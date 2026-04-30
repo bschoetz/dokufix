@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="dokufix — eine HTML-Datei, die gleichzeitig Viewer, Editor und Artefakt ist. Schluss mit dem verschollenen Word zum PDF.">
+<title>dokufix — Wer hat eigentlich das Word zum PDF?</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='5' fill='%230b0b0e'/><path d='M9 6h11l4 4v16H9z' fill='none' stroke='%23d4ff00' stroke-width='2.4' stroke-linejoin='round'/><path d='M20 6v4h4' fill='none' stroke='%23d4ff00' stroke-width='2.4' stroke-linejoin='round'/><line x1='12' y1='15' x2='21' y2='15' stroke='%23d4ff00' stroke-width='2'/><line x1='12' y1='19' x2='21' y2='19' stroke='%23d4ff00' stroke-width='2'/><line x1='12' y1='23' x2='17' y2='23' stroke='%23d4ff00' stroke-width='2'/></svg>">
+<style>
+:root{
+  --ink:#0b0b0e;
+  --surface:#15151b;
+  --line:rgba(255,255,255,0.08);
+  --line-strong:rgba(255,255,255,0.16);
+  --text:#f5f5f7;
+  --muted:#8e8e98;
+  --acid:#d4ff00;
+  --hot:#ff5b3a;
+  --maxw:1180px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  background:var(--ink);
+  color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.5;
+  font-feature-settings:"ss01","cv11";
+  overflow-x:hidden;
+  text-rendering:optimizeLegibility;
+  -webkit-font-smoothing:antialiased;
+}
+.container{max-width:var(--maxw);margin:0 auto;padding:0 32px;width:100%}
+
+/* HERO */
+.hero{
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  position:relative;
+  padding:120px 0 80px;
+  background:
+    radial-gradient(ellipse at top right, rgba(212,255,0,0.10), transparent 60%),
+    radial-gradient(ellipse at bottom left, rgba(255,91,58,0.08), transparent 60%);
+  overflow:hidden;
+}
+.hero::before{
+  content:"";
+  position:absolute; inset:0;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size:80px 80px;
+  mask-image:radial-gradient(ellipse at center, black 30%, transparent 75%);
+  opacity:0.4;
+  pointer-events:none;
+}
+.eyebrow{
+  font-size:13px;
+  letter-spacing:0.28em;
+  text-transform:uppercase;
+  color:var(--acid);
+  margin-bottom:32px;
+  font-weight:700;
+  position:relative;z-index:1;
+}
+h1.hero-title{
+  font-size:clamp(54px,9.5vw,156px);
+  font-weight:900;
+  line-height:0.92;
+  letter-spacing:-0.045em;
+  margin-bottom:48px;
+  position:relative;z-index:1;
+}
+h1.hero-title .strike{
+  position:relative;
+  white-space:nowrap;
+  display:inline-block;
+}
+h1.hero-title .strike::after{
+  content:"";
+  position:absolute;
+  left:-4%;right:-4%;top:52%;
+  height:clamp(6px,1.2vw,18px);
+  background:var(--hot);
+  transform:scaleX(0);
+  transform-origin:left;
+  animation:strike 1.0s 0.7s cubic-bezier(.7,0,.3,1) forwards;
+}
+@keyframes strike{to{transform:scaleX(1)}}
+.hero-sub{
+  font-size:clamp(20px,2.4vw,30px);
+  max-width:880px;
+  color:var(--muted);
+  margin-bottom:56px;
+  line-height:1.4;
+  position:relative;z-index:1;
+}
+.hero-sub b{color:var(--text);font-weight:600}
+.hero-sub .punch{color:var(--acid);font-weight:700}
+.cta{
+  display:inline-flex;align-items:center;gap:14px;
+  background:var(--acid);
+  color:var(--ink);
+  padding:22px 36px;
+  font-size:18px;
+  font-weight:700;
+  text-decoration:none;
+  border-radius:2px;
+  transition:transform .2s ease, box-shadow .2s ease;
+  position:relative;z-index:1;
+  letter-spacing:-0.01em;
+}
+.cta:hover{transform:translateY(-2px);box-shadow:0 16px 50px -10px rgba(212,255,0,0.5)}
+.cta .arrow{transition:transform .2s ease;font-size:22px;line-height:1}
+.cta:hover .arrow{transform:translateX(8px)}
+.cta-row{display:flex;gap:16px;flex-wrap:wrap;align-items:center;position:relative;z-index:1}
+.cta-secondary{
+  color:var(--muted);font-size:15px;text-decoration:none;
+  border-bottom:1px solid var(--line-strong);padding-bottom:2px;
+  transition:color .2s ease, border-color .2s ease;
+}
+.cta-secondary:hover{color:var(--text);border-color:var(--acid)}
+
+/* MARQUEE */
+.marquee{
+  border-top:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+  overflow:hidden;
+  padding:24px 0;
+  background:var(--ink);
+}
+.marquee-track{
+  display:flex;
+  gap:64px;
+  animation:scroll 30s linear infinite;
+  white-space:nowrap;
+}
+.marquee span{
+  font-size:clamp(18px,2vw,28px);
+  font-weight:800;
+  color:var(--muted);
+  letter-spacing:-0.02em;
+  flex-shrink:0;
+}
+.marquee span b{color:var(--acid)}
+.marquee span .x{color:var(--hot)}
+@keyframes scroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+
+/* SECTIONS */
+section{padding:140px 0;border-top:1px solid var(--line);position:relative}
+.section-eyebrow{
+  font-size:13px;letter-spacing:0.28em;text-transform:uppercase;color:var(--acid);
+  font-weight:700;margin-bottom:24px;
+}
+h2{
+  font-size:clamp(40px,6.4vw,90px);
+  font-weight:900;line-height:0.95;letter-spacing:-0.035em;
+  margin-bottom:48px;max-width:980px;
+}
+h2 em{color:var(--acid);font-style:normal;font-weight:900}
+h2 .hot{color:var(--hot);font-style:normal}
+.lead{
+  font-size:clamp(18px,1.6vw,22px);
+  max-width:780px;color:var(--muted);line-height:1.55;
+}
+.lead b{color:var(--text);font-weight:600}
+
+/* PROBLEM VIGNETTE */
+.vignette{
+  background:var(--surface);
+  border-left:4px solid var(--hot);
+  padding:48px 56px;
+  margin:64px 0;
+  font-size:clamp(22px,2.4vw,32px);
+  line-height:1.4;
+  font-weight:600;
+  letter-spacing:-0.01em;
+}
+.vignette p+p{margin-top:14px}
+.vignette .punch{color:var(--muted);font-size:16px;margin-top:28px;font-style:italic;font-weight:400;letter-spacing:0.02em}
+
+/* CARDS */
+.cards{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+  gap:1px;
+  background:var(--line);
+  border:1px solid var(--line);
+  margin-top:64px;
+}
+.card{
+  background:var(--ink);
+  padding:48px 40px;
+  display:flex;flex-direction:column;gap:18px;
+  transition:background .25s ease, transform .25s ease;
+  position:relative;
+}
+.card:hover{background:var(--surface)}
+.card .num{
+  font-size:13px;font-weight:800;letter-spacing:0.28em;color:var(--acid);
+}
+.card h3{
+  font-size:clamp(22px,2vw,28px);font-weight:800;line-height:1.15;letter-spacing:-0.015em;
+}
+.card p{color:var(--muted);font-size:16px;line-height:1.6}
+.card p b{color:var(--text);font-weight:600}
+
+/* COMPARE */
+.compare{
+  margin-top:64px;
+  border:1px solid var(--line);
+}
+.compare-row{
+  display:grid;grid-template-columns:1fr 1fr;
+}
+.compare-row+.compare-row{border-top:1px solid var(--line)}
+.compare-cell{
+  padding:48px 40px 36px;font-size:clamp(16px,1.4vw,20px);line-height:1.5;
+  position:relative;
+}
+.compare-cell.before{color:var(--muted);border-right:1px solid var(--line)}
+.compare-cell.before::before{
+  content:"BISHER";position:absolute;top:18px;left:40px;
+  font-size:10px;letter-spacing:0.32em;color:var(--hot);font-weight:800;
+}
+.compare-cell.after::before{
+  content:"MIT DOKUFIX";position:absolute;top:18px;left:40px;
+  font-size:10px;letter-spacing:0.32em;color:var(--acid);font-weight:800;
+}
+.compare-cell b{color:var(--text);font-weight:700}
+
+/* MANIFEST */
+.manifest{
+  background:var(--surface);
+  padding:96px 56px;
+  border-left:4px solid var(--acid);
+}
+.manifest blockquote{
+  font-size:clamp(28px,3.6vw,52px);
+  font-weight:800;line-height:1.18;letter-spacing:-0.025em;
+}
+.manifest blockquote em{color:var(--acid);font-style:normal;font-weight:900}
+.manifest cite{display:block;margin-top:32px;color:var(--muted);font-size:13px;font-style:normal;letter-spacing:0.28em;text-transform:uppercase;font-weight:700}
+
+/* CTA SECTION */
+.cta-section{
+  text-align:center;padding:160px 0;
+  background:radial-gradient(ellipse at center, rgba(212,255,0,0.08), transparent 70%);
+  position:relative;
+}
+.cta-section h2{margin:0 auto 32px;max-width:1100px}
+.cta-section .lead{margin:0 auto 56px;text-align:center}
+.cta-section .cta{font-size:22px;padding:28px 48px}
+.cta-section .meta{
+  color:var(--muted);font-size:13px;margin-top:36px;
+  letter-spacing:0.28em;font-weight:700;
+}
+
+/* FOOTER */
+footer{
+  border-top:1px solid var(--line);
+  padding:48px 0;
+  font-size:14px;color:var(--muted);
+}
+.footer-inner{display:flex;justify-content:space-between;flex-wrap:wrap;gap:16px;align-items:center}
+.footer-inner .wink{color:var(--acid);font-weight:700;letter-spacing:-0.01em}
+
+/* Subtle reveal */
+@media (prefers-reduced-motion: no-preference){
+  .card{opacity:0;transform:translateY(20px);animation:rise .6s forwards}
+  .card:nth-child(1){animation-delay:.05s}
+  .card:nth-child(2){animation-delay:.10s}
+  .card:nth-child(3){animation-delay:.15s}
+  .card:nth-child(4){animation-delay:.20s}
+  .card:nth-child(5){animation-delay:.25s}
+  .card:nth-child(6){animation-delay:.30s}
+  @keyframes rise{to{opacity:1;transform:translateY(0)}}
+}
+
+@media (max-width:760px){
+  section{padding:96px 0}
+  .vignette{padding:32px 28px}
+  .compare-row{grid-template-columns:1fr}
+  .compare-cell.before{border-right:none;border-bottom:1px solid var(--line)}
+  .card{padding:36px 28px}
+  .manifest{padding:56px 32px}
+  .cta-section{padding:96px 0}
+}
+
+/* ACROBAT POPUP (vintage pastiche) */
+.acrobat-modal{
+  position:fixed;inset:0;z-index:9999;
+  display:none;
+  align-items:center;justify-content:center;
+  font-family:Tahoma,'MS Sans Serif',Arial,sans-serif;
+}
+.acrobat-modal.open{display:flex;animation:fadein 0.18s ease-out}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.acrobat-overlay{
+  position:absolute;inset:0;
+  background:rgba(0,0,0,0.55);
+  backdrop-filter:blur(2px);
+}
+.acrobat-dialog{
+  position:relative;
+  width:min(92vw,440px);
+  background:#ece9d8;
+  border:1px solid #4a4a4a;
+  box-shadow:
+    0 20px 60px rgba(0,0,0,0.6),
+    inset 1px 1px 0 #ffffff,
+    inset -1px -1px 0 #999;
+  animation:popin 0.22s cubic-bezier(.2,.8,.2,1.2);
+}
+@keyframes popin{from{transform:scale(0.85);opacity:0}to{transform:scale(1);opacity:1}}
+.acrobat-titlebar{
+  display:flex;align-items:center;gap:10px;
+  background:linear-gradient(to bottom,#fa0f00 0%,#c40b00 100%);
+  color:#fff;
+  padding:6px 8px;
+  font-size:13px;
+  font-weight:700;
+  height:28px;
+  user-select:none;
+}
+.acrobat-titlebar .acrobat-logo{
+  background:#fff;color:#fa0f00;
+  width:18px;height:18px;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-style:italic;font-weight:900;font-size:14px;
+  font-family:'Times New Roman',serif;
+  border-radius:1px;
+  letter-spacing:0;
+}
+.acrobat-titlebar .acrobat-title{flex:1;letter-spacing:0.01em}
+.acrobat-x{
+  background:#ece9d8;
+  border:1px solid #4a4a4a;
+  width:22px;height:20px;
+  font-size:14px;line-height:1;
+  cursor:pointer;
+  color:#000;
+  font-weight:700;
+  font-family:Tahoma,Arial,sans-serif;
+  box-shadow:inset 1px 1px 0 #fff;
+  padding:0;
+}
+.acrobat-x:hover{background:#fff5d8}
+.acrobat-x:active{box-shadow:inset 1px 1px 0 #888}
+.acrobat-body{
+  display:flex;
+  gap:20px;
+  padding:28px 24px 16px;
+  align-items:flex-start;
+  color:#000;
+}
+.acrobat-icon{flex-shrink:0;margin-top:2px}
+.acrobat-text{font-size:14px;line-height:1.45;color:#000}
+.acrobat-text .acrobat-heading{
+  font-size:15px;font-weight:700;margin-bottom:6px;
+}
+.acrobat-text p{color:#000}
+.acrobat-buttons{
+  display:flex;justify-content:center;gap:10px;
+  padding:8px 16px 18px;
+}
+.acrobat-btn{
+  background:linear-gradient(to bottom,#fefefe 0%,#dcdcd0 100%);
+  border:1px solid #707070;
+  padding:6px 28px;
+  font-family:Tahoma,Arial,sans-serif;
+  font-size:13px;
+  font-weight:400;
+  cursor:pointer;
+  color:#000;
+  min-width:80px;
+  box-shadow:inset 1px 1px 0 #fff;
+}
+.acrobat-btn:hover{border-color:#0a246a;background:linear-gradient(to bottom,#fff 0%,#e8e8d8 100%)}
+.acrobat-btn:focus{outline:1px dotted #000;outline-offset:-4px}
+.acrobat-btn:active{box-shadow:inset 1px 1px 0 #888}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="container">
+    <div class="eyebrow">dokufix · open source · eine Datei</div>
+    <h1 class="hero-title">Wer hat<br>eigentlich das<br><span class="strike">Word</span> zum PDF?</h1>
+    <p class="hero-sub">Die Richtlinie muss aktualisiert werden. Das <b>PDF liegt in fünfzig Postfächern</b>. Den Word-Quelltext findet niemand. Wer ihn zuletzt hatte, ist im März in Elternzeit gegangen. <span class="punch">Schluss damit.</span></p>
+    <div class="cta-row">
+      <a class="cta" href="#download">Datei herunterladen <span class="arrow">→</span></a>
+      <a class="cta-secondary" href="#problem">Erst kurz erklären lassen</a>
+    </div>
+  </div>
+</header>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee-track">
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+    <span>Word <span class="x">weg</span>. <b>PDF da</b>.</span>
+  </div>
+</div>
+
+<section id="problem">
+  <div class="container">
+    <div class="section-eyebrow">Das Problem</div>
+    <h2>Quellen verschwinden.<br>PDFs bleiben.<br>Aktualisierungen werden zur <span class="hot">Archäologie</span>.</h2>
+    <p class="lead">Diese Schleife läuft jedes Mal, wenn Sie ein Dokument schreiben, das länger lebt als ein Projekt. Die großen Werkzeuge — <b>Confluence, Notion, SharePoint, Obsidian</b> — wollen Konten, Installationsrechte, Netzwerk. Auf einem gesperrten Kundenlaptop, im Postfach einer Behörde, im Mail-Anhang an einen Wirtschaftsprüfer kommt davon nichts durch.</p>
+    <div class="vignette">
+      <p>Also frieren Sie das Dokument als PDF ein.</p>
+      <p>Und verlieren die Quelle.</p>
+      <p class="punch">— Jeden Monat. In jedem Unternehmen. Seit den Neunzigern.</p>
+    </div>
+  </div>
+</section>
+
+<section id="solution">
+  <div class="container">
+    <div class="section-eyebrow">Die Lösung</div>
+    <h2>Eine HTML-Datei, die gleichzeitig <em>Viewer, Editor und Artefakt</em> ist.</h2>
+    <p class="lead">Sie laden die Datei herunter. Sie öffnen sie im Browser. Sie lesen, Sie editieren, Sie speichern eine neue Version. <b>Keine Installation, kein Konto, kein Server, kein Internet.</b></p>
+    <div class="cards">
+      <div class="card">
+        <span class="num">01 / Format</span>
+        <h3>Markdown nativ.<br>Mermaid eingebaut.</h3>
+        <p>Sie schreiben in der Syntax, die Sie ohnehin kennen. <b>Diagramme und eingebettete Bilder rendern automatisch</b> — ohne Plug-ins, ohne Konvertierung.</p>
+      </div>
+      <div class="card">
+        <span class="num">02 / Umgebung</span>
+        <h3>Eine Datei.<br>Komplett offline.</h3>
+        <p>Marked und Mermaid sind in der HTML eingebacken, kein CDN, keine Internet-Abhängigkeit. <b>Im Flugzeug, auf dem Kundenlaptop, überall.</b></p>
+      </div>
+      <div class="card">
+        <span class="num">03 / Bedienung</span>
+        <h3>Lesen und Editieren<br>in derselben Datei.</h3>
+        <p>Eine IndexedDB-Werkbank fängt jede Änderung ab, auch wenn der Tab zugeht. <b>Speichern bleibt eine bewusste Geste</b> — kein Auto-Save-Schreck.</p>
+      </div>
+      <div class="card">
+        <span class="num">04 / Verbreitung</span>
+        <h3>Die Datei vermehrt<br>sich selbst.</h3>
+        <p>Aus jeder dokufix-Datei lässt sich eine neue, leere erzeugen. <b>Eine Datei durch die Firewall</b> — und Sie haben die ganze Werkbank im Kundennetz.</p>
+      </div>
+      <div class="card">
+        <span class="num">05 / Export</span>
+        <h3>Andere Systeme<br>einfach befüllen.</h3>
+        <p>Sauberer Markdown-Export jederzeit. Confluence- und Jira-Syntax folgen als nächste Ausgabeformate. <b>Sie schreiben einmal — und spielen denselben Inhalt überall ein.</b> Kein Plattform-Lock-in.</p>
+      </div>
+      <div class="card">
+        <span class="num">06 / Audit</span>
+        <h3>Das Dokument kennt<br>seine eigenen Änderungen.</h3>
+        <p>Optionale Commit-Nachrichten beim Speichern werden in der Datei mitgeschrieben. <b>Versionszähler, Zeitstempel und Änderungsprotokoll</b> stehen direkt darin.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="compare">
+  <div class="container">
+    <div class="section-eyebrow">Was sich ändert</div>
+    <h2>Bisher.<br><em>Mit dokufix.</em></h2>
+    <div class="compare">
+      <div class="compare-row">
+        <div class="compare-cell before">Word verschollen, PDF kursiert</div>
+        <div class="compare-cell after"><b>Eine Datei</b> ist gleichzeitig lesbares Dokument und editierbare Quelle.</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell before">Drei Anhänge pro Mail (Text, Bilder, Diagramme)</div>
+        <div class="compare-cell after"><b>Ein</b> HTML — Bilder und Diagramme sind drin.</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell before">Word, Notion oder Obsidian auf dem Kundenlaptop installieren</div>
+        <div class="compare-cell after">Browser auf. <b>Mehr Werkzeug brauchen Sie nicht.</b></div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell before">Welche Version ist aktuell? Niemand weiß es</div>
+        <div class="compare-cell after">In der Datei selbst lesen — <b>Versionszähler, Zeitstempel, Änderungsprotokoll</b>.</div>
+      </div>
+      <div class="compare-row">
+        <div class="compare-cell before">Hoffen, dass das Format 2030 noch öffnet</div>
+        <div class="compare-cell after"><b>HTML und Markdown.</b> Beide werden die nächsten zehn Doku-Plattformen überleben.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="manifest">
+  <div class="container">
+    <div class="manifest">
+      <blockquote>dokufix ist ein <em>Träger für Inhalte.</em> Die HTML ist nur die aktuelle Hülle. Ihr Inhalt gehört Ihnen — nicht der Plattform.</blockquote>
+      <cite>— die dokufix-Doktrin</cite>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section" id="download">
+  <div class="container">
+    <div class="section-eyebrow">Jetzt loslegen</div>
+    <h2>Eine Datei.<br>Lesen. Editieren. <em>Weitergeben.</em></h2>
+    <p class="lead">Laden Sie die aktuelle dokufix-Datei von GitHub, öffnen Sie sie im Browser, schreiben Sie los. Die Datei, die Sie gerade geladen haben, ist gleichzeitig der Editor für jede weitere dokufix-Datei, die Sie je anlegen werden.</p>
+    <a class="cta" href="https://github.com" target="_blank" rel="noopener">Zum GitHub-Release <span class="arrow">→</span></a>
+    <p class="meta">OPEN SOURCE · OHNE ANMELDUNG · OHNE TELEMETRIE · OHNE SERVER</p>
+  </div>
+</section>
+
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <span>© dokufix · 2026 · Eine Datei. Mehr nicht.</span>
+      <span class="wink">↑ Diese Seite ist EINE HTML-Datei. Genau wie dokufix.</span>
+    </div>
+  </div>
+</footer>
+
+<!-- Vintage "Ah-nee Aggrobat Reader" coming-soon dialog (entirely fictional, any resemblance to a certain PDF vendor is purely satirical) -->
+<div class="acrobat-modal" id="acrobat-modal" role="dialog" aria-modal="true" aria-labelledby="acrobat-heading">
+  <div class="acrobat-overlay" data-close></div>
+  <div class="acrobat-dialog">
+    <div class="acrobat-titlebar">
+      <span class="acrobat-logo">A</span>
+      <span class="acrobat-title">Ah-nee Aggrobat Reader</span>
+      <button class="acrobat-x" data-close aria-label="Schließen">×</button>
+    </div>
+    <div class="acrobat-body">
+      <div class="acrobat-icon">
+        <svg width="42" height="42" viewBox="0 0 42 42" aria-hidden="true">
+          <rect x="1" y="1" width="40" height="40" rx="4" fill="#fa0f00" stroke="#7a0700" stroke-width="1"/>
+          <text x="21" y="30" font-family="Times New Roman,serif" font-size="28" font-weight="900" font-style="italic" text-anchor="middle" fill="#ffffff">A</text>
+        </svg>
+      </div>
+      <div class="acrobat-text">
+        <p class="acrobat-heading" id="acrobat-heading">Dauert noch.</p>
+        <p>Kommt aber sicher irgendwann.</p>
+      </div>
+    </div>
+    <div class="acrobat-buttons">
+      <button class="acrobat-btn" data-close autofocus>OK</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var modal = document.getElementById('acrobat-modal');
+  function open(e){
+    if(e) e.preventDefault();
+    modal.classList.add('open');
+    var btn = modal.querySelector('.acrobat-btn');
+    if(btn) setTimeout(function(){ btn.focus(); }, 50);
+  }
+  function close(){
+    modal.classList.remove('open');
+  }
+  // Intercept any GitHub-bound CTA
+  document.querySelectorAll('a[href*="github"]').forEach(function(a){
+    a.addEventListener('click', open);
+  });
+  // Close handlers
+  modal.querySelectorAll('[data-close]').forEach(function(el){
+    el.addEventListener('click', close);
+  });
+  document.addEventListener('keydown', function(e){
+    if(e.key === 'Escape') close();
+  });
+})();
+</script>
+
+</body>
+</html>
