@@ -367,9 +367,12 @@ footer{
   padding:8px 16px 18px;
 }
 .acrobat-btn{
+  display:inline-block;
+  text-decoration:none;
+  text-align:center;
   background:linear-gradient(to bottom,#fefefe 0%,#dcdcd0 100%);
   border:1px solid #707070;
-  padding:6px 28px;
+  padding:6px 22px;
   font-family:Tahoma,Arial,sans-serif;
   font-size:13px;
   font-weight:400;
@@ -377,10 +380,15 @@ footer{
   color:#000;
   min-width:80px;
   box-shadow:inset 1px 1px 0 #fff;
+  line-height:1.4;
 }
 .acrobat-btn:hover{border-color:#0a246a;background:linear-gradient(to bottom,#fff 0%,#e8e8d8 100%)}
 .acrobat-btn:focus{outline:1px dotted #000;outline-offset:-4px}
 .acrobat-btn:active{box-shadow:inset 1px 1px 0 #888}
+.acrobat-btn.acrobat-btn-primary{
+  border-color:#0a246a;
+  font-weight:700;
+}
 </style>
 </head>
 <body>
@@ -544,7 +552,8 @@ footer{
       </div>
     </div>
     <div class="acrobat-buttons">
-      <button class="acrobat-btn" data-close autofocus>OK</button>
+      <a class="acrobat-btn acrobat-btn-primary" href="dokufix-poc.html">Jetzt testen</a>
+      <button class="acrobat-btn" data-close>OK</button>
     </div>
   </div>
 </div>

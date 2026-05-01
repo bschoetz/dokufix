@@ -97,6 +97,7 @@ purpose: "Token-efficient context for downstream PRD creation"
 - **Cross-document link feature scope:** is "infrastructure-free wiki via `<a href>` between dokufix files" a marketed v1 feature or just a happy emergent behavior? If marketed, requires testing of relative-path resolution in `file://` contexts across browsers.
 - **Indexing / discoverability across multiple dokufix files** in a folder — out of scope for v1, but a candidate v2 feature (a generated index dokufix file?).
 - **Image-export-as-ZIP:** does dokufix bundle a ZIP library (jszip ~30KB minified) into the artifact for the ZIP option, or only offer (a) inline / (b) sibling files in v1 and add ZIP later? Size cost vs feature completeness.
+- **Smuggle source into "Ohne Editor" exports for round-trip recovery:** the read-only export variants are deliberately one-way (rendered HTML only — the Markdown source isn't recoverable from a rendered table or code block). Idea: optionally append the gzip+base64 Markdown source as a single HTML comment at the bottom of the file (`<!-- dokufix-source-gz: BASE64 -->`). The file stays JS-free and visually identical, but a future "Open in dokufix" loader could detect and extract the source. Resurrects edit-ability without compromising the no-JS promise. Decide: opt-in checkbox in the download menu, or always-on, or never (privacy: comment IS still readable in any text editor — leakage of "draft" content into a "final" artifact is a non-trivial concern for legal/compliance contexts). Likely v2.
 - **Versioning of the dokufix format itself:** how are old dokufix files re-edited by newer dokufix builds? Format-version field embedded? Migration on first edit? Important for the "endurance aspiration" but not blocking v1.
 
 ## Competitive Intelligence (Worth Preserving)
@@ -108,6 +109,13 @@ purpose: "Token-efficient context for downstream PRD creation"
 - **Marp** — Markdown-to-slides. Can export self-contained HTML slides but no in-export editor. Slides shape, not docs.
 - **Obsidian Publish / Notion Export / MkDocs / Quarto** — all produce static sites or hosted pages, none produce a self-editing HTML artifact.
 - **Silverbullet.md / Logseq / Decker (HyperCard revivalist scene)** — adjacent niche tools. Decker is the most spiritually similar (single-file self-editing stacks) but uses a HyperCard-style stack metaphor, not Markdown documents.
+
+## Decided Tech Constraints (with Why-Now reasoning)
+
+- **Compression algorithm: gzip** (via browser-native `CompressionStream('gzip')`). Decision date: 2026-05-01.
+  - **Why:** As of May 2026, native brotli in `CompressionStream` is shipped in Firefox 147 and Safari 18.4, but **NOT in Chrome / Edge** (caniuse `mdn-api_compressionstream_compressionstream_brotli` shows Chrome unsupported through v150). Brotli would save ~15–25 % vs gzip on text/SVG payloads, but the savings are dwarfed by the cost of unreliable round-trips for Chrome users — who are the dominant browser among the consultant-on-locked-laptop primary persona.
+  - **When to revisit:** Once caniuse shows brotli green for Chrome / Edge in `CompressionStream`. The migration is a string swap (`'gzip'` → `'brotli'`) in two functions; no architectural rework. Until then: gzip everywhere.
+  - **Forward-compatibility nudge:** Worth considering a single-byte format discriminator at the head of every compressed payload (e.g. `0x01 = gzip`, `0x02 = brotli`) so future dokufix files can mix formats without breaking the decoder. Cheap insurance.
 
 ## Latent Strategic Properties (Not Features to Build, but Stories to Tell)
 

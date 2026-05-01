@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dokufix — PoC</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:#f5f5f7;
+    color:#1c1c1e;
+    line-height:1.5;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  header{
+    background:#1c1c1e;
+    color:#fff;
+    padding:14px 24px;
+    display:flex;
+    align-items:center;
+    gap:14px;
+    flex-shrink:0;
+    border-bottom:1px solid #000;
+    position:relative;
+  }
+  .header-actions{
+    display:flex;align-items:center;gap:10px;
+  }
+  .hamburger{
+    display:none;
+    background:transparent;border:1px solid #3a3a3c;color:#f5f5f7;
+    font-size:18px;font-weight:700;
+    width:38px;height:36px;
+    border-radius:4px;cursor:pointer;padding:0;
+    align-items:center;justify-content:center;
+    line-height:1;
+  }
+  .hamburger:hover{background:#2c2c2e;border-color:#48484a}
+  header h1{font-size:18px;font-weight:800;letter-spacing:-0.01em}
+  header .tag{
+    font-size:10px;background:#d4ff00;color:#1c1c1e;
+    padding:3px 8px;border-radius:3px;font-weight:800;letter-spacing:0.08em;
+  }
+  header .hint{font-size:12px;color:#8e8e92;margin-left:8px}
+  header .hint kbd{
+    background:#2c2c2e;border:1px solid #3a3a3c;border-radius:3px;
+    padding:1px 6px;font-family:ui-monospace,monospace;font-size:11px;color:#f5f5f7;
+  }
+  header .spacer{flex:1}
+  header button{
+    background:#d4ff00;color:#1c1c1e;border:0;
+    font-weight:800;padding:9px 20px;border-radius:4px;cursor:pointer;
+    font-size:14px;letter-spacing:-0.01em;
+    transition:background .15s ease, transform .05s ease, border-color .15s ease, color .15s ease;
+  }
+  header button:hover{background:#bce300}
+  header button:active{transform:translateY(1px)}
+  header button.ghost{
+    background:transparent;color:#f5f5f7;
+    border:1px solid #3a3a3c;font-weight:700;
+  }
+  header button.ghost:hover{background:#2c2c2e;border-color:#48484a}
+
+  /* Download dropdown */
+  .menu-wrap{position:relative;display:inline-flex}
+  .menu{
+    position:absolute;top:calc(100% + 8px);right:0;
+    min-width:320px;background:#1c1c1e;
+    border:1px solid #2c2c2e;border-radius:6px;
+    box-shadow:0 14px 36px rgba(0,0,0,0.55);
+    display:none;flex-direction:column;
+    z-index:60;overflow:hidden;
+    animation:menuIn .12s ease-out;
+  }
+  @keyframes menuIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
+  .menu-wrap.open .menu{display:flex}
+  .menu button{
+    background:transparent !important;color:#f5f5f7 !important;
+    border:0 !important;border-radius:0 !important;
+    padding:14px 18px !important;text-align:left;
+    display:flex;flex-direction:column;gap:4px;
+    cursor:pointer;font-family:inherit;font-weight:400 !important;
+    width:100%;letter-spacing:0;
+    transition:background .12s ease;
+  }
+  .menu button:hover{background:#2c2c2e !important}
+  .menu button+button{border-top:1px solid #2c2c2e !important}
+  .menu .m-title{font-size:14px;font-weight:700;letter-spacing:-0.005em;color:#f5f5f7}
+  .menu .m-sub{font-size:12px;color:#8e8e92;font-weight:400;line-height:1.4}
+  .menu .m-title .badge{
+    display:inline-block;background:#d4ff00;color:#1c1c1e;
+    font-size:9px;font-weight:800;letter-spacing:0.06em;
+    padding:1px 6px;border-radius:2px;margin-left:6px;
+    vertical-align:1px;
+  }
+  .layout{
+    flex:1;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:1px;
+    background:#d8d8da;
+    overflow:hidden;
+  }
+  .pane{
+    background:#fff;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  .pane-header{
+    padding:8px 16px;background:#fafafa;
+    border-bottom:1px solid #e5e5ea;
+    font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
+    color:#6e6e73;font-weight:700;flex-shrink:0;
+  }
+  textarea{
+    flex:1;width:100%;border:0;padding:24px;
+    font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    font-size:13.5px;line-height:1.6;resize:none;outline:none;color:#1c1c1e;
+    background:#fff;
+  }
+  #preview{
+    flex:1;padding:36px 44px;overflow:auto;
+    font-size:16px;
+  }
+  #preview h1,#preview h2,#preview h3,#preview h4{
+    line-height:1.2;margin-top:1.4em;margin-bottom:0.5em;
+    letter-spacing:-0.015em;font-weight:800;
+  }
+  #preview h1{font-size:34px;margin-top:0}
+  #preview h2{font-size:25px;border-bottom:1px solid #e5e5ea;padding-bottom:6px}
+  #preview h3{font-size:19px}
+  #preview p{margin-bottom:1em}
+  #preview ul,#preview ol{margin:0 0 1em 1.5em}
+  #preview li{margin-bottom:4px}
+  #preview code:not(pre code){
+    background:#f0f0f3;padding:2px 6px;border-radius:3px;
+    font-family:ui-monospace,monospace;font-size:0.88em;color:#c41a16;
+  }
+  #preview pre{
+    background:#1c1c1e;color:#f5f5f7;padding:16px 20px;
+    border-radius:6px;overflow-x:auto;margin:0 0 1em;
+    font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;
+  }
+  #preview pre code{background:transparent;padding:0;color:inherit}
+  #preview blockquote{
+    border-left:4px solid #d4ff00;padding:10px 18px;
+    background:#fafafa;margin:0 0 1em;color:#3a3a3f;
+  }
+  #preview blockquote p:last-child{margin-bottom:0}
+  #preview table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
+  #preview th,#preview td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
+  #preview th{background:#fafafa;font-weight:700}
+  #preview img{max-width:100%;height:auto;border-radius:4px}
+  #preview a{color:#0066cc}
+  #preview .mermaid{margin:24px 0;text-align:center}
+  #preview .mermaid svg{max-width:100%;height:auto}
+  #preview hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+
+  /* Gliederungsnummerierung — opt-in via body.numbered */
+  .numbered #preview{counter-reset:h2}
+  .numbered #preview h2{counter-reset:h3}
+  .numbered #preview h3{counter-reset:h4}
+  .numbered #preview h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
+  .numbered #preview h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+  .numbered #preview h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+
+  /* Toggle-button active state */
+  header button.toggle-on{
+    background:#d4ff00;color:#1c1c1e;border-color:#d4ff00;
+  }
+  header button.toggle-on:hover{background:#bce300;border-color:#bce300}
+  .error{
+    background:#fff0ee;border-left:4px solid #ff5b3a;
+    padding:12px 16px;color:#8b1300;font-family:ui-monospace,monospace;font-size:13px;
+    margin:1em 0;border-radius:0 4px 4px 0;
+  }
+  @media (max-width:820px){
+    .layout{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
+    header .hint{display:none}
+
+    /* Hamburger appears, action buttons collapse into a panel */
+    .hamburger{display:inline-flex}
+    .header-actions{
+      display:none;
+      position:absolute;top:100%;right:0;
+      background:#1c1c1e;
+      border:1px solid #2c2c2e;
+      flex-direction:column;align-items:stretch;
+      padding:10px;gap:6px;
+      min-width:280px;max-width:calc(100vw - 32px);
+      box-shadow:0 14px 36px rgba(0,0,0,0.55);
+      z-index:70;
+      border-radius:0 0 0 6px;
+    }
+    .header-actions.open{display:flex}
+    .header-actions>button,
+    .header-actions>.menu-wrap{
+      width:100%;
+    }
+    .header-actions>button,
+    .header-actions>.menu-wrap>button{
+      width:100%;text-align:left;justify-content:flex-start;
+      padding:10px 14px;
+    }
+    /* Download submenu inlines into the panel instead of overlaying */
+    .header-actions .menu-wrap .menu{
+      position:static;
+      margin-top:4px;
+      box-shadow:none;
+      min-width:100%;
+      border-radius:4px;
+      animation:none;
+    }
+  }
+
+  /* ---------- VIEW MODE (pure document, no chrome) ---------- */
+  .toggle-back{
+    position:fixed;top:16px;right:16px;z-index:50;
+    display:none;
+    background:#fff;
+    border:1px solid rgba(0,0,0,0.18);
+    color:#1c1c1e;
+    font-family:inherit;font-size:13px;font-weight:700;
+    padding:8px 14px;border-radius:4px;cursor:pointer;
+    letter-spacing:-0.005em;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+    transition:background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease, transform .1s ease;
+  }
+  .toggle-back:hover{
+    background:#1c1c1e;color:#fff;border-color:#1c1c1e;
+    box-shadow:0 6px 20px rgba(0,0,0,0.20);
+    transform:translateY(-1px);
+  }
+  .toggle-back:active{transform:translateY(0)}
+  body.mode-view{
+    display:block;
+    height:auto;
+    min-height:100vh;
+    overflow:visible;
+    background:#fff;
+  }
+  body.mode-view header{display:none}
+  body.mode-view .layout{
+    display:block;
+    overflow:visible;
+    background:#fff;
+    height:auto;
+  }
+  body.mode-view .pane.pane-source{display:none}
+  body.mode-view .pane-header{display:none}
+  body.mode-view .pane.pane-preview{
+    display:block;
+    overflow:visible;
+    background:#fff;
+    height:auto;
+  }
+  body.mode-view #preview{
+    max-width:950px;
+    margin:0 auto;
+    padding:80px 32px 120px;
+    font-size:17px;
+    overflow:visible;
+  }
+  @media (max-width:820px){
+    body.mode-view #preview{
+      max-width:100%;
+      padding:64px 22px 96px;
+      font-size:16px;
+    }
+  }
+  body.mode-view .toggle-back{display:inline-block}
+</style>
+</head>
+<body class="mode-view">
+
+<header>
+  <h1>dokufix</h1>
+  <span class="tag">PoC</span>
+  <span class="hint"><kbd>Strg</kbd>+<kbd>Enter</kbd> rendert</span>
+  <span class="spacer"></span>
+  <button id="hamburger" class="hamburger" type="button" aria-label="Menü öffnen" aria-expanded="false">☰</button>
+  <div class="header-actions" id="header-actions">
+    <button id="numbering-btn" class="ghost" type="button" title="Gliederungsnummerierung an/aus" aria-pressed="false">1.2.3</button>
+    <button id="reset-btn" class="ghost" type="button" title="Editor-Inhalt auf den Demo-Beispieltext zurücksetzen">Demo zurücksetzen</button>
+    <button id="render-btn" type="button">Rendern →</button>
+    <span class="menu-wrap" id="download-wrap">
+      <button id="download-btn" class="ghost" type="button" aria-haspopup="menu" aria-expanded="false">Herunterladen ▾</button>
+      <div class="menu" role="menu" aria-label="Download-Optionen">
+        <button type="button" data-download="full" role="menuitem">
+          <span class="m-title">Mit Editor</span>
+          <span class="m-sub">Vollständige dokufix-Datei. Quelltext ist gzip-komprimiert eingebettet. Empfänger kann lesen, editieren und neu speichern.</span>
+        </button>
+        <button type="button" data-download="readonly-open" role="menuitem">
+          <span class="m-title">Ohne Editor — offen <span class="badge">PUR</span></span>
+          <span class="m-sub">Reines Lesedokument, kein JavaScript. Maximale Portabilität, im Texteditor lesbar.</span>
+        </button>
+        <button type="button" data-download="readonly-slim" role="menuitem">
+          <span class="m-title">Ohne Editor — schlank <span class="badge">SVG-GZ</span></span>
+          <span class="m-sub">Text als Klartext (grep-bar, im Editor lesbar), nur die Mermaid-Diagramme sind einzeln gzip-komprimiert. Ohne JavaScript bleibt der Text lesbar, Diagramme fehlen.</span>
+        </button>
+        <button type="button" data-download="readonly-compact" role="menuitem">
+          <span class="m-title">Ohne Editor — kompakt <span class="badge">GZ</span></span>
+          <span class="m-sub">Lesedokument, alles gzip-komprimiert. Maximal klein; benötigt JavaScript zum Entpacken.</span>
+        </button>
+      </div>
+    </span>
+    <button id="view-btn" class="ghost" type="button" title="Pure View ohne Editor-Chrome">Lesen →</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="pane pane-source">
+    <div class="pane-header">Quelle · Markdown + Mermaid</div>
+    <textarea id="source" spellcheck="false"></textarea>
+  </section>
+  <section class="pane pane-preview">
+    <div class="pane-header">Vorschau · gelayoutetes Dokument</div>
+    <article id="preview"></article>
+  </section>
+</main>
+
+<button id="edit-btn" type="button" class="toggle-back" aria-label="Zurück zum Editor">Editor ↩</button>
+
+<!-- CDN libraries (PoC only — production bundle will inline these) -->
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+
+<script>
+mermaid.initialize({
+  startOnLoad: false,
+  theme: 'default',
+  securityLevel: 'loose',
+  flowchart: { curve: 'basis' }
+});
+
+// --- Gzip helpers (browser-native, no library) -------------------
+// Used both for compressing on download and for decompressing the
+// SAMPLE in downloaded "Mit Editor" files on load.
+async function gzipB64(text){
+  const stream = new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'));
+  const buf = await new Response(stream).arrayBuffer();
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+  return btoa(bin);
+}
+async function ungzipB64(b64){
+  const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
+  return await new Response(stream).text();
+}
+
+// === DEMO-START === (immutable original demo content for "Demo zurücksetzen"; ships gzip-compressed in downloaded files)
+let DEMO = `# Willkommen bei dokufix
+
+Sie lesen gerade. Das hier ist der **Lesemodus** — keine Werkzeugleiste, keine Doppel-Ansicht, kein Chrome. Genau so kommt ein dokufix-Dokument beim Empfänger an: als ein Dokument, nicht als App.
+
+Oben rechts gibt es einen einzigen kleinen Button: **„Editor ↩"**. Ein Klick — und Sie wechseln in die Bearbeitungsansicht und können diese Datei selbst verändern. Kein Tool installieren, kein Konto, keine Plattform dazwischen.
+
+## Was Sie in diesem Dokument sehen
+
+- Überschriften, Listen, Tabellen
+- *Kursiv*, **fett**, ~~durchgestrichen~~
+- Inline-\`Code\` und Code-Blöcke
+- Blockzitate
+- **Mermaid-Diagramme**
+
+## Wie das hier zusammenspielt
+
+\`\`\`mermaid
+flowchart LR
+    A[Markdown-Quelle] --> B((dokufix))
+    B --> C[HTML-Layout]
+    B --> D[Mermaid-SVG]
+    C --> E[Vorschau]
+    D --> E
+    E --> F{{Eine Datei}}
+\`\`\`
+
+## Eine Tabelle
+
+| Feature | Status |
+|---|---|
+| Markdown rendern | ✅ |
+| Mermaid rendern | ✅ |
+| Editor-Modus | 🚧 |
+| Self-Save | 🚧 |
+| Self-Replication | 🚧 |
+
+## Sequenzdiagramm
+
+\`\`\`mermaid
+sequenceDiagram
+    autonumber
+    Nutzerin->>+dokufix: Markdown eintippen
+    Nutzerin->>+dokufix: "Rendern" klicken
+    dokufix->>marked: Parsen
+    marked-->>dokufix: HTML
+    dokufix->>mermaid: Diagramme rendern
+    mermaid-->>dokufix: SVG
+    dokufix-->>-Nutzerin: Fertige Vorschau
+\`\`\`
+
+## Code-Block (kein Mermaid)
+
+\`\`\`javascript
+function dokufix(md) {
+  const html = marked.parse(md);
+  return renderMermaidIn(html);
+}
+\`\`\`
+
+> **Träger für Inhalte.** Die HTML ist nur die aktuelle Hülle.
+
+---
+
+Probieren Sie es aus: Klicken Sie oben rechts auf **„Editor ↩"**, ändern Sie diesen Text — und rendern Sie ihn anschließend neu. Die Datei, die Sie gerade lesen, ist gleichzeitig der Editor.
+`;
+let DEMO_GZ = '';
+// === DEMO-END ===
+
+// === SAMPLE-START === (this file's per-document default; replaced on download with user's current edits)
+let SAMPLE = '';
+let SAMPLE_GZ = '';
+// === SAMPLE-END ===
+
+const sourceEl  = document.getElementById('source');
+const previewEl = document.getElementById('preview');
+const btnEl     = document.getElementById('render-btn');
+const resetEl   = document.getElementById('reset-btn');
+
+// --- Browser-side persistence ---------------------------------
+// PoC: localStorage. MVP target per product brief is IndexedDB (larger payloads,
+// survives more aggressively across tab/crash). Easy to swap later.
+const STORAGE_KEY = 'dokufix-poc-source-v1';
+function loadFromStorage(){
+  try{ return localStorage.getItem(STORAGE_KEY); }
+  catch(e){ console.warn('localStorage read failed:', e); return null; }
+}
+function saveToStorage(text){
+  try{ localStorage.setItem(STORAGE_KEY, text); }
+  catch(e){ console.warn('localStorage write failed:', e); }
+}
+let saveTimer;
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => saveToStorage(sourceEl.value), 250);
+}
+
+// Sample loading is async (SAMPLE_GZ may need decompression). See bottom of script.
+
+let mermaidId = 0;
+
+async function render() {
+  const md = sourceEl.value;
+  let html;
+  try {
+    html = marked.parse(md, { gfm: true, breaks: false });
+  } catch (err) {
+    previewEl.innerHTML = '<div class="error">Markdown-Fehler: ' + escapeHtml(err.message) + '</div>';
+    return;
+  }
+  previewEl.innerHTML = html;
+
+  // Convert <pre><code class="language-mermaid">…</code></pre> into <div class="mermaid">…</div>
+  previewEl.querySelectorAll('pre code.language-mermaid').forEach(block => {
+    const div = document.createElement('div');
+    div.className = 'mermaid';
+    div.id = 'mermaid-' + (++mermaidId);
+    div.textContent = block.textContent;
+    block.parentElement.replaceWith(div);
+  });
+
+  // Render Mermaid diagrams (if any)
+  const nodes = previewEl.querySelectorAll('.mermaid');
+  if (nodes.length) {
+    try {
+      await mermaid.run({ nodes: Array.from(nodes) });
+    } catch (err) {
+      console.error('Mermaid error:', err);
+    }
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+btnEl.addEventListener('click', render);
+
+sourceEl.addEventListener('input', scheduleSave);
+sourceEl.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+    e.preventDefault();
+    render();
+  }
+});
+
+// "Demo zurücksetzen" — restore the immutable DEMO (not SAMPLE, which may have been overwritten by a download)
+resetEl.addEventListener('click', () => {
+  if (sourceEl.value === DEMO || confirm('Demo-Text zurücksetzen? Aktuelle Änderungen gehen verloren.')){
+    sourceEl.value = DEMO;
+    saveToStorage(DEMO);
+    render();
+    sourceEl.focus();
+  }
+});
+
+// --- Download menu --------------------------------------------
+const downloadWrap = document.getElementById('download-wrap');
+const downloadBtn  = document.getElementById('download-btn');
+
+function toggleMenu(force){
+  const willOpen = (typeof force === 'boolean') ? force : !downloadWrap.classList.contains('open');
+  downloadWrap.classList.toggle('open', willOpen);
+  downloadBtn.setAttribute('aria-expanded', String(willOpen));
+}
+downloadBtn.addEventListener('click', e => { e.stopPropagation(); toggleMenu(); });
+document.addEventListener('click', e => {
+  if (!downloadWrap.contains(e.target)) toggleMenu(false);
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && downloadWrap.classList.contains('open')) toggleMenu(false);
+});
+
+downloadWrap.querySelectorAll('button[data-download]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    toggleMenu(false);
+    if (btn.dataset.download === 'full')              await downloadWithEditor();
+    if (btn.dataset.download === 'readonly-open')     await downloadReadonlyOpen();
+    if (btn.dataset.download === 'readonly-slim')     await downloadReadonlySlim();
+    if (btn.dataset.download === 'readonly-compact')  await downloadReadonlyCompact();
+  });
+});
+
+// Filename helper — pull title from the first H1 of the markdown
+function safeFilenameBase(){
+  const m = sourceEl.value.match(/^#\s+(.+?)\s*$/m);
+  let base = (m ? m[1] : 'dokufix-dokument').trim();
+  base = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, '-').slice(0, 80);
+  return base || 'dokufix-dokument';
+}
+function triggerDownload(filename, content, mime='text/html;charset=utf-8'){
+  const blob = new Blob([content], { type: mime });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+}
+
+// --- Download #1 — full dokufix file (with editor baked in) ---
+async function downloadWithEditor(){
+  const docClone = document.documentElement.cloneNode(true);
+
+  // Strip transient UI state from the clone
+  docClone.querySelectorAll('.menu-wrap.open').forEach(el => el.classList.remove('open'));
+  // Make sure the downloaded file opens in view mode by default (the receiver should see the document)
+  docClone.querySelector('body')?.classList.add('mode-view');
+  // Empty the rendered preview — receiver's render() runs on load and re-renders fresh.
+  // Without this, every Mermaid SVG (5-15 KB each) would ship inside the file as redundant bytes.
+  const previewClone = docClone.querySelector('#preview');
+  if (previewClone) previewClone.innerHTML = '';
+
+  // Rewrite both DEMO and SAMPLE blocks gzip-compressed:
+  //   DEMO_GZ  — preserved from this session (immutable original demo)
+  //   SAMPLE_GZ — current source content, gzipped
+  // Receiver's async init decompresses both on load.
+  const sourceGz = await gzipB64(sourceEl.value);
+  const demoGz   = DEMO_GZ || await gzipB64(DEMO);
+
+  const liveScripts = docClone.querySelectorAll('script:not([src])');
+  for (const sc of liveScripts){
+    if (sc.textContent.includes('=== DEMO-START ===') && sc.textContent.includes('=== SAMPLE-START ===')){
+      let txt = sc.textContent;
+      txt = txt.replace(
+        /\/\/ === DEMO-START ===[\s\S]*?\/\/ === DEMO-END ===/,
+        '// === DEMO-START ===\n' +
+        'let DEMO = "";\n' +
+        'let DEMO_GZ = ' + JSON.stringify(demoGz) + ';\n' +
+        '// === DEMO-END ==='
+      );
+      txt = txt.replace(
+        /\/\/ === SAMPLE-START ===[\s\S]*?\/\/ === SAMPLE-END ===/,
+        '// === SAMPLE-START ===\n' +
+        'let SAMPLE = "";\n' +
+        'let SAMPLE_GZ = ' + JSON.stringify(sourceGz) + ';\n' +
+        '// === SAMPLE-END ==='
+      );
+      sc.textContent = txt;
+      break;
+    }
+  }
+
+  const html = '<!DOCTYPE html>\n' + docClone.outerHTML;
+  triggerDownload(safeFilenameBase() + '.html', html);
+}
+
+// --- Gliederungsnummerierung (Heading numbering) ----------------
+const NUMBERING_KEY = 'dokufix-poc-numbering';
+const numberingBtn  = document.getElementById('numbering-btn');
+function applyNumbering(on){
+  document.body.classList.toggle('numbered', on);
+  numberingBtn.classList.toggle('toggle-on', on);
+  numberingBtn.setAttribute('aria-pressed', String(on));
+  try { localStorage.setItem(NUMBERING_KEY, on ? '1' : '0'); } catch(e){}
+}
+numberingBtn.addEventListener('click', () => {
+  applyNumbering(!document.body.classList.contains('numbered'));
+});
+// Restore saved preference on load
+try {
+  if (localStorage.getItem(NUMBERING_KEY) === '1') applyNumbering(true);
+} catch(e){}
+
+// Common CSS used by both read-only download variants
+const READONLY_CSS = `*{box-sizing:border-box;margin:0;padding:0}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+  color:#1c1c1e;background:#fff;line-height:1.5;
+  max-width:950px;margin:0 auto;padding:80px 32px 120px;
+  font-size:17px;-webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4{line-height:1.2;margin:1.4em 0 .5em;letter-spacing:-0.015em;font-weight:800}
+h1{font-size:34px;margin-top:0}
+h2{font-size:25px;border-bottom:1px solid #e5e5ea;padding-bottom:6px}
+h3{font-size:19px}
+p{margin-bottom:1em}
+ul,ol{margin:0 0 1em 1.5em} li{margin-bottom:4px}
+code:not(pre code){background:#f0f0f3;padding:2px 6px;border-radius:3px;font-family:ui-monospace,monospace;font-size:.88em;color:#c41a16}
+pre{background:#1c1c1e;color:#f5f5f7;padding:16px 20px;border-radius:6px;overflow-x:auto;margin:0 0 1em;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5}
+pre code{background:transparent;padding:0;color:inherit}
+blockquote{border-left:4px solid #d4ff00;padding:10px 18px;background:#fafafa;margin:0 0 1em;color:#3a3a3f}
+blockquote p:last-child{margin-bottom:0}
+table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
+th,td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
+th{background:#fafafa;font-weight:700}
+img{max-width:100%;height:auto;border-radius:4px}
+a{color:#0066cc}
+.mermaid{margin:24px 0;text-align:center}
+.mermaid svg{max-width:100%;height:auto}
+hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+.numbered{counter-reset:h2}
+.numbered h2{counter-reset:h3}
+.numbered h3{counter-reset:h4}
+.numbered h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
+.numbered h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+.numbered h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+@media (max-width:820px){body{padding:64px 22px 96px;font-size:16px}}`;
+
+function bodyClassForExport(){
+  return document.body.classList.contains('numbered') ? ' class="numbered"' : '';
+}
+
+function escTitle(s){ return String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
+
+// --- Download #2a — pure read-only, no JS, fully open HTML ---
+async function downloadReadonlyOpen(){
+  await render(); // ensure preview reflects current source AND mermaid SVGs are inlined
+
+  const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
+  const bodyHtml = previewEl.innerHTML;
+
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escTitle(title)}</title>
+<style>${READONLY_CSS}</style>
+</head>
+<body${bodyClassForExport()}>
+${bodyHtml}
+</body>
+</html>`;
+
+  triggerDownload(safeFilenameBase() + '-nur-lesen.html', html);
+}
+
+// --- Download #2b — schlank: text plain, only Mermaid SVGs gzipped per-element ---
+async function downloadReadonlySlim(){
+  await render();
+
+  const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
+
+  // Work on a clone of the rendered preview
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = previewEl.innerHTML;
+
+  // Replace each Mermaid SVG with a placeholder div that carries gzipped+base64 SVG payload.
+  // The text/HTML around it stays as readable plaintext.
+  let svgCount = 0;
+  for (const div of wrapper.querySelectorAll('.mermaid')){
+    const svg = div.querySelector('svg');
+    if (!svg) continue;
+    const gz = await gzipB64(svg.outerHTML);
+    div.setAttribute('data-gz', gz);
+    div.innerHTML = ''; // emptied — decoder fills it on load
+    svgCount++;
+  }
+
+  // Tiny inline decoder (only emitted if there are diagrams to expand)
+  const decoder = svgCount > 0
+    ? `<script>(async()=>{for(const el of document.querySelectorAll('[data-gz]')){try{const u=Uint8Array.from(atob(el.getAttribute('data-gz')),c=>c.charCodeAt(0));const r=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip')));el.innerHTML=await r.text();el.removeAttribute('data-gz');}catch(e){console.error('SVG decode failed',e);}}})();<\/script>`
+    : '';
+
+  const noscript = svgCount > 0
+    ? `<noscript><style>.mermaid[data-gz]{display:block;padding:24px;border:1px dashed #d8d8da;color:#8e8e92;text-align:center;font-size:14px;font-style:italic}.mermaid[data-gz]::before{content:"[Mermaid-Diagramm — JavaScript erforderlich, um es anzuzeigen]"}</style></noscript>`
+    : '';
+
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escTitle(title)}</title>
+<style>${READONLY_CSS}</style>
+${noscript}
+</head>
+<body${bodyClassForExport()}>
+${wrapper.innerHTML}
+${decoder}
+</body>
+</html>`;
+
+  triggerDownload(safeFilenameBase() + '-schlank.html', html);
+}
+
+// --- Download #2c — read-only, fully gzip-compressed, tiny JS decoder ---
+async function downloadReadonlyCompact(){
+  await render();
+
+  const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
+  const bodyHtml = previewEl.innerHTML;
+  const payload = await gzipB64(bodyHtml);
+
+  const html = `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${escTitle(title)}</title>
+<style>${READONLY_CSS}</style>
+</head>
+<body${bodyClassForExport()}>
+<noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.html) anfordern.</p></noscript>
+<div id="d"></div>
+<script type="text/plain" id="p">${payload}<\/script>
+<script>
+(async()=>{
+  const b=document.getElementById('p').textContent.trim();
+  const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));
+  const r=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip')));
+  document.getElementById('d').innerHTML=await r.text();
+})();
+<\/script>
+</body>
+</html>`;
+
+  triggerDownload(safeFilenameBase() + '-kompakt.html', html);
+}
+
+// Hamburger menu (mobile)
+const hamburgerBtn  = document.getElementById('hamburger');
+const headerActions = document.getElementById('header-actions');
+hamburgerBtn.addEventListener('click', e => {
+  e.stopPropagation();
+  const willOpen = !headerActions.classList.contains('open');
+  headerActions.classList.toggle('open', willOpen);
+  hamburgerBtn.setAttribute('aria-expanded', String(willOpen));
+});
+document.addEventListener('click', e => {
+  if (!headerActions.contains(e.target) && e.target !== hamburgerBtn){
+    headerActions.classList.remove('open');
+    hamburgerBtn.setAttribute('aria-expanded', 'false');
+  }
+});
+
+// View / Editor toggle
+const viewBtn = document.getElementById('view-btn');
+const editBtn = document.getElementById('edit-btn');
+viewBtn.addEventListener('click', async () => {
+  await render();              // make sure preview reflects latest source
+  document.body.classList.add('mode-view');
+  window.scrollTo(0, 0);
+  document.getElementById('preview').scrollTop = 0;
+});
+editBtn.addEventListener('click', () => {
+  document.body.classList.remove('mode-view');
+  sourceEl.focus();
+});
+// ESC leaves view mode
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape' && document.body.classList.contains('mode-view')) {
+    document.body.classList.remove('mode-view');
+    sourceEl.focus();
+  }
+});
+
+// Async init — decompresses DEMO_GZ and SAMPLE_GZ if set, then loads source + renders
+(async () => {
+  if (DEMO_GZ) {
+    try { DEMO = await ungzipB64(DEMO_GZ); }
+    catch (e) { console.error('DEMO_GZ decompression failed:', e); }
+  }
+  if (SAMPLE_GZ) {
+    try { SAMPLE = await ungzipB64(SAMPLE_GZ); }
+    catch (e) { console.error('SAMPLE_GZ decompression failed:', e); }
+  }
+  const stored = loadFromStorage();
+  // Fallback chain: localStorage > SAMPLE (per-doc default) > DEMO (original)
+  const fallback = SAMPLE || DEMO;
+  sourceEl.value = (stored !== null && stored !== '') ? stored : fallback;
+  render();
+})();
+</script>
+
+</body>
+</html>
