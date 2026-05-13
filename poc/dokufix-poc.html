@@ -88,6 +88,12 @@
   }
   .version-badge:hover{color:#f5f5f7;border-color:#48484a}
   .version-badge:focus-visible{outline:2px solid #d4ff00;outline-offset:2px}
+  .version-badge.persist-failed{
+    background:rgba(255,91,58,0.18);
+    color:#ff8a6a;
+    border-color:rgba(255,91,58,0.5);
+    animation:dirtyPulse 1.6s ease-in-out infinite;
+  }
 
   /* Version history modal */
   .version-modal{
@@ -164,6 +170,12 @@
   }
   .commit-btn:hover{background:#3a3a3c}
   .commit-btn:focus-visible{outline:2px solid #d4ff00;outline-offset:2px}
+  .commit-btn.shake{animation:btnShake .35s ease}
+  @keyframes btnShake{
+    0%,100%{transform:translateX(0)}
+    25%{transform:translateX(-4px)}
+    75%{transform:translateX(4px)}
+  }
   .commit-hint{
     font-size:12px;color:#6e6e73;
     flex:1;min-width:0;
@@ -501,7 +513,10 @@
   }
 
   @media (min-width:1500px){
-    body.mode-view{
+    /* Only switch to 2-column grid when the rail actually has items;
+       otherwise the body stays single-column and the document remains
+       centered (no empty 425 px column on the right). */
+    body.mode-view:has(aside.dokufix-rail.has-items){
       display:grid;
       grid-template-columns:minmax(0, 1fr) 425px;
       column-gap:73px;
@@ -509,13 +524,13 @@
       margin:0 auto;
       padding:0 32px;
     }
-    body.mode-view #preview{
+    body.mode-view:has(aside.dokufix-rail.has-items) #preview{
       max-width:1000px;
       margin:0 auto;
       padding-left:0;
       padding-right:0;
     }
-    body.mode-view .dokufix-rail.has-items{
+    body.mode-view aside.dokufix-rail.has-items{
       display:block;
       position:sticky;
       top:80px;
@@ -719,16 +734,48 @@ const previewEl = document.getElementById('preview');
 const btnEl     = document.getElementById('render-btn');
 const resetEl   = document.getElementById('reset-btn');
 
+// --- Per-document identity ------------------------------------
+// Each dokufix file carries a UUID baked into its #dokufix-history JSON.
+// Both localStorage keys (editor source + version history) are suffixed
+// with this UUID, so two different dokufix files in the same browser
+// no longer collide on storage. Files predating this feature load with
+// no UUID; we generate one for the session and bake it on first save.
+let docUuid = '';
+function generateDocUuid(){
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'){
+    try { return crypto.randomUUID(); } catch(e){ /* fall through */ }
+  }
+  // Fallback for non-secure contexts (some file:// browsers)
+  return 'd-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+}
+
+// Stable session-spanning identifier for files that have not yet been
+// saved (no UUID baked into the JSON). Without this, every reload would
+// produce a fresh UUID and orphan the localStorage data from the prior
+// session. We derive the fallback from location.href so the same file
+// at the same path keeps the same fallback ID across reloads — but two
+// different files at different paths still get distinct IDs.
+function fallbackUuidFromLocation(){
+  const src = String(location.href);
+  // Cheap deterministic hash (FNV-1a 32-bit-ish, base36-encoded).
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < src.length; i++){
+    h ^= src.charCodeAt(i);
+    h = Math.imul(h, 16777619) >>> 0;
+  }
+  return 'loc-' + h.toString(36);
+}
+
 // --- Browser-side persistence ---------------------------------
 // PoC: localStorage. MVP target per product brief is IndexedDB (larger payloads,
 // survives more aggressively across tab/crash). Easy to swap later.
-const STORAGE_KEY = 'dokufix-poc-source-v1';
+function sourceStorageKey(){ return 'dokufix-doc-' + docUuid + '-source'; }
 function loadFromStorage(){
-  try{ return localStorage.getItem(STORAGE_KEY); }
+  try{ return localStorage.getItem(sourceStorageKey()); }
   catch(e){ console.warn('localStorage read failed:', e); return null; }
 }
 function saveToStorage(text){
-  try{ localStorage.setItem(STORAGE_KEY, text); }
+  try{ localStorage.setItem(sourceStorageKey(), text); }
   catch(e){ console.warn('localStorage write failed:', e); }
 }
 let saveTimer;
@@ -750,7 +797,7 @@ function scheduleSave(){
 let currentVersion = 0;
 let versionHistory = [];
 let commitBaseline = '';  // source at time of last version event
-const VERSION_STORAGE_KEY = 'dokufix-poc-versions-v1';
+function versionStorageKey(){ return 'dokufix-doc-' + docUuid + '-versions'; }
 const versionBtn = document.getElementById('version-btn');
 const versionModal = document.getElementById('version-modal');
 
@@ -763,46 +810,93 @@ function loadVersionHistory(initialSource){
   if (el) {
     try {
       const raw = (el.textContent || '').trim() || '{"version":0,"history":[]}';
-      fileData = JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') fileData = parsed;
     } catch (e) { console.warn('File history parse failed:', e); }
   }
+  // The UUID lives in the file's JSON block. Missing on older / never-saved
+  // files; we fall back to a deterministic id derived from location.href
+  // so a reload-before-save still recovers the prior session's draft and
+  // commits from localStorage. On first save, a real UUID is baked in.
+  docUuid = (fileData && typeof fileData.uuid === 'string' && fileData.uuid)
+    ? fileData.uuid : fallbackUuidFromLocation();
+
   let lsData = null;
   try {
-    const raw = localStorage.getItem(VERSION_STORAGE_KEY);
-    if (raw) lsData = JSON.parse(raw);
+    const raw = localStorage.getItem(versionStorageKey());
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') lsData = parsed;
+    }
   } catch (e) { console.warn('Storage history parse failed:', e); }
 
-  const lsVer = lsData ? (Number(lsData.version) || 0) : -1;
-  const fileVer = Number(fileData.version) || 0;
+  const lsVer = lsData ? sanitizeVersion(lsData.version) : -1;
+  const fileVer = sanitizeVersion(fileData.version);
   const useLs = lsData && lsVer > fileVer;
   const data = useLs ? lsData : fileData;
 
-  currentVersion = Number(data.version) || 0;
-  versionHistory = Array.isArray(data.history) ? data.history : [];
+  currentVersion = sanitizeVersion(data.version);
+  versionHistory = Array.isArray(data.history) ? data.history.filter(isValidEntry) : [];
   // commitBaseline = the source at the time of the last version event.
   // If localStorage is ahead, it stored the source as it was when the
   // commit-only happened. Otherwise the file's baked SAMPLE represents it.
-  commitBaseline = useLs
-    ? (typeof data.commitBaseline === 'string' ? data.commitBaseline : initialSource)
+  commitBaseline = useLs && typeof data.commitBaseline === 'string'
+    ? data.commitBaseline
     : initialSource;
+}
+
+function sanitizeVersion(n){
+  const v = Math.floor(Number(n));
+  return Number.isFinite(v) && v >= 0 ? v : 0;
+}
+function isValidEntry(e){
+  return e && typeof e === 'object'
+    && Number.isFinite(e.v) && typeof e.t === 'string'
+    && (typeof e.m === 'string' || e.m === undefined)
+    && (typeof e.s === 'string' || e.s === undefined);
 }
 
 function persistVersionHistory(){
   try {
-    localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify({
+    localStorage.setItem(versionStorageKey(), JSON.stringify({
+      uuid: docUuid,
       version: currentVersion,
       history: versionHistory,
       commitBaseline: commitBaseline,
     }));
-  } catch (e) { console.warn('Version persist failed:', e); }
+    setPersistFailed(false);
+  } catch (e) {
+    console.warn('Version persist failed:', e);
+    setPersistFailed(true);
+  }
 }
 
-function commitNewVersion(message){
+let persistFailedFlag = false;
+function setPersistFailed(failed){
+  if (persistFailedFlag === failed) return;
+  persistFailedFlag = failed;
+  if (versionBtn){
+    versionBtn.classList.toggle('persist-failed', failed);
+    versionBtn.title = failed
+      ? 'Achtung: Versionsdaten konnten nicht im Browser gespeichert werden (Quota?). Klick für Details.'
+      : 'Versionsverlauf anzeigen';
+  }
+}
+
+async function commitNewVersion(message){
+  // Capture a gzipped snapshot of the source at this version. Lets readers
+  // of the file inspect what the document looked like at any prior version
+  // — the basis of the audit story.
+  let snapshot = '';
+  try { snapshot = await gzipB64(sourceEl.value); }
+  catch (e) { console.warn('Version snapshot gzip failed:', e); }
+
   currentVersion += 1;
   versionHistory = versionHistory.concat([{
     v: currentVersion,
     t: new Date().toISOString(),
     m: message,
+    s: snapshot,
   }]);
   commitBaseline = sourceEl.value;
   persistVersionHistory();
@@ -841,23 +935,32 @@ function renderVersionModalBody(){
 
 if (versionBtn && versionModal){
   versionBtn.addEventListener('click', () => {
+    if (versionModal.open) return;  // guard against double-click
     renderVersionModalBody();
     versionModal.showModal();
   });
-  versionModal.querySelector('.version-modal-close').addEventListener('click', () => versionModal.close());
+  const closeBtn = versionModal.querySelector('.version-modal-close');
+  if (closeBtn) closeBtn.addEventListener('click', () => versionModal.close());
   // Click outside dialog (on backdrop) closes
   versionModal.addEventListener('click', e => {
     if (e.target === versionModal) versionModal.close();
   });
   const commitBtn = document.getElementById('commit-btn');
   if (commitBtn){
-    commitBtn.addEventListener('click', () => {
+    commitBtn.addEventListener('click', async () => {
+      // Skip silently when nothing changed since the last commit/save —
+      // mirrors the "Mit Editor" save behaviour. No empty-commit spam.
+      if (sourceEl.value === commitBaseline){
+        commitBtn.classList.add('shake');
+        setTimeout(() => commitBtn.classList.remove('shake'), 400);
+        return;
+      }
       const raw = window.prompt(
         'Beschreibung dieser Version (leer lassen für ohne):',
         ''
       );
       if (raw === null) return;
-      commitNewVersion(raw.trim());
+      await commitNewVersion(raw.trim());
       renderVersionModalBody();
     });
   }
@@ -934,9 +1037,16 @@ function escapeHtml(s) {
 // Both feed off the same set of generated heading IDs.
 
 function slugify(text, used){
+  // Fold most Latin diacritics via NFKD decomposition (é → e, ç → c, ñ → n).
+  // German-specific letters are spelled out explicitly because NFKD splits
+  // them differently (ä → "a" + combining diaeresis, which would collapse to
+  // "a" — we want "ae" instead, the conventional German romanization).
   let slug = String(text)
-    .toLowerCase()
     .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/Ä/g, 'Ae').replace(/Ö/g, 'Oe').replace(/Ü/g, 'Ue')
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')  // strip remaining combining marks
+    .toLowerCase()
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')
@@ -977,8 +1087,14 @@ function buildTocHtml(headings, maxLevel){
 function processInlineToc(headings){
   const paras = previewEl.querySelectorAll('p');
   for (const p of paras){
-    const txt = p.textContent.trim();
-    const m = txt.match(/^\[\[toc(?::([2-6]))?\]\]$/);
+    // Stricter than textContent.trim(): the paragraph must contain ONLY a
+    // text node matching the marker — no inline elements (e.g., <code>,
+    // <em>) wrapping it. That way a doc explaining the marker by writing
+    // `[[toc]]` (which marked renders as <p><code>[[toc]]</code></p>)
+    // doesn't accidentally invoke the feature.
+    if (p.children.length !== 0) continue;
+    const txt = (p.textContent || '').trim();
+    const m = txt.match(/^\[\[toc(?::([1-6]))?\]\]$/);
     if (!m) continue;
     const maxLevel = m[1] ? parseInt(m[1], 10) : 3;
     const inner = buildTocHtml(headings, maxLevel);
@@ -1001,7 +1117,11 @@ function tocLinkHandler(e){
   if (!target) return;
   e.preventDefault();
   target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  history.replaceState(null, '', '#' + id);
+  // Some browsers (older Safari, file:// in some Chromium builds) throw
+  // SecurityError on history API in non-http contexts. Smooth scroll has
+  // already happened — just swallow the hash-update failure.
+  try { history.replaceState(null, '', '#' + id); }
+  catch (err) { /* ignore */ }
 }
 
 // Build a static rail HTML string (no scrollspy) for read-only exports.
@@ -1021,6 +1141,9 @@ function buildStaticRailHtml(headings){
 // --- Right-side scrollspy rail --------------------------------
 const railEl = document.getElementById('dokufix-rail');
 const RAIL_MIN_HEADINGS = 4;
+// Click handler is attached ONCE at init; the rail's children are
+// rebuilt on each render() but the rail element itself persists.
+if (railEl) railEl.addEventListener('click', tocLinkHandler);
 // Reading line: where in the viewport we consider "what the reader is currently looking at".
 // 25 % from the top — under the eye-line of someone scanning new content.
 const READING_LINE_RATIO = 0.25;
@@ -1057,7 +1180,6 @@ function buildRail(headings){
   html += '</ol>';
   railEl.innerHTML = html;
   railEl.classList.add('has-items');
-  railEl.addEventListener('click', tocLinkHandler);
 
   // Scrollspy: pick the last heading whose top edge is at or above the reading line.
   // Guarantees a non-empty active state in every position — before the first heading
@@ -1147,11 +1269,23 @@ document.addEventListener('keydown', e => {
 
 downloadWrap.querySelectorAll('button[data-download]').forEach(btn => {
   btn.addEventListener('click', async () => {
+    if (!initDone || downloadInFlight) return;
     toggleMenu(false);
-    if (btn.dataset.download === 'full')              await downloadWithEditor();
-    if (btn.dataset.download === 'readonly-open')     await downloadReadonlyOpen();
-    if (btn.dataset.download === 'readonly-slim')     await downloadReadonlySlim();
-    if (btn.dataset.download === 'readonly-compact')  await downloadReadonlyCompact();
+    // For read-only downloads we set the in-flight gate here.
+    // downloadWithEditor() manages its own gate (it can take more steps).
+    const variant = btn.dataset.download;
+    if (variant === 'full'){
+      await downloadWithEditor();
+      return;
+    }
+    setDownloadInFlight(true);
+    try {
+      if (variant === 'readonly-open')     await downloadReadonlyOpen();
+      if (variant === 'readonly-slim')     await downloadReadonlySlim();
+      if (variant === 'readonly-compact')  await downloadReadonlyCompact();
+    } finally {
+      setDownloadInFlight(false);
+    }
   });
 });
 
@@ -1171,82 +1305,158 @@ function triggerDownload(filename, content, mime='text/html;charset=utf-8'){
   setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
+// Init gate — set true at end of the async IIFE. Until then, download
+// buttons (and any state-mutating user actions) are disabled so a click
+// during slow CDN load can't fire against half-initialized state.
+let initDone = false;
+let downloadInFlight = false;
+function setDownloadInFlight(flag){
+  downloadInFlight = flag;
+  downloadWrap.querySelectorAll('button[data-download]').forEach(b => {
+    b.disabled = flag;
+  });
+}
+
 // --- Download #1 — full dokufix file (with editor baked in) ---
+
+// Encode JSON safely for embedding inside <script type="application/json">.
+// A literal close-script tag inside the JSON would close the script tag
+// prematurely; the `\/` escape is valid in JSON and survives JSON.parse on load.
+function encodeJsonForScript(obj){
+  return JSON.stringify(obj).replace(/<\/script>/gi, '<\\/script>');
+}
+
 async function downloadWithEditor(){
+  if (!initDone) return;
+  // First save with a location-based fallback UUID — upgrade to a real UUID
+  // and migrate the localStorage data to the new key. Subsequent saves keep
+  // the same real UUID. Copies of this file (via OS-level file copy) will
+  // share the UUID — that's the intentional behaviour: each "lineage" of
+  // saves shares a single identifier until the user breaks it manually.
+  if (docUuid.startsWith('loc-')){
+    const oldUuid = docUuid;
+    docUuid = generateDocUuid();
+    try {
+      const oldSrcKey = 'dokufix-doc-' + oldUuid + '-source';
+      const oldVerKey = 'dokufix-doc-' + oldUuid + '-versions';
+      const oldSrc = localStorage.getItem(oldSrcKey);
+      const oldVer = localStorage.getItem(oldVerKey);
+      if (oldSrc !== null){ localStorage.setItem(sourceStorageKey(), oldSrc); localStorage.removeItem(oldSrcKey); }
+      if (oldVer !== null){ localStorage.setItem(versionStorageKey(), oldVer); localStorage.removeItem(oldVerKey); }
+    } catch (e) { /* localStorage failures non-fatal here */ }
+  }
   // Only ask for a commit message if there are actual changes since the last
   // version event. If the source already matches the last commit/save, we
   // silently re-emit the current version — no prompt, no bump.
   const hasUncommittedChanges = sourceEl.value !== commitBaseline;
+  let pendingVersion = currentVersion;
+  let pendingHistory = versionHistory;
+  let pendingCommitBaseline = commitBaseline;
   if (hasUncommittedChanges){
     const raw = window.prompt(
       'Optionale Beschreibung dieser Version (leer lassen für ohne):',
       ''
     );
     if (raw === null) return;  // user cancelled — abort save entirely
-    commitNewVersion(raw.trim());
+    // Build the new entry IN MEMORY ONLY. We do not mutate currentVersion /
+    // versionHistory yet — that happens after the download has actually
+    // been initiated, so a serialization or popup-blocker failure can't
+    // leave a phantom version dangling in localStorage.
+    let snapshot = '';
+    try { snapshot = await gzipB64(sourceEl.value); }
+    catch (e) { console.warn('Snapshot gzip failed:', e); }
+    pendingVersion = currentVersion + 1;
+    pendingHistory = versionHistory.concat([{
+      v: pendingVersion,
+      t: new Date().toISOString(),
+      m: raw.trim(),
+      s: snapshot,
+    }]);
+    pendingCommitBaseline = sourceEl.value;
   }
 
-  const historyJson = JSON.stringify({ version: currentVersion, history: versionHistory });
+  setDownloadInFlight(true);
+  try {
+    const historyJson = encodeJsonForScript({
+      uuid: docUuid,
+      version: pendingVersion,
+      history: pendingHistory,
+    });
 
-  const docClone = document.documentElement.cloneNode(true);
+    const docClone = document.documentElement.cloneNode(true);
 
-  // Strip transient UI state from the clone
-  docClone.querySelectorAll('.menu-wrap.open').forEach(el => el.classList.remove('open'));
-  // Receiver will recompute dirty state on init against the new baseline.
-  docClone.querySelector('body')?.classList.remove('is-dirty');
-  // Make sure the downloaded file opens in view mode by default (the receiver should see the document)
-  docClone.querySelector('body')?.classList.add('mode-view');
-  // Empty the rendered preview — receiver's render() runs on load and re-renders fresh.
-  // Without this, every Mermaid SVG (5-15 KB each) would ship inside the file as redundant bytes.
-  const previewClone = docClone.querySelector('#preview');
-  if (previewClone) previewClone.innerHTML = '';
-  // Same for the scrollspy rail — receiver's buildRail() repopulates it on render.
-  const railClone = docClone.querySelector('#dokufix-rail');
-  if (railClone){ railClone.innerHTML = ''; railClone.classList.remove('has-items'); }
-  // Bake the current version history into the clone before serializing.
-  const historyClone = docClone.querySelector('#dokufix-history');
-  if (historyClone) historyClone.textContent = historyJson;
-  const versionBadgeClone = docClone.querySelector('#version-btn');
-  if (versionBadgeClone) versionBadgeClone.textContent = 'v' + currentVersion;
-
-  // Rewrite both DEMO and SAMPLE blocks gzip-compressed:
-  //   DEMO_GZ  — preserved from this session (immutable original demo)
-  //   SAMPLE_GZ — current source content, gzipped
-  // Receiver's async init decompresses both on load.
-  const sourceGz = await gzipB64(sourceEl.value);
-  const demoGz   = DEMO_GZ || await gzipB64(DEMO);
-
-  const liveScripts = docClone.querySelectorAll('script:not([src])');
-  for (const sc of liveScripts){
-    if (sc.textContent.includes('=== DEMO-START ===') && sc.textContent.includes('=== SAMPLE-START ===')){
-      let txt = sc.textContent;
-      txt = txt.replace(
-        /\/\/ === DEMO-START ===[\s\S]*?\/\/ === DEMO-END ===/,
-        '// === DEMO-START ===\n' +
-        'let DEMO = "";\n' +
-        'let DEMO_GZ = ' + JSON.stringify(demoGz) + ';\n' +
-        '// === DEMO-END ==='
-      );
-      txt = txt.replace(
-        /\/\/ === SAMPLE-START ===[\s\S]*?\/\/ === SAMPLE-END ===/,
-        '// === SAMPLE-START ===\n' +
-        'let SAMPLE = "";\n' +
-        'let SAMPLE_GZ = ' + JSON.stringify(sourceGz) + ';\n' +
-        '// === SAMPLE-END ==='
-      );
-      sc.textContent = txt;
-      break;
+    // Strip transient UI state from the clone
+    docClone.querySelectorAll('.menu-wrap.open').forEach(el => el.classList.remove('open'));
+    // The "in-flight" disabled state must not survive into the saved file —
+    // receivers must be able to use their download buttons immediately.
+    docClone.querySelectorAll('button[disabled]').forEach(b => b.removeAttribute('disabled'));
+    // Receiver will recompute dirty state on init against the new baseline.
+    docClone.querySelector('body')?.classList.remove('is-dirty');
+    // Reset the title — strip the leading "● " from dirty-state.
+    const titleClone = docClone.querySelector('title');
+    if (titleClone) titleClone.textContent = baseTitle;
+    // Make sure the downloaded file opens in view mode by default (the receiver should see the document)
+    docClone.querySelector('body')?.classList.add('mode-view');
+    // Empty the rendered preview — receiver's render() runs on load and re-renders fresh.
+    // Without this, every Mermaid SVG (5-15 KB each) would ship inside the file as redundant bytes.
+    const previewClone = docClone.querySelector('#preview');
+    if (previewClone) previewClone.innerHTML = '';
+    // Same for the scrollspy rail — receiver's buildRail() repopulates it on render.
+    const railClone = docClone.querySelector('#dokufix-rail');
+    if (railClone){ railClone.innerHTML = ''; railClone.classList.remove('has-items'); }
+    // Bake the version history into the clone before serializing.
+    const historyClone = docClone.querySelector('#dokufix-history');
+    if (historyClone) historyClone.textContent = historyJson;
+    const versionBadgeClone = docClone.querySelector('#version-btn');
+    if (versionBadgeClone){
+      versionBadgeClone.textContent = 'v' + pendingVersion;
+      versionBadgeClone.classList.remove('persist-failed');
     }
+
+    // Rewrite both DEMO and SAMPLE blocks gzip-compressed:
+    //   DEMO_GZ  — preserved from this session (immutable original demo)
+    //   SAMPLE_GZ — current source content, gzipped
+    // Receiver's async init decompresses both on load.
+    const sourceGz = await gzipB64(sourceEl.value);
+    const demoGz   = DEMO_GZ || await gzipB64(DEMO);
+
+    const liveScripts = docClone.querySelectorAll('script:not([src])');
+    for (const sc of liveScripts){
+      if (sc.textContent.includes('=== DEMO-START ===') && sc.textContent.includes('=== SAMPLE-START ===')){
+        let txt = sc.textContent;
+        txt = txt.replace(
+          /\/\/ === DEMO-START ===[\s\S]*?\/\/ === DEMO-END ===/,
+          '// === DEMO-START ===\n' +
+          'let DEMO = "";\n' +
+          'let DEMO_GZ = ' + JSON.stringify(demoGz) + ';\n' +
+          '// === DEMO-END ==='
+        );
+        txt = txt.replace(
+          /\/\/ === SAMPLE-START ===[\s\S]*?\/\/ === SAMPLE-END ===/,
+          '// === SAMPLE-START ===\n' +
+          'let SAMPLE = "";\n' +
+          'let SAMPLE_GZ = ' + JSON.stringify(sourceGz) + ';\n' +
+          '// === SAMPLE-END ==='
+        );
+        sc.textContent = txt;
+        break;
+      }
+    }
+
+    const html = '<!DOCTYPE html>\n' + docClone.outerHTML;
+    triggerDownload(safeFilenameBase() + '.html', html);
+
+    // Download initiated successfully. Now (and only now) mutate global state.
+    currentVersion = pendingVersion;
+    versionHistory = pendingHistory;
+    commitBaseline = pendingCommitBaseline;
+    cleanBaseline = sourceEl.value;
+    updateDirtyState();
+    updateVersionBadge();
+    persistVersionHistory();
+  } finally {
+    setDownloadInFlight(false);
   }
-
-  const html = '<!DOCTYPE html>\n' + docClone.outerHTML;
-  triggerDownload(safeFilenameBase() + '.html', html);
-
-  // The downloaded file now matches the current editor content → reset baseline.
-  cleanBaseline = sourceEl.value;
-  updateDirtyState();
-  // Persist so a later reload sees the just-saved state as authoritative.
-  persistVersionHistory();
 }
 
 // --- Gliederungsnummerierung (Heading numbering) ----------------
@@ -1306,10 +1516,11 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 .dokufix-meta{margin-top:4em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.85em;color:#8e8e92}
 .dokufix-meta p{margin:0}
 @media (min-width:1500px){
-  body{max-width:1562px;display:grid;grid-template-columns:minmax(0, 1fr) 425px;column-gap:73px;padding:80px 32px 120px}
-  .reader-body{max-width:1000px;margin:0 auto;width:100%}
+  body:has(aside.dokufix-rail.has-items){max-width:1562px;display:grid;grid-template-columns:minmax(0, 1fr) 425px;column-gap:73px;padding:80px 32px 120px}
+  body:has(aside.dokufix-rail.has-items) .reader-body{max-width:1000px;margin:0 auto;width:100%}
   .dokufix-rail.has-items{display:block;position:sticky;top:80px;max-height:calc(100vh - 100px);align-self:start}
 }
+.dokufix-rail-pending{pointer-events:none;opacity:.4;transition:opacity .25s ease}
 .dokufix-toc{margin:1.5em 0 2em;padding:1.1em 1.4em 1.2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.94em}
 .dokufix-toc ol{list-style:none;margin:0;padding:0}
 .dokufix-toc > ol{counter-reset:tocH2}
@@ -1343,14 +1554,19 @@ function bodyClassForExport(){
 
 function escTitle(s){ return String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 
-// Small metadata block appended to read-only exports — shows the version
-// they were generated from. Skipped for files that have never been saved.
+// Small metadata block appended to read-only exports. Always emits at least
+// an export timestamp — even on files that have never been saved (v0) — so
+// every read-only artifact carries a "when was this generated" anchor.
 function buildMetaFooterHtml(){
-  if (currentVersion === 0 || !versionHistory.length) return '';
+  const nowStr = escapeHtml(formatVersionDate(new Date().toISOString()));
+  if (currentVersion === 0 || !versionHistory.length){
+    return '<footer class="dokufix-meta"><p>Exportiert: ' + nowStr + ' · ungespeicherte Fassung</p></footer>';
+  }
   const last = versionHistory[versionHistory.length - 1];
   const dateStr = escapeHtml(formatVersionDate(last.t));
   const msgStr = last.m ? ' · ' + escapeHtml(last.m) : '';
-  return '<footer class="dokufix-meta"><p>Version ' + last.v + ' · ' + dateStr + msgStr + '</p></footer>';
+  return '<footer class="dokufix-meta"><p>Version ' + last.v + ' · ' + dateStr + msgStr +
+         ' · exportiert ' + nowStr + '</p></footer>';
 }
 
 // --- Download #2a — pure read-only, no JS, fully open HTML ---
@@ -1445,7 +1661,11 @@ async function downloadReadonlyCompact(){
   const payload = await gzipB64(bodyHtml);
   // Rail stays outside the compressed payload so it appears immediately
   // (no flash of empty navigation while the body decompresses).
-  const railHtml = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+  // Mark the rail as pending — clicks would race against decompression
+  // (anchor targets don't exist until the body is filled). CSS dims it
+  // and disables pointer events; the decoder removes the class on done.
+  const railHtmlPending = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+    .replace(/class="dokufix-rail has-items"/, 'class="dokufix-rail has-items dokufix-rail-pending"');
 
   const html = `<!DOCTYPE html>
 <html lang="de">
@@ -1458,7 +1678,7 @@ async function downloadReadonlyCompact(){
 <body${bodyClassForExport()}>
 <noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.html) anfordern.</p></noscript>
 <main class="reader-body"><div id="d"></div></main>
-${railHtml}
+${railHtmlPending}
 <script type="text/plain" id="p">${payload}<\/script>
 <script>
 (async()=>{
@@ -1466,6 +1686,8 @@ ${railHtml}
   const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));
   const r=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip')));
   document.getElementById('d').innerHTML=await r.text();
+  const rail=document.querySelector('.dokufix-rail-pending');
+  if(rail) rail.classList.remove('dokufix-rail-pending');
 })();
 <\/script>
 </body>
@@ -1521,17 +1743,19 @@ document.addEventListener('keydown', e => {
     try { SAMPLE = await ungzipB64(SAMPLE_GZ); }
     catch (e) { console.error('SAMPLE_GZ decompression failed:', e); }
   }
-  const stored = loadFromStorage();
-  // Fallback chain: localStorage > SAMPLE (per-doc default) > DEMO (original)
   const fallback = SAMPLE || DEMO;
+  // loadVersionHistory FIRST: it sets docUuid, which is needed before
+  // sourceStorageKey() can produce a UUID-suffixed key.
+  loadVersionHistory(fallback);
+  const stored = loadFromStorage();
   // Baseline = what's actually baked into THIS file. A draft restored from
   // localStorage that differs from the baseline correctly reads as "geändert".
   cleanBaseline = fallback;
   sourceEl.value = (stored !== null && stored !== '') ? stored : fallback;
   updateDirtyState();
-  loadVersionHistory(fallback);
   updateVersionBadge();
   render();
+  initDone = true;
 })();
 </script>
 
