@@ -752,11 +752,15 @@ function generateDocUuid(){
 // Stable session-spanning identifier for files that have not yet been
 // saved (no UUID baked into the JSON). Without this, every reload would
 // produce a fresh UUID and orphan the localStorage data from the prior
-// session. We derive the fallback from location.href so the same file
+// session. We derive the fallback from origin+pathname so the same file
 // at the same path keeps the same fallback ID across reloads — but two
-// different files at different paths still get distinct IDs.
+// different files at different paths still get distinct IDs. Hash and
+// query are deliberately excluded: ToC clicks mutate the hash via
+// history.replaceState, and a stale anchor in the URL on next reload
+// would otherwise produce a different key and orphan the prior data.
 function fallbackUuidFromLocation(){
-  const src = String(location.href);
+  const src = (location.origin || '') + (location.pathname || '')
+           || String(location.href);
   // Cheap deterministic hash (FNV-1a 32-bit-ish, base36-encoded).
   let h = 2166136261 >>> 0;
   for (let i = 0; i < src.length; i++){
