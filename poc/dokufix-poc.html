@@ -161,6 +161,25 @@
   #preview .mermaid svg{max-width:100%;height:auto}
   #preview hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 
+  /* Footnotes (marked-footnote / GFM style) */
+  #preview .footnotes{
+    margin-top:3em;padding-top:1.5em;
+    border-top:1px solid #e5e5ea;
+    font-size:.9em;color:#3a3a3f;
+  }
+  #preview .footnotes h2{display:none}
+  #preview .footnotes ol{margin:0 0 0 1.5em}
+  #preview .footnotes li{margin-bottom:.5em}
+  #preview .footnotes li p{margin:0}
+  #preview sup a, #preview a[data-footnote-ref]{
+    text-decoration:none;font-weight:700;
+    padding:0 2px;color:#0066cc;
+  }
+  #preview a[data-footnote-backref]{
+    text-decoration:none;margin-left:4px;opacity:.55;
+  }
+  #preview a[data-footnote-backref]:hover{opacity:1}
+
   /* Gliederungsnummerierung — opt-in via body.numbered */
   .numbered #preview{counter-reset:h2}
   .numbered #preview h2{counter-reset:h3}
@@ -328,6 +347,7 @@
 
 <!-- CDN libraries (PoC only — production bundle will inline these) -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked-footnote/dist/index.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
 
 <script>
@@ -337,6 +357,11 @@ mermaid.initialize({
   securityLevel: 'loose',
   flowchart: { curve: 'basis' }
 });
+
+// Enable GFM footnotes ([^id] inline + [^id]: definition)
+if (typeof markedFootnote === 'function') {
+  marked.use(markedFootnote());
+}
 
 // --- Gzip helpers (browser-native, no library) -------------------
 // Used both for compressing on download and for decompressing the
@@ -361,6 +386,8 @@ let DEMO = `# Willkommen bei dokufix
 Sie lesen gerade. Das hier ist der **Lesemodus** — keine Werkzeugleiste, keine Doppel-Ansicht, kein Chrome. Genau so kommt ein dokufix-Dokument beim Empfänger an: als ein Dokument, nicht als App.
 
 Oben rechts gibt es einen einzigen kleinen Button: **„Editor ↩"**. Ein Klick — und Sie wechseln in die Bearbeitungsansicht und können diese Datei selbst verändern. Kein Tool installieren, kein Konto, keine Plattform dazwischen.
+
+Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentlichten Richtlinie, einem Audit-Bericht, einer finalen Fassung. Dafür gibt es die **Auslieferung ohne Editor**: das Dokument bleibt lesbar, der Bearbeitungs-Modus fehlt komplett. Wird später doch eine Aktualisierung nötig, lässt sich der Inhalt jederzeit wieder in einen dokufix-Editor laden und weiterbearbeiten. Sie entscheiden bei jeder Auslieferung neu, ob das Dokument *gelesen* oder auch *fortgeschrieben* werden darf.
 
 ## Was Sie in diesem Dokument sehen
 
@@ -419,7 +446,9 @@ function dokufix(md) {
 
 ---
 
-Probieren Sie es aus: Klicken Sie oben rechts auf **„Editor ↩"**, ändern Sie diesen Text — und rendern Sie ihn anschließend neu. Die Datei, die Sie gerade lesen, ist gleichzeitig der Editor.
+Probieren Sie es aus: Klicken Sie oben rechts auf **„Editor ↩"**, ändern Sie diesen Text — und rendern Sie ihn anschließend neu. Die Datei, die Sie gerade lesen, ist gleichzeitig der Editor.[^selbstbezug]
+
+[^selbstbezug]: Das ist kein Bug, das ist die These. dokufix verwischt die Grenze zwischen *Werkzeug* und *Werkstück* — die HTML ist beides gleichzeitig.
 `;
 let DEMO_GZ = '';
 // === DEMO-END ===
@@ -647,6 +676,14 @@ a{color:#0066cc}
 .mermaid{margin:24px 0;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
 hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+.footnotes{margin-top:3em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.9em;color:#3a3a3f}
+.footnotes h2{display:none}
+.footnotes ol{margin:0 0 0 1.5em}
+.footnotes li{margin-bottom:.5em}
+.footnotes li p{margin:0}
+sup a,a[data-footnote-ref]{text-decoration:none;font-weight:700;padding:0 2px;color:#0066cc}
+a[data-footnote-backref]{text-decoration:none;margin-left:4px;opacity:.55}
+a[data-footnote-backref]:hover{opacity:1}
 .numbered{counter-reset:h2}
 .numbered h2{counter-reset:h3}
 .numbered h3{counter-reset:h4}
