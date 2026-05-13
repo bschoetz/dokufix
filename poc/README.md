@@ -15,7 +15,8 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
 - **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
 - **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
-- **In-file version history** — each "Mit Editor" download increments a counter and appends a `{v, t (ISO), m (optional message)}` entry to a JSON block embedded in the file (`<script type="application/json" id="dokufix-history">` — non-executing, just data). A clickable `v{N}` badge in the header opens a modal listing every saved version, newest first. Read-only exports inherit a small `Version N · DD.MM.YYYY HH:MM · message` footer at the end of the document.
+- **In-file version history with per-version source snapshots** — each "Mit Editor" download and each "commit-only" action appends a `{v, t (ISO), m (message), s (gzipped source)}` entry to a JSON block embedded in the file (`<script type="application/json" id="dokufix-history">` — non-executing, just data). A clickable `v{N}` badge in the header opens a modal listing every saved version, newest first. The full source of any prior version is recoverable from the file alone — the artifact is auditable on its own. Read-only exports inherit a small `Version N · DD.MM.YYYY HH:MM · message · exportiert <date>` footer at the end of the document.
+- **Per-document identity** — each saved file carries a UUID in its history JSON. Both `localStorage` keys (editor source and version history) are UUID-suffixed, so two dokufix files in the same browser no longer share storage. Files without a UUID (older or never-saved) use a deterministic `loc-{hash}` fallback derived from `location.href`; on first save the fallback upgrades to a real `crypto.randomUUID()` and existing localStorage data migrates to the new key.
 - **Mobile-friendly** — hamburger menu collapses the editor toolbar on narrow viewports.
 
 ## Download variants
@@ -42,25 +43,45 @@ Loading order on open: `localStorage` > `SAMPLE` > `DEMO`.
 
 Two complementary mechanisms, deliberately separate:
 
-- **Inline `[[toc]]` marker** — write `[[toc]]` (default H2+H3) or `[[toc:4]]` (down to H4) on its own line in the markdown. At render time, the paragraph is replaced with a nested `<nav class="dokufix-toc">` list. The list is **static HTML** — it travels through every export variant including the JS-free `nur-lesen` one, and the numbering toggle reaches it via a dedicated `tocH2/tocH3/tocH4` counter scope (no double-counting with body headings).
+- **Inline `[[toc]]` marker** — write `[[toc]]` (default H2+H3) or `[[toc:N]]` for `N` in 1–6 (depth) on its own line in the markdown. The marker only fires when the paragraph contains nothing but the literal text — wrapping it in inline elements (e.g., `` `[[toc]]` `` to *talk about* the marker) leaves it as visible content. At render time, the matching paragraph is replaced with a nested `<nav class="dokufix-toc">` list. The list is **static HTML** — it travels through every export variant including the JS-free `nur-lesen` one, and the numbering toggle reaches it via a dedicated `tocH2/tocH3/tocH4` counter scope (no double-counting with body headings).
 - **Right-side rail** — auto-generated from H2/H3/H4 headings, visible above ~1500 px viewport when the document has ≥ 4 such headings. At wide viewports the body switches to a 2-column **grid**: a 1000 px content column (centered in its track) and a 425 px rail column, sharing the same horizontal budget with a 73 px gap instead of overlapping. The body caps at 1562 px (1000 + 73 + 425 + 64 padding), so from 1562 px upward both columns hit their exact target widths; between 1500 and 1561 px the content track flexes a little while the rail stays pinned. The rail uses `position: sticky; top: 80px` so it stays in view during scroll while still participating in the grid for sizing. Two flavors of the same UI:
   - **Live (editor / `Mit Editor` downloads):** scroll-based "reading line" scrollspy picks the last heading whose top edge sits at or above 25 % of the viewport — so there is always exactly one active entry (the first heading before scrolling, the last after the document ends, the just-scrolled-past one in between). The active link is auto-scrolled into view inside the rail's own scroll container so it stays visible in long tables of contents. Smooth-scrolls on click. Visible only in read mode.
   - **Static (read-only downloads — `nur-lesen`, `schlank`, `kompakt`):** pre-built HTML emitted at export time with the same heading list and CSS, but no JS dependency. Clicking jumps via native anchor — no scrollspy, no smooth scroll. Survives the JS-free `nur-lesen` variant.
 
-Heading IDs are slugified deterministically (umlaut-aware, ASCII-folded, deduped), so anchor links remain stable across re-renders and across the editor/receiver boundary.
+Heading IDs are slugified deterministically. German `ä/ö/ü/ß` (and uppercase variants) are explicitly spelled out, then `String.prototype.normalize('NFKD')` folds the remaining Latin diacritics (`é → e`, `à → a`, `ñ → n`, `ç → c`) before stripping combining marks. CJK and other non-Latin scripts that don't decompose under NFKD collapse to `section`, deduped with `-N` suffixes. Anchor links remain stable across re-renders for the same heading text.
 
 ### Version history
 
-Two ways to create a new version entry:
+The history block (`#dokufix-history`) shape:
 
-1. **"Mit Editor" download (canonical save).** Asks for an optional message via `prompt()`. Cancel aborts entirely; Enter on an empty input proceeds without a message. The counter bumps, the entry lands in the history list, and the file is emitted with everything baked in.
-2. **Commit-only (button in the version modal).** Same prompt, same bump, same history append — but no file is produced. The new state is persisted to `localStorage` under `dokufix-poc-versions-v1` so it survives a reload. Later "Mit Editor" downloads pick up all accumulated commits.
+```json
+{
+  "uuid": "987d2a3b-d26c-4d07-b3ff-b4e3ae0c6615",
+  "version": 3,
+  "history": [
+    { "v": 1, "t": "2026-05-13T14:32:00.000Z", "m": "Erste Fassung",   "s": "<gzip+base64>" },
+    { "v": 2, "t": "2026-05-13T15:45:00.000Z", "m": "",                "s": "<gzip+base64>" },
+    { "v": 3, "t": "2026-05-14T09:12:00.000Z", "m": "Audit ergänzt",   "s": "<gzip+base64>" }
+  ]
+}
+```
 
-Both flows are **skipped silently when the source matches the last committed/saved state** (the `commitBaseline`). Clicking "Mit Editor" on an unchanged document re-emits the same version without a prompt or counter bump; clicking it right after a commit-only does the same. There is no "make me ask anyway" path — by design, every prompt corresponds to actual uncommitted changes.
+The `s` field of each entry is `gzipB64()` of the markdown source at that version — captured at commit time. Every prior version is fully recoverable from the file alone (basis of the audit story).
 
-On load, version state comes from whichever of the two sources is more recent: the file's baked-in `<script type="application/json" id="dokufix-history">` block, or `localStorage`. localStorage wins when commit-onlys have happened since the last download. Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`; the first save bootstraps the history at `v1`.
+Two ways to create a new entry:
 
-Read-only downloads do *not* bump the version — they ship the current `Version N · timestamp · message` as a footer (inside the compressed payload for the `kompakt` variant so it survives decompression). They are derivatives of a saved version, not new saves.
+1. **"Mit Editor" download (canonical save).** Asks for an optional message via `prompt()`. Cancel aborts entirely; Enter on an empty input proceeds without a message. The counter bumps, the entry lands in the history list (including a gzipped snapshot of the current source), and the file is emitted with everything baked in. Counter increment and persistence happen *after* `triggerDownload` returns, so a popup-blocker or serialization failure can't leave a phantom version with no on-disk artifact.
+2. **Commit-only (button in the version modal).** Same prompt, same bump, same history append — but no file is produced. The new state is persisted to `localStorage` (under the UUID-scoped versions key) so it survives a reload. Later "Mit Editor" downloads pick up all accumulated commits in a single file.
+
+Both flows are **skipped silently when the source matches the last committed/saved state** (the `commitBaseline`). Clicking "Mit Editor" on an unchanged document re-emits the same version without a prompt or counter bump; clicking the commit button when nothing has changed shake-animates instead of prompting. By design, every prompt corresponds to actual uncommitted changes.
+
+On load, version state comes from whichever of two sources is more recent: the file's baked-in `<script type="application/json" id="dokufix-history">` block, or `localStorage`. localStorage wins when commit-onlys have happened since the last download. History entries are shape-validated on load (well-formed `{v, t}` minimum); malformed entries are silently filtered out rather than crashing init. `null`, negative, or fractional `version` values normalize to `0`. Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`; the first save bootstraps the history at `v1`.
+
+`</script>` substrings in commit messages or source snapshots are escaped to `<\/script>` before being written into the JSON block, so the HTML parser doesn't close the script tag early.
+
+If `localStorage` setItem fails (quota exhausted, private-mode disabled), the version badge gains a red `.persist-failed` class with a pulse animation and an accessible title attribute — silent data loss is no longer possible.
+
+Read-only downloads do *not* bump the version — they ship a `Version N · DD.MM.YYYY HH:MM · message · exportiert <date>` footer at the end of the document. Files with `version: 0` still emit a footer carrying just the export timestamp (the spec wants timestamps as always-present metadata). For the `kompakt` variant the footer lives inside the gzip payload so it survives decompression.
 
 ### Dirty-state baseline
 
@@ -110,10 +131,11 @@ The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="tex
 ## Known PoC limitations (deferred to MVP)
 
 - **CDN-loaded libraries** — production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
-- **`localStorage` not IndexedDB** — fine for plaintext-only PoC; needs IndexedDB once base64 images push payloads past the ~5 MB localStorage cap.
-- **localStorage cross-contamination on `file://`** — multiple dokufix files in the same browser share state. Fix: per-document storage keys derived from a UUID baked into each file at save time.
+- **`localStorage` not IndexedDB** — fine for plaintext-only PoC; needs IndexedDB once base64 images push payloads past the ~5 MB localStorage cap. Per-version source snapshots also accelerate quota pressure on long-lived files.
 - **No File System Access API integration** — Chromium-only, optional power-user path. Not in PoC. See product brief distillate for design.
 - **Mermaid SVG bloat unaddressed** — each SVG ships a redundant 1.5–3 KB `<style>` block. Future optimization: dedupe to a single document-level `<style>`.
+- **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
+- **Per-version history grows linearly with snapshots** — full gzip snapshots per version dominate file size once a document accumulates many versions. A diff-based encoding (gzipped patch against prior version, ~10× smaller) is in the backlog for the MVP build pipeline.
 
 ## File layout
 
