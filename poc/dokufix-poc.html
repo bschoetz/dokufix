@@ -362,13 +362,16 @@
   }
   body.mode-view .toggle-back{display:inline-block}
 
-  /* Right-side scrollspy rail — read mode only, wide viewports only */
+  /* Right-side scrollspy rail.
+     Hidden by default. On wide viewports (and only in read mode for the editor),
+     the body becomes a 2-column grid: content on the left, rail on the right,
+     sharing the available horizontal space instead of overlapping. The rail
+     uses `position: sticky` so it stays in view during scroll while still
+     participating in the grid for sizing. */
   .dokufix-rail{
-    position:fixed;top:90px;right:32px;
-    width:210px;max-height:calc(100vh - 140px);
+    display:none;z-index:40;
     overflow-y:auto;overflow-x:hidden;
     font-size:13px;line-height:1.4;
-    display:none;z-index:40;
     padding:4px 0;
   }
   .dokufix-rail::before{
@@ -377,10 +380,6 @@
     font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
     color:#8e8e92;font-weight:700;
     padding:0 14px 8px;
-  }
-  body.mode-view .dokufix-rail.has-items{display:block}
-  @media (max-width:1300px){
-    body.mode-view .dokufix-rail{display:none !important}
   }
   .dokufix-rail ol{
     list-style:none;margin:0;padding:0;
@@ -408,6 +407,31 @@
   .dokufix-rail a.active{
     color:#1c1c1e;font-weight:700;
     border-left-color:#1c1c1e;
+  }
+
+  @media (min-width:1300px){
+    body.mode-view{
+      display:grid;
+      grid-template-columns:minmax(0, 1fr) 320px;
+      column-gap:48px;
+      max-width:1400px;
+      margin:0 auto;
+      padding:0 32px;
+    }
+    body.mode-view #preview{
+      max-width:950px;
+      margin:0 auto;
+      padding-left:0;
+      padding-right:0;
+    }
+    body.mode-view .dokufix-rail.has-items{
+      display:block;
+      position:sticky;
+      top:80px;
+      max-height:calc(100vh - 100px);
+      align-self:start;
+      margin-top:80px;
+    }
   }
 </style>
 </head>
@@ -1014,10 +1038,8 @@ a{color:#0066cc}
 .mermaid{margin:24px 0;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
 hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
-.dokufix-rail{position:fixed;top:90px;right:32px;width:210px;max-height:calc(100vh - 140px);overflow-y:auto;overflow-x:hidden;font-size:13px;line-height:1.4;z-index:40;padding:4px 0;display:none}
+.dokufix-rail{display:none;z-index:40;overflow-y:auto;overflow-x:hidden;font-size:13px;line-height:1.4;padding:4px 0}
 .dokufix-rail::before{content:"Auf dieser Seite";display:block;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8e8e92;font-weight:700;padding:0 14px 8px}
-.dokufix-rail.has-items{display:block}
-@media (max-width:1300px){.dokufix-rail{display:none !important}}
 .dokufix-rail ol{list-style:none;margin:0;padding:0;border-left:2px solid #e5e5ea}
 .dokufix-rail li{margin:0}
 .dokufix-rail ol ol{border-left:0;margin:0;padding:0}
@@ -1025,6 +1047,12 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 .dokufix-rail a:hover{color:#1c1c1e}
 .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
 .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
+.reader-body{min-width:0}
+@media (min-width:1300px){
+  body{max-width:1400px;display:grid;grid-template-columns:minmax(0, 1fr) 320px;column-gap:48px;padding:80px 32px 120px}
+  .reader-body{max-width:950px;margin:0 auto;width:100%}
+  .dokufix-rail.has-items{display:block;position:sticky;top:80px;max-height:calc(100vh - 100px);align-self:start}
+}
 .dokufix-toc{margin:1.5em 0 2em;padding:1.1em 1.4em 1.2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.94em}
 .dokufix-toc ol{list-style:none;margin:0;padding:0}
 .dokufix-toc > ol{counter-reset:tocH2}
@@ -1075,8 +1103,10 @@ async function downloadReadonlyOpen(){
 <style>${READONLY_CSS}</style>
 </head>
 <body${bodyClassForExport()}>
-${railHtml}
+<main class="reader-body">
 ${bodyHtml}
+</main>
+${railHtml}
 </body>
 </html>`;
 
@@ -1126,9 +1156,11 @@ async function downloadReadonlySlim(){
 ${noscript}
 </head>
 <body${bodyClassForExport()}>
-${railHtml}
+<main class="reader-body">
 ${wrapper.innerHTML}
 ${decoder}
+</main>
+${railHtml}
 </body>
 </html>`;
 
@@ -1156,8 +1188,8 @@ async function downloadReadonlyCompact(){
 </head>
 <body${bodyClassForExport()}>
 <noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.html) anfordern.</p></noscript>
+<main class="reader-body"><div id="d"></div></main>
 ${railHtml}
-<div id="d"></div>
 <script type="text/plain" id="p">${payload}<\/script>
 <script>
 (async()=>{
