@@ -147,6 +147,27 @@
   .version-list .v-date{color:#6e6e73;font-variant-numeric:tabular-nums}
   .version-list .v-msg{color:#1c1c1e;word-break:break-word}
   .version-list .v-msg em{color:#8e8e92;font-style:italic}
+  .version-modal-foot{
+    display:flex;align-items:center;gap:12px;
+    padding:14px 20px;
+    border-top:1px solid #e5e5ea;
+    background:#fafafa;
+    flex-wrap:wrap;
+  }
+  .commit-btn{
+    background:#1c1c1e;color:#fff;
+    border:0;cursor:pointer;
+    padding:9px 14px;border-radius:4px;
+    font-family:inherit;font-weight:700;font-size:13px;
+    letter-spacing:-0.005em;
+    transition:background .12s ease;
+  }
+  .commit-btn:hover{background:#3a3a3c}
+  .commit-btn:focus-visible{outline:2px solid #d4ff00;outline-offset:2px}
+  .commit-hint{
+    font-size:12px;color:#6e6e73;
+    flex:1;min-width:0;
+  }
   header .spacer{flex:1}
   header button{
     background:#d4ff00;color:#1c1c1e;border:0;
@@ -565,6 +586,10 @@
     <button class="version-modal-close" type="button" aria-label="Schließen">×</button>
   </header>
   <div class="version-modal-body"></div>
+  <footer class="version-modal-foot">
+    <button id="commit-btn" type="button" class="commit-btn">+ Neue Version festschreiben</button>
+    <span class="commit-hint">Beschreibung jetzt notieren, Datei später erzeugen.</span>
+  </footer>
 </dialog>
 
 <!-- Persistent in-file version history (JSON payload, not executed) -->
@@ -715,26 +740,73 @@ function scheduleSave(){
 // --- In-file version history ----------------------------------
 // One JSON blob lives in <script type="application/json" id="dokufix-history">.
 // {version: N, history: [{v, t (ISO), m (message)}, …]}
-// Counter increments only on "Mit Editor" download — the canonical save.
-// Read-only exports inherit the current version into a metadata footer.
+// Two ways to create an entry:
+//   - "Mit Editor" download (canonical save) — bumps the version, writes the file
+//   - Commit-only (button in the version modal) — bumps the version in memory,
+//     persisted via localStorage, no file is produced. A later save picks up
+//     all accumulated commits.
+// Both are skipped if the editor source is identical to the last commit/save
+// (commitBaseline) — no point asking for a message when nothing changed.
 let currentVersion = 0;
 let versionHistory = [];
+let commitBaseline = '';  // source at time of last version event
+const VERSION_STORAGE_KEY = 'dokufix-poc-versions-v1';
 const versionBtn = document.getElementById('version-btn');
 const versionModal = document.getElementById('version-modal');
 
-function loadVersionHistory(){
+function loadVersionHistory(initialSource){
+  // Two sources of truth: the file's baked-in JSON block and the browser's
+  // localStorage. Prefer whichever has the higher version (localStorage wins
+  // when a commit-only happened since the last download).
+  let fileData = { version: 0, history: [] };
   const el = document.getElementById('dokufix-history');
-  if (!el) return;
-  try {
-    const raw = (el.textContent || '').trim() || '{"version":0,"history":[]}';
-    const data = JSON.parse(raw);
-    currentVersion = Number(data.version) || 0;
-    versionHistory = Array.isArray(data.history) ? data.history : [];
-  } catch (e) {
-    console.warn('Version history parse failed:', e);
-    currentVersion = 0;
-    versionHistory = [];
+  if (el) {
+    try {
+      const raw = (el.textContent || '').trim() || '{"version":0,"history":[]}';
+      fileData = JSON.parse(raw);
+    } catch (e) { console.warn('File history parse failed:', e); }
   }
+  let lsData = null;
+  try {
+    const raw = localStorage.getItem(VERSION_STORAGE_KEY);
+    if (raw) lsData = JSON.parse(raw);
+  } catch (e) { console.warn('Storage history parse failed:', e); }
+
+  const lsVer = lsData ? (Number(lsData.version) || 0) : -1;
+  const fileVer = Number(fileData.version) || 0;
+  const useLs = lsData && lsVer > fileVer;
+  const data = useLs ? lsData : fileData;
+
+  currentVersion = Number(data.version) || 0;
+  versionHistory = Array.isArray(data.history) ? data.history : [];
+  // commitBaseline = the source at the time of the last version event.
+  // If localStorage is ahead, it stored the source as it was when the
+  // commit-only happened. Otherwise the file's baked SAMPLE represents it.
+  commitBaseline = useLs
+    ? (typeof data.commitBaseline === 'string' ? data.commitBaseline : initialSource)
+    : initialSource;
+}
+
+function persistVersionHistory(){
+  try {
+    localStorage.setItem(VERSION_STORAGE_KEY, JSON.stringify({
+      version: currentVersion,
+      history: versionHistory,
+      commitBaseline: commitBaseline,
+    }));
+  } catch (e) { console.warn('Version persist failed:', e); }
+}
+
+function commitNewVersion(message){
+  currentVersion += 1;
+  versionHistory = versionHistory.concat([{
+    v: currentVersion,
+    t: new Date().toISOString(),
+    m: message,
+  }]);
+  commitBaseline = sourceEl.value;
+  persistVersionHistory();
+  updateVersionBadge();
 }
 
 function updateVersionBadge(){
@@ -777,6 +849,18 @@ if (versionBtn && versionModal){
   versionModal.addEventListener('click', e => {
     if (e.target === versionModal) versionModal.close();
   });
+  const commitBtn = document.getElementById('commit-btn');
+  if (commitBtn){
+    commitBtn.addEventListener('click', () => {
+      const raw = window.prompt(
+        'Beschreibung dieser Version (leer lassen für ohne):',
+        ''
+      );
+      if (raw === null) return;
+      commitNewVersion(raw.trim());
+      renderVersionModalBody();
+    });
+  }
 }
 
 // --- Dirty-state indicator ------------------------------------
@@ -1089,19 +1173,20 @@ function triggerDownload(filename, content, mime='text/html;charset=utf-8'){
 
 // --- Download #1 — full dokufix file (with editor baked in) ---
 async function downloadWithEditor(){
-  // Ask for an optional version message. Cancel aborts the save entirely;
-  // Enter on empty input proceeds with no message.
-  const raw = window.prompt(
-    'Optionale Beschreibung dieser Version (leer lassen für ohne):',
-    ''
-  );
-  if (raw === null) return;
-  const message = raw.trim();
+  // Only ask for a commit message if there are actual changes since the last
+  // version event. If the source already matches the last commit/save, we
+  // silently re-emit the current version — no prompt, no bump.
+  const hasUncommittedChanges = sourceEl.value !== commitBaseline;
+  if (hasUncommittedChanges){
+    const raw = window.prompt(
+      'Optionale Beschreibung dieser Version (leer lassen für ohne):',
+      ''
+    );
+    if (raw === null) return;  // user cancelled — abort save entirely
+    commitNewVersion(raw.trim());
+  }
 
-  const newVersion = currentVersion + 1;
-  const newEntry = { v: newVersion, t: new Date().toISOString(), m: message };
-  const newHistory = versionHistory.concat([newEntry]);
-  const newHistoryJson = JSON.stringify({ version: newVersion, history: newHistory });
+  const historyJson = JSON.stringify({ version: currentVersion, history: versionHistory });
 
   const docClone = document.documentElement.cloneNode(true);
 
@@ -1118,11 +1203,11 @@ async function downloadWithEditor(){
   // Same for the scrollspy rail — receiver's buildRail() repopulates it on render.
   const railClone = docClone.querySelector('#dokufix-rail');
   if (railClone){ railClone.innerHTML = ''; railClone.classList.remove('has-items'); }
-  // Bake the new version history into the clone before serializing.
+  // Bake the current version history into the clone before serializing.
   const historyClone = docClone.querySelector('#dokufix-history');
-  if (historyClone) historyClone.textContent = newHistoryJson;
+  if (historyClone) historyClone.textContent = historyJson;
   const versionBadgeClone = docClone.querySelector('#version-btn');
-  if (versionBadgeClone) versionBadgeClone.textContent = 'v' + newVersion;
+  if (versionBadgeClone) versionBadgeClone.textContent = 'v' + currentVersion;
 
   // Rewrite both DEMO and SAMPLE blocks gzip-compressed:
   //   DEMO_GZ  — preserved from this session (immutable original demo)
@@ -1160,10 +1245,8 @@ async function downloadWithEditor(){
   // The downloaded file now matches the current editor content → reset baseline.
   cleanBaseline = sourceEl.value;
   updateDirtyState();
-  // Commit the version bump into the running session.
-  currentVersion = newVersion;
-  versionHistory = newHistory;
-  updateVersionBadge();
+  // Persist so a later reload sees the just-saved state as authoritative.
+  persistVersionHistory();
 }
 
 // --- Gliederungsnummerierung (Heading numbering) ----------------
@@ -1446,7 +1529,7 @@ document.addEventListener('keydown', e => {
   cleanBaseline = fallback;
   sourceEl.value = (stored !== null && stored !== '') ? stored : fallback;
   updateDirtyState();
-  loadVersionHistory();
+  loadVersionHistory(fallback);
   updateVersionBadge();
   render();
 })();

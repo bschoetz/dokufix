@@ -51,17 +51,16 @@ Heading IDs are slugified deterministically (umlaut-aware, ASCII-folded, deduped
 
 ### Version history
 
-Each "Mit Editor" download is treated as the canonical save event:
+Two ways to create a new version entry:
 
-1. A `prompt()` asks for an optional version description. Cancel aborts the save entirely; Enter on an empty input proceeds without a message.
-2. The version counter increments by 1.
-3. A new entry `{v, t, m}` is appended to the history list.
-4. The cloned document's `<script type="application/json" id="dokufix-history">` block is replaced with the new JSON before serializing.
-5. The running session updates its own counter and history so subsequent saves continue from the new state.
+1. **"Mit Editor" download (canonical save).** Asks for an optional message via `prompt()`. Cancel aborts entirely; Enter on an empty input proceeds without a message. The counter bumps, the entry lands in the history list, and the file is emitted with everything baked in.
+2. **Commit-only (button in the version modal).** Same prompt, same bump, same history append — but no file is produced. The new state is persisted to `localStorage` under `dokufix-poc-versions-v1` so it survives a reload. Later "Mit Editor" downloads pick up all accumulated commits.
 
-Read-only downloads do *not* bump the version — they ship the current `Version N · timestamp · message` as a footer (inside the compressed payload for the `kompakt` variant so it survives decompression) and that's it. They are derivatives of a saved version, not new saves.
+Both flows are **skipped silently when the source matches the last committed/saved state** (the `commitBaseline`). Clicking "Mit Editor" on an unchanged document re-emits the same version without a prompt or counter bump; clicking it right after a commit-only does the same. There is no "make me ask anyway" path — by design, every prompt corresponds to actual uncommitted changes.
 
-Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`. The first save bootstraps the history at `v1`. No migration is required and no data is silently mutated.
+On load, version state comes from whichever of the two sources is more recent: the file's baked-in `<script type="application/json" id="dokufix-history">` block, or `localStorage`. localStorage wins when commit-onlys have happened since the last download. Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`; the first save bootstraps the history at `v1`.
+
+Read-only downloads do *not* bump the version — they ship the current `Version N · timestamp · message` as a footer (inside the compressed payload for the `kompakt` variant so it survives decompression). They are derivatives of a saved version, not new saves.
 
 ### Dirty-state baseline
 
