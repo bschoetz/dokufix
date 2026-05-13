@@ -50,6 +50,33 @@
     background:#2c2c2e;border:1px solid #3a3a3c;border-radius:3px;
     padding:1px 6px;font-family:ui-monospace,monospace;font-size:11px;color:#f5f5f7;
   }
+  .dirty-badge{
+    display:inline-flex;align-items:center;gap:7px;
+    font-size:11px;font-weight:600;letter-spacing:0.01em;
+    padding:4px 10px;border-radius:3px;
+    background:#2c2c2e;color:#8e8e92;
+    border:1px solid #3a3a3c;
+    transition:background .2s ease, color .2s ease, border-color .2s ease;
+    user-select:none;
+  }
+  .dirty-badge::before{
+    content:"";width:6px;height:6px;border-radius:50%;
+    background:#48d160;flex-shrink:0;
+    transition:background .2s ease;
+  }
+  body.is-dirty .dirty-badge{
+    background:rgba(212,255,0,0.12);
+    color:#d4ff00;
+    border-color:rgba(212,255,0,0.35);
+  }
+  body.is-dirty .dirty-badge::before{
+    background:#d4ff00;
+    animation:dirtyPulse 1.6s ease-in-out infinite;
+  }
+  @keyframes dirtyPulse{
+    0%,100%{opacity:1}
+    50%{opacity:.35}
+  }
   header .spacer{flex:1}
   header button{
     background:#d4ff00;color:#1c1c1e;border:0;
@@ -300,6 +327,7 @@
 <header>
   <h1>dokufix</h1>
   <span class="tag">PoC</span>
+  <span id="dirty-badge" class="dirty-badge" aria-live="polite" title="Vergleicht den aktuellen Editor-Inhalt mit dem, was zuletzt in dieser Datei gespeichert wurde">wie in Datei</span>
   <span class="hint"><kbd>Strg</kbd>+<kbd>Enter</kbd> rendert</span>
   <span class="spacer"></span>
   <button id="hamburger" class="hamburger" type="button" aria-label="Menü öffnen" aria-expanded="false">☰</button>
@@ -481,6 +509,21 @@ function scheduleSave(){
   saveTimer = setTimeout(() => saveToStorage(sourceEl.value), 250);
 }
 
+// --- Dirty-state indicator ------------------------------------
+// "clean" means: the current editor text is identical to what is baked
+// into this HTML file (SAMPLE, or DEMO for a fresh dokufix file).
+// "dirty" means: the user has unsaved changes relative to the file on disk.
+// A "Mit Editor"-Download resets the baseline to the new saved content.
+let cleanBaseline = '';
+const baseTitle = document.title;
+const dirtyBadgeEl = document.getElementById('dirty-badge');
+function updateDirtyState(){
+  const dirty = sourceEl.value !== cleanBaseline;
+  document.body.classList.toggle('is-dirty', dirty);
+  document.title = (dirty ? '● ' : '') + baseTitle;
+  if (dirtyBadgeEl) dirtyBadgeEl.textContent = dirty ? 'geändert' : 'wie in Datei';
+}
+
 // Sample loading is async (SAMPLE_GZ may need decompression). See bottom of script.
 
 let mermaidId = 0;
@@ -524,7 +567,7 @@ function escapeHtml(s) {
 
 btnEl.addEventListener('click', render);
 
-sourceEl.addEventListener('input', scheduleSave);
+sourceEl.addEventListener('input', () => { scheduleSave(); updateDirtyState(); });
 sourceEl.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
     e.preventDefault();
@@ -537,6 +580,7 @@ resetEl.addEventListener('click', () => {
   if (sourceEl.value === DEMO || confirm('Demo-Text zurücksetzen? Aktuelle Änderungen gehen verloren.')){
     sourceEl.value = DEMO;
     saveToStorage(DEMO);
+    updateDirtyState();
     render();
     sourceEl.focus();
   }
@@ -591,6 +635,8 @@ async function downloadWithEditor(){
 
   // Strip transient UI state from the clone
   docClone.querySelectorAll('.menu-wrap.open').forEach(el => el.classList.remove('open'));
+  // Receiver will recompute dirty state on init against the new baseline.
+  docClone.querySelector('body')?.classList.remove('is-dirty');
   // Make sure the downloaded file opens in view mode by default (the receiver should see the document)
   docClone.querySelector('body')?.classList.add('mode-view');
   // Empty the rendered preview — receiver's render() runs on load and re-renders fresh.
@@ -630,6 +676,10 @@ async function downloadWithEditor(){
 
   const html = '<!DOCTYPE html>\n' + docClone.outerHTML;
   triggerDownload(safeFilenameBase() + '.html', html);
+
+  // The downloaded file now matches the current editor content → reset baseline.
+  cleanBaseline = sourceEl.value;
+  updateDirtyState();
 }
 
 // --- Gliederungsnummerierung (Heading numbering) ----------------
@@ -854,7 +904,11 @@ document.addEventListener('keydown', e => {
   const stored = loadFromStorage();
   // Fallback chain: localStorage > SAMPLE (per-doc default) > DEMO (original)
   const fallback = SAMPLE || DEMO;
+  // Baseline = what's actually baked into THIS file. A draft restored from
+  // localStorage that differs from the baseline correctly reads as "geändert".
+  cleanBaseline = fallback;
   sourceEl.value = (stored !== null && stored !== '') ? stored : fallback;
+  updateDirtyState();
   render();
 })();
 </script>

@@ -13,6 +13,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Self-replication** — the "Mit Editor" download produces a new HTML file with the user's content baked in (gzip-compressed). The receiver opens that file and starts from there.
 - **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
+- **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
 - **Mobile-friendly** — hamburger menu collapses the editor toolbar on narrow viewports.
 
 ## Download variants
@@ -34,6 +35,14 @@ Two distinct concepts, deliberately separated:
 - **`SAMPLE`** — this file's per-document default (what gets loaded on first open if `localStorage` is empty). On `Mit Editor` download, this is replaced with the user's current content.
 
 Loading order on open: `localStorage` > `SAMPLE` > `DEMO`.
+
+### Dirty-state baseline
+
+The dirty indicator compares the live editor against `cleanBaseline`, which is set to `SAMPLE || DEMO` at load time — i.e. whatever is actually baked into *this* HTML file on disk. Consequences:
+
+- A `localStorage` draft that differs from the baked content reads as **geändert** immediately on open. That's the intended "you have unsynced work" signal after a crash or tab close.
+- A successful "Mit Editor" download resets `cleanBaseline` to the just-saved content → badge flips to clean. The downloaded HTML file also carries the new baseline, so the receiver opens it as clean.
+- The other download variants (read-only) don't touch the baseline, since they don't carry editable source out the door.
 
 ### Compression
 
