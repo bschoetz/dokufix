@@ -391,13 +391,16 @@
     border-left:0;margin:0;padding:0;
   }
   .dokufix-rail a{
-    display:block;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
     padding:5px 14px;
     margin-left:-2px;
     border-left:2px solid transparent;
     color:#6e6e73;text-decoration:none;
     transition:color .15s ease, border-left-color .15s ease;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    word-break:break-word;
   }
   .dokufix-rail a:hover{color:#1c1c1e}
   .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
@@ -760,12 +763,27 @@ function buildStaticRailHtml(headings){
 
 // --- Right-side scrollspy rail --------------------------------
 const railEl = document.getElementById('dokufix-rail');
-let spyObserver = null;
 const RAIL_MIN_HEADINGS = 4;
+// Reading line: where in the viewport we consider "what the reader is currently looking at".
+// 25 % from the top — under the eye-line of someone scanning new content.
+const READING_LINE_RATIO = 0.25;
+
+// One scroll handler at a time; track it so buildRail can swap it on re-render.
+let railScrollHandler = null;
+let railResizeHandler = null;
 
 function buildRail(headings){
   if (!railEl) return;
-  if (spyObserver){ spyObserver.disconnect(); spyObserver = null; }
+
+  // Detach previous handlers before rebuilding (re-render of editor source).
+  if (railScrollHandler){
+    window.removeEventListener('scroll', railScrollHandler);
+    railScrollHandler = null;
+  }
+  if (railResizeHandler){
+    window.removeEventListener('resize', railResizeHandler);
+    railResizeHandler = null;
+  }
 
   const items = Array.from(headings).filter(h => /^H[234]$/.test(h.tagName));
   if (items.length < RAIL_MIN_HEADINGS){
@@ -773,41 +791,63 @@ function buildRail(headings){
     railEl.innerHTML = '';
     return;
   }
-  // Flat-ish list with class hints per level (rail-h2/h3/h4)
-  const minLv = Math.min(...items.map(h => parseInt(h.tagName.substring(1), 10)));
+
   let html = '<ol>';
   for (const h of items){
-    const lv = parseInt(h.tagName.substring(1), 10);
     html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
             '<a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a></li>';
-    void lv; void minLv;
   }
   html += '</ol>';
   railEl.innerHTML = html;
   railEl.classList.add('has-items');
   railEl.addEventListener('click', tocLinkHandler);
 
-  // Scrollspy: highlight the most recently scrolled-past heading
-  const visible = new Set();
-  const idOrder = items.map(h => h.id);
-  spyObserver = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) visible.add(e.target.id);
-      else visible.delete(e.target.id);
-    });
-    let activeId = null;
-    for (const id of idOrder){ if (visible.has(id)){ activeId = id; break; } }
-    // Fallback: if nothing intersecting, pick last heading above the viewport top.
-    if (!activeId){
-      for (let i = items.length - 1; i >= 0; i--){
-        if (items[i].getBoundingClientRect().top < 120){ activeId = items[i].id; break; }
+  // Scrollspy: pick the last heading whose top edge is at or above the reading line.
+  // Guarantees a non-empty active state in every position — before the first heading
+  // we pick the first; after the last heading we keep the last; mid-section we keep
+  // the one we just scrolled past.
+  const linksByHash = new Map();
+  railEl.querySelectorAll('a').forEach(a => linksByHash.set(a.getAttribute('href'), a));
+
+  let lastActiveHref = null;
+  function updateActive(){
+    const lineY = window.innerHeight * READING_LINE_RATIO;
+    let active = items[0];
+    for (const h of items){
+      const top = h.getBoundingClientRect().top;
+      if (top <= lineY) active = h;
+      else break;
+    }
+    const href = '#' + active.id;
+    if (href === lastActiveHref) return;
+    lastActiveHref = href;
+    for (const [h, a] of linksByHash){
+      a.classList.toggle('active', h === href);
+    }
+    // Keep the active entry visible inside the rail's own scroll container,
+    // without nudging the page scroll position.
+    const link = linksByHash.get(href);
+    if (link){
+      const lr = link.getBoundingClientRect();
+      const rr = railEl.getBoundingClientRect();
+      if (lr.top < rr.top || lr.bottom > rr.bottom){
+        railEl.scrollTop += (lr.top + lr.height / 2) - (rr.top + rr.height / 2);
       }
     }
-    railEl.querySelectorAll('a').forEach(a => {
-      a.classList.toggle('active', a.getAttribute('href') === '#' + activeId);
-    });
-  }, { rootMargin: '-100px 0px -55% 0px', threshold: 0 });
-  items.forEach(h => spyObserver.observe(h));
+  }
+
+  // rAF-throttled scroll handler — at most one update per frame.
+  let pending = false;
+  railScrollHandler = () => {
+    if (pending) return;
+    pending = true;
+    requestAnimationFrame(() => { pending = false; updateActive(); });
+  };
+  railResizeHandler = railScrollHandler;
+  window.addEventListener('scroll', railScrollHandler, { passive: true });
+  window.addEventListener('resize', railResizeHandler, { passive: true });
+
+  updateActive(); // initial state, before any scroll
 }
 
 btnEl.addEventListener('click', render);
@@ -981,7 +1021,7 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 .dokufix-rail ol{list-style:none;margin:0;padding:0;border-left:2px solid #e5e5ea}
 .dokufix-rail li{margin:0}
 .dokufix-rail ol ol{border-left:0;margin:0;padding:0}
-.dokufix-rail a{display:block;padding:5px 14px;margin-left:-2px;border-left:2px solid transparent;color:#6e6e73;text-decoration:none;transition:color .15s ease,border-left-color .15s ease;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dokufix-rail a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:5px 14px;margin-left:-2px;border-left:2px solid transparent;color:#6e6e73;text-decoration:none;transition:color .15s ease,border-left-color .15s ease;word-break:break-word}
 .dokufix-rail a:hover{color:#1c1c1e}
 .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
 .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
