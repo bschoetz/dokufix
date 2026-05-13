@@ -188,6 +188,47 @@
   #preview .mermaid svg{max-width:100%;height:auto}
   #preview hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 
+  /* Inline Table of Contents — injected where the markdown contains [[toc]] */
+  #preview .dokufix-toc{
+    margin:1.5em 0 2em;
+    padding:1.1em 1.4em 1.2em;
+    background:#fafafa;
+    border:1px solid #e5e5ea;
+    border-radius:6px;
+    font-size:.94em;
+  }
+  #preview .dokufix-toc ol{
+    list-style:none;margin:0;padding:0;
+  }
+  #preview .dokufix-toc > ol{counter-reset:tocH2}
+  #preview .dokufix-toc ol ol{
+    margin:.3em 0 .3em 1.2em;
+    padding-left:.6em;
+    border-left:1px solid #e5e5ea;
+    counter-reset:tocH3;
+  }
+  #preview .dokufix-toc ol ol ol{counter-reset:tocH4}
+  #preview .dokufix-toc li{margin:.25em 0;line-height:1.4}
+  #preview .dokufix-toc a{
+    text-decoration:none;color:#1c1c1e;
+    border-bottom:1px solid transparent;
+    transition:color .12s ease, border-color .12s ease;
+  }
+  #preview .dokufix-toc a:hover{color:#0066cc;border-bottom-color:currentColor}
+  /* Numbered ToC: mirror body.numbered, separate counter scope */
+  .numbered #preview .dokufix-toc > ol > li > a::before{
+    counter-increment:tocH2;content:counter(tocH2) ". ";
+    color:#8e8e92;font-weight:600;margin-right:.15em;
+  }
+  .numbered #preview .dokufix-toc ol ol > li > a::before{
+    counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";
+    color:#8e8e92;font-weight:600;margin-right:.15em;
+  }
+  .numbered #preview .dokufix-toc ol ol ol > li > a::before{
+    counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";
+    color:#8e8e92;font-weight:600;margin-right:.15em;
+  }
+
   /* Footnotes (marked-footnote / GFM style) */
   #preview .footnotes{
     margin-top:3em;padding-top:1.5em;
@@ -320,6 +361,51 @@
     }
   }
   body.mode-view .toggle-back{display:inline-block}
+
+  /* Right-side scrollspy rail — read mode only, wide viewports only */
+  .dokufix-rail{
+    position:fixed;top:90px;right:32px;
+    width:210px;max-height:calc(100vh - 140px);
+    overflow-y:auto;overflow-x:hidden;
+    font-size:13px;line-height:1.4;
+    display:none;z-index:40;
+    padding:4px 0;
+  }
+  .dokufix-rail::before{
+    content:"Auf dieser Seite";
+    display:block;
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
+    color:#8e8e92;font-weight:700;
+    padding:0 14px 8px;
+  }
+  body.mode-view .dokufix-rail.has-items{display:block}
+  @media (max-width:1300px){
+    body.mode-view .dokufix-rail{display:none !important}
+  }
+  .dokufix-rail ol{
+    list-style:none;margin:0;padding:0;
+    border-left:2px solid #e5e5ea;
+  }
+  .dokufix-rail li{margin:0}
+  .dokufix-rail ol ol{
+    border-left:0;margin:0;padding:0;
+  }
+  .dokufix-rail a{
+    display:block;
+    padding:5px 14px;
+    margin-left:-2px;
+    border-left:2px solid transparent;
+    color:#6e6e73;text-decoration:none;
+    transition:color .15s ease, border-left-color .15s ease;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .dokufix-rail a:hover{color:#1c1c1e}
+  .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
+  .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
+  .dokufix-rail a.active{
+    color:#1c1c1e;font-weight:700;
+    border-left-color:#1c1c1e;
+  }
 </style>
 </head>
 <body class="mode-view">
@@ -371,6 +457,8 @@
   </section>
 </main>
 
+<aside id="dokufix-rail" class="dokufix-rail" aria-label="Navigation"></aside>
+
 <button id="edit-btn" type="button" class="toggle-back" aria-label="Zurück zum Editor">Editor ↩</button>
 
 <!-- CDN libraries (PoC only — production bundle will inline these) -->
@@ -417,6 +505,8 @@ Oben rechts gibt es einen einzigen kleinen Button: **„Editor ↩"**. Ein Klick
 
 Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentlichten Richtlinie, einem Audit-Bericht, einer finalen Fassung. Dafür gibt es die **Auslieferung ohne Editor**: das Dokument bleibt lesbar, der Bearbeitungs-Modus fehlt komplett. Wird später doch eine Aktualisierung nötig, lässt sich der Inhalt jederzeit wieder in einen dokufix-Editor laden und weiterbearbeiten. Sie entscheiden bei jeder Auslieferung neu, ob das Dokument *gelesen* oder auch *fortgeschrieben* werden darf.
 
+[[toc]]
+
 ## Was Sie in diesem Dokument sehen
 
 - Überschriften, Listen, Tabellen
@@ -446,6 +536,10 @@ flowchart LR
 | Editor-Modus | 🚧 |
 | Self-Save | 🚧 |
 | Self-Replication | 🚧 |
+
+### Lesehilfen im Detail
+
+Bei breiteren Bildschirmen erscheint rechts eine schwebende Schiene mit allen Überschriften des Dokuments. Der gerade gelesene Abschnitt ist markiert; ein Klick springt direkt dorthin. Die Schiene blendet sich auf schmaleren Geräten aus — dort übernimmt das eingebettete Inhaltsverzeichnis oben.
 
 ## Sequenzdiagramm
 
@@ -539,6 +633,11 @@ async function render() {
   }
   previewEl.innerHTML = html;
 
+  // Heading IDs first — both the inline ToC and the scrollspy rail need them.
+  const headings = previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  assignHeadingIds(headings);
+  processInlineToc(headings);
+
   // Convert <pre><code class="language-mermaid">…</code></pre> into <div class="mermaid">…</div>
   previewEl.querySelectorAll('pre code.language-mermaid').forEach(block => {
     const div = document.createElement('div');
@@ -557,12 +656,144 @@ async function render() {
       console.error('Mermaid error:', err);
     }
   }
+
+  // Build the scrollspy rail (read-mode only; CSS gates visibility).
+  buildRail(headings);
 }
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, c => ({
     '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
   }[c]));
+}
+
+// --- Table of Contents ----------------------------------------
+// Two layers, see README:
+//   1. Inline [[toc]] (or [[toc:N]]) marker in markdown → static nested list.
+//   2. Right-side scrollspy rail in read mode (wide viewports only).
+// Both feed off the same set of generated heading IDs.
+
+function slugify(text, used){
+  let slug = String(text)
+    .toLowerCase()
+    .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+  if (!slug) slug = 'section';
+  let candidate = slug, i = 1;
+  while (used.has(candidate)) candidate = slug + '-' + (++i);
+  used.add(candidate);
+  return candidate;
+}
+
+function assignHeadingIds(headings){
+  const used = new Set();
+  headings.forEach(h => { if (h.id) used.add(h.id); });
+  headings.forEach(h => { if (!h.id) h.id = slugify(h.textContent, used); });
+}
+
+function buildTocHtml(headings, maxLevel){
+  const items = Array.from(headings).filter(h => {
+    const lv = parseInt(h.tagName.substring(1), 10);
+    return lv >= 2 && lv <= maxLevel;
+  });
+  if (!items.length) return '';
+  const minLv = Math.min(...items.map(h => parseInt(h.tagName.substring(1), 10)));
+  let html = '';
+  const open = []; // stack of (relative) levels currently open
+  for (const h of items){
+    const lv = parseInt(h.tagName.substring(1), 10) - minLv;
+    while (open.length && open[open.length-1] > lv){ html += '</li></ol>'; open.pop(); }
+    if (!open.length || open[open.length-1] < lv){ html += '<ol>'; open.push(lv); }
+    else { html += '</li>'; }
+    html += '<li><a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a>';
+  }
+  while (open.length){ html += '</li></ol>'; open.pop(); }
+  return html;
+}
+
+function processInlineToc(headings){
+  const paras = previewEl.querySelectorAll('p');
+  for (const p of paras){
+    const txt = p.textContent.trim();
+    const m = txt.match(/^\[\[toc(?::([2-6]))?\]\]$/);
+    if (!m) continue;
+    const maxLevel = m[1] ? parseInt(m[1], 10) : 3;
+    const inner = buildTocHtml(headings, maxLevel);
+    if (!inner){ p.remove(); continue; }
+    const nav = document.createElement('nav');
+    nav.className = 'dokufix-toc';
+    nav.setAttribute('aria-label', 'Inhaltsverzeichnis');
+    nav.innerHTML = inner;
+    // Smooth scroll on click + update hash without jumping
+    nav.addEventListener('click', tocLinkHandler);
+    p.replaceWith(nav);
+  }
+}
+
+function tocLinkHandler(e){
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const id = a.getAttribute('href').slice(1);
+  const target = document.getElementById(id);
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  history.replaceState(null, '', '#' + id);
+}
+
+// --- Right-side scrollspy rail --------------------------------
+const railEl = document.getElementById('dokufix-rail');
+let spyObserver = null;
+const RAIL_MIN_HEADINGS = 4;
+
+function buildRail(headings){
+  if (!railEl) return;
+  if (spyObserver){ spyObserver.disconnect(); spyObserver = null; }
+
+  const items = Array.from(headings).filter(h => /^H[234]$/.test(h.tagName));
+  if (items.length < RAIL_MIN_HEADINGS){
+    railEl.classList.remove('has-items');
+    railEl.innerHTML = '';
+    return;
+  }
+  // Flat-ish list with class hints per level (rail-h2/h3/h4)
+  const minLv = Math.min(...items.map(h => parseInt(h.tagName.substring(1), 10)));
+  let html = '<ol>';
+  for (const h of items){
+    const lv = parseInt(h.tagName.substring(1), 10);
+    html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
+            '<a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a></li>';
+    void lv; void minLv;
+  }
+  html += '</ol>';
+  railEl.innerHTML = html;
+  railEl.classList.add('has-items');
+  railEl.addEventListener('click', tocLinkHandler);
+
+  // Scrollspy: highlight the most recently scrolled-past heading
+  const visible = new Set();
+  const idOrder = items.map(h => h.id);
+  spyObserver = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) visible.add(e.target.id);
+      else visible.delete(e.target.id);
+    });
+    let activeId = null;
+    for (const id of idOrder){ if (visible.has(id)){ activeId = id; break; } }
+    // Fallback: if nothing intersecting, pick last heading above the viewport top.
+    if (!activeId){
+      for (let i = items.length - 1; i >= 0; i--){
+        if (items[i].getBoundingClientRect().top < 120){ activeId = items[i].id; break; }
+      }
+    }
+    railEl.querySelectorAll('a').forEach(a => {
+      a.classList.toggle('active', a.getAttribute('href') === '#' + activeId);
+    });
+  }, { rootMargin: '-100px 0px -55% 0px', threshold: 0 });
+  items.forEach(h => spyObserver.observe(h));
 }
 
 btnEl.addEventListener('click', render);
@@ -643,6 +874,9 @@ async function downloadWithEditor(){
   // Without this, every Mermaid SVG (5-15 KB each) would ship inside the file as redundant bytes.
   const previewClone = docClone.querySelector('#preview');
   if (previewClone) previewClone.innerHTML = '';
+  // Same for the scrollspy rail — receiver's buildRail() repopulates it on render.
+  const railClone = docClone.querySelector('#dokufix-rail');
+  if (railClone){ railClone.innerHTML = ''; railClone.classList.remove('has-items'); }
 
   // Rewrite both DEMO and SAMPLE blocks gzip-compressed:
   //   DEMO_GZ  — preserved from this session (immutable original demo)
@@ -726,6 +960,17 @@ a{color:#0066cc}
 .mermaid{margin:24px 0;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
 hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+.dokufix-toc{margin:1.5em 0 2em;padding:1.1em 1.4em 1.2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.94em}
+.dokufix-toc ol{list-style:none;margin:0;padding:0}
+.dokufix-toc > ol{counter-reset:tocH2}
+.dokufix-toc ol ol{margin:.3em 0 .3em 1.2em;padding-left:.6em;border-left:1px solid #e5e5ea;counter-reset:tocH3}
+.dokufix-toc ol ol ol{counter-reset:tocH4}
+.dokufix-toc li{margin:.25em 0;line-height:1.4}
+.dokufix-toc a{text-decoration:none;color:#1c1c1e;border-bottom:1px solid transparent;transition:color .12s ease,border-color .12s ease}
+.dokufix-toc a:hover{color:#0066cc;border-bottom-color:currentColor}
+.numbered .dokufix-toc > ol > li > a::before{counter-increment:tocH2;content:counter(tocH2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
+.numbered .dokufix-toc ol ol > li > a::before{counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+.numbered .dokufix-toc ol ol ol > li > a::before{counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
 .footnotes{margin-top:3em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.9em;color:#3a3a3f}
 .footnotes h2{display:none}
 .footnotes ol{margin:0 0 0 1.5em}

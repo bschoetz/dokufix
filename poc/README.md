@@ -13,6 +13,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Self-replication** — the "Mit Editor" download produces a new HTML file with the user's content baked in (gzip-compressed). The receiver opens that file and starts from there.
 - **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
+- **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
 - **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
 - **Mobile-friendly** — hamburger menu collapses the editor toolbar on narrow viewports.
 
@@ -35,6 +36,15 @@ Two distinct concepts, deliberately separated:
 - **`SAMPLE`** — this file's per-document default (what gets loaded on first open if `localStorage` is empty). On `Mit Editor` download, this is replaced with the user's current content.
 
 Loading order on open: `localStorage` > `SAMPLE` > `DEMO`.
+
+### Table of Contents (two layers)
+
+Two complementary mechanisms, deliberately separate:
+
+- **Inline `[[toc]]` marker** — write `[[toc]]` (default H2+H3) or `[[toc:4]]` (down to H4) on its own line in the markdown. At render time, the paragraph is replaced with a nested `<nav class="dokufix-toc">` list. The list is **static HTML** — it travels through every export variant including the JS-free `nur-lesen` one, and the numbering toggle reaches it via a dedicated `tocH2/tocH3/tocH4` counter scope (no double-counting with body headings).
+- **Right-side scrollspy rail** — auto-generated from H2/H3/H4 headings, visible **only** in read mode and **only** above ~1300 px viewport, **only** when the document has ≥ 4 such headings. Uses `IntersectionObserver` to highlight the section the reader is currently looking at. Hidden in editor mode (where the markdown source already is the outline) and in the read-only export variants (which don't carry the JS). The empty `<aside id="dokufix-rail">` element ships in `Mit Editor` files and is repopulated by the receiver's `render()`.
+
+Heading IDs are slugified deterministically (umlaut-aware, ASCII-folded, deduped), so anchor links remain stable across re-renders and across the editor/receiver boundary.
 
 ### Dirty-state baseline
 
