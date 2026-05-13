@@ -744,6 +744,20 @@ function tocLinkHandler(e){
   history.replaceState(null, '', '#' + id);
 }
 
+// Build a static rail HTML string (no scrollspy) for read-only exports.
+// Same structure as the live rail; just anchor links, no JS dependency.
+function buildStaticRailHtml(headings){
+  const items = Array.from(headings).filter(h => /^H[234]$/.test(h.tagName));
+  if (items.length < RAIL_MIN_HEADINGS) return '';
+  let html = '<aside class="dokufix-rail has-items" aria-label="Navigation"><ol>';
+  for (const h of items){
+    html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
+            '<a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a></li>';
+  }
+  html += '</ol></aside>';
+  return html;
+}
+
 // --- Right-side scrollspy rail --------------------------------
 const railEl = document.getElementById('dokufix-rail');
 let spyObserver = null;
@@ -960,6 +974,17 @@ a{color:#0066cc}
 .mermaid{margin:24px 0;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
 hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+.dokufix-rail{position:fixed;top:90px;right:32px;width:210px;max-height:calc(100vh - 140px);overflow-y:auto;overflow-x:hidden;font-size:13px;line-height:1.4;z-index:40;padding:4px 0;display:none}
+.dokufix-rail::before{content:"Auf dieser Seite";display:block;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8e8e92;font-weight:700;padding:0 14px 8px}
+.dokufix-rail.has-items{display:block}
+@media (max-width:1300px){.dokufix-rail{display:none !important}}
+.dokufix-rail ol{list-style:none;margin:0;padding:0;border-left:2px solid #e5e5ea}
+.dokufix-rail li{margin:0}
+.dokufix-rail ol ol{border-left:0;margin:0;padding:0}
+.dokufix-rail a{display:block;padding:5px 14px;margin-left:-2px;border-left:2px solid transparent;color:#6e6e73;text-decoration:none;transition:color .15s ease,border-left-color .15s ease;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dokufix-rail a:hover{color:#1c1c1e}
+.dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
+.dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
 .dokufix-toc{margin:1.5em 0 2em;padding:1.1em 1.4em 1.2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.94em}
 .dokufix-toc ol{list-style:none;margin:0;padding:0}
 .dokufix-toc > ol{counter-reset:tocH2}
@@ -999,6 +1024,7 @@ async function downloadReadonlyOpen(){
 
   const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
   const bodyHtml = previewEl.innerHTML;
+  const railHtml = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 
   const html = `<!DOCTYPE html>
 <html lang="de">
@@ -1009,6 +1035,7 @@ async function downloadReadonlyOpen(){
 <style>${READONLY_CSS}</style>
 </head>
 <body${bodyClassForExport()}>
+${railHtml}
 ${bodyHtml}
 </body>
 </html>`;
@@ -1047,6 +1074,8 @@ async function downloadReadonlySlim(){
     ? `<noscript><style>.mermaid[data-gz]{display:block;padding:24px;border:1px dashed #d8d8da;color:#8e8e92;text-align:center;font-size:14px;font-style:italic}.mermaid[data-gz]::before{content:"[Mermaid-Diagramm — JavaScript erforderlich, um es anzuzeigen]"}</style></noscript>`
     : '';
 
+  const railHtml = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+
   const html = `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -1057,6 +1086,7 @@ async function downloadReadonlySlim(){
 ${noscript}
 </head>
 <body${bodyClassForExport()}>
+${railHtml}
 ${wrapper.innerHTML}
 ${decoder}
 </body>
@@ -1072,6 +1102,9 @@ async function downloadReadonlyCompact(){
   const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
   const bodyHtml = previewEl.innerHTML;
   const payload = await gzipB64(bodyHtml);
+  // Rail stays outside the compressed payload so it appears immediately
+  // (no flash of empty navigation while the body decompresses).
+  const railHtml = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 
   const html = `<!DOCTYPE html>
 <html lang="de">
@@ -1083,6 +1116,7 @@ async function downloadReadonlyCompact(){
 </head>
 <body${bodyClassForExport()}>
 <noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.html) anfordern.</p></noscript>
+${railHtml}
 <div id="d"></div>
 <script type="text/plain" id="p">${payload}<\/script>
 <script>

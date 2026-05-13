@@ -42,7 +42,9 @@ Loading order on open: `localStorage` > `SAMPLE` > `DEMO`.
 Two complementary mechanisms, deliberately separate:
 
 - **Inline `[[toc]]` marker** — write `[[toc]]` (default H2+H3) or `[[toc:4]]` (down to H4) on its own line in the markdown. At render time, the paragraph is replaced with a nested `<nav class="dokufix-toc">` list. The list is **static HTML** — it travels through every export variant including the JS-free `nur-lesen` one, and the numbering toggle reaches it via a dedicated `tocH2/tocH3/tocH4` counter scope (no double-counting with body headings).
-- **Right-side scrollspy rail** — auto-generated from H2/H3/H4 headings, visible **only** in read mode and **only** above ~1300 px viewport, **only** when the document has ≥ 4 such headings. Uses `IntersectionObserver` to highlight the section the reader is currently looking at. Hidden in editor mode (where the markdown source already is the outline) and in the read-only export variants (which don't carry the JS). The empty `<aside id="dokufix-rail">` element ships in `Mit Editor` files and is repopulated by the receiver's `render()`.
+- **Right-side rail** — auto-generated from H2/H3/H4 headings, visible above ~1300 px viewport when the document has ≥ 4 such headings. Two flavors of the same UI:
+  - **Live (editor / `Mit Editor` downloads):** `IntersectionObserver`-driven scrollspy highlights the section the reader is currently looking at. Smooth-scrolls on click. Visible only in read mode.
+  - **Static (read-only downloads — `nur-lesen`, `schlank`, `kompakt`):** pre-built HTML emitted at export time with the same heading list and CSS, but no JS dependency. Clicking jumps via native anchor — no scrollspy, no smooth scroll. Survives the JS-free `nur-lesen` variant.
 
 Heading IDs are slugified deterministically (umlaut-aware, ASCII-folded, deduped), so anchor links remain stable across re-renders and across the editor/receiver boundary.
 
