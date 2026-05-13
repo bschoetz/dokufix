@@ -77,6 +77,76 @@
     0%,100%{opacity:1}
     50%{opacity:.35}
   }
+  .version-badge{
+    font-size:11px;font-weight:600;letter-spacing:0.02em;
+    padding:4px 10px;border-radius:3px;
+    background:#2c2c2e;color:#8e8e92;
+    border:1px solid #3a3a3c;
+    cursor:pointer;
+    font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
+    transition:color .15s ease, border-color .15s ease;
+  }
+  .version-badge:hover{color:#f5f5f7;border-color:#48484a}
+  .version-badge:focus-visible{outline:2px solid #d4ff00;outline-offset:2px}
+
+  /* Version history modal */
+  .version-modal{
+    border:0;padding:0;border-radius:8px;
+    width:min(560px, calc(100vw - 48px));
+    max-height:calc(100vh - 80px);
+    margin:auto;
+    background:#fff;color:#1c1c1e;
+    box-shadow:0 24px 80px rgba(0,0,0,0.35);
+    font-family:inherit;
+  }
+  .version-modal[open]{
+    display:flex;flex-direction:column;
+  }
+  .version-modal::backdrop{
+    background:rgba(0,0,0,0.5);
+    backdrop-filter:blur(2px);
+  }
+  .version-modal-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:16px 20px;
+    border-bottom:1px solid #e5e5ea;
+  }
+  .version-modal-head h2{
+    font-size:16px;font-weight:800;letter-spacing:-0.01em;margin:0;
+  }
+  .version-modal-close{
+    background:transparent;border:0;cursor:pointer;
+    width:32px;height:32px;border-radius:4px;
+    font-size:22px;line-height:1;color:#6e6e73;
+    display:inline-flex;align-items:center;justify-content:center;
+  }
+  .version-modal-close:hover{background:#f0f0f3;color:#1c1c1e}
+  .version-modal-body{
+    padding:8px 20px 20px;
+    overflow-y:auto;max-height:calc(100vh - 200px);
+  }
+  .version-empty{
+    padding:20px 0;color:#6e6e73;font-size:14px;line-height:1.5;
+  }
+  .version-list{
+    list-style:none;margin:0;padding:0;
+  }
+  .version-list li{
+    display:grid;
+    grid-template-columns:auto auto 1fr;
+    gap:14px;
+    padding:10px 0;
+    border-bottom:1px solid #f0f0f3;
+    font-size:14px;line-height:1.4;
+  }
+  .version-list li:last-child{border-bottom:0}
+  .version-list .v-num{
+    font-family:ui-monospace,monospace;font-weight:700;color:#1c1c1e;
+    min-width:34px;
+  }
+  .version-list .v-date{color:#6e6e73;font-variant-numeric:tabular-nums}
+  .version-list .v-msg{color:#1c1c1e;word-break:break-word}
+  .version-list .v-msg em{color:#8e8e92;font-style:italic}
   header .spacer{flex:1}
   header button{
     background:#d4ff00;color:#1c1c1e;border:0;
@@ -441,6 +511,7 @@
   <h1>dokufix</h1>
   <span class="tag">PoC</span>
   <span id="dirty-badge" class="dirty-badge" aria-live="polite" title="Vergleicht den aktuellen Editor-Inhalt mit dem, was zuletzt in dieser Datei gespeichert wurde">wie in Datei</span>
+  <button id="version-btn" class="version-badge" type="button" title="Versionsverlauf anzeigen">v0</button>
   <span class="hint"><kbd>Strg</kbd>+<kbd>Enter</kbd> rendert</span>
   <span class="spacer"></span>
   <button id="hamburger" class="hamburger" type="button" aria-label="Menü öffnen" aria-expanded="false">☰</button>
@@ -487,6 +558,17 @@
 <aside id="dokufix-rail" class="dokufix-rail" aria-label="Navigation"></aside>
 
 <button id="edit-btn" type="button" class="toggle-back" aria-label="Zurück zum Editor">Editor ↩</button>
+
+<dialog id="version-modal" class="version-modal" aria-labelledby="version-modal-title">
+  <header class="version-modal-head">
+    <h2 id="version-modal-title">Versionsverlauf</h2>
+    <button class="version-modal-close" type="button" aria-label="Schließen">×</button>
+  </header>
+  <div class="version-modal-body"></div>
+</dialog>
+
+<!-- Persistent in-file version history (JSON payload, not executed) -->
+<script type="application/json" id="dokufix-history">{"version":0,"history":[]}</script>
 
 <!-- CDN libraries (PoC only — production bundle will inline these) -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -628,6 +710,73 @@ let saveTimer;
 function scheduleSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(() => saveToStorage(sourceEl.value), 250);
+}
+
+// --- In-file version history ----------------------------------
+// One JSON blob lives in <script type="application/json" id="dokufix-history">.
+// {version: N, history: [{v, t (ISO), m (message)}, …]}
+// Counter increments only on "Mit Editor" download — the canonical save.
+// Read-only exports inherit the current version into a metadata footer.
+let currentVersion = 0;
+let versionHistory = [];
+const versionBtn = document.getElementById('version-btn');
+const versionModal = document.getElementById('version-modal');
+
+function loadVersionHistory(){
+  const el = document.getElementById('dokufix-history');
+  if (!el) return;
+  try {
+    const raw = (el.textContent || '').trim() || '{"version":0,"history":[]}';
+    const data = JSON.parse(raw);
+    currentVersion = Number(data.version) || 0;
+    versionHistory = Array.isArray(data.history) ? data.history : [];
+  } catch (e) {
+    console.warn('Version history parse failed:', e);
+    currentVersion = 0;
+    versionHistory = [];
+  }
+}
+
+function updateVersionBadge(){
+  if (versionBtn) versionBtn.textContent = 'v' + currentVersion;
+}
+
+function formatVersionDate(iso){
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return iso;
+  const pad = n => String(n).padStart(2, '0');
+  return pad(d.getDate()) + '.' + pad(d.getMonth()+1) + '.' + d.getFullYear() +
+         ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+}
+
+function renderVersionModalBody(){
+  const body = versionModal && versionModal.querySelector('.version-modal-body');
+  if (!body) return;
+  if (!versionHistory.length){
+    body.innerHTML = '<p class="version-empty">Noch keine Versionen gespeichert. Beim ersten Download „Mit Editor" wird Version 1 angelegt.</p>';
+    return;
+  }
+  const items = [...versionHistory].reverse().map(e => {
+    const num = '<span class="v-num">v' + e.v + '</span>';
+    const date = '<span class="v-date">' + escapeHtml(formatVersionDate(e.t)) + '</span>';
+    const msg = e.m
+      ? '<span class="v-msg">' + escapeHtml(e.m) + '</span>'
+      : '<span class="v-msg"><em>(ohne Beschreibung)</em></span>';
+    return '<li>' + num + date + msg + '</li>';
+  }).join('');
+  body.innerHTML = '<ol class="version-list">' + items + '</ol>';
+}
+
+if (versionBtn && versionModal){
+  versionBtn.addEventListener('click', () => {
+    renderVersionModalBody();
+    versionModal.showModal();
+  });
+  versionModal.querySelector('.version-modal-close').addEventListener('click', () => versionModal.close());
+  // Click outside dialog (on backdrop) closes
+  versionModal.addEventListener('click', e => {
+    if (e.target === versionModal) versionModal.close();
+  });
 }
 
 // --- Dirty-state indicator ------------------------------------
@@ -940,6 +1089,20 @@ function triggerDownload(filename, content, mime='text/html;charset=utf-8'){
 
 // --- Download #1 — full dokufix file (with editor baked in) ---
 async function downloadWithEditor(){
+  // Ask for an optional version message. Cancel aborts the save entirely;
+  // Enter on empty input proceeds with no message.
+  const raw = window.prompt(
+    'Optionale Beschreibung dieser Version (leer lassen für ohne):',
+    ''
+  );
+  if (raw === null) return;
+  const message = raw.trim();
+
+  const newVersion = currentVersion + 1;
+  const newEntry = { v: newVersion, t: new Date().toISOString(), m: message };
+  const newHistory = versionHistory.concat([newEntry]);
+  const newHistoryJson = JSON.stringify({ version: newVersion, history: newHistory });
+
   const docClone = document.documentElement.cloneNode(true);
 
   // Strip transient UI state from the clone
@@ -955,6 +1118,11 @@ async function downloadWithEditor(){
   // Same for the scrollspy rail — receiver's buildRail() repopulates it on render.
   const railClone = docClone.querySelector('#dokufix-rail');
   if (railClone){ railClone.innerHTML = ''; railClone.classList.remove('has-items'); }
+  // Bake the new version history into the clone before serializing.
+  const historyClone = docClone.querySelector('#dokufix-history');
+  if (historyClone) historyClone.textContent = newHistoryJson;
+  const versionBadgeClone = docClone.querySelector('#version-btn');
+  if (versionBadgeClone) versionBadgeClone.textContent = 'v' + newVersion;
 
   // Rewrite both DEMO and SAMPLE blocks gzip-compressed:
   //   DEMO_GZ  — preserved from this session (immutable original demo)
@@ -992,6 +1160,10 @@ async function downloadWithEditor(){
   // The downloaded file now matches the current editor content → reset baseline.
   cleanBaseline = sourceEl.value;
   updateDirtyState();
+  // Commit the version bump into the running session.
+  currentVersion = newVersion;
+  versionHistory = newHistory;
+  updateVersionBadge();
 }
 
 // --- Gliederungsnummerierung (Heading numbering) ----------------
@@ -1048,6 +1220,8 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
 .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
 .reader-body{min-width:0}
+.dokufix-meta{margin-top:4em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.85em;color:#8e8e92}
+.dokufix-meta p{margin:0}
 @media (min-width:1500px){
   body{max-width:1562px;display:grid;grid-template-columns:minmax(0, 1fr) 425px;column-gap:73px;padding:80px 32px 120px}
   .reader-body{max-width:1000px;margin:0 auto;width:100%}
@@ -1086,6 +1260,16 @@ function bodyClassForExport(){
 
 function escTitle(s){ return String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 
+// Small metadata block appended to read-only exports — shows the version
+// they were generated from. Skipped for files that have never been saved.
+function buildMetaFooterHtml(){
+  if (currentVersion === 0 || !versionHistory.length) return '';
+  const last = versionHistory[versionHistory.length - 1];
+  const dateStr = escapeHtml(formatVersionDate(last.t));
+  const msgStr = last.m ? ' · ' + escapeHtml(last.m) : '';
+  return '<footer class="dokufix-meta"><p>Version ' + last.v + ' · ' + dateStr + msgStr + '</p></footer>';
+}
+
 // --- Download #2a — pure read-only, no JS, fully open HTML ---
 async function downloadReadonlyOpen(){
   await render(); // ensure preview reflects current source AND mermaid SVGs are inlined
@@ -1105,6 +1289,7 @@ async function downloadReadonlyOpen(){
 <body${bodyClassForExport()}>
 <main class="reader-body">
 ${bodyHtml}
+${buildMetaFooterHtml()}
 </main>
 ${railHtml}
 </body>
@@ -1158,6 +1343,7 @@ ${noscript}
 <body${bodyClassForExport()}>
 <main class="reader-body">
 ${wrapper.innerHTML}
+${buildMetaFooterHtml()}
 ${decoder}
 </main>
 ${railHtml}
@@ -1172,7 +1358,7 @@ async function downloadReadonlyCompact(){
   await render();
 
   const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
-  const bodyHtml = previewEl.innerHTML;
+  const bodyHtml = previewEl.innerHTML + buildMetaFooterHtml();
   const payload = await gzipB64(bodyHtml);
   // Rail stays outside the compressed payload so it appears immediately
   // (no flash of empty navigation while the body decompresses).
@@ -1260,6 +1446,8 @@ document.addEventListener('keydown', e => {
   cleanBaseline = fallback;
   sourceEl.value = (stored !== null && stored !== '') ? stored : fallback;
   updateDirtyState();
+  loadVersionHistory();
+  updateVersionBadge();
   render();
 })();
 </script>

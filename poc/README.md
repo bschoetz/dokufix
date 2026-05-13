@@ -15,6 +15,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
 - **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
 - **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
+- **In-file version history** — each "Mit Editor" download increments a counter and appends a `{v, t (ISO), m (optional message)}` entry to a JSON block embedded in the file (`<script type="application/json" id="dokufix-history">` — non-executing, just data). A clickable `v{N}` badge in the header opens a modal listing every saved version, newest first. Read-only exports inherit a small `Version N · DD.MM.YYYY HH:MM · message` footer at the end of the document.
 - **Mobile-friendly** — hamburger menu collapses the editor toolbar on narrow viewports.
 
 ## Download variants
@@ -47,6 +48,20 @@ Two complementary mechanisms, deliberately separate:
   - **Static (read-only downloads — `nur-lesen`, `schlank`, `kompakt`):** pre-built HTML emitted at export time with the same heading list and CSS, but no JS dependency. Clicking jumps via native anchor — no scrollspy, no smooth scroll. Survives the JS-free `nur-lesen` variant.
 
 Heading IDs are slugified deterministically (umlaut-aware, ASCII-folded, deduped), so anchor links remain stable across re-renders and across the editor/receiver boundary.
+
+### Version history
+
+Each "Mit Editor" download is treated as the canonical save event:
+
+1. A `prompt()` asks for an optional version description. Cancel aborts the save entirely; Enter on an empty input proceeds without a message.
+2. The version counter increments by 1.
+3. A new entry `{v, t, m}` is appended to the history list.
+4. The cloned document's `<script type="application/json" id="dokufix-history">` block is replaced with the new JSON before serializing.
+5. The running session updates its own counter and history so subsequent saves continue from the new state.
+
+Read-only downloads do *not* bump the version — they ship the current `Version N · timestamp · message` as a footer (inside the compressed payload for the `kompakt` variant so it survives decompression) and that's it. They are derivatives of a saved version, not new saves.
+
+Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`. The first save bootstraps the history at `v1`. No migration is required and no data is silently mutated.
 
 ### Dirty-state baseline
 
