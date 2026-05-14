@@ -246,6 +246,33 @@
     border-bottom:1px solid #e5e5ea;
     font-size:11px;letter-spacing:0.18em;text-transform:uppercase;
     color:#6e6e73;font-weight:700;flex-shrink:0;
+    display:flex;align-items:center;gap:12px;
+  }
+  .img-btn{
+    margin-left:auto;background:transparent;border:1px solid #d1d1d6;color:#1c1c1e;
+    font:600 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    letter-spacing:0.14em;text-transform:uppercase;
+    padding:5px 10px;border-radius:4px;cursor:pointer;transition:background .12s ease;
+  }
+  .img-btn:hover{background:#f0f0f3}
+  .pane-source{position:relative}
+  .drop-overlay{
+    position:absolute;inset:32px;border:2px dashed #0066cc;border-radius:8px;
+    background:rgba(0,102,204,0.06);display:none;align-items:center;justify-content:center;
+    color:#0066cc;font:600 18px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    pointer-events:none;z-index:5;
+  }
+  .pane-source.is-drop-target .drop-overlay{display:flex}
+  #preview img{max-width:100%;height:auto;border-radius:4px;margin:8px 0}
+  #preview img[data-missing-asset]{
+    display:inline-block;min-width:200px;padding:14px 18px;
+    background:#fff3f3;border:1px dashed #c44;border-radius:6px;
+    color:#8b1300;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    text-align:center;
+  }
+  #preview img[data-missing-asset]::after{
+    content:"Bild fehlt: " attr(data-missing-asset);
+    word-break:break-all;
   }
   textarea{
     flex:1;width:100%;border:0;padding:24px;
@@ -582,8 +609,13 @@
 
 <main class="layout">
   <section class="pane pane-source">
-    <div class="pane-header">Quelle · Markdown + Mermaid</div>
+    <div class="pane-header">
+      <span>Quelle · Markdown + Mermaid</span>
+      <button id="img-btn" type="button" class="img-btn" title="Bild einfügen — oder per Drag &amp; Drop / Strg+V hineinpasten">+ Bild</button>
+      <input id="img-input" type="file" accept="image/*" multiple hidden>
+    </div>
     <textarea id="source" spellcheck="false"></textarea>
+    <div class="drop-overlay" id="drop-overlay" aria-hidden="true">Bild fallenlassen</div>
   </section>
   <section class="pane pane-preview">
     <div class="pane-header">Vorschau · gelayoutetes Dokument</div>
@@ -609,6 +641,18 @@
 
 <!-- Persistent in-file version history (JSON payload, not executed) -->
 <script type="application/json" id="dokufix-history">{"version":0,"history":[]}</script>
+
+<!-- Baked image assets (hash → {m: mime, d: base64}). Seeded into IndexedDB on load. -->
+<script type="application/json" id="dokufix-assets">{}</script>
+
+<!-- Storage-error banner (hidden until init detects IDB failure) -->
+<div id="storage-error" hidden role="alert"
+     style="position:fixed;top:0;left:0;right:0;background:#fee;border-bottom:1px solid #c44;color:#8b1300;padding:12px 18px;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;z-index:9999">
+  <strong>Speicher nicht verfügbar.</strong>
+  <span class="storage-error-msg"></span>
+  IndexedDB ist im aktuellen Browserprofil deaktiviert — wahrscheinlich ein privater Modus oder eine restriktive Site-Einstellung.
+  Entwurf und Versionsverlauf können in dieser Sitzung nicht erhalten werden.
+</div>
 
 <!-- CDN libraries (PoC only — production bundle will inline these) -->
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -643,6 +687,393 @@ async function ungzipB64(b64){
   const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('gzip'));
   return await new Response(stream).text();
+}
+
+// --- IndexedDB layer ------------------------------------------
+// One DB per origin, two stores:
+//   docs   (keyPath: uuid)  — one record per dokufix file: source, version, history, commitBaseline
+//   assets (keyPath: hash)  — image Blobs, content-addressed by SHA-256 hex (auto-dedup, no GC needed)
+const IDB_NAME = 'dokufix-v1';
+const IDB_VERSION = 1;
+let _dbPromise = null;
+function openDB(){
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = new Promise((resolve, reject) => {
+    if (typeof indexedDB === 'undefined'){
+      reject(new Error('IndexedDB nicht verfügbar'));
+      return;
+    }
+    const req = indexedDB.open(IDB_NAME, IDB_VERSION);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains('docs')) db.createObjectStore('docs', { keyPath: 'uuid' });
+      if (!db.objectStoreNames.contains('assets')) db.createObjectStore('assets', { keyPath: 'hash' });
+    };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => reject(req.error || new Error('IndexedDB open failed'));
+    req.onblocked = () => reject(new Error('IndexedDB upgrade blocked by another tab'));
+  });
+  return _dbPromise;
+}
+function _idbReq(req){
+  return new Promise((resolve, reject) => {
+    req.onsuccess = () => resolve(req.result);
+    req.onerror   = () => reject(req.error);
+  });
+}
+async function idbGetDoc(uuid){
+  const db = await openDB();
+  return _idbReq(db.transaction('docs', 'readonly').objectStore('docs').get(uuid));
+}
+async function idbPutDoc(rec){
+  const db = await openDB();
+  rec.updatedAt = new Date().toISOString();
+  return _idbReq(db.transaction('docs', 'readwrite').objectStore('docs').put(rec));
+}
+async function idbDeleteDoc(uuid){
+  const db = await openDB();
+  return _idbReq(db.transaction('docs', 'readwrite').objectStore('docs').delete(uuid));
+}
+async function idbGetAsset(hash){
+  const db = await openDB();
+  return _idbReq(db.transaction('assets', 'readonly').objectStore('assets').get(hash));
+}
+async function idbPutAsset(rec){
+  const db = await openDB();
+  return _idbReq(db.transaction('assets', 'readwrite').objectStore('assets').put(rec));
+}
+async function idbBatchGetAssets(hashes){
+  const out = new Map();
+  if (!hashes.length) return out;
+  const db = await openDB();
+  const store = db.transaction('assets', 'readonly').objectStore('assets');
+  await Promise.all(hashes.map(h => new Promise((resolve, reject) => {
+    const req = store.get(h);
+    req.onsuccess = () => { if (req.result) out.set(h, req.result); resolve(); };
+    req.onerror   = () => reject(req.error);
+  })));
+  return out;
+}
+
+// --- Storage-error banner -------------------------------------
+function showStorageError(detail){
+  const el = document.getElementById('storage-error');
+  if (!el) { alert('Speicher nicht verfügbar: ' + detail); return; }
+  const msgEl = el.querySelector('.storage-error-msg');
+  if (msgEl && detail) msgEl.textContent = '(' + detail + ') ';
+  el.hidden = false;
+}
+
+// --- Image / asset pipeline -----------------------------------
+// Assets are stored as native Blob in IDB, keyed by SHA-256 hex (content
+// addressing → automatic deduplication). The markdown source refers to
+// them via ![alt](#asset-<hash>). The render step rewrites those refs to
+// Blob URLs; read-only downloads inline them as data: URLs.
+const ASSET_MAX_INPUT_BYTES = 5 * 1024 * 1024;
+const ASSET_MAX_WIDTH = 1600;
+const ASSET_WEBP_QUALITY = 0.85;
+// Guard against decoded-pixel blow-up: a heavily compressed JPEG can fit
+// inside the 5 MB input cap and still decode to a 12000×8000 bitmap, where
+// the intermediate canvas allocates ~400 MB of RGBA and can OOM the tab.
+const ASSET_MAX_DECODED_PIXELS = 25 * 1000 * 1000;  // 25 MP
+// Hash matcher: 12-64 hex chars after #asset- (full sha256 is 64; allow
+// shorter prefixes for forward-compat with eventual short-hash refs).
+const ASSET_REF_RE = /#asset-([0-9a-f]{12,64})/gi;
+// Same shape inside an HTML attribute value, used to rewrite src="#asset-…".
+const ASSET_SRC_ATTR_RE = /src=("|')#asset-([0-9a-f]{12,64})\1/gi;
+
+// Session-lifetime cache mapping hash → blob URL. Created on demand during
+// render. Stale entries (hashes no longer referenced from the source) are
+// revoked after each render via pruneAssetUrlCache — long sessions otherwise
+// accumulate decoded image references that the browser keeps alive.
+const assetUrlCache = new Map();
+function assetUrlFor(hash, blob){
+  let url = assetUrlCache.get(hash);
+  if (!url){
+    url = URL.createObjectURL(blob);
+    assetUrlCache.set(hash, url);
+  }
+  return url;
+}
+function pruneAssetUrlCache(keepHashes){
+  for (const [h, u] of assetUrlCache){
+    if (!keepHashes.has(h)){
+      URL.revokeObjectURL(u);
+      assetUrlCache.delete(h);
+    }
+  }
+}
+window.addEventListener('beforeunload', () => {
+  for (const u of assetUrlCache.values()) URL.revokeObjectURL(u);
+  assetUrlCache.clear();
+});
+
+// 1×1 transparent GIF data URL used as the src for unresolved/missing asset
+// refs. Avoids the empty src="" footgun where browsers fetch the document's
+// own URL, and keeps the layout box stable so the CSS placeholder renders
+// at a sensible size.
+const MISSING_ASSET_SRC = 'data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==';
+
+// Pull every #asset-<hash> reference out of an arbitrary markdown / HTML
+// string. Returns a Set of unique lowercase hashes.
+function collectAssetHashes(text){
+  const out = new Set();
+  if (!text) return out;
+  ASSET_REF_RE.lastIndex = 0;
+  let m;
+  while ((m = ASSET_REF_RE.exec(text)) !== null) out.add(m[1].toLowerCase());
+  return out;
+}
+
+async function sha256Hex(buf){
+  const digest = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(digest))
+    .map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+// Decode the file, optionally downscale, re-encode to WebP, hash, store.
+// Returns { hash, mime, size, alt, width, height }.
+async function addImageFromBlob(file, altHint){
+  if (!file || !file.type || !file.type.startsWith('image/')){
+    throw new Error('Keine Bilddatei');
+  }
+  if (file.size > ASSET_MAX_INPUT_BYTES){
+    throw new Error('Datei zu groß (max. ' + Math.round(ASSET_MAX_INPUT_BYTES / 1024 / 1024) + ' MB)');
+  }
+  // createImageBitmap with imageOrientation: 'from-image' applies EXIF
+  // orientation to the pixels; the subsequent canvas roundtrip strips
+  // the EXIF metadata entirely (privacy side-effect).
+  const bitmap = await createImageBitmap(file, { imageOrientation: 'from-image' });
+  const w0 = bitmap.width, h0 = bitmap.height;
+  if (w0 * h0 > ASSET_MAX_DECODED_PIXELS){
+    if (bitmap.close) bitmap.close();
+    throw new Error('Bild zu groß zum Verarbeiten (' + w0 + '×' + h0 +
+      ' Pixel; Limit ' + Math.round(ASSET_MAX_DECODED_PIXELS / 1e6) + ' MP)');
+  }
+  const scale = Math.min(1, ASSET_MAX_WIDTH / w0);
+  const w = Math.max(1, Math.round(w0 * scale));
+  const h = Math.max(1, Math.round(h0 * scale));
+  let outBlob;
+  try {
+    if (typeof OffscreenCanvas !== 'undefined' && OffscreenCanvas.prototype.convertToBlob){
+      const oc = new OffscreenCanvas(w, h);
+      const ctx = oc.getContext('2d');
+      if (!ctx) throw new Error('Canvas-Kontext nicht verfügbar');
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      outBlob = await oc.convertToBlob({ type: 'image/webp', quality: ASSET_WEBP_QUALITY });
+    } else {
+      const cv = Object.assign(document.createElement('canvas'), { width: w, height: h });
+      const ctx = cv.getContext('2d');
+      if (!ctx) throw new Error('Canvas-Kontext nicht verfügbar');
+      ctx.drawImage(bitmap, 0, 0, w, h);
+      outBlob = await new Promise((res, rej) =>
+        cv.toBlob(b => b ? res(b) : rej(new Error('Bild-Encoding fehlgeschlagen')),
+                  'image/webp', ASSET_WEBP_QUALITY));
+    }
+  } finally {
+    // Release native bitmap memory even when encoding throws — otherwise
+    // each failed upload leaks the decoded buffer until GC.
+    if (bitmap.close) bitmap.close();
+  }
+  const buf = await outBlob.arrayBuffer();
+  const hash = await sha256Hex(buf);
+  await idbPutAsset({
+    hash, blob: outBlob, mime: 'image/webp',
+    size: outBlob.size, createdAt: new Date().toISOString(),
+  });
+  // Sanitize alt-text from the filename: strip characters that would let an
+  // attacker-controlled filename break out of the markdown image syntax
+  // (e.g. `x](http://evil/track.png).png` would otherwise inject an external
+  // src). Keep it readable: trim leftover whitespace and bound the length.
+  const rawAlt = altHint || (file.name ? file.name.replace(/\.[^.]+$/, '') : 'Bild');
+  const altBase = String(rawAlt).replace(/[\[\]()\\`<>]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120) || 'Bild';
+  return { hash, mime: 'image/webp', size: outBlob.size, alt: altBase, width: w, height: h };
+}
+
+// Insert markdown text at the current selection position of the textarea
+// and dispatch input so the save / dirty machinery picks it up.
+function insertAtCursor(textarea, text){
+  const start = textarea.selectionStart, end = textarea.selectionEnd;
+  textarea.value = textarea.value.slice(0, start) + text + textarea.value.slice(end);
+  const pos = start + text.length;
+  textarea.selectionStart = textarea.selectionEnd = pos;
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+async function handleImageInsert(file){
+  try {
+    const { hash, alt } = await addImageFromBlob(file);
+    insertAtCursor(sourceEl, '![' + alt + '](#asset-' + hash + ')');
+    render();
+  } catch (e) {
+    console.error('Image insert failed:', e);
+    alert('Bild konnte nicht eingefügt werden: ' + (e.message || e));
+  }
+}
+
+// Read the baked <script id="dokufix-assets"> JSON block and write each
+// entry into IDB. Idempotent — content-addressed hashes mean a re-seed
+// of identical bytes is a no-op.
+//
+// Integrity check: the asserted hash is treated as untrusted (the file
+// may have been crafted by an attacker pairing a benign hash with hostile
+// bytes). We recompute SHA-256 over the decoded bytes and refuse to store
+// the entry if it doesn't match. A mismatch is logged once and skipped —
+// the markdown ref will simply render as a missing-asset placeholder.
+async function seedAssetsFromBakedBlock(){
+  const el = document.getElementById('dokufix-assets');
+  if (!el) return;
+  let parsed;
+  try { parsed = JSON.parse((el.textContent || '').trim() || '{}'); }
+  catch (e) { console.warn('Assets block parse failed:', e); return; }
+  if (!parsed || typeof parsed !== 'object') return;
+  for (const [hash, val] of Object.entries(parsed)){
+    if (!/^[0-9a-f]{64}$/i.test(hash)) continue;  // require full SHA-256
+    if (!val || typeof val !== 'object') continue;
+    const mime = typeof val.m === 'string' ? val.m : 'image/webp';
+    const b64 = typeof val.d === 'string' ? val.d : '';
+    if (!b64) continue;
+    const lowerHash = hash.toLowerCase();
+    try {
+      const existing = await idbGetAsset(lowerHash);
+      if (existing) continue;
+      let bytes;
+      try { bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0)); }
+      catch (e) { console.warn('Asset base64 decode failed for ' + lowerHash + ':', e); continue; }
+      const actualHash = await sha256Hex(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+      if (actualHash !== lowerHash){
+        console.warn('Asset integrity check failed — asserted ' + lowerHash +
+                     ' but bytes hash to ' + actualHash + '; skipping.');
+        continue;
+      }
+      const blob = new Blob([bytes], { type: mime });
+      await idbPutAsset({
+        hash: lowerHash, blob, mime, size: bytes.length,
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) { console.warn('Asset seed failed for ' + lowerHash + ':', e); }
+  }
+}
+
+// Blob → "base64" (binary-safe via FileReader).
+async function blobToBase64(blob){
+  return new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => {
+      const s = String(r.result);
+      const i = s.indexOf(',');
+      resolve(i >= 0 ? s.slice(i + 1) : s);
+    };
+    r.onerror = () => reject(r.error);
+    r.readAsDataURL(blob);
+  });
+}
+
+// Rewrite src="#asset-<hash>" inside the rendered HTML to a Blob URL pulled
+// from IDB. Missing assets get a transparent placeholder src plus a
+// data-missing-asset attribute so the CSS rule img[data-missing-asset] can
+// render a clearly-labeled placeholder. The transparent src prevents the
+// browser from issuing a fetch against the document URL (which empty
+// src="" would otherwise trigger). Returns the set of hashes that were
+// successfully resolved so the caller can prune stale cache entries.
+async function resolveAssetRefsInHtml(html){
+  if (!html) return { html, resolved: new Set() };
+  const hashes = new Set();
+  let m;
+  ASSET_SRC_ATTR_RE.lastIndex = 0;
+  while ((m = ASSET_SRC_ATTR_RE.exec(html)) !== null) hashes.add(m[2].toLowerCase());
+  if (!hashes.size) return { html, resolved: new Set() };
+  let assetMap = new Map();
+  try { assetMap = await idbBatchGetAssets([...hashes]); }
+  catch (e) { console.warn('Asset batch read failed:', e); }
+  const resolved = new Set();
+  const out = html.replace(ASSET_SRC_ATTR_RE, (_full, q, hex) => {
+    const h = hex.toLowerCase();
+    const rec = assetMap.get(h);
+    if (rec && rec.blob){
+      const url = assetUrlFor(h, rec.blob);
+      resolved.add(h);
+      return 'src=' + q + url + q;
+    }
+    return 'src=' + q + MISSING_ASSET_SRC + q + ' data-missing-asset=' + q + h + q;
+  });
+  return { html: out, resolved };
+}
+
+// Same shape, but produces data: URLs — for read-only exports that must be
+// self-contained without any IDB or runtime dependency. Unresolvable refs
+// keep the transparent placeholder src plus their data-missing-asset
+// attribute, so the receiver's CSS still shows a "Bild fehlt" marker.
+async function inlineAssetRefsAsDataUrls(html){
+  if (!html) return html;
+  const hashes = new Set();
+  let m;
+  ASSET_SRC_ATTR_RE.lastIndex = 0;
+  while ((m = ASSET_SRC_ATTR_RE.exec(html)) !== null) hashes.add(m[2].toLowerCase());
+  // Read-only exports may also contain Blob URLs that the live render pass
+  // inserted into the preview before we cloned it. Resolve those too via
+  // the assetUrlCache reverse map.
+  const blobUrlToHash = new Map();
+  for (const [h, u] of assetUrlCache.entries()) blobUrlToHash.set(u, h);
+  const BLOB_RE = /src=("|')(blob:[^"']+)\1/gi;
+  while ((m = BLOB_RE.exec(html)) !== null){
+    const h = blobUrlToHash.get(m[2]);
+    if (h) hashes.add(h);
+  }
+  if (!hashes.size) return html;
+  let assetMap = new Map();
+  try { assetMap = await idbBatchGetAssets([...hashes]); }
+  catch (e) { console.warn('Asset batch read failed:', e); }
+  const dataUrls = new Map();
+  for (const [h, rec] of assetMap.entries()){
+    if (!rec || !rec.blob) continue;
+    try {
+      const b64 = await blobToBase64(rec.blob);
+      dataUrls.set(h, 'data:' + (rec.mime || 'image/webp') + ';base64,' + b64);
+    } catch (e) { console.warn('Asset data-URL convert failed for ' + h + ':', e); }
+  }
+  let out = html.replace(ASSET_SRC_ATTR_RE, (_full, q, hex) => {
+    const h = hex.toLowerCase();
+    const url = dataUrls.get(h);
+    return url
+      ? 'src=' + q + url + q
+      : 'src=' + q + MISSING_ASSET_SRC + q + ' data-missing-asset=' + q + h + q;
+  });
+  out = out.replace(BLOB_RE, (_full, q, blobUrl) => {
+    const h = blobUrlToHash.get(blobUrl);
+    const url = h ? dataUrls.get(h) : null;
+    if (url) return 'src=' + q + url + q;
+    return 'src=' + q + MISSING_ASSET_SRC + q +
+           (h ? ' data-missing-asset=' + q + h + q : '');
+  });
+  return out;
+}
+
+// Build the JSON payload for the #dokufix-assets script block. Includes any
+// asset referenced by the current source AND any referenced in history
+// snapshots — every prior version stays fully reconstructible from the file.
+async function bakeAssetsForDocument(){
+  const hashes = new Set(collectAssetHashes(sourceEl.value));
+  for (const e of versionHistory){
+    if (!e || typeof e.s !== 'string' || !e.s) continue;
+    try {
+      const src = await ungzipB64(e.s);
+      for (const h of collectAssetHashes(src)) hashes.add(h);
+    } catch (err) {
+      console.warn('History snapshot decode failed during asset bake:', err);
+    }
+  }
+  if (!hashes.size) return {};
+  const assetMap = await idbBatchGetAssets([...hashes]);
+  const out = {};
+  for (const [h, rec] of assetMap.entries()){
+    if (!rec || !rec.blob) continue;
+    try {
+      const b64 = await blobToBase64(rec.blob);
+      out[h] = { m: rec.mime || 'image/webp', d: b64 };
+    } catch (e) { console.warn('Asset bake failed for ' + h + ':', e); }
+  }
+  return out;
 }
 
 // === DEMO-START === (immutable original demo content for "Demo zurücksetzen"; ships gzip-compressed in downloaded files)
@@ -770,45 +1201,67 @@ function fallbackUuidFromLocation(){
   return 'loc-' + h.toString(36);
 }
 
-// --- Browser-side persistence ---------------------------------
-// PoC: localStorage. MVP target per product brief is IndexedDB (larger payloads,
-// survives more aggressively across tab/crash). Easy to swap later.
-function sourceStorageKey(){ return 'dokufix-doc-' + docUuid + '-source'; }
-function loadFromStorage(){
-  try{ return localStorage.getItem(sourceStorageKey()); }
-  catch(e){ console.warn('localStorage read failed:', e); return null; }
-}
-function saveToStorage(text){
-  try{ localStorage.setItem(sourceStorageKey(), text); }
-  catch(e){ console.warn('localStorage write failed:', e); }
-}
-let saveTimer;
-function scheduleSave(){
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => saveToStorage(sourceEl.value), 250);
-}
+// --- Browser-side persistence (IndexedDB) ---------------------
+// One record per dokufix file lives in IDB under its UUID, in store 'docs':
+//   { uuid, source, version, history, commitBaseline, updatedAt }
+// Migration from the PoC's earlier localStorage layout happens transparently
+// on first load (see migrateLegacyLocalStorage). Storage of the heading-
+// numbering preference stays in localStorage — it's doc-independent UX state,
+// not document content.
 
-// --- In-file version history ----------------------------------
-// One JSON blob lives in <script type="application/json" id="dokufix-history">.
-// {version: N, history: [{v, t (ISO), m (message)}, …]}
-// Two ways to create an entry:
-//   - "Mit Editor" download (canonical save) — bumps the version, writes the file
-//   - Commit-only (button in the version modal) — bumps the version in memory,
-//     persisted via localStorage, no file is produced. A later save picks up
-//     all accumulated commits.
-// Both are skipped if the editor source is identical to the last commit/save
-// (commitBaseline) — no point asking for a message when nothing changed.
+// In-memory state mirrored to IDB.
 let currentVersion = 0;
 let versionHistory = [];
-let commitBaseline = '';  // source at time of last version event
-function versionStorageKey(){ return 'dokufix-doc-' + docUuid + '-versions'; }
-const versionBtn = document.getElementById('version-btn');
+let commitBaseline = '';   // source at time of last version event
+let storedSource   = null; // last source loaded from IDB (or null on fresh open)
+const versionBtn   = document.getElementById('version-btn');
 const versionModal = document.getElementById('version-modal');
 
-function loadVersionHistory(initialSource){
-  // Two sources of truth: the file's baked-in JSON block and the browser's
-  // localStorage. Prefer whichever has the higher version (localStorage wins
-  // when a commit-only happened since the last download).
+// One-shot migration: if no IDB doc record exists for this UUID but the old
+// PoC's localStorage keys do, move the data into IDB and drop the LS keys.
+// Conservative: we only delete the legacy keys after the IDB write resolved
+// successfully. A migration with a malformed source still proceeds (we'd
+// lose nothing by keeping the LS copy around through another reload, but
+// the user has already moved on to the IDB-backed flow at that point).
+async function migrateLegacyLocalStorage(uuid){
+  const srcKey = 'dokufix-doc-' + uuid + '-source';
+  const verKey = 'dokufix-doc-' + uuid + '-versions';
+  let lsSource = null, lsVersions = null;
+  try { lsSource   = localStorage.getItem(srcKey); } catch(e){}
+  try { lsVersions = localStorage.getItem(verKey); } catch(e){}
+  if (lsSource === null && lsVersions === null) return null;
+  let parsedVersions = { version: 0, history: [] };
+  if (lsVersions){
+    try {
+      const p = JSON.parse(lsVersions);
+      if (p && typeof p === 'object') parsedVersions = p;
+    } catch (e) { console.warn('Legacy versions parse failed during migration:', e); }
+  }
+  // commitBaseline is only carried over if it's a non-empty string; empty or
+  // missing falls through to loadDocState which will use the file's SAMPLE
+  // as baseline instead. An empty-string baseline would otherwise make every
+  // subsequent edit (and the loaded source itself) read as dirty.
+  const lsBaseline = typeof parsedVersions.commitBaseline === 'string' && parsedVersions.commitBaseline !== ''
+    ? parsedVersions.commitBaseline : null;
+  const rec = {
+    uuid,
+    source: lsSource || '',
+    version: sanitizeVersion(parsedVersions.version),
+    history: Array.isArray(parsedVersions.history) ? parsedVersions.history.filter(isValidEntry) : [],
+  };
+  if (lsBaseline !== null) rec.commitBaseline = lsBaseline;
+  try { await idbPutDoc(rec); }
+  catch (e) { console.warn('IDB migration write failed:', e); return null; }
+  try { localStorage.removeItem(srcKey); localStorage.removeItem(verKey); } catch(e){}
+  return rec;
+}
+
+async function loadDocState(initialSource){
+  // The file's baked-in #dokufix-history is one source of truth. The IDB
+  // record (or migrated-from-localStorage) is the other. We use the file's
+  // JSON purely to derive docUuid; live state comes from IDB if its version
+  // is newer (commit-only events after the last download bump the IDB
+  // version past the file's baked one).
   let fileData = { version: 0, history: [] };
   const el = document.getElementById('dokufix-history');
   if (el) {
@@ -818,35 +1271,36 @@ function loadVersionHistory(initialSource){
       if (parsed && typeof parsed === 'object') fileData = parsed;
     } catch (e) { console.warn('File history parse failed:', e); }
   }
-  // The UUID lives in the file's JSON block. Missing on older / never-saved
-  // files; we fall back to a deterministic id derived from location.href
-  // so a reload-before-save still recovers the prior session's draft and
-  // commits from localStorage. On first save, a real UUID is baked in.
   docUuid = (fileData && typeof fileData.uuid === 'string' && fileData.uuid)
     ? fileData.uuid : fallbackUuidFromLocation();
 
-  let lsData = null;
-  try {
-    const raw = localStorage.getItem(versionStorageKey());
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') lsData = parsed;
-    }
-  } catch (e) { console.warn('Storage history parse failed:', e); }
+  // Look in IDB first; if absent, attempt one-shot migration from legacy LS.
+  let dbRec = null;
+  try { dbRec = await idbGetDoc(docUuid); }
+  catch (e) { console.warn('IDB read failed:', e); }
+  if (!dbRec) dbRec = await migrateLegacyLocalStorage(docUuid);
 
-  const lsVer = lsData ? sanitizeVersion(lsData.version) : -1;
+  const dbVer   = dbRec ? sanitizeVersion(dbRec.version) : -1;
   const fileVer = sanitizeVersion(fileData.version);
-  const useLs = lsData && lsVer > fileVer;
-  const data = useLs ? lsData : fileData;
+  const useDb = dbRec && dbVer > fileVer;
+  const data = useDb ? dbRec : fileData;
 
   currentVersion = sanitizeVersion(data.version);
   versionHistory = Array.isArray(data.history) ? data.history.filter(isValidEntry) : [];
   // commitBaseline = the source at the time of the last version event.
-  // If localStorage is ahead, it stored the source as it was when the
+  // If the IDB record is ahead, it stored the source as it was when the
   // commit-only happened. Otherwise the file's baked SAMPLE represents it.
-  commitBaseline = useLs && typeof data.commitBaseline === 'string'
+  // Empty string is treated as "no usable baseline" (e.g. legacy record
+  // with no commitBaseline field) — fall back to initialSource so dirty
+  // state isn't computed against an empty baseline.
+  commitBaseline = useDb && typeof data.commitBaseline === 'string' && data.commitBaseline !== ''
     ? data.commitBaseline
     : initialSource;
+  // Source: whatever IDB has wins — drafts survive reloads. The presence
+  // of the record itself, not the truthiness of source, distinguishes
+  // "no draft" from "deliberately empty draft" — clearing the textarea on
+  // purpose must not be silently undone by SAMPLE-substitution on reload.
+  storedSource = (dbRec && typeof dbRec.source === 'string') ? dbRec.source : null;
 }
 
 function sanitizeVersion(n){
@@ -860,19 +1314,26 @@ function isValidEntry(e){
     && (typeof e.s === 'string' || e.s === undefined);
 }
 
-function persistVersionHistory(){
+async function persistDoc(){
   try {
-    localStorage.setItem(versionStorageKey(), JSON.stringify({
+    await idbPutDoc({
       uuid: docUuid,
+      source: sourceEl.value,
       version: currentVersion,
       history: versionHistory,
-      commitBaseline: commitBaseline,
-    }));
+      commitBaseline,
+    });
     setPersistFailed(false);
   } catch (e) {
-    console.warn('Version persist failed:', e);
+    console.warn('IDB persist failed:', e);
     setPersistFailed(true);
   }
+}
+
+let saveTimer;
+function scheduleSave(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(persistDoc, 250);
 }
 
 let persistFailedFlag = false;
@@ -903,7 +1364,7 @@ async function commitNewVersion(message){
     s: snapshot,
   }]);
   commitBaseline = sourceEl.value;
-  persistVersionHistory();
+  await persistDoc();
   updateVersionBadge();
 }
 
@@ -998,7 +1459,15 @@ async function render() {
     previewEl.innerHTML = '<div class="error">Markdown-Fehler: ' + escapeHtml(err.message) + '</div>';
     return;
   }
-  previewEl.innerHTML = html;
+  // Resolve #asset-<hash> image refs: pull the matching Blobs from IDB and
+  // rewrite the html string before insertion so the browser never tries to
+  // load the bogus "#asset-…" URL. Unresolved hashes get a transparent
+  // placeholder src + data-missing-asset attribute. Prune cache entries
+  // for hashes no longer referenced — long sessions would otherwise hold
+  // decoded image memory for every image ever inserted.
+  const resolution = await resolveAssetRefsInHtml(html);
+  pruneAssetUrlCache(resolution.resolved);
+  previewEl.innerHTML = resolution.html;
 
   // Heading IDs first — both the inline ToC and the scrollspy rail need them.
   const headings = previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
@@ -1056,6 +1525,10 @@ function slugify(text, used){
     .replace(/\s+/g, '-')
     .replace(/-+/g, '-');
   if (!slug) slug = 'section';
+  // Guard: never let a heading produce an "asset-…" slug — that namespace is
+  // reserved for image refs (#asset-<hash>) in the rendered preview, and a
+  // collision would let the asset-resolver target a heading anchor.
+  if (slug.startsWith('asset-') || slug === 'asset') slug = 'h-' + slug;
   let candidate = slug, i = 1;
   while (used.has(candidate)) candidate = slug + '-' + (++i);
   used.add(candidate);
@@ -1243,11 +1716,73 @@ sourceEl.addEventListener('keydown', e => {
   }
 });
 
+// --- Image input: paste, drag-and-drop, file-picker -----------
+// All three pathways converge on handleImageInsert(file), which runs the
+// pipeline (decode → downscale → WebP → hash → IDB) and inserts a
+// markdown reference at the cursor.
+
+// Clipboard paste (e.g. Win+Shift+S screenshot, Mac Cmd+Ctrl+Shift+4)
+sourceEl.addEventListener('paste', async e => {
+  const items = e.clipboardData ? e.clipboardData.items : null;
+  if (!items) return;
+  const imgs = [];
+  for (const it of items){
+    if (it.kind === 'file' && it.type && it.type.startsWith('image/')){
+      const f = it.getAsFile();
+      if (f) imgs.push(f);
+    }
+  }
+  if (!imgs.length) return;  // let the normal text paste through
+  e.preventDefault();
+  for (const f of imgs) await handleImageInsert(f);
+});
+
+// Drag-and-drop on the source pane. Highlights via .is-drop-target.
+const sourcePane = document.querySelector('.pane-source');
+if (sourcePane){
+  let dragDepth = 0;
+  const hasFile = ev => ev.dataTransfer && Array.from(ev.dataTransfer.types || []).includes('Files');
+  sourcePane.addEventListener('dragenter', e => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    if (dragDepth++ === 0) sourcePane.classList.add('is-drop-target');
+  });
+  sourcePane.addEventListener('dragover', e => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  });
+  sourcePane.addEventListener('dragleave', e => {
+    if (!hasFile(e)) return;
+    if (--dragDepth <= 0){ dragDepth = 0; sourcePane.classList.remove('is-drop-target'); }
+  });
+  sourcePane.addEventListener('drop', async e => {
+    if (!hasFile(e)) return;
+    e.preventDefault();
+    dragDepth = 0;
+    sourcePane.classList.remove('is-drop-target');
+    const files = Array.from(e.dataTransfer.files || []).filter(f => f.type.startsWith('image/'));
+    for (const f of files) await handleImageInsert(f);
+  });
+}
+
+// "+ Bild" toolbar button → hidden file input
+const imgBtn = document.getElementById('img-btn');
+const imgInput = document.getElementById('img-input');
+if (imgBtn && imgInput){
+  imgBtn.addEventListener('click', () => imgInput.click());
+  imgInput.addEventListener('change', async () => {
+    const files = Array.from(imgInput.files || []);
+    for (const f of files) await handleImageInsert(f);
+    imgInput.value = '';  // allow reselecting the same file
+  });
+}
+
 // "Demo zurücksetzen" — restore the immutable DEMO (not SAMPLE, which may have been overwritten by a download)
 resetEl.addEventListener('click', () => {
   if (sourceEl.value === DEMO || confirm('Demo-Text zurücksetzen? Aktuelle Änderungen gehen verloren.')){
     sourceEl.value = DEMO;
-    saveToStorage(DEMO);
+    persistDoc();
     updateDirtyState();
     render();
     sourceEl.focus();
@@ -1333,21 +1868,29 @@ function encodeJsonForScript(obj){
 async function downloadWithEditor(){
   if (!initDone) return;
   // First save with a location-based fallback UUID — upgrade to a real UUID
-  // and migrate the localStorage data to the new key. Subsequent saves keep
-  // the same real UUID. Copies of this file (via OS-level file copy) will
-  // share the UUID — that's the intentional behaviour: each "lineage" of
-  // saves shares a single identifier until the user breaks it manually.
+  // and rekey the IDB record. Subsequent saves keep the same real UUID.
+  // Copies of this file (via OS-level file copy) will share the UUID —
+  // that's the intentional behaviour: each "lineage" of saves shares a
+  // single identifier until the user breaks it manually.
+  //
+  // Order matters: we cancel the debounced save and read the existing
+  // record BEFORE flipping docUuid. Otherwise a 250 ms keystroke debounce
+  // firing during the await window could write the current source under
+  // the new UUID, only for the rekey to overwrite it with stale data.
   if (docUuid.startsWith('loc-')){
+    clearTimeout(saveTimer);
     const oldUuid = docUuid;
-    docUuid = generateDocUuid();
+    let oldRec = null;
+    try { oldRec = await idbGetDoc(oldUuid); }
+    catch (e) { console.warn('IDB rekey read failed:', e); }
+    const newUuid = generateDocUuid();
     try {
-      const oldSrcKey = 'dokufix-doc-' + oldUuid + '-source';
-      const oldVerKey = 'dokufix-doc-' + oldUuid + '-versions';
-      const oldSrc = localStorage.getItem(oldSrcKey);
-      const oldVer = localStorage.getItem(oldVerKey);
-      if (oldSrc !== null){ localStorage.setItem(sourceStorageKey(), oldSrc); localStorage.removeItem(oldSrcKey); }
-      if (oldVer !== null){ localStorage.setItem(versionStorageKey(), oldVer); localStorage.removeItem(oldVerKey); }
-    } catch (e) { /* localStorage failures non-fatal here */ }
+      if (oldRec){
+        await idbPutDoc({ ...oldRec, uuid: newUuid, source: sourceEl.value });
+        await idbDeleteDoc(oldUuid);
+      }
+    } catch (e) { console.warn('IDB rekey write failed:', e); }
+    docUuid = newUuid;
   }
   // Only ask for a commit message if there are actual changes since the last
   // version event. If the source already matches the last commit/save, we
@@ -1411,6 +1954,26 @@ async function downloadWithEditor(){
     // Bake the version history into the clone before serializing.
     const historyClone = docClone.querySelector('#dokufix-history');
     if (historyClone) historyClone.textContent = historyJson;
+    // Bake every asset referenced by the current source AND any history
+    // snapshot. Without this, prior versions in the in-file history that
+    // referenced now-baked assets would break on receiver-side preview.
+    // If the bake itself fails (transaction abort, base64 conversion error
+    // on a corrupt asset), we surface a clear error instead of silently
+    // killing the whole download.
+    let assetsPayload = {};
+    try { assetsPayload = await bakeAssetsForDocument(); }
+    catch (e) {
+      console.error('Asset bake failed:', e);
+      alert('Bilder konnten nicht in die Datei eingebettet werden — Download abgebrochen. (' + (e && e.message || e) + ')');
+      return;
+    }
+    const assetsClone = docClone.querySelector('#dokufix-assets');
+    if (assetsClone) assetsClone.textContent = encodeJsonForScript(assetsPayload);
+    // Receiver opens cleanly — hide any storage-error banner the sender saw.
+    const errClone = docClone.querySelector('#storage-error');
+    if (errClone) errClone.hidden = true;
+    // Drop the transient .is-drop-target class on the source pane clone.
+    docClone.querySelectorAll('.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
     const versionBadgeClone = docClone.querySelector('#version-btn');
     if (versionBadgeClone){
       versionBadgeClone.textContent = 'v' + pendingVersion;
@@ -1457,7 +2020,7 @@ async function downloadWithEditor(){
     cleanBaseline = sourceEl.value;
     updateDirtyState();
     updateVersionBadge();
-    persistVersionHistory();
+    await persistDoc();
   } finally {
     setDownloadInFlight(false);
   }
@@ -1503,6 +2066,8 @@ table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
 th,td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
 th{background:#fafafa;font-weight:700}
 img{max-width:100%;height:auto;border-radius:4px}
+img[data-missing-asset]{display:inline-block;min-width:200px;padding:14px 18px;background:#fff3f3;border:1px dashed #c44;border-radius:6px;color:#8b1300;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;object-fit:contain}
+img[data-missing-asset]::after{content:"Bild fehlt: " attr(data-missing-asset);word-break:break-all}
 a{color:#0066cc}
 .mermaid{margin:24px 0;text-align:center}
 .mermaid svg{max-width:100%;height:auto}
@@ -1578,7 +2143,10 @@ async function downloadReadonlyOpen(){
   await render(); // ensure preview reflects current source AND mermaid SVGs are inlined
 
   const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
-  const bodyHtml = previewEl.innerHTML;
+  // Inline every image asset as a data: URL — the receiver of a read-only
+  // export has no IDB and may not even have JS, so blob URLs (live preview)
+  // and "#asset-…" refs (unresolved) both need to become self-contained.
+  const bodyHtml = await inlineAssetRefsAsDataUrls(previewEl.innerHTML);
   const railHtml = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'));
 
   const html = `<!DOCTYPE html>
@@ -1607,9 +2175,10 @@ async function downloadReadonlySlim(){
 
   const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
 
-  // Work on a clone of the rendered preview
+  // Work on a clone of the rendered preview, with image refs inlined as
+  // data: URLs so the export is fully self-contained.
   const wrapper = document.createElement('div');
-  wrapper.innerHTML = previewEl.innerHTML;
+  wrapper.innerHTML = await inlineAssetRefsAsDataUrls(previewEl.innerHTML);
 
   // Replace each Mermaid SVG with a placeholder div that carries gzipped+base64 SVG payload.
   // The text/HTML around it stays as readable plaintext.
@@ -1661,7 +2230,11 @@ async function downloadReadonlyCompact(){
   await render();
 
   const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
-  const bodyHtml = previewEl.innerHTML + buildMetaFooterHtml();
+  // Image refs become data: URLs before gzipping. Binary PNG/WebP doesn't
+  // compress meaningfully a second time, but base64 itself shrinks by ~30 %
+  // through gzip, so the overall cost vs an open export is modest.
+  const inlinedBody = await inlineAssetRefsAsDataUrls(previewEl.innerHTML);
+  const bodyHtml = inlinedBody + buildMetaFooterHtml();
   const payload = await gzipB64(bodyHtml);
   // Rail stays outside the compressed payload so it appears immediately
   // (no flash of empty navigation while the body decompresses).
@@ -1737,7 +2310,8 @@ document.addEventListener('keydown', e => {
   }
 });
 
-// Async init — decompresses DEMO_GZ and SAMPLE_GZ if set, then loads source + renders
+// Async init — decompresses DEMO_GZ and SAMPLE_GZ if set, opens IDB,
+// migrates legacy localStorage if present, then loads source + renders.
 (async () => {
   if (DEMO_GZ) {
     try { DEMO = await ungzipB64(DEMO_GZ); }
@@ -1748,14 +2322,55 @@ document.addEventListener('keydown', e => {
     catch (e) { console.error('SAMPLE_GZ decompression failed:', e); }
   }
   const fallback = SAMPLE || DEMO;
-  // loadVersionHistory FIRST: it sets docUuid, which is needed before
-  // sourceStorageKey() can produce a UUID-suffixed key.
-  loadVersionHistory(fallback);
-  const stored = loadFromStorage();
+
+  // Open IDB once up front. If the browser refuses (private mode in some
+  // browsers, file:// quirks), surface the banner — but keep going in a
+  // degraded mode so the user can still READ the baked SAMPLE/DEMO. Edits
+  // won't persist (persistDoc will warn via setPersistFailed), but the
+  // document content itself remains visible. The PoC is modern-only and
+  // doesn't fall back to localStorage for storage, but blocking the view
+  // would mean private-mode users can't even read what they just opened.
+  let idbAvailable = true;
+  try { await openDB(); }
+  catch (e) {
+    console.error('IndexedDB unavailable:', e);
+    showStorageError(e && e.message ? e.message : String(e));
+    idbAvailable = false;
+  }
+
+  if (idbAvailable){
+    // loadDocState FIRST: derives docUuid from the file's history JSON,
+    // then loads (or migrates) the IDB record for that UUID.
+    await loadDocState(fallback);
+    // Seed assets baked into THIS file into IDB (idempotent — content-addressed).
+    await seedAssetsFromBakedBlock();
+  } else {
+    // Degraded path: parse the baked history block for UUID + history (so
+    // the version badge and bake metadata are correct), but no IDB read.
+    docUuid = fallbackUuidFromLocation();
+    const el = document.getElementById('dokufix-history');
+    if (el){
+      try {
+        const parsed = JSON.parse((el.textContent || '').trim() || '{}');
+        if (parsed && typeof parsed === 'object'){
+          if (typeof parsed.uuid === 'string' && parsed.uuid) docUuid = parsed.uuid;
+          currentVersion = sanitizeVersion(parsed.version);
+          versionHistory = Array.isArray(parsed.history) ? parsed.history.filter(isValidEntry) : [];
+        }
+      } catch (e) { console.warn('File history parse failed (degraded mode):', e); }
+    }
+    commitBaseline = fallback;
+    storedSource = null;
+    setPersistFailed(true);
+  }
+
   // Baseline = what's actually baked into THIS file. A draft restored from
-  // localStorage that differs from the baseline correctly reads as "geändert".
+  // IDB that differs from the baseline correctly reads as "geändert".
   cleanBaseline = fallback;
-  sourceEl.value = (stored !== null && stored !== '') ? stored : fallback;
+  // A record exists (storedSource is a string) → respect it even if it's
+  // empty — that means the user cleared the textarea deliberately. No
+  // record → fall back to the file's SAMPLE/DEMO so the doc is readable.
+  sourceEl.value = (storedSource !== null) ? storedSource : fallback;
   updateDirtyState();
   updateVersionBadge();
   render();

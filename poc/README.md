@@ -8,7 +8,8 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 
 - **Markdown + Mermaid rendering** in the browser via `marked` and `mermaid` (loaded from CDN — production will inline these).
 - **Viewer ↔ Editor toggle.** Default mode is the reader experience; a discreet "Editor ↩" button in the corner reveals the editing UI.
-- **IndexedDB-style persistence** (currently `localStorage` for PoC speed) — every keystroke survives a tab close, a refresh, or a crash.
+- **IndexedDB persistence** — one record per dokufix file (keyed by UUID) holds the live markdown source, version history, and commit baseline. Image assets live in a separate object store, keyed by SHA-256 content hash. Documents that were saved by an older localStorage-based build of the PoC are migrated transparently on first open with the new code.
+- **Image upload (paste, drag-and-drop, file picker)** — drop a file onto the editor, paste a screenshot from the clipboard, or use the `+ Bild` button. The image is decoded via `createImageBitmap` (with `imageOrientation: 'from-image'` so EXIF orientation is applied to the pixels), optionally downscaled to a max of 1600 px wide, re-encoded as WebP @ 0.85, hashed, and stored in IndexedDB. The canvas roundtrip is what strips EXIF metadata as a side effect; `createImageBitmap` itself doesn't strip anything. The markdown gets a `![alt](#asset-<hash>)` reference; the render pass swaps that reference for a Blob URL pulled from IndexedDB. Read-only exports replace `#asset-` and `blob:` URLs with inline `data:` URLs so the recipient has no IDB or runtime dependency. `Mit Editor` downloads include every asset referenced by the current source **or by any history snapshot** in a separate `<script type="application/json" id="dokufix-assets">` block — content-addressed, so a re-seed of an identical hash is a no-op.
 - **Explicit save** — leaving edit mode does **not** auto-save; saving is a deliberate user action via the Download menu.
 - **Self-replication** — the "Mit Editor" download produces a new HTML file with the user's content baked in (gzip-compressed). The receiver opens that file and starts from there.
 - **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
@@ -16,7 +17,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
 - **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
 - **In-file version history with per-version source snapshots** — each "Mit Editor" download and each "commit-only" action appends a `{v, t (ISO), m (message), s (gzipped source)}` entry to a JSON block embedded in the file (`<script type="application/json" id="dokufix-history">` — non-executing, just data). A clickable `v{N}` badge in the header opens a modal listing every saved version, newest first. The full source of any prior version is recoverable from the file alone — the artifact is auditable on its own. Read-only exports inherit a small `Version N · DD.MM.YYYY HH:MM · message · exportiert <date>` footer at the end of the document.
-- **Per-document identity** — each saved file carries a UUID in its history JSON. Both `localStorage` keys (editor source and version history) are UUID-suffixed, so two dokufix files in the same browser no longer share storage. Files without a UUID (older or never-saved) use a deterministic `loc-{hash}` fallback derived from `location.origin + location.pathname` (URL hash and query are deliberately excluded so ToC anchor clicks don't relocate the storage on the next reload); on first save the fallback upgrades to a real `crypto.randomUUID()` and existing localStorage data migrates to the new key.
+- **Per-document identity** — each saved file carries a UUID in its history JSON. The IndexedDB doc record is keyed by this UUID, so two dokufix files in the same browser no longer share storage. Files without a UUID (older or never-saved) use a deterministic `loc-{hash}` fallback derived from `location.origin + location.pathname` (URL hash and query are deliberately excluded so ToC anchor clicks don't relocate the storage on the next reload); on first save the fallback upgrades to a real `crypto.randomUUID()` and the IndexedDB record is rekeyed to the new identifier.
 - **Mobile-friendly** — hamburger menu collapses the editor toolbar on narrow viewports.
 
 ## Download variants
@@ -35,9 +36,9 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 Two distinct concepts, deliberately separated:
 
 - **`DEMO`** — the immutable original demo text, shipped gzip-compressed in every downloaded file. The "Demo zurücksetzen" button always restores from this. It is never overwritten on re-download.
-- **`SAMPLE`** — this file's per-document default (what gets loaded on first open if `localStorage` is empty). On `Mit Editor` download, this is replaced with the user's current content.
+- **`SAMPLE`** — this file's per-document default (what gets loaded on first open if no IndexedDB record exists yet for this document UUID). On `Mit Editor` download, this is replaced with the user's current content.
 
-Loading order on open: `localStorage` > `SAMPLE` > `DEMO`.
+Loading order on open: IndexedDB doc record (live draft) > `SAMPLE` (file's baked content) > `DEMO`.
 
 ### Table of Contents (two layers)
 
@@ -87,9 +88,40 @@ Read-only downloads do *not* bump the version — they ship a `Version N · DD.M
 
 The dirty indicator compares the live editor against `cleanBaseline`, which is set to `SAMPLE || DEMO` at load time — i.e. whatever is actually baked into *this* HTML file on disk. Consequences:
 
-- A `localStorage` draft that differs from the baked content reads as **geändert** immediately on open. That's the intended "you have unsynced work" signal after a crash or tab close.
+- An IndexedDB draft that differs from the baked content reads as **geändert** immediately on open. That's the intended "you have unsynced work" signal after a crash or tab close.
 - A successful "Mit Editor" download resets `cleanBaseline` to the just-saved content → badge flips to clean. The downloaded HTML file also carries the new baseline, so the receiver opens it as clean.
 - The other download variants (read-only) don't touch the baseline, since they don't carry editable source out the door.
+
+### Persistence (IndexedDB)
+
+One database per origin, named `dokufix-v1`, with two object stores:
+
+- **`docs`** (keyPath: `uuid`) — one record per dokufix file: `{ uuid, source, version, history, commitBaseline, updatedAt }`. The whole record is rewritten on every persist; markdown + history JSON is small enough that this is cheap.
+- **`assets`** (keyPath: `hash`) — image Blobs, keyed by SHA-256 hex. Content-addressed → uploading the same image twice deduplicates automatically; no GC needed in the PoC.
+
+On first load of a doc whose UUID has a pre-existing `dokufix-doc-<uuid>-source` / `…-versions` pair in the old localStorage layout, the data is migrated into the IDB doc record and the legacy keys are deleted. Idempotent — the migration only fires when no IDB record exists yet for the UUID.
+
+The heading-numbering preference (`dokufix-poc-numbering`) deliberately stays in localStorage. It's doc-independent UX state and has no business cluttering the per-document IDB record.
+
+If IndexedDB is unavailable (some browser private modes, restrictive site settings), the init code surfaces a banner and continues in a degraded read-only mode — the baked SAMPLE/DEMO content is still loaded into the editor so the user can read what they just opened, but `persistDoc` calls will keep flipping the persist-failed flag. There is no localStorage fallback in this PoC, since storing images there would be a non-starter anyway.
+
+### Image assets
+
+Images live in IndexedDB and are referenced from the markdown source via `![alt](#asset-<sha256>)`. Three input pathways converge on a single pipeline:
+
+1. **Paste** — clipboard `paste` event on the textarea. Captures `it.kind === 'file' && it.type.startsWith('image/')`. Lets normal text paste through untouched.
+2. **Drag & drop** — `dragenter`/`dragover`/`drop` on the source pane. A drop overlay highlights the target during the drag.
+3. **`+ Bild` button** — hidden `<input type="file" accept="image/*" multiple>` triggered by a toolbar button.
+
+The pipeline: `createImageBitmap({ imageOrientation: 'from-image' })` decodes and applies EXIF orientation. Two size guards run before allocating the canvas: a 5 MB per-file input cap (cheap to check, blocks pathological inputs early) and a 25-megapixel decoded-pixel cap (a 4.9 MB heavily-compressed JPEG can decode to 12000×8000 = 96 MP and OOM the tab during `drawImage`; the encoded-byte cap doesn't protect against that). If the bitmap is wider than 1600 px, it's downscaled. The result is drawn to an `OffscreenCanvas` and re-encoded as WebP @ 0.85 (fallback to `<canvas>.toBlob` if OffscreenCanvas isn't available). The output bytes are SHA-256-hashed via `crypto.subtle.digest`; the hex digest becomes both the IDB key and the markdown reference. The decoded `ImageBitmap` is released via `bitmap.close()` in a `finally` block so a failed encoding pass doesn't leak the native buffer. Alt-text derived from the filename is sanitized — characters that would otherwise break out of the markdown image syntax (`[`, `]`, `(`, `)`, `\`, `` ` ``, `<`, `>`) are stripped, so a malicious filename like `x](http://attacker.com/track.png).png` can't inject an attacker-controlled `src`.
+
+**Render-time resolution.** After `marked.parse(md)`, the HTML string is run through `resolveAssetRefsInHtml`, which `idbBatchGetAssets`-fetches every `#asset-<hash>` referenced in the document. Each match is rewritten to a Blob URL via `URL.createObjectURL`. Unresolved hashes get a transparent 1×1 GIF data URL as the `src` plus a `data-missing-asset` attribute; CSS turns those into a red "Bild fehlt" placeholder. (Using `src=""` for missing assets would trigger the browser to fetch the document URL itself, which is a footgun.) After each render, `pruneAssetUrlCache` revokes Blob URLs whose hashes are no longer referenced from the source — without this, every distinct image inserted in a session would hold its decoded pixels in memory until tab close. The same missing-asset CSS rule ships in the read-only export stylesheet, so a recipient who opens an export with a stale or missing asset sees the same "Bild fehlt" placeholder rather than an empty image element.
+
+**Heading-slug guard.** Heading anchors and asset references share the `#`-fragment namespace. `slugify` explicitly rejects any heading slug that would start with `asset-` (or be exactly `asset`), prefixing it to `h-asset-…`. Without this, a heading literally titled "Asset Inventory" could otherwise be resolved as an image ref.
+
+**Baking on "Mit Editor" download.** `bakeAssetsForDocument` collects every asset hash referenced by the current source *and by every history snapshot* (each snapshot is gzipped markdown — we decompress and re-scan). Every matched Blob is Base64-encoded into a JSON map `{ hash → { m: mime, d: base64 } }` and serialized into the `<script type="application/json" id="dokufix-assets">` block in the document clone. If the bake fails (transaction abort, base64 conversion error on a corrupt asset), the download is aborted with a user-facing message rather than silently emitting a broken file. On the receiver's first open, `seedAssetsFromBakedBlock` parses that block and writes each entry into IndexedDB — but only after **re-hashing the decoded bytes** and verifying the result matches the asserted hash. Mismatched entries are logged and skipped: a hostile sender can't pair an attacker-supplied blob with an arbitrary lookup key. Content-addressed dedup keeps re-seeds of identical hashes idempotent.
+
+**Read-only export inlining.** `inlineAssetRefsAsDataUrls` runs on the cloned preview HTML before serialization for all three read-only variants. It handles both `src="#asset-<hash>"` (unresolved) and `src="blob:<url>"` (already resolved by the live render pass — the cache's reverse map gives back the hash). Output is `src="data:image/webp;base64,…"`. Missing assets keep the same transparent placeholder + `data-missing-asset` shape used in the live preview, so the receiver sees the same "Bild fehlt" treatment in the export. For the `kompakt` variant this is further gzipped along with the rest of the body; binary image bytes don't compress meaningfully a second time, but the Base64 envelope itself shrinks by ~30 %.
 
 ### Compression
 
@@ -131,7 +163,6 @@ The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="tex
 ## Known PoC limitations (deferred to MVP)
 
 - **CDN-loaded libraries** — production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
-- **`localStorage` not IndexedDB** — fine for plaintext-only PoC; needs IndexedDB once base64 images push payloads past the ~5 MB localStorage cap. Per-version source snapshots also accelerate quota pressure on long-lived files.
 - **No File System Access API integration** — Chromium-only, optional power-user path. Not in PoC. See product brief distillate for design.
 - **Mermaid SVG bloat unaddressed** — each SVG ships a redundant 1.5–3 KB `<style>` block. Future optimization: dedupe to a single document-level `<style>`.
 - **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
