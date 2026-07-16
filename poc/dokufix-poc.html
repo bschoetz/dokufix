@@ -460,6 +460,47 @@
     visibility:visible;opacity:1;
   }
   #preview .dokufix-fn-preview code{font-size:.92em}
+@position-try --dokufix-fn-start{position-area:block-start span-inline-start}
+@position-try --dokufix-fn-end{position-area:block-start span-inline-end}
+@supports (anchor-name:--a) and (position-try-fallbacks:--b){
+.dokufix-fn-host{position:static;anchor-name:--dokufix-fn;anchor-scope:--dokufix-fn}
+.dokufix-fn-preview{position-anchor:--dokufix-fn;position-area:block-start center;left:auto;right:auto;bottom:auto;transform:none;margin-bottom:8px;position-try-fallbacks:--dokufix-fn-start,--dokufix-fn-end}
+}
+  /* Keep the box inside the viewport when its marker sits near the edge. A
+     centred box cannot fit when the marker is closer to the edge than half the
+     box width, and plain CSS can't detect that — at ~900px a right-edge marker
+     pushed the preview ~200px off-screen. Anchor positioning fixes it at every
+     width, in both engines.
+     The host must NOT be position:relative here: a tiny containing block
+     leaves the try-fallbacks nothing to evaluate against and they never fire.
+     The transition below is load-bearing — without it Firefox does not reveal
+     the preview at all.
+     KNOWN DEVIATION (Firefox 151, under automation): reveal takes ~800ms and
+     un-hover does not hide the preview. Chromium/Edge are unaffected (~40ms,
+     hides correctly). Measured with Playwright's synthetic mouse, headed and
+     headless — this may be a synthetic-input artifact rather than real-mouse
+     behaviour, which is why it is shipped for hands-on evaluation.
+     Product decision (Ben, 2026-07-16): ship it; recipients are overwhelmingly
+     Chromium/Edge. Revisit if it misbehaves in practice — deleting this block
+     in BOTH stylesheets restores the fast base and reinstates the clipping. */
+  @position-try --dokufix-fn-start{position-area:block-start span-inline-start}
+  @position-try --dokufix-fn-end{position-area:block-start span-inline-end}
+  @supports (anchor-name:--a) and (position-try-fallbacks:--b){
+    #preview .dokufix-fn-host{
+      position:static;
+      anchor-name:--dokufix-fn;
+      /* Belt and braces: each preview already resolves to its own <sup>,
+         the last matching anchor preceding it in tree order. */
+      anchor-scope:--dokufix-fn;
+    }
+    #preview .dokufix-fn-preview{
+      position-anchor:--dokufix-fn;
+      position-area:block-start center;
+      left:auto;right:auto;bottom:auto;transform:none;
+      margin-bottom:8px;
+      position-try-fallbacks:--dokufix-fn-start, --dokufix-fn-end;
+    }
+  }
 
   /* Gliederungsnummerierung — opt-in via body.numbered */
   .numbered #preview{counter-reset:h2}
