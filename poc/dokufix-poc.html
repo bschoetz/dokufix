@@ -359,6 +359,56 @@
     color:#8e8e92;font-weight:600;margin-right:.15em;
   }
 
+  /* Frontmatter — YAML/JSON metadata header as a collapsible panel.
+     Native <details>: keyboard-operable and JS-free, so it survives the
+     nur-lesen export. Collapsed by default — the document should read as a
+     document on first open, with metadata as context rather than headline. */
+  #preview .dokufix-frontmatter{
+    margin:0 0 2em;
+    background:#fafafa;
+    border:1px solid #e5e5ea;
+    border-radius:6px;
+    font-size:.92em;
+  }
+  #preview .dokufix-frontmatter summary{
+    cursor:pointer;
+    padding:.7em 1.1em;
+    display:flex;align-items:baseline;gap:.55em;
+    list-style:none;
+    border-radius:6px;
+    user-select:none;
+  }
+  #preview .dokufix-frontmatter summary::-webkit-details-marker{display:none}
+  #preview .dokufix-frontmatter summary::before{
+    content:"▸";color:#8e8e92;font-size:.9em;
+    display:inline-block;transition:transform .12s ease;
+  }
+  #preview .dokufix-frontmatter[open] > summary::before{transform:rotate(90deg)}
+  #preview .dokufix-frontmatter summary:hover{background:#f0f0f2}
+  #preview .dokufix-fm-label{font-weight:600;color:#1c1c1e}
+  #preview .dokufix-fm-digest{
+    color:#8e8e92;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  #preview .dokufix-fm-body{padding:0 1.1em 1em}
+  #preview .dokufix-fm-rows{
+    margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;
+  }
+  #preview .dokufix-fm-rows dt{color:#8e8e92;font-weight:600;white-space:nowrap}
+  #preview .dokufix-fm-rows dd{margin:0;color:#1c1c1e;min-width:0;overflow-wrap:anywhere}
+  #preview .dokufix-fm-rows dd > .dokufix-fm-rows{
+    margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid #e5e5ea;
+  }
+  #preview .dokufix-fm-list{margin:0;padding-left:1.1em}
+  #preview .dokufix-fm-list li{margin:.1em 0}
+  #preview .dokufix-fm-empty{color:#8e8e92}
+  #preview .dokufix-fm-raw{
+    margin:0;padding:.8em 1em;
+    background:#fff;border:1px solid #e5e5ea;border-radius:4px;
+    font-size:.9em;white-space:pre-wrap;overflow-x:auto;
+  }
+  #preview .dokufix-fm-unparsed .dokufix-fm-digest{color:#a06000}
+
   /* Footnotes (marked-footnote / GFM style) */
   #preview .footnotes{
     margin-top:3em;padding-top:1.5em;
@@ -1450,8 +1500,263 @@ function updateDirtyState(){
 
 let mermaidId = 0;
 
+// --- Frontmatter -------------------------------------------------------
+// A leading YAML/JSON metadata block is not document content. Left alone,
+// marked renders "---\ntitle: X\n---" as an <hr> plus a setext <h2> (the
+// closing delimiter underlines the last line) — visible garbage in the
+// preview and in every export. We split the block off before parsing and
+// render it as a collapsible panel instead.
+//
+// Deliberately NOT a full YAML implementation: a library (~30 KB) against a
+// ~16 KB artifact fails the "body for information" test. Supported subset is
+// documented in poc/README.md. Anything outside it throws, and the block
+// falls back to being shown verbatim — never partially parsed, never
+// silently dropped.
+
+// A '#' only opens a comment when preceded by whitespace or at line start,
+// so "https://x.com#frag" keeps its fragment.
+function fmStripComment(s){
+  const m = s.match(/(?:^|\s)#/);
+  return m ? s.slice(0, m.index) : s;
+}
+
+function fmFindQuoteEnd(s, q){
+  for (let i = 1; i < s.length; i++){
+    if (q === '"' && s[i] === '\\'){ i++; continue; }
+    if (q === "'" && s[i] === "'" && s[i+1] === "'"){ i++; continue; }
+    if (s[i] === q) return i;
+  }
+  return -1;
+}
+
+function fmScalar(raw){
+  const s = raw.trim();
+  if (!s) return '';
+  const q = s[0];
+  if (q === '"' || q === "'"){
+    const end = fmFindQuoteEnd(s, q);
+    if (end < 0) throw new Error('unterminated quoted scalar');
+    const inner = s.slice(1, end);
+    if (fmStripComment(s.slice(end + 1)).trim()) throw new Error('trailing content after quoted scalar');
+    return q === '"'
+      ? inner.replace(/\\(["\\/nrt])/g, (_, c) => ({ '"':'"', '\\':'\\', '/':'/', n:'\n', r:'\r', t:'\t' }[c]))
+      : inner.replace(/''/g, "'");
+  }
+  const v = fmStripComment(s).trim();
+  // Out-of-subset constructs: fail loudly so the caller can show the raw block.
+  if (/^[|>]/.test(v)) throw new Error('block scalars are not supported');
+  if (/^[&*]/.test(v)) throw new Error('anchors and aliases are not supported');
+  if (/^!/.test(v)) throw new Error('tags are not supported');
+  if (/^[[{]/.test(v)) throw new Error('flow collections are not supported');
+  // No type coercion on purpose — values are displayed, not computed on.
+  return v;
+}
+
+function fmUnquoteKey(k){
+  const s = k.trim();
+  if (s.length > 1 && ((s[0] === '"' && s[s.length-1] === '"') || (s[0] === "'" && s[s.length-1] === "'"))) return s.slice(1, -1);
+  return s;
+}
+
+function fmIsSeqItem(text){ return text === '-' || text.startsWith('- '); }
+
+function fmParseNode(lines, i, indent){
+  return fmIsSeqItem(lines[i].text) ? fmParseSeq(lines, i, indent) : fmParseMap(lines, i, indent);
+}
+
+function fmParseMap(lines, i, indent){
+  const out = {};
+  while (i < lines.length){
+    const ln = lines[i];
+    if (ln.indent < indent) break;
+    if (ln.indent > indent) throw new Error('unexpected indentation on line ' + ln.line);
+    if (fmIsSeqItem(ln.text)) break;
+    const m = ln.text.match(/^([^:#]+?)\s*:(?:\s+(.*))?$/);
+    if (!m) throw new Error('unsupported line: ' + ln.text);
+    const key = fmUnquoteKey(m[1]);
+    let rest = (m[2] === undefined ? '' : m[2]).trim();
+    if (rest.startsWith('#')) rest = '';
+    i++;
+    if (rest === ''){
+      const nxt = lines[i];
+      if (nxt && nxt.indent > indent){
+        const r = fmParseNode(lines, i, nxt.indent);
+        out[key] = r.value; i = r.next;
+      } else if (nxt && nxt.indent === indent && fmIsSeqItem(nxt.text)){
+        // Sequence written flush with its key — the other common YAML style.
+        const r = fmParseSeq(lines, i, indent);
+        out[key] = r.value; i = r.next;
+      } else {
+        out[key] = '';
+      }
+    } else {
+      out[key] = fmScalar(rest);
+    }
+  }
+  return { value: out, next: i };
+}
+
+function fmParseSeq(lines, i, indent){
+  const out = [];
+  while (i < lines.length){
+    const ln = lines[i];
+    if (ln.indent < indent) break;
+    if (ln.indent > indent) throw new Error('unexpected indentation on line ' + ln.line);
+    if (!fmIsSeqItem(ln.text)) break;
+    const rest = (ln.text === '-' ? '' : ln.text.slice(2)).trim();
+    i++;
+    // "- key: value" (sequence of maps) is outside the subset. Without this
+    // guard it would silently become the scalar string "key: value".
+    if (/^["']?[\w.-]+["']?\s*:(\s|$)/.test(rest)) throw new Error('sequences of maps are not supported');
+    if (rest === ''){
+      const nxt = lines[i];
+      if (nxt && nxt.indent > indent){
+        const r = fmParseNode(lines, i, nxt.indent);
+        out.push(r.value); i = r.next;
+      } else {
+        out.push('');
+      }
+    } else {
+      out.push(fmScalar(rest));
+    }
+  }
+  return { value: out, next: i };
+}
+
+function parseYamlSubset(text){
+  const lines = [];
+  text.split(/\r?\n/).forEach((raw, idx) => {
+    if (/^[ \t]*$/.test(raw)) return;
+    if (/^[ \t]*#/.test(raw)) return;
+    const lead = raw.match(/^[ \t]*/)[0];
+    if (lead.includes('\t')) throw new Error('tab indentation is not supported');
+    lines.push({ indent: lead.length, text: raw.slice(lead.length).replace(/\s+$/, ''), line: idx + 1 });
+  });
+  if (!lines.length) throw new Error('empty block');
+  const r = fmParseNode(lines, 0, lines[0].indent);
+  if (r.next !== lines.length) throw new Error('inconsistent indentation');
+  return r.value;
+}
+
+// Intent test, kept separate from parsability. A block that doesn't even look
+// like a mapping is a thematic break and must render exactly as it always has
+// (a doc may legitimately open with "---"). A block that DOES look like
+// frontmatter but fails to parse is shown raw rather than reverted to garbage.
+function fmLooksLikeFrontmatter(raw){
+  for (const line of raw.split(/\r?\n/)){
+    if (/^[ \t]*$/.test(line)) continue;
+    if (/^[ \t]*#/.test(line)) continue;
+    if (/^[ \t]*\{/.test(line)) return true;
+    return /^[ \t]*["']?[A-Za-z0-9_.\-]+["']?[ \t]*:([ \t]|$)/.test(line);
+  }
+  return false;
+}
+
+function splitFrontmatter(src){
+  const none = { raw: '', kind: null, data: null, body: src };
+  if (typeof src !== 'string' || !src) return none;
+  const open = src.match(/^---([A-Za-z]*)[ \t]*\r?\n/);
+  if (!open) return none;
+  const fence = open[1].toLowerCase();
+  if (fence && fence !== 'json' && fence !== 'yaml') return none;
+  const rest = src.slice(open[0].length);
+  const close = rest.match(/^---[ \t]*(?:\r?\n|$)/m);
+  if (!close) return none;
+  const raw = rest.slice(0, close.index);
+  const body = rest.slice(close.index + close[0].length);
+  const explicit = !!fence;
+  if (!explicit && !fmLooksLikeFrontmatter(raw)) return none;
+  const trimmed = raw.trim();
+  try {
+    if (fence === 'json' || (!fence && trimmed.startsWith('{'))){
+      const data = JSON.parse(trimmed);
+      if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('not a JSON object');
+      return { raw, kind: 'json', data, body };
+    }
+    const data = parseYamlSubset(raw);
+    if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('not a mapping');
+    if (!Object.keys(data).length) throw new Error('empty mapping');
+    return { raw, kind: 'yaml', data, body };
+  } catch (err){
+    return { raw, kind: 'raw', data: null, body, error: err.message };
+  }
+}
+
+// Single source of truth for "what is this document called?" — used by the
+// download filename and by all three read-only export <title>s. Reads the
+// BODY, so a "#"-prefixed YAML comment can't masquerade as the heading.
+function deriveDocTitle(fallback){
+  const m = splitFrontmatter(sourceEl.value).body.match(/^#\s+(.+?)\s*$/m);
+  return (m ? m[1] : fallback).trim();
+}
+
+const FM_SUMMARY_KEYS = ['title', 'version', 'date', 'author'];
+
+function fmLookup(data, name){
+  const k = Object.keys(data).find(key => key.toLowerCase() === name);
+  return k === undefined ? undefined : data[k];
+}
+
+function buildFrontmatterSummary(data){
+  const parts = [];
+  for (const name of FM_SUMMARY_KEYS){
+    const v = fmLookup(data, name);
+    if (v === null || v === undefined || typeof v === 'object') continue;
+    const s = String(v).trim();
+    if (s) parts.push(s);
+  }
+  return parts.join(' · ');
+}
+
+function buildFrontmatterValueHtml(v){
+  if (v === null || v === undefined || v === '') return '<span class="dokufix-fm-empty">—</span>';
+  if (Array.isArray(v)){
+    if (!v.length) return '<span class="dokufix-fm-empty">—</span>';
+    return '<ul class="dokufix-fm-list">' + v.map(x => '<li>' + buildFrontmatterValueHtml(x) + '</li>').join('') + '</ul>';
+  }
+  if (typeof v === 'object') return buildFrontmatterRowsHtml(v);
+  return escapeHtml(String(v));
+}
+
+function buildFrontmatterRowsHtml(obj){
+  const keys = Object.keys(obj);
+  if (!keys.length) return '<span class="dokufix-fm-empty">—</span>';
+  let html = '<dl class="dokufix-fm-rows">';
+  for (const k of keys){
+    html += '<dt>' + escapeHtml(k) + '</dt><dd>' + buildFrontmatterValueHtml(obj[k]) + '</dd>';
+  }
+  return html + '</dl>';
+}
+
+function buildFrontmatterHtml(fm){
+  if (!fm || !fm.kind) return '';
+  if (fm.kind === 'raw'){
+    return '<details class="dokufix-frontmatter dokufix-fm-unparsed">' +
+      '<summary><span class="dokufix-fm-label">Metadaten</span>' +
+      '<span class="dokufix-fm-digest">nicht lesbar — Originaltext</span></summary>' +
+      '<div class="dokufix-fm-body"><pre class="dokufix-fm-raw">' +
+      escapeHtml(fm.raw.replace(/\s+$/, '')) + '</pre></div></details>';
+  }
+  const count = Object.keys(fm.data).length;
+  const digest = buildFrontmatterSummary(fm.data) || (count + (count === 1 ? ' Eintrag' : ' Einträge'));
+  return '<details class="dokufix-frontmatter">' +
+    '<summary><span class="dokufix-fm-label">Metadaten</span>' +
+    '<span class="dokufix-fm-digest">' + escapeHtml(digest) + '</span></summary>' +
+    '<div class="dokufix-fm-body">' + buildFrontmatterRowsHtml(fm.data) + '</div></details>';
+}
+
+// Post-DOM injection, mirroring processInlineToc: every export variant calls
+// render() and then reads previewEl.innerHTML back out, so mutating the live
+// preview here is what makes the panel ship into all four downloads for free.
+// Emits no headings, so assignHeadingIds/buildRail stay unaffected.
+function injectFrontmatterPanel(fm){
+  const html = buildFrontmatterHtml(fm);
+  if (html) previewEl.insertAdjacentHTML('afterbegin', html);
+}
+
 async function render() {
-  const md = sourceEl.value;
+  const fm = splitFrontmatter(sourceEl.value);
+  const md = fm.body;
   let html;
   try {
     html = marked.parse(md, { gfm: true, breaks: false });
@@ -1468,6 +1773,7 @@ async function render() {
   const resolution = await resolveAssetRefsInHtml(html);
   pruneAssetUrlCache(resolution.resolved);
   previewEl.innerHTML = resolution.html;
+  injectFrontmatterPanel(fm);
 
   // Heading IDs first — both the inline ToC and the scrollspy rail need them.
   const headings = previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
@@ -1830,8 +2136,7 @@ downloadWrap.querySelectorAll('button[data-download]').forEach(btn => {
 
 // Filename helper — pull title from the first H1 of the markdown
 function safeFilenameBase(){
-  const m = sourceEl.value.match(/^#\s+(.+?)\s*$/m);
-  let base = (m ? m[1] : 'dokufix-dokument').trim();
+  let base = deriveDocTitle('dokufix-dokument');
   base = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, '-').slice(0, 80);
   return base || 'dokufix-dokument';
 }
@@ -2101,6 +2406,24 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 .numbered .dokufix-toc > ol > li > a::before{counter-increment:tocH2;content:counter(tocH2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
 .numbered .dokufix-toc ol ol > li > a::before{counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
 .numbered .dokufix-toc ol ol ol > li > a::before{counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+.dokufix-frontmatter{margin:0 0 2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.92em}
+.dokufix-frontmatter summary{cursor:pointer;padding:.7em 1.1em;display:flex;align-items:baseline;gap:.55em;list-style:none;border-radius:6px;user-select:none}
+.dokufix-frontmatter summary::-webkit-details-marker{display:none}
+.dokufix-frontmatter summary::before{content:"▸";color:#8e8e92;font-size:.9em;display:inline-block;transition:transform .12s ease}
+.dokufix-frontmatter[open]>summary::before{transform:rotate(90deg)}
+.dokufix-frontmatter summary:hover{background:#f0f0f2}
+.dokufix-fm-label{font-weight:600;color:#1c1c1e}
+.dokufix-fm-digest{color:#8e8e92;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dokufix-fm-body{padding:0 1.1em 1em}
+.dokufix-fm-rows{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35em .9em}
+.dokufix-fm-rows dt{color:#8e8e92;font-weight:600;white-space:nowrap}
+.dokufix-fm-rows dd{margin:0;color:#1c1c1e;min-width:0;overflow-wrap:anywhere}
+.dokufix-fm-rows dd>.dokufix-fm-rows{margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid #e5e5ea}
+.dokufix-fm-list{margin:0;padding-left:1.1em}
+.dokufix-fm-list li{margin:.1em 0}
+.dokufix-fm-empty{color:#8e8e92}
+.dokufix-fm-raw{margin:0;padding:.8em 1em;background:#fff;border:1px solid #e5e5ea;border-radius:4px;font-size:.9em;white-space:pre-wrap;overflow-x:auto}
+.dokufix-fm-unparsed .dokufix-fm-digest{color:#a06000}
 .footnotes{margin-top:3em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.9em;color:#3a3a3f}
 .footnotes h2{display:none}
 .footnotes ol{margin:0 0 0 1.5em}
@@ -2142,7 +2465,7 @@ function buildMetaFooterHtml(){
 async function downloadReadonlyOpen(){
   await render(); // ensure preview reflects current source AND mermaid SVGs are inlined
 
-  const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
+  const title = deriveDocTitle('dokufix-Dokument');
   // Inline every image asset as a data: URL — the receiver of a read-only
   // export has no IDB and may not even have JS, so blob URLs (live preview)
   // and "#asset-…" refs (unresolved) both need to become self-contained.
@@ -2173,7 +2496,7 @@ ${railHtml}
 async function downloadReadonlySlim(){
   await render();
 
-  const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
+  const title = deriveDocTitle('dokufix-Dokument');
 
   // Work on a clone of the rendered preview, with image refs inlined as
   // data: URLs so the export is fully self-contained.
@@ -2229,7 +2552,7 @@ ${railHtml}
 async function downloadReadonlyCompact(){
   await render();
 
-  const title = (sourceEl.value.match(/^#\s+(.+?)\s*$/m)?.[1] || 'dokufix-Dokument').trim();
+  const title = deriveDocTitle('dokufix-Dokument');
   // Image refs become data: URLs before gzipping. Binary PNG/WebP doesn't
   // compress meaningfully a second time, but base64 itself shrinks by ~30 %
   // through gzip, so the overall cost vs an open export is modest.

@@ -13,6 +13,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Explicit save** — leaving edit mode does **not** auto-save; saving is a deliberate user action via the Download menu.
 - **Self-replication** — the "Mit Editor" download produces a new HTML file with the user's content baked in (gzip-compressed). The receiver opens that file and starts from there.
 - **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
+- **Frontmatter metadata panel** — a leading YAML or JSON header block renders as a collapsible panel instead of leaking into the document as markup. Native `<details>`, so it collapses without JavaScript and survives the JS-free export. See *Frontmatter* below.
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
 - **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
 - **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
@@ -39,6 +40,33 @@ Two distinct concepts, deliberately separated:
 - **`SAMPLE`** — this file's per-document default (what gets loaded on first open if no IndexedDB record exists yet for this document UUID). On `Mit Editor` download, this is replaced with the user's current content.
 
 Loading order on open: IndexedDB doc record (live draft) > `SAMPLE` (file's baked content) > `DEMO`.
+
+### Frontmatter (YAML / JSON metadata header)
+
+A metadata block at the very top of the document renders as a collapsible panel above the first heading, not as document content.
+
+Without this, marked treats the block as ordinary Markdown: per CommonMark a lone `---` is a thematic break, *except* when it follows paragraph text, where it becomes a setext H2 underline. So `---\ntitle: Foo\n---` rendered as `<hr>` plus `<h2>title: Foo</h2>` — visible garbage in the preview and in every export.
+
+**Delimiters.** The first line must be exactly `---` (sniffed as JSON when the content starts with `{`, YAML otherwise), or explicitly `---json` / `---yaml`. A closing `---` line must follow. TOML (`+++`) is not supported.
+
+**Panel.** `<details class="dokufix-frontmatter">`, collapsed by default — the document should read as a document on first open. The summary line shows a digest built from the first available of `title`, `version`, `date`, `author` (case-insensitive), falling back to an entry count. Expanding reveals every key/value pair; nested maps become indented sub-rows, sequences become lists. Everything is HTML-escaped. Because it's a native `<details>`, it is keyboard-operable and needs no JavaScript — it works in the `nur-lesen` export.
+
+**The YAML subset — and its limits.** dokufix does *not* bundle a YAML library. One (~30 KB) against a ~16 KB artifact fails the "body for information" test. Instead there is a deliberate subset covering what document frontmatter actually contains:
+
+| Supported | Not supported |
+|---|---|
+| `key: value` pairs | block scalars (`\|`, `>`) |
+| nested maps by indentation | anchors / aliases (`&`, `*`) |
+| sequences of scalars (`- item`), indented or flush with the key | sequences of maps (`- key: value`) |
+| single- and double-quoted scalars | tags (`!!str`) |
+| `#` comments, full-line and trailing | flow collections (`{a: 1}`, `[a, b]`) — except as the JSON path |
+| | tab indentation, multi-document streams |
+
+Anything outside the subset makes the parser fail **loudly rather than partially**: the panel then shows the raw block verbatim under a "nicht lesbar" summary. A half-parsed panel that silently dropped a key would be a data-integrity failure; showing the original text is honest and loses nothing. There is deliberately no type coercion — values stay strings, so YAML's `no`-becomes-`false` class of surprises can't occur. The values are displayed, never computed on.
+
+**Not mistaken for a thematic break.** A document may legitimately open with `---`. Detection therefore runs two tiers: the block must first *look* like frontmatter (its first meaningful line is a `key:` or a `{`), and only then is it parsed. `---\nSome intro.\n---` and an empty `---\n---` are left completely untouched and render exactly as they always did. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
+
+**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
 
 ### Table of Contents (two layers)
 

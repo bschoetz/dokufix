@@ -1,6 +1,6 @@
 # Story 1.1: Collapsible Metadata Panel for YAML and JSON Frontmatter
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -24,36 +24,36 @@ so that the document opens looking like a finished document instead of leaking i
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Add the `splitFrontmatter` seam** (AC: 1, 3, 6, 8)
-  - [ ] Add `splitFrontmatter(src)` near the other source-level helpers, returning `{ raw, kind, data, body, bodyOffset }` — or a null-object (`{ raw: '', kind: null, data: null, body: src }`) when no valid frontmatter is present.
-  - [ ] Detection rule: the **very first line** of the source must be exactly `---` (or `---json` / `---yaml`), and a closing `---` line must follow. No leading blank lines permitted before the opening delimiter.
-  - [ ] **Guard against false positives (AC8):** only treat the block as frontmatter if its content actually parses to a non-empty key/value mapping. If parsing yields no mapping, return the null-object so the source renders unchanged as a thematic break.
-  - [ ] Keep this function pure and side-effect free — it is called from four sites.
-- [ ] **Task 2: Parse the two content shapes** (AC: 2, 3, 7)
-  - [ ] JSON path: content trimmed starts with `{`, **or** the fence is `---json`. Use `JSON.parse` in a try/catch.
-  - [ ] YAML path: implement the deliberate subset described in Dev Notes → *Scope decision: the YAML subset*. Do **not** bundle a YAML library.
-  - [ ] On parse failure of either path, return `kind: 'raw'` with the verbatim text so Task 4 can render it as a fallback (AC7). Never throw out of `splitFrontmatter`.
-- [ ] **Task 3: Strip frontmatter from the parse and title paths** (AC: 1, 6)
-  - [ ] In `render()` (L1453), feed `splitFrontmatter(sourceEl.value).body` to `marked.parse` instead of the raw `sourceEl.value` (L1457).
-  - [ ] Route `safeFilenameBase()` (L1832) through `splitFrontmatter(...).body` before applying its `/^#\s+(.+?)\s*$/m` match. **This is an active defect fix** — see Dev Notes.
-  - [ ] Route the three export `<title>` derivations (L2145, L2176, L2232) through the same body. Consider extracting the repeated regex into one `deriveDocTitle()` helper used by all four sites rather than patching the regex in four places.
-- [ ] **Task 4: Build and inject the panel** (AC: 1, 2, 5, 7)
-  - [ ] Add `buildFrontmatterHtml(kind, data, raw)` — a pure string builder in the style of `buildTocHtml` (L1544). Escape everything via the existing `escapeHtml` (L1500).
-  - [ ] Emit `<details class="dokufix-frontmatter">` + `<summary>` digest + a `<dl>`-style body. Recurse for nested maps/sequences.
-  - [ ] Summary digest (AC5): pick the first available of a small preference list of common keys (e.g. `title`, then `version`/`date`/`author`), joined compactly; fall back to a generic label plus the key count when none match. Keep the preference list short and obvious.
-  - [ ] `kind: 'raw'` fallback: emit the same `<details>` shell with the verbatim block inside a `<pre>`, and a summary that signals the block could not be parsed (AC7).
-  - [ ] Inject in `render()` **immediately after** `previewEl.innerHTML = resolution.html` (L1470) by prepending to `previewEl` — mirroring the post-DOM pattern of `processInlineToc`. See Dev Notes → *Why post-DOM injection*.
-- [ ] **Task 5: Style it — twice** (AC: 1, 2, 4, 9)
-  - [ ] Add `#preview`-prefixed rules to the main `<style>` block (L7–569), near the ToC/footnote rules.
-  - [ ] Add the unprefixed twin to `READONLY_CSS` (L2047–2118).
-  - [ ] Style the native `<details>`/`<summary>` disclosure so it reads as document furniture, not a debug dump. Match the existing palette (Dev Notes → *Styling conventions*). Do not introduce CSS custom properties — the file has none.
-  - [ ] Ensure the panel does not disturb the `[[toc]]` nav or the rail (it contains no headings, so `assignHeadingIds`/`buildRail` are unaffected — verify).
-- [ ] **Task 6: Verify all four export variants** (AC: 4, 9)
-  - [ ] Manually export a frontmatter document as all four variants and open each.
-  - [ ] **Explicitly confirm `nur-lesen` contains no `<script>` tag** and that the panel still toggles there.
-- [ ] **Task 7: Documentation**
-  - [ ] Document the feature in `poc/README.md`: the supported delimiters, the YAML subset and its limits, the collapse default, and the raw-fallback behaviour.
-  - [ ] Record any newly discovered edge cases in `_bmad-output/implementation-artifacts/deferred-work.md` if deferred.
+- [x] **Task 1: Add the `splitFrontmatter` seam** (AC: 1, 3, 6, 8)
+  - [x] Add `splitFrontmatter(src)` near the other source-level helpers, returning `{ raw, kind, data, body, bodyOffset }` — or a null-object (`{ raw: '', kind: null, data: null, body: src }`) when no valid frontmatter is present.
+  - [x] Detection rule: the **very first line** of the source must be exactly `---` (or `---json` / `---yaml`), and a closing `---` line must follow. No leading blank lines permitted before the opening delimiter.
+  - [x] **Guard against false positives (AC8):** only treat the block as frontmatter if its content actually parses to a non-empty key/value mapping. If parsing yields no mapping, return the null-object so the source renders unchanged as a thematic break.
+  - [x] Keep this function pure and side-effect free — it is called from four sites.
+- [x] **Task 2: Parse the two content shapes** (AC: 2, 3, 7)
+  - [x] JSON path: content trimmed starts with `{`, **or** the fence is `---json`. Use `JSON.parse` in a try/catch.
+  - [x] YAML path: implement the deliberate subset described in Dev Notes → *Scope decision: the YAML subset*. Do **not** bundle a YAML library.
+  - [x] On parse failure of either path, return `kind: 'raw'` with the verbatim text so Task 4 can render it as a fallback (AC7). Never throw out of `splitFrontmatter`.
+- [x] **Task 3: Strip frontmatter from the parse and title paths** (AC: 1, 6)
+  - [x] In `render()` (L1453), feed `splitFrontmatter(sourceEl.value).body` to `marked.parse` instead of the raw `sourceEl.value` (L1457).
+  - [x] Route `safeFilenameBase()` (L1832) through `splitFrontmatter(...).body` before applying its `/^#\s+(.+?)\s*$/m` match. **This is an active defect fix** — see Dev Notes.
+  - [x] Route the three export `<title>` derivations (L2145, L2176, L2232) through the same body. Consider extracting the repeated regex into one `deriveDocTitle()` helper used by all four sites rather than patching the regex in four places.
+- [x] **Task 4: Build and inject the panel** (AC: 1, 2, 5, 7)
+  - [x] Add `buildFrontmatterHtml(kind, data, raw)` — a pure string builder in the style of `buildTocHtml` (L1544). Escape everything via the existing `escapeHtml` (L1500).
+  - [x] Emit `<details class="dokufix-frontmatter">` + `<summary>` digest + a `<dl>`-style body. Recurse for nested maps/sequences.
+  - [x] Summary digest (AC5): pick the first available of a small preference list of common keys (e.g. `title`, then `version`/`date`/`author`), joined compactly; fall back to a generic label plus the key count when none match. Keep the preference list short and obvious.
+  - [x] `kind: 'raw'` fallback: emit the same `<details>` shell with the verbatim block inside a `<pre>`, and a summary that signals the block could not be parsed (AC7).
+  - [x] Inject in `render()` **immediately after** `previewEl.innerHTML = resolution.html` (L1470) by prepending to `previewEl` — mirroring the post-DOM pattern of `processInlineToc`. See Dev Notes → *Why post-DOM injection*.
+- [x] **Task 5: Style it — twice** (AC: 1, 2, 4, 9)
+  - [x] Add `#preview`-prefixed rules to the main `<style>` block (L7–569), near the ToC/footnote rules.
+  - [x] Add the unprefixed twin to `READONLY_CSS` (L2047–2118).
+  - [x] Style the native `<details>`/`<summary>` disclosure so it reads as document furniture, not a debug dump. Match the existing palette (Dev Notes → *Styling conventions*). Do not introduce CSS custom properties — the file has none.
+  - [x] Ensure the panel does not disturb the `[[toc]]` nav or the rail (it contains no headings, so `assignHeadingIds`/`buildRail` are unaffected — verify).
+- [x] **Task 6: Verify all four export variants** (AC: 4, 9)
+  - [x] Manually export a frontmatter document as all four variants and open each.
+  - [x] **Explicitly confirm `nur-lesen` contains no `<script>` tag** and that the panel still toggles there.
+- [x] **Task 7: Documentation**
+  - [x] Document the feature in `poc/README.md`: the supported delimiters, the YAML subset and its limits, the collapse default, and the raw-fallback behaviour.
+  - [x] Record any newly discovered edge cases in `_bmad-output/implementation-artifacts/deferred-work.md` if deferred.
 
 ## Dev Notes
 
@@ -226,10 +226,42 @@ There is no automated test suite in this project (`_bmad-output/test-artifacts/`
 
 ### Agent Model Used
 
-_To be filled by the dev agent._
+claude-opus-4-8[1m] (Claude Opus 4.8, 1M context)
 
 ### Debug Log References
 
+Verification harness (scratchpad, not committed — the repo has no test framework and adding one was out of scope):
+`test-story-1-1.js` drives the real `poc/dokufix-poc.html` in a real browser via playwright-core and calls the page globals directly (`splitFrontmatter`, `render`, `safeFilenameBase`, `deriveDocTitle`), then exercises all four download buttons, saves the produced files, and re-opens each one to assert the panel renders and is styled.
+
+- RED confirmed before implementation: `ReferenceError: splitFrontmatter is not defined`.
+- Final: **71 assertions, 0 failures, in both Chromium 1228 and Firefox 151.**
+- Regression (`regress.js`): demo document unchanged — 8 headings, inline ToC present, 2 Mermaid SVGs, footnotes section present, rail present, no panel, filename `Willkommen-bei-dokufix`, zero page errors.
+- Harness note: `Mit Editor` calls `prompt()` for the commit message; Playwright auto-dismisses dialogs, which the PoC correctly reads as "cancel the save". The harness accepts the dialog.
+
 ### Completion Notes List
 
+- **All 9 ACs satisfied and machine-verified.** Each AC has at least one assertion in the harness; the export ACs are verified by opening the produced files rather than by grepping the source for CSS.
+- **Two-tier detection resolves the AC7/AC8 tension.** AC7 wants unparseable frontmatter shown raw; AC8 wants a leading `---` thematic break untouched. For a bare `---` fence these are indistinguishable from parsability alone. So detection asks *intent* first (`fmLooksLikeFrontmatter`: is the first meaningful line a `key:` or `{`?) and only then parses. Looks-like + parse failure → raw panel (AC7). Doesn't look like → not frontmatter, source untouched (AC8). An explicit `---json`/`---yaml` fence is always treated as intent.
+- **The YAML parser fails loudly, never partially.** Out-of-subset constructs (`|`, `>`, `&`, `*`, `!!`, flow collections, tab indent, `- key: value`) throw, and the whole block falls back to the verbatim raw panel. A half-parsed panel that silently dropped a key would be a data-integrity failure. The `- key: value` guard matters specifically because without it YAML's sequence-of-maps would have degraded into the scalar string `"key: value"` — wrong, and silently so.
+- **No type coercion on purpose.** Values stay strings, so YAML's `no` → `false` (Norway problem) class of bugs cannot occur. The panel displays values; nothing computes on them.
+- **Comment stripping respects URLs.** `#` only opens a comment when preceded by whitespace, so `url: https://x.com#frag` keeps its fragment, while `title: Foo # note` loses the note. Quoted scalars are parsed before comment stripping, so `title: "a # b"` survives intact.
+- **AC6 was a real, pre-existing bug — now fixed.** `safeFilenameBase()` and the three export `<title>` derivations each ran `/^#\s+(.+?)\s*$/m` against the *raw* source. Multiline, so a YAML comment `# internal draft` beat the document's real `# Heading`; the file downloaded as `internal-draft.html`. All four sites now route through a single `deriveDocTitle(fallback)` reading the frontmatter-stripped body — four duplicated regexes collapsed to one helper.
+- **Panel ships to exports for free**, via the existing architecture rather than new export code: `injectFrontmatterPanel` mutates the live `#preview` DOM inside `render()`, and every export variant calls `await render()` then reads `previewEl.innerHTML` back out. No export function was touched except to reroute its `<title>`. Same mechanism `processInlineToc` relies on.
+- **JS-free requirement met by construction.** Native `<details>` — verified by asserting the `nur-lesen` export contains no `<script>` tag at all, then opening it and confirming click *and* keyboard (Enter on `<summary>`) toggle it, with the expanded content measurably visible.
+- **Panel emits no headings** (`<summary>`/`<dl>` only), so `assignHeadingIds`, `processInlineToc` and `buildRail` are provably unaffected — asserted, not assumed.
+- **CSS duplication tax paid as required by NFR4:** rules exist twice, `#preview`-prefixed in the main block and unprefixed in `READONLY_CSS`. This remains the file's most obvious refactor candidate (noted in the epic's Additional Requirements) but was out of scope here.
+- **Cross-browser:** full suite green in Chromium and Firefox. No CSS custom properties introduced (the file has none); no bleeding-edge selectors used.
+- **Deferred items recorded** in `deferred-work.md`: the YAML subset boundary, the empty `---\n---` block, frontmatter `title` not feeding the document title, and the absence of a frontmatter editing UI.
+
 ### File List
+
+- `poc/dokufix-poc.html` — modified. Added the frontmatter section (`fmStripComment`, `fmFindQuoteEnd`, `fmScalar`, `fmUnquoteKey`, `fmIsSeqItem`, `fmParseNode`, `fmParseMap`, `fmParseSeq`, `parseYamlSubset`, `fmLooksLikeFrontmatter`, `splitFrontmatter`, `deriveDocTitle`, `fmLookup`, `buildFrontmatterSummary`, `buildFrontmatterValueHtml`, `buildFrontmatterRowsHtml`, `buildFrontmatterHtml`, `injectFrontmatterPanel`) before `render()`; rerouted `render()` to parse `fm.body` and inject the panel; replaced the title regex in `safeFilenameBase()` and in the three read-only export functions with `deriveDocTitle()`; added panel CSS to the main `<style>` block and its twin to `READONLY_CSS`.
+- `poc/README.md` — modified. New *Frontmatter (YAML / JSON metadata header)* architecture section (delimiters, panel behaviour, YAML subset table with explicit limits, two-tier detection, title derivation) plus a bullet in *What this PoC demonstrates*.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — modified. Four deferred items from this story.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified. Story status transitions.
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-07-16 | Implemented story 1.1. YAML/JSON frontmatter now renders as a collapsible `<details>` metadata panel instead of leaking as `<hr>` + setext `<h2>`. Added a deliberate YAML subset parser (no library) with a loud raw fallback, two-tier detection to protect leading thematic breaks, and a single `deriveDocTitle()` helper that fixes a pre-existing bug where a `#`-prefixed YAML comment could hijack the download filename and export `<title>`. 71 assertions green in Chromium and Firefox; no regression in the demo document. Status → review. |

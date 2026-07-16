@@ -12,6 +12,16 @@ Items intentionally postponed from reviews and audits. Each entry: source review
 
 - **Diff-based per-version history (instead of full snapshots)** — Once the in-file version history grows past ~10 entries on a typical document, full gzip snapshots per version become the dominant size cost. Storing a gzipped patch against the previous version would cut size by ~10× for typical edits but requires a diff library (e.g., `diff-match-patch`, ~30 KB) bundled into the artifact. Defer to MVP when bundling work happens anyway; revisit after observing real growth patterns. [poc/dokufix-poc.html ~line 798]
 
+## Deferred from: story 1-1 frontmatter metadata panel (2026-07-16)
+
+- **YAML subset boundary — sequences of maps, block scalars, anchors, tags, flow collections** — all deliberately unsupported; the parser throws and the panel shows the raw block verbatim under a "nicht lesbar" summary. Bundling a YAML library (~30 KB against a ~16 KB artifact) fails the "body for information" test. Documented as a table in `poc/README.md`. Revisit only if real documents hit the boundary often; the honest raw fallback is the mitigation. [`parseYamlSubset`]
+
+- **Empty `---\n---` block renders as two thematic breaks** — the two-tier detection requires the block to *look* like frontmatter (first meaningful line is a `key:` or `{`), so an empty block is not frontmatter and renders exactly as before. Consistent with AC8 but arguably surprising if someone stubs out a header intending to fill it in later. Left as-is: guessing intent here would risk swallowing legitimate thematic breaks. [`fmLooksLikeFrontmatter`]
+
+- **Frontmatter `title:` is not used as the document title** — `deriveDocTitle()` deliberately reads only the body's first `# Heading`, per story AC6 ("never from inside the frontmatter block"). Using a frontmatter `title` as a fallback when the body has no H1 would be a reasonable enhancement, but it was out of scope and would need a decision on precedence. [`deriveDocTitle`]
+
+- **No frontmatter editing UI** — the panel is render-only; the Markdown source stays the single source of truth. Explicitly out of scope for Epic 1.
+
 ## Deferred from: code review of plan-images-indexeddb (2026-05-14)
 
 - **Drag-depth desync** — `dragleave` `hasFile(e)` check is unreliable across browsers; can leave the drop overlay visible until next drop or reload. Standard HTML5 DnD wart; clean fix would require a heavier state machine tracking active drag-source.
