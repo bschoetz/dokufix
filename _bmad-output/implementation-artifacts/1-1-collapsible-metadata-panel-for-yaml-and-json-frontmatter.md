@@ -265,3 +265,4 @@ Verification harness (scratchpad, not committed — the repo has no test framewo
 | Date | Change |
 |---|---|
 | 2026-07-16 | Implemented story 1.1. YAML/JSON frontmatter now renders as a collapsible `<details>` metadata panel instead of leaking as `<hr>` + setext `<h2>`. Added a deliberate YAML subset parser (no library) with a loud raw fallback, two-tier detection to protect leading thematic breaks, and a single `deriveDocTitle()` helper that fixes a pre-existing bug where a `#`-prefixed YAML comment could hijack the download filename and export `<title>`. 71 assertions green in Chromium and Firefox; no regression in the demo document. Status → review. |
+| 2026-07-16 | **Hands-on human review passed** (Ben, on the demo data): "besteht meinen test, sieht ordentlich aus". Status stays `review` pending the code-review workflow. |
