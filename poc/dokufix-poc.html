@@ -428,6 +428,28 @@
   }
   #preview a[data-footnote-backref]:hover{opacity:1}
 
+  /* Landing highlight + return-path disambiguation.
+     li:target covers arrival via the plain #footnote-<id> anchor (external
+     bookmarks, copied URLs). li:has(...) covers arrival via a marker, which
+     now targets its own arrow — see linkFootnoteReturnPaths(). */
+  #preview .footnotes li:target,
+  #preview .footnotes li:has(a[data-footnote-backref]:target){
+    background:rgba(212,255,0,.30);
+    box-shadow:0 0 0 7px rgba(212,255,0,.30);
+    border-radius:2px;
+    transition:background-color .25s ease, box-shadow .25s ease;
+  }
+  #preview .footnotes li{scroll-margin-top:90px}
+  /* Exactly the arrow that leads back where you came from. */
+  #preview .footnotes a[data-footnote-backref]:target{
+    background:#d4ff00;
+    opacity:1;
+    padding:0 4px;
+    border-radius:3px;
+    scroll-margin-top:90px;
+    outline:2px solid #d4ff00;
+  }
+
   /* Footnote hover/focus preview. Pure CSS on purpose: no listener means it
      works in the JS-free nur-lesen export. Base positioning stays on plain
      absolute + translate — CSS anchor positioning would flip nicely at the
@@ -1853,7 +1875,12 @@ async function render() {
   const headings = previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
   assignHeadingIds(headings);
   processInlineToc(headings);
+  // Order matters: attachFootnotePreviews() resolves each definition through
+  // the marker's href, and linkFootnoteReturnPaths() rewrites that href to
+  // point at the return arrow. Retargeting first would build every preview
+  // out of the "↩" anchor instead of the footnote.
   attachFootnotePreviews();
+  linkFootnoteReturnPaths();
 
   // Convert <pre><code class="language-mermaid">…</code></pre> into <div class="mermaid">…</div>
   previewEl.querySelectorAll('pre code.language-mermaid').forEach(block => {
@@ -2025,6 +2052,38 @@ function buildFootnotePreview(li){
   // Whitespace from the source markup collapses via CSS (white-space:normal).
   if (!(span.textContent || '').trim()) return null;
   return span;
+}
+
+// Point every footnote marker at its OWN return arrow.
+//
+// marked-footnote renders each reference to a footnote with the same visible
+// number and the same href: three citations of [^norm] all read "1" and all
+// link to #footnote-norm, while the definition grows three arrows ↩ ↩² ↩³.
+// On arrival you cannot tell which arrow leads back to where you came from.
+//
+// :target only ever knows the current fragment, so CSS cannot distinguish the
+// three cases — the only JS-free fix is to give each marker a distinct target.
+// The arrow itself becomes that target, which lets CSS mark exactly the right
+// one (a[data-footnote-backref]:target) and shade the definition around it
+// (li:has(...)). The plain #footnote-<id> anchor keeps working via li:target.
+//
+// TRADE-OFF: the marker now lands on the arrow, which sits at the END of the
+// footnote text, so assistive tech reads "Back to reference" before the prose.
+// Documented in poc/README.md; see deferred-work.md for the reversal option.
+function linkFootnoteReturnPaths(){
+  const backrefs = previewEl.querySelectorAll('.footnotes a[data-footnote-backref]');
+  for (const back of backrefs){
+    const href = back.getAttribute('href') || '';
+    if (!href.startsWith('#') || href.length < 2) continue;
+    const refId = href.slice(1);                       // footnote-ref-norm-2
+    let ref = null;
+    try { ref = previewEl.querySelector('a[data-footnote-ref]#' + CSS.escape(refId)); }
+    catch (err) { ref = null; }
+    if (!ref) continue;                                // orphan arrow → leave alone
+    const backId = 'footnote-back-' + refId.replace(/^footnote-ref-/, '');
+    back.id = backId;
+    ref.setAttribute('href', '#' + backId);
+  }
 }
 
 function attachFootnotePreviews(){
@@ -2586,6 +2645,9 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 sup a,a[data-footnote-ref]{text-decoration:none;font-weight:700;padding:0 2px;color:#0066cc}
 a[data-footnote-backref]{text-decoration:none;margin-left:4px;opacity:.55}
 a[data-footnote-backref]:hover{opacity:1}
+.footnotes li:target,.footnotes li:has(a[data-footnote-backref]:target){background:rgba(212,255,0,.30);box-shadow:0 0 0 7px rgba(212,255,0,.30);border-radius:2px;transition:background-color .25s ease,box-shadow .25s ease}
+.footnotes li{scroll-margin-top:90px}
+.footnotes a[data-footnote-backref]:target{background:#d4ff00;opacity:1;padding:0 4px;border-radius:3px;scroll-margin-top:90px;outline:2px solid #d4ff00}
 .dokufix-fn-host{position:relative}
 .dokufix-fn-preview{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:20;width:max-content;max-width:min(32rem,90vw);padding:.7em .9em;background:#fff;border:1px solid #e5e5ea;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.13);font-size:.85rem;font-weight:400;line-height:1.5;color:#3a3a3f;text-align:left;white-space:normal;vertical-align:baseline;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;pointer-events:none}
 .dokufix-fn-host:hover>.dokufix-fn-preview,.dokufix-fn-host:focus-within>.dokufix-fn-preview{visibility:visible;opacity:1}

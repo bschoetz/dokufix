@@ -67,6 +67,20 @@ CSS anchor positioning fixes it: `@position-try` with `position-area: block-star
 
 **Product decision (Ben, 2026-07-16): shipped.** Recipients are overwhelmingly on Chromium/Edge, and the read-only exports — the artifacts that actually travel — behave correctly in Firefox too. The Firefox deviations are confined to the *app* contexts (the editor page and the `Mit Editor` variant), where the editor chrome's containing blocks appear to defeat anchor positioning. **Caveat on the evidence:** all of this was measured with Playwright's synthetic mouse; the un-hover result in particular may be an artifact of synthetic input rather than real-mouse behaviour, which is why the feature is shipped for hands-on evaluation rather than judged from the harness alone. Revisit if it misbehaves in practice — deleting the `@supports` block from **both** stylesheets restores a ~16 ms reveal everywhere and reinstates the ~900 px clipping. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`.
 
+**Landing highlight and return-path disambiguation.** `marked-footnote` renders every reference to the same footnote with the *same visible number* and the *same href*: three citations of `[^norm]` all read `1` and all link to `#footnote-norm`, while the definition grows three return arrows `↩ ↩² ↩³`. On arrival you cannot tell which entry you landed on, nor which arrow leads back to where you came from.
+
+`:target` only ever knows the current fragment, so CSS cannot distinguish the three cases. The only JS-free fix is to give each marker a **distinct** target: `linkFootnoteReturnPaths()` gives every arrow a stable id (`footnote-back-<id>[-N]`) and points the matching marker at it. Then
+
+- `a[data-footnote-backref]:target` marks exactly the arrow that leads back, and
+- `li:has(a[data-footnote-backref]:target)` shades the definition around it, while
+- `li:target` still shades when arriving via the plain `#footnote-<id>` anchor (external bookmarks, copied URLs).
+
+All pure CSS, so it works in the JS-free export. `attachFootnotePreviews()` must run **before** the retarget — it resolves each definition through the marker's href, so retargeting first would build every preview out of the `↩` anchor instead of the footnote.
+
+**Accessibility trade-off — the cost of doing this without JavaScript.** The marker now lands on the return arrow, which sits at the *end* of the footnote text. Measured on a real export: `:target` resolves to `<a id="footnote-back-norm-2" aria-label="Back to reference norm">`, so a screen-reader user activating a footnote marker hears *"Back to reference"* before the footnote's prose, and must navigate backwards to read it. The definition is fully visible on screen and shaded, so sighted readers are unaffected — the cost falls specifically on assistive-technology users, in a product whose personas include policy and audit documents. It is shipped knowingly, not overlooked.
+
+*Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in both stylesheets. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`.
+
 **Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured on a document with three short footnotes: `nur-lesen` +1050 B (+12.5 %), `kompakt` +770 B (+9.0 %) — gzip absorbs much of the duplication, which is exactly the kind of redundancy it is good at. The `Mit Editor` variant grows by ~5.7 KB, but that is the feature's code (JS + the duplicated CSS), a fixed cost rather than per-footnote. Footnote-heavy documents pay proportionally more; the per-footnote marginal cost is about the length of the footnote's own text.
 
 ### Frontmatter (YAML / JSON metadata header)

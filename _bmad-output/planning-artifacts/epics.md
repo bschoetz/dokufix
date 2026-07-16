@@ -94,7 +94,7 @@ No UX design artifact exists for this change request. Design intent is taken fro
 
 | Epic | Title | Stories | Status |
 |---|---|---|---|
-| 1 | Metadata Headers and Footnote Previews | 1.1, 1.2 | in-progress |
+| 1 | Metadata Headers and Footnote Previews | 1.1, 1.2, 1.3 | in-progress |
 
 ## Epic 1: Metadata Headers and Footnote Previews
 
@@ -218,3 +218,70 @@ So that I can take in the aside without jumping to the bottom of the document an
 **When** a representative document with footnotes is exported in all four variants
 **Then** the resulting size delta is measured and recorded in the story's completion notes
 **And** if the delta is material, it is noted in `poc/README.md` alongside the existing size table.
+
+### Story 1.3: Landing Highlight and Return-Path Disambiguation for Footnotes
+
+*Added 2026-07-16 at the product owner's request, after 1.2 reached review. Scope extension to Epic 1 rather than a re-open of 1.2.*
+
+As a reader following a footnote to the bottom of a long document,
+I want the footnote I landed on to be visibly highlighted, and the specific return arrow that takes me back to be marked,
+So that I can see instantly where I arrived and how to get back — without scanning a list of identical-looking arrows and guessing.
+
+**Context — the concrete defect.** `marked-footnote` renders every reference to the same footnote with the **same visible number**, all pointing at the same `href`. A footnote cited three times produces three markers that all read `1` and all link to `#footnote-norm`, and a definition carrying three return arrows: `↩ ↩² ↩³`. On arrival there is no indication of which arrow leads back to the marker you came from, and (for a long footnote list) no indication of which entry you landed on at all.
+
+Verified against the PoC:
+
+```
+Erste[^norm]. Zweite[^norm]. Dritte[^norm].
+
+→ refs: id=footnote-ref-norm, -norm-2, -norm-3 — all href="#footnote-norm", all rendered "1"
+→ <li id="footnote-norm"> … <a href="#footnote-ref-norm">↩</a>
+                             <a href="#footnote-ref-norm-2">↩<sup>2</sup></a>
+                             <a href="#footnote-ref-norm-3">↩<sup>3</sup></a>
+```
+
+**The design constraint that shapes this story.** `:target` only ever knows the current fragment (`#footnote-norm`). It cannot know *which* reference the reader came from. Highlighting the correct return arrow without JavaScript is therefore only possible if each reference navigates to a **distinct** anchor. That is a deliberate change to the reference `href` that `marked-footnote` generates, and it supersedes Story 1.2's AC5 assertion that a click lands on `#footnote-<id>` — noted explicitly so the change is a decision, not a regression.
+
+**Acceptance Criteria:**
+
+**AC1 — The landed-on footnote is highlighted**
+**Given** a document with several footnotes
+**When** the reader clicks a footnote marker
+**Then** the footnote definition they landed on is visibly highlighted against the rest of the list
+**And** the highlight persists while that footnote remains the target, so the reader can look away and back.
+
+**AC2 — The matching return arrow is marked**
+**Given** a footnote referenced from several places, rendering several return arrows
+**When** the reader arrives from one specific marker
+**Then** exactly the arrow that leads back to *that* marker is highlighted
+**And** the other arrows of the same footnote are not.
+
+**AC3 — Both work without JavaScript**
+**Given** the JS-free `nur-lesen` export
+**When** the reader clicks a footnote marker
+**Then** both highlights behave as above, driven purely by CSS
+**And** no `<script>` is introduced into that export.
+
+**AC4 — Return path still works, and is reciprocal**
+**Given** a highlighted return arrow
+**When** the reader activates it
+**Then** they land back at the marker they originally came from.
+
+**AC5 — Ships through every variant**
+**Given** a document with footnotes
+**When** it is exported as `Mit Editor`, `nur-lesen`, `schlank`, and `kompakt`
+**Then** both highlights work in all four
+**And** the CSS exists in both the live `#preview` block and in `READONLY_CSS`.
+
+**AC6 — Existing behaviour survives**
+**Given** the changes to reference targets
+**When** the document renders
+**Then** the hover previews from Story 1.2 still work and are unaffected
+**And** a link to the plain `#footnote-<id>` anchor (an external bookmark, or a copied URL from before this change) still highlights the footnote
+**And** the footnote list, its numbering, and its arrows are otherwise unchanged.
+
+**AC7 — The accessibility trade-off is recorded**
+**Given** the reference target is changed so that CSS can disambiguate the return path
+**When** the implementation lands
+**Then** the consequence for assistive technology is measured, written down in `poc/README.md` and `deferred-work.md`, and flagged for the product owner
+**And** an alternative that preserves the original target semantics is described, so reversing the decision is a known, costed option.
