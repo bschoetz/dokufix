@@ -1,5 +1,5 @@
 # generated: 2026-07-16 12:35
-# last_updated: 2026-07-16 12:48
+# last_updated: 2026-07-16 13:24
 # project: dokufix
 # project_key: NOKEY
 # tracking_system: file-system
@@ -42,7 +42,7 @@
 # Epic 1 is the first formally tracked work item. Source: _bmad-output/planning-artifacts/epics.md
 
 generated: 2026-07-16 12:35
-last_updated: 2026-07-16 12:48
+last_updated: 2026-07-16 13:24
 project: dokufix
 project_key: NOKEY
 tracking_system: file-system
@@ -51,5 +51,5 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   epic-1: in-progress
   1-1-collapsible-metadata-panel-for-yaml-and-json-frontmatter: review
-  1-2-hover-and-focus-previews-for-footnotes: ready-for-dev
+  1-2-hover-and-focus-previews-for-footnotes: review
   epic-1-retrospective: optional

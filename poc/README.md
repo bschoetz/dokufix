@@ -13,6 +13,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 - **Explicit save** — leaving edit mode does **not** auto-save; saving is a deliberate user action via the Download menu.
 - **Self-replication** — the "Mit Editor" download produces a new HTML file with the user's content baked in (gzip-compressed). The receiver opens that file and starts from there.
 - **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
+- **Footnotes with hover previews** — GFM footnote syntax (`[^id]` / `[^id]:`) via `marked-footnote`, plus a preview that appears when the reader hovers or keyboard-focuses a marker, so an aside can be read without jumping to the bottom of the document. Pure CSS, so it works in the JS-free export. See *Footnotes* below.
 - **Frontmatter metadata panel** — a leading YAML or JSON header block renders as a collapsible panel instead of leaking into the document as markup. Native `<details>`, so it collapses without JavaScript and survives the JS-free export. See *Frontmatter* below.
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
 - **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
@@ -40,6 +41,18 @@ Two distinct concepts, deliberately separated:
 - **`SAMPLE`** — this file's per-document default (what gets loaded on first open if no IndexedDB record exists yet for this document UUID). On `Mit Editor` download, this is replaced with the user's current content.
 
 Loading order on open: IndexedDB doc record (live draft) > `SAMPLE` (file's baked content) > `DEMO`.
+
+### Footnotes
+
+Standard GFM footnotes work: `[^id]` places a marker, `[^id]:` defines it, and `marked-footnote` (registered via the single `marked.use()` call in the file) renders the definition list at the document end with return arrows. dokufix adds no syntax here.
+
+**Hover / focus preview.** Each marker carries a preview of its footnote, revealed on `:hover` or `:focus-within` of the host `<sup class="dokufix-fn-host">`. The reveal is **pure CSS** — there is no listener — which is what lets it work in the JS-free `nur-lesen` export. `attachFootnotePreviews()` only injects inert markup at render time; because every export variant calls `render()` and then reads `previewEl.innerHTML` back out, the previews travel into all four downloads without any export-specific code.
+
+**Preview content is flattened to inline.** This is load-bearing, not cosmetic. The preview `<span>` lives in the `<sup>` that sits inside the paragraph carrying the marker. A footnote definition is block content (`<p>`, sometimes lists) — and a `<p>` nested inside a `<p>` makes the HTML parser close the outer paragraph early. In the live DOM you would not notice; in an *export*, where the markup is serialised and re-parsed by the recipient's browser, it would quietly shred the document structure. So `fnFlattenInline()` unwraps block elements (joining them with a space) and keeps only phrasing content. Links are unwrapped to their text as well, for a second reason: the preview is `aria-hidden="true"` (the footnote text is already reachable through the marker's own link, and announcing it twice is noise), and an `aria-hidden` subtree must not contain focusable elements. Backrefs and nested markers are stripped, the latter so a footnote citing a footnote cannot nest previews.
+
+**Known limitation — positioning at the viewport edge.** The preview is centred over its marker with plain `position:absolute` + `translateX(-50%)`. At wide viewports (the 1000 px content column is centred, leaving margin) and at phone widths (`max-width: min(32rem, 90vw)`) it stays on screen. But at **middling widths — around 900 px, where the column nearly fills the window — a marker near the right edge pushes the preview off-screen** (measured: ~200 px cut off). A centred box simply cannot fit when the marker is closer to the edge than half the box width, and CSS has no way to detect that without JavaScript. CSS anchor positioning (`position-try-fallbacks`) is the intended fix, but it is not usable as a gate today: Firefox 151 reports `anchor-name` support while not delivering working fallbacks, so an `@supports` block would silently replace the working base with an untested one. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`; revisit when anchor positioning is reliably shipped across engines.
+
+**Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured on a document with three short footnotes: `nur-lesen` +1050 B (+12.5 %), `kompakt` +770 B (+9.0 %) — gzip absorbs much of the duplication, which is exactly the kind of redundancy it is good at. The `Mit Editor` variant grows by ~5.7 KB, but that is the feature's code (JS + the duplicated CSS), a fixed cost rather than per-footnote. Footnote-heavy documents pay proportionally more; the per-footnote marginal cost is about the length of the footnote's own text.
 
 ### Frontmatter (YAML / JSON metadata header)
 

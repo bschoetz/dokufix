@@ -428,6 +428,39 @@
   }
   #preview a[data-footnote-backref]:hover{opacity:1}
 
+  /* Footnote hover/focus preview. Pure CSS on purpose: no listener means it
+     works in the JS-free nur-lesen export. Base positioning stays on plain
+     absolute + translate — CSS anchor positioning would flip nicely at the
+     viewport edge but is not in Firefox/Safari yet (NFR7). */
+  #preview .dokufix-fn-host{position:relative}
+  #preview .dokufix-fn-preview{
+    position:absolute;
+    left:50%;bottom:calc(100% + 8px);
+    transform:translateX(-50%);
+    z-index:20;
+    width:max-content;
+    max-width:min(32rem, 90vw);
+    padding:.7em .9em;
+    background:#fff;
+    border:1px solid #e5e5ea;
+    border-radius:6px;
+    box-shadow:0 6px 20px rgba(0,0,0,.13);
+    /* rem, not em: the host <sup> is font-size:smaller and would shrink it */
+    font-size:.85rem;font-weight:400;line-height:1.5;
+    color:#3a3a3f;text-align:left;
+    white-space:normal;
+    vertical-align:baseline;
+    visibility:hidden;opacity:0;
+    transition:opacity .12s ease, visibility .12s ease;
+    /* Decorative duplicate of the definition — never a hit target. */
+    pointer-events:none;
+  }
+  #preview .dokufix-fn-host:hover > .dokufix-fn-preview,
+  #preview .dokufix-fn-host:focus-within > .dokufix-fn-preview{
+    visibility:visible;opacity:1;
+  }
+  #preview .dokufix-fn-preview code{font-size:.92em}
+
   /* Gliederungsnummerierung — opt-in via body.numbered */
   .numbered #preview{counter-reset:h2}
   .numbered #preview h2{counter-reset:h3}
@@ -1779,6 +1812,7 @@ async function render() {
   const headings = previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6');
   assignHeadingIds(headings);
   processInlineToc(headings);
+  attachFootnotePreviews();
 
   // Convert <pre><code class="language-mermaid">…</code></pre> into <div class="mermaid">…</div>
   previewEl.querySelectorAll('pre code.language-mermaid').forEach(block => {
@@ -1889,6 +1923,85 @@ function processInlineToc(headings){
     // Smooth scroll on click + update hash without jumping
     nav.addEventListener('click', tocLinkHandler);
     p.replaceWith(nav);
+  }
+}
+
+// --- Footnote previews -------------------------------------------------
+// Hovering (or focusing) a footnote marker shows its text in place, so the
+// reader keeps their position. Reveal is pure CSS (:hover / :focus-within on
+// the host <sup>) — no listener — which is what makes it work in the JS-free
+// nur-lesen export. This pass only injects inert markup at render time.
+//
+// Footnote parsing itself is marked-footnote's job (see marked.use above);
+// this touches only presentation.
+
+// Tags kept as-is inside a preview. Everything else is unwrapped to its
+// children — including <a>, whose text we keep but whose link we drop: an
+// aria-hidden subtree must not contain focusable elements.
+const FN_KEEP_TAGS = new Set(['CODE','EM','STRONG','B','I','SUB','SUP','SMALL','MARK','ABBR','KBD','SAMP','VAR','DEL','INS','SPAN','BR']);
+// Unwrapping these joins their content with a space so words don't collide.
+const FN_BLOCK_TAGS = new Set(['P','DIV','UL','OL','LI','BLOCKQUOTE','PRE','TABLE','THEAD','TBODY','TR','TD','TH','H1','H2','H3','H4','H5','H6','SECTION','FIGURE','FIGCAPTION','DL','DT','DD','HR']);
+
+// Flatten to phrasing content. This is load-bearing, not cosmetic: the
+// preview sits in a <sup> inside the paragraph that carries the marker, and a
+// <p> (or <ul>, …) nested in a <p> makes the HTML parser close the outer
+// paragraph early. That would quietly shred the document structure of every
+// exported file, where the markup is serialised and re-parsed.
+function fnFlattenInline(src, out){
+  for (const child of src.childNodes){
+    if (child.nodeType === Node.TEXT_NODE){
+      out.appendChild(child.cloneNode(false));
+      continue;
+    }
+    if (child.nodeType !== Node.ELEMENT_NODE) continue;
+    const tag = child.tagName;
+    if (FN_KEEP_TAGS.has(tag)){
+      const el = child.cloneNode(false);
+      fnFlattenInline(child, el);
+      out.appendChild(el);
+    } else {
+      if (FN_BLOCK_TAGS.has(tag) && out.lastChild && !/\s$/.test(out.textContent || '')){
+        out.appendChild(document.createTextNode(' '));
+      }
+      fnFlattenInline(child, out);
+    }
+  }
+}
+
+function buildFootnotePreview(li){
+  const clone = li.cloneNode(true);
+  // Drop the "↩" return link — it belongs to the definition list, not here.
+  clone.querySelectorAll('a[data-footnote-backref]').forEach(a => a.remove());
+  // Drop nested markers so a footnote citing a footnote can't nest previews.
+  clone.querySelectorAll('a[data-footnote-ref]').forEach(a => {
+    const sup = a.parentElement;
+    (sup && sup.tagName === 'SUP' ? sup : a).remove();
+  });
+  const span = document.createElement('span');
+  span.className = 'dokufix-fn-preview';
+  span.setAttribute('aria-hidden', 'true');
+  fnFlattenInline(clone, span);
+  // Whitespace from the source markup collapses via CSS (white-space:normal).
+  if (!(span.textContent || '').trim()) return null;
+  return span;
+}
+
+function attachFootnotePreviews(){
+  const refs = previewEl.querySelectorAll('a[data-footnote-ref]');
+  for (const ref of refs){
+    const sup = ref.parentElement;
+    if (!sup || sup.tagName !== 'SUP') continue;
+    if (sup.querySelector(':scope > .dokufix-fn-preview')) continue; // idempotent
+    const href = ref.getAttribute('href') || '';
+    if (!href.startsWith('#') || href.length < 2) continue;
+    let li = null;
+    try { li = previewEl.querySelector('.footnotes ' + '#' + CSS.escape(href.slice(1))); }
+    catch (err) { li = null; }
+    if (!li) continue; // definition missing → no preview, ref still jumps
+    const span = buildFootnotePreview(li);
+    if (!span) continue;
+    sup.classList.add('dokufix-fn-host');
+    sup.appendChild(span);
   }
 }
 
@@ -2432,6 +2545,10 @@ hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 sup a,a[data-footnote-ref]{text-decoration:none;font-weight:700;padding:0 2px;color:#0066cc}
 a[data-footnote-backref]{text-decoration:none;margin-left:4px;opacity:.55}
 a[data-footnote-backref]:hover{opacity:1}
+.dokufix-fn-host{position:relative}
+.dokufix-fn-preview{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:20;width:max-content;max-width:min(32rem,90vw);padding:.7em .9em;background:#fff;border:1px solid #e5e5ea;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.13);font-size:.85rem;font-weight:400;line-height:1.5;color:#3a3a3f;text-align:left;white-space:normal;vertical-align:baseline;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;pointer-events:none}
+.dokufix-fn-host:hover>.dokufix-fn-preview,.dokufix-fn-host:focus-within>.dokufix-fn-preview{visibility:visible;opacity:1}
+.dokufix-fn-preview code{font-size:.92em}
 .numbered{counter-reset:h2}
 .numbered h2{counter-reset:h3}
 .numbered h3{counter-reset:h4}

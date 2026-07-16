@@ -1,6 +1,6 @@
 # Story 1.2: Hover and Focus Previews for Footnotes
 
-Status: ready-for-dev
+Status: review
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -21,31 +21,31 @@ so that I can take in the aside without jumping to the bottom of the document an
 
 ## Tasks / Subtasks
 
-- [ ] **Task 1: Build the preview injection pass** (AC: 1, 5)
-  - [ ] Add `attachFootnotePreviews()` — a post-DOM pass over `previewEl`, following the `processInlineToc` pattern (L1564).
-  - [ ] For each `a[data-footnote-ref]`, resolve its target `<li>` in `section.footnotes` via the ref's `href` fragment.
-  - [ ] Clone the target's content, **strip the backref link** (`a[data-footnote-backref]`) from the clone, and strip any nested `a[data-footnote-ref]` markers to avoid recursive previews.
-  - [ ] Wrap/insert a `<span class="dokufix-fn-preview" aria-hidden="true">` as a sibling of the ref anchor inside its `<sup>`. See Dev Notes → *Why `aria-hidden`* (AC5).
-  - [ ] Call it from `render()` after `previewEl.innerHTML = resolution.html` (L1470) — anywhere in the DOM-transform half, e.g. next to `processInlineToc` (L1475).
-  - [ ] Make it a no-op when the document has no footnotes, and tolerate a missing/unresolvable definition (skip that ref, don't throw).
-- [ ] **Task 2: CSS-only show/hide — twice** (AC: 1, 2, 3, 4)
-  - [ ] Add `#preview`-prefixed rules to the main `<style>` block near the existing footnote rules (L362–379).
-  - [ ] Add the unprefixed twin to `READONLY_CSS` next to its footnote rules (L2104–2111).
-  - [ ] Hide by default; reveal on `:hover` **and** `:focus-within` on the containing `<sup>` (AC3 comes free from `:focus-within` — the ref is a focusable `<a>`).
-  - [ ] Position with classic `position: absolute` inside a `position: relative` `<sup>`. Constrain with `max-width: min(32rem, 90vw)`. Do **not** make base positioning depend on CSS anchor positioning (Dev Notes → *Positioning*).
-  - [ ] Use `visibility`/`opacity` rather than `display:none` so a transition is possible; keep it consistent with the file's existing decorative `:hover` transitions.
-  - [ ] Match the existing palette; do not introduce CSS custom properties.
-- [ ] **Task 3: Verify all four export variants** (AC: 2, 4)
-  - [ ] Export a footnote document as all four variants and hover-test each.
-  - [ ] **Explicitly confirm `nur-lesen` still contains no `<script>` tag** and that previews work there.
-  - [ ] Check the preview is not clipped by an ancestor `overflow` and renders above following content (`z-index`), especially inside the 2-column grid read mode.
-- [ ] **Task 4: Measure size impact** (AC: 6)
-  - [ ] Export a representative footnote-bearing document before and after; record the delta per variant in Completion Notes.
-  - [ ] If material, add a note to `poc/README.md` near the size table.
-- [ ] **Task 5: Documentation**
-  - [ ] Document the preview in `poc/README.md`.
-  - [ ] **Also document the pre-existing footnote support**, which is currently undocumented (Dev Notes → *Documentation debt*).
-  - [ ] Record deferred edge cases (e.g. touch behaviour, viewport-edge overflow) in `_bmad-output/implementation-artifacts/deferred-work.md`.
+- [x] **Task 1: Build the preview injection pass** (AC: 1, 5)
+  - [x] Add `attachFootnotePreviews()` — a post-DOM pass over `previewEl`, following the `processInlineToc` pattern (L1564).
+  - [x] For each `a[data-footnote-ref]`, resolve its target `<li>` in `section.footnotes` via the ref's `href` fragment.
+  - [x] Clone the target's content, **strip the backref link** (`a[data-footnote-backref]`) from the clone, and strip any nested `a[data-footnote-ref]` markers to avoid recursive previews.
+  - [x] Wrap/insert a `<span class="dokufix-fn-preview" aria-hidden="true">` as a sibling of the ref anchor inside its `<sup>`. See Dev Notes → *Why `aria-hidden`* (AC5).
+  - [x] Call it from `render()` after `previewEl.innerHTML = resolution.html` (L1470) — anywhere in the DOM-transform half, e.g. next to `processInlineToc` (L1475).
+  - [x] Make it a no-op when the document has no footnotes, and tolerate a missing/unresolvable definition (skip that ref, don't throw).
+- [x] **Task 2: CSS-only show/hide — twice** (AC: 1, 2, 3, 4)
+  - [x] Add `#preview`-prefixed rules to the main `<style>` block near the existing footnote rules (L362–379).
+  - [x] Add the unprefixed twin to `READONLY_CSS` next to its footnote rules (L2104–2111).
+  - [x] Hide by default; reveal on `:hover` **and** `:focus-within` on the containing `<sup>` (AC3 comes free from `:focus-within` — the ref is a focusable `<a>`).
+  - [x] Position with classic `position: absolute` inside a `position: relative` `<sup>`. Constrain with `max-width: min(32rem, 90vw)`. Do **not** make base positioning depend on CSS anchor positioning (Dev Notes → *Positioning*).
+  - [x] Use `visibility`/`opacity` rather than `display:none` so a transition is possible; keep it consistent with the file's existing decorative `:hover` transitions.
+  - [x] Match the existing palette; do not introduce CSS custom properties.
+- [x] **Task 3: Verify all four export variants** (AC: 2, 4)
+  - [x] Export a footnote document as all four variants and hover-test each.
+  - [x] **Explicitly confirm `nur-lesen` still contains no `<script>` tag** and that previews work there.
+  - [x] Check the preview is not clipped by an ancestor `overflow` and renders above following content (`z-index`), especially inside the 2-column grid read mode.
+- [x] **Task 4: Measure size impact** (AC: 6)
+  - [x] Export a representative footnote-bearing document before and after; record the delta per variant in Completion Notes.
+  - [x] If material, add a note to `poc/README.md` near the size table.
+- [x] **Task 5: Documentation**
+  - [x] Document the preview in `poc/README.md`.
+  - [x] **Also document the pre-existing footnote support**, which is currently undocumented (Dev Notes → *Documentation debt*).
+  - [x] Record deferred edge cases (e.g. touch behaviour, viewport-edge overflow) in `_bmad-output/implementation-artifacts/deferred-work.md`.
 
 ## Dev Notes
 
@@ -179,10 +179,47 @@ No automated test suite exists (`_bmad-output/test-artifacts/` is empty) and no 
 
 ### Agent Model Used
 
-_To be filled by the dev agent._
+claude-opus-4-8[1m] (Claude Opus 4.8, 1M context)
 
 ### Debug Log References
 
+Verification harness (scratchpad, not committed — the repo has no test framework and adding one was out of scope):
+`test-story-1-2.js` drives the real `poc/dokufix-poc.html` in a real browser via playwright-core, then exports all four variants, re-opens each produced file and hover-tests it there.
+
+- RED confirmed before implementation (all AC1/AC5 structure assertions failing).
+- Final: **52 assertions, 0 failures, in both Chromium 1228 and Firefox 151.** Story 1.1's 71 assertions still green in both → 246 total.
+- Regression (`regress.js`): demo document unchanged — 8 headings, inline ToC, 2 Mermaid SVGs, footnotes section, 1 footnote ref, rail present, zero page errors.
+- `probe-fn.js` established the plugin's real DOM shape before coding against it: `<sup><a id="footnote-ref-a" href="#footnote-a" data-footnote-ref aria-describedby="footnote-label">1</a></sup>` and `<li id="footnote-a"><p>… <a href="#footnote-ref-a" data-footnote-backref>↩</a></p></li>`.
+- `edge-fn.js` measured preview overflow across viewport widths (1600/1400/900/390).
+- `anchor-exp.html` + `anchor-test.js` + `dbg.js` evaluated CSS anchor positioning as a refinement; rejected, see notes.
+- One Firefox-only failure during development turned out to be a **harness artifact, not a product bug**: Firefox queues anchor navigation, so reading `location.hash` synchronously after `.click()` returned `""` and then `#footnote-a` 500 ms later (`probe-click.js`). A real user click jumps and scrolls correctly. The assertion now uses a real click plus a tick, and additionally asserts the definition scrolled into view.
+
 ### Completion Notes List
 
+- **All 6 ACs satisfied and machine-verified**, including hover-testing each of the four *exported files* rather than only the live page.
+- **No footnote parsing was written.** `marked-footnote` already handles it (`marked.use()` at L671–672); this story is presentation only, exactly as the story framed it.
+- **Flattening the preview to inline content is the load-bearing decision, and it is a correctness fix, not styling.** The preview `<span>` sits in a `<sup>` inside the paragraph carrying the marker. Footnote definitions are block content (`<p>`, sometimes lists). A `<p>` nested inside a `<p>` makes the HTML parser close the outer paragraph early — invisible in the live DOM, but every export serialises the markup and the recipient's browser **re-parses** it, which would silently shred the document structure. `fnFlattenInline()` unwraps block elements (joining with a space) and keeps only phrasing content. There is a dedicated assertion per export variant that the marker's paragraph survived re-parsing with its text intact.
+- **Links are unwrapped to text** for a second, independent reason: the preview is `aria-hidden="true"` (the text is already reachable via the marker's link; announcing it twice is noise), and an `aria-hidden` subtree must not contain focusable elements. Asserted: zero focusable elements inside the preview.
+- **Preview is a sibling of the ref anchor, not inside it** — putting it inside would make the link's accessible name the entire footnote text. Asserted: the anchor's accessible name is still `1`.
+- **Nested markers stripped**, so a footnote citing a footnote cannot nest previews. Missing definitions are skipped rather than throwing; the ref still jumps. Re-render is idempotent (asserted).
+- **AC2 met by construction:** no listener at all. Verified by asserting the `nur-lesen` export contains no `<script>` tag, then opening it and hover-testing.
+- **⚠️ AC2's positioning clause — an honest limitation, not a clean pass.** Measured overflow of the centred preview: none at 1600/1400 px (the 1000 px column is centred, leaving margin) and none at 390 px (`max-width:min(32rem,90vw)` caps it), but at **~900 px a marker near the right edge pushes the preview ~200 px off-screen**. A centred box cannot fit when the marker is closer to the edge than half the box width; CSS cannot detect that without JS.
+  **CSS anchor positioning was evaluated and deliberately rejected.** Firefox 151 returns `true` for both `CSS.supports('anchor-name','--x')` and `('position-try-fallbacks','flip-inline')`, but the fallbacks do not take effect — the tooltip overflowed identically. An `@supports` gate would therefore *replace the verified base with an untested one in Firefox*, which is precisely the failure mode AC2's "must degrade to a still-usable preview" clause is guarding against. (Chromium separately dropped `position-try-fallbacks: position-area(...)` as invalid, computing to `none`; `@position-try` custom options would be required.) The story's guidance was to prefer a CSS-only mitigation over JS and record the residual — no CSS-only mitigation exists that works cross-engine today, so the residual is recorded in `deferred-work.md` and `poc/README.md`. **This is the one point in the epic worth a product decision** (see Change Log).
+- **AC6 measured, not estimated.** Document with three short footnotes: `nur-lesen` 8421 → 9471 B (**+1050 B, +12.5 %**), `kompakt` 8555 → 9325 B (**+770 B, +9.0 %**), `Mit Editor` 112544 → 118210 B (**+5666 B, +5.0 %**). Isolating fixed from marginal cost via a footnote-free document: the read-only delta is ~600 B of CSS (fixed) plus roughly the length of each footnote's own text (the preview duplicates it once). `kompakt` grows least because gzip absorbs duplication — which is exactly what this feature produces. The `Mit Editor` delta is the feature's code and does not scale with footnote count. Noted in `poc/README.md`.
+- **AC5 verified against the real risk:** definitions keep their own block structure (only the *preview* is flattened), ids/backrefs/hrefs unchanged, clicking a ref still jumps *and* scrolls the definition into view (`pointer-events:none` keeps the preview from swallowing the click).
+- **CSS duplication tax paid** (NFR4): rules in both stylesheets. **Documentation debt cleared** (NFR: the story's Task 5) — `poc/README.md` now documents the pre-existing footnote support, which had never been written down, alongside the preview.
+- **Cross-browser green** in Chromium and Firefox; no CSS custom properties introduced; `font-size` uses `rem` deliberately so the host `<sup>`'s `font-size:smaller` does not shrink the preview.
+
 ### File List
+
+- `poc/dokufix-poc.html` — modified. Added `FN_KEEP_TAGS`, `FN_BLOCK_TAGS`, `fnFlattenInline`, `buildFootnotePreview`, `attachFootnotePreviews` before `tocLinkHandler`; call added in `render()` after `processInlineToc`; preview CSS added to the main `<style>` block and its twin to `READONLY_CSS`.
+- `poc/README.md` — modified. New *Footnotes* architecture section (pre-existing GFM support, preview mechanics, the inline-flattening rationale, the positioning limitation, measured size cost) plus a bullet in *What this PoC demonstrates*.
+- `_bmad-output/implementation-artifacts/deferred-work.md` — modified. Four deferred items from this story.
+- `_bmad-output/implementation-artifacts/sprint-status.yaml` — modified. Story status transitions.
+
+## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-07-16 | Implemented story 1.2. Footnote markers now show a hover/focus preview, revealed by pure CSS so it works in the JS-free `nur-lesen` export. Preview content is flattened to phrasing content — required, because a `<p>` inside the marker's `<sup>` would break the outer paragraph when an export is re-parsed. Documented the pre-existing (previously undocumented) footnote support. 52 assertions green in Chromium and Firefox; no regression. Status → review. |
+| 2026-07-16 | **Open for product decision:** the preview overflows the viewport by ~200 px at ~900 px widths when a marker sits near the right edge. AC2 forbids depending on CSS anchor positioning, and it is not reliably gate-able today (Firefox 151 claims support but fallbacks don't fire), so no cross-engine CSS-only fix exists. Options: accept and document (current state); allow a JS nudge for the live/`Mit Editor` variants while the JS-free export keeps the residual; or revisit when anchor positioning ships across engines. Recorded in `deferred-work.md`. |
