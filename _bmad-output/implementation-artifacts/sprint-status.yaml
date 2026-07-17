@@ -1,5 +1,5 @@
 # generated: 2026-07-16 12:35
-# last_updated: 2026-07-16 15:10
+# last_updated: 2026-07-17 09:15
 # project: dokufix
 # project_key: NOKEY
 # tracking_system: file-system
@@ -34,18 +34,43 @@
 # - Developer typically creates next story after previous one is 'done' to incorporate learnings
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
-# REVIEW STATE (2026-07-16):
+# REVIEW STATE (2026-07-17 — epic 1 closed):
 # =========================
-# All three stories of epic 1 passed hands-on human review by Ben on the demo data
-# ("besteht meinen test, sieht ordentlich aus"). They stay at 'review' pending the
-# code-review workflow, which Ben will trigger.
+# All three stories passed hands-on human review by Ben on the demo data
+# ("besteht meinen test, sieht ordentlich aus"), then went through the code-review
+# workflow: 9 agents (3 layers x 3 stories), 65 raw findings -> 41 after dedupe ->
+# 4 decisions, 29 patches, 8 dismissed. All 33 (29 + the 4 resolved decisions) were
+# APPLIED, verified, and closed by Ben on 2026-07-17.
 #
-# One decision is deliberately still open and is NOT a blocker for code review:
-# story 1.3 costs screen-reader reading order (a footnote marker lands on the
-# "Back to reference" arrow rather than the footnote prose) in exchange for being
-# able to mark the correct return arrow without JavaScript. Ben has taken this as a
-# separate item to look at. Reversal is ~15 lines and keeps the landing highlight.
-# Full write-up: deferred-work.md -> "Deferred from: story 1-3".
+# Three of the findings were real user-facing bugs, all reproduced and then proven
+# fixed in a real browser:
+#  - 1.1: a German first key ("Pruefer: Ben") reverted the whole header to
+#    <hr>+<h2> garbage AND dragged the download filename with it (internal-draft.html).
+#    The sniffer's key alphabet was stricter than its own parser's.
+#  - 1.2: the @supports anchor-positioning block sat in the app stylesheet twice and
+#    in READONLY_CSS zero times, so every read-only export -- the artifacts that
+#    actually travel -- lacked the feature they were built for, and the measurements
+#    taken from them were void.
+#  - 1.3: marked-footnote does not mint unique reference ids; a document with both
+#    [^bgb] (cited twice) and [^bgb-2] sent [^bgb-2]'s marker to the WRONG footnote
+#    while its hover preview still showed the right text. Pairing now goes through
+#    the marker's href, which is unambiguous.
+#
+# TWO ITEMS REMAIN OPEN AND ARE TRACKED IN deferred-work.md, NOT LOST IN THIS CLOSE:
+#  - Safari/WebKit has never been opened, and story 1.2's AC2 names it explicitly.
+#    Chromium and Firefox are measured on the real export; WebKit could not run here
+#    (libicu74 vs libicu78, no sudo). The @supports gate is syntactic, so Safari will
+#    very likely pass it and receive an untested refinement -- the same shape Firefox
+#    already demonstrates. Accepted by Ben with the epic closed.
+#  - The 1.3 screen-reader trade-off stays Ben's separate item. The review added two
+#    costs the record did not have: long footnotes scroll their own prose off the top
+#    for SIGHTED readers too (the README's "sighted readers are unaffected" was false
+#    and is corrected), and AT users get none of the feature's benefit because every
+#    arrow carries an identical aria-label. Both make the costed ~15-line reversal
+#    cheaper than it first looked.
+#
+# Lesson worth carrying into the next epic: READONLY_CSS drift has no detector and
+# has now cost real correctness once. See deferred-work.md.
 
 # PROJECT NOTE:
 # =============
@@ -55,15 +80,15 @@
 # Epic 1 is the first formally tracked work item. Source: _bmad-output/planning-artifacts/epics.md
 
 generated: 2026-07-16 12:35
-last_updated: 2026-07-16 15:10
+last_updated: 2026-07-17 09:15
 project: dokufix
 project_key: NOKEY
 tracking_system: file-system
 story_location: _bmad-output/implementation-artifacts
 
 development_status:
-  epic-1: in-progress
-  1-1-collapsible-metadata-panel-for-yaml-and-json-frontmatter: review
-  1-2-hover-and-focus-previews-for-footnotes: review
-  1-3-landing-highlight-and-return-path-disambiguation-for-footnotes: review
+  epic-1: done
+  1-1-collapsible-metadata-panel-for-yaml-and-json-frontmatter: done
+  1-2-hover-and-focus-previews-for-footnotes: done
+  1-3-landing-highlight-and-return-path-disambiguation-for-footnotes: done
   epic-1-retrospective: optional

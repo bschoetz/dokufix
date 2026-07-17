@@ -1,6 +1,6 @@
 # Story 1.1: Collapsible Metadata Panel for YAML and JSON Frontmatter
 
-Status: review
+Status: done
 
 <!-- Note: Validation is optional. Run validate-create-story for quality check before dev-story. -->
 
@@ -19,15 +19,15 @@ so that the document opens looking like a finished document instead of leaking i
 5. **Collapsed state is informative.** Default state is collapsed; the summary line shows a compact digest of the most useful available keys, not just a generic label. [FR4]
 6. **Frontmatter never becomes the title or filename.** With a `#`-prefixed line inside the frontmatter (e.g. YAML comment `# internal draft`) and a real `# Heading` in the body, both the download filename and the export `<title>` derive from the body heading. [FR5]
 7. **Unparseable frontmatter degrades safely.** A block parseable as neither JSON nor the supported YAML subset must not throw; the rest of the document renders, and the raw text is shown verbatim inside the panel rather than discarded. No source content is lost. [FR6, NFR3]
-8. **A leading thematic break is not mistaken for frontmatter.** A document legitimately starting with a `---` thematic break, or whose `---` block does not resolve to a key/value mapping, renders exactly as it does today. [FR6]
+8. **A leading thematic break is not mistaken for frontmatter, and prose is never swallowed.** A document legitimately starting with a `---` thematic break renders exactly as it does today. *Amended during code review 2026-07-16:* the original second clause ("or whose `---` block does not resolve to a key/value mapping") contradicted AC7 for a bare `---` fence and was never implemented — detection is an **intent** test, deliberately separate from parsability, so a block that looks like frontmatter but fails to parse gets the raw panel (AC7) rather than reverting to garbage. Intent now requires two signals: **two or more entries, or one recognized metadata key**. One prose line shaped `Note: this is a draft.` satisfies neither and stays body text; a lone `title: X` still gets its panel. An unterminated block whose candidate contains blank-line-separated prose is likewise rejected, so the prose stays in the body instead of being buried in a collapsed panel. [FR6]
 9. **Ships through every variant.** The panel is present, styled, and collapsible in `Mit Editor`, `nur-lesen`, `schlank`, and `kompakt`. Required CSS exists in both the live `#preview` block and in `READONLY_CSS`. [NFR1, NFR4]
 
 ## Tasks / Subtasks
 
 - [x] **Task 1: Add the `splitFrontmatter` seam** (AC: 1, 3, 6, 8)
-  - [x] Add `splitFrontmatter(src)` near the other source-level helpers, returning `{ raw, kind, data, body, bodyOffset }` — or a null-object (`{ raw: '', kind: null, data: null, body: src }`) when no valid frontmatter is present.
+  - [x] Add `splitFrontmatter(src)` near the other source-level helpers, returning `{ raw, kind, data, body }` — or a null-object (`{ raw: '', kind: null, data: null, body: src }`) when no valid frontmatter is present. *(Corrected 2026-07-16: the spec said `bodyOffset`; it was never implemented and nothing consumes it — it would only matter for source-mapping editor selections, which is out of scope. The shipped shape adds an `error` field on the raw path instead.)*
   - [x] Detection rule: the **very first line** of the source must be exactly `---` (or `---json` / `---yaml`), and a closing `---` line must follow. No leading blank lines permitted before the opening delimiter.
-  - [x] **Guard against false positives (AC8):** only treat the block as frontmatter if its content actually parses to a non-empty key/value mapping. If parsing yields no mapping, return the null-object so the source renders unchanged as a thematic break.
+  - [x] **Guard against false positives (AC8):** *(rewritten 2026-07-16 to describe what shipped — the original text specified a parse-based guard that would have made AC7's raw panel unreachable, and was correctly discarded during implementation without the spec being updated.)* Gate on **intent**, not parsability: `fmLooksLikeFrontmatter()` requires two or more key/value entries **or** one recognized metadata key (`title`/`version`/`date`/`author`), or a `{` first line for JSON. `fmHasProseParagraph()` additionally rejects a candidate containing blank-line-separated prose, which is the signature of an unterminated block that ran to the document's next thematic break. A block passing intent but failing to parse gets the raw panel (AC7); a block failing intent returns the null-object and renders unchanged (AC8).
   - [x] Keep this function pure and side-effect free — it is called from four sites.
 - [x] **Task 2: Parse the two content shapes** (AC: 2, 3, 7)
   - [x] JSON path: content trimmed starts with `{`, **or** the fence is `---json`. Use `JSON.parse` in a try/catch.
@@ -38,9 +38,9 @@ so that the document opens looking like a finished document instead of leaking i
   - [x] Route `safeFilenameBase()` (L1832) through `splitFrontmatter(...).body` before applying its `/^#\s+(.+?)\s*$/m` match. **This is an active defect fix** — see Dev Notes.
   - [x] Route the three export `<title>` derivations (L2145, L2176, L2232) through the same body. Consider extracting the repeated regex into one `deriveDocTitle()` helper used by all four sites rather than patching the regex in four places.
 - [x] **Task 4: Build and inject the panel** (AC: 1, 2, 5, 7)
-  - [x] Add `buildFrontmatterHtml(kind, data, raw)` — a pure string builder in the style of `buildTocHtml` (L1544). Escape everything via the existing `escapeHtml` (L1500).
+  - [x] Add `buildFrontmatterHtml(fm)` — a pure string builder in the style of `buildTocHtml` (L1544). Escape everything via the existing `escapeHtml` (L1500). *(Corrected 2026-07-16: the spec said `(kind, data, raw)`; the shipped signature takes the whole `fm` object.)*
   - [x] Emit `<details class="dokufix-frontmatter">` + `<summary>` digest + a `<dl>`-style body. Recurse for nested maps/sequences.
-  - [x] Summary digest (AC5): pick the first available of a small preference list of common keys (e.g. `title`, then `version`/`date`/`author`), joined compactly; fall back to a generic label plus the key count when none match. Keep the preference list short and obvious.
+  - [x] Summary digest (AC5): join **all** present keys from a small preference list (`title`, `version`, `date`, `author`) with `·`, in that order; fall back to a generic label plus the key count when none match. Keep the preference list short and obvious. *(Corrected 2026-07-16: this said "pick the first available", and `poc/README.md` repeated it; the code joins every one that is present, which is the better behaviour and what AC5 actually asks for — "a compact digest of the most useful available keys". The prose was wrong, not the code. The list doubles as the detection signal — see Task 1.)*
   - [x] `kind: 'raw'` fallback: emit the same `<details>` shell with the verbatim block inside a `<pre>`, and a summary that signals the block could not be parsed (AC7).
   - [x] Inject in `render()` **immediately after** `previewEl.innerHTML = resolution.html` (L1470) by prepending to `previewEl` — mirroring the post-DOM pattern of `processInlineToc`. See Dev Notes → *Why post-DOM injection*.
 - [x] **Task 5: Style it — twice** (AC: 1, 2, 4, 9)
@@ -54,6 +54,26 @@ so that the document opens looking like a finished document instead of leaking i
 - [x] **Task 7: Documentation**
   - [x] Document the feature in `poc/README.md`: the supported delimiters, the YAML subset and its limits, the collapse default, and the raw-fallback behaviour.
   - [x] Record any newly discovered edge cases in `_bmad-output/implementation-artifacts/deferred-work.md` if deferred.
+
+### Review Findings
+
+Code review 2026-07-16 (Blind Hunter + Edge Case Hunter + Acceptance Auditor). AC2, AC4, AC6 and AC9 were re-verified by execution and hold.
+
+- [x] [Review][Patch] *(was Decision — resolved by Ben 2026-07-16: **require a second signal**)* Gate on `≥2 key/value entries OR ≥1 recognized metadata key` (`title`/`version`/`date`/`author`, reusing `FM_SUMMARY_KEYS`), and bound the block so an unterminated one cannot run to the document's next thematic break (stop at a blank line followed by prose). `Note: this is a draft.` = 1 entry, no recognized key → stays body prose. `title: X` alone → still a panel. **The panel can swallow body prose — two triggers, one gate** — `fmLooksLikeFrontmatter` accepts any first line shaped `Word: text`, so a legitimate `---`/`Note: this is a draft.`/`---` opener is reinterpreted as a one-entry mapping: the prose leaves the body and lands in a **collapsed** `<details>`, in all four exports (verified: `kind: yaml`, `data: {"Note":"this is a draft."}`). Separately, the closing-delimiter search is unbounded (`/^---[ \t]*(?:\r?\n|$)/m`), so an *unterminated* block runs to the document's next thematic break, fails to parse, and buries the intervening prose in the "nicht lesbar" raw panel. README claims `---\nSome intro.\n---` "is left completely untouched" — true only because that example has no colon. The gate needs a corroborating signal (entry count, recognized metadata keys, block length, max span) to break the tie; picking one is a product call. Note the interaction: widening the key alphabet (patch below) slightly widens this blast radius. [poc/dokufix-poc.html:1776-1782, 1794]
+- [x] [Review][Patch] Sniffer key alphabet is stricter than the parser's, so a German first key reverts the block to pre-feature `<hr>`+`<h2>` garbage *and* regresses AC6 (`# internal draft` becomes the H1, file downloads as `internal-draft.html`); verified: `Prüfer: Ben` → sniffer `false`, parser reads key `"Prüfer"` [poc/dokufix-poc.html:1781]
+- [x] [Review][Patch] `fmParseMap` assigns into a plain `{}`, so duplicate keys silently overwrite and `__proto__` vanishes through the inherited setter — both return `kind:'yaml'` without the raw fallback, the exact "half-parsed panel that silently dropped a key" the Completion Notes rule out [poc/dokufix-poc.html:1699, 1715, 1724]
+- [x] [Review][Patch] `poc/README.md` and Task 4 both say the summary digest is "the first available of `title`, `version`, `date`, `author`"; `buildFrontmatterSummary` loops all four and joins them with ` · ` — there is no `break` anywhere in it, so "first available" never happens. The code is the better behaviour and is what AC5 asks for; the prose was wrong [poc/README.md · this file, Tasks §4]
+- [x] [Review][Patch] Top-level flow mapping under an explicit fence half-parses instead of throwing: `---yaml\n{a: 1}\n---` → `dt="{a"`, `dd="1}"`; the unfenced form correctly throws to the raw panel, so being explicit yields the worse result [poc/dokufix-poc.html:1786-1814]
+- [x] [Review][Patch] Sequence-of-maps guard uses `[\w.-]+`, so `- Autor Name: Ben` and `- Größe: 5` bypass it and become scalar strings — the silent-scalar outcome the guard's own comment says it prevents [poc/dokufix-poc.html:1741]
+- [x] [Review][Patch] Sequence-of-maps is rejected by spelling, not semantics: `authors:\n  - name: Ben` throws, but the equivalent `authors:\n  -\n    name: Ben` parses and renders fine — `deferred-work.md` scopes the construct as unsupported, not one spelling of it [poc/dokufix-poc.html:1744-1751]
+- [x] [Review][Patch] Unrecognized double-quote escapes pass through literally — `title: "café"` renders the text `café` rather than failing loudly to the raw panel [poc/dokufix-poc.html:1673]
+- [x] [Review][Patch] Empty-mapping guard exists only on the YAML branch, so `---\n{}\n---` yields a contentless "0 Einträge" panel while the YAML twin throws `empty mapping` [poc/dokufix-poc.html:1804]
+- [x] [Review][Patch] Empty explicit fence (`---json\n---`) announces "nicht lesbar — Originaltext" over an empty `<pre>` — a raw panel with no raw text to show [poc/dokufix-poc.html:1862-1870]
+- [x] [Review][Patch] Task 1's `[x]` subtask specifies a parse-based AC8 guard ("if parsing yields no mapping, return the null-object"); the shipped rule is intent-based (looks-like → panel, raw on parse failure). The deviation is the better design and is argued in the Completion Notes — but AC8's second clause and the subtask text still assert the discarded rule [this file, Tasks §1 / AC8]
+- [x] [Review][Patch] README promises out-of-subset constructs "fail loudly rather than partially" and lists multi-document streams as unsupported; in fact `---\na: 1\n---\nb: 2\n---` parses doc 1 confidently and leaks `b: 2` into the body as a setext `<h2>` [poc/README.md]
+- [x] [Review][Patch] Two `[x]` subtasks specify shapes that do not exist: `splitFrontmatter` returns no `bodyOffset` (nothing consumes it), and the signature is `buildFrontmatterHtml(fm)`, not `(kind, data, raw)` [this file, Tasks §1 and §4]
+
+**Dismissed as noise:** panel `open` state lost on re-render (Blind Hunter, `speculative`) — premise disproved: `render()` fires only on button click and Ctrl/Cmd+Enter (`poc/dokufix-poc.html:2263, 2269`), not on input.
 
 ## Dev Notes
 

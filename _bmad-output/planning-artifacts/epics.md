@@ -42,19 +42,19 @@ Neither story adds a plugin system, a theme, or an authoring extension point. Bo
 | FR6 | Malformed or unparseable frontmatter degrades visibly but harmlessly — never crashes the render, never silently swallows content | 1.1 |
 | FR7 | Hovering a footnote reference shows a preview of the footnote text without leaving the reading position | 1.2 |
 | FR8 | The footnote preview is reachable by keyboard, not only by mouse | 1.2 |
-| FR9 | The existing footnote section, its anchors, and its backrefs continue to work unchanged | 1.2 |
+| FR9 | The existing footnote section, its anchors, and its backrefs keep working. **Amended by Story 1.3:** the original wording said "unchanged", which 1.3 deliberately breaks — it gives each backref a stable id and repoints each reference at it, so that CSS alone can mark which arrow leads back. Behaviour is preserved (every marker still jumps to its definition, every arrow still returns to its marker); the markup is not. Story 1.2's AC5 is superseded accordingly. | 1.2, 1.3 |
 
 ### NonFunctional Requirements
 
 | ID | Requirement | Story |
 |---|---|---|
-| NFR1 | Both features ship into all four download variants (`Mit Editor`, `nur-lesen`, `schlank`, `kompakt`) | 1.1, 1.2 |
-| NFR2 | Both features work in the **JS-free** `nur-lesen` export — no `<script>` may be introduced into that variant | 1.1, 1.2 |
+| NFR1 | Every feature in this epic ships into all four download variants (`Mit Editor`, `nur-lesen`, `schlank`, `kompakt`) | 1.1, 1.2, 1.3 |
+| NFR2 | Every feature in this epic works in the **JS-free** `nur-lesen` export — no `<script>` may be introduced into that variant | 1.1, 1.2, 1.3 |
 | NFR3 | No new CDN dependency and no new runtime library. The production target is a single inlined file; a YAML library is not to be bundled (see Story 1.1 scope decision) | 1.1 |
-| NFR4 | New CSS is added to **both** stylesheets — the `#preview`-prefixed live block (L7–569) and the unprefixed `READONLY_CSS` export twin (L2047–2118) | 1.1, 1.2 |
-| NFR5 | New document-content constructs follow the `dokufix-` class-prefix convention | 1.1, 1.2 |
-| NFR6 | File-size impact stays proportionate; measured and recorded, not assumed | 1.2 |
-| NFR7 | Browser target remains "shipped from 2025 onward"; modern CSS is welcome, but a feature must not *depend* on a selector that Firefox or Safari lacks | 1.2 |
+| NFR4 | New CSS is added to **both** stylesheets — the `#preview`-prefixed live block (L7–569) and the unprefixed `READONLY_CSS` export twin (L2047–2118). Hand-maintained, with no drift detection: story 1.2 shipped its `@supports` block into the live sheet twice and the export twin zero times, and nothing caught it. Verify by grepping both, not by eye. | 1.1, 1.2, 1.3 |
+| NFR5 | New document-content constructs follow the `dokufix-` class-prefix convention | 1.1, 1.2, 1.3 |
+| NFR6 | File-size impact stays proportionate; measured and recorded, not assumed. Measure all four variants through one build with one document, or the numbers are not comparable to each other. | 1.2, 1.3 |
+| NFR7 | Browser target remains "shipped from 2025 onward"; modern CSS is welcome, but a feature must not *depend* on a selector that Firefox or Safari lacks | 1.2, 1.3 |
 
 ### Additional Requirements
 
@@ -81,14 +81,15 @@ No UX design artifact exists for this change request. Design intent is taken fro
 | FR6 | Story 1.1 | AC7, AC8 |
 | FR7 | Story 1.2 | AC1, AC2 |
 | FR8 | Story 1.2 | AC3 |
-| FR9 | Story 1.2 | AC5 |
-| NFR1 | Story 1.1 AC9 · Story 1.2 AC4 | |
-| NFR2 | Story 1.1 AC9 · Story 1.2 AC4 | |
+| FR9 | Story 1.2 · Story 1.3 | 1.2 AC5 (superseded by 1.3) · 1.3 AC4, AC6 |
+| FR9 (amended) | Story 1.3 | AC1, AC2 — landing highlight and return-path disambiguation |
+| NFR1 | Story 1.1 AC9 · Story 1.2 AC4 · Story 1.3 AC5 | |
+| NFR2 | Story 1.1 AC9 · Story 1.2 AC4 · Story 1.3 AC3 | |
 | NFR3 | Story 1.1 AC7 | |
-| NFR4 | Story 1.1 AC9 · Story 1.2 AC4 | |
-| NFR5 | Story 1.1 AC1 · Story 1.2 AC1 | |
+| NFR4 | Story 1.1 AC9 · Story 1.2 AC4 · Story 1.3 AC5 | |
+| NFR5 | Story 1.1 AC1 · Story 1.2 AC1 · Story 1.3 AC1 | |
 | NFR6 | Story 1.2 AC6 | |
-| NFR7 | Story 1.2 AC2 | |
+| NFR7 | Story 1.2 AC2 · Story 1.3 AC3 (`:has()` — Safari 15.4+, Firefox 121+) | |
 
 ## Epic List
 

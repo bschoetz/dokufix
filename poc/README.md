@@ -31,6 +31,8 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 | **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | ~10 KB |
 | **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | ~6 KB |
 
+Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
+
 ## Architecture notes
 
 ### `DEMO` vs `SAMPLE`
@@ -52,10 +54,15 @@ Standard GFM footnotes work: `[^id]` places a marker, `[^id]:` defines it, and `
 
 **Positioning, and the trade-off it carries.** A centred box cannot fit when its marker sits closer to the viewport edge than half the box width — at ~900 px (where the content column nearly fills the window) a right-edge marker pushed the preview ~200 px off-screen. Plain CSS cannot detect that without JavaScript.
 
-CSS anchor positioning fixes it: `@position-try` with `position-area: block-start span-inline-start / span-inline-end` keeps the box on screen at every tested width (1600/1200/900/800/600/390) in both engines, each preview anchored to its own marker. Two non-obvious requirements, both load-bearing:
+CSS anchor positioning fixes it: `@position-try` keeps the box on screen at every tested width (1600/1200/900/800/600/390), each preview anchored to its own marker. The fallback chain covers **both axes** — `block-start` tries for the inline overflow, `block-end` tries for the block axis. An earlier version listed only `block-start` tries, which vary the inline axis alone, so a marker near the top of the viewport had nothing to flip to; the block axis had never been tested (the widths above are six numbers and no heights). The box also carries a `max-height` with a fade: a preview is a preview, and without a ceiling a long footnote grows past the viewport top, where content is unreachable because browsers do not make overflow above the scroll origin scrollable.
 
+Three non-obvious requirements, all load-bearing:
+
+- the block must live in **both** stylesheets. It shipped for a while in the app sheet only — pasted there twice, in fact, once in the export sheet's unprefixed style — so the read-only exports, the artifacts that actually travel, kept the centred base and kept clipping. Verify with `grep -c position-try` on both, not by eye;
 - the host `<sup>` must **not** be `position:relative` inside the `@supports` block — a tiny containing block leaves the try-fallbacks nothing to evaluate against and they silently never fire;
 - the `transition` must stay — without it Firefox does not reveal the preview at all.
+
+**The `@supports` gate is syntactic, not behavioural.** `@supports (anchor-name:--a) and (position-try-fallbacks:--b)` asks whether the engine *parses* these properties, not whether the fallbacks actually fire — and Firefox answers yes to the first while failing the second. So the gate cannot separate a working engine from a partial one, and any engine that parses the syntax gets the refinement whether or not it can honour it. This is why positioning is verified by **measurement** rather than by trusting the gate.
 
 **Engine behaviour.** Chromium/Edge reveal in ~40–100 ms at every width. Firefox was initially reported here as slow (~700 ms) and as leaving previews stuck open — **both were artifacts of Playwright's synthetic mouse and do not reproduce for a human.** Confirmed by hands-on review (2026-07-16): with a real mouse in Firefox the preview appears immediately.
 
@@ -71,13 +78,31 @@ Automated coverage of this feature is therefore only as good as synthetic input 
 - `li:has(a[data-footnote-backref]:target)` shades the definition around it, while
 - `li:target` still shades when arriving via the plain `#footnote-<id>` anchor (external bookmarks, copied URLs).
 
-All pure CSS, so it works in the JS-free export. `attachFootnotePreviews()` must run **before** the retarget — it resolves each definition through the marker's href, so retargeting first would build every preview out of the `↩` anchor instead of the footnote.
+All pure CSS, so it works in the JS-free export. `attachFootnotePreviews()` must run **before** the retarget — it resolves each definition through the marker's href, so retargeting first would build every preview out of the `↩` anchor instead of the footnote. That ordering used to be guarded by a comment alone, with a silent failure mode (every preview rendering as `↩`, no error); the lookup is now scoped `li#…`, so a wrong order resolves to nothing and skips the preview instead of producing a confidently wrong one.
 
-**Accessibility trade-off — the cost of doing this without JavaScript.** The marker now lands on the return arrow, which sits at the *end* of the footnote text. Measured on a real export: `:target` resolves to `<a id="footnote-back-norm-2" aria-label="Back to reference norm">`, so a screen-reader user activating a footnote marker hears *"Back to reference"* before the footnote's prose, and must navigate backwards to read it. The definition is fully visible on screen and shaded, so sighted readers are unaffected — the cost falls specifically on assistive-technology users, in a product whose personas include policy and audit documents. It is shipped knowingly, not overlooked.
+**Pairing goes through the definition, not the marker's id.** The obvious implementation — read the arrow's `href`, `querySelector` that id, retarget it — is wrong, because `marked-footnote` does not guarantee those ids are unique. A document containing both `[^bgb]` (cited twice) and `[^bgb-2]` mints `id="footnote-ref-bgb-2"` **twice**; `querySelector` takes the first, and `[^bgb-2]`'s marker gets repointed at footnote `bgb`'s arrow — the reader clicks and lands on the wrong footnote, while the hover preview still shows the right text. A marker's *href* names its definition unambiguously, so each definition pairs its Nth marker with its Nth arrow; both are in reference order. Ids generated this way share one flat namespace with the definitions (`footnote-<label>`), so `[^back-x]` beside `[^x]` can still collide — on a collision the marker keeps pointing at its definition, which keeps the jump correct and loses only the arrow marking for that one reference.
+
+**Accessibility trade-off — the cost of doing this without JavaScript.** The marker now lands on the return arrow, which sits at the *end* of the footnote text. Measured on a real export: `:target` resolves to `<a id="footnote-back-norm-2" aria-label="Back to reference norm">`, so a screen-reader user activating a footnote marker hears *"Back to reference"* before the footnote's prose, and must navigate backwards to read it. It is shipped knowingly, not overlooked.
+
+Two costs that a first write-up of this trade-off missed, and that anyone weighing the reversal should have in front of them:
+
+- **Sighted readers are not unaffected.** Fragment navigation start-aligns the target, and the target is now the arrow at the *end* of the definition. A footnote taller than the 90 px `scroll-margin-top` therefore lands the reader on `↩` with its own prose scrolled above the viewport top — they must scroll **up** to read what they came for. The `li`'s `scroll-margin-top` cannot compensate, because the `li` is no longer the target. Short footnotes are unaffected; long ones are exactly the case policy and audit documents produce.
+- **Assistive-technology users pay the cost and get none of the benefit.** All arrows of a multi-referenced footnote carry the same accessible name — `[^bgb]`'s two arrows both read `aria-label="Back to reference bgb"`. Telling the arrows apart is the entire point of the feature, and the only signal that distinguishes them is colour. So the group that pays the reading-order cost is the one group the feature cannot help.
 
 *Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in both stylesheets. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`.
 
-**Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured on a document with three short footnotes: `nur-lesen` +1050 B (+12.5 %), `kompakt` +770 B (+9.0 %) — gzip absorbs much of the duplication, which is exactly the kind of redundancy it is good at. The `Mit Editor` variant grows by ~5.7 KB, but that is the feature's code (JS + the duplicated CSS), a fixed cost rather than per-footnote. Footnote-heavy documents pay proportionally more; the per-footnote marginal cost is about the length of the footnote's own text.
+**Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured 2026-07-16 on a document with three short footnotes (two definitions, one cited twice), all four variants through the same build and the same document, `b74cfce` (frontmatter panel merged, previews not yet added) as the baseline:
+
+| variant | before | after | delta |
+|---|---|---|---|
+| `nur-lesen` | 8 838 B | 12 045 B | +3 207 B (+36.3 %) |
+| `schlank` | 8 840 B | 12 047 B | +3 207 B (+36.3 %) |
+| `kompakt` | 8 705 B | 11 268 B | +2 563 B (+29.4 %) |
+| `Mit Editor` | 113 056 B | 136 431 B | +23 375 B (+20.7 %) |
+
+Read these carefully, because they are not the numbers an earlier draft carried. They span **story 1.2 and story 1.3 and the review patches**, not the preview alone, and they are larger than the first figures partly because the read-only exports now actually carry the `@supports` block they were always meant to have — the earlier measurement was taken on exports that silently lacked it. `Mit Editor` is a different animal again: it embeds the whole application, so its delta is mostly the source growth of the branch, not the cost of the feature.
+
+gzip absorbs much of the duplication, which is exactly the kind of redundancy it is good at. Footnote-heavy documents pay proportionally more; the per-footnote marginal cost is about the length of the footnote's own text.
 
 ### Frontmatter (YAML / JSON metadata header)
 
@@ -87,7 +112,7 @@ Without this, marked treats the block as ordinary Markdown: per CommonMark a lon
 
 **Delimiters.** The first line must be exactly `---` (sniffed as JSON when the content starts with `{`, YAML otherwise), or explicitly `---json` / `---yaml`. A closing `---` line must follow. TOML (`+++`) is not supported.
 
-**Panel.** `<details class="dokufix-frontmatter">`, collapsed by default — the document should read as a document on first open. The summary line shows a digest built from the first available of `title`, `version`, `date`, `author` (case-insensitive), falling back to an entry count. Expanding reveals every key/value pair; nested maps become indented sub-rows, sequences become lists. Everything is HTML-escaped. Because it's a native `<details>`, it is keyboard-operable and needs no JavaScript — it works in the `nur-lesen` export.
+**Panel.** `<details class="dokufix-frontmatter">`, collapsed by default — the document should read as a document on first open. The summary line shows a digest of whichever of `title`, `version`, `date`, `author` are present (case-insensitive), in that order, joined with `·` — all of them, not just the first — falling back to an entry count when none is. Expanding reveals every key/value pair; nested maps become indented sub-rows, sequences become lists. Everything is HTML-escaped. Because it's a native `<details>`, it is keyboard-operable and needs no JavaScript — it works in the `nur-lesen` export.
 
 **The YAML subset — and its limits.** dokufix does *not* bundle a YAML library. One (~30 KB) against a ~16 KB artifact fails the "body for information" test. Instead there is a deliberate subset covering what document frontmatter actually contains:
 
@@ -102,7 +127,15 @@ Without this, marked treats the block as ordinary Markdown: per CommonMark a lon
 
 Anything outside the subset makes the parser fail **loudly rather than partially**: the panel then shows the raw block verbatim under a "nicht lesbar" summary. A half-parsed panel that silently dropped a key would be a data-integrity failure; showing the original text is honest and loses nothing. There is deliberately no type coercion — values stay strings, so YAML's `no`-becomes-`false` class of surprises can't occur. The values are displayed, never computed on.
 
-**Not mistaken for a thematic break.** A document may legitimately open with `---`. Detection therefore runs two tiers: the block must first *look* like frontmatter (its first meaningful line is a `key:` or a `{`), and only then is it parsed. `---\nSome intro.\n---` and an empty `---\n---` are left completely untouched and render exactly as they always did. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
+Fail-loudly is a claim worth auditing, because it quietly failed in five places at once and every one of them looked fine from the outside: duplicate keys overwrote each other, `__proto__` disappeared through `Object.prototype`'s setter, `{a: 1}` under an explicit `---yaml` fence half-parsed into key `{a` / value `1}`, `- Autor Name: Ben` slipped past a sequence guard whose alphabet was narrower than the parser's, and an unknown escape like `é` rendered literally. All five now throw. The lesson generalises: **every regex that recognises a key must use the same alphabet.** Three used to disagree, and each disagreement was a silent bug.
+
+**Multi-document streams** are listed as unsupported above and are worth spelling out, because the failure is not loud: the closing-`---` search stops at the first delimiter, so `---\na: 1\n---\nb: 2\n---` parses document 1 into a confident-looking panel and leaks `b: 2` into the body as a setext `<h2>`. That is standard frontmatter behaviour and is not going to change; it is simply not the raw panel this section otherwise promises.
+
+**Not mistaken for a thematic break, and not swallowing prose.** A document may legitimately open with `---`, so detection is separate from parsing — and it needs **two** signals, not one. "First meaningful line is a `key:`" is not enough on its own, because that shape is equally an ordinary sentence: `---\nNote: this is a draft.\n---` used to be reinterpreted as a one-entry mapping, which moved the author's prose out of the body into a collapsed panel. The tie must never break toward hiding body text. So a block is frontmatter when it holds **two or more entries, or one recognized metadata key** (`title`/`version`/`date`/`author`) — one prose line satisfies neither, while a lone `title: X` still gets its panel. A `{` first line is JSON and unambiguous on its own.
+
+The second way body text used to disappear was an **unterminated** block: the closing-`---` search is document-wide, so it latched onto the next thematic break and dragged whole paragraphs into the candidate, which then failed to parse and buried them under "nicht lesbar". Frontmatter never contains blank-line-separated prose; a document does. That signature now disqualifies the block, so the malformed source renders as what it is and the prose stays where the author put it.
+
+`---\nSome intro.\n---` and an empty `---\n---` are left completely untouched. An explicit but empty header (`---json\n---`) is consumed and renders nothing — announcing "nicht lesbar" over an empty `<pre>` would be a lie. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
 
 **Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
 

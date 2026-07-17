@@ -448,12 +448,32 @@
     border-radius:3px;
     scroll-margin-top:90px;
     outline:2px solid #d4ff00;
+    /* Match the definition's fade: the two highlight as one gesture, and the
+       padding jump would otherwise shove neighbouring text sideways instantly. */
+    transition:background-color .25s ease, padding .25s ease, outline-color .25s ease;
+  }
+  /* forced-colors strips background and box-shadow, which is the entire landing
+     highlight — leaving only the arrow's outline visible, i.e. exactly the element
+     whose reading position is the documented trade-off. Re-state the highlight in
+     system colours so "which footnote did I land on" survives high-contrast mode. */
+  @media (forced-colors: active){
+    #preview .footnotes li:target,
+    #preview .footnotes li:has(a[data-footnote-backref]:target){
+      outline:3px solid Highlight;
+      outline-offset:3px;
+    }
+    #preview .footnotes a[data-footnote-backref]:target{
+      outline:2px solid Highlight;
+      forced-color-adjust:none;
+      background:Highlight;
+      color:HighlightText;
+    }
   }
 
   /* Footnote hover/focus preview. Pure CSS on purpose: no listener means it
-     works in the JS-free nur-lesen export. Base positioning stays on plain
-     absolute + translate — CSS anchor positioning would flip nicely at the
-     viewport edge but is not in Firefox/Safari yet (NFR7). */
+     works in the JS-free nur-lesen export. Base positioning is plain absolute +
+     translate, which every target engine supports; anchor positioning refines it
+     under @supports below (NFR7). */
   #preview .dokufix-fn-host{position:relative}
   #preview .dokufix-fn-preview{
     position:absolute;
@@ -462,6 +482,14 @@
     z-index:20;
     width:max-content;
     max-width:min(32rem, 90vw);
+    /* A preview is a preview. Without a ceiling a long footnote grows past the
+       viewport top, where content is unreachable because browsers do not make
+       overflow above the scroll origin scrollable — and pointer-events:none
+       rules out scrolling the box itself. The fade signals the cut; the full
+       text is always in the definition list below. */
+    max-height:min(50vh, 20rem);
+    overflow:hidden;
+    mask-image:linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
     padding:.7em .9em;
     background:#fff;
     border:1px solid #e5e5ea;
@@ -482,31 +510,31 @@
     visibility:visible;opacity:1;
   }
   #preview .dokufix-fn-preview code{font-size:.92em}
-@position-try --dokufix-fn-start{position-area:block-start span-inline-start}
-@position-try --dokufix-fn-end{position-area:block-start span-inline-end}
-@supports (anchor-name:--a) and (position-try-fallbacks:--b){
-.dokufix-fn-host{position:static;anchor-name:--dokufix-fn;anchor-scope:--dokufix-fn}
-.dokufix-fn-preview{position-anchor:--dokufix-fn;position-area:block-start center;left:auto;right:auto;bottom:auto;transform:none;margin-bottom:8px;position-try-fallbacks:--dokufix-fn-start,--dokufix-fn-end}
-}
-  /* Keep the box inside the viewport when its marker sits near the edge. A
-     centred box cannot fit when the marker is closer to the edge than half the
-     box width, and plain CSS can't detect that — at ~900px a right-edge marker
-     pushed the preview ~200px off-screen. Anchor positioning fixes it at every
-     width, in both engines.
-     The host must NOT be position:relative here: a tiny containing block
-     leaves the try-fallbacks nothing to evaluate against and they never fire.
-     The transition below is load-bearing — without it Firefox does not reveal
-     the preview at all.
-     KNOWN DEVIATION (Firefox 151, under automation): reveal takes ~800ms and
-     un-hover does not hide the preview. Chromium/Edge are unaffected (~40ms,
-     hides correctly). Measured with Playwright's synthetic mouse, headed and
-     headless — this may be a synthetic-input artifact rather than real-mouse
-     behaviour, which is why it is shipped for hands-on evaluation.
-     Product decision (Ben, 2026-07-16): ship it; recipients are overwhelmingly
-     Chromium/Edge. Revisit if it misbehaves in practice — deleting this block
-     in BOTH stylesheets restores the fast base and reinstates the clipping. */
+  /* Keep the box inside the viewport when its marker sits near an edge. A centred
+     box cannot fit when the marker is closer to the edge than half the box width,
+     and plain CSS can't detect that — at ~900px a right-edge marker pushed the
+     preview ~200px off-screen.
+     The fallback chain covers BOTH axes. It used to list only block-start tries,
+     which vary the inline axis alone, so a marker near the top of the viewport had
+     nothing to flip to and opened upward off-screen regardless — the block axis was
+     never tested (the README recorded six widths and no heights).
+     The host must NOT be position:relative here: a tiny containing block leaves the
+     try-fallbacks nothing to evaluate against and they never fire.
+     The transition in the base rule above is load-bearing — without it Firefox does
+     not reveal the preview at all.
+     Note the gate is syntactic: Firefox reports support for these properties while
+     the fallbacks do not actually fire, so @supports cannot tell a working engine
+     from a partial one. Positioning is verified by measurement (see poc/README.md);
+     hover *timing* here cannot be trusted to automation — Playwright's synthetic
+     mouse produced the Firefox numbers that human review later retracted
+     (deferred-work.md → "Deferred from: story 1-2").
+     Revert path: delete this block AND its twin in READONLY_CSS — restores the fast
+     base and reinstates the ~900px clipping. */
   @position-try --dokufix-fn-start{position-area:block-start span-inline-start}
   @position-try --dokufix-fn-end{position-area:block-start span-inline-end}
+  @position-try --dokufix-fn-below{position-area:block-end center;margin-block:8px 0}
+  @position-try --dokufix-fn-below-start{position-area:block-end span-inline-start;margin-block:8px 0}
+  @position-try --dokufix-fn-below-end{position-area:block-end span-inline-end;margin-block:8px 0}
   @supports (anchor-name:--a) and (position-try-fallbacks:--b){
     #preview .dokufix-fn-host{
       position:static;
@@ -520,7 +548,7 @@
       position-area:block-start center;
       left:auto;right:auto;bottom:auto;transform:none;
       margin-bottom:8px;
-      position-try-fallbacks:--dokufix-fn-start, --dokufix-fn-end;
+      position-try-fallbacks:--dokufix-fn-start, --dokufix-fn-end, --dokufix-fn-below, --dokufix-fn-below-start, --dokufix-fn-below-end;
     }
   }
 
@@ -1660,6 +1688,8 @@ function fmFindQuoteEnd(s, q){
   return -1;
 }
 
+const FM_DQ_ESCAPES = { '"':'"', '\\':'\\', '/':'/', n:'\n', r:'\r', t:'\t' };
+
 function fmScalar(raw){
   const s = raw.trim();
   if (!s) return '';
@@ -1670,7 +1700,13 @@ function fmScalar(raw){
     const inner = s.slice(1, end);
     if (fmStripComment(s.slice(end + 1)).trim()) throw new Error('trailing content after quoted scalar');
     return q === '"'
-      ? inner.replace(/\\(["\\/nrt])/g, (_, c) => ({ '"':'"', '\\':'\\', '/':'/', n:'\n', r:'\r', t:'\t' }[c]))
+      // Every escape we don't decode must throw, not pass through: a literal
+      // "café" in the panel is a silent mis-render, and this parser's
+      // contract is to fail loudly so the raw block is shown instead.
+      ? inner.replace(/\\(.)/g, (_, c) => {
+          if (!Object.prototype.hasOwnProperty.call(FM_DQ_ESCAPES, c)) throw new Error('unsupported escape sequence: \\' + c);
+          return FM_DQ_ESCAPES[c];
+        })
       : inner.replace(/''/g, "'");
   }
   const v = fmStripComment(s).trim();
@@ -1691,12 +1727,30 @@ function fmUnquoteKey(k){
 
 function fmIsSeqItem(text){ return text === '-' || text.startsWith('- '); }
 
+// One key alphabet for the whole feature. Three used to disagree: the sniffer's
+// [A-Za-z0-9_.-] rejected keys the map parser reads fine ("Prüfer: Ben" reverted
+// a whole German header to <hr>+<h2> garbage), and the sequence guard's [\w.-]
+// missed keys the map parser accepts ("- Autor Name: Ben" became a scalar). This
+// mirrors fmParseMap's own [^:#]+? — anything it calls a key, everyone calls a key.
+const FM_KEY_LINE_RE = /^[ \t]*[^:#\s][^:#]*?[ \t]*:(?:[ \t]|$)/;
+
 function fmParseNode(lines, i, indent){
   return fmIsSeqItem(lines[i].text) ? fmParseSeq(lines, i, indent) : fmParseMap(lines, i, indent);
 }
 
+// Object.create(null), not {}: "__proto__: x" on a plain object hits the
+// inherited setter, so the key never becomes an own property and vanishes from
+// the panel with no error. And a repeated key must throw rather than overwrite —
+// both are the "half-parsed panel that silently dropped a key" this parser's
+// fail-loudly contract rules out. A null-prototype object also makes `key in out`
+// an honest own-key test.
+function fmDefine(out, key, value){
+  if (key in out) throw new Error('duplicate key: ' + key);
+  out[key] = value;
+}
+
 function fmParseMap(lines, i, indent){
-  const out = {};
+  const out = Object.create(null);
   while (i < lines.length){
     const ln = lines[i];
     if (ln.indent < indent) break;
@@ -1712,16 +1766,16 @@ function fmParseMap(lines, i, indent){
       const nxt = lines[i];
       if (nxt && nxt.indent > indent){
         const r = fmParseNode(lines, i, nxt.indent);
-        out[key] = r.value; i = r.next;
+        fmDefine(out, key, r.value); i = r.next;
       } else if (nxt && nxt.indent === indent && fmIsSeqItem(nxt.text)){
         // Sequence written flush with its key — the other common YAML style.
         const r = fmParseSeq(lines, i, indent);
-        out[key] = r.value; i = r.next;
+        fmDefine(out, key, r.value); i = r.next;
       } else {
-        out[key] = '';
+        fmDefine(out, key, '');
       }
     } else {
-      out[key] = fmScalar(rest);
+      fmDefine(out, key, fmScalar(rest));
     }
   }
   return { value: out, next: i };
@@ -1738,11 +1792,15 @@ function fmParseSeq(lines, i, indent){
     i++;
     // "- key: value" (sequence of maps) is outside the subset. Without this
     // guard it would silently become the scalar string "key: value".
-    if (/^["']?[\w.-]+["']?\s*:(\s|$)/.test(rest)) throw new Error('sequences of maps are not supported');
+    if (FM_KEY_LINE_RE.test(rest)) throw new Error('sequences of maps are not supported');
     if (rest === ''){
       const nxt = lines[i];
       if (nxt && nxt.indent > indent){
         const r = fmParseNode(lines, i, nxt.indent);
+        // The same construct spelled across two lines ("-" then an indented
+        // "key: value"). Reject both spellings or neither — README lists the
+        // construct as unsupported, not one way of writing it.
+        if (r.value && typeof r.value === 'object' && !Array.isArray(r.value)) throw new Error('sequences of maps are not supported');
         out.push(r.value); i = r.next;
       } else {
         out.push('');
@@ -1769,16 +1827,53 @@ function parseYamlSubset(text){
   return r.value;
 }
 
+// Doubles as the detection signal below: a block carrying one of these is
+// frontmatter even with a single entry, because no one opens a document with a
+// prose line called "title:".
+const FM_SUMMARY_KEYS = ['title', 'version', 'date', 'author'];
+
 // Intent test, kept separate from parsability. A block that doesn't even look
 // like a mapping is a thematic break and must render exactly as it always has
 // (a doc may legitimately open with "---"). A block that DOES look like
 // frontmatter but fails to parse is shown raw rather than reverted to garbage.
+//
+// "First line is shaped key:" is not enough on its own, because that shape is
+// equally an ordinary sentence: "---\nNote: this is a draft.\n---" used to be
+// reinterpreted as a one-entry mapping, which moved the author's prose out of
+// the body and into a collapsed panel. The tie must never break toward hiding
+// body text, so a second signal is required: either two entries, or one
+// recognized metadata key. One prose line satisfies neither.
 function fmLooksLikeFrontmatter(raw){
+  const lines = raw.split(/\r?\n/).filter(l => !/^[ \t]*$/.test(l) && !/^[ \t]*#/.test(l));
+  if (!lines.length) return false;
+  if (/^[ \t]*\{/.test(lines[0])) return true; // JSON — unambiguous on its own
+  let entries = 0;
+  let recognized = false;
+  for (const line of lines){
+    if (/^[ \t]/.test(line)) continue;         // nested value, not a top-level entry
+    const m = line.match(FM_KEY_LINE_RE);
+    if (!m) continue;
+    entries++;
+    const key = fmUnquoteKey(line.slice(0, line.indexOf(':'))).toLowerCase();
+    if (FM_SUMMARY_KEYS.includes(key)) recognized = true;
+  }
+  return recognized || entries >= 2;
+}
+
+// An unterminated block is the other way body text gets swallowed: the closing
+// "---" search is document-wide, so it latches onto the next thematic break and
+// drags whole paragraphs into the candidate, which then fails to parse and buries
+// them in the "nicht lesbar" panel. Frontmatter never contains blank-line-separated
+// prose; a document does. Reject on that signature and the block renders as the
+// malformed source it is, with the prose left in the body where the author put it.
+function fmHasProseParagraph(raw){
+  let blank = false;
   for (const line of raw.split(/\r?\n/)){
-    if (/^[ \t]*$/.test(line)) continue;
+    if (/^[ \t]*$/.test(line)){ blank = true; continue; }
     if (/^[ \t]*#/.test(line)) continue;
-    if (/^[ \t]*\{/.test(line)) return true;
-    return /^[ \t]*["']?[A-Za-z0-9_.\-]+["']?[ \t]*:([ \t]|$)/.test(line);
+    const structural = /^[ \t]/.test(line) || fmIsSeqItem(line.trim()) || FM_KEY_LINE_RE.test(line);
+    if (blank && !structural) return true;
+    blank = false;
   }
   return false;
 }
@@ -1796,14 +1891,27 @@ function splitFrontmatter(src){
   const raw = rest.slice(0, close.index);
   const body = rest.slice(close.index + close[0].length);
   const explicit = !!fence;
+  // An explicit but empty header ("---json\n---") has nothing to show. Announcing
+  // "nicht lesbar" over an empty <pre> is a lie; consume the block and render
+  // nothing. Without a fence an empty block is not frontmatter at all, so it stays
+  // two thematic breaks (see deferred-work.md).
+  if (!raw.trim()) return explicit ? { raw, kind: null, data: null, body } : none;
   if (!explicit && !fmLooksLikeFrontmatter(raw)) return none;
+  if (!explicit && fmHasProseParagraph(raw)) return none;
   const trimmed = raw.trim();
   try {
     if (fence === 'json' || (!fence && trimmed.startsWith('{'))){
       const data = JSON.parse(trimmed);
       if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('not a JSON object');
+      if (!Object.keys(data).length) throw new Error('empty mapping');
       return { raw, kind: 'json', data, body };
     }
+    // Reachable only under an explicit ---yaml fence (the unfenced form is routed
+    // to JSON.parse above and throws there). Without it, fmParseMap's lazy key
+    // match reads "{a: 1}" as key "{a" / value "1}" — a confident-looking panel
+    // over half-parsed data, and the fmScalar flow-collection guard never sees it
+    // because it only ever inspects values.
+    if (/^[[{]/.test(trimmed)) throw new Error('flow collections are not supported');
     const data = parseYamlSubset(raw);
     if (!data || typeof data !== 'object' || Array.isArray(data)) throw new Error('not a mapping');
     if (!Object.keys(data).length) throw new Error('empty mapping');
@@ -1820,8 +1928,6 @@ function deriveDocTitle(fallback){
   const m = splitFrontmatter(sourceEl.value).body.match(/^#\s+(.+?)\s*$/m);
   return (m ? m[1] : fallback).trim();
 }
-
-const FM_SUMMARY_KEYS = ['title', 'version', 'date', 'author'];
 
 function fmLookup(data, name){
   const k = Object.keys(data).find(key => key.toLowerCase() === name);
@@ -1998,10 +2104,22 @@ function buildTocHtml(headings, maxLevel){
     while (open.length && open[open.length-1] > lv){ html += '</li></ol>'; open.pop(); }
     if (!open.length || open[open.length-1] < lv){ html += '<ol>'; open.push(lv); }
     else { html += '</li>'; }
-    html += '<li><a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a>';
+    html += '<li><a href="#' + h.id + '">' + escapeHtml(headingLabelText(h)) + '</a>';
   }
   while (open.length){ html += '</li></ol>'; open.pop(); }
   return html;
+}
+
+// Heading text for a ToC or rail label. Not h.textContent: attachFootnotePreviews()
+// appends the whole footnote into a <span> inside the marker's <sup>, so a marker
+// in a heading drags the entire footnote into the label. textContent is DOM-level
+// and does not care that the span is visibility:hidden. processInlineToc() happens
+// to run before the preview pass and would escape today, but that is call ordering,
+// not a guarantee — buildRail() and buildStaticRailHtml() run after it.
+function headingLabelText(h){
+  const clone = h.cloneNode(true);
+  clone.querySelectorAll('.dokufix-fn-preview').forEach(n => n.remove());
+  return clone.textContent;
 }
 
 function processInlineToc(headings){
@@ -2057,9 +2175,20 @@ function fnFlattenInline(src, out){
       continue;
     }
     if (child.nodeType !== Node.ELEMENT_NODE) continue;
-    const tag = child.tagName;
+    // Uppercase explicitly: tagName is only normalised for HTML-namespace
+    // elements, so inline SVG/MathML reports "svg"/"title" verbatim and would
+    // miss both sets, falling through to the unwrap default — which renders an
+    // <svg><title> accessible name as body copy.
+    const tag = child.tagName.toUpperCase();
     if (FN_KEEP_TAGS.has(tag)){
       const el = child.cloneNode(false);
+      // cloneNode copies every attribute. An id would be duplicated into the
+      // document once per marker (breaking getElementById and in-document
+      // links), and tabindex would put a focusable element inside the
+      // aria-hidden subtree that unwrapping <a> exists to keep unfocusable.
+      el.removeAttribute('id');
+      el.removeAttribute('tabindex');
+      el.removeAttribute('name');
       fnFlattenInline(child, el);
       out.appendChild(el);
     } else {
@@ -2105,19 +2234,34 @@ function buildFootnotePreview(li){
 // TRADE-OFF: the marker now lands on the arrow, which sits at the END of the
 // footnote text, so assistive tech reads "Back to reference" before the prose.
 // Documented in poc/README.md; see deferred-work.md for the reversal option.
+// Pairing goes through each definition, NOT through the arrow's href id.
+// marked-footnote does not guarantee footnote-ref-<label>-N is unique: a document
+// with both [^bgb] (cited twice) and [^bgb-2] mints id="footnote-ref-bgb-2" twice,
+// and resolving by id takes whichever comes first in tree order — which repointed
+// [^bgb-2]'s marker at footnote bgb's arrow and landed the reader on the wrong
+// footnote, while its hover preview still showed the right text. A marker's href
+// names its definition unambiguously, so pair the Nth marker of a definition with
+// its Nth arrow: both are in reference order.
 function linkFootnoteReturnPaths(){
-  const backrefs = previewEl.querySelectorAll('.footnotes a[data-footnote-backref]');
-  for (const back of backrefs){
-    const href = back.getAttribute('href') || '';
-    if (!href.startsWith('#') || href.length < 2) continue;
-    const refId = href.slice(1);                       // footnote-ref-norm-2
-    let ref = null;
-    try { ref = previewEl.querySelector('a[data-footnote-ref]#' + CSS.escape(refId)); }
-    catch (err) { ref = null; }
-    if (!ref) continue;                                // orphan arrow → leave alone
-    const backId = 'footnote-back-' + refId.replace(/^footnote-ref-/, '');
-    back.id = backId;
-    ref.setAttribute('href', '#' + backId);
+  const refs = Array.from(previewEl.querySelectorAll('a[data-footnote-ref]'));
+  for (const li of previewEl.querySelectorAll('.footnotes li[id]')){
+    const arrows = li.querySelectorAll('a[data-footnote-backref]');
+    if (!arrows.length) continue;
+    const markers = refs.filter(a => a.getAttribute('href') === '#' + li.id);
+    arrows.forEach((back, n) => {
+      const ref = markers[n];
+      if (!ref) return;                                // orphan arrow → leave alone
+      const backId = 'footnote-back-' + li.id.replace(/^footnote-/, '') + (n ? '-' + (n + 1) : '');
+      // footnote-back-* shares one flat namespace with the definitions
+      // (footnote-<label>) and with each other, so [^back-x] beside [^x], or
+      // [^bgb] beside [^bgb-2], can mint an id that already exists. slugify()
+      // guards its reserved "asset-" namespace the same way. On a collision,
+      // leave the marker pointing at its definition: the jump still works and
+      // only the arrow marking is lost for that one reference.
+      if (previewEl.querySelector('#' + CSS.escape(backId))) return;
+      back.id = backId;
+      ref.setAttribute('href', '#' + backId);
+    });
   }
 }
 
@@ -2129,9 +2273,14 @@ function attachFootnotePreviews(){
     if (sup.querySelector(':scope > .dokufix-fn-preview')) continue; // idempotent
     const href = ref.getAttribute('href') || '';
     if (!href.startsWith('#') || href.length < 2) continue;
-    let li = null;
-    try { li = previewEl.querySelector('.footnotes ' + '#' + CSS.escape(href.slice(1))); }
-    catch (err) { li = null; }
+    // "li#": resolve only to a definition, never to whatever else carries that id.
+    // This is what keeps the pass order-independent. It must run before
+    // linkFootnoteReturnPaths() retargets these hrefs at the return arrows; if it
+    // ever ran after, an unqualified "#id" would resolve to the ↩ anchor and every
+    // preview would silently render as "↩" — no error, just wrong. Now it resolves
+    // to nothing and the preview is skipped. CSS.escape is total over strings and
+    // cannot throw, so no try/catch is needed here.
+    const li = previewEl.querySelector('.footnotes li#' + CSS.escape(href.slice(1)));
     if (!li) continue; // definition missing → no preview, ref still jumps
     const span = buildFootnotePreview(li);
     if (!span) continue;
@@ -2163,7 +2312,7 @@ function buildStaticRailHtml(headings){
   let html = '<aside class="dokufix-rail has-items" aria-label="Navigation"><ol>';
   for (const h of items){
     html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
-            '<a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a></li>';
+            '<a href="#' + h.id + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
   }
   html += '</ol></aside>';
   return html;
@@ -2206,7 +2355,7 @@ function buildRail(headings){
   let html = '<ol>';
   for (const h of items){
     html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
-            '<a href="#' + h.id + '">' + escapeHtml(h.textContent) + '</a></li>';
+            '<a href="#' + h.id + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
   }
   html += '</ol>';
   railEl.innerHTML = html;
@@ -2682,11 +2831,24 @@ a[data-footnote-backref]{text-decoration:none;margin-left:4px;opacity:.55}
 a[data-footnote-backref]:hover{opacity:1}
 .footnotes li:target,.footnotes li:has(a[data-footnote-backref]:target){background:rgba(212,255,0,.30);box-shadow:0 0 0 7px rgba(212,255,0,.30);border-radius:2px;transition:background-color .25s ease,box-shadow .25s ease}
 .footnotes li{scroll-margin-top:90px}
-.footnotes a[data-footnote-backref]:target{background:#d4ff00;opacity:1;padding:0 4px;border-radius:3px;scroll-margin-top:90px;outline:2px solid #d4ff00}
+.footnotes a[data-footnote-backref]:target{background:#d4ff00;opacity:1;padding:0 4px;border-radius:3px;scroll-margin-top:90px;outline:2px solid #d4ff00;transition:background-color .25s ease,padding .25s ease,outline-color .25s ease}
+@media (forced-colors: active){
+.footnotes li:target,.footnotes li:has(a[data-footnote-backref]:target){outline:3px solid Highlight;outline-offset:3px}
+.footnotes a[data-footnote-backref]:target{outline:2px solid Highlight;forced-color-adjust:none;background:Highlight;color:HighlightText}
+}
 .dokufix-fn-host{position:relative}
-.dokufix-fn-preview{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:20;width:max-content;max-width:min(32rem,90vw);padding:.7em .9em;background:#fff;border:1px solid #e5e5ea;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.13);font-size:.85rem;font-weight:400;line-height:1.5;color:#3a3a3f;text-align:left;white-space:normal;vertical-align:baseline;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;pointer-events:none}
+.dokufix-fn-preview{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:20;width:max-content;max-width:min(32rem,90vw);max-height:min(50vh,20rem);overflow:hidden;mask-image:linear-gradient(to bottom,#000 calc(100% - 1.6em),transparent);padding:.7em .9em;background:#fff;border:1px solid #e5e5ea;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.13);font-size:.85rem;font-weight:400;line-height:1.5;color:#3a3a3f;text-align:left;white-space:normal;vertical-align:baseline;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;pointer-events:none}
 .dokufix-fn-host:hover>.dokufix-fn-preview,.dokufix-fn-host:focus-within>.dokufix-fn-preview{visibility:visible;opacity:1}
 .dokufix-fn-preview code{font-size:.92em}
+@position-try --dokufix-fn-start{position-area:block-start span-inline-start}
+@position-try --dokufix-fn-end{position-area:block-start span-inline-end}
+@position-try --dokufix-fn-below{position-area:block-end center;margin-block:8px 0}
+@position-try --dokufix-fn-below-start{position-area:block-end span-inline-start;margin-block:8px 0}
+@position-try --dokufix-fn-below-end{position-area:block-end span-inline-end;margin-block:8px 0}
+@supports (anchor-name:--a) and (position-try-fallbacks:--b){
+.dokufix-fn-host{position:static;anchor-name:--dokufix-fn;anchor-scope:--dokufix-fn}
+.dokufix-fn-preview{position-anchor:--dokufix-fn;position-area:block-start center;left:auto;right:auto;bottom:auto;transform:none;margin-bottom:8px;position-try-fallbacks:--dokufix-fn-start,--dokufix-fn-end,--dokufix-fn-below,--dokufix-fn-below-start,--dokufix-fn-below-end}
+}
 .numbered{counter-reset:h2}
 .numbered h2{counter-reset:h3}
 .numbered h3{counter-reset:h4}
