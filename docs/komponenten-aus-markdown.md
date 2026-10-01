@@ -541,7 +541,7 @@ Mermaid ist hier also Anordner, nicht Zeichner und nicht Schreibformat. Derselbe
 | Epic-Schnitt | Alles in ein Epic: Komponenten und BPMN | Ben |
 | Handbuch-Layout (Navigation links mit Gruppen, Eyebrow, Vorspann) | Nicht ins Epic, vermutlich nie | Ben |
 | Freitextfilter | Ins Epic, obwohl er in den Exporten ohne JavaScript fehlt | Ben |
-| Epic 2 | Geschrieben: `_bmad-output/planning-artifacts/epics.md`, „Document Components and BPMN Diagrams“, Stories 2.1 bis 2.12 | – |
+| Epic 2 | Geschrieben: `_bmad-output/initiative-dokufix/epic-document-components-and-bpmn-diagrams/`, „Document Components and BPMN Diagrams“, Stories 2.1 bis 2.12 | – |
 | Mehrere Pools ohne Koordinaten | Nach dem Versuch ins Epic, als eigene Story 2.12, damit sie getrennt abgenommen oder verschoben werden kann | Ben |
 | Block-Markierung (D1) | HTML-Kommentar | Ben |
 | Status-Chip (D2) | Farbpunkt im Code-Span als Start, eine bessere Syntax kann später kommen | Ben |

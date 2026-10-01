@@ -11,14 +11,14 @@ Frame: **"body for information"** — HTML is the current skin, can be shed (MD 
 ## Artifacts
 
 ### Discovery
-- `_bmad-output/brainstorming/brainstorming-session-2026-04-30-2055.md` — Carson brainstorming, 24 ideas, MVP convergence.
-- `_bmad-output/planning-artifacts/product-brief-dokufix.md` — exec brief (status: complete).
-- `_bmad-output/planning-artifacts/product-brief-dokufix-distillate.md` — detail pack with technical decisions, open questions, decided constraints (e.g. gzip-over-brotli rationale, source-smuggling caveats).
+- `_bmad-output/initiative-dokufix/brainstorm-session/brainstorm-session.md` — Carson brainstorming, 24 ideas, MVP convergence.
+- `_bmad-output/initiative-dokufix/brief-dokufix/brief-dokufix.md` — exec brief (status: complete).
+- `_bmad-output/initiative-dokufix/distillate-dokufix/distillate-dokufix.md` — detail pack with technical decisions, open questions, decided constraints (e.g. gzip-over-brotli rationale, source-smuggling caveats).
 
 ### Marketing
-- `_bmad-output/planning-artifacts/one-pager-dokufix-users.md` (EN, PSB framework)
-- `_bmad-output/planning-artifacts/one-pager-dokufix-users-de.md` (DE, Wolf-Schneider style, separate take rather than translation)
-- `_bmad-output/planning-artifacts/landing-dokufix.html` — flashy single-file DE landing page with Ah-nee-Aggrobat satirical popup, links to the PoC
+- `_bmad-output/inbox/one-pager-dokufix-users.md` (EN, PSB framework)
+- `_bmad-output/inbox/one-pager-dokufix-users-de.md` (DE, Wolf-Schneider style, separate take rather than translation)
+- `_bmad-output/inbox/landing-dokufix.html` — flashy single-file DE landing page with Ah-nee-Aggrobat satirical popup, links to the PoC
 
 ### Working Prototype
 - `poc/dokufix-poc.html` — functional PoC. Default = view mode. Editor with Markdown+Mermaid. localStorage persistence. Heading numbering toggle (CSS counters). Mobile hamburger. Four download variants (Mit Editor, Ohne Editor offen/schlank/kompakt). All compression uses native `CompressionStream('gzip')`.

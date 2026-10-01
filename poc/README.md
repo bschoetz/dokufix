@@ -89,7 +89,7 @@ Two costs that a first write-up of this trade-off missed, and that anyone weighi
 - **Sighted readers are not unaffected.** Fragment navigation start-aligns the target, and the target is now the arrow at the *end* of the definition. A footnote taller than the 90 px `scroll-margin-top` therefore lands the reader on `↩` with its own prose scrolled above the viewport top — they must scroll **up** to read what they came for. The `li`'s `scroll-margin-top` cannot compensate, because the `li` is no longer the target. Short footnotes are unaffected; long ones are exactly the case policy and audit documents produce.
 - **Assistive-technology users pay the cost and get none of the benefit.** All arrows of a multi-referenced footnote carry the same accessible name — `[^bgb]`'s two arrows both read `aria-label="Back to reference bgb"`. Telling the arrows apart is the entire point of the feature, and the only signal that distinguishes them is colour. So the group that pays the reading-order cost is the one group the feature cannot help.
 
-*Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in both stylesheets. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`.
+*Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in both stylesheets. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`.
 
 **Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured 2026-07-16 on a document with three short footnotes (two definitions, one cited twice), all four variants through the same build and the same document, `b74cfce` (frontmatter panel merged, previews not yet added) as the baseline:
 
@@ -264,7 +264,7 @@ The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="tex
 - **CDN-loaded libraries** — production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
 - **No File System Access API integration** — Chromium-only, optional power-user path. Not in PoC. See product brief distillate for design.
 - **Mermaid SVG bloat unaddressed** — each SVG ships a redundant 1.5–3 KB `<style>` block. Future optimization: dedupe to a single document-level `<style>`.
-- **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/implementation-artifacts/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
+- **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
 - **Per-version history grows linearly with snapshots** — full gzip snapshots per version dominate file size once a document accumulates many versions. A diff-based encoding (gzipped patch against prior version, ~10× smaller) is in the backlog for the MVP build pipeline.
 
 ## File layout
@@ -279,8 +279,8 @@ The PoC is intentionally a single file. Everything you see when you open it (HTM
 
 ## Related artifacts
 
-- Product brief: `../_bmad-output/planning-artifacts/product-brief-dokufix.md`
-- Distillate (technical decisions, open questions): `../_bmad-output/planning-artifacts/product-brief-dokufix-distillate.md`
-- One-pager pitches (DE/EN): `../_bmad-output/planning-artifacts/one-pager-dokufix-users*.md`
-- Landing page: `../_bmad-output/planning-artifacts/landing-dokufix.html`
-- Original brainstorming: `../_bmad-output/brainstorming/brainstorming-session-2026-04-30-2055.md`
+- Product brief: `../_bmad-output/initiative-dokufix/brief-dokufix/brief-dokufix.md`
+- Distillate (technical decisions, open questions): `../_bmad-output/initiative-dokufix/distillate-dokufix/distillate-dokufix.md`
+- One-pager pitches (DE/EN): `../_bmad-output/inbox/one-pager-dokufix-users*.md`
+- Landing page: `../_bmad-output/inbox/landing-dokufix.html`
+- Original brainstorming: `../_bmad-output/initiative-dokufix/brainstorm-session/brainstorm-session.md`
