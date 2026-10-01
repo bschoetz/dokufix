@@ -259,6 +259,33 @@ The receiver's async-init decompresses both before first render.
 
 The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="text/plain">` element. This works because the browser does not execute the script (wrong MIME), but the contents are accessible via `textContent`. Decoder reads, decompresses via `DecompressionStream`, sets `innerHTML`.
 
+## Checks
+
+The PoC has no build step and does not depend on anything in `tests/`. The checks there run in Node and look at the file from outside.
+
+### Comparison run (`tests/vergleich.mjs`)
+
+Builds all four download variants from one document in one run, reopens each the way a recipient would, and records what they look like and how big they are. It is the tool for any change that must not alter the look of a document.
+
+```
+cd poc/tests
+npm install                                             # once; playwright-core only
+node vergleich.mjs --out out/vorher                     # before the change
+node vergleich.mjs --out out/nachher --compare out/vorher
+```
+
+- **Document.** `tests/referenz.md`, an invented text that contains every construct dokufix styles: frontmatter, a footnote cited three times, `[[toc]]`, headings down to h4, table, code, blockquote, lists, an image as `data:` URI, a missing `#asset-` reference and two Mermaid diagrams. `--demo` builds from the built-in demo text instead, `--doc <file>` from any other Markdown file.
+- **Screenshots.** Each variant in light and dark at 1400 and 1600 px, once at rest and once with every state switched on (`-zustand`: heading numbering, open metadata panel, a revealed footnote preview, landing highlight with its marked arrow), plus the preview pane inside the editor. `--compare` reports the differing pixels per image and writes a red-on-white mask of them to `<browser>/diff/`. Two runs of the same file are pixel-identical in Chromium and in Firefox, so every reported pixel is a real difference.
+- **Sizes.** `sizes.json` per browser, with the library versions the CDN actually served. `--compare` prints the delta per variant. Two runs of the same file give the same byte counts.
+- **Assertions.** In every variant: metadata panel, footnote preview on focus, landing highlight and marked return arrow, heading numbering, rail at 1600 px and not at 1400 px; `nur-lesen` contains no `<script>`; no read-only export carries a rule of the editor interface. A failed assertion exits 1. Differing pixels do not, unless `--strict` is given, because some differences are decided ones.
+- **Browsers.** Chromium from `/usr/bin/chromium` and Firefox from the Playwright cache (`--browser chromium|firefox|all`; `CHROMIUM` and `FIREFOX` override the paths). WebKit is not run.
+
+Three things the run does on purpose, each because the obvious way gave wrong results:
+
+- **`Date` and `Math.random` are deterministic stand-ins.** The read-only exports print their export time, Mermaid derives its SVG ids from `Date.now()`, and Mermaid 12 draws node outlines with randomised control points. The clock still ticks, one millisecond per reading: with a frozen `Date.now()` both diagrams of a document get the same id and Mermaid draws the second into the first.
+- **The footnote preview is revealed by focus, not by hover.** Hover under Playwright's synthetic mouse is what produced the retracted Firefox numbers (see *Footnotes*).
+- **Known deviation in the Playwright Firefox build.** Once a page has been open for about a second, focusing a marker no longer reveals its preview: the host matches `:focus-within`, the rule on its child does not take effect. With `position-try-fallbacks` switched off on the preview it appears. This was measured on the file before any change of story 2.1 and has not been checked by hand in a real Firefox. Where it happens the run switches the fallbacks off with a style tag and prints a note instead of failing.
+
 ## Known PoC limitations (deferred to MVP)
 
 - **CDN-loaded libraries** — production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
@@ -272,10 +299,15 @@ The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="tex
 ```
 poc/
 ├── dokufix-poc.html    The PoC itself. Open in browser.
-└── README.md           This file.
+├── README.md           This file.
+└── tests/              Checks that look at the PoC from outside. See "Checks".
+    ├── referenz.md         Neutral reference document, the one input of every comparison.
+    ├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
+    ├── package.json        One development dependency: playwright-core.
+    └── out/                Exports and screenshots of the runs. Not in git.
 ```
 
-The PoC is intentionally a single file. Everything you see when you open it (HTML, CSS, JS, demo content, assets) lives inside that one file.
+The PoC is intentionally a single file. Everything you see when you open it (HTML, CSS, JS, demo content, assets) lives inside that one file. `tests/` is tooling beside it, not part of it.
 
 ## Related artifacts
 

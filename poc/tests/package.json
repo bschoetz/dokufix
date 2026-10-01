@@ -1,0 +1,13 @@
+{
+  "name": "dokufix-poc-tests",
+  "private": true,
+  "type": "module",
+  "description": "Checks for poc/dokufix-poc.html. The PoC itself has no build step and no dependency on this folder.",
+  "scripts": {
+    "check": "node check-doc-styles.mjs",
+    "vergleich": "node vergleich.mjs"
+  },
+  "devDependencies": {
+    "playwright-core": "1.63.0"
+  }
+}
