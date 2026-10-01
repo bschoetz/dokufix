@@ -1,0 +1,4 @@
+node_modules/
+# Zwischenstände der Testläufe, entstehen bei jedem Lauf neu
+tests/out/_*
+tests/out/*.bundle.min.js

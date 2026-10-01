@@ -1,0 +1,1298 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kisten-Prozesse (Dokufix-Spike)</title>
+<!-- Wie in der Vorlage: Schriften vom Google-CDN. Für echtes Dokufix tabu (kein CDN), siehe docs. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/* Farbwerte und Maße folgen der Vorlage, damit der Vergleich fair ist. */
+:root{
+  --paper:#F6F8FA; --surface:#FFFFFF; --ink:#16243D; --ink-soft:#4E5E78;
+  --line:#D8DFE9; --accent:#0E7C89; --accent-soft:#E2F0F2;
+  --live:#1C6F46; --live-bg:#E2F1E9; --plan:#8A5E07; --plan-bg:#FAEFD8;
+  --hold:#59647A; --hold-bg:#EBEFF4; --danger:#A32A2A; --danger-bg:#F8E3E3;
+  --f-head:"IBM Plex Serif", Georgia, serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#0F141C; --surface:#161C26; --ink:#E7ECF3; --ink-soft:#9DAABD;
+  --line:#293140; --accent:#45B9C5; --accent-soft:#102F37;
+  --live:#6CD5A1; --live-bg:#0F2F1F; --plan:#E4B85C; --plan-bg:#31270E;
+  --hold:#9DAABD; --hold-bg:#212936; --danger:#F09A9A; --danger-bg:#3A1717; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6; margin:0}
+.dokufix-wrap{display:grid; grid-template-columns:248px minmax(0,1fr); gap:40px; max-width:1240px; margin:0 auto; padding:0 20px}
+
+/* Navigation: aus H1 (Marke), H2 (Gruppe), H3 (Link) erzeugt */
+.dokufix-nav{position:sticky; top:0; align-self:start; padding-block:28px 40px; max-height:100vh; overflow-y:auto}
+.dokufix-brand{font-family:var(--f-head); font-weight:600; font-size:19px; line-height:1.25; margin:0 0 4px}
+.dokufix-brand-sub{color:var(--ink-soft); font-size:12.5px; margin:0 0 22px}
+.dokufix-navgrp{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); margin:20px 0 7px}
+.dokufix-nav > a{display:block; color:var(--ink-soft); text-decoration:none; font-size:13.5px; padding:4px 0 4px 11px; border-left:2px solid var(--line)}
+.dokufix-nav > a:hover{color:var(--ink); border-left-color:var(--accent)}
+.dokufix-nav > a.on{color:var(--accent); border-left-color:var(--accent); font-weight:500}
+.dokufix-nav > a:focus-visible, .dokufix-filter-ui input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* Inhalt */
+main{padding-block:28px 72px; min-width:0}
+main p{max-width:66ch}
+h2.dokufix-group{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap}
+.dokufix-eyebrow{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--accent); margin:36px 0 6px; padding-top:36px; border-top:1px solid var(--line); max-width:none}
+.dokufix-eyebrow.dokufix-first{margin-top:0; padding-top:12px; border-top:0}
+.dokufix-section{font-family:var(--f-head); font-weight:600; font-size:23px; text-wrap:balance; margin:0 0 4px; scroll-margin-top:60px}
+.dokufix-section.dokufix-opening{font-size:clamp(28px,4vw,38px); line-height:1.15; margin-bottom:10px}
+.dokufix-lede{font-size:17px; color:var(--ink-soft); max-width:62ch}
+h4{font-size:15px; font-weight:600; margin:26px 0 8px}
+:not(pre) > code{font-family:var(--f-mono); font-size:.875em; background:var(--accent-soft); color:var(--ink); padding:1px 5px; border-radius:3px; overflow-wrap:anywhere}
+td > code, th > code{white-space:nowrap}
+pre{font-family:var(--f-mono); font-size:13px; line-height:1.5; background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:12px 14px; overflow-x:auto}
+main img{max-width:100%; height:auto}
+blockquote{margin:16px 0 0; padding-left:14px; border-left:3px solid var(--line); color:var(--ink-soft)}
+.dokufix-warnung{background:var(--plan-bg); color:var(--plan); border:1px dashed var(--plan); border-radius:6px; padding:8px 12px; font-size:13px; max-width:none}
+.dokufix-warnung::before{content:"⚠ "}
+
+/* Status-Chip */
+.dokufix-chip{display:inline-block; font-family:var(--f-mono); font-size:10.5px; font-weight:400; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:999px; vertical-align:2px}
+.dokufix-chip-ok{background:var(--live-bg); color:var(--live)}
+.dokufix-chip-warn{background:var(--plan-bg); color:var(--plan)}
+.dokufix-chip-neutral, .dokufix-chip-info{background:var(--hold-bg); color:var(--hold)}
+.dokufix-chip-danger{background:var(--danger-bg); color:var(--danger)}
+
+/* Tabellen */
+.dokufix-table{margin-top:14px}
+.dokufix-scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:520px}
+th{text-align:left; font-weight:600; font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--line); padding:0 14px 8px 0; white-space:nowrap}
+td{border-bottom:1px solid var(--line); padding:9px 14px 9px 0; vertical-align:top; font-variant-numeric:tabular-nums}
+tbody tr:hover td{background:var(--accent-soft)}
+.dokufix-sub{font-family:var(--f-mono); font-size:11px; font-style:normal; color:var(--ink-soft)}
+
+/* Schritte */
+ol.dokufix-steps{counter-reset:s; list-style:none; padding:0; margin:14px 0 0; display:grid; gap:10px}
+ol.dokufix-steps > li{counter-increment:s; position:relative; padding-left:42px; max-width:72ch}
+ol.dokufix-steps > li::before{content:counter(s); position:absolute; left:0; top:2px; width:28px; height:22px; font-family:var(--f-mono); font-size:12px; color:var(--accent); background:var(--accent-soft); border-radius:4px; display:grid; place-items:center}
+.dokufix-who{font-family:var(--f-mono); font-size:11px; font-style:normal; color:var(--ink-soft); display:block}
+
+/* Karten */
+ul.dokufix-cards{list-style:none; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:16px 0 0}
+ul.dokufix-cards > li{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:14px 16px; font-size:13px; color:var(--ink-soft)}
+.dokufix-card-title{display:block; font-size:14px; color:var(--ink); margin-bottom:4px}
+ul.dokufix-cards > li > p{margin:0; max-width:none}
+
+/* Hinweise */
+.dokufix-callout{background:var(--surface); border-left:3px solid var(--accent); padding:12px 16px; margin-top:16px; border-radius:0 6px 6px 0}
+.dokufix-callout p{margin:0; font-size:14px}
+.dokufix-callout p + p{margin-top:8px}
+.dokufix-callout-warning, .dokufix-callout-important{border-left-color:var(--plan)}
+.dokufix-callout-caution{border-left-color:var(--danger)}
+.dokufix-callout-tip{border-left-color:var(--live)}
+
+/* Filter */
+.dokufix-filter-ui input{font-family:var(--f-body); font-size:14px; padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); width:min(320px,100%)}
+.dokufix-filter-ui span{font-family:var(--f-mono); font-size:11.5px; color:var(--ink-soft); margin-left:10px}
+.dokufix-facet-ui{border:0; padding:0; margin:10px 0 12px; display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.dokufix-facet-ui legend{float:left; font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); margin-right:8px; padding:0}
+.dokufix-facet-ui label{font-size:12.5px; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); color:var(--ink-soft); cursor:pointer}
+.dokufix-facet-ui label span{font-family:var(--f-mono); font-size:10.5px; opacity:.75}
+.dokufix-facet-ui input{position:absolute; opacity:0; pointer-events:none}
+.dokufix-facet-ui label:has(input:checked){background:var(--accent-soft); border-color:var(--accent); color:var(--ink)}
+.dokufix-facet-ui label:has(input:focus-visible){outline:2px solid var(--accent); outline-offset:2px}
+
+/* Diagramme */
+.dokufix-diagram{position:relative; margin:18px 0 0; background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:14px}
+.dokufix-stage{display:block; cursor:zoom-in; max-width:var(--w)}  /* kleine Diagramme nicht aufblasen */
+.dokufix-stage svg{display:block; width:100%; height:auto}
+.dokufix-diagram figcaption{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:10px; font-family:var(--f-mono); font-size:11px; color:var(--ink-soft)}
+.dokufix-diagram figcaption a{color:var(--accent)}
+.dokufix-zoom-toggle{position:absolute; width:1px; height:1px; opacity:0; margin:0}
+.dokufix-zoom-toggle:focus-visible ~ .dokufix-viewport{outline:2px solid var(--accent); outline-offset:4px}
+.dokufix-zoom-bar{display:none}
+
+/* Große Ansicht: der Rahmen selbst wird zum Vollbild. Kein zweites SVG, kein JavaScript. */
+html:has(.dokufix-zoom-toggle:checked){overflow:hidden}
+.dokufix-diagram:has(> .dokufix-zoom-toggle:checked){position:fixed; inset:0; z-index:1000; margin:0; padding:0; border:0; border-radius:0; display:flex; flex-direction:column; background:var(--paper)}
+.dokufix-zoom-toggle:checked ~ .dokufix-zoom-bar{display:flex; align-items:center; gap:10px 18px; flex-wrap:wrap; padding:10px 20px; background:var(--surface); border-bottom:1px solid var(--line); font-size:13.5px}
+.dokufix-zoom-bar strong{font-family:var(--f-head); font-size:16px; margin-right:auto}
+.dokufix-zoom-bar fieldset{border:0; padding:0; margin:0; display:flex; gap:6px; align-items:center}
+.dokufix-zoom-bar legend{float:left; font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); margin-right:8px; padding:0}
+.dokufix-zoom-bar label{border:1px solid var(--line); border-radius:999px; padding:3px 12px; background:var(--surface); color:var(--ink-soft); cursor:pointer}
+.dokufix-zoom-bar fieldset input{position:absolute; opacity:0; pointer-events:none}
+.dokufix-zoom-bar label:has(input:checked){background:var(--accent-soft); border-color:var(--accent); color:var(--ink)}
+.dokufix-zoom-bar label:has(input:focus-visible), .dokufix-zoom-close:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.dokufix-zoom-bar .dokufix-zoom-close{color:var(--ink); font-weight:500}
+.dokufix-zoom-toggle:checked ~ .dokufix-viewport{flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:24px}
+.dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{pointer-events:none; cursor:default; margin:0 auto; max-width:none; background:var(--surface); width:min(100%, calc(var(--w) * 1.5))}
+.dokufix-diagram:has(.dokufix-zoom-bar input[value="100"]:checked) > .dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{width:var(--w)}
+.dokufix-diagram:has(.dokufix-zoom-bar input[value="150"]:checked) > .dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{width:calc(var(--w) * 1.5)}
+.dokufix-diagram:has(.dokufix-zoom-bar input[value="200"]:checked) > .dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{width:calc(var(--w) * 2)}
+.dokufix-zoom-toggle:checked ~ figcaption{display:none}
+
+/* Große Ansicht mit laufendem bpmn-js-Viewer (nur mit JavaScript): der Viewer ersetzt das Bild, die Zoomstufen steuern ihn. */
+.dokufix-live > .dokufix-zoom-toggle:checked ~ .dokufix-viewport{position:relative; overflow:hidden; padding:0}
+.dokufix-live .dokufix-stage{display:none}
+.dokufix-live-canvas{position:absolute; inset:0; background:var(--surface)}
+.dokufix-live-hint{font-family:var(--f-mono); font-size:11px; color:var(--ink-soft)}
+/* Das bpmn.io-Logo ist fest dunkelgrau. Eine helle Fläche DAHINTER hält es im Dunkelmodus sichtbar, ohne es anzufassen. */
+.dokufix-live-canvas::after{content:""; position:absolute; right:7px; bottom:7px; width:70px; height:38px; border-radius:6px; background:#fff; z-index:99}
+
+/* BPMN (bpmn-js). Grundfarben kommen als CSS-Variablen aus dem Renderer, hier nur die Abweichungen je Elementart. */
+.dokufix-diagram-bpmn [class*="task"] > .djs-visual > rect,
+.dokufix-diagram-bpmn [class*="subprocess"] > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-callactivity > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-startevent > .djs-visual > circle,
+.dokufix-diagram-bpmn [class*="intermediate"] > .djs-visual > circle,
+.dokufix-diagram-bpmn [class*="gateway"] > .djs-visual > polygon{stroke:var(--accent) !important}
+.dokufix-diagram-bpmn [class*="gateway"] > .djs-visual > path{stroke:var(--accent) !important; fill:var(--accent) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-endevent > .djs-visual > circle{stroke:var(--ink) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-lane > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-participant > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-participant > .djs-visual > path{stroke:var(--line) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-participant > .djs-visual > rect{fill:var(--accent-soft) !important; fill-opacity:1 !important}
+/* Ein Pool ohne Bahnen hat keine Bahn, die seine Fläche überdeckt */
+.dokufix-diagram-bpmn .dokufix-bpmn-participant.dokufix-bpmn-ohnebahnen > .djs-visual > rect{fill:var(--surface) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-lane > .djs-visual > rect{fill:var(--surface) !important; fill-opacity:1 !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-geplant > .djs-visual > rect{stroke:var(--plan) !important; stroke-dasharray:6 4}
+.dokufix-diagram-bpmn .dokufix-bpmn-gestrichelt > .djs-visual > path{stroke-dasharray:6 4}
+
+@media (max-width:860px){
+  .dokufix-wrap{grid-template-columns:1fr; gap:0}
+  .dokufix-nav{position:static; max-height:none; padding-block:22px 10px; border-bottom:1px solid var(--line)}
+  .dokufix-navgrp{margin-top:14px}
+  .dokufix-nav > a{display:inline-block; border-left:0; border-bottom:2px solid var(--line); margin:0 14px 6px 0; padding:2px 0}
+  .dokufix-nav > a.on{border-bottom-color:var(--accent)}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+/* Druck: Filter ausblenden und alle Zeilen zeigen, sonst druckt man unbemerkt eine gefilterte Tabelle */
+@media print{.dokufix-nav{position:static} .dokufix-filter-ui, .dokufix-facet-ui, .dokufix-diagram figcaption > span{display:none} .dokufix-table tbody tr{display:table-row !important}}
+/* Ohne :has() täten die Facetten-Knöpfe nichts. Dann lieber gar nicht zeigen. */
+@supports not selector(:has(*)){.dokufix-facet-ui{display:none}}
+
+</style>
+</head>
+<body>
+<div class="dokufix-wrap">
+<nav class="dokufix-nav" aria-label="Inhalt"></nav>
+<main></main>
+</div>
+
+<!-- Quelle als JSON-Zeichenkette, die öffnende spitze Klammer ist als \u003c maskiert. Roh in ein Skript-Element
+     eingebettet würde Markdown, das selbst Skript-Tags oder HTML-Kommentare erwähnt, die Seite zerlegen. -->
+<script>const DOKUFIX_SOURCE = "# Kisten-Prozesse\n\nHof Sonnenfeld · frei erfundenes Beispiel · Stand 1. Oktober 2026\n\n## Einstieg\n\n### Wie ein Kunde zum Hof findet\n\nEs gibt zwei Wege, auf denen jemand von der Website zu uns kommt. Er bestellt eine Probekiste, oder er fragt ein Abo an. Diese Seite beschreibt beide Wege vollständig: was passiert, welches System es tut, und wer auf dem Hof etwas davon mitbekommt.\n\n\u003c!-- dokufix: cards -->\n- **Weg A · Abo-Anfrage**\\\n  Jemand will regelmäßig beliefert werden. Die Anfrage geht sofort an die Tourenplanung und zusätzlich zur Ablage in die Kundenkartei.\n- **Weg B · Probekiste**\\\n  Jemand will erst einmal probieren. Daraus wird erst dann ein Abo, wenn er selbst darum bittet.\n\n#### Die beiden Systeme\n\n| System | Wofür | Wie lange |\n|---|---|---|\n| **Bestellformular**\u003cbr>*auf der Website* | Die Abo-Anfrage, die Zustellung an die Tourenplanung und die Verteilung auf die Touren | bleibt |\n| **Kundenkartei** | Die Probekisten-Bestellungen, die Ablage aller Kunden, die Merkmale und die automatischen Abläufe | `⚪ Übergangslösung`\u003cbr>bis die Warenwirtschaft steht |\n\n> [!NOTE]\n> **Der Grundsatz dahinter:** Eine Probekiste sagt, dass jemand neugierig ist. Sie sagt nicht, dass jemand jede Woche Gemüse will. Deshalb geht eine Probekiste nicht in die feste Tourenplanung, eine Abo-Anfrage schon.\n\n#### Stand der fünf Prozesse\n\n| Nr | Prozess | Auslöser | Stand |\n|---|---|---|---|\n| 1 | Probekiste | Besucher bestellt eine Probekiste | `🟢 in Betrieb` |\n| 2 | Abo-Anfrage | Besucher sendet das Abo-Formular | `🟢 in Betrieb` |\n| 3 | Erinnerungsmails | Probekunde mit Erlaubnis für Erinnerungen | `🟡 geplant` |\n| 4 | Übergabe an die Tourenplanung | Reaktion auf eine Erinnerung | `🟡 teilweise` |\n| 5 | Löschroutine | fester Termin je Quartal | `🟡 geplant` |\n\n## Die fünf Prozesse\n\n### Probekiste `🟢 in Betrieb`\n\nVier Kistenarten, vier Bestellseiten, ein Ablauf. Niemand auf dem Hof muss eingreifen, bis die Kiste gepackt wird.\n\n\u003c!-- dokufix: bpmn \"Probekiste\" -->\n```mermaid\nswimlane-beta LR\n  accTitle: Ablaufdiagramm Probekiste mit vier Bahnen\n  subgraph Kunde\n    s((Probekiste\u003cbr>entdeckt))\n    a[Bestellung ausfüllen\u003cbr>und absenden]\n    c[Bestellung per Link\u003cbr>bestätigen]\n    e(((Probekiste\u003cbr>erhalten)))\n  end\n  subgraph Website\n    b[Bestätigungsmail senden\u003cbr>eine Vorlage für alle]\n    g[Lieferauftrag an\u003cbr>die nächste Tour]\n  end\n  subgraph Kundenkartei\n    d[Kunde anlegen\u003cbr>oder ergänzen]\n    f[Kistenart, Datum\u003cbr>und Status eintragen]\n    x{Erinnerungen\u003cbr>erlaubt?}\n    n(((Einmalkunde, keine\u003cbr>Erinnerung)))\n  end\n  subgraph Hofbüro\n    h[Erinnerungsmails\u003cbr>3 Mails, 3 Wochen]:::geplant\n    y{Reaktion?}\n    i[Übergabe an die\u003cbr>Tourenplanung, Prozess 2]:::geplant\n    z(((Mails beendet,\u003cbr>bleibt erreichbar)))\n  end\n  s --> a\n  a --> b\n  b -. Bestätigungsmail .-> c\n  c --> d\n  d --> f\n  d --> g\n  g --> e\n  f --> x\n  x -- nein --> n\n  x -- ja --> h\n  h --> y\n  y -- ja --> i\n  y -- nein --> z\n```\n\n\u003c!-- dokufix: steps -->\n1. *Kunde:* Füllt die Bestellseite aus: Name, Adresse, E-Mail, Kistenart. Das Pflicht-Häkchen gilt der Lieferung, das zweite Häkchen erlaubt freiwillig spätere Erinnerungen.\n2. *Website:* Verschickt die Bestätigungsmail aus der Vorlage `Bestätigung 2026`. Dieselbe Vorlage für alle vier Kistenarten, sie nennt noch keinen Liefertag.\n3. *Kunde:* Klickt den Link in der Mail. Damit ist die Adresse nachweislich seine.\n4. *Kundenkartei:* Legt den Kunden an oder ergänzt einen bestehenden und trägt ihn in die Liste `Probekunden` ein.\n5. *Website:* Gibt den Lieferauftrag an die nächste passende Tour. Das ist die Auslieferung.\n6. *Kundenkartei:* Der zugehörige Ablauf vermerkt, welche Kiste bestellt wurde, wann, und setzt den Status auf `PROBE`.\n\n#### Danach trennen sich die Wege\n\n\u003c!-- dokufix: cards -->\n- **Mit Erlaubnis**\\\n  Der Kunde bekommt später die Erinnerungsmails.\n- **Ohne Erlaubnis**\\\n  Keine weitere Post. Der Kunde bleibt in der Kartei, er wird weder angeschrieben noch angerufen.\n\n> [!WARNING]\n> **Was heute nicht passiert:** Eine Probekiste löst keine Nachricht ans Hofbüro aus. Wer wissen will, wie viele bestellt wurden, schaut in die Liste `Probekunden`.\n\n### Abo-Anfrage `🟢 in Betrieb`\n\nJemand möchte regelmäßig beliefert werden. Das kann aus eigenem Antrieb geschehen oder über den Aufruf in der letzten Erinnerungsmail. Beides mündet in dasselbe Formular, deshalb gibt es für die Tourenplanung nur einen Eingang.\n\n```bpmn\n\u003c?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\u003cbpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\" id=\"Definitions_1\" targetNamespace=\"http://bpmn.io/schema/bpmn\" exporter=\"dokufix-spike\">\n  \u003cbpmn:collaboration id=\"Collaboration_1\">\n    \u003cbpmn:participant id=\"Participant_1\" name=\"Abo-Anfrage\" processRef=\"Process_1\"/>\n  \u003c/bpmn:collaboration>\n  \u003cbpmn:process id=\"Process_1\" isExecutable=\"false\">\n    \u003cbpmn:laneSet id=\"LaneSet_1\">\n      \u003cbpmn:lane id=\"Lane_Kunde\" name=\"Kunde\">\u003cbpmn:flowNodeRef>Start\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Formular\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Eingang\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Bestellformular\" name=\"Bestellformular\">\u003cbpmn:flowNodeRef>Pruefen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Bestaetigen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Tour\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Kundenkartei\" name=\"Kundenkartei\">\u003cbpmn:flowNodeRef>Liste\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Status\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Erfasst\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Tourenplanung\" name=\"Tourenplanung\">\u003cbpmn:flowNodeRef>TourNord\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>TourSued\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>TourStadt\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>TourHof\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Einplanen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Eingeplant\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n    \u003c/bpmn:laneSet>\n    \u003cbpmn:startEvent id=\"Start\" name=\"Möchte regelmäßig beliefert werden\">\u003cbpmn:outgoing>Flow_1\u003c/bpmn:outgoing>\u003c/bpmn:startEvent>\n    \u003cbpmn:task id=\"Formular\" name=\"Abo-Formular ausfüllen, Tour wählen\">\u003cbpmn:incoming>Flow_1\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_2\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:endEvent id=\"Eingang\" name=\"Bestätigung erhalten\">\u003cbpmn:incoming>Flow_4\u003c/bpmn:incoming>\u003c/bpmn:endEvent>\n    \u003cbpmn:task id=\"Pruefen\" name=\"Pflichtfelder und Adresse prüfen\">\u003cbpmn:incoming>Flow_2\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_3\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_5\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_6\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:task id=\"Bestaetigen\" name=\"Bestätigung an den Kunden senden\">\u003cbpmn:incoming>Flow_3\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_4\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:exclusiveGateway id=\"Tour\" name=\"Welche Tour?\">\u003cbpmn:incoming>Flow_5\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_9\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_10\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_11\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_12\u003c/bpmn:outgoing>\u003c/bpmn:exclusiveGateway>\n    \u003cbpmn:task id=\"Liste\" name=\"Kunde in Liste Abo-Anfragen\">\u003cbpmn:incoming>Flow_6\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_7\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:task id=\"Status\" name=\"Status auf ABO_ANFRAGE setzen\">\u003cbpmn:incoming>Flow_7\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_8\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:endEvent id=\"Erfasst\" name=\"erfasst\">\u003cbpmn:incoming>Flow_8\u003c/bpmn:incoming>\u003c/bpmn:endEvent>\n    \u003cbpmn:task id=\"TourNord\" name=\"Tour Nord: Dörfer am Fluss\">\u003cbpmn:incoming>Flow_9\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_13\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:task id=\"TourSued\" name=\"Tour Süd: Stadtrand und Siedlung\">\u003cbpmn:incoming>Flow_10\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_14\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:task id=\"TourStadt\" name=\"Tour Stadt: Innenstadt per Lastenrad\">\u003cbpmn:incoming>Flow_11\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_15\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:task id=\"TourHof\" name=\"Abholung am Hof: alles andere\">\u003cbpmn:incoming>Flow_12\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_16\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:task id=\"Einplanen\" name=\"Kiste einplanen, Status pflegen\">\u003cbpmn:incoming>Flow_13\u003c/bpmn:incoming>\u003cbpmn:incoming>Flow_14\u003c/bpmn:incoming>\u003cbpmn:incoming>Flow_15\u003c/bpmn:incoming>\u003cbpmn:incoming>Flow_16\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_17\u003c/bpmn:outgoing>\u003c/bpmn:task>\n    \u003cbpmn:endEvent id=\"Eingeplant\" name=\"eingeplant\">\u003cbpmn:incoming>Flow_17\u003c/bpmn:incoming>\u003c/bpmn:endEvent>\n    \u003cbpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start\" targetRef=\"Formular\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Formular\" targetRef=\"Pruefen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Pruefen\" targetRef=\"Bestaetigen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Bestaetigen\" targetRef=\"Eingang\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Pruefen\" targetRef=\"Tour\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Pruefen\" targetRef=\"Liste\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Liste\" targetRef=\"Status\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Status\" targetRef=\"Erfasst\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Tour\" targetRef=\"TourNord\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Tour\" targetRef=\"TourSued\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Tour\" targetRef=\"TourStadt\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Tour\" targetRef=\"TourHof\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_13\" sourceRef=\"TourNord\" targetRef=\"Einplanen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_14\" sourceRef=\"TourSued\" targetRef=\"Einplanen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_15\" sourceRef=\"TourStadt\" targetRef=\"Einplanen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_16\" sourceRef=\"TourHof\" targetRef=\"Einplanen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_17\" sourceRef=\"Einplanen\" targetRef=\"Eingeplant\"/>\n  \u003c/bpmn:process>\n  \u003cbpmndi:BPMNDiagram id=\"Diagram_1\">\n    \u003cbpmndi:BPMNPlane id=\"Plane_1\" bpmnElement=\"Collaboration_1\">\n      \u003cbpmndi:BPMNShape id=\"Participant_1_di\" bpmnElement=\"Participant_1\" isHorizontal=\"true\">\u003cdc:Bounds x=\"10\" y=\"20\" width=\"1290\" height=\"830\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Kunde_di\" bpmnElement=\"Lane_Kunde\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"20\" width=\"1260\" height=\"130\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Bestellformular_di\" bpmnElement=\"Lane_Bestellformular\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"150\" width=\"1260\" height=\"150\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Kundenkartei_di\" bpmnElement=\"Lane_Kundenkartei\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"300\" width=\"1260\" height=\"130\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Tourenplanung_di\" bpmnElement=\"Lane_Tourenplanung\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"430\" width=\"1260\" height=\"420\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Start_di\" bpmnElement=\"Start\">\u003cdc:Bounds x=\"92\" y=\"67\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Formular_di\" bpmnElement=\"Formular\">\u003cdc:Bounds x=\"190\" y=\"45\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Eingang_di\" bpmnElement=\"Eingang\">\u003cdc:Bounds x=\"632\" y=\"67\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Pruefen_di\" bpmnElement=\"Pruefen\">\u003cdc:Bounds x=\"190\" y=\"185\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Bestaetigen_di\" bpmnElement=\"Bestaetigen\">\u003cdc:Bounds x=\"390\" y=\"185\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Tour_di\" bpmnElement=\"Tour\" isMarkerVisible=\"true\">\u003cdc:Bounds x=\"625\" y=\"200\" width=\"50\" height=\"50\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"602\" y=\"168\" width=\"96\" height=\"28\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Liste_di\" bpmnElement=\"Liste\">\u003cdc:Bounds x=\"190\" y=\"325\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Status_di\" bpmnElement=\"Status\">\u003cdc:Bounds x=\"390\" y=\"325\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Erfasst_di\" bpmnElement=\"Erfasst\">\u003cdc:Bounds x=\"632\" y=\"347\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"TourNord_di\" bpmnElement=\"TourNord\">\u003cdc:Bounds x=\"790\" y=\"450\" width=\"170\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"TourSued_di\" bpmnElement=\"TourSued\">\u003cdc:Bounds x=\"790\" y=\"550\" width=\"170\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"TourStadt_di\" bpmnElement=\"TourStadt\">\u003cdc:Bounds x=\"790\" y=\"650\" width=\"170\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"TourHof_di\" bpmnElement=\"TourHof\">\u003cdc:Bounds x=\"790\" y=\"750\" width=\"170\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Einplanen_di\" bpmnElement=\"Einplanen\">\u003cdc:Bounds x=\"1030\" y=\"600\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Eingeplant_di\" bpmnElement=\"Eingeplant\">\u003cdc:Bounds x=\"1212\" y=\"622\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNEdge id=\"Flow_1_di\" bpmnElement=\"Flow_1\">\u003cdi:waypoint x=\"128\" y=\"85\"/>\u003cdi:waypoint x=\"190\" y=\"85\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_2_di\" bpmnElement=\"Flow_2\">\u003cdi:waypoint x=\"250\" y=\"125\"/>\u003cdi:waypoint x=\"250\" y=\"185\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_3_di\" bpmnElement=\"Flow_3\">\u003cdi:waypoint x=\"310\" y=\"225\"/>\u003cdi:waypoint x=\"390\" y=\"225\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_4_di\" bpmnElement=\"Flow_4\">\u003cdi:waypoint x=\"450\" y=\"185\"/>\u003cdi:waypoint x=\"450\" y=\"85\"/>\u003cdi:waypoint x=\"632\" y=\"85\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_5_di\" bpmnElement=\"Flow_5\">\u003cdi:waypoint x=\"290\" y=\"265\"/>\u003cdi:waypoint x=\"290\" y=\"285\"/>\u003cdi:waypoint x=\"650\" y=\"285\"/>\u003cdi:waypoint x=\"650\" y=\"250\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_6_di\" bpmnElement=\"Flow_6\">\u003cdi:waypoint x=\"230\" y=\"265\"/>\u003cdi:waypoint x=\"230\" y=\"325\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_7_di\" bpmnElement=\"Flow_7\">\u003cdi:waypoint x=\"310\" y=\"365\"/>\u003cdi:waypoint x=\"390\" y=\"365\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_8_di\" bpmnElement=\"Flow_8\">\u003cdi:waypoint x=\"510\" y=\"365\"/>\u003cdi:waypoint x=\"632\" y=\"365\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_9_di\" bpmnElement=\"Flow_9\">\u003cdi:waypoint x=\"675\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"490\"/>\u003cdi:waypoint x=\"790\" y=\"490\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_10_di\" bpmnElement=\"Flow_10\">\u003cdi:waypoint x=\"675\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"590\"/>\u003cdi:waypoint x=\"790\" y=\"590\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_11_di\" bpmnElement=\"Flow_11\">\u003cdi:waypoint x=\"675\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"690\"/>\u003cdi:waypoint x=\"790\" y=\"690\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_12_di\" bpmnElement=\"Flow_12\">\u003cdi:waypoint x=\"675\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"225\"/>\u003cdi:waypoint x=\"735\" y=\"790\"/>\u003cdi:waypoint x=\"790\" y=\"790\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_13_di\" bpmnElement=\"Flow_13\">\u003cdi:waypoint x=\"960\" y=\"490\"/>\u003cdi:waypoint x=\"995\" y=\"490\"/>\u003cdi:waypoint x=\"995\" y=\"640\"/>\u003cdi:waypoint x=\"1030\" y=\"640\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_14_di\" bpmnElement=\"Flow_14\">\u003cdi:waypoint x=\"960\" y=\"590\"/>\u003cdi:waypoint x=\"995\" y=\"590\"/>\u003cdi:waypoint x=\"995\" y=\"640\"/>\u003cdi:waypoint x=\"1030\" y=\"640\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_15_di\" bpmnElement=\"Flow_15\">\u003cdi:waypoint x=\"960\" y=\"690\"/>\u003cdi:waypoint x=\"995\" y=\"690\"/>\u003cdi:waypoint x=\"995\" y=\"640\"/>\u003cdi:waypoint x=\"1030\" y=\"640\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_16_di\" bpmnElement=\"Flow_16\">\u003cdi:waypoint x=\"960\" y=\"790\"/>\u003cdi:waypoint x=\"995\" y=\"790\"/>\u003cdi:waypoint x=\"995\" y=\"640\"/>\u003cdi:waypoint x=\"1030\" y=\"640\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_17_di\" bpmnElement=\"Flow_17\">\u003cdi:waypoint x=\"1150\" y=\"640\"/>\u003cdi:waypoint x=\"1212\" y=\"640\"/>\u003c/bpmndi:BPMNEdge>\n    \u003c/bpmndi:BPMNPlane>\n  \u003c/bpmndi:BPMNDiagram>\n\u003c/bpmn:definitions>\n```\n\n\u003c!-- dokufix: steps -->\n1. *Kunde:* Füllt aus: Name, Adresse, E-Mail, Telefon, Kistengröße, Tour, Wünsche und die Datenschutz-Zustimmung. Ein verborgenes Feld merkt sich, von welcher Seite die Anfrage kam.\n2. *Bestellformular:* Prüft die Pflichtfelder und die Adresse.\n3. *Bestellformular:* Schickt die Anfrage an die gewählte Tour. Rückfragen der Tour gehen direkt an den Kunden.\n4. *Bestellformular:* Schickt dem Kunden eine Bestätigung.\n5. *Bestellformular:* Überträgt den Kunden zusätzlich in die Kundenkartei, in die Liste `Abo-Anfragen`.\n6. *Kundenkartei:* Der Ablauf `Abo-Anfrage eintragen` setzt den Status auf `ABO_ANFRAGE`.\n7. *Tourenplanung:* Plant die Kiste ein und pflegt den Status.\n\n> [!NOTE]\n> **Warum der Umweg über die Kundenkartei:** Nur dadurch ist erkennbar, ob eine Abo-Anfrage aus einer früheren Probekiste entstanden ist. Die Kartei führt beide Vorgänge über die E-Mail-Adresse zusammen. Die Zustellung an die Tour hängt nicht daran, sie läuft unabhängig.\n\n### Erinnerungsmails `🟡 geplant`\n\nDrei Mails über drei Wochen mit genau einem Zweck: aus einer Probekiste einen zweiten Kontakt machen. Sie gehen nur an Kunden, die bei der Bestellung freiwillig zugestimmt haben.\n\n| Wann | Zweck | Was drinsteht | Aufruf |\n|---|---|---|---|\n| Tag 3 | Nutzen | Ein Rezept zu dem Gemüse, das in der Kiste war | Einladung zu antworten |\n| Tag 10 | Einblick | Ein Bericht vom Feld: was gerade wächst und was als Nächstes kommt | Link auf die Kistenübersicht |\n| Tag 21 | Angebot | Das Abo, knapp erklärt, mit Abmeldemöglichkeit im selben Text | Abo anfragen |\n| danach | Ende | Keine vierte Mail. Wer nicht reagiert, bleibt in der Kartei und ist zur nächsten Saison wieder erreichbar | |\n\n> [!WARNING]\n> **Zwei Bedingungen:** Die Mails dürfen erst nach der Prüfung des Zustimmungstexts verschickt werden. Und sie enden automatisch, sobald der Status nicht mehr auf `PROBE` steht, damit niemand Werbung bekommt, während die Tourenplanung schon mit ihm spricht.\n\n### Übergabe an die Tourenplanung `🟡 teilweise`\n\nEin Probekunde wird zum Abo-Kunden, wenn er sich selbst meldet. Dafür gibt es zwei Wege, und sie unterscheiden sich im Aufwand erheblich.\n\n\u003c!-- dokufix: bpmn \"Übergabe an die Tourenplanung\" -->\n```mermaid\nswimlane-beta LR\n  accTitle: Ablaufdiagramm Übergabe an die Tourenplanung mit vier Bahnen\n  subgraph Kunde\n    s((Reagiert auf\u003cbr>eine Erinnerung))\n    w{Wie meldet\u003cbr>er sich?}\n    r[📤 Auf die Mail\u003cbr>antworten]\n  end\n  subgraph Hofbüro\n    m((📨 Antwort im\u003cbr>Postfach))\n    x{Art der\u003cbr>Antwort?}\n    i(((Abwesenheit,\u003cbr>nichts zu tun)))\n    p{+}\n    b[📤 Persönlich antworten\u003cbr>am selben Tag]\n    j{+}\n    g[📤 An die Tourenplanung\u003cbr>geben]\n  end\n  subgraph Kundenkartei\n    u[👤 Abmeldung\u003cbr>sofort eintragen]\n    eu(((Abgemeldet)))\n    t[👤 Status auf\u003cbr>ABO_ANFRAGE setzen]\n    n[⚙ Erinnerungen enden\u003cbr>automatisch]\n  end\n  subgraph Tourenplanung\n    k[[Abo-Anfrage\u003cbr>Prozess 2]]\n    e(((Bei der\u003cbr>Tourenplanung)))\n  end\n  s --> w\n  w -- Antwort --> r\n  w -- Formular --> k\n  r -.-> m\n  m --> x\n  x -- Abwesenheit --> i\n  x -- Abmeldung --> u\n  u --> eu\n  x -- Anfrage --> p\n  p --> b\n  p --> t\n  t --> n\n  b --> j\n  n --> j\n  j --> g\n  g --> e\n  k --> e\n```\n\nZum Vergleich derselbe Ablauf als BPMN-XML, von Hand angeordnet:\n\n```bpmn\n\u003c?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\u003cbpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\" id=\"Definitions_1\" targetNamespace=\"http://bpmn.io/schema/bpmn\" exporter=\"dokufix-spike\">\n  \u003cbpmn:collaboration id=\"Collaboration_1\">\n    \u003cbpmn:participant id=\"Participant_1\" name=\"Übergabe an die Tourenplanung\" processRef=\"Process_1\"/>\n  \u003c/bpmn:collaboration>\n  \u003cbpmn:process id=\"Process_1\" isExecutable=\"false\">\n    \u003cbpmn:laneSet id=\"LaneSet_1\">\n      \u003cbpmn:lane id=\"Lane_Kunde\" name=\"Kunde\">\u003cbpmn:flowNodeRef>Start\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Weg\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Antworten\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Hofbuero\" name=\"Hofbüro\">\u003cbpmn:flowNodeRef>Postfach\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Art\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Abwesenheit\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Teilen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>PersoenlichAntworten\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Zusammen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>AnTouren\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Kundenkartei\" name=\"Kundenkartei\">\u003cbpmn:flowNodeRef>Abmelden\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Abgemeldet\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Status\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>MailsEnden\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Tourenplanung\" name=\"Tourenplanung\">\u003cbpmn:flowNodeRef>AboAnfrage\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>BeiTouren\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n    \u003c/bpmn:laneSet>\n    \u003cbpmn:startEvent id=\"Start\" name=\"Reagiert auf eine Erinnerung\">\u003cbpmn:outgoing>Flow_1\u003c/bpmn:outgoing>\u003c/bpmn:startEvent>\n    \u003cbpmn:exclusiveGateway id=\"Weg\" name=\"Wie meldet er sich?\">\u003cbpmn:incoming>Flow_1\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_2\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_3\u003c/bpmn:outgoing>\u003c/bpmn:exclusiveGateway>\n    \u003cbpmn:sendTask id=\"Antworten\" name=\"Auf die Mail antworten\">\u003cbpmn:incoming>Flow_2\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_4\u003c/bpmn:outgoing>\u003c/bpmn:sendTask>\n    \u003cbpmn:intermediateCatchEvent id=\"Postfach\" name=\"Antwort im Postfach\">\u003cbpmn:incoming>Flow_4\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_5\u003c/bpmn:outgoing>\u003cbpmn:messageEventDefinition id=\"Postfach_def\"/>\u003c/bpmn:intermediateCatchEvent>\n    \u003cbpmn:exclusiveGateway id=\"Art\" name=\"Art der Antwort?\">\u003cbpmn:incoming>Flow_5\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_6\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_7\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_9\u003c/bpmn:outgoing>\u003c/bpmn:exclusiveGateway>\n    \u003cbpmn:endEvent id=\"Abwesenheit\" name=\"Abwesenheit, nichts zu tun\">\u003cbpmn:incoming>Flow_6\u003c/bpmn:incoming>\u003c/bpmn:endEvent>\n    \u003cbpmn:parallelGateway id=\"Teilen\">\u003cbpmn:incoming>Flow_9\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_10\u003c/bpmn:outgoing>\u003cbpmn:outgoing>Flow_11\u003c/bpmn:outgoing>\u003c/bpmn:parallelGateway>\n    \u003cbpmn:sendTask id=\"PersoenlichAntworten\" name=\"Persönlich antworten am selben Tag\">\u003cbpmn:incoming>Flow_10\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_13\u003c/bpmn:outgoing>\u003c/bpmn:sendTask>\n    \u003cbpmn:parallelGateway id=\"Zusammen\">\u003cbpmn:incoming>Flow_13\u003c/bpmn:incoming>\u003cbpmn:incoming>Flow_14\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_15\u003c/bpmn:outgoing>\u003c/bpmn:parallelGateway>\n    \u003cbpmn:sendTask id=\"AnTouren\" name=\"An die Tourenplanung geben\">\u003cbpmn:incoming>Flow_15\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_16\u003c/bpmn:outgoing>\u003c/bpmn:sendTask>\n    \u003cbpmn:userTask id=\"Abmelden\" name=\"Abmeldung sofort eintragen\">\u003cbpmn:incoming>Flow_7\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_8\u003c/bpmn:outgoing>\u003c/bpmn:userTask>\n    \u003cbpmn:endEvent id=\"Abgemeldet\" name=\"Abgemeldet\">\u003cbpmn:incoming>Flow_8\u003c/bpmn:incoming>\u003c/bpmn:endEvent>\n    \u003cbpmn:userTask id=\"Status\" name=\"Status auf ABO_ANFRAGE setzen\">\u003cbpmn:incoming>Flow_11\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_12\u003c/bpmn:outgoing>\u003c/bpmn:userTask>\n    \u003cbpmn:serviceTask id=\"MailsEnden\" name=\"Erinnerungen enden automatisch\">\u003cbpmn:incoming>Flow_12\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_14\u003c/bpmn:outgoing>\u003c/bpmn:serviceTask>\n    \u003cbpmn:callActivity id=\"AboAnfrage\" name=\"Abo-Anfrage Prozess 2\">\u003cbpmn:incoming>Flow_3\u003c/bpmn:incoming>\u003cbpmn:outgoing>Flow_17\u003c/bpmn:outgoing>\u003c/bpmn:callActivity>\n    \u003cbpmn:endEvent id=\"BeiTouren\" name=\"Bei der Tourenplanung\">\u003cbpmn:incoming>Flow_16\u003c/bpmn:incoming>\u003cbpmn:incoming>Flow_17\u003c/bpmn:incoming>\u003c/bpmn:endEvent>\n    \u003cbpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start\" targetRef=\"Weg\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Weg\" targetRef=\"Antworten\" name=\"Antwort\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Weg\" targetRef=\"AboAnfrage\" name=\"Formular\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Antworten\" targetRef=\"Postfach\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Postfach\" targetRef=\"Art\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Art\" targetRef=\"Abwesenheit\" name=\"Abwesenheit\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Art\" targetRef=\"Abmelden\" name=\"Abmeldung\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Abmelden\" targetRef=\"Abgemeldet\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Art\" targetRef=\"Teilen\" name=\"Anfrage\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Teilen\" targetRef=\"PersoenlichAntworten\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Teilen\" targetRef=\"Status\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Status\" targetRef=\"MailsEnden\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_13\" sourceRef=\"PersoenlichAntworten\" targetRef=\"Zusammen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_14\" sourceRef=\"MailsEnden\" targetRef=\"Zusammen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_15\" sourceRef=\"Zusammen\" targetRef=\"AnTouren\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_16\" sourceRef=\"AnTouren\" targetRef=\"BeiTouren\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_17\" sourceRef=\"AboAnfrage\" targetRef=\"BeiTouren\"/>\n  \u003c/bpmn:process>\n  \u003cbpmndi:BPMNDiagram id=\"Diagram_1\">\n    \u003cbpmndi:BPMNPlane id=\"Plane_1\" bpmnElement=\"Collaboration_1\">\n      \u003cbpmndi:BPMNShape id=\"Participant_1_di\" bpmnElement=\"Participant_1\" isHorizontal=\"true\">\u003cdc:Bounds x=\"10\" y=\"20\" width=\"1420\" height=\"565\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Kunde_di\" bpmnElement=\"Lane_Kunde\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"20\" width=\"1390\" height=\"130\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Hofbuero_di\" bpmnElement=\"Lane_Hofbuero\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"150\" width=\"1390\" height=\"175\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Kundenkartei_di\" bpmnElement=\"Lane_Kundenkartei\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"325\" width=\"1390\" height=\"160\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Lane_Tourenplanung_di\" bpmnElement=\"Lane_Tourenplanung\" isHorizontal=\"true\">\u003cdc:Bounds x=\"40\" y=\"485\" width=\"1390\" height=\"100\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Start_di\" bpmnElement=\"Start\">\u003cdc:Bounds x=\"92\" y=\"67\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Weg_di\" bpmnElement=\"Weg\" isMarkerVisible=\"true\">\u003cdc:Bounds x=\"175\" y=\"60\" width=\"50\" height=\"50\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"152\" y=\"28\" width=\"96\" height=\"28\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Antworten_di\" bpmnElement=\"Antworten\">\u003cdc:Bounds x=\"300\" y=\"45\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Postfach_di\" bpmnElement=\"Postfach\">\u003cdc:Bounds x=\"342\" y=\"232\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Art_di\" bpmnElement=\"Art\" isMarkerVisible=\"true\">\u003cdc:Bounds x=\"445\" y=\"225\" width=\"50\" height=\"50\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"378\" y=\"190\" width=\"88\" height=\"28\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Abwesenheit_di\" bpmnElement=\"Abwesenheit\">\u003cdc:Bounds x=\"552\" y=\"172\" width=\"36\" height=\"36\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"594\" y=\"176\" width=\"90\" height=\"28\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Teilen_di\" bpmnElement=\"Teilen\">\u003cdc:Bounds x=\"735\" y=\"225\" width=\"50\" height=\"50\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"PersoenlichAntworten_di\" bpmnElement=\"PersoenlichAntworten\">\u003cdc:Bounds x=\"850\" y=\"210\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Zusammen_di\" bpmnElement=\"Zusammen\">\u003cdc:Bounds x=\"1165\" y=\"225\" width=\"50\" height=\"50\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"AnTouren_di\" bpmnElement=\"AnTouren\">\u003cdc:Bounds x=\"1270\" y=\"210\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Abmelden_di\" bpmnElement=\"Abmelden\">\u003cdc:Bounds x=\"520\" y=\"365\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Abgemeldet_di\" bpmnElement=\"Abgemeldet\">\u003cdc:Bounds x=\"672\" y=\"387\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"Status_di\" bpmnElement=\"Status\">\u003cdc:Bounds x=\"850\" y=\"365\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"MailsEnden_di\" bpmnElement=\"MailsEnden\">\u003cdc:Bounds x=\"1010\" y=\"365\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"AboAnfrage_di\" bpmnElement=\"AboAnfrage\">\u003cdc:Bounds x=\"260\" y=\"495\" width=\"120\" height=\"80\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNShape id=\"BeiTouren_di\" bpmnElement=\"BeiTouren\">\u003cdc:Bounds x=\"1312\" y=\"517\" width=\"36\" height=\"36\"/>\u003c/bpmndi:BPMNShape>\n      \u003cbpmndi:BPMNEdge id=\"Flow_1_di\" bpmnElement=\"Flow_1\">\u003cdi:waypoint x=\"128\" y=\"85\"/>\u003cdi:waypoint x=\"175\" y=\"85\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_2_di\" bpmnElement=\"Flow_2\">\u003cdi:waypoint x=\"225\" y=\"85\"/>\u003cdi:waypoint x=\"300\" y=\"85\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"232\" y=\"67\" width=\"48\" height=\"14\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_3_di\" bpmnElement=\"Flow_3\">\u003cdi:waypoint x=\"200\" y=\"110\"/>\u003cdi:waypoint x=\"200\" y=\"535\"/>\u003cdi:waypoint x=\"260\" y=\"535\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"206\" y=\"118\" width=\"54\" height=\"14\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_4_di\" bpmnElement=\"Flow_4\">\u003cdi:waypoint x=\"360\" y=\"125\"/>\u003cdi:waypoint x=\"360\" y=\"232\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_5_di\" bpmnElement=\"Flow_5\">\u003cdi:waypoint x=\"378\" y=\"250\"/>\u003cdi:waypoint x=\"445\" y=\"250\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_6_di\" bpmnElement=\"Flow_6\">\u003cdi:waypoint x=\"470\" y=\"225\"/>\u003cdi:waypoint x=\"470\" y=\"190\"/>\u003cdi:waypoint x=\"552\" y=\"190\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"476\" y=\"172\" width=\"70\" height=\"14\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_7_di\" bpmnElement=\"Flow_7\">\u003cdi:waypoint x=\"470\" y=\"275\"/>\u003cdi:waypoint x=\"470\" y=\"405\"/>\u003cdi:waypoint x=\"520\" y=\"405\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"476\" y=\"290\" width=\"62\" height=\"14\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_8_di\" bpmnElement=\"Flow_8\">\u003cdi:waypoint x=\"640\" y=\"405\"/>\u003cdi:waypoint x=\"672\" y=\"405\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_9_di\" bpmnElement=\"Flow_9\">\u003cdi:waypoint x=\"495\" y=\"250\"/>\u003cdi:waypoint x=\"735\" y=\"250\"/>\u003cbpmndi:BPMNLabel>\u003cdc:Bounds x=\"505\" y=\"232\" width=\"50\" height=\"14\"/>\u003c/bpmndi:BPMNLabel>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_10_di\" bpmnElement=\"Flow_10\">\u003cdi:waypoint x=\"785\" y=\"250\"/>\u003cdi:waypoint x=\"850\" y=\"250\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_11_di\" bpmnElement=\"Flow_11\">\u003cdi:waypoint x=\"760\" y=\"275\"/>\u003cdi:waypoint x=\"760\" y=\"405\"/>\u003cdi:waypoint x=\"850\" y=\"405\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_12_di\" bpmnElement=\"Flow_12\">\u003cdi:waypoint x=\"970\" y=\"405\"/>\u003cdi:waypoint x=\"1010\" y=\"405\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_13_di\" bpmnElement=\"Flow_13\">\u003cdi:waypoint x=\"970\" y=\"250\"/>\u003cdi:waypoint x=\"1165\" y=\"250\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_14_di\" bpmnElement=\"Flow_14\">\u003cdi:waypoint x=\"1130\" y=\"405\"/>\u003cdi:waypoint x=\"1190\" y=\"405\"/>\u003cdi:waypoint x=\"1190\" y=\"275\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_15_di\" bpmnElement=\"Flow_15\">\u003cdi:waypoint x=\"1215\" y=\"250\"/>\u003cdi:waypoint x=\"1270\" y=\"250\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_16_di\" bpmnElement=\"Flow_16\">\u003cdi:waypoint x=\"1330\" y=\"290\"/>\u003cdi:waypoint x=\"1330\" y=\"517\"/>\u003c/bpmndi:BPMNEdge>\n      \u003cbpmndi:BPMNEdge id=\"Flow_17_di\" bpmnElement=\"Flow_17\">\u003cdi:waypoint x=\"380\" y=\"535\"/>\u003cdi:waypoint x=\"1312\" y=\"535\"/>\u003c/bpmndi:BPMNEdge>\n    \u003c/bpmndi:BPMNPlane>\n  \u003c/bpmndi:BPMNDiagram>\n\u003c/bpmn:definitions>\n```\n\nUnd noch einmal als BPMN-XML ohne Koordinaten, die Anordnung entsteht beim Rendern:\n\n```bpmn\n\u003c?xml version=\"1.0\" encoding=\"UTF-8\"?>\n\u003cbpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_1\" targetNamespace=\"http://bpmn.io/schema/bpmn\">\n  \u003cbpmn:collaboration id=\"Collaboration_1\">\n    \u003cbpmn:participant id=\"Participant_1\" name=\"Übergabe an die Tourenplanung\" processRef=\"Process_1\"/>\n  \u003c/bpmn:collaboration>\n  \u003cbpmn:process id=\"Process_1\" isExecutable=\"false\">\n    \u003cbpmn:laneSet id=\"LaneSet_1\">\n      \u003cbpmn:lane id=\"Lane_Kunde\" name=\"Kunde\">\u003cbpmn:flowNodeRef>Start\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Weg\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Antworten\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Hofbuero\" name=\"Hofbüro\">\u003cbpmn:flowNodeRef>Postfach\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Art\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Abwesenheit\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Teilen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>PersoenlichAntworten\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Zusammen\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>AnTouren\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Kundenkartei\" name=\"Kundenkartei\">\u003cbpmn:flowNodeRef>Abmelden\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Abgemeldet\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>Status\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>MailsEnden\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n      \u003cbpmn:lane id=\"Lane_Tourenplanung\" name=\"Tourenplanung\">\u003cbpmn:flowNodeRef>AboAnfrage\u003c/bpmn:flowNodeRef>\u003cbpmn:flowNodeRef>BeiTouren\u003c/bpmn:flowNodeRef>\u003c/bpmn:lane>\n    \u003c/bpmn:laneSet>\n    \u003cbpmn:startEvent id=\"Start\" name=\"Reagiert auf eine Erinnerung\"/>\n    \u003cbpmn:exclusiveGateway id=\"Weg\" name=\"Wie meldet er sich?\"/>\n    \u003cbpmn:sendTask id=\"Antworten\" name=\"Auf die Mail antworten\"/>\n    \u003cbpmn:intermediateCatchEvent id=\"Postfach\" name=\"Antwort im Postfach\">\u003cbpmn:messageEventDefinition id=\"Postfach_def\"/>\u003c/bpmn:intermediateCatchEvent>\n    \u003cbpmn:exclusiveGateway id=\"Art\" name=\"Art der Antwort?\"/>\n    \u003cbpmn:endEvent id=\"Abwesenheit\" name=\"Abwesenheit, nichts zu tun\"/>\n    \u003cbpmn:parallelGateway id=\"Teilen\"/>\n    \u003cbpmn:sendTask id=\"PersoenlichAntworten\" name=\"Persönlich antworten am selben Tag\"/>\n    \u003cbpmn:parallelGateway id=\"Zusammen\"/>\n    \u003cbpmn:sendTask id=\"AnTouren\" name=\"An die Tourenplanung geben\"/>\n    \u003cbpmn:userTask id=\"Abmelden\" name=\"Abmeldung sofort eintragen\"/>\n    \u003cbpmn:endEvent id=\"Abgemeldet\" name=\"Abgemeldet\"/>\n    \u003cbpmn:userTask id=\"Status\" name=\"Status auf ABO_ANFRAGE setzen\"/>\n    \u003cbpmn:serviceTask id=\"MailsEnden\" name=\"Erinnerungen enden automatisch\"/>\n    \u003cbpmn:callActivity id=\"AboAnfrage\" name=\"Abo-Anfrage Prozess 2\"/>\n    \u003cbpmn:endEvent id=\"BeiTouren\" name=\"Bei der Tourenplanung\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start\" targetRef=\"Weg\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Weg\" targetRef=\"Antworten\" name=\"Antwort\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Weg\" targetRef=\"AboAnfrage\" name=\"Formular\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Antworten\" targetRef=\"Postfach\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Postfach\" targetRef=\"Art\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Art\" targetRef=\"Abwesenheit\" name=\"Abwesenheit\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Art\" targetRef=\"Abmelden\" name=\"Abmeldung\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Abmelden\" targetRef=\"Abgemeldet\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Art\" targetRef=\"Teilen\" name=\"Anfrage\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Teilen\" targetRef=\"PersoenlichAntworten\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Teilen\" targetRef=\"Status\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Status\" targetRef=\"MailsEnden\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_13\" sourceRef=\"PersoenlichAntworten\" targetRef=\"Zusammen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_14\" sourceRef=\"MailsEnden\" targetRef=\"Zusammen\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_15\" sourceRef=\"Zusammen\" targetRef=\"AnTouren\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_16\" sourceRef=\"AnTouren\" targetRef=\"BeiTouren\"/>\n    \u003cbpmn:sequenceFlow id=\"Flow_17\" sourceRef=\"AboAnfrage\" targetRef=\"BeiTouren\"/>\n  \u003c/bpmn:process>\n\u003c/bpmn:definitions>\n```\n\n\u003c!-- dokufix: cards -->\n- **Weg A · automatisch**\\\n  Er klickt den Aufruf in der dritten Mail und füllt das Abo-Formular aus. Ab da gilt Prozess 2 unverändert, ohne jede Handarbeit.\n- **Weg B · von Hand**\\\n  Er antwortet direkt auf eine Mail. Die Antwort landet im Postfach des Hofbüros und muss weitergegeben werden.\n\n#### Was bei einer Antwort zu tun ist\n\n\u003c!-- dokufix: steps -->\n1. Art der Antwort bestimmen. Abwesenheitsnotizen ignorieren. Eine **Abmeldung wird sofort eingetragen**, das hat Vorrang vor allem anderen.\n2. Noch am selben Tag persönlich antworten, aus dem Hofbüro. Es hat jemand auf eine Mail geantwortet, die einen Namen trug.\n3. In der Kundenkartei den Status auf `ABO_ANFRAGE` setzen. Dadurch enden die Erinnerungen automatisch.\n4. An die Tourenplanung geben, immer mit denselben Angaben: Name, Adresse, E-Mail, bestellte Probekiste mit Datum, Erlaubnis ja oder nein, Wortlaut der Antwort.\n\n### Löschroutine `🟡 geplant`\n\nDie Kundenkartei löscht nichts von selbst. Ohne festen Termin wächst der Bestand unbegrenzt, und das ist weder nötig noch erlaubt.\n\n| Fall | Frist | Was passiert |\n|---|---|---|\n| Probekunde ohne Erlaubnis | 12 Monate ohne Bestellung | löschen |\n| Probekunde mit Erlaubnis, ohne Reaktion | 24 Monate ohne Bestellung | löschen |\n| Abo-Anfrage, bearbeitet, ohne Abo | 12 Monate nach Abschluss | löschen |\n| Kunde hat ein Abo | hier keine Frist | folgt dem Abo |\n| **Abmeldung oder Widerruf** | dauerhaft | **nicht löschen, sperren** |\n| Unzustellbare Adresse, Testeinträge | sofort | löschen |\n\n> [!NOTE]\n> **Die vorletzte Zeile wird am häufigsten falsch gemacht.** Wer sich abmeldet, darf nicht gelöscht werden. Sonst fehlt beim nächsten Einlesen die Angabe, dass diese Person keine Post will, und sie bekommt wieder welche. Dafür ist die Sperrliste da.\n\nAls Bestellung zählt jede Kiste, jede Abo-Anfrage und jede Antwort auf eine Mail. Jede davon setzt die Frist neu. Jeder Durchlauf wird in einer Zeile festgehalten: Datum, Anzahl, angewandte Regel.\n\n## Was im System steht\n\n### Formulare\n\n#### Vier Bestellseiten für Probekisten\n\nBenannt nach dem Schema `PK 01 …` bis `PK 04 …`. Alle gleich aufgebaut, sie unterscheiden sich in genau zwei Dingen: der Überschrift und der Kistenart, die bestellt wird.\n\n| Feld | Pflicht | Zweck |\n|---|---|---|\n| Anrede | nein | Ansprache in späteren Mails. Lässt sich nicht nachholen |\n| Vorname, Nachname | ja | Ansprache und Lieferschein |\n| E-Mail | ja | Bestätigung und Zusammenführung beider Wege |\n| Lieferadresse | ja | Zuordnung zu einer Tour |\n| Zustimmung Lieferung | **ja** | Erlaubnis, die Angaben für die Lieferung zu verwenden |\n| Zustimmung Erinnerungen | **nein** | Freiwillig. Nur wer hier zustimmt, bekommt später Post |\n| Sicherheitsabfrage | — | Schutz vor automatischen Einträgen |\n\n> [!NOTE]\n> **Warum das zweite Häkchen freiwillig bleiben muss:** Die Erlaubnis für Werbung darf keine Bedingung für die bestellte Kiste sein. Wäre sie Pflicht, wäre sie erzwungen und damit nichts wert. Das Ergebnis wären weniger Bestellungen und trotzdem keine belastbare Erlaubnis.\n\n#### Das Abo-Formular auf der Website\n\n| Feld | Pflicht | Zweck |\n|---|---|---|\n| Vorname, Nachname | nein | Ansprache |\n| E-Mail | ja | Antwort und Zusammenführung |\n| Telefon | nein | Rückruf bei Fragen zur Lieferung |\n| Lieferadresse | ja | Zuordnung zu einer Tour |\n| Tour | **ja** | Steuert, welche Tour die Anfrage bekommt |\n| Wünsche | nein | Was nicht in die Kiste soll |\n| Datenschutz-Zustimmung | ja | Erlaubnis, die Anfrage zu bearbeiten |\n| `Herkunft der Anfrage` | verborgen | Merkt sich die Seite, auf der das Formular stand |\n\n### Die beiden Listen in der Kundenkartei\n\nEine Liste sagt, zu welcher Gruppe jemand gehört. Sie sagt nichts darüber, was wir ihm schicken dürfen, das steht im Merkmal für die Erlaubnis.\n\n| Liste | Wer landet darin | Woher | Wofür sie gebraucht wird |\n|---|---|---|---|\n| `Probekunden` | Jeder, der eine Probekiste bestellt und seine Adresse bestätigt hat | die vier Bestellseiten | Grundmenge für die Erinnerungsmails und für Auswertungen je Kistenart |\n| `Abo-Anfragen` | Jeder, der das Abo-Formular abgeschickt hat | Bestellformular | Ablage, und sie löst den Ablauf aus, der den Status setzt |\n\n> [!NOTE]\n> Ein Mensch kann in beiden Listen stehen. Genau das ist der interessante Fall: Er hat erst eine Probekiste bestellt und später ein Abo angefragt. Die Kartei führt beides über die E-Mail-Adresse auf einem Kunden zusammen.\n\n### Kundenmerkmale\n\nMerkmale sind die Felder am Kunden. Sie tragen alles, was wir über einen Menschen wissen, und sie sind der Grund, warum ein Kunde später nicht nur ein Name in einer Liste ist. Namen und Typen lassen sich in der Kartei nachträglich nicht ändern.\n\n\u003c!-- dokufix: filter \"Merkmal oder Zweck suchen …\" -->\n\u003c!-- dokufix: facets Typ -->\n| Merkmal | Typ | Wer füllt es | Wofür |\n|---|---|---|---|\n| `PK_LETZTE` | Kategorie | Ablauf | Welche Probekiste zuletzt bestellt wurde. Das Feld für die Tourenplanung, es zeigt immer den aktuellen Anlass |\n| `PK_LETZTE_AM` | Datum | Ablauf | Wann. Eine Bestellung von gestern ist etwas anderes als eine von vor acht Monaten |\n| `PK_GEMUESE`\u003cbr>`PK_OBST`\u003cbr>`PK_GEMISCHT`\u003cbr>`PK_SAISON` | Ja/Nein\u003cbr>*je eines* | Ablauf | Die vollständige Bestellhistorie. Vier Felder, eines je Kistenart, sie werden nie zurückgesetzt. Wer zwei Kistenarten probiert hat, hat zwei davon auf Ja |\n| `ERLAUBNIS_ERINNERUNG` | Ja/Nein | Besucher im Formular | Das wichtigste Feld überhaupt. Es entscheidet, ob wir diesen Menschen anschreiben dürfen |\n| `ANREDE` | Kategorie | Besucher im Formular | Ansprache. Fehlt sie, lässt sie sich für Altkunden nicht nachholen |\n| `ORT` | Text | Besucher im Formular | Die wichtigste Angabe für die Zuordnung zu einer Tour |\n| `TELEFON` | Text | Besucher im Abo-Formular | Rückruf. Bewusst Text und kein Zahlenfeld, weil Vorwahlen und Leerzeichen erhalten bleiben sollen |\n| `QUELLE_SEITE` | Text | verborgenes Formularfeld | Von welcher Seite die Anfrage kam. Trennt die Anfrage von einer Rezeptseite von der aus dem Menü |\n| `WUNSCH_TOUR` | Text | Besucher im Abo-Formular | Die gewählte Tour. Zeigt später, welche Touren überhaupt gefragt sind |\n| `ANFRAGE_AM` | Datum | — | Angelegt, bleibt vorerst leer. Das Abo-Formular hat kein Datumsfeld, und der Zeitpunkt steht ohnehin in der Historie |\n| `STATUS` | Kategorie | Ablauf, später von Hand | Wo der Kunde steht. Mögliche Werte: PROBE, ABO_ANFRAGE, IN_PLANUNG, ABO, KEIN_BEDARF. Beendet außerdem die Erinnerungsmails, sobald er nicht mehr auf PROBE steht |\n| `ABO_KUNDE` | Ja/Nein | von Hand | Wer schon ein Abo hat, gehört nicht in die Erinnerungsmails |\n| `TOUR_FAHRER` | Benutzer | von Hand | Zuständiger Fahrer, sofern die Tourenplanung in der Kartei angelegt ist |\n| `VORLIEBE` | Kategorie | — | Angelegt, aber zurückgestellt. Die Zuordnung erfolgt derzeit über die bestellte Kistenart |\n\n#### Die vier Probekisten und ihre Kürzel\n\n| Nr | Probekiste | Kürzel |\n|---|---|---|\n| 01 | Gemüsekiste, klein | `GEMUESE` |\n| 02 | Obstkiste | `OBST` |\n| 03 | Gemischte Kiste für zwei | `GEMISCHT` |\n| 04 | Saisonkiste mit Rezept | `SAISON` |\n\n### Abläufe in der Kundenkartei\n\nFünf Stück. Vier davon sind Geschwister, sie unterscheiden sich nur in den Werten, die sie setzen.\n\n#### Vier Abläufe für Probekisten\n\nBenannt nach dem Schema `PK 01 …`. Jeder hört auf genau eine Bestellseite, daher weiß er, welche Kiste bestellt wurde.\n\n| Schritt | Was |\n|---|---|\n| Auslöser | Die zugehörige Bestellseite wurde gesendet |\n| Aktion 1 | `PK_LETZTE` auf das Kürzel der Kiste setzen |\n| Aktion 2 | Das Ja-Nein-Feld dieser Kiste auf Ja setzen |\n| Aktion 3 | `PK_LETZTE_AM` auf das Bestelldatum setzen |\n| Aktion 4 | `STATUS` auf `PROBE` setzen |\n\n#### Ein Ablauf für Abo-Anfragen\n\n| Name | Auslöser | Aktion |\n|---|---|---|\n| `Abo-Anfrage eintragen` | Kunde wird zur Liste `Abo-Anfragen` hinzugefügt | `STATUS` auf `ABO_ANFRAGE` setzen |\n\n> [!NOTE]\n> **Warum es diesen Ablauf gibt:** Das Bestellformular kann Kategorie-Merkmale in der Kartei nicht beschreiben. Der Status lässt sich deshalb nicht direkt aus dem Formular setzen. Die Kartei erledigt es stattdessen selbst, sobald der Kunde in der Liste landet. Das ist zugleich die robustere Lösung, weil die Logik vollständig in einem System liegt.\n\n### Tourenregeln\n\nVier Auswahlmöglichkeiten im Formular, vier Regeln in der Zustellung. Weil das Feld Pflicht ist und genau vier Werte hat, trifft jede Anfrage genau eine Regel. Es kann keine durchfallen.\n\n| Was der Besucher wählt | Gespeicherter Wert | Geht an |\n|---|---|---|\n| Dörfer am Fluss\u003cbr>*Auenbach, Weidenau, Mühlfurt* | `TOUR_NORD` | Tour Nord |\n| Stadtrand und Siedlung\u003cbr>*Gartenviertel, Am Hang, Neue Siedlung* | `TOUR_SUED` | Tour Süd |\n| Innenstadt\u003cbr>*Lieferung per Lastenrad* | `TOUR_STADT` | Tour Stadt |\n| Ich hole selbst ab, oder noch unklar | `ABHOLUNG` | Hofladen |\n\n> [!NOTE]\n> **Die Regeln hängen am gespeicherten Wert, nicht am sichtbaren Text.** Die Beschriftungen im Formular lassen sich jederzeit umformulieren, ohne dass die Zustellung bricht. Ändern sich dagegen Touren oder Zuständigkeiten, müssen diese vier Regeln angepasst werden. Sie liegen unsichtbar in einem Formular, und von allein denkt niemand daran.\n\n## Betrieb\n\n### Wenn etwas ausfällt\n\n| Ausfall | Was trotzdem läuft | Was fehlt |\n|---|---|---|\n| Kundenkartei nicht erreichbar | Abo-Anfragen gehen weiter an die Tourenplanung, das Formular speichert jeden Eintrag | Probekisten-Bestellungen, Kundenablage, Merkmale |\n| **Zugang zur Kartei abgelaufen oder gesperrt** | Formular und Mail an die Tour laufen völlig unverändert | **Der Kunde erscheint nicht in der Kartei, und zwar ohne jede Fehlermeldung** |\n| Website ausgefallen | Bestehende Abos laufen weiter, sie hängen nur an der Tourenplanung | Neue Probekisten und Abo-Anfragen insgesamt |\n\n> [!WARNING]\n> **Der mittlere Fall ist der gefährliche**, weil nichts kaputt aussieht. Deshalb gehört er in die monatliche Routine: Stimmt die Zahl der Einträge im Formular mit der Zahl neuer Kunden in der Liste `Abo-Anfragen` überein?\n\n### Was noch offen ist\n\n| Punkt | Warum es zählt | Wer |\n|---|---|---|\n| Prüfung von Zustimmungstext, Zweck und Löschfristen | Ab der neuen Saison wird in Serie gesammelt. Eine Lücke wächst mit | Hofbüro |\n| Beschluss über den Ablauf mit Hofleitung und Tourenplanung | Ohne Beschluss entstehen zwei Abläufe nebeneinander | Hofbüro, Hofleitung |\n| Drei Sammeladressen für die Touren | Sammeladressen, keine Personen. Sonst liegt eine Anfrage während eines Urlaubs | Hofbüro |\n| Bestellseiten für Obst- und Saisonkiste verlinken | Die Hälfte der Bestellseiten ist von der Startseite aus nicht erreichbar | Website |\n| Rezepte für die erste Erinnerungsmail sammeln | Ohne Rezept hat die erste Mail keinen Inhalt | Hofbüro, Küche |\n| Absender der Erinnerungsmails samt Vertretung | Antworten landen in seinem Postfach. Ohne Vertretung gehen sie im Urlaub verloren | Hofbüro |\n";</script>
+
+<!-- Wie im PoC: Bibliotheken vom CDN, hier aber auf Hauptversionen festgelegt. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@18/lib/marked.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.min.js"></script>
+<script>
+// Spike: Komponenten aus reinem Markdown.
+// Muster wie im PoC: marked.parse() liefert HTML, danach laufen kleine DOM-Pässe darüber.
+// render()  = statische Umformung. Ergebnis ist reines HTML/CSS und überlebt den JS-freien Export.
+// enhance() = Laufzeit-Komfort (Freitextfilter, Scrollspy). Fehlt im JS-freien Export ersatzlos.
+const DokufixKomponenten = (() => {
+  const CHIP = { '🟢': 'ok', '🟡': 'warn', '🔴': 'danger', '⚪': 'neutral', '🔵': 'info' };
+  const CALLOUT = { NOTE: 'note', TIP: 'tip', IMPORTANT: 'important', WARNING: 'warning', CAUTION: 'caution' };
+  // Bekannte Markierungen und der Block, den sie direkt danach erwarten.
+  const PRAGMAS = { cards: 'UL', steps: 'OL', filter: 'TABLE', facets: 'TABLE', bpmn: 'PRE' };
+  const BLOCK_NAME = { UL: 'eine Aufzählung', OL: 'eine nummerierte Liste', TABLE: 'eine Tabelle', PRE: 'einen Mermaid-Codeblock' };
+  let uid = 0;
+
+  const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]));
+
+  function slugify(text) {
+    const s = String(text).normalize('NFC').toLowerCase()
+      .replace(/ä/g, 'ae').replace(/ö/g, 'oe').replace(/ü/g, 'ue').replace(/ß/g, 'ss')
+      .normalize('NFKD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return s || 'section';
+  }
+
+  // Erster Knoten, der nicht nur Leerraum ist.
+  function firstReal(node) {
+    let n = node.firstChild;
+    while (n && n.nodeType === 3 && !n.data.trim()) n = n.nextSibling;
+    return n;
+  }
+  function prevReal(node) {
+    let n = node.previousSibling;
+    while (n && n.nodeType === 3 && !n.data.trim()) n = n.previousSibling;
+    return n;
+  }
+  // Listeneinträge mit Leerzeilen dazwischen tragen ihren Inhalt in einem <p>.
+  function itemHost(li) {
+    const first = firstReal(li);
+    return first && first.nodeType === 1 && first.tagName === 'P' ? first : li;
+  }
+
+  function warnung(text) {
+    const p = document.createElement('p');
+    p.className = 'dokufix-warnung';
+    p.setAttribute('role', 'note');
+    p.textContent = text;
+    return p;
+  }
+
+  // <!-- dokufix: name [argument] --> markiert den direkt folgenden Block.
+  // Renderer, die Roh-HTML durchlassen (GitHub, marked, Pandoc), zeigen den Kommentar nicht.
+  // Tippfehler und falsche Blockart fallen sichtbar auf statt still zu verpuffen.
+  function applyPragmas(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+    const comments = [];
+    while (walker.nextNode()) comments.push(walker.currentNode);
+    for (const c of comments) {
+      const m = /^\s*dokufix:\s*([a-z-]+)\s*([\s\S]*?)\s*$/.exec(c.data);
+      if (!m) continue;
+      const name = m[1], want = PRAGMAS[name];
+      if (!want) { c.replaceWith(warnung('Unbekannte Markierung „dokufix: ' + name + '“.')); continue; }
+      let el = c.nextSibling;
+      while (el && (el.nodeType === 8 || (el.nodeType === 3 && !el.data.trim()))) el = el.nextSibling;
+      if (!el || el.nodeType !== 1 || el.tagName !== want) {
+        c.replaceWith(warnung('Markierung „dokufix: ' + name + '“ erwartet direkt danach ' + BLOCK_NAME[want] + '.'));
+        continue;
+      }
+      el.classList.add('dokufix-' + name);
+      if (m[2]) el.setAttribute('data-' + name, m[2].replace(/^"([\s\S]*)"$/, '$1'));
+      c.remove();
+    }
+  }
+
+  // GitHub-Alerts: > [!NOTE] / > [!WARNING] … Der Marker muss wie bei GitHub allein in der ersten Zeile stehen.
+  function callouts(root) {
+    root.querySelectorAll('blockquote').forEach(bq => {
+      const p = bq.firstElementChild;
+      const t = p && p.tagName === 'P' ? p.firstChild : null;
+      if (!t || t.nodeType !== 3) return;
+      const m = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\][ \t]*(\n|$)/i.exec(t.data);
+      if (!m) return;
+      t.data = t.data.slice(m[0].length);
+      if (!t.data) t.remove();
+      const lead = firstReal(p);
+      if (lead && lead.nodeType === 1 && lead.tagName === 'BR') lead.remove();
+      if (!firstReal(p)) p.remove();
+      const box = document.createElement('div');
+      box.className = 'dokufix-callout dokufix-callout-' + CALLOUT[m[1].toUpperCase()];
+      box.setAttribute('role', 'note');
+      box.append(...bq.childNodes);
+      bq.replaceWith(box);
+    });
+  }
+
+  // `🟢 in Betrieb` → Status-Chip. Ohne Dokufix bleibt es ein lesbarer Code-Span mit Emoji.
+  function chips(root) {
+    root.querySelectorAll('code').forEach(code => {
+      if (code.closest('pre')) return;
+      const m = /^(🟢|🟡|🔴|⚪|🔵)️?\s*(.+)$/u.exec(code.textContent);
+      if (!m) return;
+      const chip = document.createElement('span');
+      chip.className = 'dokufix-chip dokufix-chip-' + CHIP[m[1]];
+      chip.textContent = m[2];
+      code.replaceWith(chip);
+    });
+  }
+
+  // Karten: der Eintrag beginnt mit einem fetten Titel.
+  function cards(root) {
+    root.querySelectorAll('ul.dokufix-cards > li').forEach(li => {
+      const first = firstReal(itemHost(li));
+      if (!first || first.nodeType !== 1 || first.tagName !== 'STRONG') return;
+      first.classList.add('dokufix-card-title');
+      let next = first.nextSibling;
+      while (next && next.nodeType === 3 && !next.data.trim()) next = next.nextSibling;
+      if (next && next.nodeType === 1 && next.tagName === 'BR') next.remove();
+    });
+  }
+
+  // Schritte: führendes *Akteur:* (mit Doppelpunkt) wird zum Etikett über dem Schritt.
+  function steps(root) {
+    root.querySelectorAll('ol.dokufix-steps').forEach(ol => {
+      if (ol.start > 1) ol.style.counterReset = 's ' + (ol.start - 1);
+      for (const li of ol.children) {
+        const first = firstReal(itemHost(li));
+        if (first && first.nodeType === 1 && first.tagName === 'EM' && /:\s*$/.test(first.textContent)) {
+          first.className = 'dokufix-who';
+          first.textContent = first.textContent.replace(/:\s*$/, '');
+        }
+      }
+    });
+  }
+
+  function firstLineText(cell) {
+    let out = '';
+    for (const n of cell ? cell.childNodes : []) {
+      if (n.nodeType === 1 && n.tagName === 'BR') break;
+      out += n.textContent;
+    }
+    return out.trim();
+  }
+
+  // Facetten-Filter ohne JavaScript: Radio-Buttons + generierte :has()-Regeln je Wert.
+  function buildFacets(wrap, table, column) {
+    const head = table.tHead && table.tHead.rows[0];
+    const idx = head ? [...head.cells].findIndex(th => th.textContent.trim().toLowerCase() === column.trim().toLowerCase()) : -1;
+    if (idx < 0 || !table.tBodies[0]) {
+      wrap.prepend(warnung('Markierung „dokufix: facets ' + column + '“: Spalte nicht gefunden.'));
+      return;
+    }
+    const id = 'dokufix-facets-' + (++uid);
+    wrap.id = id;
+    const values = new Map();   // Schlüssel ist der Zellentext selbst, nicht sein Slug: „C“ und „C++“ bleiben getrennt
+    for (const tr of table.tBodies[0].rows) {
+      const label = firstLineText(tr.cells[idx]) || '—';
+      let v = values.get(label);
+      if (!v) { v = { key: 'f' + (values.size + 1), n: 0 }; values.set(label, v); }
+      v.n++;
+      tr.dataset.facet = v.key;
+    }
+    const total = table.tBodies[0].rows.length;
+    const fs = document.createElement('fieldset');
+    fs.className = 'dokufix-facet-ui';
+    let html = '<legend>' + esc(head.cells[idx].textContent.trim()) + '</legend>' +
+      '<label><input type="radio" name="' + id + '" value="*" checked> Alle <span>' + total + '</span></label>';
+    let css = '';
+    for (const [label, v] of values) {
+      html += '<label><input type="radio" name="' + id + '" value="' + v.key + '"> ' + esc(label) + ' <span>' + v.n + '</span></label>';
+      css += '#' + id + ':has(input[value="' + v.key + '"]:checked) tbody tr:not([data-facet="' + v.key + '"]){display:none}';
+    }
+    fs.innerHTML = html;
+    const style = document.createElement('style');
+    style.textContent = css;
+    wrap.prepend(fs, style);
+  }
+
+  function tables(root) {
+    root.querySelectorAll('table').forEach(table => {
+      const wrap = document.createElement('div');
+      wrap.className = 'dokufix-table';
+      const scroll = document.createElement('div');
+      scroll.className = 'dokufix-scroll';
+      table.replaceWith(wrap);
+      scroll.append(table);
+      wrap.append(scroll);
+      // Unterzeile: ein *kursiver* Text direkt nach einem Zeilenumbruch in der Zelle
+      table.querySelectorAll('td > em, th > em').forEach(em => {
+        const prev = prevReal(em);
+        if (prev && prev.nodeType === 1 && prev.tagName === 'BR') em.classList.add('dokufix-sub');
+      });
+      if (table.classList.contains('dokufix-facets')) buildFacets(wrap, table, table.dataset.facets || '');
+      if (table.classList.contains('dokufix-filter')) wrap.dataset.filter = table.dataset.filter || 'Filtern …';
+    });
+  }
+
+  // Handbuch-Layout: H1 = Marke in der Navigation, H2 mit H3 darunter = Gruppe, H3 = Abschnitt.
+  // Eine H2 ohne H3 darunter ist selbst ein Abschnitt und bleibt sichtbar.
+  // Es zählen nur Überschriften auf oberster Ebene, nicht die in Hinweisen oder Listen.
+  function layout(root, nav) {
+    const h1 = root.querySelector(':scope > h1');
+    if (h1) {
+      const sub = h1.nextElementSibling;
+      h1.classList.add('dokufix-brand');
+      nav.append(h1);
+      if (sub && sub.tagName === 'P' && sub.textContent.length <= 120) { sub.classList.add('dokufix-brand-sub'); nav.append(sub); }
+    }
+    const heads = [...root.querySelectorAll(':scope > h2, :scope > h3, :scope > h4')];
+    const used = new Set([...root.querySelectorAll('[id]')].map(e => e.id));
+    let group = '';
+    let opening = true;
+    heads.forEach((h, i) => {
+      const clean = h.cloneNode(true);
+      clean.querySelectorAll('.dokufix-chip').forEach(c => c.remove());
+      const text = clean.textContent.trim() || h.textContent.trim();
+      if (!h.id) {                                   // vom Autor gesetzte ids bleiben
+        const base = slugify(text);
+        let id = base, n = 1;
+        while (used.has(id)) id = base + '-' + (++n);
+        used.add(id);
+        h.id = id;
+      }
+      const next = heads.slice(i + 1).find(x => x.tagName !== 'H4');
+      const isGroup = h.tagName === 'H2' && next && next.tagName === 'H3';
+      if (isGroup) {
+        group = text;
+        h.classList.add('dokufix-group');
+        const g = document.createElement('p');
+        g.className = 'dokufix-navgrp';
+        g.textContent = text;
+        nav.append(g);
+      } else if (h.tagName !== 'H4') {
+        if (h.tagName === 'H2') group = '';
+        h.classList.add('dokufix-section');
+        const a = document.createElement('a');
+        a.href = '#' + encodeURIComponent(h.id);
+        a.textContent = text;
+        nav.append(a);
+        const eyebrow = document.createElement('p');
+        eyebrow.className = 'dokufix-eyebrow';
+        eyebrow.setAttribute('aria-hidden', 'true');
+        eyebrow.textContent = group;
+        h.before(eyebrow);
+        if (opening) {
+          opening = false;
+          eyebrow.classList.add('dokufix-first');
+          h.classList.add('dokufix-opening');
+          if (h.nextElementSibling && h.nextElementSibling.tagName === 'P') h.nextElementSibling.classList.add('dokufix-lede');
+        }
+      }
+    });
+  }
+
+  // Diagramm-Rahmen mit großer Ansicht. Reines HTML und CSS: eine Checkbox schaltet auf Vollbild,
+  // Radio-Buttons wählen die Zoomstufe. Deshalb funktioniert beides auch im JS-freien Export.
+  // `svg` ist die Ausgabe von Mermaid oder bpmn-js, kein Autorentext.
+  const ZOOM = [['fit', 'Einpassen'], ['100', '100 %'], ['150', '150 %'], ['200', '200 %']];
+  let figId = 0;
+  function diagramFigure(svg, opts = {}) {
+    const id = 'dokufix-diagramm-' + (++figId);
+    const fig = document.createElement('figure');
+    fig.className = 'dokufix-diagram' + (opts.kind ? ' dokufix-diagram-' + opts.kind : '');
+    fig.id = id;
+    fig.innerHTML =
+      '<input type="checkbox" class="dokufix-zoom-toggle" id="' + id + '-gross" aria-label="Diagramm in großer Ansicht zeigen">' +
+      '<div class="dokufix-zoom-bar"><strong>' + esc(opts.title || 'Diagramm') + '</strong>' +
+      '<fieldset><legend>Zoom</legend>' + ZOOM.map(([v, t], i) =>
+        '<label><input type="radio" name="' + id + '-zoom" value="' + v + '"' + (i ? '' : ' checked') + '> ' + t + '</label>').join('') + '</fieldset>' +
+      '<label class="dokufix-zoom-close" for="' + id + '-gross">Schließen</label></div>' +
+      '<div class="dokufix-viewport"><label class="dokufix-stage" for="' + id + '-gross" title="Anklicken für die große Ansicht"></label></div>' +
+      '<figcaption><span>Anklicken für die große Ansicht</span></figcaption>';
+    const stage = fig.querySelector('.dokufix-stage');
+    stage.innerHTML = svg;
+    const el = stage.querySelector('svg');
+    if (el) {
+      const w = el.viewBox.baseVal.width || parseFloat(el.getAttribute('width')) || 800;
+      fig.style.setProperty('--w', Math.round(w) + 'px');
+      el.removeAttribute('height');
+      el.setAttribute('width', '100%');
+      el.style.maxWidth = 'none';
+    }
+    const cap = fig.querySelector('figcaption');
+    for (const l of opts.links || []) {
+      const a = document.createElement('a');
+      a.textContent = l.text;
+      a.href = l.href;
+      if (l.download) a.download = l.download;
+      cap.append(a);
+    }
+    return fig;
+  }
+
+  function render(root, nav) {
+    applyPragmas(root);
+    callouts(root);
+    chips(root);
+    cards(root);
+    steps(root);
+    tables(root);
+    if (nav) layout(root, nav);
+  }
+
+  // Ab hier Laufzeit-JavaScript. Wird im JS-freien Export nicht mitgeliefert.
+  function enhance(doc) {
+    doc.querySelectorAll('.dokufix-table[data-filter]').forEach(wrap => {
+      if (wrap.querySelector('.dokufix-filter-ui')) return;
+      const rows = [...wrap.querySelectorAll('tbody tr')];
+      const ui = doc.createElement('div');
+      ui.className = 'dokufix-filter-ui';
+      const input = doc.createElement('input');
+      input.type = 'search';
+      input.placeholder = wrap.dataset.filter;
+      input.setAttribute('aria-label', wrap.dataset.filter);
+      input.autocomplete = 'off';
+      const count = doc.createElement('span');
+      count.setAttribute('aria-live', 'polite');
+      ui.append(input, count);
+      wrap.prepend(ui);
+      const update = () => {
+        const q = input.value.trim().toLowerCase();
+        rows.forEach(r => { r.hidden = !!q && !r.textContent.toLowerCase().includes(q); });
+        const shown = rows.filter(r => r.getClientRects().length > 0).length;
+        count.textContent = shown === rows.length ? rows.length + ' Zeilen' : shown + ' von ' + rows.length + ' Zeilen';
+      };
+      input.addEventListener('input', update);
+      wrap.addEventListener('change', update);
+      update();
+    });
+
+    // Große Diagrammansicht: Esc schließt, + und − wechseln die Zoomstufe. Ohne JS bleiben Maus und Tab.
+    if (!doc.documentElement.dataset.dokufixZoomKeys) {
+      doc.documentElement.dataset.dokufixZoomKeys = '1';
+      doc.addEventListener('keydown', e => {
+        const open = doc.querySelector('.dokufix-zoom-toggle:checked');
+        if (!open) return;
+        const changed = el => el.dispatchEvent(new Event('change', { bubbles: true }));
+        if (e.key === 'Escape') { open.checked = false; changed(open); open.focus(); return; }
+        if (e.key !== '+' && e.key !== '-') return;
+        const radios = [...open.parentElement.querySelectorAll('.dokufix-zoom-bar input[type="radio"]')];
+        const i = radios.findIndex(r => r.checked);
+        const next = radios[Math.min(radios.length - 1, Math.max(0, i + (e.key === '+' ? 1 : -1)))];
+        if (next && !next.checked) { next.checked = true; changed(next); }
+      });
+    }
+
+    const links = [...doc.querySelectorAll('.dokufix-nav > a[href^="#"]')];
+    const heads = links.map(a => doc.getElementById(decodeURIComponent(a.hash.slice(1))));
+    if (links.length) {
+      const spy = () => {
+        const line = innerHeight * 0.25;
+        let active = 0;
+        heads.forEach((h, i) => { if (h && h.getBoundingClientRect().top <= line) active = i; });
+        links.forEach((a, i) => {
+          a.classList.toggle('on', i === active);
+          if (i === active) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current');
+        });
+      };
+      addEventListener('scroll', spy, { passive: true });
+      spy();
+    }
+  }
+
+  return { render, enhance, slugify, diagramFigure, warnung };
+})();
+
+// Spike: BPMN 2.0 im Dokument. Zwei Eingänge, ein Ausgang:
+//   fromXml()      BPMN-XML mit Koordinaten (aus einem Modeler)            ─┐
+//   fromMermaid()  Mermaid-Swimlane-Text → Modell → Mermaids Layout → XML  ─┴→ bpmn-js → statisches SVG
+// Im Dokument bleibt ein SVG, das ohne JavaScript auskommt. enhance() ersetzt es in der großen Ansicht
+// durch den Viewer selbst, wenn bpmn-js in der Seite geladen ist.
+// Braucht die Globals `mermaid` und `BpmnJS` (bpmn-js Viewer).
+const DokufixBpmn = (() => {
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const TAG = { start: 'startEvent', end: 'endEvent', inter: 'intermediateThrowEvent', gateway: 'exclusiveGateway', task: 'task' };
+  // Die Mermaid-Form legt die Grundart fest, ein Zeichen am Textanfang die genaue BPMN-Art (wie beim Status-Chip).
+  // Reines Mermaid zeigt das Zeichen als Text im Knoten: `{+}` ist dort eine Raute mit Plus, `((✉ …))` ein Kreis mit Umschlag.
+  const MARKER = /^(✉|📧|📨|📩|📥|📤|⏱|⏲|⏰|⏳|⌛|👤|⚙|✋)\uFE0F?\s*/u;
+  const KIND = { '✉': 'message', '📧': 'message', '📨': 'receive', '📩': 'receive', '📥': 'receive', '📤': 'send', '⏱': 'timer', '⏲': 'timer', '⏰': 'timer', '⏳': 'timer', '⌛': 'timer', '👤': 'user', '⚙': 'service', '✋': 'manual' };
+  const TASK = { message: 'sendTask', send: 'sendTask', receive: 'receiveTask', user: 'userTask', service: 'serviceTask', manual: 'manualTask' };
+  const GATEWAY = { '+': 'parallelGateway', 'o': 'inclusiveGateway', 'O': 'inclusiveGateway' };
+  // Grundart + Zeichen → BPMN-Element und Ereignisdefinition. null: Das Zeichen passt nicht zur Form, dann bleibt es im Namen stehen.
+  function refine(type, kind) {
+    const message = kind === 'message' || kind === 'send' || kind === 'receive';
+    if (type === 'task') return TASK[kind] ? { tag: TASK[kind] } : null;
+    if (type === 'start') return message ? { tag: 'startEvent', def: 'message' } : kind === 'timer' ? { tag: 'startEvent', def: 'timer' } : null;
+    if (type === 'end') return message ? { tag: 'endEvent', def: 'message' } : null;
+    if (type === 'inter') return kind === 'send' ? { tag: 'intermediateThrowEvent', def: 'message' } : message ? { tag: 'intermediateCatchEvent', def: 'message' } : kind === 'timer' ? { tag: 'intermediateCatchEvent', def: 'timer' } : null;
+    return null;
+  }
+  const HEAD = 30;                       // Breite des Pool-Kopfs in bpmn-js
+  const R = n => Math.round(n);
+  let seq = 0;
+
+  function offscreen() {
+    const host = document.createElement('div');
+    host.style.cssText = 'position:absolute;left:-99999px;top:0;width:4000px;height:3000px';
+    document.body.append(host);
+    return host;
+  }
+
+  // Mermaid-Quelltext → Modell. Nutzt Mermaids eigenen Parser, kein zweiter Parser.
+  async function parseMermaid(src, name) {
+    const diagram = await mermaid.mermaidAPI.getDiagramFromText(src);
+    const db = diagram.db;
+    const ta = document.createElement('textarea');
+    const text = t => { ta.innerHTML = String(t || '').replace(/<br\s*\/?>/gi, ' '); return ta.value.replace(/\s+/g, ' ').trim(); };
+    const vertices = [...db.getVertices().values()];
+    const edges = db.getEdges();
+    const subs = db.getSubGraphs();
+    // XML-ids: eigener Namensraum, damit Mermaid-ids wie „1“ oder „Process_1“ nichts kaputt machen
+    const xmlId = new Map();
+    vertices.forEach((v, i) => xmlId.set(v.id, 'N' + (i + 1) + '_' + String(v.id).replace(/[^A-Za-z0-9_]/g, '_')));
+    const hasIn = new Set(edges.map(e => e.end)), hasOut = new Set(edges.map(e => e.start));
+    const typeOf = v => {
+      if (v.type === 'doublecircle') return 'end';
+      if (v.type === 'circle') return !hasIn.has(v.id) ? 'start' : !hasOut.has(v.id) ? 'end' : 'inter';
+      if (v.type === 'diamond') return 'gateway';
+      return 'task';
+    };
+    const nodes = vertices.map(v => {
+      const type = typeOf(v), full = text(v.text), call = v.type === 'subroutine', m = !call && MARKER.exec(full);
+      const r = type === 'gateway' ? (GATEWAY[full] ? { tag: GATEWAY[full] } : null) : m ? refine(type, KIND[m[1]]) : null;
+      const name = !r ? full : type === 'gateway' ? '' : full.slice(m[0].length);
+      return { id: xmlId.get(v.id), src: v.id, name, type, tag: r ? r.tag : call ? 'callActivity' : TAG[type], def: r && r.def || null, classes: v.classes || [] };
+    });
+    const flows = edges.filter(e => xmlId.has(e.start) && xmlId.has(e.end)).map((e, i) => ({
+      id: 'F' + (i + 1), from: xmlId.get(e.start), to: xmlId.get(e.end), srcFrom: e.start, srcTo: e.end, srcId: e.id, name: text(e.text), dotted: e.stroke === 'dotted'
+    }));
+    const lanes = subs.map((s, i) => ({ id: 'L' + (i + 1), src: s.id, name: text(s.title), nodes: s.nodes.filter(n => xmlId.has(n)).map(n => xmlId.get(n)) }));
+    if (!lanes.length) throw new Error('Kein subgraph gefunden. Jede Bahn ist ein subgraph.');
+    if (subs.some(s => s.nodes.some(n => subs.some(o => o.id === n)))) throw new Error('Verschachtelte subgraphs lassen sich nicht als Bahnen abbilden.');
+    const dir = String(db.getDirection ? db.getDirection() : 'TB').trim().toUpperCase();
+    return { name: name || (db.getAccTitle && db.getAccTitle()) || '', vertical: dir !== 'LR' && dir !== 'RL', nodes, flows, lanes };
+  }
+
+  // Ein Kantenende an das BPMN-Symbol heranführen. Kreis und Raute werden auf ihrer Mittelachse getroffen,
+  // eine Aufgabe irgendwo auf ihrer Kante.
+  function attach(pts, atStart, c, side) {
+    const i = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2, k = atStart ? 2 : pts.length - 3;
+    const p = pts[i], q = pts[j];
+    const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
+    const aim = (v, mid, half) => c.task ? Math.min(mid + half - 12, Math.max(mid - half + 12, v)) : mid;
+    // Läuft das Endstück NEBEN dem Symbol vorbei, dockt die Kante seitlich an (kurzer Stummel),
+    // statt durch das Symbol und seine Nachbarn in derselben Spalte gezogen zu werden.
+    const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
+    // `side` kommt aus Mermaids ungestauchten Koordinaten: dort lag das Endstück außerhalb des eigenen Knotens.
+    if (side && side.axis === 'x') { p.x = q.x = c.cx + side.sign * (c.w / 2 + 12); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
+    if (side && side.axis === 'y') { p.y = q.y = c.cy + side.sign * (c.h / 2 + 12); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
+    if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5) { p.y = c.cy; dock({ x: c.cx + Math.sign(p.x - c.cx) * c.w / 2, y: c.cy }); return; }
+    if (Math.abs(p.y - q.y) < 1 && Math.abs(p.y - c.cy) > c.h / 2 + 0.5) { p.x = c.cx; dock({ x: c.cx, y: c.cy + Math.sign(p.y - c.cy) * c.h / 2 }); return; }
+    if (Math.abs(p.x - q.x) < 1) {                               // senkrechtes Endstück
+      const dir = Math.sign(q.y - c.cy) || 1, tx = aim(p.x, c.cx, c.w / 2);
+      if (Math.abs(p.x - tx) > 1) {
+        if (pts[k] && Math.abs(pts[k].y - q.y) < 1) q.x = tx;    // Nachbarstück liegt quer: Endstück verschieben
+        else { const my = (p.y + q.y) / 2; ins({ x: tx, y: my }, { x: q.x, y: my }); }
+      }
+      p.x = tx; p.y = c.cy + dir * c.h / 2;
+    } else if (Math.abs(p.y - q.y) < 1) {                        // waagerechtes Endstück
+      const dir = Math.sign(q.x - c.cx) || 1, ty = aim(p.y, c.cy, c.h / 2);
+      if (Math.abs(p.y - ty) > 1) {
+        if (pts[k] && Math.abs(pts[k].x - q.x) < 1) q.y = ty;
+        else { const mx = (p.x + q.x) / 2; ins({ x: mx, y: ty }, { x: mx, y: q.y }); }
+      }
+      p.y = ty; p.x = c.cx + dir * c.w / 2;
+    }
+  }
+
+  // Mermaid entscheidet die Anordnung, Dokufix die Maße: Mermaids Knoten sind groß (Text im Kreis, breite Kästen),
+  // BPMN-Symbole sind klein. Die Achse wird stückweise linear gestaucht: jede Spalte auf die Breite ihres größten
+  // BPMN-Symbols, jede Lücke auf ein festes Maß. Reihenfolgen bleiben erhalten, rechte Winkel auch.
+  function axisMap(items, minGap, maxGap) {
+    const ranks = [];
+    for (const it of [...items].sort((a, b) => a.lo - b.lo)) {
+      const last = ranks[ranks.length - 1];
+      if (last && it.lo < last.hi - 1) { last.hi = Math.max(last.hi, it.hi); last.size = Math.max(last.size, it.size); }
+      else ranks.push({ lo: it.lo, hi: it.hi, size: it.size });
+    }
+    let cur = ranks[0].lo;
+    ranks.forEach((r, i) => {
+      r.nlo = cur; r.nhi = cur + r.size;
+      const next = ranks[i + 1];
+      if (next) cur = r.nhi + Math.min(maxGap, Math.max(minGap, (next.lo - r.hi) * 0.6));
+    });
+    return v => {
+      const first = ranks[0], last = ranks[ranks.length - 1];
+      if (v <= first.lo) return first.nlo - (first.lo - v);
+      if (v >= last.hi) return last.nhi + (v - last.hi);
+      for (let i = 0; i < ranks.length; i++) {
+        const r = ranks[i], n = ranks[i + 1];
+        if (v <= r.hi) return r.nlo + (v - r.lo) / (r.hi - r.lo || 1) * (r.nhi - r.nlo);
+        if (v < n.lo) return r.nhi + (v - r.hi) / (n.lo - r.hi) * (n.nlo - r.nhi);
+      }
+    };
+  }
+  const SIZE = { task: [120, 80], gateway: [50, 50], start: [36, 36], end: [36, 36], inter: [36, 36] };
+  const EVENT_LABEL = 84;               // Platz für die Beschriftung unter einem Ereignis
+
+  // Mermaid führt Kanten an SEINEN (größeren) Knoten vorbei. Nach dem Stauchen kann ein inneres Kantenstück
+  // auf oder in einem fremden Symbol liegen. Dann rückt es neben dessen nächste Kante.
+  function nudge(pts, obstacles) {
+    for (let i = 1; i < pts.length - 2; i++) {
+      const a = pts[i], b = pts[i + 1];
+      if (Math.abs(a.x - b.x) < 1) {
+        const lo = Math.min(a.y, b.y), hi = Math.max(a.y, b.y);
+        for (const o of obstacles) if (a.x > o.x1 - 8 && a.x < o.x2 + 8 && hi > o.y1 && lo < o.y2) a.x = b.x = (a.x - o.x1 < o.x2 - a.x) ? o.x1 - 12 : o.x2 + 12;
+      } else if (Math.abs(a.y - b.y) < 1) {
+        const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
+        for (const o of obstacles) if (a.y > o.y1 - 8 && a.y < o.y2 + 8 && hi > o.x1 && lo < o.x2) a.y = b.y = (a.y - o.y1 < o.y2 - a.y) ? o.y1 - 12 : o.y2 + 12;
+      }
+    }
+  }
+
+  // Mermaid lässt Kanten gern knapp innerhalb der Kante eines Nachbarknotens laufen. Führt ein Endstück dadurch
+  // durch ein fremdes Symbol, dockt die Kante stattdessen seitlich an und läuft außen an beiden vorbei.
+  function detour(pts, atStart, c, obstacles) {
+    if (pts.length < 3) return;
+    const p = pts[atStart ? 0 : pts.length - 1], q = pts[atStart ? 1 : pts.length - 2];
+    const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
+    if (Math.abs(p.x - q.x) < 1) {
+      const lo = Math.min(p.y, q.y), hi = Math.max(p.y, q.y);
+      const hit = obstacles.filter(o => p.x > o.x1 - 2 && p.x < o.x2 + 2 && hi > o.y1 && lo < o.y2);
+      if (!hit.length) return;
+      const sign = p.x >= c.cx ? 1 : -1;
+      const x = sign > 0 ? Math.max(c.cx + c.w / 2, ...hit.map(o => o.x2)) + 12 : Math.min(c.cx - c.w / 2, ...hit.map(o => o.x1)) - 12;
+      p.x = q.x = x; p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy });
+    } else if (Math.abs(p.y - q.y) < 1) {
+      const lo = Math.min(p.x, q.x), hi = Math.max(p.x, q.x);
+      const hit = obstacles.filter(o => p.y > o.y1 - 2 && p.y < o.y2 + 2 && hi > o.x1 && lo < o.x2);
+      if (!hit.length) return;
+      const sign = p.y >= c.cy ? 1 : -1;
+      const y = sign > 0 ? Math.max(c.cy + c.h / 2, ...hit.map(o => o.y2)) + 12 : Math.min(c.cy - c.h / 2, ...hit.map(o => o.y1)) - 12;
+      p.y = q.y = y; p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 });
+    }
+  }
+
+  // Mermaid versetzt Kanten, die sich einen Anschluss teilen, um wenige Pixel. Nach dem Stauchen bleiben davon Zacken
+  // von 1 bis 5 px. Sie werden geglättet, ohne die Kantenenden zu bewegen. Punkte auf einer Geraden entfallen.
+  function tidy(pts) {
+    const same = (a, b, k) => Math.abs(a[k] - b[k]) < 0.5;
+    for (let i = 0; i < pts.length - 1; i++) {
+      const a = pts[i], b = pts[i + 1];
+      const k = same(a, b, 'y') ? 'x' : same(a, b, 'x') ? 'y' : null;      // Achse, auf der der Zacken liegt
+      if (!k || Math.abs(a[k] - b[k]) > 5 || same(a, b, k)) continue;
+      let hi = i + 1, lo = i;
+      while (hi + 1 < pts.length && same(pts[hi + 1], b, k)) hi++;
+      while (lo > 0 && same(pts[lo - 1], a, k)) lo--;
+      if (hi < pts.length - 1) { const v = a[k]; for (let j = i + 1; j <= hi; j++) pts[j][k] = v; }
+      else if (lo > 0) { const v = b[k]; for (let j = lo; j <= i; j++) pts[j][k] = v; }
+    }
+    for (let i = pts.length - 2; i > 0; i--) {
+      const a = pts[i - 1], b = pts[i], c = pts[i + 1];
+      if ((same(a, b, 'x') && same(b, c, 'x')) || (same(a, b, 'y') && same(b, c, 'y'))) pts.splice(i, 1);
+    }
+  }
+
+  const exitSide = pts => Math.abs(pts[0].y - pts[1].y) < 0.5 ? (pts[1].x > pts[0].x ? 'x+' : 'x-') : Math.abs(pts[0].x - pts[1].x) < 0.5 ? (pts[1].y > pts[0].y ? 'y+' : 'y-') : '';
+  const blocked = (a, b, obstacles) => obstacles.some(o => Math.max(a.x, b.x) > o.x1 - 2 && Math.min(a.x, b.x) < o.x2 + 2 && Math.max(a.y, b.y) > o.y1 - 2 && Math.min(a.y, b.y) < o.y2 + 2);
+
+  // Verlassen zwei Kanten ein Gateway an derselben Ecke, liegen sie auf dem ersten Stück übereinander.
+  // Biegt eine davon gleich ab, nimmt sie stattdessen die freie Ecke in ihrer Richtung.
+  function fanOut(routes, box, gateways) {
+    for (const id of gateways) {
+      const c = box[id], outs = routes.filter(r => r.f.from === id);
+      const used = new Set(outs.map(r => exitSide(r.pts)));
+      routes.filter(r => r.f.to === id).forEach(r => used.add(exitSide([...r.pts].reverse())));
+      for (const r of outs) {
+        const pts = r.pts, side = exitSide(pts);
+        if (pts.length < 3 || !side || !outs.some(o => o !== r && exitSide(o.pts) === side)) continue;
+        const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h', su = u === 'x' ? 'w' : 'h';
+        if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) continue;                 // zweites Stück muss abbiegen
+        const dir = Math.sign(pts[2][v] - pts[1][v]), corner = v + (dir > 0 ? '+' : '-');
+        if (!dir || used.has(corner)) continue;
+        const start = { [u]: c[cu], [v]: c[cv] + dir * c[sv] / 2 };
+        let next;
+        if (pts.length === 3) {                                              // endete von oben oder unten im Ziel: jetzt seitlich
+          const t = box[r.f.to], du = Math.sign(pts[1][u] - pts[0][u]), edge = t[cu] - du * t[su] / 2;
+          if ((edge - c[cu]) * du < 12) continue;
+          next = [start, { [u]: c[cu], [v]: t[cv] }, { [u]: edge, [v]: t[cv] }];
+        } else {
+          if (Math.abs(pts[2][v] - pts[3][v]) > 0.5) continue;
+          next = [start, { [u]: c[cu], [v]: pts[2][v] }, ...pts.slice(3)];
+        }
+        if (blocked(next[0], next[1], r.obstacles) || blocked(next[1], next[2], r.obstacles)) continue;
+        pts.splice(0, pts.length, ...next);
+        used.add(corner);
+      }
+      // Ein Abgang auf der Seite, an der eine Kante ankommt, sieht aus, als zweige er schon vor dem Gateway ab.
+      // Er startet stattdessen an der Ecke in seiner Richtung und teilt dort notfalls ein kurzes Stück mit einem anderen Abgang.
+      const arriving = new Set(routes.filter(r => r.f.to === id).map(r => exitSide([...r.pts].reverse())));
+      for (const r of outs) {
+        const pts = r.pts, side = exitSide(pts);
+        if (pts.length < 4 || !side || !arriving.has(side)) continue;
+        const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h';
+        if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) continue;
+        const dir = Math.sign(pts[2][v] - pts[1][v]);
+        const start = { [u]: c[cu], [v]: c[cv] + dir * c[sv] / 2 }, stem = start[v] + dir * 14;
+        if (!dir || (pts[2][v] - stem) * dir <= 0) continue;
+        const next = [start, { [u]: c[cu], [v]: stem }, { [u]: pts[1][u], [v]: stem }];
+        if (blocked(next[0], next[1], r.obstacles) || blocked(next[1], next[2], r.obstacles) || blocked(next[2], pts[2], r.obstacles)) continue;
+        pts.splice(0, 2, ...next);
+      }
+    }
+  }
+
+  // Trifft an derselben Seite einer Aufgabe ein eingehender auf einen ausgehenden Pfeil, sieht das aus wie ein Doppelpfeil.
+  // Der verschiebbare von beiden rückt zur Seite.
+  function spreadPorts(routes, box) {
+    const ends = [];
+    for (const r of routes) for (const atStart of [true, false]) {
+      const c = box[atStart ? r.f.from : r.f.to];
+      if (!c.task) continue;
+      const pts = r.pts, p = pts[atStart ? 0 : pts.length - 1], q = pts[atStart ? 1 : pts.length - 2];
+      const vertical = Math.abs(p.x - q.x) < 1;
+      if (!vertical && Math.abs(p.y - q.y) >= 1) continue;
+      ends.push({ p, q, c, vertical, out: atStart, side: (vertical ? (p.y < c.cy ? 'oben' : 'unten') : (p.x < c.cx ? 'links' : 'rechts')), movable: pts.length >= 3 });
+    }
+    for (const a of ends) for (const b of ends) {
+      if (a === b || a.c !== b.c || a.side !== b.side || a.out === b.out) continue;
+      const va = a.vertical ? a.p.x : a.p.y, vb = b.vertical ? b.p.x : b.p.y;
+      if (Math.abs(va - vb) >= 14) continue;
+      const m = a.movable ? a : b.movable ? b : null;
+      if (!m) continue;
+      const other = m === a ? vb : va, mid = m.vertical ? m.c.cx : m.c.cy, half = (m.vertical ? m.c.w : m.c.h) / 2 - 10;
+      let v = other + (other <= mid ? 18 : -18);
+      v = Math.min(mid + half, Math.max(mid - half, v));
+      if (m.vertical) m.p.x = m.q.x = v; else m.p.y = m.q.y = v;
+    }
+  }
+
+  // Beschriftung einer Kante: hinter einem Gateway direkt am Abgang („ja“, „nein“), sonst mittig am längsten Stück.
+  function flowLabel(pts, text, atGateway) {
+    const w = Math.max(24, Math.round(text.length * 6.2) + 8);
+    let a = pts[0], b = pts[1];
+    if (!atGateway) {
+      let best = -1;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const len = Math.abs(pts[i].x - pts[i + 1].x) + Math.abs(pts[i].y - pts[i + 1].y);
+        if (len > best) { best = len; a = pts[i]; b = pts[i + 1]; }
+      }
+    }
+    if (Math.abs(a.y - b.y) < 1) {                                   // waagerecht: darüber
+      const dir = Math.sign(b.x - a.x) || 1;
+      const x = atGateway ? (dir > 0 ? a.x + 10 : a.x - 10 - w) : (a.x + b.x) / 2 - w / 2;
+      return [R(x), R(a.y - 18), w, 14];
+    }
+    const dir = Math.sign(b.y - a.y) || 1;                           // senkrecht: rechts daneben
+    const y = atGateway ? (dir > 0 ? a.y + 8 : a.y - 22) : (a.y + b.y) / 2 - 7;
+    return [R(a.x + 6), R(y), w, 14];
+  }
+
+  // Mermaids Swimlane-Layout als Koordinatenquelle für das BPMN-DI.
+  async function layoutFromMermaid(src, model) {
+    const host = offscreen();
+    try {
+      const { svg } = await mermaid.render('dokufix-bpmn-layout-' + (++seq), src);
+      host.innerHTML = svg;
+      const root = host.querySelector('svg');
+      const gNodes = [...root.querySelectorAll('g.node')];
+      const raw = {};
+      for (const n of model.nodes) {
+        const g = gNodes.find(e => e.dataset.id === n.src) || gNodes.find(e => e.id.includes('-flowchart-' + n.src + '-'));
+        if (!g) throw new Error('Knoten nicht gefunden: ' + n.src);
+        const m = /translate\(\s*([-\d.eE]+)[ ,]+([-\d.eE]+)\s*\)/.exec(g.getAttribute('transform') || '');
+        if (!m) throw new Error('Knoten ohne Position: ' + n.src);
+        const bb = g.getBBox();
+        const isEvent = n.type === 'start' || n.type === 'end' || n.type === 'inter';
+        raw[n.id] = { cx: +m[1], cy: +m[2], w: bb.width, h: bb.height, size: SIZE[n.type], reserveX: isEvent && !model.vertical ? EVENT_LABEL : SIZE[n.type][0] };
+      }
+      const all = Object.values(raw);
+      const mapX = axisMap(all.map(r => ({ lo: r.cx - r.w / 2, hi: r.cx + r.w / 2, size: r.reserveX })), 36, 70);
+      const mapY = axisMap(all.map(r => ({ lo: r.cy - r.h / 2, hi: r.cy + r.h / 2, size: r.size[1] })), 36, 70);
+
+      const di = { lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {} };
+      const box = {};
+      let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+      for (const l of model.lanes) {
+        const g = [...root.querySelectorAll('g.cluster.swimlane')].find(e => e.dataset.id === l.src);
+        if (!g) throw new Error('Bahn nicht gefunden: ' + l.src);
+        const rects = [...g.querySelectorAll('rect.swimlane-body, rect.swimlane-title')].map(r => r.getBBox());
+        const a = mapX(Math.min(...rects.map(r => r.x))), b = mapY(Math.min(...rects.map(r => r.y)));
+        const c = mapX(Math.max(...rects.map(r => r.x + r.width))), d = mapY(Math.max(...rects.map(r => r.y + r.height)));
+        di.lanes[l.id] = [R(a), R(b), R(c - a), R(d - b)];
+        x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d);
+      }
+      di.pool = model.vertical ? [R(x1), R(y1 - HEAD), R(x2 - x1), R(y2 - y1 + HEAD)] : [R(x1 - HEAD), R(y1), R(x2 - x1 + HEAD), R(y2 - y1)];
+      for (const n of model.nodes) {
+        const r = raw[n.id], cx = mapX(r.cx), cy = mapY(r.cy), [w, h] = r.size;
+        di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h];
+        box[n.id] = { cx, cy, w, h, task: n.type === 'task' };
+        // Beschriftung dorthin, wo keine Kante entlangläuft: quer über dem Gateway, hochkant rechts daneben
+        if (n.type === 'gateway') { if (n.name) di.labels[n.id] = model.vertical ? [R(cx + 30), R(cy - 46), 96, 28] : [R(cx - 48), R(cy - 56), 96, 28]; }
+        else if (n.type !== 'task' && model.vertical) {
+          const lane = model.lanes.find(l => l.nodes.includes(n.id));
+          const room = lane ? di.lanes[lane.id][0] + di.lanes[lane.id][2] - (cx + 26) - 6 : EVENT_LABEL;
+          di.labels[n.id] = [R(cx + 26), R(cy - 21), Math.max(40, Math.min(EVENT_LABEL, R(room))), 42];
+        }
+      }
+      const paths = [...root.querySelectorAll('path[data-edge="true"]')];
+      const taken = new Set();
+      const routes = [];
+      for (const f of model.flows) {
+        const path = paths.find(e => !taken.has(e) && e.dataset.id === f.srcId) ||
+          paths.find(e => !taken.has(e) && (e.dataset.id || '').startsWith('L_' + f.srcFrom + '_' + f.srcTo + '_'));
+        if (!path) throw new Error('Kante nicht gefunden: ' + f.srcFrom + ' → ' + f.srcTo);
+        taken.add(path);
+        const orig = JSON.parse(atob(path.dataset.points));
+        if (orig.length < 2) throw new Error('Kante ohne Verlauf: ' + f.srcFrom + ' → ' + f.srcTo);
+        const beside = (o, o2, r) =>
+          Math.abs(o.x - o2.x) < 1 && Math.abs(o.x - r.cx) > r.w / 2 + 0.5 ? { axis: 'x', sign: Math.sign(o.x - r.cx) } :
+          Math.abs(o.y - o2.y) < 1 && Math.abs(o.y - r.cy) > r.h / 2 + 0.5 ? { axis: 'y', sign: Math.sign(o.y - r.cy) } : null;
+        const sideFrom = beside(orig[0], orig[1], raw[f.from]), sideTo = beside(orig[orig.length - 1], orig[orig.length - 2], raw[f.to]);
+        const pts = orig.map(p => ({ x: mapX(p.x), y: mapY(p.y) }));
+        attach(pts, true, box[f.from], sideFrom);
+        attach(pts, false, box[f.to], sideTo);
+        const obstacles = model.nodes.filter(n => n.id !== f.from && n.id !== f.to).map(n => {
+          const c = box[n.id];
+          return { x1: c.cx - c.w / 2, x2: c.cx + c.w / 2, y1: c.cy - c.h / 2, y2: c.cy + c.h / 2 };
+        });
+        detour(pts, true, box[f.from], obstacles);
+        detour(pts, false, box[f.to], obstacles);
+        nudge(pts, obstacles);
+        tidy(pts);
+        routes.push({ f, pts, obstacles });
+      }
+      const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
+      fanOut(routes, box, gateways);
+      spreadPorts(routes, box);
+      for (const { f, pts } of routes) {
+        di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
+        // Teilen sich zwei Abgänge eine Ecke des Gateways, stünden ihre Beschriftungen dort übereinander.
+        const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
+        if (f.name) di.flowLabels[f.id] = flowLabel(pts, f.name, gateways.has(f.from) && alone);
+      }
+      return di;
+    } finally { host.remove(); }
+  }
+
+  function toXml(model, di) {
+    const inc = {}, out = {};
+    model.flows.forEach(f => { (out[f.from] ||= []).push(f.id); (inc[f.to] ||= []).push(f.id); });
+    let x = '<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn" exporter="dokufix-spike">\n';
+    x += '  <bpmn:collaboration id="Collaboration_1">\n    <bpmn:participant id="Participant_1" name="' + esc(model.name) + '" processRef="Process_1"/>\n  </bpmn:collaboration>\n';
+    x += '  <bpmn:process id="Process_1" isExecutable="false">\n    <bpmn:laneSet id="LaneSet_1">\n';
+    model.lanes.forEach(l => { x += '      <bpmn:lane id="' + l.id + '" name="' + esc(l.name) + '">' + l.nodes.map(n => '<bpmn:flowNodeRef>' + n + '</bpmn:flowNodeRef>').join('') + '</bpmn:lane>\n'; });
+    x += '    </bpmn:laneSet>\n';
+    const tagOf = n => n.tag || TAG[n.type];        // tag: genaue BPMN-Art, sonst die Grundart
+    model.nodes.forEach(n => {
+      x += '    <bpmn:' + tagOf(n) + ' id="' + n.id + '"' + (n.name ? ' name="' + esc(n.name) + '"' : '') + '>' +
+        (inc[n.id] || []).map(f => '<bpmn:incoming>' + f + '</bpmn:incoming>').join('') +
+        (out[n.id] || []).map(f => '<bpmn:outgoing>' + f + '</bpmn:outgoing>').join('') +
+        (n.def ? '<bpmn:' + n.def + 'EventDefinition id="' + n.id + '_def"/>' : '') + '</bpmn:' + tagOf(n) + '>\n';
+    });
+    model.flows.forEach(f => { x += '    <bpmn:sequenceFlow id="' + f.id + '" sourceRef="' + f.from + '" targetRef="' + f.to + '"' + (f.name ? ' name="' + esc(f.name) + '"' : '') + '/>\n'; });
+    return x + '  </bpmn:process>\n' + diXml(model, di, 'Collaboration_1', 'Participant_1') + '</bpmn:definitions>\n';
+  }
+
+  // Die Koordinaten (BPMN-DI) zu einem Modell. plane: Collaboration oder Prozess, pool: Participant oder leer.
+  function diXml(model, di, plane, pool, ns = '') {
+    const b = r => '<dc:Bounds x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '"/>';
+    const hz = ' isHorizontal="' + (model.vertical ? 'false' : 'true') + '"';
+    let x = '  <bpmndi:BPMNDiagram' + ns + ' id="Diagram_1">\n    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="' + plane + '">\n';
+    for (const [id, r] of Object.entries(di.pools || (pool ? { [pool]: di.pool } : {}))) x += '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '"' + hz + '>' + b(r) + '</bpmndi:BPMNShape>\n';
+    model.lanes.forEach(l => { if (!l.synthetic) x += '      <bpmndi:BPMNShape id="' + l.id + '_di" bpmnElement="' + l.id + '"' + hz + '>' + b(di.lanes[l.id]) + '</bpmndi:BPMNShape>\n'; });
+    model.nodes.forEach(n => {
+      x += '      <bpmndi:BPMNShape id="' + n.id + '_di" bpmnElement="' + n.id + '"' + ((n.tag || TAG[n.type]) === 'exclusiveGateway' ? ' isMarkerVisible="true"' : '') + '>' + b(di.nodes[n.id]) +
+        (di.labels[n.id] ? '<bpmndi:BPMNLabel>' + b(di.labels[n.id]) + '</bpmndi:BPMNLabel>' : '') + '</bpmndi:BPMNShape>\n';
+    });
+    model.flows.forEach(f => {
+      x += '      <bpmndi:BPMNEdge id="' + f.id + '_di" bpmnElement="' + f.id + '">' + di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') +
+        (di.flowLabels && di.flowLabels[f.id] ? '<bpmndi:BPMNLabel>' + b(di.flowLabels[f.id]) + '</bpmndi:BPMNLabel>' : '') + '</bpmndi:BPMNEdge>\n';
+    });
+    return x + '    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n';
+  }
+
+  // BPMN-XML ohne Koordinaten: Die Anordnung kommt wie bei fromMermaid() aus Mermaids Swimlane-Layout.
+  // Das XML wird dazu gelesen (Bahnen, Knoten, Sequenzflüsse), als Mermaid-Text nachgebaut und angeordnet.
+  // Das Original bleibt, wie es ist. Es bekommt nur den Koordinatenteil angehängt.
+  async function layoutXml(xml) {
+    const doc = new DOMParser().parseFromString(xml, 'application/xml');
+    if (doc.querySelector('parsererror')) throw new Error('Das XML ist nicht lesbar.');
+    const all = (name, root = doc) => [...root.getElementsByTagNameNS('*', name)];
+    const processes = all('process'), participants = all('participant'), collab = all('collaboration')[0] || null;
+    if (!processes.length) throw new Error('Das XML enthält keinen Prozess.');
+    if (processes.length > 1 && !participants.length) throw new Error('Mehrere Prozesse brauchen eine Collaboration mit je einem Participant.');
+    // Ein Pool je Participant, in der Reihenfolge des XML. Ohne Collaboration gibt es nur den Prozess, ohne Pool.
+    const pools = participants.length
+      ? participants.map(el => ({ key: el.id, el, name: el.getAttribute('name') || '', proc: processes.find(pr => pr.id === el.getAttribute('processRef')) }))
+      : [{ key: processes[0].id, el: null, name: '', proc: processes[0] }];
+    if (pools.some(pl => !pl.proc)) throw new Error('Ein Pool ohne eigenen Prozess lässt sich ohne Koordinaten nicht anordnen.');
+    const type = el => {
+      const t = el.localName;
+      return t === 'startEvent' ? 'start' : t === 'endEvent' ? 'end' : /Event$/.test(t) ? 'inter' : /Gateway$/.test(t) ? 'gateway' :
+        /^(task|\w+Task|callActivity|subProcess|transaction)$/.test(t) ? 'task' : null;
+    };
+    const clean = t => (t || '').replace(/\s+/g, ' ').trim();
+    const nodes = [], lanes = [];
+    for (const pl of pools) {
+      const mine = [...pl.proc.children].filter(el => type(el) && el.id).map(el => ({ id: el.id, src: 'n' + (nodes.length + 1), name: clean(el.getAttribute('name')), type: type(el), tag: el.localName, classes: [] }));
+      mine.forEach((n, i) => { n.src = 'n' + (nodes.length + i + 1); });
+      const ids = new Set(mine.map(n => n.id));
+      const own = all('lane', pl.proc).map(el => ({ id: el.id, name: el.getAttribute('name') || '', pool: pl.key, nodes: [...el.children].filter(c => c.localName === 'flowNodeRef').map(c => c.textContent.trim()).filter(id => ids.has(id)) }));
+      const placed = new Set(own.flatMap(l => l.nodes)), stray = mine.filter(n => !placed.has(n.id));
+      if (!own.length) own.push({ id: '__' + pl.key, name: pl.name, pool: pl.key, nodes: mine.map(n => n.id), synthetic: true });   // Pool ohne Bahnen
+      else if (stray.length) throw new Error('Ohne Bahn: ' + stray.map(n => n.id).join(', ') + '. Jedes Element braucht ein flowNodeRef in einer Bahn.');
+      nodes.push(...mine); lanes.push(...own);
+    }
+    if (!nodes.length) throw new Error('Das XML enthält kein darstellbares Element.');
+    lanes.forEach((l, i) => { l.src = 'l' + (i + 1); });
+    const byId = new Map(nodes.map(n => [n.id, n]));
+    // Sequenzflüsse aller Prozesse, dazu Nachrichtenflüsse zwischen den Pools. Für die Anordnung sind beides Kanten.
+    const flowEls = [...pools.flatMap(pl => [...pl.proc.children].filter(el => el.localName === 'sequenceFlow')), ...(collab ? [...collab.children].filter(el => el.localName === 'messageFlow') : [])];
+    const flows = [];
+    for (const el of flowEls) {
+      const from = byId.get(el.getAttribute('sourceRef')), to = byId.get(el.getAttribute('targetRef')), message = el.localName === 'messageFlow';
+      if (message && !(from && to)) throw new Error('Nachrichtenfluss ' + el.id + ' muss zwei Elemente verbinden, nicht einen ganzen Pool.');
+      if (from && to) flows.push({ id: el.id, from: from.id, to: to.id, srcFrom: from.src, srcTo: to.src, name: clean(el.getAttribute('name')), message });
+    }
+    const model = { name: pools[0].name, vertical: false, nodes, flows, lanes };
+    const q = t => '"' + (String(t).replace(/["<>&#]/g, ' ').trim() || ' ') + '"';
+    const shape = n => n.src + (n.type === 'task' ? '[' + q(n.name) + ']' : n.type === 'gateway' ? '{' + q(n.name || '+') + '}' : '((' + q(n.name) + '))');
+    const src = 'swimlane-beta LR\n' + lanes.map(l => '  subgraph ' + l.src + '[' + q(l.name) + ']\n' + l.nodes.map(id => '    ' + shape(byId.get(id)) + '\n').join('') + '  end\n').join('') +
+      flows.map(f => '  ' + f.srcFrom + (f.message ? ' -.->' : ' -->') + (f.name ? '|' + q(f.name) + '|' : '') + ' ' + f.srcTo + '\n').join('');
+    const di = await layoutFromMermaid(src, model);
+    if (participants.length) spreadPools(di, model, pools);
+    const ns = ' xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI"';
+    const close = /<\/(?:[\w.-]+:)?definitions>\s*$/.exec(xml);
+    if (!close) throw new Error('Das XML endet nicht mit </definitions>.');
+    const plane = collab ? collab.id : pools[0].proc.id;
+    if (!plane) throw new Error('Prozess oder Collaboration ohne id.');
+    return xml.slice(0, close.index) + diXml(model, di, plane, '', ns) + close[0];
+  }
+
+  // Mermaid kennt nur Bahnen. Die Bahnen eines Pools liegen dort direkt untereinander, die Pools also auch.
+  // Jeder Pool bekommt hier seinen eigenen Rahmen, zwischen zwei Pools kommt ein Abstand: Alles darunter rückt nach unten,
+  // Kanten über die Grenze werden entsprechend länger.
+  function spreadPools(di, model, pools) {
+    const GAP = 40;
+    const frames = pools.map(pl => {
+      const rects = model.lanes.filter(l => l.pool === pl.key).map(l => di.lanes[l.id]);
+      return { key: pl.key, x1: Math.min(...rects.map(r => r[0])), x2: Math.max(...rects.map(r => r[0] + r[2])), y1: Math.min(...rects.map(r => r[1])), y2: Math.max(...rects.map(r => r[1] + r[3])) };
+    }).sort((a, b) => a.y1 - b.y1);
+    for (let i = 1; i < frames.length; i++) if (frames[i].y1 < frames[i - 1].y2 - 1) throw new Error('Die Bahnen eines Pools liegen nicht zusammen.');
+    const cuts = frames.slice(1).map(f => f.y1);
+    const dy = y => GAP * cuts.filter(c => y >= c - 0.5).length;
+    for (const l of model.lanes) di.lanes[l.id][1] += dy(di.lanes[l.id][1]);
+    for (const n of model.nodes) { const d = dy(di.nodes[n.id][1]); di.nodes[n.id][1] += d; if (di.labels[n.id]) di.labels[n.id][1] += d; }
+    const frameOf = id => frames.find(fr => fr.key === model.lanes.find(l => l.nodes.includes(id)).pool);
+    for (const f of model.flows) {
+      if (f.message) di.flows[f.id].forEach(p => { p[1] += dy(p[1]); });
+      else {
+        // Ein Sequenzfluss gehört ganz zu seinem Pool. Mermaid führt ihn manchmal genau auf dessen Rand entlang:
+        // Dort rückt er nach innen, sonst läge er nach dem Auseinanderziehen im Zwischenraum oder auf dem Rahmen.
+        const fr = frameOf(f.from), d = dy(fr.y1);
+        di.flows[f.id].forEach(p => { p[1] = Math.min(fr.y2 - 9, Math.max(fr.y1 + 9, p[1])) + d; });
+      }
+      if (di.flowLabels[f.id]) di.flowLabels[f.id][1] += dy(di.flowLabels[f.id][1] + 7);
+    }
+    di.pools = Object.fromEntries(frames.map(f => [f.key, [R(f.x1 - HEAD), R(f.y1 + dy(f.y1)), R(f.x2 - f.x1 + HEAD), R(f.y2 - f.y1)]]));
+
+    // Mermaid führt jede Kante von der Seite ins Ziel. Ein Nachrichtenfluss läge dann auf dem Sequenzfluss, der dort ankommt.
+    // Er dockt stattdessen von der Seite an, aus der er kommt: von unten oder oben, auf der Mittelachse des Ziels.
+    const rectOf = id => { const b = di.nodes[id]; return { x1: b[0], y1: b[1], x2: b[0] + b[2], y2: b[1] + b[3] }; };
+    let channel = 0;
+    for (const f of model.flows.filter(f => f.message)) {
+      const pts = di.flows[f.id], n = pts.length;
+      if (n < 3 || Math.abs(pts[n - 1][1] - pts[n - 2][1]) > 0.5 || Math.abs(pts[n - 2][0] - pts[n - 3][0]) > 0.5) continue;
+      const t = di.nodes[f.to], tx = R(t[0] + t[2] / 2), below = pts[n - 3][1] > t[1] + t[3] / 2, end = [tx, below ? t[1] + t[3] : t[1]];
+      let next;
+      if (n === 3) {                                        // kam ohne Umweg: Der Querweg läuft im Abstand zwischen den Pools
+        const pool = di.pools[model.lanes.find(l => l.nodes.includes(f.to)).pool];
+        const y = (below ? pool[1] + pool[3] + GAP / 2 : pool[1] - GAP / 2) + (channel++ % 3 - 1) * 10;
+        next = [pts[0], [pts[0][0], y], [tx, y], end];
+      } else {
+        if (Math.abs(pts[n - 4][1] - pts[n - 3][1]) > 0.5) continue;
+        next = [...pts.slice(0, n - 3), [tx, pts[n - 3][1]], end];
+      }
+      const obstacles = model.nodes.filter(o => o.id !== f.from && o.id !== f.to).map(o => rectOf(o.id));
+      const P = q => ({ x: q[0], y: q[1] });
+      if (next.slice(1).some((q, i) => blocked(P(next[i]), P(q), obstacles))) continue;
+      di.flows[f.id] = next;
+      if (f.name) di.flowLabels[f.id] = flowLabel(next.map(P), f.name, false);
+      const node = model.nodes.find(o => o.id === f.to);
+      if (below && node.type !== 'task' && node.name) di.labels[f.to] = [tx - 45, t[1] - 34, 90, 28];   // Beschriftung nach oben, unten kommt die Kante an
+    }
+  }
+
+  // Farben sind CSS-Variablen der Seite: Bild und Viewer folgen dem Farbschema ohne neues Rendern.
+  const VIEWER = {
+    bpmnRenderer: { defaultFillColor: 'var(--surface)', defaultStrokeColor: 'var(--ink-soft)', defaultLabelColor: 'var(--ink)' },
+    textRenderer: { defaultStyle: { fontFamily: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif', fontSize: 12 }, externalStyle: { fontSize: 11 } }
+  };
+
+  // Öffnet das XML in einem bpmn-js-Viewer im Container. Jedes Element bekommt eine Klasse nach seiner Art.
+  // marks: { elementId: ['klasse', …] } für Dinge, die BPMN nicht kennt (geplant, gestrichelt).
+  async function mount(container, xml, marks = {}) {
+    const viewer = new BpmnJS({ container, ...VIEWER });
+    try {
+      const { warnings } = await viewer.importXML(xml);
+      const reg = viewer.get('elementRegistry');
+      let shapes = 0;
+      reg.forEach(el => {
+        const gfx = reg.getGraphics(el);
+        if (!gfx || el.type === 'label' || !/^bpmn:/.test(el.type) || el.type === 'bpmn:Collaboration' || el.type === 'bpmn:Process') return;
+        shapes++;
+        gfx.classList.add('dokufix-bpmn-' + el.type.slice(5).toLowerCase(), ...(marks[el.id] || []).map(m => 'dokufix-bpmn-' + m));
+        if (el.type === 'bpmn:Participant' && !(el.children || []).some(c => c.type === 'bpmn:Lane')) gfx.classList.add('dokufix-bpmn-ohnebahnen');
+      });
+      if (!shapes) throw new Error('Das XML enthält kein darstellbares Element. Fehlen die Koordinaten (BPMN-DI)?');
+      return { viewer, warnings: warnings.map(w => String(w.message || w)), shapes };
+    } catch (err) { viewer.destroy(); throw err; }
+  }
+
+  // BPMN-XML → SVG-Text über saveSVG(), die Exportfunktion von bpmn-js. Das ist die Fassung ohne JavaScript.
+  async function render(xml, marks = {}) {
+    const host = offscreen();
+    try {
+      const { viewer, warnings, shapes } = await mount(host, xml, marks);
+      try {
+        const { svg } = await viewer.saveSVG();
+        const el = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
+        el.querySelectorAll('.djs-hit').forEach(e => e.remove());       // nur für die Bedienung im Viewer nötig
+        el.setAttribute('role', 'img');
+        return { svg: new XMLSerializer().serializeToString(el), warnings, shapes };
+      } finally { viewer.destroy(); }
+    } finally { host.remove(); }
+  }
+
+  async function fromXml(xml) {
+    const laidOut = !/<(?:[\w.-]+:)?BPMNShape\b/.test(xml);          // kein BPMN-DI: selbst anordnen
+    if (laidOut) xml = await layoutXml(xml);
+    const r = await render(xml);
+    return { ...r, xml, marks: {}, laidOut };
+  }
+
+  async function fromMermaid(src, name) {
+    const model = await parseMermaid(src, name);
+    const di = await layoutFromMermaid(src, model);
+    const xml = toXml(model, di);
+    const marks = {};
+    model.nodes.forEach(n => { if (n.classes.includes('geplant')) marks[n.id] = ['geplant']; });
+    model.flows.forEach(f => { if (f.dotted) marks[f.id] = ['gestrichelt']; });
+    const r = await render(xml, marks);
+    return { ...r, xml, marks, model };
+  }
+
+  // Laufzeit: Ist bpmn-js in der Seite, zeigt die große Ansicht den Viewer selbst statt des Bildes.
+  // Mausrad mit Strg zoomt, Ziehen verschiebt, das bpmn.io-Logo steht unten rechts.
+  // Ohne JavaScript oder ohne Bibliothek bleibt die große Ansicht beim Bild und den CSS-Zoomstufen.
+  const wired = new WeakSet();
+  function enhance(doc) {
+    if (typeof BpmnJS === 'undefined') return;
+    doc.querySelectorAll('figure.dokufix-diagram-bpmn').forEach(fig => {
+      const toggle = fig.querySelector('.dokufix-zoom-toggle'), viewport = fig.querySelector('.dokufix-viewport');
+      const bar = fig.querySelector('.dokufix-zoom-bar'), link = fig.querySelector('figcaption a[download]');
+      if (wired.has(fig) || !toggle || !viewport || !bar || !link) return;
+      wired.add(fig);
+      let live = null;
+      const zoom = () => {
+        if (!live) return;
+        const value = bar.querySelector('input[type="radio"]:checked').value;
+        const canvas = live.viewer.get('canvas');
+        // „Einpassen“ lässt rundum 24 px Rand und vergrößert höchstens auf 150 %.
+        const { inner, outer } = canvas.viewbox();
+        const scale = value === 'fit' ? Math.min((outer.width - 48) / inner.width, (outer.height - 48) / inner.height, 1.5) : +value / 100;
+        // Passt das Diagramm in die Fläche, steht es mittig. Sonst beginnt es links oben, wo der Prozess anfängt.
+        const w = outer.width / scale, h = outer.height / scale;
+        canvas.viewbox({ x: w >= inner.width ? inner.x - (w - inner.width) / 2 : inner.x - 20, y: h >= inner.height ? inner.y - (h - inner.height) / 2 : inner.y - 20, width: w, height: h });
+      };
+      const close = () => {
+        if (!live) return;
+        live.viewer.destroy(); live.box.remove(); live.hint.remove();
+        live = null;
+        fig.classList.remove('dokufix-live');
+      };
+      toggle.addEventListener('change', async () => {
+        if (!toggle.checked) { close(); return; }
+        if (live) return;
+        const box = doc.createElement('div');
+        box.className = 'dokufix-live-canvas';
+        const hint = doc.createElement('span');
+        hint.className = 'dokufix-live-hint';
+        hint.textContent = 'Strg + Mausrad zoomt, Ziehen verschiebt';
+        viewport.append(box);
+        fig.classList.add('dokufix-live');
+        try {
+          const xml = decodeURIComponent(link.getAttribute('href').split(',').slice(1).join(','));
+          const marks = fig.dataset.bpmnMarks ? JSON.parse(fig.dataset.bpmnMarks) : {};
+          const opened = await mount(box, xml, marks);
+          if (!toggle.checked) { opened.viewer.destroy(); box.remove(); fig.classList.remove('dokufix-live'); return; }
+          bar.querySelector('fieldset').after(hint);
+          live = { ...opened, box, hint };
+          zoom();
+        } catch (err) {                      // Viewer nicht startbar: die Bild-Ansicht bleibt
+          box.remove();
+          fig.classList.remove('dokufix-live');
+          console.error(err);
+        }
+      });
+      bar.addEventListener('change', zoom);
+    });
+  }
+
+  return { fromXml, fromMermaid, parseMermaid, toXml, diXml, enhance };
+})();
+
+</script>
+<script>
+// Mermaid bekommt keine festen Farben, sondern die CSS-Variablen der Seite.
+// Dadurch folgt das Diagramm dem Hell-/Dunkel-Schema ohne zweites Rendern.
+// Nur Farben und Striche überschreiben: Mermaid misst die Textbreite vor dem Rendern,
+// eine andere Schrift oder Stärke per CSS schneidet Beschriftungen ab.
+const MERMAID_THEME_CSS = `
+  .swimlane-body{fill:var(--surface)!important;stroke:var(--line)!important}
+  .swimlane-title{fill:var(--accent-soft)!important;stroke:var(--line)!important}
+  .cluster-label p,.cluster-label span{color:var(--ink);font-weight:600;font-size:13px}
+  .node rect,.node polygon,.node circle,.node path{fill:var(--surface)!important;stroke:var(--accent)!important;stroke-width:1.5px;filter:none!important}
+  .node rect{rx:7px;ry:7px}
+  .node .outer-circle{stroke:var(--ink)!important;stroke-width:3.5px}
+  .node .inner-circle{stroke:none!important;fill:none!important}
+  .node.geplant rect{stroke:var(--plan)!important;stroke-dasharray:6 4}
+  .nodeLabel,.nodeLabel p{color:var(--ink)}
+  .flowchart-link{stroke:var(--ink-soft)!important;stroke-width:1.5px}
+  .arrowMarkerPath{fill:var(--ink-soft)!important;stroke:var(--ink-soft)!important}
+  .edgeLabel,.edgeLabel p,.labelBkg{background-color:var(--surface)!important;color:var(--ink)}
+`;
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'strict',
+  theme: 'base',
+  look: 'classic',
+  themeVariables: { fontFamily: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif', fontSize: '13px' },
+  themeCSS: MERMAID_THEME_CSS,
+  flowchart: { nodeSpacing: 20, rankSpacing: 36 },
+  swimlane: { lineHops: 'arc' }
+});
+
+(async () => {
+  const main = document.querySelector('main');
+  try {
+    main.innerHTML = marked.parse(DOKUFIX_SOURCE, { gfm: true, breaks: false });
+    DokufixKomponenten.render(main, document.querySelector('.dokufix-nav'));
+  } catch (err) {
+    // Ein Fehler in einem Pass darf nicht still eine halbfertige Seite hinterlassen.
+    const box = document.createElement('p');
+    box.className = 'dokufix-warnung';
+    box.dataset.fehler = 'render';
+    box.textContent = 'Fehler beim Rendern: ' + (err && err.message || err);
+    main.prepend(box);
+    console.error(err);
+  }
+
+  // Mermaid misst Text beim Rendern, die Schrift muss vorher geladen sein.
+  try { await Promise.all(['400 13px "IBM Plex Sans"', '600 13px "IBM Plex Sans"', '500 11px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch (e) {}
+  // Diagramme: Mermaid direkt, BPMN über bpmn-js. Die Bibliothek (195 KB, Viewer mit Zoom und Verschieben)
+  // wird nur geladen, wenn das Dokument BPMN enthält.
+  const BPMN_JS = 'https://cdn.jsdelivr.net/npm/bpmn-js@18/dist/bpmn-navigated-viewer.production.min.js';
+  const loadScript = src => new Promise((ok, fail) => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = ok; el.onerror = () => fail(new Error('Nicht ladbar: ' + src));
+    document.head.append(el);
+  });
+  const headingBefore = el => {
+    for (let p = el.previousElementSibling; p; p = p.previousElementSibling) {
+      if (/^H[1-4]$/.test(p.tagName)) { const c = p.cloneNode(true); c.querySelectorAll('.dokufix-chip').forEach(x => x.remove()); return c.textContent.trim(); }
+    }
+    return '';
+  };
+  const bpmnLinks = (xml, title) => [
+    { text: 'BPMN 2.0 herunterladen', href: 'data:application/xml;charset=utf-8,' + encodeURIComponent(xml), download: DokufixKomponenten.slugify(title || 'prozess') + '.bpmn' },
+    { text: 'gerendert mit bpmn.io', href: 'https://bpmn.io' }
+  ];
+  const blocks = [...main.querySelectorAll('pre > code.language-mermaid, pre > code.language-bpmn')];
+  const wantsBpmn = blocks.some(b => b.classList.contains('language-bpmn') || b.parentElement.classList.contains('dokufix-bpmn'));
+  let bpmnError = null;
+  if (wantsBpmn && typeof BpmnJS === 'undefined') { try { await loadScript(BPMN_JS); } catch (err) { bpmnError = err; } }
+  let n = 0;
+  for (const block of blocks) {
+    const pre = block.parentElement;
+    const title = pre.dataset.bpmn || headingBefore(pre);
+    let out;
+    n++;
+    try {
+      if (block.classList.contains('language-bpmn')) {
+        if (bpmnError) throw bpmnError;
+        const r = await DokufixBpmn.fromXml(block.textContent);
+        out = DokufixKomponenten.diagramFigure(r.svg, { kind: 'bpmn', title, links: bpmnLinks(r.xml, title) });
+      } else if (pre.classList.contains('dokufix-bpmn')) {
+        if (bpmnError) throw bpmnError;
+        const r = await DokufixBpmn.fromMermaid(block.textContent, title);
+        out = DokufixKomponenten.diagramFigure(r.svg, { kind: 'bpmn', title, links: bpmnLinks(r.xml, title) });
+        if (Object.keys(r.marks).length) out.dataset.bpmnMarks = JSON.stringify(r.marks);
+      } else {
+        const { svg } = await mermaid.render('dokufix-mermaid-' + n, block.textContent);
+        out = DokufixKomponenten.diagramFigure(svg, { kind: 'mermaid', title });
+      }
+    } catch (err) {
+      // Mermaid würde sonst sein Fehlerbild als Diagramm ausliefern.
+      out = DokufixKomponenten.warnung('Diagramm ' + n + ' ist fehlerhaft: ' + String(err && err.message || err).split('\n')[0]);
+      out.dataset.fehler = block.classList.contains('language-bpmn') || pre.classList.contains('dokufix-bpmn') ? 'bpmn' : 'mermaid';
+      document.querySelectorAll('body > [id^="ddokufix-"], body > [id^="dokufix-mermaid-"], body > [id^="dokufix-bpmn-layout-"]').forEach(e => e.remove());
+    }
+    pre.replaceWith(out);
+  }
+  // Die Markierung „bpmn“ vor einem Codeblock, der kein Mermaid ist
+  main.querySelectorAll('pre.dokufix-bpmn').forEach(pre => pre.before(DokufixKomponenten.warnung('Markierung „dokufix: bpmn“ erwartet direkt danach einen Mermaid-Codeblock.')));
+  DokufixKomponenten.enhance(document);
+  DokufixBpmn.enhance(document);
+  document.documentElement.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html><meta charset="utf-8">
+<body style="margin:0;background:#fff;font-family:sans-serif">
+<script src="../node_modules/mermaid/dist/mermaid.min.js"></script>
+<script src="../node_modules/bpmn-js/dist/bpmn-viewer.production.min.js"></script>
+<script src="out/bpmn-auto-layout.bundle.min.js"></script>
+<div id="canvas" style="width:1500px;height:800px"></div>
+<script>
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const TAG = { start: 'startEvent', end: 'endEvent', gateway: 'exclusiveGateway', task: 'task' };
+
+// Modell → BPMN-2.0-XML. Ohne `di` entsteht nur die Semantik (keine Koordinaten).
+function toBpmnXml(model, { collaboration = false, di = null } = {}) {
+  const inc = {}, out = {};
+  model.flows.forEach(f => { (out[f.from] ||= []).push(f.id); (inc[f.to] ||= []).push(f.id); });
+  let x = '<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">\n';
+  if (collaboration) x += '  <bpmn:collaboration id="Collaboration_1"><bpmn:participant id="Participant_1" name="' + esc(model.name) + '" processRef="Process_1"/></bpmn:collaboration>\n';
+  x += '  <bpmn:process id="Process_1" isExecutable="false">\n';
+  if (model.lanes.length) {
+    x += '    <bpmn:laneSet id="LaneSet_1">\n';
+    model.lanes.forEach(l => { x += '      <bpmn:lane id="Lane_' + l.id + '" name="' + esc(l.name) + '">' + l.nodes.map(n => '<bpmn:flowNodeRef>' + n + '</bpmn:flowNodeRef>').join('') + '</bpmn:lane>\n'; });
+    x += '    </bpmn:laneSet>\n';
+  }
+  model.nodes.forEach(n => {
+    x += '    <bpmn:' + TAG[n.type] + ' id="' + n.id + '" name="' + esc(n.name) + '">' +
+      (inc[n.id] || []).map(f => '<bpmn:incoming>' + f + '</bpmn:incoming>').join('') +
+      (out[n.id] || []).map(f => '<bpmn:outgoing>' + f + '</bpmn:outgoing>').join('') + '</bpmn:' + TAG[n.type] + '>\n';
+  });
+  model.flows.forEach(f => { x += '    <bpmn:sequenceFlow id="' + f.id + '" sourceRef="' + f.from + '" targetRef="' + f.to + '"' + (f.name ? ' name="' + esc(f.name) + '"' : '') + '/>\n'; });
+  x += '  </bpmn:process>\n';
+  if (di) {
+    const b = r => '<dc:Bounds x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '"/>';
+    x += '  <bpmndi:BPMNDiagram id="Diagram_1"><bpmndi:BPMNPlane id="Plane_1" bpmnElement="' + (collaboration ? 'Collaboration_1' : 'Process_1') + '">\n';
+    if (collaboration && di.pool) x += '    <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="Participant_1" isHorizontal="true">' + b(di.pool) + '</bpmndi:BPMNShape>\n';
+    model.lanes.forEach(l => { if (di.lanes[l.id]) x += '    <bpmndi:BPMNShape id="Lane_' + l.id + '_di" bpmnElement="Lane_' + l.id + '" isHorizontal="true">' + b(di.lanes[l.id]) + '</bpmndi:BPMNShape>\n'; });
+    model.nodes.forEach(n => { x += '    <bpmndi:BPMNShape id="' + n.id + '_di" bpmnElement="' + n.id + '"' + (n.type === 'gateway' ? ' isMarkerVisible="true"' : '') + '>' + b(di.nodes[n.id]) + '</bpmndi:BPMNShape>\n'; });
+    model.flows.forEach(f => { x += '    <bpmndi:BPMNEdge id="' + f.id + '_di" bpmnElement="' + f.id + '">' + di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + '</bpmndi:BPMNEdge>\n'; });
+    x += '  </bpmndi:BPMNPlane></bpmndi:BPMNDiagram>\n';
+  }
+  return x + '</bpmn:definitions>\n';
+}
+
+// Mermaid-Flowchart-Quelltext → Modell, über Mermaids eigenen Parser (kein zweiter Parser nötig).
+async function mermaidToModel(src, name) {
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'loose' });
+  const diagram = await mermaid.mermaidAPI.getDiagramFromText(src);
+  const db = diagram.db;
+  const ta = document.createElement('textarea');
+  const text = t => { ta.innerHTML = String(t || '').replace(/<br\s*\/?>/gi, ' '); return ta.value.replace(/\s+/g, ' ').trim(); };
+  const vertices = [...db.getVertices().values()];
+  const edges = db.getEdges();
+  const subs = db.getSubGraphs();
+  const hasIn = new Set(edges.map(e => e.end));
+  const nodes = vertices.map(v => ({
+    id: v.id, name: text(v.text),
+    type: v.type === 'doublecircle' ? 'end' : v.type === 'circle' ? (hasIn.has(v.id) ? 'end' : 'start') : v.type === 'diamond' ? 'gateway' : 'task',
+    cls: (v.classes || []).join(' ')
+  }));
+  const flows = edges.map((e, i) => ({ id: 'Flow_' + (i + 1), from: e.start, to: e.end, name: text(e.text), dotted: e.stroke === 'dotted' }));
+  const lanes = subs.map(s => ({ srcId: s.id, id: s.id.replace(/\W/g, '_'), name: text(s.title), nodes: s.nodes.filter(n => vertices.some(v => v.id === n)) }));
+  return { name, nodes, flows, lanes, raw: { vertexTypes: vertices.map(v => v.id + ':' + v.type), subgraphs: subs.map(s => s.id + '=' + s.nodes.join(',')) } };
+}
+
+let viewer;
+async function show(xml) {
+  if (viewer) viewer.destroy();
+  viewer = new BpmnJS({ container: '#canvas' });
+  const { warnings } = await viewer.importXML(xml);
+  viewer.get('canvas').zoom('fit-viewport');
+  const { svg } = await viewer.saveSVG();
+  const reg = viewer.get('elementRegistry');
+  return { warnings: warnings.map(w => String(w.message || w).slice(0, 120)), svgBytes: svg.length, svg,
+           lanesDrawn: reg.filter(e => e.type === 'bpmn:Lane').length, shapes: reg.filter(e => e.type !== 'label').length,
+           foreignObjects: (svg.match(/<foreignObject/g) || []).length, textEls: (svg.match(/<text/g) || []).length };
+}
+// Variante C: Mermaids Swimlane-Layout als Koordinatenquelle für das BPMN-DI.
+// Rendert den Quelltext als swimlane-beta, liest Bahnen, Knoten und Kantenpunkte aus dem SVG.
+async function mermaidLayoutToDi(body, model) {
+  mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', flowchart: { rankSpacing: 50, nodeSpacing: 30 } });
+  const host = document.createElement('div');
+  host.style.cssText = 'position:absolute;left:-99999px;top:0;width:4000px';
+  document.body.append(host);
+  const { svg } = await mermaid.render('lay' + Date.now(), 'swimlane-beta LR\n' + body);
+  host.innerHTML = svg;
+  const root = host.querySelector('svg');
+  const vb = root.viewBox.baseVal;
+  const ox = 60 - vb.x, oy = 20 - vb.y;                       // Platz links für den Pool-Kopf
+  const R = n => Math.round(n);
+  const di = { lanes: {}, nodes: {}, flows: {}, centers: {} };
+  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+  for (const l of model.lanes) {
+    const g = [...root.querySelectorAll('g.cluster.swimlane')].find(e => e.dataset.id === l.srcId);
+    if (!g) throw new Error('Bahn nicht gefunden: ' + l.srcId);
+    const rects = [...g.querySelectorAll('rect.swimlane-body, rect.swimlane-title')].map(r => r.getBBox());
+    const x1 = Math.min(...rects.map(r => r.x)), y1 = Math.min(...rects.map(r => r.y));
+    const x2 = Math.max(...rects.map(r => r.x + r.width)), y2 = Math.max(...rects.map(r => r.y + r.height));
+    di.lanes[l.id] = [R(x1 + ox), R(y1 + oy), R(x2 - x1), R(y2 - y1)];
+    minX = Math.min(minX, x1 + ox); minY = Math.min(minY, y1 + oy); maxX = Math.max(maxX, x2 + ox); maxY = Math.max(maxY, y2 + oy);
+  }
+  di.pool = [R(minX - 30), R(minY), R(maxX - minX + 30), R(maxY - minY)];
+  for (const n of model.nodes) {
+    const g = [...root.querySelectorAll('g.node')].find(e => new RegExp('flowchart-' + n.id + '-\\d+$').test(e.id));
+    if (!g) throw new Error('Knoten nicht gefunden: ' + n.id);
+    const m = /translate\(([-\d.]+)[ ,]+([-\d.]+)\)/.exec(g.getAttribute('transform'));
+    const cx = +m[1] + ox, cy = +m[2] + oy, bb = g.getBBox();
+    const w = n.type === 'task' ? bb.width : n.type === 'gateway' ? 50 : 36, h = n.type === 'task' ? bb.height : n.type === 'gateway' ? 50 : 36;
+    di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), R(w), R(h)];
+    di.centers[n.id] = { cx, cy, w, h };
+  }
+  // Kantenenden an die (kleineren) BPMN-Symbole heranziehen
+  const snap = (p, q, c) => {
+    if (Math.abs(p.y - q.y) < 1) return [R(c.cx + Math.sign(q.x - p.x) * c.w / 2), R(p.y)];
+    if (Math.abs(p.x - q.x) < 1) return [R(p.x), R(c.cy + Math.sign(q.y - p.y) * c.h / 2)];
+    return [R(p.x), R(p.y)];
+  };
+  model.flows.forEach((f, i) => {
+    const path = [...root.querySelectorAll('path[data-edge="true"]')].find(e => new RegExp('^L_' + f.from + '_' + f.to + '_\\d+$').test(e.dataset.id));
+    if (!path) throw new Error('Kante nicht gefunden: ' + f.from + '>' + f.to);
+    const pts = JSON.parse(atob(path.dataset.points)).map(p => ({ x: p.x + ox, y: p.y + oy }));
+    const wp = pts.map(p => [R(p.x), R(p.y)]);
+    wp[0] = snap(pts[0], pts[1], di.centers[f.from]);
+    wp[wp.length - 1] = snap(pts[pts.length - 1], pts[pts.length - 2], di.centers[f.to]);
+    di.flows[f.id] = wp;
+  });
+  host.remove();
+  return di;
+}
+</script>

@@ -1,0 +1,940 @@
+<!doctype html><meta charset="utf-8"><body style="font:15px/1.5 system-ui,sans-serif;max-width:860px;margin:24px auto;padding:0 16px"><style>table{border-collapse:collapse}td,th{border:1px solid #ccc;padding:4px 8px}blockquote{border-left:4px solid #ccc;margin-left:0;padding-left:12px;color:#444}pre{background:#f4f4f4;padding:10px;overflow:auto;max-height:160px}code{background:#f4f4f4}</style><h1>Kisten-Prozesse</h1>
+<p>Hof Sonnenfeld · frei erfundenes Beispiel · Stand 1. Oktober 2026</p>
+<h2>Einstieg</h2>
+<h3>Wie ein Kunde zum Hof findet</h3>
+<p>Es gibt zwei Wege, auf denen jemand von der Website zu uns kommt. Er bestellt eine Probekiste, oder er fragt ein Abo an. Diese Seite beschreibt beide Wege vollständig: was passiert, welches System es tut, und wer auf dem Hof etwas davon mitbekommt.</p>
+<!-- dokufix: cards -->
+<ul>
+<li><strong>Weg A · Abo-Anfrage</strong><br>Jemand will regelmäßig beliefert werden. Die Anfrage geht sofort an die Tourenplanung und zusätzlich zur Ablage in die Kundenkartei.</li>
+<li><strong>Weg B · Probekiste</strong><br>Jemand will erst einmal probieren. Daraus wird erst dann ein Abo, wenn er selbst darum bittet.</li>
+</ul>
+<h4>Die beiden Systeme</h4>
+<table>
+<thead>
+<tr>
+<th>System</th>
+<th>Wofür</th>
+<th>Wie lange</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><strong>Bestellformular</strong><br><em>auf der Website</em></td>
+<td>Die Abo-Anfrage, die Zustellung an die Tourenplanung und die Verteilung auf die Touren</td>
+<td>bleibt</td>
+</tr>
+<tr>
+<td><strong>Kundenkartei</strong></td>
+<td>Die Probekisten-Bestellungen, die Ablage aller Kunden, die Merkmale und die automatischen Abläufe</td>
+<td><code>⚪ Übergangslösung</code><br>bis die Warenwirtschaft steht</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!NOTE]
+<strong>Der Grundsatz dahinter:</strong> Eine Probekiste sagt, dass jemand neugierig ist. Sie sagt nicht, dass jemand jede Woche Gemüse will. Deshalb geht eine Probekiste nicht in die feste Tourenplanung, eine Abo-Anfrage schon.</p>
+</blockquote>
+<h4>Stand der fünf Prozesse</h4>
+<table>
+<thead>
+<tr>
+<th>Nr</th>
+<th>Prozess</th>
+<th>Auslöser</th>
+<th>Stand</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>1</td>
+<td>Probekiste</td>
+<td>Besucher bestellt eine Probekiste</td>
+<td><code>🟢 in Betrieb</code></td>
+</tr>
+<tr>
+<td>2</td>
+<td>Abo-Anfrage</td>
+<td>Besucher sendet das Abo-Formular</td>
+<td><code>🟢 in Betrieb</code></td>
+</tr>
+<tr>
+<td>3</td>
+<td>Erinnerungsmails</td>
+<td>Probekunde mit Erlaubnis für Erinnerungen</td>
+<td><code>🟡 geplant</code></td>
+</tr>
+<tr>
+<td>4</td>
+<td>Übergabe an die Tourenplanung</td>
+<td>Reaktion auf eine Erinnerung</td>
+<td><code>🟡 teilweise</code></td>
+</tr>
+<tr>
+<td>5</td>
+<td>Löschroutine</td>
+<td>fester Termin je Quartal</td>
+<td><code>🟡 geplant</code></td>
+</tr>
+</tbody></table>
+<h2>Die fünf Prozesse</h2>
+<h3>Probekiste <code>🟢 in Betrieb</code></h3>
+<p>Vier Kistenarten, vier Bestellseiten, ein Ablauf. Niemand auf dem Hof muss eingreifen, bis die Kiste gepackt wird.</p>
+<!-- dokufix: bpmn "Probekiste" -->
+<pre><code class="language-mermaid">swimlane-beta LR
+  accTitle: Ablaufdiagramm Probekiste mit vier Bahnen
+  subgraph Kunde
+    s((Probekiste&lt;br&gt;entdeckt))
+    a[Bestellung ausfüllen&lt;br&gt;und absenden]
+    c[Bestellung per Link&lt;br&gt;bestätigen]
+    e(((Probekiste&lt;br&gt;erhalten)))
+  end
+  subgraph Website
+    b[Bestätigungsmail senden&lt;br&gt;eine Vorlage für alle]
+    g[Lieferauftrag an&lt;br&gt;die nächste Tour]
+  end
+  subgraph Kundenkartei
+    d[Kunde anlegen&lt;br&gt;oder ergänzen]
+    f[Kistenart, Datum&lt;br&gt;und Status eintragen]
+    x{Erinnerungen&lt;br&gt;erlaubt?}
+    n(((Einmalkunde, keine&lt;br&gt;Erinnerung)))
+  end
+  subgraph Hofbüro
+    h[Erinnerungsmails&lt;br&gt;3 Mails, 3 Wochen]:::geplant
+    y{Reaktion?}
+    i[Übergabe an die&lt;br&gt;Tourenplanung, Prozess 2]:::geplant
+    z(((Mails beendet,&lt;br&gt;bleibt erreichbar)))
+  end
+  s --&gt; a
+  a --&gt; b
+  b -. Bestätigungsmail .-&gt; c
+  c --&gt; d
+  d --&gt; f
+  d --&gt; g
+  g --&gt; e
+  f --&gt; x
+  x -- nein --&gt; n
+  x -- ja --&gt; h
+  h --&gt; y
+  y -- ja --&gt; i
+  y -- nein --&gt; z
+</code></pre>
+<!-- dokufix: steps -->
+<ol>
+<li><em>Kunde:</em> Füllt die Bestellseite aus: Name, Adresse, E-Mail, Kistenart. Das Pflicht-Häkchen gilt der Lieferung, das zweite Häkchen erlaubt freiwillig spätere Erinnerungen.</li>
+<li><em>Website:</em> Verschickt die Bestätigungsmail aus der Vorlage <code>Bestätigung 2026</code>. Dieselbe Vorlage für alle vier Kistenarten, sie nennt noch keinen Liefertag.</li>
+<li><em>Kunde:</em> Klickt den Link in der Mail. Damit ist die Adresse nachweislich seine.</li>
+<li><em>Kundenkartei:</em> Legt den Kunden an oder ergänzt einen bestehenden und trägt ihn in die Liste <code>Probekunden</code> ein.</li>
+<li><em>Website:</em> Gibt den Lieferauftrag an die nächste passende Tour. Das ist die Auslieferung.</li>
+<li><em>Kundenkartei:</em> Der zugehörige Ablauf vermerkt, welche Kiste bestellt wurde, wann, und setzt den Status auf <code>PROBE</code>.</li>
+</ol>
+<h4>Danach trennen sich die Wege</h4>
+<!-- dokufix: cards -->
+<ul>
+<li><strong>Mit Erlaubnis</strong><br>Der Kunde bekommt später die Erinnerungsmails.</li>
+<li><strong>Ohne Erlaubnis</strong><br>Keine weitere Post. Der Kunde bleibt in der Kartei, er wird weder angeschrieben noch angerufen.</li>
+</ul>
+<blockquote>
+<p>[!WARNING]
+<strong>Was heute nicht passiert:</strong> Eine Probekiste löst keine Nachricht ans Hofbüro aus. Wer wissen will, wie viele bestellt wurden, schaut in die Liste <code>Probekunden</code>.</p>
+</blockquote>
+<h3>Abo-Anfrage <code>🟢 in Betrieb</code></h3>
+<p>Jemand möchte regelmäßig beliefert werden. Das kann aus eigenem Antrieb geschehen oder über den Aufruf in der letzten Erinnerungsmail. Beides mündet in dasselbe Formular, deshalb gibt es für die Tourenplanung nur einen Eingang.</p>
+<pre><code class="language-bpmn">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;bpmn:definitions xmlns:bpmn=&quot;http://www.omg.org/spec/BPMN/20100524/MODEL&quot; xmlns:bpmndi=&quot;http://www.omg.org/spec/BPMN/20100524/DI&quot; xmlns:dc=&quot;http://www.omg.org/spec/DD/20100524/DC&quot; xmlns:di=&quot;http://www.omg.org/spec/DD/20100524/DI&quot; id=&quot;Definitions_1&quot; targetNamespace=&quot;http://bpmn.io/schema/bpmn&quot; exporter=&quot;dokufix-spike&quot;&gt;
+  &lt;bpmn:collaboration id=&quot;Collaboration_1&quot;&gt;
+    &lt;bpmn:participant id=&quot;Participant_1&quot; name=&quot;Abo-Anfrage&quot; processRef=&quot;Process_1&quot;/&gt;
+  &lt;/bpmn:collaboration&gt;
+  &lt;bpmn:process id=&quot;Process_1&quot; isExecutable=&quot;false&quot;&gt;
+    &lt;bpmn:laneSet id=&quot;LaneSet_1&quot;&gt;
+      &lt;bpmn:lane id=&quot;Lane_Kunde&quot; name=&quot;Kunde&quot;&gt;&lt;bpmn:flowNodeRef&gt;Start&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Formular&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Eingang&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Bestellformular&quot; name=&quot;Bestellformular&quot;&gt;&lt;bpmn:flowNodeRef&gt;Pruefen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Bestaetigen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Tour&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Kundenkartei&quot; name=&quot;Kundenkartei&quot;&gt;&lt;bpmn:flowNodeRef&gt;Liste&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Status&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Erfasst&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Tourenplanung&quot; name=&quot;Tourenplanung&quot;&gt;&lt;bpmn:flowNodeRef&gt;TourNord&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;TourSued&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;TourStadt&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;TourHof&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Einplanen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Eingeplant&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+    &lt;/bpmn:laneSet&gt;
+    &lt;bpmn:startEvent id=&quot;Start&quot; name=&quot;Möchte regelmäßig beliefert werden&quot;&gt;&lt;bpmn:outgoing&gt;Flow_1&lt;/bpmn:outgoing&gt;&lt;/bpmn:startEvent&gt;
+    &lt;bpmn:task id=&quot;Formular&quot; name=&quot;Abo-Formular ausfüllen, Tour wählen&quot;&gt;&lt;bpmn:incoming&gt;Flow_1&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_2&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:endEvent id=&quot;Eingang&quot; name=&quot;Bestätigung erhalten&quot;&gt;&lt;bpmn:incoming&gt;Flow_4&lt;/bpmn:incoming&gt;&lt;/bpmn:endEvent&gt;
+    &lt;bpmn:task id=&quot;Pruefen&quot; name=&quot;Pflichtfelder und Adresse prüfen&quot;&gt;&lt;bpmn:incoming&gt;Flow_2&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_3&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_5&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_6&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:task id=&quot;Bestaetigen&quot; name=&quot;Bestätigung an den Kunden senden&quot;&gt;&lt;bpmn:incoming&gt;Flow_3&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_4&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:exclusiveGateway id=&quot;Tour&quot; name=&quot;Welche Tour?&quot;&gt;&lt;bpmn:incoming&gt;Flow_5&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_9&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_10&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_11&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_12&lt;/bpmn:outgoing&gt;&lt;/bpmn:exclusiveGateway&gt;
+    &lt;bpmn:task id=&quot;Liste&quot; name=&quot;Kunde in Liste Abo-Anfragen&quot;&gt;&lt;bpmn:incoming&gt;Flow_6&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_7&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:task id=&quot;Status&quot; name=&quot;Status auf ABO_ANFRAGE setzen&quot;&gt;&lt;bpmn:incoming&gt;Flow_7&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_8&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:endEvent id=&quot;Erfasst&quot; name=&quot;erfasst&quot;&gt;&lt;bpmn:incoming&gt;Flow_8&lt;/bpmn:incoming&gt;&lt;/bpmn:endEvent&gt;
+    &lt;bpmn:task id=&quot;TourNord&quot; name=&quot;Tour Nord: Dörfer am Fluss&quot;&gt;&lt;bpmn:incoming&gt;Flow_9&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_13&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:task id=&quot;TourSued&quot; name=&quot;Tour Süd: Stadtrand und Siedlung&quot;&gt;&lt;bpmn:incoming&gt;Flow_10&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_14&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:task id=&quot;TourStadt&quot; name=&quot;Tour Stadt: Innenstadt per Lastenrad&quot;&gt;&lt;bpmn:incoming&gt;Flow_11&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_15&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:task id=&quot;TourHof&quot; name=&quot;Abholung am Hof: alles andere&quot;&gt;&lt;bpmn:incoming&gt;Flow_12&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_16&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:task id=&quot;Einplanen&quot; name=&quot;Kiste einplanen, Status pflegen&quot;&gt;&lt;bpmn:incoming&gt;Flow_13&lt;/bpmn:incoming&gt;&lt;bpmn:incoming&gt;Flow_14&lt;/bpmn:incoming&gt;&lt;bpmn:incoming&gt;Flow_15&lt;/bpmn:incoming&gt;&lt;bpmn:incoming&gt;Flow_16&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_17&lt;/bpmn:outgoing&gt;&lt;/bpmn:task&gt;
+    &lt;bpmn:endEvent id=&quot;Eingeplant&quot; name=&quot;eingeplant&quot;&gt;&lt;bpmn:incoming&gt;Flow_17&lt;/bpmn:incoming&gt;&lt;/bpmn:endEvent&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_1&quot; sourceRef=&quot;Start&quot; targetRef=&quot;Formular&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_2&quot; sourceRef=&quot;Formular&quot; targetRef=&quot;Pruefen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_3&quot; sourceRef=&quot;Pruefen&quot; targetRef=&quot;Bestaetigen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_4&quot; sourceRef=&quot;Bestaetigen&quot; targetRef=&quot;Eingang&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_5&quot; sourceRef=&quot;Pruefen&quot; targetRef=&quot;Tour&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_6&quot; sourceRef=&quot;Pruefen&quot; targetRef=&quot;Liste&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_7&quot; sourceRef=&quot;Liste&quot; targetRef=&quot;Status&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_8&quot; sourceRef=&quot;Status&quot; targetRef=&quot;Erfasst&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_9&quot; sourceRef=&quot;Tour&quot; targetRef=&quot;TourNord&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_10&quot; sourceRef=&quot;Tour&quot; targetRef=&quot;TourSued&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_11&quot; sourceRef=&quot;Tour&quot; targetRef=&quot;TourStadt&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_12&quot; sourceRef=&quot;Tour&quot; targetRef=&quot;TourHof&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_13&quot; sourceRef=&quot;TourNord&quot; targetRef=&quot;Einplanen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_14&quot; sourceRef=&quot;TourSued&quot; targetRef=&quot;Einplanen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_15&quot; sourceRef=&quot;TourStadt&quot; targetRef=&quot;Einplanen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_16&quot; sourceRef=&quot;TourHof&quot; targetRef=&quot;Einplanen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_17&quot; sourceRef=&quot;Einplanen&quot; targetRef=&quot;Eingeplant&quot;/&gt;
+  &lt;/bpmn:process&gt;
+  &lt;bpmndi:BPMNDiagram id=&quot;Diagram_1&quot;&gt;
+    &lt;bpmndi:BPMNPlane id=&quot;Plane_1&quot; bpmnElement=&quot;Collaboration_1&quot;&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Participant_1_di&quot; bpmnElement=&quot;Participant_1&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;10&quot; y=&quot;20&quot; width=&quot;1290&quot; height=&quot;830&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Kunde_di&quot; bpmnElement=&quot;Lane_Kunde&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;20&quot; width=&quot;1260&quot; height=&quot;130&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Bestellformular_di&quot; bpmnElement=&quot;Lane_Bestellformular&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;150&quot; width=&quot;1260&quot; height=&quot;150&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Kundenkartei_di&quot; bpmnElement=&quot;Lane_Kundenkartei&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;300&quot; width=&quot;1260&quot; height=&quot;130&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Tourenplanung_di&quot; bpmnElement=&quot;Lane_Tourenplanung&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;430&quot; width=&quot;1260&quot; height=&quot;420&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Start_di&quot; bpmnElement=&quot;Start&quot;&gt;&lt;dc:Bounds x=&quot;92&quot; y=&quot;67&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Formular_di&quot; bpmnElement=&quot;Formular&quot;&gt;&lt;dc:Bounds x=&quot;190&quot; y=&quot;45&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Eingang_di&quot; bpmnElement=&quot;Eingang&quot;&gt;&lt;dc:Bounds x=&quot;632&quot; y=&quot;67&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Pruefen_di&quot; bpmnElement=&quot;Pruefen&quot;&gt;&lt;dc:Bounds x=&quot;190&quot; y=&quot;185&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Bestaetigen_di&quot; bpmnElement=&quot;Bestaetigen&quot;&gt;&lt;dc:Bounds x=&quot;390&quot; y=&quot;185&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Tour_di&quot; bpmnElement=&quot;Tour&quot; isMarkerVisible=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;625&quot; y=&quot;200&quot; width=&quot;50&quot; height=&quot;50&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;602&quot; y=&quot;168&quot; width=&quot;96&quot; height=&quot;28&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Liste_di&quot; bpmnElement=&quot;Liste&quot;&gt;&lt;dc:Bounds x=&quot;190&quot; y=&quot;325&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Status_di&quot; bpmnElement=&quot;Status&quot;&gt;&lt;dc:Bounds x=&quot;390&quot; y=&quot;325&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Erfasst_di&quot; bpmnElement=&quot;Erfasst&quot;&gt;&lt;dc:Bounds x=&quot;632&quot; y=&quot;347&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;TourNord_di&quot; bpmnElement=&quot;TourNord&quot;&gt;&lt;dc:Bounds x=&quot;790&quot; y=&quot;450&quot; width=&quot;170&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;TourSued_di&quot; bpmnElement=&quot;TourSued&quot;&gt;&lt;dc:Bounds x=&quot;790&quot; y=&quot;550&quot; width=&quot;170&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;TourStadt_di&quot; bpmnElement=&quot;TourStadt&quot;&gt;&lt;dc:Bounds x=&quot;790&quot; y=&quot;650&quot; width=&quot;170&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;TourHof_di&quot; bpmnElement=&quot;TourHof&quot;&gt;&lt;dc:Bounds x=&quot;790&quot; y=&quot;750&quot; width=&quot;170&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Einplanen_di&quot; bpmnElement=&quot;Einplanen&quot;&gt;&lt;dc:Bounds x=&quot;1030&quot; y=&quot;600&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Eingeplant_di&quot; bpmnElement=&quot;Eingeplant&quot;&gt;&lt;dc:Bounds x=&quot;1212&quot; y=&quot;622&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_1_di&quot; bpmnElement=&quot;Flow_1&quot;&gt;&lt;di:waypoint x=&quot;128&quot; y=&quot;85&quot;/&gt;&lt;di:waypoint x=&quot;190&quot; y=&quot;85&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_2_di&quot; bpmnElement=&quot;Flow_2&quot;&gt;&lt;di:waypoint x=&quot;250&quot; y=&quot;125&quot;/&gt;&lt;di:waypoint x=&quot;250&quot; y=&quot;185&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_3_di&quot; bpmnElement=&quot;Flow_3&quot;&gt;&lt;di:waypoint x=&quot;310&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;390&quot; y=&quot;225&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_4_di&quot; bpmnElement=&quot;Flow_4&quot;&gt;&lt;di:waypoint x=&quot;450&quot; y=&quot;185&quot;/&gt;&lt;di:waypoint x=&quot;450&quot; y=&quot;85&quot;/&gt;&lt;di:waypoint x=&quot;632&quot; y=&quot;85&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_5_di&quot; bpmnElement=&quot;Flow_5&quot;&gt;&lt;di:waypoint x=&quot;290&quot; y=&quot;265&quot;/&gt;&lt;di:waypoint x=&quot;290&quot; y=&quot;285&quot;/&gt;&lt;di:waypoint x=&quot;650&quot; y=&quot;285&quot;/&gt;&lt;di:waypoint x=&quot;650&quot; y=&quot;250&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_6_di&quot; bpmnElement=&quot;Flow_6&quot;&gt;&lt;di:waypoint x=&quot;230&quot; y=&quot;265&quot;/&gt;&lt;di:waypoint x=&quot;230&quot; y=&quot;325&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_7_di&quot; bpmnElement=&quot;Flow_7&quot;&gt;&lt;di:waypoint x=&quot;310&quot; y=&quot;365&quot;/&gt;&lt;di:waypoint x=&quot;390&quot; y=&quot;365&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_8_di&quot; bpmnElement=&quot;Flow_8&quot;&gt;&lt;di:waypoint x=&quot;510&quot; y=&quot;365&quot;/&gt;&lt;di:waypoint x=&quot;632&quot; y=&quot;365&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_9_di&quot; bpmnElement=&quot;Flow_9&quot;&gt;&lt;di:waypoint x=&quot;675&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;490&quot;/&gt;&lt;di:waypoint x=&quot;790&quot; y=&quot;490&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_10_di&quot; bpmnElement=&quot;Flow_10&quot;&gt;&lt;di:waypoint x=&quot;675&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;590&quot;/&gt;&lt;di:waypoint x=&quot;790&quot; y=&quot;590&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_11_di&quot; bpmnElement=&quot;Flow_11&quot;&gt;&lt;di:waypoint x=&quot;675&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;690&quot;/&gt;&lt;di:waypoint x=&quot;790&quot; y=&quot;690&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_12_di&quot; bpmnElement=&quot;Flow_12&quot;&gt;&lt;di:waypoint x=&quot;675&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;790&quot;/&gt;&lt;di:waypoint x=&quot;790&quot; y=&quot;790&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_13_di&quot; bpmnElement=&quot;Flow_13&quot;&gt;&lt;di:waypoint x=&quot;960&quot; y=&quot;490&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;490&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;640&quot;/&gt;&lt;di:waypoint x=&quot;1030&quot; y=&quot;640&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_14_di&quot; bpmnElement=&quot;Flow_14&quot;&gt;&lt;di:waypoint x=&quot;960&quot; y=&quot;590&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;590&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;640&quot;/&gt;&lt;di:waypoint x=&quot;1030&quot; y=&quot;640&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_15_di&quot; bpmnElement=&quot;Flow_15&quot;&gt;&lt;di:waypoint x=&quot;960&quot; y=&quot;690&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;690&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;640&quot;/&gt;&lt;di:waypoint x=&quot;1030&quot; y=&quot;640&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_16_di&quot; bpmnElement=&quot;Flow_16&quot;&gt;&lt;di:waypoint x=&quot;960&quot; y=&quot;790&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;790&quot;/&gt;&lt;di:waypoint x=&quot;995&quot; y=&quot;640&quot;/&gt;&lt;di:waypoint x=&quot;1030&quot; y=&quot;640&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_17_di&quot; bpmnElement=&quot;Flow_17&quot;&gt;&lt;di:waypoint x=&quot;1150&quot; y=&quot;640&quot;/&gt;&lt;di:waypoint x=&quot;1212&quot; y=&quot;640&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+    &lt;/bpmndi:BPMNPlane&gt;
+  &lt;/bpmndi:BPMNDiagram&gt;
+&lt;/bpmn:definitions&gt;
+</code></pre>
+<!-- dokufix: steps -->
+<ol>
+<li><em>Kunde:</em> Füllt aus: Name, Adresse, E-Mail, Telefon, Kistengröße, Tour, Wünsche und die Datenschutz-Zustimmung. Ein verborgenes Feld merkt sich, von welcher Seite die Anfrage kam.</li>
+<li><em>Bestellformular:</em> Prüft die Pflichtfelder und die Adresse.</li>
+<li><em>Bestellformular:</em> Schickt die Anfrage an die gewählte Tour. Rückfragen der Tour gehen direkt an den Kunden.</li>
+<li><em>Bestellformular:</em> Schickt dem Kunden eine Bestätigung.</li>
+<li><em>Bestellformular:</em> Überträgt den Kunden zusätzlich in die Kundenkartei, in die Liste <code>Abo-Anfragen</code>.</li>
+<li><em>Kundenkartei:</em> Der Ablauf <code>Abo-Anfrage eintragen</code> setzt den Status auf <code>ABO_ANFRAGE</code>.</li>
+<li><em>Tourenplanung:</em> Plant die Kiste ein und pflegt den Status.</li>
+</ol>
+<blockquote>
+<p>[!NOTE]
+<strong>Warum der Umweg über die Kundenkartei:</strong> Nur dadurch ist erkennbar, ob eine Abo-Anfrage aus einer früheren Probekiste entstanden ist. Die Kartei führt beide Vorgänge über die E-Mail-Adresse zusammen. Die Zustellung an die Tour hängt nicht daran, sie läuft unabhängig.</p>
+</blockquote>
+<h3>Erinnerungsmails <code>🟡 geplant</code></h3>
+<p>Drei Mails über drei Wochen mit genau einem Zweck: aus einer Probekiste einen zweiten Kontakt machen. Sie gehen nur an Kunden, die bei der Bestellung freiwillig zugestimmt haben.</p>
+<table>
+<thead>
+<tr>
+<th>Wann</th>
+<th>Zweck</th>
+<th>Was drinsteht</th>
+<th>Aufruf</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Tag 3</td>
+<td>Nutzen</td>
+<td>Ein Rezept zu dem Gemüse, das in der Kiste war</td>
+<td>Einladung zu antworten</td>
+</tr>
+<tr>
+<td>Tag 10</td>
+<td>Einblick</td>
+<td>Ein Bericht vom Feld: was gerade wächst und was als Nächstes kommt</td>
+<td>Link auf die Kistenübersicht</td>
+</tr>
+<tr>
+<td>Tag 21</td>
+<td>Angebot</td>
+<td>Das Abo, knapp erklärt, mit Abmeldemöglichkeit im selben Text</td>
+<td>Abo anfragen</td>
+</tr>
+<tr>
+<td>danach</td>
+<td>Ende</td>
+<td>Keine vierte Mail. Wer nicht reagiert, bleibt in der Kartei und ist zur nächsten Saison wieder erreichbar</td>
+<td></td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!WARNING]
+<strong>Zwei Bedingungen:</strong> Die Mails dürfen erst nach der Prüfung des Zustimmungstexts verschickt werden. Und sie enden automatisch, sobald der Status nicht mehr auf <code>PROBE</code> steht, damit niemand Werbung bekommt, während die Tourenplanung schon mit ihm spricht.</p>
+</blockquote>
+<h3>Übergabe an die Tourenplanung <code>🟡 teilweise</code></h3>
+<p>Ein Probekunde wird zum Abo-Kunden, wenn er sich selbst meldet. Dafür gibt es zwei Wege, und sie unterscheiden sich im Aufwand erheblich.</p>
+<!-- dokufix: bpmn "Übergabe an die Tourenplanung" -->
+<pre><code class="language-mermaid">swimlane-beta LR
+  accTitle: Ablaufdiagramm Übergabe an die Tourenplanung mit vier Bahnen
+  subgraph Kunde
+    s((Reagiert auf&lt;br&gt;eine Erinnerung))
+    w{Wie meldet&lt;br&gt;er sich?}
+    r[📤 Auf die Mail&lt;br&gt;antworten]
+  end
+  subgraph Hofbüro
+    m((📨 Antwort im&lt;br&gt;Postfach))
+    x{Art der&lt;br&gt;Antwort?}
+    i(((Abwesenheit,&lt;br&gt;nichts zu tun)))
+    p{+}
+    b[📤 Persönlich antworten&lt;br&gt;am selben Tag]
+    j{+}
+    g[📤 An die Tourenplanung&lt;br&gt;geben]
+  end
+  subgraph Kundenkartei
+    u[👤 Abmeldung&lt;br&gt;sofort eintragen]
+    eu(((Abgemeldet)))
+    t[👤 Status auf&lt;br&gt;ABO_ANFRAGE setzen]
+    n[⚙ Erinnerungen enden&lt;br&gt;automatisch]
+  end
+  subgraph Tourenplanung
+    k[[Abo-Anfrage&lt;br&gt;Prozess 2]]
+    e(((Bei der&lt;br&gt;Tourenplanung)))
+  end
+  s --&gt; w
+  w -- Antwort --&gt; r
+  w -- Formular --&gt; k
+  r -.-&gt; m
+  m --&gt; x
+  x -- Abwesenheit --&gt; i
+  x -- Abmeldung --&gt; u
+  u --&gt; eu
+  x -- Anfrage --&gt; p
+  p --&gt; b
+  p --&gt; t
+  t --&gt; n
+  b --&gt; j
+  n --&gt; j
+  j --&gt; g
+  g --&gt; e
+  k --&gt; e
+</code></pre>
+<p>Zum Vergleich derselbe Ablauf als BPMN-XML, von Hand angeordnet:</p>
+<pre><code class="language-bpmn">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;bpmn:definitions xmlns:bpmn=&quot;http://www.omg.org/spec/BPMN/20100524/MODEL&quot; xmlns:bpmndi=&quot;http://www.omg.org/spec/BPMN/20100524/DI&quot; xmlns:dc=&quot;http://www.omg.org/spec/DD/20100524/DC&quot; xmlns:di=&quot;http://www.omg.org/spec/DD/20100524/DI&quot; id=&quot;Definitions_1&quot; targetNamespace=&quot;http://bpmn.io/schema/bpmn&quot; exporter=&quot;dokufix-spike&quot;&gt;
+  &lt;bpmn:collaboration id=&quot;Collaboration_1&quot;&gt;
+    &lt;bpmn:participant id=&quot;Participant_1&quot; name=&quot;Übergabe an die Tourenplanung&quot; processRef=&quot;Process_1&quot;/&gt;
+  &lt;/bpmn:collaboration&gt;
+  &lt;bpmn:process id=&quot;Process_1&quot; isExecutable=&quot;false&quot;&gt;
+    &lt;bpmn:laneSet id=&quot;LaneSet_1&quot;&gt;
+      &lt;bpmn:lane id=&quot;Lane_Kunde&quot; name=&quot;Kunde&quot;&gt;&lt;bpmn:flowNodeRef&gt;Start&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Weg&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Antworten&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Hofbuero&quot; name=&quot;Hofbüro&quot;&gt;&lt;bpmn:flowNodeRef&gt;Postfach&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Art&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Abwesenheit&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Teilen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;PersoenlichAntworten&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Zusammen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;AnTouren&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Kundenkartei&quot; name=&quot;Kundenkartei&quot;&gt;&lt;bpmn:flowNodeRef&gt;Abmelden&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Abgemeldet&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Status&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;MailsEnden&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Tourenplanung&quot; name=&quot;Tourenplanung&quot;&gt;&lt;bpmn:flowNodeRef&gt;AboAnfrage&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;BeiTouren&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+    &lt;/bpmn:laneSet&gt;
+    &lt;bpmn:startEvent id=&quot;Start&quot; name=&quot;Reagiert auf eine Erinnerung&quot;&gt;&lt;bpmn:outgoing&gt;Flow_1&lt;/bpmn:outgoing&gt;&lt;/bpmn:startEvent&gt;
+    &lt;bpmn:exclusiveGateway id=&quot;Weg&quot; name=&quot;Wie meldet er sich?&quot;&gt;&lt;bpmn:incoming&gt;Flow_1&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_2&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_3&lt;/bpmn:outgoing&gt;&lt;/bpmn:exclusiveGateway&gt;
+    &lt;bpmn:sendTask id=&quot;Antworten&quot; name=&quot;Auf die Mail antworten&quot;&gt;&lt;bpmn:incoming&gt;Flow_2&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_4&lt;/bpmn:outgoing&gt;&lt;/bpmn:sendTask&gt;
+    &lt;bpmn:intermediateCatchEvent id=&quot;Postfach&quot; name=&quot;Antwort im Postfach&quot;&gt;&lt;bpmn:incoming&gt;Flow_4&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_5&lt;/bpmn:outgoing&gt;&lt;bpmn:messageEventDefinition id=&quot;Postfach_def&quot;/&gt;&lt;/bpmn:intermediateCatchEvent&gt;
+    &lt;bpmn:exclusiveGateway id=&quot;Art&quot; name=&quot;Art der Antwort?&quot;&gt;&lt;bpmn:incoming&gt;Flow_5&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_6&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_7&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_9&lt;/bpmn:outgoing&gt;&lt;/bpmn:exclusiveGateway&gt;
+    &lt;bpmn:endEvent id=&quot;Abwesenheit&quot; name=&quot;Abwesenheit, nichts zu tun&quot;&gt;&lt;bpmn:incoming&gt;Flow_6&lt;/bpmn:incoming&gt;&lt;/bpmn:endEvent&gt;
+    &lt;bpmn:parallelGateway id=&quot;Teilen&quot;&gt;&lt;bpmn:incoming&gt;Flow_9&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_10&lt;/bpmn:outgoing&gt;&lt;bpmn:outgoing&gt;Flow_11&lt;/bpmn:outgoing&gt;&lt;/bpmn:parallelGateway&gt;
+    &lt;bpmn:sendTask id=&quot;PersoenlichAntworten&quot; name=&quot;Persönlich antworten am selben Tag&quot;&gt;&lt;bpmn:incoming&gt;Flow_10&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_13&lt;/bpmn:outgoing&gt;&lt;/bpmn:sendTask&gt;
+    &lt;bpmn:parallelGateway id=&quot;Zusammen&quot;&gt;&lt;bpmn:incoming&gt;Flow_13&lt;/bpmn:incoming&gt;&lt;bpmn:incoming&gt;Flow_14&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_15&lt;/bpmn:outgoing&gt;&lt;/bpmn:parallelGateway&gt;
+    &lt;bpmn:sendTask id=&quot;AnTouren&quot; name=&quot;An die Tourenplanung geben&quot;&gt;&lt;bpmn:incoming&gt;Flow_15&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_16&lt;/bpmn:outgoing&gt;&lt;/bpmn:sendTask&gt;
+    &lt;bpmn:userTask id=&quot;Abmelden&quot; name=&quot;Abmeldung sofort eintragen&quot;&gt;&lt;bpmn:incoming&gt;Flow_7&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_8&lt;/bpmn:outgoing&gt;&lt;/bpmn:userTask&gt;
+    &lt;bpmn:endEvent id=&quot;Abgemeldet&quot; name=&quot;Abgemeldet&quot;&gt;&lt;bpmn:incoming&gt;Flow_8&lt;/bpmn:incoming&gt;&lt;/bpmn:endEvent&gt;
+    &lt;bpmn:userTask id=&quot;Status&quot; name=&quot;Status auf ABO_ANFRAGE setzen&quot;&gt;&lt;bpmn:incoming&gt;Flow_11&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_12&lt;/bpmn:outgoing&gt;&lt;/bpmn:userTask&gt;
+    &lt;bpmn:serviceTask id=&quot;MailsEnden&quot; name=&quot;Erinnerungen enden automatisch&quot;&gt;&lt;bpmn:incoming&gt;Flow_12&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_14&lt;/bpmn:outgoing&gt;&lt;/bpmn:serviceTask&gt;
+    &lt;bpmn:callActivity id=&quot;AboAnfrage&quot; name=&quot;Abo-Anfrage Prozess 2&quot;&gt;&lt;bpmn:incoming&gt;Flow_3&lt;/bpmn:incoming&gt;&lt;bpmn:outgoing&gt;Flow_17&lt;/bpmn:outgoing&gt;&lt;/bpmn:callActivity&gt;
+    &lt;bpmn:endEvent id=&quot;BeiTouren&quot; name=&quot;Bei der Tourenplanung&quot;&gt;&lt;bpmn:incoming&gt;Flow_16&lt;/bpmn:incoming&gt;&lt;bpmn:incoming&gt;Flow_17&lt;/bpmn:incoming&gt;&lt;/bpmn:endEvent&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_1&quot; sourceRef=&quot;Start&quot; targetRef=&quot;Weg&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_2&quot; sourceRef=&quot;Weg&quot; targetRef=&quot;Antworten&quot; name=&quot;Antwort&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_3&quot; sourceRef=&quot;Weg&quot; targetRef=&quot;AboAnfrage&quot; name=&quot;Formular&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_4&quot; sourceRef=&quot;Antworten&quot; targetRef=&quot;Postfach&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_5&quot; sourceRef=&quot;Postfach&quot; targetRef=&quot;Art&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_6&quot; sourceRef=&quot;Art&quot; targetRef=&quot;Abwesenheit&quot; name=&quot;Abwesenheit&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_7&quot; sourceRef=&quot;Art&quot; targetRef=&quot;Abmelden&quot; name=&quot;Abmeldung&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_8&quot; sourceRef=&quot;Abmelden&quot; targetRef=&quot;Abgemeldet&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_9&quot; sourceRef=&quot;Art&quot; targetRef=&quot;Teilen&quot; name=&quot;Anfrage&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_10&quot; sourceRef=&quot;Teilen&quot; targetRef=&quot;PersoenlichAntworten&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_11&quot; sourceRef=&quot;Teilen&quot; targetRef=&quot;Status&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_12&quot; sourceRef=&quot;Status&quot; targetRef=&quot;MailsEnden&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_13&quot; sourceRef=&quot;PersoenlichAntworten&quot; targetRef=&quot;Zusammen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_14&quot; sourceRef=&quot;MailsEnden&quot; targetRef=&quot;Zusammen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_15&quot; sourceRef=&quot;Zusammen&quot; targetRef=&quot;AnTouren&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_16&quot; sourceRef=&quot;AnTouren&quot; targetRef=&quot;BeiTouren&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_17&quot; sourceRef=&quot;AboAnfrage&quot; targetRef=&quot;BeiTouren&quot;/&gt;
+  &lt;/bpmn:process&gt;
+  &lt;bpmndi:BPMNDiagram id=&quot;Diagram_1&quot;&gt;
+    &lt;bpmndi:BPMNPlane id=&quot;Plane_1&quot; bpmnElement=&quot;Collaboration_1&quot;&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Participant_1_di&quot; bpmnElement=&quot;Participant_1&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;10&quot; y=&quot;20&quot; width=&quot;1420&quot; height=&quot;565&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Kunde_di&quot; bpmnElement=&quot;Lane_Kunde&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;20&quot; width=&quot;1390&quot; height=&quot;130&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Hofbuero_di&quot; bpmnElement=&quot;Lane_Hofbuero&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;150&quot; width=&quot;1390&quot; height=&quot;175&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Kundenkartei_di&quot; bpmnElement=&quot;Lane_Kundenkartei&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;325&quot; width=&quot;1390&quot; height=&quot;160&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Lane_Tourenplanung_di&quot; bpmnElement=&quot;Lane_Tourenplanung&quot; isHorizontal=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;40&quot; y=&quot;485&quot; width=&quot;1390&quot; height=&quot;100&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Start_di&quot; bpmnElement=&quot;Start&quot;&gt;&lt;dc:Bounds x=&quot;92&quot; y=&quot;67&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Weg_di&quot; bpmnElement=&quot;Weg&quot; isMarkerVisible=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;175&quot; y=&quot;60&quot; width=&quot;50&quot; height=&quot;50&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;152&quot; y=&quot;28&quot; width=&quot;96&quot; height=&quot;28&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Antworten_di&quot; bpmnElement=&quot;Antworten&quot;&gt;&lt;dc:Bounds x=&quot;300&quot; y=&quot;45&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Postfach_di&quot; bpmnElement=&quot;Postfach&quot;&gt;&lt;dc:Bounds x=&quot;342&quot; y=&quot;232&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Art_di&quot; bpmnElement=&quot;Art&quot; isMarkerVisible=&quot;true&quot;&gt;&lt;dc:Bounds x=&quot;445&quot; y=&quot;225&quot; width=&quot;50&quot; height=&quot;50&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;378&quot; y=&quot;190&quot; width=&quot;88&quot; height=&quot;28&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Abwesenheit_di&quot; bpmnElement=&quot;Abwesenheit&quot;&gt;&lt;dc:Bounds x=&quot;552&quot; y=&quot;172&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;594&quot; y=&quot;176&quot; width=&quot;90&quot; height=&quot;28&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Teilen_di&quot; bpmnElement=&quot;Teilen&quot;&gt;&lt;dc:Bounds x=&quot;735&quot; y=&quot;225&quot; width=&quot;50&quot; height=&quot;50&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;PersoenlichAntworten_di&quot; bpmnElement=&quot;PersoenlichAntworten&quot;&gt;&lt;dc:Bounds x=&quot;850&quot; y=&quot;210&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Zusammen_di&quot; bpmnElement=&quot;Zusammen&quot;&gt;&lt;dc:Bounds x=&quot;1165&quot; y=&quot;225&quot; width=&quot;50&quot; height=&quot;50&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;AnTouren_di&quot; bpmnElement=&quot;AnTouren&quot;&gt;&lt;dc:Bounds x=&quot;1270&quot; y=&quot;210&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Abmelden_di&quot; bpmnElement=&quot;Abmelden&quot;&gt;&lt;dc:Bounds x=&quot;520&quot; y=&quot;365&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Abgemeldet_di&quot; bpmnElement=&quot;Abgemeldet&quot;&gt;&lt;dc:Bounds x=&quot;672&quot; y=&quot;387&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;Status_di&quot; bpmnElement=&quot;Status&quot;&gt;&lt;dc:Bounds x=&quot;850&quot; y=&quot;365&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;MailsEnden_di&quot; bpmnElement=&quot;MailsEnden&quot;&gt;&lt;dc:Bounds x=&quot;1010&quot; y=&quot;365&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;AboAnfrage_di&quot; bpmnElement=&quot;AboAnfrage&quot;&gt;&lt;dc:Bounds x=&quot;260&quot; y=&quot;495&quot; width=&quot;120&quot; height=&quot;80&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNShape id=&quot;BeiTouren_di&quot; bpmnElement=&quot;BeiTouren&quot;&gt;&lt;dc:Bounds x=&quot;1312&quot; y=&quot;517&quot; width=&quot;36&quot; height=&quot;36&quot;/&gt;&lt;/bpmndi:BPMNShape&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_1_di&quot; bpmnElement=&quot;Flow_1&quot;&gt;&lt;di:waypoint x=&quot;128&quot; y=&quot;85&quot;/&gt;&lt;di:waypoint x=&quot;175&quot; y=&quot;85&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_2_di&quot; bpmnElement=&quot;Flow_2&quot;&gt;&lt;di:waypoint x=&quot;225&quot; y=&quot;85&quot;/&gt;&lt;di:waypoint x=&quot;300&quot; y=&quot;85&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;232&quot; y=&quot;67&quot; width=&quot;48&quot; height=&quot;14&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_3_di&quot; bpmnElement=&quot;Flow_3&quot;&gt;&lt;di:waypoint x=&quot;200&quot; y=&quot;110&quot;/&gt;&lt;di:waypoint x=&quot;200&quot; y=&quot;535&quot;/&gt;&lt;di:waypoint x=&quot;260&quot; y=&quot;535&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;206&quot; y=&quot;118&quot; width=&quot;54&quot; height=&quot;14&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_4_di&quot; bpmnElement=&quot;Flow_4&quot;&gt;&lt;di:waypoint x=&quot;360&quot; y=&quot;125&quot;/&gt;&lt;di:waypoint x=&quot;360&quot; y=&quot;232&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_5_di&quot; bpmnElement=&quot;Flow_5&quot;&gt;&lt;di:waypoint x=&quot;378&quot; y=&quot;250&quot;/&gt;&lt;di:waypoint x=&quot;445&quot; y=&quot;250&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_6_di&quot; bpmnElement=&quot;Flow_6&quot;&gt;&lt;di:waypoint x=&quot;470&quot; y=&quot;225&quot;/&gt;&lt;di:waypoint x=&quot;470&quot; y=&quot;190&quot;/&gt;&lt;di:waypoint x=&quot;552&quot; y=&quot;190&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;476&quot; y=&quot;172&quot; width=&quot;70&quot; height=&quot;14&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_7_di&quot; bpmnElement=&quot;Flow_7&quot;&gt;&lt;di:waypoint x=&quot;470&quot; y=&quot;275&quot;/&gt;&lt;di:waypoint x=&quot;470&quot; y=&quot;405&quot;/&gt;&lt;di:waypoint x=&quot;520&quot; y=&quot;405&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;476&quot; y=&quot;290&quot; width=&quot;62&quot; height=&quot;14&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_8_di&quot; bpmnElement=&quot;Flow_8&quot;&gt;&lt;di:waypoint x=&quot;640&quot; y=&quot;405&quot;/&gt;&lt;di:waypoint x=&quot;672&quot; y=&quot;405&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_9_di&quot; bpmnElement=&quot;Flow_9&quot;&gt;&lt;di:waypoint x=&quot;495&quot; y=&quot;250&quot;/&gt;&lt;di:waypoint x=&quot;735&quot; y=&quot;250&quot;/&gt;&lt;bpmndi:BPMNLabel&gt;&lt;dc:Bounds x=&quot;505&quot; y=&quot;232&quot; width=&quot;50&quot; height=&quot;14&quot;/&gt;&lt;/bpmndi:BPMNLabel&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_10_di&quot; bpmnElement=&quot;Flow_10&quot;&gt;&lt;di:waypoint x=&quot;785&quot; y=&quot;250&quot;/&gt;&lt;di:waypoint x=&quot;850&quot; y=&quot;250&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_11_di&quot; bpmnElement=&quot;Flow_11&quot;&gt;&lt;di:waypoint x=&quot;760&quot; y=&quot;275&quot;/&gt;&lt;di:waypoint x=&quot;760&quot; y=&quot;405&quot;/&gt;&lt;di:waypoint x=&quot;850&quot; y=&quot;405&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_12_di&quot; bpmnElement=&quot;Flow_12&quot;&gt;&lt;di:waypoint x=&quot;970&quot; y=&quot;405&quot;/&gt;&lt;di:waypoint x=&quot;1010&quot; y=&quot;405&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_13_di&quot; bpmnElement=&quot;Flow_13&quot;&gt;&lt;di:waypoint x=&quot;970&quot; y=&quot;250&quot;/&gt;&lt;di:waypoint x=&quot;1165&quot; y=&quot;250&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_14_di&quot; bpmnElement=&quot;Flow_14&quot;&gt;&lt;di:waypoint x=&quot;1130&quot; y=&quot;405&quot;/&gt;&lt;di:waypoint x=&quot;1190&quot; y=&quot;405&quot;/&gt;&lt;di:waypoint x=&quot;1190&quot; y=&quot;275&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_15_di&quot; bpmnElement=&quot;Flow_15&quot;&gt;&lt;di:waypoint x=&quot;1215&quot; y=&quot;250&quot;/&gt;&lt;di:waypoint x=&quot;1270&quot; y=&quot;250&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_16_di&quot; bpmnElement=&quot;Flow_16&quot;&gt;&lt;di:waypoint x=&quot;1330&quot; y=&quot;290&quot;/&gt;&lt;di:waypoint x=&quot;1330&quot; y=&quot;517&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+      &lt;bpmndi:BPMNEdge id=&quot;Flow_17_di&quot; bpmnElement=&quot;Flow_17&quot;&gt;&lt;di:waypoint x=&quot;380&quot; y=&quot;535&quot;/&gt;&lt;di:waypoint x=&quot;1312&quot; y=&quot;535&quot;/&gt;&lt;/bpmndi:BPMNEdge&gt;
+    &lt;/bpmndi:BPMNPlane&gt;
+  &lt;/bpmndi:BPMNDiagram&gt;
+&lt;/bpmn:definitions&gt;
+</code></pre>
+<p>Und noch einmal als BPMN-XML ohne Koordinaten, die Anordnung entsteht beim Rendern:</p>
+<pre><code class="language-bpmn">&lt;?xml version=&quot;1.0&quot; encoding=&quot;UTF-8&quot;?&gt;
+&lt;bpmn:definitions xmlns:bpmn=&quot;http://www.omg.org/spec/BPMN/20100524/MODEL&quot; id=&quot;Definitions_1&quot; targetNamespace=&quot;http://bpmn.io/schema/bpmn&quot;&gt;
+  &lt;bpmn:collaboration id=&quot;Collaboration_1&quot;&gt;
+    &lt;bpmn:participant id=&quot;Participant_1&quot; name=&quot;Übergabe an die Tourenplanung&quot; processRef=&quot;Process_1&quot;/&gt;
+  &lt;/bpmn:collaboration&gt;
+  &lt;bpmn:process id=&quot;Process_1&quot; isExecutable=&quot;false&quot;&gt;
+    &lt;bpmn:laneSet id=&quot;LaneSet_1&quot;&gt;
+      &lt;bpmn:lane id=&quot;Lane_Kunde&quot; name=&quot;Kunde&quot;&gt;&lt;bpmn:flowNodeRef&gt;Start&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Weg&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Antworten&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Hofbuero&quot; name=&quot;Hofbüro&quot;&gt;&lt;bpmn:flowNodeRef&gt;Postfach&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Art&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Abwesenheit&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Teilen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;PersoenlichAntworten&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Zusammen&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;AnTouren&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Kundenkartei&quot; name=&quot;Kundenkartei&quot;&gt;&lt;bpmn:flowNodeRef&gt;Abmelden&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Abgemeldet&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;Status&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;MailsEnden&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+      &lt;bpmn:lane id=&quot;Lane_Tourenplanung&quot; name=&quot;Tourenplanung&quot;&gt;&lt;bpmn:flowNodeRef&gt;AboAnfrage&lt;/bpmn:flowNodeRef&gt;&lt;bpmn:flowNodeRef&gt;BeiTouren&lt;/bpmn:flowNodeRef&gt;&lt;/bpmn:lane&gt;
+    &lt;/bpmn:laneSet&gt;
+    &lt;bpmn:startEvent id=&quot;Start&quot; name=&quot;Reagiert auf eine Erinnerung&quot;/&gt;
+    &lt;bpmn:exclusiveGateway id=&quot;Weg&quot; name=&quot;Wie meldet er sich?&quot;/&gt;
+    &lt;bpmn:sendTask id=&quot;Antworten&quot; name=&quot;Auf die Mail antworten&quot;/&gt;
+    &lt;bpmn:intermediateCatchEvent id=&quot;Postfach&quot; name=&quot;Antwort im Postfach&quot;&gt;&lt;bpmn:messageEventDefinition id=&quot;Postfach_def&quot;/&gt;&lt;/bpmn:intermediateCatchEvent&gt;
+    &lt;bpmn:exclusiveGateway id=&quot;Art&quot; name=&quot;Art der Antwort?&quot;/&gt;
+    &lt;bpmn:endEvent id=&quot;Abwesenheit&quot; name=&quot;Abwesenheit, nichts zu tun&quot;/&gt;
+    &lt;bpmn:parallelGateway id=&quot;Teilen&quot;/&gt;
+    &lt;bpmn:sendTask id=&quot;PersoenlichAntworten&quot; name=&quot;Persönlich antworten am selben Tag&quot;/&gt;
+    &lt;bpmn:parallelGateway id=&quot;Zusammen&quot;/&gt;
+    &lt;bpmn:sendTask id=&quot;AnTouren&quot; name=&quot;An die Tourenplanung geben&quot;/&gt;
+    &lt;bpmn:userTask id=&quot;Abmelden&quot; name=&quot;Abmeldung sofort eintragen&quot;/&gt;
+    &lt;bpmn:endEvent id=&quot;Abgemeldet&quot; name=&quot;Abgemeldet&quot;/&gt;
+    &lt;bpmn:userTask id=&quot;Status&quot; name=&quot;Status auf ABO_ANFRAGE setzen&quot;/&gt;
+    &lt;bpmn:serviceTask id=&quot;MailsEnden&quot; name=&quot;Erinnerungen enden automatisch&quot;/&gt;
+    &lt;bpmn:callActivity id=&quot;AboAnfrage&quot; name=&quot;Abo-Anfrage Prozess 2&quot;/&gt;
+    &lt;bpmn:endEvent id=&quot;BeiTouren&quot; name=&quot;Bei der Tourenplanung&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_1&quot; sourceRef=&quot;Start&quot; targetRef=&quot;Weg&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_2&quot; sourceRef=&quot;Weg&quot; targetRef=&quot;Antworten&quot; name=&quot;Antwort&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_3&quot; sourceRef=&quot;Weg&quot; targetRef=&quot;AboAnfrage&quot; name=&quot;Formular&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_4&quot; sourceRef=&quot;Antworten&quot; targetRef=&quot;Postfach&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_5&quot; sourceRef=&quot;Postfach&quot; targetRef=&quot;Art&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_6&quot; sourceRef=&quot;Art&quot; targetRef=&quot;Abwesenheit&quot; name=&quot;Abwesenheit&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_7&quot; sourceRef=&quot;Art&quot; targetRef=&quot;Abmelden&quot; name=&quot;Abmeldung&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_8&quot; sourceRef=&quot;Abmelden&quot; targetRef=&quot;Abgemeldet&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_9&quot; sourceRef=&quot;Art&quot; targetRef=&quot;Teilen&quot; name=&quot;Anfrage&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_10&quot; sourceRef=&quot;Teilen&quot; targetRef=&quot;PersoenlichAntworten&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_11&quot; sourceRef=&quot;Teilen&quot; targetRef=&quot;Status&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_12&quot; sourceRef=&quot;Status&quot; targetRef=&quot;MailsEnden&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_13&quot; sourceRef=&quot;PersoenlichAntworten&quot; targetRef=&quot;Zusammen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_14&quot; sourceRef=&quot;MailsEnden&quot; targetRef=&quot;Zusammen&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_15&quot; sourceRef=&quot;Zusammen&quot; targetRef=&quot;AnTouren&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_16&quot; sourceRef=&quot;AnTouren&quot; targetRef=&quot;BeiTouren&quot;/&gt;
+    &lt;bpmn:sequenceFlow id=&quot;Flow_17&quot; sourceRef=&quot;AboAnfrage&quot; targetRef=&quot;BeiTouren&quot;/&gt;
+  &lt;/bpmn:process&gt;
+&lt;/bpmn:definitions&gt;
+</code></pre>
+<!-- dokufix: cards -->
+<ul>
+<li><strong>Weg A · automatisch</strong><br>Er klickt den Aufruf in der dritten Mail und füllt das Abo-Formular aus. Ab da gilt Prozess 2 unverändert, ohne jede Handarbeit.</li>
+<li><strong>Weg B · von Hand</strong><br>Er antwortet direkt auf eine Mail. Die Antwort landet im Postfach des Hofbüros und muss weitergegeben werden.</li>
+</ul>
+<h4>Was bei einer Antwort zu tun ist</h4>
+<!-- dokufix: steps -->
+<ol>
+<li>Art der Antwort bestimmen. Abwesenheitsnotizen ignorieren. Eine <strong>Abmeldung wird sofort eingetragen</strong>, das hat Vorrang vor allem anderen.</li>
+<li>Noch am selben Tag persönlich antworten, aus dem Hofbüro. Es hat jemand auf eine Mail geantwortet, die einen Namen trug.</li>
+<li>In der Kundenkartei den Status auf <code>ABO_ANFRAGE</code> setzen. Dadurch enden die Erinnerungen automatisch.</li>
+<li>An die Tourenplanung geben, immer mit denselben Angaben: Name, Adresse, E-Mail, bestellte Probekiste mit Datum, Erlaubnis ja oder nein, Wortlaut der Antwort.</li>
+</ol>
+<h3>Löschroutine <code>🟡 geplant</code></h3>
+<p>Die Kundenkartei löscht nichts von selbst. Ohne festen Termin wächst der Bestand unbegrenzt, und das ist weder nötig noch erlaubt.</p>
+<table>
+<thead>
+<tr>
+<th>Fall</th>
+<th>Frist</th>
+<th>Was passiert</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Probekunde ohne Erlaubnis</td>
+<td>12 Monate ohne Bestellung</td>
+<td>löschen</td>
+</tr>
+<tr>
+<td>Probekunde mit Erlaubnis, ohne Reaktion</td>
+<td>24 Monate ohne Bestellung</td>
+<td>löschen</td>
+</tr>
+<tr>
+<td>Abo-Anfrage, bearbeitet, ohne Abo</td>
+<td>12 Monate nach Abschluss</td>
+<td>löschen</td>
+</tr>
+<tr>
+<td>Kunde hat ein Abo</td>
+<td>hier keine Frist</td>
+<td>folgt dem Abo</td>
+</tr>
+<tr>
+<td><strong>Abmeldung oder Widerruf</strong></td>
+<td>dauerhaft</td>
+<td><strong>nicht löschen, sperren</strong></td>
+</tr>
+<tr>
+<td>Unzustellbare Adresse, Testeinträge</td>
+<td>sofort</td>
+<td>löschen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!NOTE]
+<strong>Die vorletzte Zeile wird am häufigsten falsch gemacht.</strong> Wer sich abmeldet, darf nicht gelöscht werden. Sonst fehlt beim nächsten Einlesen die Angabe, dass diese Person keine Post will, und sie bekommt wieder welche. Dafür ist die Sperrliste da.</p>
+</blockquote>
+<p>Als Bestellung zählt jede Kiste, jede Abo-Anfrage und jede Antwort auf eine Mail. Jede davon setzt die Frist neu. Jeder Durchlauf wird in einer Zeile festgehalten: Datum, Anzahl, angewandte Regel.</p>
+<h2>Was im System steht</h2>
+<h3>Formulare</h3>
+<h4>Vier Bestellseiten für Probekisten</h4>
+<p>Benannt nach dem Schema <code>PK 01 …</code> bis <code>PK 04 …</code>. Alle gleich aufgebaut, sie unterscheiden sich in genau zwei Dingen: der Überschrift und der Kistenart, die bestellt wird.</p>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Pflicht</th>
+<th>Zweck</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Anrede</td>
+<td>nein</td>
+<td>Ansprache in späteren Mails. Lässt sich nicht nachholen</td>
+</tr>
+<tr>
+<td>Vorname, Nachname</td>
+<td>ja</td>
+<td>Ansprache und Lieferschein</td>
+</tr>
+<tr>
+<td>E-Mail</td>
+<td>ja</td>
+<td>Bestätigung und Zusammenführung beider Wege</td>
+</tr>
+<tr>
+<td>Lieferadresse</td>
+<td>ja</td>
+<td>Zuordnung zu einer Tour</td>
+</tr>
+<tr>
+<td>Zustimmung Lieferung</td>
+<td><strong>ja</strong></td>
+<td>Erlaubnis, die Angaben für die Lieferung zu verwenden</td>
+</tr>
+<tr>
+<td>Zustimmung Erinnerungen</td>
+<td><strong>nein</strong></td>
+<td>Freiwillig. Nur wer hier zustimmt, bekommt später Post</td>
+</tr>
+<tr>
+<td>Sicherheitsabfrage</td>
+<td>—</td>
+<td>Schutz vor automatischen Einträgen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!NOTE]
+<strong>Warum das zweite Häkchen freiwillig bleiben muss:</strong> Die Erlaubnis für Werbung darf keine Bedingung für die bestellte Kiste sein. Wäre sie Pflicht, wäre sie erzwungen und damit nichts wert. Das Ergebnis wären weniger Bestellungen und trotzdem keine belastbare Erlaubnis.</p>
+</blockquote>
+<h4>Das Abo-Formular auf der Website</h4>
+<table>
+<thead>
+<tr>
+<th>Feld</th>
+<th>Pflicht</th>
+<th>Zweck</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Vorname, Nachname</td>
+<td>nein</td>
+<td>Ansprache</td>
+</tr>
+<tr>
+<td>E-Mail</td>
+<td>ja</td>
+<td>Antwort und Zusammenführung</td>
+</tr>
+<tr>
+<td>Telefon</td>
+<td>nein</td>
+<td>Rückruf bei Fragen zur Lieferung</td>
+</tr>
+<tr>
+<td>Lieferadresse</td>
+<td>ja</td>
+<td>Zuordnung zu einer Tour</td>
+</tr>
+<tr>
+<td>Tour</td>
+<td><strong>ja</strong></td>
+<td>Steuert, welche Tour die Anfrage bekommt</td>
+</tr>
+<tr>
+<td>Wünsche</td>
+<td>nein</td>
+<td>Was nicht in die Kiste soll</td>
+</tr>
+<tr>
+<td>Datenschutz-Zustimmung</td>
+<td>ja</td>
+<td>Erlaubnis, die Anfrage zu bearbeiten</td>
+</tr>
+<tr>
+<td><code>Herkunft der Anfrage</code></td>
+<td>verborgen</td>
+<td>Merkt sich die Seite, auf der das Formular stand</td>
+</tr>
+</tbody></table>
+<h3>Die beiden Listen in der Kundenkartei</h3>
+<p>Eine Liste sagt, zu welcher Gruppe jemand gehört. Sie sagt nichts darüber, was wir ihm schicken dürfen, das steht im Merkmal für die Erlaubnis.</p>
+<table>
+<thead>
+<tr>
+<th>Liste</th>
+<th>Wer landet darin</th>
+<th>Woher</th>
+<th>Wofür sie gebraucht wird</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Probekunden</code></td>
+<td>Jeder, der eine Probekiste bestellt und seine Adresse bestätigt hat</td>
+<td>die vier Bestellseiten</td>
+<td>Grundmenge für die Erinnerungsmails und für Auswertungen je Kistenart</td>
+</tr>
+<tr>
+<td><code>Abo-Anfragen</code></td>
+<td>Jeder, der das Abo-Formular abgeschickt hat</td>
+<td>Bestellformular</td>
+<td>Ablage, und sie löst den Ablauf aus, der den Status setzt</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!NOTE]
+Ein Mensch kann in beiden Listen stehen. Genau das ist der interessante Fall: Er hat erst eine Probekiste bestellt und später ein Abo angefragt. Die Kartei führt beides über die E-Mail-Adresse auf einem Kunden zusammen.</p>
+</blockquote>
+<h3>Kundenmerkmale</h3>
+<p>Merkmale sind die Felder am Kunden. Sie tragen alles, was wir über einen Menschen wissen, und sie sind der Grund, warum ein Kunde später nicht nur ein Name in einer Liste ist. Namen und Typen lassen sich in der Kartei nachträglich nicht ändern.</p>
+<!-- dokufix: filter "Merkmal oder Zweck suchen …" -->
+<!-- dokufix: facets Typ -->
+<table>
+<thead>
+<tr>
+<th>Merkmal</th>
+<th>Typ</th>
+<th>Wer füllt es</th>
+<th>Wofür</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>PK_LETZTE</code></td>
+<td>Kategorie</td>
+<td>Ablauf</td>
+<td>Welche Probekiste zuletzt bestellt wurde. Das Feld für die Tourenplanung, es zeigt immer den aktuellen Anlass</td>
+</tr>
+<tr>
+<td><code>PK_LETZTE_AM</code></td>
+<td>Datum</td>
+<td>Ablauf</td>
+<td>Wann. Eine Bestellung von gestern ist etwas anderes als eine von vor acht Monaten</td>
+</tr>
+<tr>
+<td><code>PK_GEMUESE</code><br><code>PK_OBST</code><br><code>PK_GEMISCHT</code><br><code>PK_SAISON</code></td>
+<td>Ja/Nein<br><em>je eines</em></td>
+<td>Ablauf</td>
+<td>Die vollständige Bestellhistorie. Vier Felder, eines je Kistenart, sie werden nie zurückgesetzt. Wer zwei Kistenarten probiert hat, hat zwei davon auf Ja</td>
+</tr>
+<tr>
+<td><code>ERLAUBNIS_ERINNERUNG</code></td>
+<td>Ja/Nein</td>
+<td>Besucher im Formular</td>
+<td>Das wichtigste Feld überhaupt. Es entscheidet, ob wir diesen Menschen anschreiben dürfen</td>
+</tr>
+<tr>
+<td><code>ANREDE</code></td>
+<td>Kategorie</td>
+<td>Besucher im Formular</td>
+<td>Ansprache. Fehlt sie, lässt sie sich für Altkunden nicht nachholen</td>
+</tr>
+<tr>
+<td><code>ORT</code></td>
+<td>Text</td>
+<td>Besucher im Formular</td>
+<td>Die wichtigste Angabe für die Zuordnung zu einer Tour</td>
+</tr>
+<tr>
+<td><code>TELEFON</code></td>
+<td>Text</td>
+<td>Besucher im Abo-Formular</td>
+<td>Rückruf. Bewusst Text und kein Zahlenfeld, weil Vorwahlen und Leerzeichen erhalten bleiben sollen</td>
+</tr>
+<tr>
+<td><code>QUELLE_SEITE</code></td>
+<td>Text</td>
+<td>verborgenes Formularfeld</td>
+<td>Von welcher Seite die Anfrage kam. Trennt die Anfrage von einer Rezeptseite von der aus dem Menü</td>
+</tr>
+<tr>
+<td><code>WUNSCH_TOUR</code></td>
+<td>Text</td>
+<td>Besucher im Abo-Formular</td>
+<td>Die gewählte Tour. Zeigt später, welche Touren überhaupt gefragt sind</td>
+</tr>
+<tr>
+<td><code>ANFRAGE_AM</code></td>
+<td>Datum</td>
+<td>—</td>
+<td>Angelegt, bleibt vorerst leer. Das Abo-Formular hat kein Datumsfeld, und der Zeitpunkt steht ohnehin in der Historie</td>
+</tr>
+<tr>
+<td><code>STATUS</code></td>
+<td>Kategorie</td>
+<td>Ablauf, später von Hand</td>
+<td>Wo der Kunde steht. Mögliche Werte: PROBE, ABO_ANFRAGE, IN_PLANUNG, ABO, KEIN_BEDARF. Beendet außerdem die Erinnerungsmails, sobald er nicht mehr auf PROBE steht</td>
+</tr>
+<tr>
+<td><code>ABO_KUNDE</code></td>
+<td>Ja/Nein</td>
+<td>von Hand</td>
+<td>Wer schon ein Abo hat, gehört nicht in die Erinnerungsmails</td>
+</tr>
+<tr>
+<td><code>TOUR_FAHRER</code></td>
+<td>Benutzer</td>
+<td>von Hand</td>
+<td>Zuständiger Fahrer, sofern die Tourenplanung in der Kartei angelegt ist</td>
+</tr>
+<tr>
+<td><code>VORLIEBE</code></td>
+<td>Kategorie</td>
+<td>—</td>
+<td>Angelegt, aber zurückgestellt. Die Zuordnung erfolgt derzeit über die bestellte Kistenart</td>
+</tr>
+</tbody></table>
+<h4>Die vier Probekisten und ihre Kürzel</h4>
+<table>
+<thead>
+<tr>
+<th>Nr</th>
+<th>Probekiste</th>
+<th>Kürzel</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>01</td>
+<td>Gemüsekiste, klein</td>
+<td><code>GEMUESE</code></td>
+</tr>
+<tr>
+<td>02</td>
+<td>Obstkiste</td>
+<td><code>OBST</code></td>
+</tr>
+<tr>
+<td>03</td>
+<td>Gemischte Kiste für zwei</td>
+<td><code>GEMISCHT</code></td>
+</tr>
+<tr>
+<td>04</td>
+<td>Saisonkiste mit Rezept</td>
+<td><code>SAISON</code></td>
+</tr>
+</tbody></table>
+<h3>Abläufe in der Kundenkartei</h3>
+<p>Fünf Stück. Vier davon sind Geschwister, sie unterscheiden sich nur in den Werten, die sie setzen.</p>
+<h4>Vier Abläufe für Probekisten</h4>
+<p>Benannt nach dem Schema <code>PK 01 …</code>. Jeder hört auf genau eine Bestellseite, daher weiß er, welche Kiste bestellt wurde.</p>
+<table>
+<thead>
+<tr>
+<th>Schritt</th>
+<th>Was</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Auslöser</td>
+<td>Die zugehörige Bestellseite wurde gesendet</td>
+</tr>
+<tr>
+<td>Aktion 1</td>
+<td><code>PK_LETZTE</code> auf das Kürzel der Kiste setzen</td>
+</tr>
+<tr>
+<td>Aktion 2</td>
+<td>Das Ja-Nein-Feld dieser Kiste auf Ja setzen</td>
+</tr>
+<tr>
+<td>Aktion 3</td>
+<td><code>PK_LETZTE_AM</code> auf das Bestelldatum setzen</td>
+</tr>
+<tr>
+<td>Aktion 4</td>
+<td><code>STATUS</code> auf <code>PROBE</code> setzen</td>
+</tr>
+</tbody></table>
+<h4>Ein Ablauf für Abo-Anfragen</h4>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Auslöser</th>
+<th>Aktion</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>Abo-Anfrage eintragen</code></td>
+<td>Kunde wird zur Liste <code>Abo-Anfragen</code> hinzugefügt</td>
+<td><code>STATUS</code> auf <code>ABO_ANFRAGE</code> setzen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!NOTE]
+<strong>Warum es diesen Ablauf gibt:</strong> Das Bestellformular kann Kategorie-Merkmale in der Kartei nicht beschreiben. Der Status lässt sich deshalb nicht direkt aus dem Formular setzen. Die Kartei erledigt es stattdessen selbst, sobald der Kunde in der Liste landet. Das ist zugleich die robustere Lösung, weil die Logik vollständig in einem System liegt.</p>
+</blockquote>
+<h3>Tourenregeln</h3>
+<p>Vier Auswahlmöglichkeiten im Formular, vier Regeln in der Zustellung. Weil das Feld Pflicht ist und genau vier Werte hat, trifft jede Anfrage genau eine Regel. Es kann keine durchfallen.</p>
+<table>
+<thead>
+<tr>
+<th>Was der Besucher wählt</th>
+<th>Gespeicherter Wert</th>
+<th>Geht an</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Dörfer am Fluss<br><em>Auenbach, Weidenau, Mühlfurt</em></td>
+<td><code>TOUR_NORD</code></td>
+<td>Tour Nord</td>
+</tr>
+<tr>
+<td>Stadtrand und Siedlung<br><em>Gartenviertel, Am Hang, Neue Siedlung</em></td>
+<td><code>TOUR_SUED</code></td>
+<td>Tour Süd</td>
+</tr>
+<tr>
+<td>Innenstadt<br><em>Lieferung per Lastenrad</em></td>
+<td><code>TOUR_STADT</code></td>
+<td>Tour Stadt</td>
+</tr>
+<tr>
+<td>Ich hole selbst ab, oder noch unklar</td>
+<td><code>ABHOLUNG</code></td>
+<td>Hofladen</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!NOTE]
+<strong>Die Regeln hängen am gespeicherten Wert, nicht am sichtbaren Text.</strong> Die Beschriftungen im Formular lassen sich jederzeit umformulieren, ohne dass die Zustellung bricht. Ändern sich dagegen Touren oder Zuständigkeiten, müssen diese vier Regeln angepasst werden. Sie liegen unsichtbar in einem Formular, und von allein denkt niemand daran.</p>
+</blockquote>
+<h2>Betrieb</h2>
+<h3>Wenn etwas ausfällt</h3>
+<table>
+<thead>
+<tr>
+<th>Ausfall</th>
+<th>Was trotzdem läuft</th>
+<th>Was fehlt</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Kundenkartei nicht erreichbar</td>
+<td>Abo-Anfragen gehen weiter an die Tourenplanung, das Formular speichert jeden Eintrag</td>
+<td>Probekisten-Bestellungen, Kundenablage, Merkmale</td>
+</tr>
+<tr>
+<td><strong>Zugang zur Kartei abgelaufen oder gesperrt</strong></td>
+<td>Formular und Mail an die Tour laufen völlig unverändert</td>
+<td><strong>Der Kunde erscheint nicht in der Kartei, und zwar ohne jede Fehlermeldung</strong></td>
+</tr>
+<tr>
+<td>Website ausgefallen</td>
+<td>Bestehende Abos laufen weiter, sie hängen nur an der Tourenplanung</td>
+<td>Neue Probekisten und Abo-Anfragen insgesamt</td>
+</tr>
+</tbody></table>
+<blockquote>
+<p>[!WARNING]
+<strong>Der mittlere Fall ist der gefährliche</strong>, weil nichts kaputt aussieht. Deshalb gehört er in die monatliche Routine: Stimmt die Zahl der Einträge im Formular mit der Zahl neuer Kunden in der Liste <code>Abo-Anfragen</code> überein?</p>
+</blockquote>
+<h3>Was noch offen ist</h3>
+<table>
+<thead>
+<tr>
+<th>Punkt</th>
+<th>Warum es zählt</th>
+<th>Wer</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>Prüfung von Zustimmungstext, Zweck und Löschfristen</td>
+<td>Ab der neuen Saison wird in Serie gesammelt. Eine Lücke wächst mit</td>
+<td>Hofbüro</td>
+</tr>
+<tr>
+<td>Beschluss über den Ablauf mit Hofleitung und Tourenplanung</td>
+<td>Ohne Beschluss entstehen zwei Abläufe nebeneinander</td>
+<td>Hofbüro, Hofleitung</td>
+</tr>
+<tr>
+<td>Drei Sammeladressen für die Touren</td>
+<td>Sammeladressen, keine Personen. Sonst liegt eine Anfrage während eines Urlaubs</td>
+<td>Hofbüro</td>
+</tr>
+<tr>
+<td>Bestellseiten für Obst- und Saisonkiste verlinken</td>
+<td>Die Hälfte der Bestellseiten ist von der Startseite aus nicht erreichbar</td>
+<td>Website</td>
+</tr>
+<tr>
+<td>Rezepte für die erste Erinnerungsmail sammeln</td>
+<td>Ohne Rezept hat die erste Mail keinen Inhalt</td>
+<td>Hofbüro, Küche</td>
+</tr>
+<tr>
+<td>Absender der Erinnerungsmails samt Vertretung</td>
+<td>Antworten landen in seinem Postfach. Ohne Vertretung gehen sie im Urlaub verloren</td>
+<td>Hofbüro</td>
+</tr>
+</tbody></table>

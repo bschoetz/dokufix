@@ -1,0 +1,250 @@
+{
+ "name": "Probekiste",
+ "nodes": [
+  {
+   "id": "s",
+   "name": "Probekiste entdeckt",
+   "type": "start",
+   "cls": ""
+  },
+  {
+   "id": "a",
+   "name": "Bestellung ausfüllen und absenden",
+   "type": "task",
+   "cls": ""
+  },
+  {
+   "id": "c",
+   "name": "Bestellung per Link bestätigen",
+   "type": "task",
+   "cls": ""
+  },
+  {
+   "id": "e",
+   "name": "Probekiste erhalten",
+   "type": "end",
+   "cls": ""
+  },
+  {
+   "id": "b",
+   "name": "Bestätigungsmail senden eine Vorlage für alle",
+   "type": "task",
+   "cls": ""
+  },
+  {
+   "id": "g",
+   "name": "Lieferauftrag an die nächste Tour",
+   "type": "task",
+   "cls": ""
+  },
+  {
+   "id": "d",
+   "name": "Kunde anlegen oder ergänzen",
+   "type": "task",
+   "cls": ""
+  },
+  {
+   "id": "f",
+   "name": "Kistenart, Datum und Status eintragen",
+   "type": "task",
+   "cls": ""
+  },
+  {
+   "id": "x",
+   "name": "Erinnerungen erlaubt?",
+   "type": "gateway",
+   "cls": ""
+  },
+  {
+   "id": "n",
+   "name": "Einmalkunde, keine Erinnerung",
+   "type": "end",
+   "cls": ""
+  },
+  {
+   "id": "h",
+   "name": "Erinnerungsmails 3 Mails, 3 Wochen",
+   "type": "task",
+   "cls": "geplant"
+  },
+  {
+   "id": "y",
+   "name": "Reaktion?",
+   "type": "gateway",
+   "cls": ""
+  },
+  {
+   "id": "i",
+   "name": "Übergabe an die Tourenplanung, Prozess 2",
+   "type": "task",
+   "cls": "geplant"
+  },
+  {
+   "id": "z",
+   "name": "Mails beendet, bleibt erreichbar",
+   "type": "end",
+   "cls": ""
+  }
+ ],
+ "flows": [
+  {
+   "id": "Flow_1",
+   "from": "s",
+   "to": "a",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_2",
+   "from": "a",
+   "to": "b",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_3",
+   "from": "b",
+   "to": "c",
+   "name": "Bestätigungsmail",
+   "dotted": true
+  },
+  {
+   "id": "Flow_4",
+   "from": "c",
+   "to": "d",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_5",
+   "from": "d",
+   "to": "f",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_6",
+   "from": "d",
+   "to": "g",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_7",
+   "from": "g",
+   "to": "e",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_8",
+   "from": "f",
+   "to": "x",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_9",
+   "from": "x",
+   "to": "n",
+   "name": "nein",
+   "dotted": false
+  },
+  {
+   "id": "Flow_10",
+   "from": "x",
+   "to": "h",
+   "name": "ja",
+   "dotted": false
+  },
+  {
+   "id": "Flow_11",
+   "from": "h",
+   "to": "y",
+   "name": "",
+   "dotted": false
+  },
+  {
+   "id": "Flow_12",
+   "from": "y",
+   "to": "i",
+   "name": "ja",
+   "dotted": false
+  },
+  {
+   "id": "Flow_13",
+   "from": "y",
+   "to": "z",
+   "name": "nein",
+   "dotted": false
+  }
+ ],
+ "lanes": [
+  {
+   "srcId": "Kunde",
+   "id": "Kunde",
+   "name": "Kunde",
+   "nodes": [
+    "s",
+    "a",
+    "c",
+    "e"
+   ]
+  },
+  {
+   "srcId": "Website",
+   "id": "Website",
+   "name": "Website",
+   "nodes": [
+    "b",
+    "g"
+   ]
+  },
+  {
+   "srcId": "Kundenkartei",
+   "id": "Kundenkartei",
+   "name": "Kundenkartei",
+   "nodes": [
+    "d",
+    "f",
+    "x",
+    "n"
+   ]
+  },
+  {
+   "srcId": "Hofbüro",
+   "id": "Hofb_ro",
+   "name": "Hofbüro",
+   "nodes": [
+    "h",
+    "y",
+    "i",
+    "z"
+   ]
+  }
+ ],
+ "raw": {
+  "vertexTypes": [
+   "s:circle",
+   "a:square",
+   "c:square",
+   "e:doublecircle",
+   "b:square",
+   "g:square",
+   "d:square",
+   "f:square",
+   "x:diamond",
+   "n:doublecircle",
+   "h:square",
+   "y:diamond",
+   "i:square",
+   "z:doublecircle"
+  ],
+  "subgraphs": [
+   "Kunde=s,a,c,e",
+   "Website=b,g",
+   "Kundenkartei=d,f,x,n",
+   "Hofbüro=h,y,i,z"
+  ]
+ }
+}

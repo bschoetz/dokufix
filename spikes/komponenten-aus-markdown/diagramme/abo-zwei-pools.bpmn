@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Pool_Kunde" name="Kunde" processRef="Process_Kunde"/>
+    <bpmn:participant id="Pool_Hof" name="Hof Sonnenfeld" processRef="Process_Hof"/>
+    <bpmn:messageFlow id="Msg_Anfrage" name="Anfrage" sourceRef="K_Senden" targetRef="F_Start"/>
+    <bpmn:messageFlow id="Msg_Bestaetigung" name="Bestätigung" sourceRef="F_Bestaetigen" targetRef="K_Bestaetigung"/>
+    <bpmn:messageFlow id="Msg_Termin" name="Liefertermin" sourceRef="T_Mitteilen" targetRef="K_Termin"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Kunde" isExecutable="false">
+    <bpmn:startEvent id="K_Start" name="Möchte ein Abo"/>
+    <bpmn:sendTask id="K_Senden" name="Abo-Formular absenden"/>
+    <bpmn:intermediateCatchEvent id="K_Bestaetigung" name="Bestätigung"><bpmn:messageEventDefinition id="K_Bestaetigung_def"/></bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="K_Termin" name="Liefertermin erhalten"><bpmn:messageEventDefinition id="K_Termin_def"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="K_Ende" name="Wird beliefert"/>
+    <bpmn:sequenceFlow id="K1" sourceRef="K_Start" targetRef="K_Senden"/>
+    <bpmn:sequenceFlow id="K2" sourceRef="K_Senden" targetRef="K_Bestaetigung"/>
+    <bpmn:sequenceFlow id="K3" sourceRef="K_Bestaetigung" targetRef="K_Termin"/>
+    <bpmn:sequenceFlow id="K4" sourceRef="K_Termin" targetRef="K_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Process_Hof" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Hof">
+      <bpmn:lane id="Lane_Formular" name="Bestellformular"><bpmn:flowNodeRef>F_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Teilen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Bestaetigen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Kartei" name="Kundenkartei"><bpmn:flowNodeRef>B_Liste</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Status</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Touren" name="Tourenplanung"><bpmn:flowNodeRef>T_Einplanen</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Mitteilen</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Ende</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="F_Start" name="Anfrage eingegangen"><bpmn:messageEventDefinition id="F_Start_def"/></bpmn:startEvent>
+    <bpmn:serviceTask id="F_Pruefen" name="Pflichtfelder und Adresse prüfen"/>
+    <bpmn:parallelGateway id="F_Teilen"/>
+    <bpmn:sendTask id="F_Bestaetigen" name="Bestätigung senden"/>
+    <bpmn:endEvent id="F_Ende" name="Bestätigt"/>
+    <bpmn:serviceTask id="B_Liste" name="Kunde in Liste Abo-Anfragen"/>
+    <bpmn:serviceTask id="B_Status" name="Status auf ABO_ANFRAGE setzen"/>
+    <bpmn:endEvent id="B_Ende" name="Erfasst"/>
+    <bpmn:userTask id="T_Einplanen" name="Kiste einplanen"/>
+    <bpmn:sendTask id="T_Mitteilen" name="Liefertermin mitteilen"/>
+    <bpmn:endEvent id="T_Ende" name="Eingeplant"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="F_Start" targetRef="F_Pruefen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="F_Pruefen" targetRef="F_Teilen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="F_Teilen" targetRef="F_Bestaetigen"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="F_Bestaetigen" targetRef="F_Ende"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="F_Teilen" targetRef="B_Liste"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="B_Liste" targetRef="B_Status"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="B_Status" targetRef="B_Ende"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="F_Teilen" targetRef="T_Einplanen"/>
+    <bpmn:sequenceFlow id="F9" sourceRef="T_Einplanen" targetRef="T_Mitteilen"/>
+    <bpmn:sequenceFlow id="F10" sourceRef="T_Mitteilen" targetRef="T_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>

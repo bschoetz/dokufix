@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_1" name="Übergabe an die Tourenplanung" processRef="Process_1"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Kunde" name="Kunde"><bpmn:flowNodeRef>Start</bpmn:flowNodeRef><bpmn:flowNodeRef>Weg</bpmn:flowNodeRef><bpmn:flowNodeRef>Antworten</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Hofbuero" name="Hofbüro"><bpmn:flowNodeRef>Postfach</bpmn:flowNodeRef><bpmn:flowNodeRef>Art</bpmn:flowNodeRef><bpmn:flowNodeRef>Abwesenheit</bpmn:flowNodeRef><bpmn:flowNodeRef>Teilen</bpmn:flowNodeRef><bpmn:flowNodeRef>PersoenlichAntworten</bpmn:flowNodeRef><bpmn:flowNodeRef>Zusammen</bpmn:flowNodeRef><bpmn:flowNodeRef>AnTouren</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Kundenkartei" name="Kundenkartei"><bpmn:flowNodeRef>Abmelden</bpmn:flowNodeRef><bpmn:flowNodeRef>Abgemeldet</bpmn:flowNodeRef><bpmn:flowNodeRef>Status</bpmn:flowNodeRef><bpmn:flowNodeRef>MailsEnden</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Tourenplanung" name="Tourenplanung"><bpmn:flowNodeRef>AboAnfrage</bpmn:flowNodeRef><bpmn:flowNodeRef>BeiTouren</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Reagiert auf eine Erinnerung"/>
+    <bpmn:exclusiveGateway id="Weg" name="Wie meldet er sich?"/>
+    <bpmn:sendTask id="Antworten" name="Auf die Mail antworten"/>
+    <bpmn:intermediateCatchEvent id="Postfach" name="Antwort im Postfach"><bpmn:messageEventDefinition id="Postfach_def"/></bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Art" name="Art der Antwort?"/>
+    <bpmn:endEvent id="Abwesenheit" name="Abwesenheit, nichts zu tun"/>
+    <bpmn:parallelGateway id="Teilen"/>
+    <bpmn:sendTask id="PersoenlichAntworten" name="Persönlich antworten am selben Tag"/>
+    <bpmn:parallelGateway id="Zusammen"/>
+    <bpmn:sendTask id="AnTouren" name="An die Tourenplanung geben"/>
+    <bpmn:userTask id="Abmelden" name="Abmeldung sofort eintragen"/>
+    <bpmn:endEvent id="Abgemeldet" name="Abgemeldet"/>
+    <bpmn:userTask id="Status" name="Status auf ABO_ANFRAGE setzen"/>
+    <bpmn:serviceTask id="MailsEnden" name="Erinnerungen enden automatisch"/>
+    <bpmn:callActivity id="AboAnfrage" name="Abo-Anfrage Prozess 2"/>
+    <bpmn:endEvent id="BeiTouren" name="Bei der Tourenplanung"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="Weg"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Weg" targetRef="Antworten" name="Antwort"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Weg" targetRef="AboAnfrage" name="Formular"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Antworten" targetRef="Postfach"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Postfach" targetRef="Art"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Art" targetRef="Abwesenheit" name="Abwesenheit"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Art" targetRef="Abmelden" name="Abmeldung"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Abmelden" targetRef="Abgemeldet"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Art" targetRef="Teilen" name="Anfrage"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Teilen" targetRef="PersoenlichAntworten"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Teilen" targetRef="Status"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Status" targetRef="MailsEnden"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="PersoenlichAntworten" targetRef="Zusammen"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="MailsEnden" targetRef="Zusammen"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Zusammen" targetRef="AnTouren"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="AnTouren" targetRef="BeiTouren"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="AboAnfrage" targetRef="BeiTouren"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Diagram_1">
+    <bpmndi:BPMNPlane id="Plane_1" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="Participant_1" isHorizontal="true"><dc:Bounds x="-48" y="-12" width="1948" height="479"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="39" y="360" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="12" y="401" width="90" height="42"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Weg_di" bpmnElement="Weg" isMarkerVisible="true"><dc:Bounds x="172" y="353" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="152" y="320" width="90" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Antworten_di" bpmnElement="Antworten"><dc:Bounds x="400" y="117" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Postfach_di" bpmnElement="Postfach"><dc:Bounds x="612" y="139" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="585" y="180" width="90" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Art_di" bpmnElement="Art" isMarkerVisible="true"><dc:Bounds x="760" y="132" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="740" y="99" width="90" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abwesenheit_di" bpmnElement="Abwesenheit"><dc:Bounds x="1033" y="12" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1006" y="53" width="90" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Teilen_di" bpmnElement="Teilen"><dc:Bounds x="1044" y="295" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PersoenlichAntworten_di" bpmnElement="PersoenlichAntworten"><dc:Bounds x="1346" y="172" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Zusammen_di" bpmnElement="Zusammen"><dc:Bounds x="1516" y="295" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AnTouren_di" bpmnElement="AnTouren"><dc:Bounds x="1616" y="280" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abmelden_di" bpmnElement="Abmelden"><dc:Bounds x="1006" y="117" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abgemeldet_di" bpmnElement="Abgemeldet"><dc:Bounds x="1193" y="139" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1176" y="180" width="70" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Status_di" bpmnElement="Status"><dc:Bounds x="1176" y="288" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MailsEnden_di" bpmnElement="MailsEnden"><dc:Bounds x="1346" y="288" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AboAnfrage_di" bpmnElement="AboAnfrage"><dc:Bounds x="570" y="346" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BeiTouren_di" bpmnElement="BeiTouren"><dc:Bounds x="1813" y="362" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1786" y="403" width="90" height="28"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="75" y="378"/><di:waypoint x="172" y="378"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="213" y="369"/><di:waypoint x="260" y="369"/><di:waypoint x="260" y="157"/><di:waypoint x="400" y="157"/><bpmndi:BPMNLabel><dc:Bounds x="296" y="138" width="51" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="214" y="386"/><di:waypoint x="570" y="386"/><bpmndi:BPMNLabel><dc:Bounds x="292" y="391" width="58" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="520" y="157"/><di:waypoint x="612" y="157"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="648" y="157"/><di:waypoint x="760" y="157"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="798" y="144"/><di:waypoint x="848" y="144"/><di:waypoint x="848" y="30"/><di:waypoint x="1033" y="30"/><bpmndi:BPMNLabel><dc:Bounds x="880" y="35" width="76" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="810" y="157"/><di:waypoint x="1006" y="157"/><bpmndi:BPMNLabel><dc:Bounds x="886" y="162" width="64" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="1126" y="157"/><di:waypoint x="1193" y="157"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="798" y="169"/><di:waypoint x="848" y="169"/><di:waypoint x="848" y="320"/><di:waypoint x="1044" y="320"/><bpmndi:BPMNLabel><dc:Bounds x="893" y="325" width="51" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="1085" y="311"/><di:waypoint x="1144" y="311"/><di:waypoint x="1144" y="212"/><di:waypoint x="1346" y="212"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="1086" y="328"/><di:waypoint x="1176" y="328"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1296" y="328"/><di:waypoint x="1346" y="328"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13"><di:waypoint x="1466" y="212"/><di:waypoint x="1484" y="212"/><di:waypoint x="1484" y="311"/><di:waypoint x="1525" y="311"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14"><di:waypoint x="1466" y="328"/><di:waypoint x="1524" y="328"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15"><di:waypoint x="1566" y="320"/><di:waypoint x="1616" y="320"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16_di" bpmnElement="Flow_16"><di:waypoint x="1736" y="320"/><di:waypoint x="1754" y="320"/><di:waypoint x="1754" y="374"/><di:waypoint x="1814" y="374"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17_di" bpmnElement="Flow_17"><di:waypoint x="690" y="386"/><di:waypoint x="1814" y="386"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,36 @@
+  subgraph Kunde
+    s((Probekiste<br>entdeckt))
+    a[Bestellung ausfüllen<br>und absenden]
+    c[Bestellung per Link<br>bestätigen]
+    e(((Probekiste<br>erhalten)))
+  end
+  subgraph Website
+    b[Bestätigungsmail senden<br>eine Vorlage für alle]
+    g[Lieferauftrag an<br>die nächste Tour]
+  end
+  subgraph Kundenkartei
+    d[Kunde anlegen<br>oder ergänzen]
+    f[Kistenart, Datum<br>und Status eintragen]
+    x{Erinnerungen<br>erlaubt?}
+    n(((Einmalkunde, keine<br>Erinnerung)))
+  end
+  subgraph Hofbüro
+    h[Erinnerungsmails<br>3 Mails, 3 Wochen]:::geplant
+    y{Reaktion?}
+    i[Übergabe an die<br>Tourenplanung, Prozess 2]:::geplant
+    z(((Mails beendet,<br>bleibt erreichbar)))
+  end
+  s --> a
+  a --> b
+  b -. Bestätigungsmail .-> c
+  c --> d
+  d --> f
+  d --> g
+  g --> e
+  f --> x
+  x -- nein --> n
+  x -- ja --> h
+  h --> y
+  y -- ja --> i
+  y -- nein --> z
+  classDef geplant stroke-dasharray:6 4,stroke:#8A5E07

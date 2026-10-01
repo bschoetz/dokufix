@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kisten-Prozesse (Dokufix-Spike)</title>
+<!-- Wie in der Vorlage: Schriften vom Google-CDN. Für echtes Dokufix tabu (kein CDN), siehe docs. -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+<style>
+/*{{CSS}}*/
+</style>
+</head>
+<body>
+<div class="dokufix-wrap">
+<nav class="dokufix-nav" aria-label="Inhalt"></nav>
+<main></main>
+</div>
+
+<!-- Quelle als JSON-Zeichenkette, die öffnende spitze Klammer ist als \u003c maskiert. Roh in ein Skript-Element
+     eingebettet würde Markdown, das selbst Skript-Tags oder HTML-Kommentare erwähnt, die Seite zerlegen. -->
+<script>const DOKUFIX_SOURCE = {{MD_JSON}};</script>
+
+<!-- Wie im PoC: Bibliotheken vom CDN, hier aber auf Hauptversionen festgelegt. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@18/lib/marked.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12/dist/mermaid.min.js"></script>
+<script>
+/*{{JS}}*/
+</script>
+<script>
+// Mermaid bekommt keine festen Farben, sondern die CSS-Variablen der Seite.
+// Dadurch folgt das Diagramm dem Hell-/Dunkel-Schema ohne zweites Rendern.
+// Nur Farben und Striche überschreiben: Mermaid misst die Textbreite vor dem Rendern,
+// eine andere Schrift oder Stärke per CSS schneidet Beschriftungen ab.
+const MERMAID_THEME_CSS = `
+  .swimlane-body{fill:var(--surface)!important;stroke:var(--line)!important}
+  .swimlane-title{fill:var(--accent-soft)!important;stroke:var(--line)!important}
+  .cluster-label p,.cluster-label span{color:var(--ink);font-weight:600;font-size:13px}
+  .node rect,.node polygon,.node circle,.node path{fill:var(--surface)!important;stroke:var(--accent)!important;stroke-width:1.5px;filter:none!important}
+  .node rect{rx:7px;ry:7px}
+  .node .outer-circle{stroke:var(--ink)!important;stroke-width:3.5px}
+  .node .inner-circle{stroke:none!important;fill:none!important}
+  .node.geplant rect{stroke:var(--plan)!important;stroke-dasharray:6 4}
+  .nodeLabel,.nodeLabel p{color:var(--ink)}
+  .flowchart-link{stroke:var(--ink-soft)!important;stroke-width:1.5px}
+  .arrowMarkerPath{fill:var(--ink-soft)!important;stroke:var(--ink-soft)!important}
+  .edgeLabel,.edgeLabel p,.labelBkg{background-color:var(--surface)!important;color:var(--ink)}
+`;
+mermaid.initialize({
+  startOnLoad: false,
+  securityLevel: 'strict',
+  theme: 'base',
+  look: 'classic',
+  themeVariables: { fontFamily: '"IBM Plex Sans", "Segoe UI", system-ui, sans-serif', fontSize: '13px' },
+  themeCSS: MERMAID_THEME_CSS,
+  flowchart: { nodeSpacing: 20, rankSpacing: 36 },
+  swimlane: { lineHops: 'arc' }
+});
+
+(async () => {
+  const main = document.querySelector('main');
+  try {
+    main.innerHTML = marked.parse(DOKUFIX_SOURCE, { gfm: true, breaks: false });
+    DokufixKomponenten.render(main, document.querySelector('.dokufix-nav'));
+  } catch (err) {
+    // Ein Fehler in einem Pass darf nicht still eine halbfertige Seite hinterlassen.
+    const box = document.createElement('p');
+    box.className = 'dokufix-warnung';
+    box.dataset.fehler = 'render';
+    box.textContent = 'Fehler beim Rendern: ' + (err && err.message || err);
+    main.prepend(box);
+    console.error(err);
+  }
+
+  // Mermaid misst Text beim Rendern, die Schrift muss vorher geladen sein.
+  try { await Promise.all(['400 13px "IBM Plex Sans"', '600 13px "IBM Plex Sans"', '500 11px "IBM Plex Mono"'].map(f => document.fonts.load(f))); } catch (e) {}
+  // Diagramme: Mermaid direkt, BPMN über bpmn-js. Die Bibliothek (195 KB, Viewer mit Zoom und Verschieben)
+  // wird nur geladen, wenn das Dokument BPMN enthält.
+  const BPMN_JS = 'https://cdn.jsdelivr.net/npm/bpmn-js@18/dist/bpmn-navigated-viewer.production.min.js';
+  const loadScript = src => new Promise((ok, fail) => {
+    const el = document.createElement('script');
+    el.src = src; el.onload = ok; el.onerror = () => fail(new Error('Nicht ladbar: ' + src));
+    document.head.append(el);
+  });
+  const headingBefore = el => {
+    for (let p = el.previousElementSibling; p; p = p.previousElementSibling) {
+      if (/^H[1-4]$/.test(p.tagName)) { const c = p.cloneNode(true); c.querySelectorAll('.dokufix-chip').forEach(x => x.remove()); return c.textContent.trim(); }
+    }
+    return '';
+  };
+  const bpmnLinks = (xml, title) => [
+    { text: 'BPMN 2.0 herunterladen', href: 'data:application/xml;charset=utf-8,' + encodeURIComponent(xml), download: DokufixKomponenten.slugify(title || 'prozess') + '.bpmn' },
+    { text: 'gerendert mit bpmn.io', href: 'https://bpmn.io' }
+  ];
+  const blocks = [...main.querySelectorAll('pre > code.language-mermaid, pre > code.language-bpmn')];
+  const wantsBpmn = blocks.some(b => b.classList.contains('language-bpmn') || b.parentElement.classList.contains('dokufix-bpmn'));
+  let bpmnError = null;
+  if (wantsBpmn && typeof BpmnJS === 'undefined') { try { await loadScript(BPMN_JS); } catch (err) { bpmnError = err; } }
+  let n = 0;
+  for (const block of blocks) {
+    const pre = block.parentElement;
+    const title = pre.dataset.bpmn || headingBefore(pre);
+    let out;
+    n++;
+    try {
+      if (block.classList.contains('language-bpmn')) {
+        if (bpmnError) throw bpmnError;
+        const r = await DokufixBpmn.fromXml(block.textContent);
+        out = DokufixKomponenten.diagramFigure(r.svg, { kind: 'bpmn', title, links: bpmnLinks(r.xml, title) });
+      } else if (pre.classList.contains('dokufix-bpmn')) {
+        if (bpmnError) throw bpmnError;
+        const r = await DokufixBpmn.fromMermaid(block.textContent, title);
+        out = DokufixKomponenten.diagramFigure(r.svg, { kind: 'bpmn', title, links: bpmnLinks(r.xml, title) });
+        if (Object.keys(r.marks).length) out.dataset.bpmnMarks = JSON.stringify(r.marks);
+      } else {
+        const { svg } = await mermaid.render('dokufix-mermaid-' + n, block.textContent);
+        out = DokufixKomponenten.diagramFigure(svg, { kind: 'mermaid', title });
+      }
+    } catch (err) {
+      // Mermaid würde sonst sein Fehlerbild als Diagramm ausliefern.
+      out = DokufixKomponenten.warnung('Diagramm ' + n + ' ist fehlerhaft: ' + String(err && err.message || err).split('\n')[0]);
+      out.dataset.fehler = block.classList.contains('language-bpmn') || pre.classList.contains('dokufix-bpmn') ? 'bpmn' : 'mermaid';
+      document.querySelectorAll('body > [id^="ddokufix-"], body > [id^="dokufix-mermaid-"], body > [id^="dokufix-bpmn-layout-"]').forEach(e => e.remove());
+    }
+    pre.replaceWith(out);
+  }
+  // Die Markierung „bpmn“ vor einem Codeblock, der kein Mermaid ist
+  main.querySelectorAll('pre.dokufix-bpmn').forEach(pre => pre.before(DokufixKomponenten.warnung('Markierung „dokufix: bpmn“ erwartet direkt danach einen Mermaid-Codeblock.')));
+  DokufixKomponenten.enhance(document);
+  DokufixBpmn.enhance(document);
+  document.documentElement.dataset.ready = '1';
+})();
+</script>
+</body>
+</html>

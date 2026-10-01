@@ -1,0 +1,163 @@
+/* Farbwerte und Maße folgen der Vorlage, damit der Vergleich fair ist. */
+:root{
+  --paper:#F6F8FA; --surface:#FFFFFF; --ink:#16243D; --ink-soft:#4E5E78;
+  --line:#D8DFE9; --accent:#0E7C89; --accent-soft:#E2F0F2;
+  --live:#1C6F46; --live-bg:#E2F1E9; --plan:#8A5E07; --plan-bg:#FAEFD8;
+  --hold:#59647A; --hold-bg:#EBEFF4; --danger:#A32A2A; --danger-bg:#F8E3E3;
+  --f-head:"IBM Plex Serif", Georgia, serif;
+  --f-body:"IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#0F141C; --surface:#161C26; --ink:#E7ECF3; --ink-soft:#9DAABD;
+  --line:#293140; --accent:#45B9C5; --accent-soft:#102F37;
+  --live:#6CD5A1; --live-bg:#0F2F1F; --plan:#E4B85C; --plan-bg:#31270E;
+  --hold:#9DAABD; --hold-bg:#212936; --danger:#F09A9A; --danger-bg:#3A1717; color-scheme:dark;
+}}
+*{box-sizing:border-box}
+body{background:var(--paper); color:var(--ink); font-family:var(--f-body); font-size:15px; line-height:1.6; margin:0}
+.dokufix-wrap{display:grid; grid-template-columns:248px minmax(0,1fr); gap:40px; max-width:1240px; margin:0 auto; padding:0 20px}
+
+/* Navigation: aus H1 (Marke), H2 (Gruppe), H3 (Link) erzeugt */
+.dokufix-nav{position:sticky; top:0; align-self:start; padding-block:28px 40px; max-height:100vh; overflow-y:auto}
+.dokufix-brand{font-family:var(--f-head); font-weight:600; font-size:19px; line-height:1.25; margin:0 0 4px}
+.dokufix-brand-sub{color:var(--ink-soft); font-size:12.5px; margin:0 0 22px}
+.dokufix-navgrp{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); margin:20px 0 7px}
+.dokufix-nav > a{display:block; color:var(--ink-soft); text-decoration:none; font-size:13.5px; padding:4px 0 4px 11px; border-left:2px solid var(--line)}
+.dokufix-nav > a:hover{color:var(--ink); border-left-color:var(--accent)}
+.dokufix-nav > a.on{color:var(--accent); border-left-color:var(--accent); font-weight:500}
+.dokufix-nav > a:focus-visible, .dokufix-filter-ui input:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+
+/* Inhalt */
+main{padding-block:28px 72px; min-width:0}
+main p{max-width:66ch}
+h2.dokufix-group{position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); white-space:nowrap}
+.dokufix-eyebrow{font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--accent); margin:36px 0 6px; padding-top:36px; border-top:1px solid var(--line); max-width:none}
+.dokufix-eyebrow.dokufix-first{margin-top:0; padding-top:12px; border-top:0}
+.dokufix-section{font-family:var(--f-head); font-weight:600; font-size:23px; text-wrap:balance; margin:0 0 4px; scroll-margin-top:60px}
+.dokufix-section.dokufix-opening{font-size:clamp(28px,4vw,38px); line-height:1.15; margin-bottom:10px}
+.dokufix-lede{font-size:17px; color:var(--ink-soft); max-width:62ch}
+h4{font-size:15px; font-weight:600; margin:26px 0 8px}
+:not(pre) > code{font-family:var(--f-mono); font-size:.875em; background:var(--accent-soft); color:var(--ink); padding:1px 5px; border-radius:3px; overflow-wrap:anywhere}
+td > code, th > code{white-space:nowrap}
+pre{font-family:var(--f-mono); font-size:13px; line-height:1.5; background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:12px 14px; overflow-x:auto}
+main img{max-width:100%; height:auto}
+blockquote{margin:16px 0 0; padding-left:14px; border-left:3px solid var(--line); color:var(--ink-soft)}
+.dokufix-warnung{background:var(--plan-bg); color:var(--plan); border:1px dashed var(--plan); border-radius:6px; padding:8px 12px; font-size:13px; max-width:none}
+.dokufix-warnung::before{content:"⚠ "}
+
+/* Status-Chip */
+.dokufix-chip{display:inline-block; font-family:var(--f-mono); font-size:10.5px; font-weight:400; letter-spacing:.06em; text-transform:uppercase; padding:3px 8px; border-radius:999px; vertical-align:2px}
+.dokufix-chip-ok{background:var(--live-bg); color:var(--live)}
+.dokufix-chip-warn{background:var(--plan-bg); color:var(--plan)}
+.dokufix-chip-neutral, .dokufix-chip-info{background:var(--hold-bg); color:var(--hold)}
+.dokufix-chip-danger{background:var(--danger-bg); color:var(--danger)}
+
+/* Tabellen */
+.dokufix-table{margin-top:14px}
+.dokufix-scroll{overflow-x:auto}
+table{border-collapse:collapse; width:100%; font-size:13.5px; min-width:520px}
+th{text-align:left; font-weight:600; font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--ink-soft); border-bottom:1px solid var(--line); padding:0 14px 8px 0; white-space:nowrap}
+td{border-bottom:1px solid var(--line); padding:9px 14px 9px 0; vertical-align:top; font-variant-numeric:tabular-nums}
+tbody tr:hover td{background:var(--accent-soft)}
+.dokufix-sub{font-family:var(--f-mono); font-size:11px; font-style:normal; color:var(--ink-soft)}
+
+/* Schritte */
+ol.dokufix-steps{counter-reset:s; list-style:none; padding:0; margin:14px 0 0; display:grid; gap:10px}
+ol.dokufix-steps > li{counter-increment:s; position:relative; padding-left:42px; max-width:72ch}
+ol.dokufix-steps > li::before{content:counter(s); position:absolute; left:0; top:2px; width:28px; height:22px; font-family:var(--f-mono); font-size:12px; color:var(--accent); background:var(--accent-soft); border-radius:4px; display:grid; place-items:center}
+.dokufix-who{font-family:var(--f-mono); font-size:11px; font-style:normal; color:var(--ink-soft); display:block}
+
+/* Karten */
+ul.dokufix-cards{list-style:none; padding:0; display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:12px; margin:16px 0 0}
+ul.dokufix-cards > li{background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:14px 16px; font-size:13px; color:var(--ink-soft)}
+.dokufix-card-title{display:block; font-size:14px; color:var(--ink); margin-bottom:4px}
+ul.dokufix-cards > li > p{margin:0; max-width:none}
+
+/* Hinweise */
+.dokufix-callout{background:var(--surface); border-left:3px solid var(--accent); padding:12px 16px; margin-top:16px; border-radius:0 6px 6px 0}
+.dokufix-callout p{margin:0; font-size:14px}
+.dokufix-callout p + p{margin-top:8px}
+.dokufix-callout-warning, .dokufix-callout-important{border-left-color:var(--plan)}
+.dokufix-callout-caution{border-left-color:var(--danger)}
+.dokufix-callout-tip{border-left-color:var(--live)}
+
+/* Filter */
+.dokufix-filter-ui input{font-family:var(--f-body); font-size:14px; padding:8px 12px; border:1px solid var(--line); border-radius:6px; background:var(--surface); color:var(--ink); width:min(320px,100%)}
+.dokufix-filter-ui span{font-family:var(--f-mono); font-size:11.5px; color:var(--ink-soft); margin-left:10px}
+.dokufix-facet-ui{border:0; padding:0; margin:10px 0 12px; display:flex; flex-wrap:wrap; gap:6px; align-items:center}
+.dokufix-facet-ui legend{float:left; font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); margin-right:8px; padding:0}
+.dokufix-facet-ui label{font-size:12.5px; border:1px solid var(--line); border-radius:999px; padding:2px 10px; background:var(--surface); color:var(--ink-soft); cursor:pointer}
+.dokufix-facet-ui label span{font-family:var(--f-mono); font-size:10.5px; opacity:.75}
+.dokufix-facet-ui input{position:absolute; opacity:0; pointer-events:none}
+.dokufix-facet-ui label:has(input:checked){background:var(--accent-soft); border-color:var(--accent); color:var(--ink)}
+.dokufix-facet-ui label:has(input:focus-visible){outline:2px solid var(--accent); outline-offset:2px}
+
+/* Diagramme */
+.dokufix-diagram{position:relative; margin:18px 0 0; background:var(--surface); border:1px solid var(--line); border-radius:7px; padding:14px}
+.dokufix-stage{display:block; cursor:zoom-in; max-width:var(--w)}  /* kleine Diagramme nicht aufblasen */
+.dokufix-stage svg{display:block; width:100%; height:auto}
+.dokufix-diagram figcaption{display:flex; flex-wrap:wrap; gap:4px 16px; margin-top:10px; font-family:var(--f-mono); font-size:11px; color:var(--ink-soft)}
+.dokufix-diagram figcaption a{color:var(--accent)}
+.dokufix-zoom-toggle{position:absolute; width:1px; height:1px; opacity:0; margin:0}
+.dokufix-zoom-toggle:focus-visible ~ .dokufix-viewport{outline:2px solid var(--accent); outline-offset:4px}
+.dokufix-zoom-bar{display:none}
+
+/* Große Ansicht: der Rahmen selbst wird zum Vollbild. Kein zweites SVG, kein JavaScript. */
+html:has(.dokufix-zoom-toggle:checked){overflow:hidden}
+.dokufix-diagram:has(> .dokufix-zoom-toggle:checked){position:fixed; inset:0; z-index:1000; margin:0; padding:0; border:0; border-radius:0; display:flex; flex-direction:column; background:var(--paper)}
+.dokufix-zoom-toggle:checked ~ .dokufix-zoom-bar{display:flex; align-items:center; gap:10px 18px; flex-wrap:wrap; padding:10px 20px; background:var(--surface); border-bottom:1px solid var(--line); font-size:13.5px}
+.dokufix-zoom-bar strong{font-family:var(--f-head); font-size:16px; margin-right:auto}
+.dokufix-zoom-bar fieldset{border:0; padding:0; margin:0; display:flex; gap:6px; align-items:center}
+.dokufix-zoom-bar legend{float:left; font-family:var(--f-mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink-soft); margin-right:8px; padding:0}
+.dokufix-zoom-bar label{border:1px solid var(--line); border-radius:999px; padding:3px 12px; background:var(--surface); color:var(--ink-soft); cursor:pointer}
+.dokufix-zoom-bar fieldset input{position:absolute; opacity:0; pointer-events:none}
+.dokufix-zoom-bar label:has(input:checked){background:var(--accent-soft); border-color:var(--accent); color:var(--ink)}
+.dokufix-zoom-bar label:has(input:focus-visible), .dokufix-zoom-close:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.dokufix-zoom-bar .dokufix-zoom-close{color:var(--ink); font-weight:500}
+.dokufix-zoom-toggle:checked ~ .dokufix-viewport{flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; padding:24px}
+.dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{pointer-events:none; cursor:default; margin:0 auto; max-width:none; background:var(--surface); width:min(100%, calc(var(--w) * 1.5))}
+.dokufix-diagram:has(.dokufix-zoom-bar input[value="100"]:checked) > .dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{width:var(--w)}
+.dokufix-diagram:has(.dokufix-zoom-bar input[value="150"]:checked) > .dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{width:calc(var(--w) * 1.5)}
+.dokufix-diagram:has(.dokufix-zoom-bar input[value="200"]:checked) > .dokufix-zoom-toggle:checked ~ .dokufix-viewport > .dokufix-stage{width:calc(var(--w) * 2)}
+.dokufix-zoom-toggle:checked ~ figcaption{display:none}
+
+/* Große Ansicht mit laufendem bpmn-js-Viewer (nur mit JavaScript): der Viewer ersetzt das Bild, die Zoomstufen steuern ihn. */
+.dokufix-live > .dokufix-zoom-toggle:checked ~ .dokufix-viewport{position:relative; overflow:hidden; padding:0}
+.dokufix-live .dokufix-stage{display:none}
+.dokufix-live-canvas{position:absolute; inset:0; background:var(--surface)}
+.dokufix-live-hint{font-family:var(--f-mono); font-size:11px; color:var(--ink-soft)}
+/* Das bpmn.io-Logo ist fest dunkelgrau. Eine helle Fläche DAHINTER hält es im Dunkelmodus sichtbar, ohne es anzufassen. */
+.dokufix-live-canvas::after{content:""; position:absolute; right:7px; bottom:7px; width:70px; height:38px; border-radius:6px; background:#fff; z-index:99}
+
+/* BPMN (bpmn-js). Grundfarben kommen als CSS-Variablen aus dem Renderer, hier nur die Abweichungen je Elementart. */
+.dokufix-diagram-bpmn [class*="task"] > .djs-visual > rect,
+.dokufix-diagram-bpmn [class*="subprocess"] > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-callactivity > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-startevent > .djs-visual > circle,
+.dokufix-diagram-bpmn [class*="intermediate"] > .djs-visual > circle,
+.dokufix-diagram-bpmn [class*="gateway"] > .djs-visual > polygon{stroke:var(--accent) !important}
+.dokufix-diagram-bpmn [class*="gateway"] > .djs-visual > path{stroke:var(--accent) !important; fill:var(--accent) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-endevent > .djs-visual > circle{stroke:var(--ink) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-lane > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-participant > .djs-visual > rect,
+.dokufix-diagram-bpmn .dokufix-bpmn-participant > .djs-visual > path{stroke:var(--line) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-participant > .djs-visual > rect{fill:var(--accent-soft) !important; fill-opacity:1 !important}
+/* Ein Pool ohne Bahnen hat keine Bahn, die seine Fläche überdeckt */
+.dokufix-diagram-bpmn .dokufix-bpmn-participant.dokufix-bpmn-ohnebahnen > .djs-visual > rect{fill:var(--surface) !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-lane > .djs-visual > rect{fill:var(--surface) !important; fill-opacity:1 !important}
+.dokufix-diagram-bpmn .dokufix-bpmn-geplant > .djs-visual > rect{stroke:var(--plan) !important; stroke-dasharray:6 4}
+.dokufix-diagram-bpmn .dokufix-bpmn-gestrichelt > .djs-visual > path{stroke-dasharray:6 4}
+
+@media (max-width:860px){
+  .dokufix-wrap{grid-template-columns:1fr; gap:0}
+  .dokufix-nav{position:static; max-height:none; padding-block:22px 10px; border-bottom:1px solid var(--line)}
+  .dokufix-navgrp{margin-top:14px}
+  .dokufix-nav > a{display:inline-block; border-left:0; border-bottom:2px solid var(--line); margin:0 14px 6px 0; padding:2px 0}
+  .dokufix-nav > a.on{border-bottom-color:var(--accent)}
+}
+@media (prefers-reduced-motion:no-preference){html{scroll-behavior:smooth}}
+/* Druck: Filter ausblenden und alle Zeilen zeigen, sonst druckt man unbemerkt eine gefilterte Tabelle */
+@media print{.dokufix-nav{position:static} .dokufix-filter-ui, .dokufix-facet-ui, .dokufix-diagram figcaption > span{display:none} .dokufix-table tbody tr{display:table-row !important}}
+/* Ohne :has() täten die Facetten-Knöpfe nichts. Dann lieber gar nicht zeigen. */
+@supports not selector(:has(*)){.dokufix-facet-ui{display:none}}

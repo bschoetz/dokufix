@@ -1,0 +1,41 @@
+  accTitle: Ablaufdiagramm Abo-Anfrage mit vier Bahnen und vier Touren
+  subgraph Kunde
+    s((Möchte regelmäßig<br>beliefert werden))
+    a[Abo-Formular ausfüllen,<br>Tour wählen]
+    e(((Bestätigung<br>erhalten)))
+  end
+  subgraph BF[Bestellformular]
+    b[Pflichtfelder und<br>Adresse prüfen]
+    c[Bestätigung an den<br>Kunden senden]
+    x{Welche<br>Tour?}
+  end
+  subgraph Kundenkartei
+    d[Kunde in Liste<br>Abo-Anfragen]
+    f[Status auf<br>ABO_ANFRAGE setzen]
+    g(((erfasst)))
+  end
+  subgraph Tourenplanung
+    v1[Tour Nord<br>Dörfer am Fluss]
+    v2[Tour Süd<br>Stadtrand und Siedlung]
+    v3[Tour Stadt<br>Innenstadt per Lastenrad]
+    v4[Abholung am Hof<br>alles andere]
+    w[Kiste einplanen,<br>Status pflegen]
+    z(((eingeplant)))
+  end
+  s --> a
+  a --> b
+  b --> c
+  c -.-> e
+  b --> x
+  b --> d
+  d --> f
+  f --> g
+  x --> v1
+  x --> v2
+  x --> v3
+  x --> v4
+  v1 --> w
+  v2 --> w
+  v3 --> w
+  v4 --> w
+  w --> z

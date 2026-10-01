@@ -1,0 +1,29 @@
+  subgraph Kunde
+    s((Möchte regelmäßig<br>beliefert werden))
+    a[Abo-Formular ausfüllen,<br>Tour wählen]
+    e(((Bestätigung<br>erhalten)))
+  end
+  subgraph BF[Bestellformular]
+    b[Pflichtfelder und<br>Adresse prüfen]
+    r[An die gewählte<br>Tour zustellen]
+    c[Bestätigung an den<br>Kunden senden]
+  end
+  subgraph Kundenkartei
+    d[Kunde in Liste<br>Abo-Anfragen]
+    f[Status auf<br>ABO_ANFRAGE setzen]
+    g(((erfasst)))
+  end
+  subgraph Tourenplanung
+    w[Kiste einplanen,<br>Status pflegen]
+    z(((eingeplant)))
+  end
+  s --> a
+  a --> b
+  b --> r
+  r --> w
+  r --> c
+  c -.-> e
+  c --> d
+  d --> f
+  f --> g
+  w --> z
