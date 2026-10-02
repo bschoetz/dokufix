@@ -30,17 +30,24 @@ export function registerDownloadMenu(){
       // For read-only downloads we set the in-flight gate here.
       // downloadWithEditor() manages its own gate (it can take more steps).
       const variant = btn.dataset.download;
-      if (variant === 'full'){
-        await downloadWithEditor();
-        return;
-      }
-      setDownloadInFlight(true);
+      // Whatever a download throws ends here: an export step that failed, for
+      // one. No file was handed over, so the user is told, with the reason.
       try {
-        if (variant === 'readonly-open')     await downloadReadonlyOpen();
-        if (variant === 'readonly-slim')     await downloadReadonlySlim();
-        if (variant === 'readonly-compact')  await downloadReadonlyCompact();
-      } finally {
-        setDownloadInFlight(false);
+        if (variant === 'full'){
+          await downloadWithEditor();
+          return;
+        }
+        setDownloadInFlight(true);
+        try {
+          if (variant === 'readonly-open')     await downloadReadonlyOpen();
+          if (variant === 'readonly-slim')     await downloadReadonlySlim();
+          if (variant === 'readonly-compact')  await downloadReadonlyCompact();
+        } finally {
+          setDownloadInFlight(false);
+        }
+      } catch (e) {
+        console.error('Download failed:', e);
+        alert('Der Download ist fehlgeschlagen — es wurde keine Datei erzeugt. (' + (e && e.message || e) + ')');
       }
     });
   });

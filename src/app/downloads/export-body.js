@@ -21,7 +21,8 @@ import { removeTransient } from '../transient.js';
 // touched.
 //
 // A step that throws ends the export: a file with a step left out would be a
-// wrong file that looks right.
+// wrong file that looks right. The menu catches what a download throws and
+// tells the user that no file was written, and why.
 
 // Elements that exist only while the page runs; see transient.js.
 function removeTransientElements(copy){

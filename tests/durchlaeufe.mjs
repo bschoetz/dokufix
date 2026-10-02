@@ -45,6 +45,13 @@
 //                                transient element and then throws: its warning
 //                                and its element are in the page and in no export
 //
+// and on a second copy, built with one export step more:
+//
+//   6. an export step throws     each of the three read-only downloads ends in
+//                                a dialog that says the download failed, with
+//                                the step's message; no file is handed over,
+//                                and the download buttons are enabled again
+//
 // In every case the error is on the console and no promise is rejected: the
 // run collects console errors and page errors and looks at both.
 //
@@ -140,20 +147,26 @@ const PASS_EDITS = [
     add: "  { name: '" + RUNTIME_PASS + "', run(root){ const el = root.ownerDocument.createElement('p'); el.id = '" + TRANSIENT_ID +
          "'; el.setAttribute(TRANSIENT_ATTR, ''); el.textContent = 'nur in der laufenden Seite'; root.appendChild(el); throw new Error('" + RUNTIME_MESSAGE + "'); } },\n" },
 ];
-function buildCopyWithThrowingPasses(outDir){
+const EXPORT_STEP_MESSAGE = 'Absicht: der Exportschritt wirft (durchlaeufe)';
+const EXPORT_EDITS = [
+  { after: "const EXPORT_STEPS = [removeTransientElements, inlineImages];\n",
+    add: "EXPORT_STEPS.push(() => { throw new Error('" + EXPORT_STEP_MESSAGE + "'); });\n" },
+];
+// Builds a copy of src/ in which one module got the given lines.
+function buildCopy(outDir, module, edits, name){
   const srcCopy = path.join(outDir, 'src');
   fs.cpSync(path.join(root, 'src'), srcCopy, { recursive: true });
-  const file = path.join(srcCopy, 'app/render.js');
+  const file = path.join(srcCopy, module);
   let text = fs.readFileSync(file, 'utf8');
-  for (const edit of PASS_EDITS){
+  for (const edit of edits){
     const anchor = edit.before || edit.after;
-    if (text.split(anchor).length !== 2) throw new Error('src/app/render.js: expected exactly once, to put a pass next to it: ' + anchor.trim());
+    if (text.split(anchor).length !== 2) throw new Error('src/' + module + ': expected exactly once, to put a line next to it: ' + anchor.trim());
     text = text.replace(anchor, () => edit.before ? edit.add + anchor : anchor + edit.add);
   }
   fs.writeFileSync(file, text);
-  const built = path.join(outDir, 'mit-werfenden-schritten.html');
+  const built = path.join(outDir, name);
   const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--src', srcCopy, '--out', built], { encoding: 'utf8' });
-  if (r.status !== 0) throw new Error('could not build the copy with the throwing passes:\n' + r.stderr);
+  if (r.status !== 0) throw new Error('could not build ' + name + ':\n' + r.stderr);
   fs.rmSync(srcCopy, { recursive: true });
   return built;
 }
@@ -173,13 +186,14 @@ const READONLY = [
 async function open(browser, file, ready){
   const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
   const page = await context.newPage();
-  const consoleErrors = [], pageErrors = [];
+  const consoleErrors = [], pageErrors = [], dialogs = [], downloads = [];
   page.on('pageerror', e => pageErrors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
-  page.on('dialog', d => d.type() === 'prompt' ? d.accept('Stand aus durchlaeufe.mjs') : d.accept());
+  page.on('dialog', d => { dialogs.push({ type: d.type(), message: d.message() }); return d.type() === 'prompt' ? d.accept('Stand aus durchlaeufe.mjs') : d.accept(); });
+  page.on('download', d => downloads.push(d.suggestedFilename()));
   await page.goto(pathToFileURL(file).href);
   await page.waitForFunction(ready, null, { timeout: 90000 });
-  return { context, page, consoleErrors, pageErrors };
+  return { context, page, consoleErrors, pageErrors, dialogs, downloads };
 }
 // An editor file: init and the first render are done when the rail is filled.
 const editorReady = () => !!document.querySelector('#dokufix-rail.has-items');
@@ -288,7 +302,7 @@ async function checkExports(scope, browser, page, dir, prefix, variants, each){
 }
 
 // ---------- one browser ----------
-async function runBrowser(name, opts, copyWithPasses){
+async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
   const dir = path.join(opts.out, name);
   fs.mkdirSync(dir, { recursive: true });
   const browser = await BROWSERS[name]();
@@ -331,8 +345,8 @@ async function runBrowser(name, opts, copyWithPasses){
     });
 
     // ----- 2. overlapping renders
-    await attempt(name + ' overlapping renders, a transient element', async () => {
-      let scope = name + ' overlapping renders';
+    await attempt(name + ' overlapping renders', async () => {
+      const scope = name + ' overlapping renders';
       const o = await open(browser, opts.file, editorReady);
       await o.page.evaluate(([a, b]) => {
         const source = document.getElementById('source'), button = document.getElementById('render-btn');
@@ -365,9 +379,13 @@ async function runBrowser(name, opts, copyWithPasses){
         JSON.stringify(log.rails) === JSON.stringify([{ rail: 'A eins', preview: 'Dokument A' }, { rail: 'B eins', preview: 'Dokument B' }]), log.rails);
       check(scope, 'the preview ends as the second one\'s, complete', log.h1 === 'Dokument B' && log.diagrams === 2, log);
       check(scope, 'no error', o.pageErrors.length === 0 && o.consoleErrors.length === 0, o.pageErrors.concat(o.consoleErrors).join(' | '));
+      await o.context.close();
+    });
 
-      // ----- 3. a transient element (same page)
-      scope = name + ' transient element';
+    // ----- 3. a transient element
+    await attempt(name + ' transient element', async () => {
+      const scope = name + ' transient element';
+      const o = await open(browser, opts.file, editorReady);
       const placed = await o.page.evaluate(() => {
         const make = (tag, id, marked) => {
           const el = document.createElement(tag);
@@ -451,6 +469,33 @@ async function runBrowser(name, opts, copyWithPasses){
       });
       await o.context.close();
     });
+
+    // ----- 6. an export step throws (the copy with one export step more)
+    await attempt(name + ' an export step throws', async () => {
+      const o = await open(browser, copyWithExportStep, editorReady);
+      await editMode(o.page);
+      for (const v of READONLY){
+        const scope = name + ' an export step throws, ' + v.key;
+        const before = o.dialogs.length;
+        await o.page.click('#download-btn');
+        await Promise.all([
+          o.page.waitForEvent('dialog', { timeout: 60000 }),
+          o.page.click('button[data-download="' + v.download + '"]'),
+        ]);
+        await o.page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+        await o.page.waitForTimeout(500);   // a download that started after all would show up by now
+        const said = o.dialogs.slice(before);
+        check(scope, 'one dialog says that the download failed, and why',
+          said.length === 1 && said[0].type === 'alert' && said[0].message.includes('Der Download ist fehlgeschlagen') && said[0].message.includes(EXPORT_STEP_MESSAGE), said);
+        check(scope, 'no download starts', o.downloads.length === 0, o.downloads);
+        check(scope, 'the download buttons are enabled again', await o.page.evaluate(() => document.querySelectorAll('button[data-download]:disabled').length === 0
+          && document.querySelectorAll('button[data-download]').length === 4));
+      }
+      const scope = name + ' an export step throws';
+      check(scope, 'the error is on the console, once per download', o.consoleErrors.filter(e => e.includes('Download failed')).length === READONLY.length, o.consoleErrors.join(' | ').slice(0, 400) || 'nothing logged');
+      check(scope, 'no page error and no rejected promise', o.pageErrors.length === 0, o.pageErrors.join(' | '));
+      await o.context.close();
+    });
   } finally {
     await browser.close();
   }
@@ -460,10 +505,11 @@ async function runBrowser(name, opts, copyWithPasses){
 const opts = parseArgs(process.argv.slice(2));
 fs.rmSync(opts.out, { recursive: true, force: true });
 fs.mkdirSync(opts.out, { recursive: true });
-const copyWithPasses = buildCopyWithThrowingPasses(opts.out);
+const copyWithPasses = buildCopy(opts.out, 'app/render.js', PASS_EDITS, 'mit-werfenden-schritten.html');
+const copyWithExportStep = buildCopy(opts.out, 'app/downloads/export-body.js', EXPORT_EDITS, 'mit-werfendem-exportschritt.html');
 
 const names = opts.browser === 'all' ? ['chromium', 'firefox'] : [opts.browser];
-for (const name of names) await runBrowser(name, opts, copyWithPasses);
+for (const name of names) await runBrowser(name, opts, copyWithPasses, copyWithExportStep);
 
 const failed = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'ok    ' : 'FAIL  ') + r.scope + ': ' + r.name + (r.detail ? ' — ' + r.detail : ''));
