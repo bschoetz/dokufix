@@ -842,6 +842,43 @@ async function assertVariant(launch, file, key, exp, results, label){
         const viewProblems = licenceViewProblems(po);
         check('edit mode at 600 px: the view opens inside the panel, as wide as the panel was', viewProblems.length === 0 && inside(po.view, panelOpen) && round(panelOpen).split(' ')[0] === round(panel).split(' ')[0] && panelOpen.bottom <= po.window.height,
           viewProblems.join('; ') + ' view ' + round(po.view) + ', panel ' + round(panel) + ' → ' + round(panelOpen));
+        // With the download menu open as well the panel is taller than the
+        // window, and the page does not scroll in edit mode. So the panel has
+        // to end inside the window and scroll inside itself: every action in
+        // it is brought into view by scrolling the panel, and only the panel,
+        // and then has to lie between the window's upper and lower edge, with
+        // its middle inside the window and nothing over it. Its right edge is
+        // not judged: the download menu stands beside its button in the panel
+        // and runs past the window's right edge, as it did before this story.
+        await page.click('#download-btn');
+        const reach = await page.evaluate(() => {
+          const p = document.getElementById('header-actions');
+          const actions = Array.from(p.querySelectorAll('summary, button'));
+          const unreachable = [];
+          for (const el of actions){
+            let b = el.getBoundingClientRect();
+            const r = p.getBoundingClientRect();
+            if (b.bottom > r.bottom) p.scrollTop += Math.ceil(b.bottom - r.bottom);
+            else if (b.top < r.top) p.scrollTop -= Math.ceil(r.top - b.top);
+            b = el.getBoundingClientRect();
+            const x = b.left + b.width / 2, y = b.top + b.height / 2;
+            const top = document.elementFromPoint(x, y);
+            if (!(b.top >= -1 && b.bottom <= innerHeight + 1 && x >= 0 && x <= innerWidth && !!top && el.contains(top))){
+              unreachable.push((el.id || el.dataset.download || el.tagName.toLowerCase()) + ' at ' + Math.round(b.top) + '–' + Math.round(b.bottom));
+            }
+          }
+          p.scrollTop = 0;
+          const r = p.getBoundingClientRect();
+          return {
+            actions: actions.length, unreachable, panel: Math.round(r.top) + '–' + Math.round(r.bottom), inside: r.top >= 0 && r.bottom <= innerHeight + 0.6,
+            content: p.scrollHeight, window: innerHeight,
+            menuOpen: !!p.querySelector('.menu-wrap.open'), viewOpen: !!p.querySelector('details.dokufix-licences[open]'),
+            pageScrolled: scrollY !== 0 || document.documentElement.scrollTop !== 0 || document.body.scrollTop !== 0,
+          };
+        });
+        check('edit mode at 600 px, licence view and download menu both open: the panel stays inside the window, and every action in it can be reached by scrolling the panel',
+          reach.menuOpen && reach.viewOpen && reach.actions >= 10 && reach.unreachable.length === 0 && reach.inside && !reach.pageScrolled, JSON.stringify(reach));
+        await page.click('#download-btn');
         await page.click('#header-actions > details.dokufix-licences > summary');
       }
       await page.click('#hamburger');

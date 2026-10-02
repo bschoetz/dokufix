@@ -461,6 +461,14 @@
     /* In the hamburger panel the view is inline, like the download menu. Width
        0 with a minimum of 100 %: its text does not widen the panel. */
     .header-actions>.dokufix-licences summary{padding:6px 14px}
+    /* With the view and the download menu both open the panel is taller than
+       the window, and <body> does not scroll in edit mode. So the panel ends
+       at the window's lower edge and scrolls inside itself; 100 % is the
+       height of the toolbar, which the panel hangs below. Sideways nothing
+       scrolls: the download menu runs past the panel's right edge, which is
+       the window's, and is cut there as it was before. */
+    .header-actions{max-height:calc(100vh - 100%);overflow-y:auto;overflow-x:hidden}
+    .header-actions>*{flex-shrink:0}
     .header-actions .dokufix-licences-view{
       position:static;width:0;min-width:100%;max-height:50vh;
       margin-top:4px;box-shadow:none;

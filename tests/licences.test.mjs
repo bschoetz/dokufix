@@ -9,9 +9,11 @@
 //
 //   - the list is complete: the four entries, each with every field, and the
 //     copyright lines as their projects publish them;
-//   - the versions are the ones the file really uses: the CDN URLs in
-//     src/index.html and the Octicons version named in src/doc.css. Raise one
-//     of those and leave the list alone, and the case fails and names the entry;
+//   - the versions are the ones the file really uses: every jsDelivr npm URL
+//     in src/index.html, whatever tag it stands in, and the Octicons version
+//     named in src/doc.css. Raise one of those and leave the list alone, and
+//     the case fails and names the entry. Not covered: a library from another
+//     host, and one the script itself would import or load;
 //   - every licence an entry names has its text;
 //   - the markup: a closed <details>, no <script>, every text escaped;
 //   - the built file holds every copyright line.
@@ -83,11 +85,19 @@ test('the entries say what their projects publish', () => {
 });
 
 // ---------- the versions ----------
-// What the sources pin: every library the page loads from the CDN, by the name
-// and version in its URL, and the Octicons version in the comment of src/doc.css.
+// What the sources pin: every package the page names on jsDelivr's npm path,
+// with its version, and the Octicons version in the comment of src/doc.css.
+// Every such URL in src/index.html counts, whatever the tag and the attribute
+// it stands in: <script src>, <link href>, with other attributes in front, in
+// a comment. A URL without a version counts as version "none", so it cannot
+// agree with an entry. Not seen: a library from another host, and one the
+// script itself imports or loads; nothing does that today.
 function pinned(indexHtml, docCss){
-  const cdn = [...indexHtml.matchAll(/<script\s+src="https:\/\/cdn\.jsdelivr\.net\/npm\/((?:@[\w.-]+\/)?[\w.-]+)@([^/"]+)\//g)]
-    .map(m => ({ package: m[1], version: m[2] }));
+  const cdn = [];
+  for (const m of indexHtml.matchAll(/cdn\.jsdelivr\.net\/npm\/((?:@[\w.-]+\/)?[\w.-]+?)(?:@([^/"'\s<>]+))?(?=[/"'\s<>])/g)){
+    const pin = { package: m[1], version: m[2] || 'none' };
+    if (!cdn.some(x => x.package === pin.package && x.version === pin.version)) cdn.push(pin);
+  }
   const octicons = docCss.match(/@primer\/octicons (\d+\.\d+\.\d+)/);
   return { cdn, embedded: octicons ? [{ package: '@primer/octicons', version: octicons[1] }] : [] };
 }
@@ -138,6 +148,23 @@ test('a library the page loads and the list does not name is reported, and so is
   const less = indexHtml.replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/marked-footnote@[^>]*><\/script>\n/, '');
   assert.notEqual(less, indexHtml, 'mutation target not found');
   assert.deepEqual(versionProblems(NOTICES, less, docCss), ['entry "marked-footnote": src/index.html does not name marked-footnote']);
+});
+
+test('a jsDelivr URL counts in whatever tag and attribute it stands: a stylesheet, a script with attributes in front, a URL without a version', () => {
+  const indexHtml = read('src/index.html'), docCss = read('src/doc.css');
+  const withTag = tag => {
+    const changed = indexHtml.replace('</head>', tag + '\n</head>');
+    assert.notEqual(changed, indexHtml, 'mutation target not found');
+    return versionProblems(NOTICES, changed, docCss);
+  };
+  assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.6.2/dist/assets/diagram-js.css">'),
+    ['src/index.html uses bpmn-js 18.6.2, and the list has no entry for it']);
+  assert.deepEqual(withTag('<script defer src="https://cdn.jsdelivr.net/npm/@scope/some.lib@1.2.3/dist/index.min.js"></script>'),
+    ['src/index.html uses @scope/some.lib 1.2.3, and the list has no entry for it']);
+  assert.deepEqual(withTag("<link rel='stylesheet' href='//cdn.jsdelivr.net/npm/mermaid@12.0.1/dist/mermaid.css'>"),
+    ['entry "Mermaid": the list says 12.0.0, src/index.html uses 12.0.1']);
+  assert.deepEqual(withTag('<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>'),
+    ['entry "marked": the list says 18.0.14, src/index.html uses none']);
 });
 
 // ---------- the licence texts ----------
