@@ -3,6 +3,7 @@ import { sourceEl, previewEl } from './dom.js';
 import { splitFrontmatter, injectFrontmatterPanel } from './frontmatter.js';
 import { buildCallouts } from './callouts.js';
 import { buildChips } from './chips.js';
+import { applyMarkers } from './markers.js';
 import { assignHeadingIds, processInlineToc, attachTocClicks } from './toc.js';
 import { attachFootnotePreviews, linkFootnoteReturnPaths } from './footnotes.js';
 import { buildRail } from './rail.js';
@@ -28,13 +29,15 @@ let mermaidId = 0;
 // document and the context of this render, { frontmatter }: what was split off
 // the source before Markdown was parsed.
 //
-// The order matters in four places. Callouts come before the headings: which
+// The order matters in five places. Callouts come before the headings: which
 // headings count depends on where a heading stands, and one inside a callout
 // does not. Status chips come before the headings as well: a heading's anchor
 // and its entry in the table of contents are made from the heading as it
 // stands then, and a code span that is still to become a chip would put its
 // colour dot into the entry. Heading ids come before the inline table of
-// contents and the rail, which need them. And attachFootnotePreviews()
+// contents and the rail, which need them. Callouts, status chips and block
+// markers all come before the footnote previews: a preview is a copy of its
+// definition as that stands when the copy is made. And attachFootnotePreviews()
 // resolves each definition through the marker's href, while
 // linkFootnoteReturnPaths() rewrites that href to point at the return arrow:
 // retargeting first would build every preview out of the "↩" anchor instead
@@ -43,6 +46,7 @@ export const DOCUMENT_PASSES = [
   { name: 'Metadaten', run: (root, context) => injectFrontmatterPanel(root, context.frontmatter) },
   { name: 'Hinweise', run: buildCallouts },
   { name: 'Status-Chips', run: buildChips },
+  { name: 'Markierungen', run: applyMarkers },
   { name: 'Überschriften', run: assignHeadingIds },
   { name: 'Inhaltsverzeichnis', run: processInlineToc },
   { name: 'Fußnoten-Vorschau', run: attachFootnotePreviews },

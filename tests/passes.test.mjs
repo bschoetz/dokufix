@@ -8,7 +8,7 @@
 //
 // The modules imported here are the ones that load without a page:
 // passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js,
-// chips.js.
+// chips.js, markers.js.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,6 +20,7 @@ import { assignHeadingIds, processInlineToc, documentHeadings, headingLabelText 
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
 import { buildCallouts } from '../src/app/callouts.js';
 import { buildChips } from '../src/app/chips.js';
+import { applyMarkers } from '../src/app/markers.js';
 
 // A root like the preview, holding the given markup.
 function rootWith(html){
@@ -336,4 +337,76 @@ test('the label of a heading leaves out the footnote preview and the chip\'s wor
   assert.equal(headingLabelText(root.querySelector('h2')), 'Frist Live1');
   // The heading is not changed by being asked.
   assert.equal(root.querySelectorAll('.dokufix-chip-status, .dokufix-fn-preview').length, 2);
+});
+
+// ---------- block markers ----------
+// The passes are the ones of render.js up to the table of contents, in its
+// order. The markup is what marked emits for
+//
+//   # Handbuch
+//   [[toc]]
+//   ## Wege
+//   <!-- dokufix: cards -->
+//   - **Automat** `🟢 Live`
+//   - **Theke** zu den Öffnungszeiten
+//
+//   <!-- dokufix: crads -->
+//   - bleibt
+//
+//   ## Ablauf
+//   <!-- dokufix: side-note wichtig -->
+//   <!-- dokufix: steps -->
+//   3. *Leserin:* einlegen
+//   4. mitnehmen
+//
+//   > [!TIP]
+//   > <!-- dokufix: steps -->
+//   > 1. im Hinweis
+const MARKER_PASSES = [
+  { name: 'Hinweise', run: buildCallouts },
+  { name: 'Status-Chips', run: buildChips },
+  { name: 'Markierungen', run: applyMarkers },
+  { name: 'Überschriften', run: assignHeadingIds },
+  { name: 'Inhaltsverzeichnis', run: processInlineToc },
+];
+const WITH_MARKERS =
+  '<h1>Handbuch</h1>\n<p>[[toc]]</p>\n<h2>Wege</h2>\n' +
+  '<!-- dokufix: cards -->\n<ul>\n<li><strong>Automat</strong> <code>🟢 Live</code></li>\n<li><strong>Theke</strong> zu den Öffnungszeiten</li>\n</ul>\n' +
+  '<!-- dokufix: crads -->\n<ul>\n<li>bleibt</li>\n</ul>\n<h2>Ablauf</h2>\n' +
+  '<!-- dokufix: side-note wichtig -->\n<!-- dokufix: steps -->\n<ol start="3">\n<li><em>Leserin:</em> einlegen</li>\n<li>mitnehmen</li>\n</ol>\n' +
+  '<blockquote>\n<p>[!TIP]</p>\n<!-- dokufix: steps -->\n<ol>\n<li>im Hinweis</li>\n</ol>\n</blockquote>\n';
+test('broken markers among working ones: no pass fails, each warning stands at its marker\'s place, every other marker takes effect', async t => {
+  const root = rootWith(WITH_MARKERS);
+  const { result: failed, logged } = await quiet(t, () => runPasses(root, MARKER_PASSES, { frontmatter: { kind: null } }));
+  assert.deepEqual(failed, [], 'no pass failed');
+  assert.deepEqual(logged, [], 'nothing on the console');
+  // Not at the top, where the runner puts the warning of a pass that failed.
+  assert.equal(root.firstElementChild.tagName, 'H1');
+  const warnings = Array.from(root.querySelectorAll('.dokufix-warning'));
+  assert.deepEqual(warnings.map(w => w.textContent), [
+    'Warnung: Unbekannte Markierung „dokufix: crads“. Bekannt sind: cards, steps.',
+    'Warnung: Unbekannte Markierung „dokufix: side-note wichtig“. Bekannt sind: cards, steps.',
+  ]);
+  assert.equal(warnings[0].nextElementSibling.outerHTML, '<ul>\n<li>bleibt</li>\n</ul>');
+  assert.equal(warnings[1].previousElementSibling.id, 'ablauf');
+  // The working ones: cards with their titles and a chip in one, steps from 3
+  // with an actor, and a step list inside a callout.
+  assert.deepEqual(Array.from(root.querySelectorAll('ul.dokufix-cards > li')).map(li => li.textContent), ['Automat grün: Live', 'Theke zu den Öffnungszeiten']);
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-card-title')).map(s => s.textContent), ['Automat', 'Theke']);
+  assert.equal(root.querySelectorAll('.dokufix-cards .dokufix-chip-green').length, 1);
+  assert.deepEqual(Array.from(root.querySelectorAll(':scope > ol.dokufix-steps .dokufix-step-number')).map(n => n.textContent), ['3', '4']);
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-step-actor')).map(a => a.textContent), ['Leserin']);
+  assert.equal(root.querySelectorAll('.dokufix-callout-tip > ol.dokufix-steps > li').length, 1);
+  // The passes after it ran on the document as it stands then.
+  assert.deepEqual(documentHeadings(root).map(h => h.id), ['handbuch', 'wege', 'ablauf']);
+  assert.deepEqual(Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.textContent), ['Wege', 'Ablauf']);
+  // No marker is left, as a comment or as text.
+  assert.ok(!root.innerHTML.includes('<!--'));
+});
+test('a document without a marker comes through the marker pass as it went in', async () => {
+  const markup = '<h1>Titel</h1>\n<!-- Notiz -->\n<ul>\n<li><strong>fett</strong> a</li>\n</ul>\n<ol start="3">\n<li><em>Wer:</em> b</li>\n</ol>\n';
+  const root = rootWith(markup);
+  const failed = await runPasses(root, [{ name: 'Markierungen', run: applyMarkers }], { frontmatter: { kind: null } });
+  assert.deepEqual(failed, []);
+  assert.equal(root.innerHTML, markup);
 });

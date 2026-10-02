@@ -311,6 +311,61 @@
     .dokufix-doc .dokufix-chip-grey::before{background:transparent;border-color:CanvasText}
   }
 
+  /* Cards — a bullet list with the marker "cards" before it (src/app/markers.js,
+     buildCards() in src/app/cards.js). Each item is a card with a thin border.
+     The grid puts as many beside each other as fit at 210 px or more and wraps
+     the rest; min() keeps a card inside a column narrower than that.
+     The title is the bold text an item starts with. Which element that is the
+     pass decides, by the class; nothing here asks where a <strong> stands. It
+     is a line of its own.
+     No colour of its own: the greys are those of the table of contents and the
+     metadata panel. */
+  .dokufix-doc .dokufix-cards{
+    list-style:none;margin:0 0 1em;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(min(210px,100%),1fr));gap:12px;
+  }
+  .dokufix-doc .dokufix-cards > li{
+    min-width:0;margin:0;padding:12px 16px;
+    border:1px solid #e5e5ea;border-radius:6px;
+    font-size:.94em;color:#3a3a3f;
+  }
+  .dokufix-doc .dokufix-card-title{display:block;margin-bottom:4px;color:#1c1c1e}
+  /* An item of a list with blank lines between its items holds paragraphs. */
+  .dokufix-doc .dokufix-cards > li > p{margin-bottom:.5em}
+  .dokufix-doc .dokufix-cards > li > :last-child:not(.dokufix-card-title){margin-bottom:0}
+
+  /* Step list — a numbered list with the marker "steps" before it
+     (buildSteps() in src/app/steps.js). The list's own marker is switched off;
+     the number of each item is text the pass wrote into it, shown as a small
+     tile left of the step. So a list that starts at 3 counts from 3, with no
+     counter and no inline style. The tile is placed against its item, which is
+     positioned for that.
+     The actor, the emphasised "Website:" an item starts with, stands above the
+     step as a small label; the pass set its class and took the colon out.
+     The tile's tint is a background, and a browser leaves backgrounds out when
+     it prints unless it is told not to; see the callout label above. */
+  .dokufix-doc .dokufix-steps{list-style:none;margin:0 0 1em}
+  .dokufix-doc .dokufix-steps > li{
+    position:relative;min-height:26px;
+    margin:0 0 10px;padding-left:42px;
+  }
+  .dokufix-doc .dokufix-steps > li:last-child{margin-bottom:0}
+  .dokufix-doc .dokufix-steps > li > p{margin-bottom:.5em}
+  .dokufix-doc .dokufix-steps > li > :last-child{margin-bottom:0}
+  .dokufix-doc .dokufix-step-number{
+    position:absolute;left:0;top:1px;
+    min-width:28px;padding:0 4px;border-radius:4px;
+    font:600 12px/24px ui-monospace,monospace;text-align:center;
+    color:#3a3a3f;background:#f0f0f3;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
+  .dokufix-doc .dokufix-step-actor{
+    display:block;
+    font:600 11px/1.6 ui-monospace,monospace;
+    letter-spacing:.06em;text-transform:uppercase;
+    color:#6e6e73;
+  }
+
   /* Footnotes (marked-footnote / GFM style) */
   .dokufix-doc .footnotes{
     margin-top:3em;padding-top:1.5em;

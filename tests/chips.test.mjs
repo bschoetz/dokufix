@@ -244,7 +244,8 @@ test('render.js runs the pass "Status-Chips" after "Hinweise" and before "Übers
   const at = names.indexOf('Status-Chips');
   assert.ok(at > 0, 'the pass is in the list: ' + names.join(', '));
   assert.equal(names[at - 1], 'Hinweise');
-  assert.equal(names[at + 1], 'Überschriften');
+  // Between the two stands the pass of the block markers (story 2.4).
+  assert.ok(names.indexOf('Überschriften') > at, 'before the headings: ' + names.join(', '));
   assert.match(list, /\{ name: 'Status-Chips', run: buildChips \}/);
 });
 test('no module but chips.js tests for a colour dot', () => {
