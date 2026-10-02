@@ -560,6 +560,21 @@ Mermaid ist hier also Anordner, nicht Zeichner und nicht Schreibformat. Derselbe
 - D1 bis D5 sind entschieden, alle Einträge unter „Out of scope“ sind von Ben bestätigt. Offen ist nur, ob Black-Box-Pools in Story 2.12 angeordnet werden sollen (heute: Warnung).
 - Die Anordnung samt Routing-Korrekturen hat keinen unabhängigen Review. Im Epic ist er Pflicht (Story 2.8).
 
+## Stand vom 2. Oktober: Story 2.1 gebaut
+
+Story 2.1 ist gebaut und geprüft. Für die übrigen Stories ändert das vier Dinge, die weiter oben noch anders stehen:
+
+- **Stile stehen einmal.** Die Leitplanke „CSS doppelt pflegen“ gilt nicht mehr, `READONLY_CSS` gibt es nicht mehr. Eine Regel für Dokumentinhalt kommt in `<style id="dokufix-doc-css">` und beginnt mit `.dokufix-doc`. Die Vorschau nutzt den Block direkt, die drei Nur-Lese-Exporte betten seinen Text beim Speichern ein. `poc/README.md`, „Document styles (one source)“, beschreibt, welche Regel wohin gehört.
+- **Eine Prüfung schlägt bei Drift fehl.** `node poc/tests/check-doc-styles.mjs` braucht weder Browser noch Abhängigkeiten. Sie erkennt keine Inhaltsregel über einen anderen Vorfahren (`.pane-preview h5`) und kein CSS-Nesting.
+- **Die Bibliotheken sind festgelegt**, wie in D4 entschieden. `marked` wird jetzt als `lib/marked.umd.js` geladen, weil es `marked.min.js` ab Version 16 nicht mehr gibt. Der Sprung von 15.0.12 auf 18.0.14 hat an Referenzdokument und Demo-Text kein Pixel und kein Byte HTML geändert.
+- **`strict` nimmt mehr weg, als oben steht.** Gemessen an Mermaid 12.0.0 mit einem Flussdiagramm: Es entfallen Klick-Funktionen sowie die Ziele von `javascript:`- und `data:`-Links. Gewöhnliche Links und gesäubertes HTML in Beschriftungen bleiben. Andere Diagrammtypen sind nicht gemessen.
+
+Für den Nachweis „kommt in allen vier Varianten an“ gibt es `poc/tests/vergleich.mjs`: Es baut aus `poc/tests/referenz.md` alle vier Varianten, öffnet jede wie ein Empfänger, macht Screenshots in Chromium und Firefox und vergleicht sie mit einem früheren Lauf. Jede weitere Story erweitert das Referenzdokument um ihre Bausteine.
+
+Entschieden am 2. Oktober (Ben): Bilder bekommen in allen Varianten `margin:8px 0`. Bisher hatte nur die Vorschau diesen Rand, die Nur-Lese-Exporte nicht.
+
+Gemessene Größen, Messweise und offene Punkte stehen in `poc/README.md` und in `_bmad-output/initiative-dokufix/deferred-work.md`.
+
 ## Offene Entscheidungen
 
 1. Block-Markierung: HTML-Kommentar, Attributliste oder Fenced Div? Entschieden am 1. Oktober: HTML-Kommentar (D1 im Epic).
