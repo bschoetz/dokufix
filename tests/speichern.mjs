@@ -30,12 +30,14 @@
 //   4. build a copy of src/ whose demo text contains </script>, <!-- and the
 //      like, open it                     the editor holds that text unchanged
 //
-// It also reads the saved files as text: both blocks hold {"gz": …} that unpack
-// to the document and to the demo text, and the script is the one of the file
+// It also reads the saved files as text: #dokufix-history parses and holds the
+// version description as typed, both text blocks hold {"gz": …} that unpack to
+// the document and to the demo text, and the script is the one of the file
 // under test, byte for byte, in both generations.
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
+// The version description contains "<!-- <script>" and "</script>".
 //
 // Exit code 1 when anything fails. The page is used the way an author uses it,
 // through its buttons; the run waits on the DOM as tests/vergleich.mjs does.
@@ -103,7 +105,12 @@ const body = name => [
 ].join('\n\n');
 const DOC_A = '# Dokument A\n\n' + body('A') + '\n';
 const DOC_B = '---\ntitle: Dokument B\nversion: 2\n---\n\n# Dokument B\n\nEin Absatz, den A nicht hat.\n\n' + body('B'); // no final newline
-const DEMO_EXTRA = '\n## Demo-Text mit Markup\n\nEin </script> ohne Rückstriche, ein <!-- und ein <script>, dazu $& und {{slot:app.js}}.\n';
+// The version description typed into every save. It goes into #dokufix-history
+// as it is. "<!--" followed by "<script" is what makes a script element run on
+// past its "</script>": written unescaped, the history block would swallow the
+// demo block behind it, and the file would open as v0 with no demo text.
+const DESCRIPTION = 'Stand aus speichern.mjs <!-- <script> und </script>';
+const DEMO_EXTRA ='\n## Demo-Text mit Markup\n\nEin </script> ohne Rückstriche, ein <!-- und ein <script>, dazu $& und {{slot:app.js}}.\n';
 
 // ---------- results ----------
 const results = [];
@@ -128,7 +135,7 @@ async function open(browser, file){
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   // "Mit Editor" asks for a version description, "Demo zurücksetzen" for a confirmation.
-  page.on('dialog', d => d.type() === 'prompt' ? d.accept('Stand aus speichern.mjs') : d.accept());
+  page.on('dialog', d => d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.accept());
   await page.goto(pathToFileURL(file).href);
   await page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
   return { context, page, errors };
@@ -187,8 +194,18 @@ function appScript(html){
   const start = html.indexOf('<script>'), end = html.lastIndexOf('</script>');
   return start < 0 || end < start ? null : html.slice(start + '<script>'.length, end);
 }
-function checkSavedFile(scope, file, original, doc, demo){
+function checkSavedFile(scope, file, original, doc, demo, version){
   const html = fs.readFileSync(file, 'utf8');
+  let history = null, historyError = '';
+  try { history = JSON.parse(dataBlock(html, 'dokufix-history')); }
+  catch (e){ historyError = String(e); }
+  check(scope, 'file: #dokufix-history parses', history !== null, historyError);
+  if (history !== null){
+    const descriptions = Array.isArray(history.history) ? history.history.map(e => e.m) : [];
+    check(scope, 'file: #dokufix-history holds version ' + version + ', every entry with the description as typed',
+      history.version === version && descriptions.length === version && descriptions.every(m => m === DESCRIPTION),
+      JSON.stringify({ version: history.version, descriptions }));
+  }
   const source = blockText(html, 'dokufix-source'), demoBlock = blockText(html, 'dokufix-demo');
   check(scope, 'file: #dokufix-source holds {"gz": …}', source.found && source.gz, JSON.stringify(source).slice(0, 200));
   if (source.gz) same(scope, 'file: #dokufix-source unpacks to the document', source.text, doc);
@@ -217,7 +234,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await editAndSave(o.page, DOC_A, gen1);
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
-    checkSavedFile(name + ' generation 1', gen1, original, DOC_A, demo);
+    checkSavedFile(name + ' generation 1', gen1, original, DOC_A, demo, 1);
 
     // 2. first generation
     scope = name + ' generation 1';
@@ -229,7 +246,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await editAndSave(o.page, DOC_B, gen2);
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
-    checkSavedFile(name + ' generation 2', gen2, original, DOC_B, demo);
+    checkSavedFile(name + ' generation 2', gen2, original, DOC_B, demo, 2);
 
     // 3. second generation
     scope = name + ' generation 2';

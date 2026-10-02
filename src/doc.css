@@ -5,7 +5,7 @@
      "Mit Editor" carries the block along because it clones the whole document.
      So a rule written here reaches all four variants, and a rule written anywhere
      else reaches some of them. That second case is how a feature once went missing
-     from every read-only export; poc/tests/check-doc-styles.mjs now fails on it.
+     from every read-only export; tests/check-doc-styles.mjs now fails on it.
 
      What belongs here: the look of rendered document content. Every selector is
      scoped by .dokufix-doc, the class on the content container (#preview here,
@@ -271,7 +271,7 @@
      not reveal the preview at all.
      Note the gate is syntactic: Firefox reports support for these properties while
      the fallbacks do not actually fire, so @supports cannot tell a working engine
-     from a partial one. Positioning is verified by measurement (see poc/README.md);
+     from a partial one. Positioning is verified by measurement (see src/README.md);
      hover *timing* here cannot be trusted to automation — Playwright's synthetic
      mouse produced the Firefox numbers that human review later retracted
      (deferred-work.md → "Deferred from: story 1-2").

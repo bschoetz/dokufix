@@ -11,6 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import vm from 'node:vm';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { assemble, BuildError, SLOTS } from '../build.mjs';
@@ -129,6 +130,57 @@ test('"</script" in the minified script: refused, with the reason', () => {
   assert.throws(() => assemble(original('index.html'), parts), e => e instanceof BuildError && /the minified script contains "<\/script"/.test(e.message));
   assert.throws(() => assemble(original('index.html'), { ...parts, 'app.js': 'x="</SCRIPT >"' }), BuildError);
   assert.doesNotThrow(() => assemble(original('index.html'), { ...parts, 'app.js': 'x="<\\/script>"' }));
+});
+
+// "<!--" in a script element, followed by the "<script" of the export templates,
+// keeps the real "</script>" from closing it. esbuild does not guard that, so
+// the build writes it as "\x3c!--".
+test('"<!--" in a string, a template and a regular expression: built without it, same values', () => {
+  const probe = 'globalThis.probe = [\'<!-- a -->\', `<!-- ${1 + 1} -->`, "<" + "!--", /<!--\\s*(\\w+)/u.exec("x <!-- dokufix: y -->")[1], "x <!-- y".replace(/<!--/gu, "#")];\n';
+  // In the page's own script, in front of the export templates: it builds, and no "<!--" is left.
+  const whole = build({ 'app.js': probe + original('app.js') });
+  assert.equal(whole.status, 0, whole.stderr);
+  const app = whole.html.slice(whole.html.indexOf('<script>') + '<script>'.length, whole.html.lastIndexOf('</script>'));
+  assert.ok(app.length > 10000 && app.includes('\\x3c!--'), 'the script was found, with the added lines in it');
+  assert.ok(!app.includes('<!--'), 'no "<!--" inside the script');
+  // On its own, where it can be run: the values are what the source says.
+  const r = build({ 'app.js': probe });
+  assert.equal(r.status, 0, r.stderr);
+  const script = r.html.slice(r.html.indexOf('<script>') + '<script>'.length, r.html.lastIndexOf('</script>'));
+  assert.ok(!script.includes('<!--'), 'no "<!--" inside the script');
+  const sandbox = {};
+  vm.runInNewContext(script, sandbox);
+  assert.deepEqual([...sandbox.probe], ['<!-- a -->', '<!-- 2 -->', '<!--', 'dokufix', 'x # y']);
+});
+test('"<!--" in the minified script: refused, with the reason', () => {
+  const parts = { 'doc.css': 'a{}', 'app.css': 'b{}', 'app.js': 'x="<!--"', 'demo.md': '{"text":""}' };
+  assert.throws(() => assemble(original('index.html'), parts), e => e instanceof BuildError && /the minified script contains "<!--"/.test(e.message));
+  assert.doesNotThrow(() => assemble(original('index.html'), { ...parts, 'app.js': 'x="\\x3c!--"' }));
+});
+
+// ---------- a missing source, and the build started through a symlink ----------
+for (const name of ['index.html', 'doc.css', 'app.css', 'app.js', 'demo.md']){
+  test(name + ' missing: exit 1, "source not found", nothing written', () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+    fs.cpSync(srcDir, path.join(dir, 'src'), { recursive: true });
+    fs.rmSync(path.join(dir, 'src', name));
+    const out = path.join(dir, 'dokufix.html');
+    const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--src', path.join(dir, 'src'), '--out', out], { encoding: 'utf8' });
+    const written = fs.existsSync(out);
+    fs.rmSync(dir, { recursive: true });
+    assert.equal(r.status, 1, r.stdout);
+    assert.ok(r.stderr.startsWith('source not found: ') && r.stderr.trim().endsWith(name), r.stderr);
+    assert.ok(!written);
+  });
+}
+test('started through a symlink, the build still runs', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  const link = path.join(dir, 'build-link.mjs');
+  fs.symlinkSync(path.join(root, 'build.mjs'), link);
+  const r = spawnSync(process.execPath, [link, '--check'], { encoding: 'utf8' });
+  fs.rmSync(dir, { recursive: true });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /up to date/);
 });
 
 // ---------- row 5: demo text with markup ----------

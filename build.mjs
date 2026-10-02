@@ -17,11 +17,21 @@
 //
 // The page's own markup goes into the built file as it is written.
 //
+// One thing is done to the script after esbuild: every "<!--" in it is written
+// as "\x3c!--". Inside a script element "<!--" followed by "<script" (which the
+// templates of the read-only exports contain) keeps the real "</script>" from
+// closing the element, and the page's script then never runs. esbuild guards
+// "</script" but not this: minifying, it prints "<"+"!--" and "\x3c!--" as
+// "<!--" again. In code it writes "<! --" itself, so what is left stands in a
+// string, a template or a regular expression, and there \x3c is the same
+// character. (Only the raw text of a tagged template would see the difference.)
+//
 // The build exits 1, and writes nothing, when
+//   - a source is missing;
 //   - a slot is missing from the page, stands there twice, or is not one of the four;
-//   - the minified script contains "</script", or a minified stylesheet "</style":
-//     either would end its element early, in the built file and in every file
-//     saved from it;
+//   - the minified script contains "</script" or "<!--", or a minified stylesheet
+//     "</style": each would break its element, in the built file and in every
+//     file saved from it;
 //   - esbuild reports an error.
 //
 // Two builds of the same sources are byte-identical, which is what --check and
@@ -61,6 +71,7 @@ export function assemble(template, parts){
     problems.push('unknown slot {{slot:' + name + '}} in index.html; the slots are ' + SLOTS.join(', '));
   }
   if (/<\/script/i.test(parts['app.js'])) problems.push('the minified script contains "</script"; it would end the script element early');
+  if (parts['app.js'].includes('<!--')) problems.push('the minified script contains "<!--"; together with a "<script" behind it, it would keep the script element from ending');
   for (const name of ['doc.css', 'app.css']){
     if (/<\/style/i.test(parts[name])) problems.push('the minified ' + name + ' contains "</style"; it would end the style element early');
   }
@@ -76,10 +87,10 @@ function printWarnings(warnings, file){
   }
 }
 
-async function minifyCss(file){
-  const result = await esbuild.transform(fs.readFileSync(file, 'utf8'),
-    { loader: 'css', minify: true, charset: 'utf8', sourcefile: path.basename(file), logLevel: 'silent' });
-  printWarnings(result.warnings, path.basename(file));
+async function minifyCss(css, name){
+  const result = await esbuild.transform(css,
+    { loader: 'css', minify: true, charset: 'utf8', sourcefile: name, logLevel: 'silent' });
+  printWarnings(result.warnings, name);
   return result.code.trim();
 }
 
@@ -95,7 +106,8 @@ async function bundleScript(file){
     logLevel: 'silent',
   });
   printWarnings(result.warnings, path.basename(file));
-  return result.outputFiles[0].text.trim();
+  // See the header: "<!--" must not stand in a script element.
+  return result.outputFiles[0].text.trim().replaceAll('<!--', '\\x3c!--');
 }
 
 // The built page as a string.
@@ -107,11 +119,13 @@ export async function build(srcDir){
   };
   const template = read('index.html');
   const demo = read('demo.md');
+  const docCss = read('doc.css'), appCss = read('app.css');
+  read('app.js');   // esbuild reads it itself; this is for the message when it is missing
   let parts;
   try {
     parts = {
-      'doc.css': await minifyCss(path.join(srcDir, 'doc.css')),
-      'app.css': await minifyCss(path.join(srcDir, 'app.css')),
+      'doc.css': await minifyCss(docCss, 'doc.css'),
+      'app.css': await minifyCss(appCss, 'app.css'),
       'app.js': await bundleScript(path.join(srcDir, 'app.js')),
       'demo.md': jsonForDataBlock({ text: demo }),
     };
@@ -153,7 +167,9 @@ async function main(){
   console.log(shown + ' written (' + size + ')');
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href){
+// Run as a command, not imported. The real path: started through a symlink,
+// argv[1] names the link and import.meta.url the file behind it.
+if (process.argv[1] && fs.existsSync(process.argv[1]) && import.meta.url === pathToFileURL(fs.realpathSync(process.argv[1])).href){
   try {
     await main();
   } catch (e){

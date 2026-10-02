@@ -28,7 +28,7 @@ That file is built from the sources in this folder with one command (see *Build*
 
 | Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
 |---|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 69 812 B + libs | 71 846 B + libs |
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 69 781 B + libs | 71 815 B + libs |
 | **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 70 956 B | 106 743 B |
 | **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 200 B | 52 004 B |
 | **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 28 887 B | 48 158 B |
@@ -39,17 +39,17 @@ The built file beside the PoC, same run, same documents, same day:
 
 | | Demo text: PoC → built | Reference document: PoC → built |
 |---|---|---|
-| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 67 990 B | the same file |
-| `Mit Editor`, Chromium | 135 085 → 69 812 B | 137 119 → 71 846 B |
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 67 959 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 69 781 B | 137 119 → 71 815 B |
 | `nur-lesen`, Chromium | 71 052 → 70 956 B | 106 839 → 106 743 B |
 | `schlank`, Chromium | 35 296 → 35 200 B | 52 100 → 52 004 B |
 | `kompakt`, Chromium | 28 983 → 28 887 B | 48 254 → 48 158 B |
-| `Mit Editor`, Firefox | 135 069 → 69 796 B | 137 103 → 71 830 B |
+| `Mit Editor`, Firefox | 135 069 → 69 765 B | 137 103 → 71 799 B |
 | `nur-lesen`, Firefox | 71 138 → 71 042 B | 107 192 → 107 096 B |
 | `schlank`, Firefox | 35 536 → 35 440 B | 52 048 → 51 952 B |
 | `kompakt`, Firefox | 29 419 → 29 323 B | 48 134 → 48 038 B |
 
-The build takes 65 363 B out of the file itself and 65 273 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+The build takes 65 394 B out of the file itself and 65 304 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -278,7 +278,7 @@ Both flows are **skipped silently when the source matches the last committed/sav
 
 On load, version state comes from whichever of two sources is more recent: the file's baked-in `<script type="application/json" id="dokufix-history">` block, or `localStorage`. localStorage wins when commit-onlys have happened since the last download. History entries are shape-validated on load (well-formed `{v, t}` minimum); malformed entries are silently filtered out rather than crashing init. `null`, negative, or fractional `version` values normalize to `0`. Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`; the first save bootstraps the history at `v1`.
 
-`</script>` substrings in commit messages or source snapshots are escaped to `<\/script>` before being written into the JSON block, so the HTML parser doesn't close the script tag early.
+Every `<` in commit messages or source snapshots is written as `\u003c` before it goes into the JSON block, so a `</script>` in a message cannot close the block early, and a `<!--` followed by `<script` cannot keep it from closing (see *`</script>` escaping*).
 
 If `localStorage` setItem fails (quota exhausted, private-mode disabled), the version badge gains a red `.persist-failed` class with a pulse animation and an accessible title attribute — silent data loss is no longer possible.
 
@@ -333,7 +333,9 @@ Brotli would compress 15–25% better, but is currently *missing* from `Compress
 
 Template literals embedded inside the main `<script>` element use `<\/script>` to avoid the HTML parser prematurely closing the outer script tag. Classic gotcha — escape both the payload-holder tag and the inner decoder script.
 
-The build guards the same thing twice. esbuild writes `<\/script` wherever it meets `</script` in the script, and `build.mjs` refuses to write a file whose minified script still contains `</script` or whose minified styles contain `</style`. The demo text goes into its data block with every `<` written as `\u003c`, so a demo text may contain `</script>` or `<!--`.
+The build guards the same thing twice. esbuild writes `<\/script` wherever it meets `</script` in the script, and `build.mjs` refuses to write a file whose minified script still contains `</script` or whose minified styles contain `</style`.
+
+`<!--` is the second trap, and the quieter one. Inside a script element, `<!--` followed by `<script` keeps the real `</script>` from closing the element: the page's script then never runs, and a data block swallows the blocks behind it. The script contains `<script` in the templates of the read-only exports, and esbuild does not guard this case; minifying, it even prints `"<"+"!--"` and `"\x3c!--"` as `"<!--"` again. So `build.mjs` writes every `<!--` of the bundled script as `\x3c!--`, which is the same character in a string, a template and a regular expression, and refuses a script that still contains one. In the data blocks every `<` is written as `\u003c`: by the build for the demo text, by `encodeJsonForScript()` for everything a save writes. A demo text, a document or a version description may therefore contain `</script>`, `<!--` and `<script>`.
 
 ### Self-replication mechanism
 
@@ -375,7 +377,8 @@ The page names each of the other four once, as a slot: `{{slot:doc.css}}`, `{{sl
 
 - **The built file is committed.** Two builds of the same sources are byte-identical, so `git status` stays clean after `npm run build` unless a source changed. Change a source, build, commit both. Never edit `dist/dokufix.html` by hand; the next build overwrites it.
 - **`node build.mjs --check`** builds in memory, writes nothing, and exits 1 with "is stale" when `dist/dokufix.html` is not what the sources give.
-- **The build exits 1 and writes nothing** when a slot is missing from the page, stands there twice or is not one of the four, and when the minified script contains `</script` or a minified stylesheet `</style`.
+- **The build exits 1 and writes nothing** when a source is missing, when a slot is missing from the page, stands there twice or is not one of the four, and when the minified script contains `</script` or `<!--` or a minified stylesheet `</style`.
+- **`<!--` in the script is written as `\x3c!--`** after bundling; why is under *`</script>` escaping*.
 - **esbuild 0.28.2**, through its API: `bundle`, `format: 'iife'`, `minify` and `charset: 'utf8'` for the script, `minify` and `charset: 'utf8'` for the two stylesheets. Without `charset: 'utf8'` esbuild writes every non-ASCII character as an escape.
 - **The code in the file is minified**, in the built file and in every `Mit Editor` file saved from it. The readable code is here, under `src/`.
 - **The script's names are not global any more.** Bundled into an IIFE, `render()` or `initDone` cannot be reached from outside. Nothing in the page needs that; a check that wants to know what the page is doing looks at the DOM (see *Comparison run*).
@@ -404,7 +407,7 @@ Four tools, all in `tests/`, all run from the repository root. They look at the 
 `node --test tests/*.test.mjs`. Every case works on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to.
 
 - `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
-- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources changed; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so does `</style` in a minified stylesheet; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page.
+- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources changed; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`.
 
 ### Comparison run (`tests/vergleich.mjs`)
 
@@ -443,7 +446,7 @@ Four things the run does on purpose, each because the obvious way gave wrong res
 3. open that file: the editor holds B, version `v2`; "Demo zurücksetzen" gives the original demo text;
 4. build a copy of `src/` whose demo text contains `</script>`, `<!--` and `<script>`, open it: the editor holds that text unchanged.
 
-It also reads both saved files as text: `#dokufix-source` and `#dokufix-demo` hold `{"gz": …}` that unpack to the document and to the demo text, and the script is the script of the file under test, byte for byte. A and B contain what could break a block or a replacement: `</script>`, `<!--`, backticks, `${…}`, `$&`, backslashes, quotes, non-ASCII. The saved files stay in `tests/out/speichern/`. Exit 1 when anything fails. Control: with the line that writes `#dokufix-source` taken out of the save, the run fails in both generations.
+Every save types a version description that contains `<!-- <script>` and `</script>`. The run also reads both saved files as text: `#dokufix-history` parses and holds that description as typed, `#dokufix-source` and `#dokufix-demo` hold `{"gz": …}` that unpack to the document and to the demo text, and the script is the script of the file under test, byte for byte. A and B contain what could break a block or a replacement: `</script>`, `<!--`, backticks, `${…}`, `$&`, backslashes, quotes, non-ASCII. The saved files stay in `tests/out/speichern/`. Exit 1 when anything fails. Controls: with the line that writes `#dokufix-source` taken out of the save, the run fails in both generations; with `encodeJsonForScript()` escaping only `</script>`, as it did in the PoC, the run ends with a timeout while opening the second generation (Chromium).
 
 ## Known PoC limitations (deferred to MVP)
 

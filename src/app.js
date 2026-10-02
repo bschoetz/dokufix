@@ -743,7 +743,7 @@ let mermaidId = 0;
 //
 // Deliberately NOT a full YAML implementation: a library (~30 KB) against a
 // ~16 KB artifact fails the "body for information" test. Supported subset is
-// documented in poc/README.md. Anything outside it throws, and the block
+// documented in src/README.md. Anything outside it throws, and the block
 // falls back to being shown verbatim — never partially parsed, never
 // silently dropped.
 
@@ -1308,7 +1308,7 @@ function buildFootnotePreview(li){
 //
 // TRADE-OFF: the marker now lands on the arrow, which sits at the END of the
 // footnote text, so assistive tech reads "Back to reference" before the prose.
-// Documented in poc/README.md; see deferred-work.md for the reversal option.
+// Documented in src/README.md; see deferred-work.md for the reversal option.
 // Pairing goes through each definition, NOT through the arrow's href id.
 // marked-footnote does not guarantee footnote-ref-<label>-N is unique: a document
 // with both [^bgb] (cited twice) and [^bgb-2] mints id="footnote-ref-bgb-2" twice,
@@ -1636,10 +1636,13 @@ function setDownloadInFlight(flag){
 // --- Download #1 — full dokufix file (with editor baked in) ---
 
 // Encode JSON safely for embedding inside <script type="application/json">.
-// A literal close-script tag inside the JSON would close the script tag
-// prematurely; the `\/` escape is valid in JSON and survives JSON.parse on load.
+// Every "<" is written as \u003c. A literal close-script tag inside the JSON
+// would close the script tag prematurely, and an open-comment followed by an
+// open-script tag (a version description may hold both) would keep the real
+// close tag from closing it, so the block would swallow the blocks after it.
+// The escape is valid in JSON and survives JSON.parse on load.
 function encodeJsonForScript(obj){
-  return JSON.stringify(obj).replace(/<\/script>/gi, '<\\/script>');
+  return JSON.stringify(obj).replace(/</g, '\\u003c');
 }
 
 async function downloadWithEditor(){
@@ -1813,7 +1816,7 @@ try {
 // stand 17 px higher than it did when p{} was an unscoped rule.
 // A rule for document content does NOT go into the frame. It goes into the
 // block in <head>, or the editor and "Mit Editor" never see it.
-// poc/tests/check-doc-styles.mjs fails when one turns up here.
+// tests/check-doc-styles.mjs fails when one turns up here.
 const READONLY_FRAME_CSS = `*{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;

@@ -103,11 +103,11 @@
   Entwurf und Versionsverlauf können in dieser Sitzung nicht erhalten werden.
 </div>
 
-<!-- CDN libraries (PoC only — production bundle will inline these).
+<!-- CDN libraries (they stay pinned on the CDN for now).
      Every version is pinned: an unpinned URL follows the CDN's idea of "latest",
      which left marked on 15.0.12 (marked.min.js stopped shipping with 16) while
      Mermaid moved with every release. Raise a version here, then run
-     poc/tests/vergleich.mjs against the state before. -->
+     tests/vergleich.mjs against the state before. -->
 <script src="https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked-footnote@1.4.0/dist/index.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@12.0.0/dist/mermaid.min.js"></script>
