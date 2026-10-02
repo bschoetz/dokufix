@@ -29,6 +29,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - *Kursiv*, **fett**, ~~durchgestrichen~~
 - Inline-`Code` und Code-Blöcke
 - Blockzitate
+- Status-Chips
 - **Mermaid-Diagramme**
 
 ## Wie das hier zusammenspielt
@@ -58,6 +59,22 @@ flowchart LR
 ### Lesehilfen im Detail
 
 Bei breiteren Bildschirmen erscheint rechts eine schwebende Schiene mit allen Überschriften des Dokuments. Der gerade gelesene Abschnitt ist markiert; ein Klick springt direkt dorthin. Die Schiene blendet sich auf schmaleren Geräten aus — dort übernimmt das eingebettete Inhaltsverzeichnis oben.
+
+## Status-Chips
+
+Ein Code-Span, der mit einem Farbpunkt beginnt, wird zu einem Status-Chip: Aus `` `🟢 in Betrieb` `` wird `🟢 in Betrieb`. Es gibt fünf Farben: `🟢 in Betrieb`, `🟡 geplant`, `🔴 gestört`, `⚪ Übergangslösung` und `🔵 im Test`. Jede hat ein eigenes Zeichen vor dem Text, damit ein Status auch ohne Farbe erkennbar bleibt.
+
+| System | Status |
+|---|---|
+| Bestellannahme | `🟢 in Betrieb` |
+| Lagerverwaltung | `🟡 geplant` |
+| Zahlungsschnittstelle | `🔴 gestört` |
+| Altsystem Versand | `⚪ Übergangslösung` |
+| Kundenportal | `🔵 im Test` |
+
+### Kundenportal `🔵 im Test`
+
+Ein Chip steht im Fließtext, in Tabellen, in Überschriften wie der hier, in **fettem Text: `🟡 geplant`** und in Verweisen: [`🟢 in Betrieb`](#status-chips). In einem Renderer, der dokufix nicht kennt, bleibt er ein Code-Span mit Farbpunkt.
 
 ## Der Metadaten-Kopf
 
