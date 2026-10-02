@@ -178,6 +178,56 @@
     white-space:pre-wrap;overflow-wrap:anywhere;
   }
 
+  /* Callouts — a blockquote that opens with a GitHub alert marker, "> [!NOTE]"
+     and its four siblings (buildCallouts() in src/app/callouts.js). The type is
+     the word in the label, which stands in the markup; colour and symbol are
+     decoration. A callout has an edge on its left and nothing else around it,
+     and its label is a line of its own: that is what tells an "Achtung" from
+     the product's warning above, which is a box that says "Warnung:" in its
+     first line.
+     The symbols are the 16 px Octicons GitHub shows for the five alert types
+     (@primer/octicons 19.38.0, MIT, © GitHub Inc.): the path data as it stands
+     in the package, each in its type's colour. They are data: URIs so that
+     they look the same on every system and travel with the document styles;
+     nothing in the markup refers to them. */
+  .dokufix-doc .dokufix-callout{
+    margin:0 0 1em;padding:8px 18px;
+    border-left:4px solid #8e8e92;
+  }
+  .dokufix-doc .dokufix-callout-label{
+    display:flex;align-items:center;gap:8px;
+    margin:0 0 .5em;
+    font-weight:600;line-height:1.3;
+  }
+  .dokufix-doc .dokufix-callout-label::before{
+    content:"";flex:none;
+    width:16px;height:16px;
+    background:no-repeat center/16px 16px;
+  }
+  .dokufix-doc .dokufix-callout > :last-child{margin-bottom:0}
+  /* A heading right under the label keeps to it. */
+  .dokufix-doc .dokufix-callout-label + :is(h1,h2,h3,h4,h5,h6){margin-top:0}
+  /* info-16 */
+  .dokufix-doc .dokufix-callout-note{border-left-color:#0969da}
+  .dokufix-doc .dokufix-callout-note > .dokufix-callout-label{color:#0969da}
+  .dokufix-doc .dokufix-callout-note > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%230969da'%3E%3Cpath d='M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E")}
+  /* light-bulb-16 */
+  .dokufix-doc .dokufix-callout-tip{border-left-color:#1a7f37}
+  .dokufix-doc .dokufix-callout-tip > .dokufix-callout-label{color:#1a7f37}
+  .dokufix-doc .dokufix-callout-tip > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%231a7f37'%3E%3Cpath d='M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z'/%3E%3C/svg%3E")}
+  /* report-16 */
+  .dokufix-doc .dokufix-callout-important{border-left-color:#8250df}
+  .dokufix-doc .dokufix-callout-important > .dokufix-callout-label{color:#8250df}
+  .dokufix-doc .dokufix-callout-important > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%238250df'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E")}
+  /* alert-16 */
+  .dokufix-doc .dokufix-callout-warning{border-left-color:#9a6700}
+  .dokufix-doc .dokufix-callout-warning > .dokufix-callout-label{color:#9a6700}
+  .dokufix-doc .dokufix-callout-warning > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%239a6700'%3E%3Cpath d='M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E")}
+  /* stop-16 */
+  .dokufix-doc .dokufix-callout-caution{border-left-color:#cf222e}
+  .dokufix-doc .dokufix-callout-caution > .dokufix-callout-label{color:#cf222e}
+  .dokufix-doc .dokufix-callout-caution > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%23cf222e'%3E%3Cpath d='M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E")}
+
   /* Footnotes (marked-footnote / GFM style) */
   .dokufix-doc .footnotes{
     margin-top:3em;padding-top:1.5em;
@@ -328,6 +378,12 @@
   .numbered .dokufix-doc h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
   .numbered .dokufix-doc h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
   .numbered .dokufix-doc h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+  /* A heading inside a callout is no document heading (documentHeadings() in
+     src/app/toc.js): it gets no number, and it does not count, so the headings
+     after it are numbered as they are without it. Said by where the heading
+     stands; these selectors outweigh the rules above. */
+  .numbered .dokufix-doc .dokufix-callout :is(h2,h3,h4){counter-reset:none}
+  .numbered .dokufix-doc .dokufix-callout :is(h2,h3,h4)::before{counter-increment:none;content:none}
 
   /* Scrollspy rail, the look. Hidden here; each frame decides where and from
      which width it is shown (the stylesheet below, READONLY_FRAME_CSS). */

@@ -16,8 +16,8 @@
 //   --demo             build from the built-in demo text instead of --doc
 //   --strict           exit 1 when --compare finds any differing pixel
 //
-// Exit code 1 when an assertion fails (epic 1 behaviour, no <script> in nur-lesen,
-// no editor rules in a read-only export). Differing pixels alone do not fail the
+// Exit code 1 when an assertion fails (epic 1 behaviour, callouts, no <script> in
+// nur-lesen, no editor rules in a read-only export). Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
 // as differing. A --compare folder that holds no run for a browser, or that is
@@ -133,9 +133,32 @@ const EDITOR_RULES = [
   /\.commit-/, /\.img-btn\b/, /\.drop-overlay\b/, /\btextarea\b/, /\bheader\b/, /\.error\b/, /a\.active\b/,
 ];
 
+// The five callout types: the word a reader sees and the colour of edge, label
+// and symbol (src/app/callouts.js, src/doc.css).
+const CALLOUTS = {
+  note:      { label: 'Hinweis',  colour: 'rgb(9, 105, 218)',  fill: '#0969da' },
+  tip:       { label: 'Tipp',     colour: 'rgb(26, 127, 55)',  fill: '#1a7f37' },
+  important: { label: 'Wichtig',  colour: 'rgb(130, 80, 223)', fill: '#8250df' },
+  warning:   { label: 'Achtung',  colour: 'rgb(154, 103, 0)',  fill: '#9a6700' },
+  caution:   { label: 'Vorsicht', colour: 'rgb(207, 34, 46)',  fill: '#cf222e' },
+};
+// Controls for the numbering of headings after a callout; see assertVariant().
+// The first forces what the document styles are meant to do, the second what
+// they must not do: a heading inside a callout that is numbered and counts.
+const CALLOUT_HEADINGS_OUT =
+  '.numbered .dokufix-doc .dokufix-callout :is(h2,h3,h4){counter-reset:none !important}' +
+  '.numbered .dokufix-doc .dokufix-callout :is(h2,h3,h4)::before{counter-increment:none !important;content:none !important}';
+const CALLOUT_HEADINGS_IN =
+  '.numbered .dokufix-doc .dokufix-callout h2{counter-reset:h3 !important}' +
+  '.numbered .dokufix-doc .dokufix-callout h3{counter-reset:h4 !important}' +
+  '.numbered .dokufix-doc .dokufix-callout h2::before{counter-increment:h2 !important;content:counter(h2) ". " !important}' +
+  '.numbered .dokufix-doc .dokufix-callout h3::before{counter-increment:h3 !important;content:counter(h2) "." counter(h3) " " !important}' +
+  '.numbered .dokufix-doc .dokufix-callout h4::before{counter-increment:h4 !important;content:counter(h2) "." counter(h3) "." counter(h4) " " !important}';
+
 // ---------- what the document should produce ----------
 function expectationsFor(md){
-  const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0 };
+  const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
+                callouts: [], calloutHeadings: [] };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -153,6 +176,26 @@ function expectationsFor(md){
   for (const m of body.matchAll(/\[\^([^\]\s]+)\](?!:)/g)) cites[m[1]] = (cites[m[1]] || 0) + 1;
   exp.footnotes = Object.keys(cites).length;
   exp.multiRef = Object.keys(cites).find(k => cites[k] >= 2) || null;
+  // Callouts: a blockquote whose first line is only an alert marker, and the
+  // headings inside one. Read line by line, and only for a quote that starts
+  // at the beginning of its line and is not nested: that is how the reference
+  // document writes them. Fenced code is skipped.
+  let fenced = false, quote = false, callout = false;
+  for (const line of body.split(/\r?\n/)){
+    if (/^(```|~~~)/.test(line)){ fenced = !fenced; quote = callout = false; continue; }
+    if (fenced) continue;
+    if (!line.startsWith('>')){ quote = callout = false; continue; }
+    const text = line.slice(1).trim();
+    if (!quote){
+      quote = true;
+      const m = text.match(/^\[!(note|tip|important|warning|caution)\]$/i);
+      callout = !!m;
+      if (m) exp.callouts.push(m[1].toLowerCase());
+      continue;
+    }
+    const h = callout && text.match(/^#{1,6}[ \t]+(.+?)[ \t]*$/);
+    if (h) exp.calloutHeadings.push(h[1]);
+  }
   return exp;
 }
 
@@ -336,6 +379,29 @@ async function assertVariant(launch, file, key, exp, results, label){
         hosts: document.querySelectorAll('sup.dokufix-fn-host > .dokufix-fn-preview').length,
         markers: document.querySelectorAll('a[data-footnote-ref]').length,
         h1Size: (() => { const h = root.querySelector('h1'); return h ? getComputedStyle(h).fontSize : ''; })(),
+        callouts: Array.from(root.querySelectorAll('.dokufix-callout')).map(c => {
+          const label = c.querySelector(':scope > .dokufix-callout-label');
+          const cs = getComputedStyle(c), ls = label && getComputedStyle(label), bs = label && getComputedStyle(label, '::before');
+          const r = label && label.getBoundingClientRect();
+          return {
+            type: (c.className.match(/dokufix-callout-([a-z]+)/) || [0, ''])[1],
+            tag: c.tagName, role: c.getAttribute('role'),
+            label: label ? label.textContent : null, labelFirst: !!label && label === c.firstElementChild,
+            labelVisible: !!label && r.width > 0 && r.height > 0 && ls.visibility === 'visible' && ls.display !== 'none',
+            labelColour: ls ? ls.color : '',
+            edge: cs.borderLeftWidth + ' ' + cs.borderLeftStyle + ' ' + cs.borderLeftColor,
+            otherEdges: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth].join(' '),
+            symbol: bs ? bs.backgroundImage : '', symbolBox: bs ? bs.width + ' ' + bs.height : '',
+            markerLeft: /\[!/.test(c.textContent),
+            emptyParagraphs: Array.from(c.querySelectorAll('p')).filter(p => !p.textContent.trim() && !p.children.length).length,
+          };
+        }),
+        calloutHeadings: Array.from(root.querySelectorAll('.dokufix-callout :is(h1, h2, h3, h4, h5, h6)')).map(h => {
+          const text = h.textContent.trim();
+          const named = sel => Array.from(document.querySelectorAll(sel)).some(a => a.textContent.trim() === text);
+          return { text, id: h.id, inToc: named('nav.dokufix-toc a'), inRail: named('.dokufix-rail a') };
+        }),
+        markerQuotes: Array.from(root.querySelectorAll('blockquote')).filter(q => /^\s*\[!(note|tip|important|warning|caution)\]\s*(\n|$)/i.test(q.textContent)).length,
       };
     });
     check('document styles apply (h1 is 34px)', s.h1Size === '34px', s.h1Size);
@@ -344,6 +410,74 @@ async function assertVariant(launch, file, key, exp, results, label){
     check('embedded images shown', s.images === exp.images, s.images + ' of ' + exp.images);
     check('missing-image placeholders', s.missing === exp.missing && (exp.missing === 0 || s.placeholderBorder === 'dashed'),
       s.missing + ' of ' + exp.missing + ', border ' + s.placeholderBorder);
+
+    // --- callouts (story 2.2). With a document that has none, the count is the check.
+    check('callouts: one per alert blockquote, in the order of the document',
+      JSON.stringify(s.callouts.map(c => c.type)) === JSON.stringify(exp.callouts) && s.markerQuotes === 0,
+      JSON.stringify(s.callouts.map(c => c.type)) + ', expected ' + JSON.stringify(exp.callouts) + '; blockquotes still opening with a marker: ' + s.markerQuotes);
+    if (exp.callouts.length){
+      const bad = (what, test) => s.callouts.filter(c => !test(c, CALLOUTS[c.type] || {})).map(c => c.type + ': ' + JSON.stringify(what(c)));
+      const labels = bad(c => [c.tag, c.role, c.label, c.labelFirst, c.labelVisible, c.markerLeft, c.emptyParagraphs],
+        (c, want) => c.tag === 'DIV' && c.role === 'note' && c.label === want.label && c.labelFirst && c.labelVisible && !c.markerLeft && c.emptyParagraphs === 0);
+      check('every callout is labelled: the word of its type, visible, as its first line, the marker gone', labels.length === 0, labels.join(' | '));
+      const styles = bad(c => [c.edge, c.otherEdges, c.labelColour, c.symbolBox],
+        (c, want) => c.edge === '4px solid ' + want.colour && c.otherEdges === '0px 0px 0px' && c.labelColour === want.colour && c.symbolBox === '16px 16px');
+      check('every callout is styled: an edge on the left only, edge and label in the colour of the type', styles.length === 0, styles.join(' | '));
+      // The symbol is a data: URI in the document styles. That the rule arrived
+      // says little; the picture has to be one a browser draws.
+      const symbols = await page.evaluate(async list => {
+        const out = [];
+        for (const c of list){
+          const m = c.symbol.match(/^url\("(data:image\/svg\+xml,[^"]*)"\)$/);
+          if (!m){ out.push({ type: c.type, problem: 'no data: URI: ' + c.symbol.slice(0, 80) }); continue; }
+          const img = new Image();
+          const loaded = await new Promise(resolve => { img.onload = () => resolve(true); img.onerror = () => resolve(false); img.src = m[1]; });
+          out.push({ type: c.type, loaded, size: img.naturalWidth + 'x' + img.naturalHeight, svg: decodeURIComponent(m[1].slice(m[1].indexOf(',') + 1)) });
+        }
+        return out;
+      }, s.callouts.map(c => ({ type: c.type, symbol: c.symbol })));
+      const badSymbols = symbols.filter(y => y.problem || !y.loaded || y.size !== '16x16' || !y.svg.includes("fill='" + (CALLOUTS[y.type] || {}).fill + "'") || !/<path d='M[^']+Z'\/>/.test(y.svg))
+        .map(y => y.type + ': ' + (y.problem || (y.loaded ? y.size : 'does not load')));
+      const distinct = new Set(symbols.map(y => y.svg)).size === new Set(s.callouts.map(c => c.type)).size;
+      check('every callout has its symbol: an SVG of 16 px in the colour of the type, one per type', badSymbols.length === 0 && distinct,
+        badSymbols.join(' | ') || 'two types share a symbol');
+    }
+    // --- a heading inside a callout is no document heading
+    check('headings inside callouts: the ones the document has',
+      JSON.stringify(s.calloutHeadings.map(h => h.text)) === JSON.stringify(exp.calloutHeadings),
+      JSON.stringify(s.calloutHeadings.map(h => h.text)) + ', expected ' + JSON.stringify(exp.calloutHeadings));
+    if (exp.calloutHeadings.length){
+      const listed = s.calloutHeadings.filter(h => h.id || h.inToc || h.inRail);
+      check('a heading inside a callout has no id and is in neither table of contents nor rail', listed.length === 0, JSON.stringify(listed));
+    }
+    // --- a [!WARNING] callout beside the product's own warning: more than colour apart
+    if (exp.callouts.includes('warning')){
+      const pair = await page.evaluate(() => {
+        const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+        const callout = root.querySelector('.dokufix-callout-warning');
+        if (!callout) return null;   // the count above has failed already
+        // The warning as buildWarning() makes it, put beside the callout for the measurement.
+        callout.insertAdjacentHTML('afterend', '<div class="dokufix-warning" role="note"><p class="dokufix-warning-title"><strong>Warnung:</strong> Ein Diagramm konnte nicht gezeichnet werden.</p></div>');
+        const warning = callout.nextElementSibling;
+        const box = el => { const cs = getComputedStyle(el); return { top: cs.borderTopWidth, right: cs.borderRightWidth, bottom: cs.borderBottomWidth, left: cs.borderLeftWidth }; };
+        const cLabel = callout.querySelector(':scope > .dokufix-callout-label'), wLabel = warning.querySelector('.dokufix-warning-title > strong');
+        const out = {
+          callout: { ...box(callout), word: cLabel.textContent, labelDisplay: getComputedStyle(cLabel).display,
+                     ownLine: !cLabel.nextElementSibling || cLabel.getBoundingClientRect().bottom <= cLabel.nextElementSibling.getBoundingClientRect().top,
+                     symbol: getComputedStyle(cLabel, '::before').backgroundImage !== 'none' },
+          warning: { ...box(warning), word: wLabel.textContent, labelDisplay: getComputedStyle(wLabel).display,
+                     ownLine: wLabel.parentElement.textContent.trim() === wLabel.textContent.trim(),
+                     symbol: getComputedStyle(wLabel, '::before').backgroundImage !== 'none' },
+        };
+        warning.remove();
+        return out;
+      });
+      const c = pair ? pair.callout : {}, w = pair ? pair.warning : {};
+      check('a WARNING callout and the product\'s warning differ in more than colour: the word, a box against an edge, the label\'s line, the symbol',
+        !!pair && c.word === 'Achtung' && w.word === 'Warnung:' &&
+        c.top === '0px' && c.right === '0px' && c.bottom === '0px' && w.top === '1px' && w.right === '1px' && w.bottom === '1px' && w.left !== c.left &&
+        c.ownLine && !w.ownLine && c.labelDisplay !== w.labelDisplay && c.symbol && !w.symbol, JSON.stringify(pair));
+    }
 
     // --- metadata panel (story 1.1)
     if (exp.frontmatter){
@@ -446,6 +580,36 @@ async function assertVariant(launch, file, key, exp, results, label){
       return out;
     });
     check('heading numbering', /counter\(h2\)/.test(numbered.h2) && (numbered.toc === null || /counter\(tocH2\)/.test(numbered.toc)), JSON.stringify(numbered));
+    // --- numbering leaves out a heading inside a callout. A browser does not
+    // say which number a counter shows, so the page is photographed three
+    // times with numbering on: as it is, with the heading forced out of the
+    // count, and with it forced in. As it is, it has to be the first of the
+    // two and not the second; the second proves that the picture would show it.
+    if (exp.calloutHeadings.length){
+      const computed = await page.evaluate(() => {
+        document.body.classList.add('numbered');
+        if (document.activeElement) document.activeElement.blur();
+        window.scrollTo(0, 0);
+        const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+        return Array.from(root.querySelectorAll('.dokufix-callout :is(h2, h3, h4)')).map(h => {
+          const b = getComputedStyle(h, '::before');
+          return { text: h.textContent.trim(), reset: getComputedStyle(h).counterReset, increment: b.counterIncrement, content: b.content };
+        });
+      });
+      const counted = computed.filter(h => h.reset !== 'none' || h.increment !== 'none' || h.content !== 'none');
+      check('a heading inside a callout gets no number and does not count', computed.length > 0 && counted.length === 0, JSON.stringify(computed));
+      const photo = async css => {
+        const tag = css ? await page.addStyleTag({ content: css }) : null;
+        const png = await page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' });
+        if (tag) await tag.evaluate(el => el.remove());
+        return png;
+      };
+      const asItIs = await photo(''), forcedOut = await photo(CALLOUT_HEADINGS_OUT), forcedIn = await photo(CALLOUT_HEADINGS_IN);
+      await page.evaluate(() => document.body.classList.remove('numbered'));
+      check('the headings after a callout are numbered as they are without its heading',
+        asItIs.equals(forcedOut) && !asItIs.equals(forcedIn),
+        'as it is = forced out of the count: ' + asItIs.equals(forcedOut) + '; as it is = forced into it: ' + asItIs.equals(forcedIn));
+    }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {
     await close();

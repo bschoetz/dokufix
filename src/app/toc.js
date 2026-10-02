@@ -1,4 +1,5 @@
 import { escapeHtml } from './html.js';
+import { CALLOUT_CLASS } from './callouts.js';
 
 // --- Table of Contents ----------------------------------------
 // Two layers, see README:
@@ -12,9 +13,12 @@ import { escapeHtml } from './html.js';
 
 // Which headings count: the one place that says so. Heading ids, the inline
 // table of contents, the rail of the editor and the rail of an export all ask
-// here, each at the moment it runs.
+// here, each at the moment it runs. A heading inside a callout is part of the
+// callout, not of the document's outline: it gets no id and no entry. The
+// numbering leaves it out by the same rule, written in src/doc.css.
 export function documentHeadings(root){
-  return root.querySelectorAll('h1, h2, h3, h4, h5, h6');
+  return Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+    .filter(h => !h.closest('.' + CALLOUT_CLASS));
 }
 
 function slugify(text, used){

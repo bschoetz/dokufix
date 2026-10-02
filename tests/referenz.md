@@ -101,6 +101,32 @@ Der Automat meldet jede Rückgabe als eine Zeile:
 }
 ```
 
+## Hinweise
+
+Fünf Arten von Hinweisen, geschrieben wie die Alerts von GitHub: ein Zitat, dessen erste Zeile nur die Marke trägt.
+
+> [!NOTE]
+> Der Automat druckt den Beleg auf Wunsch ein zweites Mal. Maßgeblich ist das **Konto**, nicht der Beleg.
+
+> [!TIP]
+> Wer die Frist im Kalender führt, trägt den Tag der Verlängerung ein, nicht das Ende der alten Frist.
+
+### Vor der Rückgabe
+
+> [!IMPORTANT]
+> ### Geräte vollständig abgeben
+>
+> Zu einem Gerät gehören Netzteil, Hülle und Anleitung. Fehlt ein Teil, bleibt das Konto belastet.
+
+### Nach der Rückgabe
+
+> [!WARNING]
+> - Die Klappe an der Außenwand nimmt keine Geräte an.
+> - Ist die Klappe voll, bleibt das Medium ausgeliehen.
+
+> [!CAUTION]
+> Beschädigte Akkus gehören nicht in den Automaten, sondern an die Theke.
+
 ---
 
 ## Schluss

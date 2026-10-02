@@ -7,7 +7,7 @@
 // Mermaid stays in the browser runs (tests/durchlaeufe.mjs, tests/vergleich.mjs).
 //
 // The modules imported here are the ones that load without a page:
-// passes.js, warning.js, transient.js, toc.js, frontmatter.js.
+// passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -17,6 +17,7 @@ import { buildWarning } from '../src/app/warning.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
 import { assignHeadingIds, processInlineToc, documentHeadings } from '../src/app/toc.js';
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
+import { buildCallouts } from '../src/app/callouts.js';
 
 // A root like the preview, holding the given markup.
 function rootWith(html){
@@ -176,4 +177,52 @@ test('a real pass that fails on its input is contained like any other', async t 
   assert.deepEqual(failed.map(f => f.name), ['Metadaten']);
   assert.equal(root.firstElementChild.className, 'dokufix-warning');
   assert.equal(root.querySelector('nav.dokufix-toc a').getAttribute('href'), '#eins');
+});
+
+// ---------- which headings count ----------
+// The markup is what marked emits for a callout with a heading in it, between
+// two headings of the document, and for an ordinary quotation with a heading.
+const WITH_CALLOUT_HEADING =
+  '<h1>Handbuch</h1><p>[[toc]]</p><h2>Ausleihe</h2><h3>Vorher</h3>' +
+  '<blockquote>\n<p>[!IMPORTANT]</p>\n<h3>Im Hinweis</h3>\n<p>Text.</p>\n</blockquote>\n' +
+  '<h3>Nachher</h3>' +
+  '<blockquote>\n<h3>Im Zitat</h3>\n<p>Text.</p>\n</blockquote>\n' +
+  '<h2>Rückgabe</h2>';
+test('a heading inside a callout is no document heading: no id, no entry in the table of contents', async () => {
+  const root = rootWith(WITH_CALLOUT_HEADING);
+  const failed = await runPasses(root, [
+    { name: 'Hinweise', run: buildCallouts },
+    { name: 'Überschriften', run: assignHeadingIds },
+    { name: 'Inhaltsverzeichnis', run: processInlineToc },
+  ], { frontmatter: { kind: null } });
+  assert.deepEqual(failed, []);
+  const inside = root.querySelector('.dokufix-callout h3');
+  assert.equal(inside.textContent, 'Im Hinweis');
+  assert.ok(!inside.hasAttribute('id'), 'the heading inside the callout has no id');
+  // An array, so every user can filter and map it.
+  assert.ok(Array.isArray(documentHeadings(root)));
+  assert.deepEqual(documentHeadings(root).map(h => h.id), ['handbuch', 'ausleihe', 'vorher', 'nachher', 'im-zitat', 'rueckgabe']);
+  // A heading in an ordinary quotation counts, as it did before there were callouts.
+  assert.deepEqual(Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.getAttribute('href') + ' ' + a.textContent),
+    ['#ausleihe Ausleihe', '#vorher Vorher', '#nachher Nachher', '#im-zitat Im Zitat', '#rueckgabe Rückgabe']);
+});
+test('the heading rule sees callouts only when their pass ran first: that is the order in render.js', async () => {
+  const root = rootWith(WITH_CALLOUT_HEADING);
+  await runPasses(root, [
+    { name: 'Überschriften', run: assignHeadingIds },
+    { name: 'Hinweise', run: buildCallouts },
+  ], { frontmatter: { kind: null } });
+  // Wrong order: the heading was still in a blockquote when ids were given.
+  assert.equal(root.querySelector('.dokufix-callout h3').id, 'im-hinweis');
+});
+test('a heading inside a callout that stands in a list item or in another callout does not count either', () => {
+  const root = rootWith(
+    '<h2>Eins</h2>' +
+    '<ul>\n<li><p>punkt</p>\n<blockquote>\n<p>[!TIP]</p>\n<h4>Im Punkt</h4>\n</blockquote>\n</li>\n</ul>\n' +
+    '<blockquote>\n<p>[!WARNING]\naussen</p>\n<blockquote>\n<p>[!NOTE]</p>\n<h2>Ganz innen</h2>\n</blockquote>\n</blockquote>\n' +
+    '<h2>Zwei</h2>');
+  buildCallouts(root);
+  assignHeadingIds(root);
+  assert.deepEqual(documentHeadings(root).map(h => h.textContent), ['Eins', 'Zwei']);
+  assert.equal(root.querySelectorAll('h2[id], h4[id]').length, 2);
 });

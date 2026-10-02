@@ -17,6 +17,7 @@ That file is built from the sources in this folder with one command (see *Build*
 - **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
 - **Footnotes with hover previews** — GFM footnote syntax (`[^id]` / `[^id]:`) via `marked-footnote`, plus a preview that appears when the reader hovers or keyboard-focuses a marker, so an aside can be read without jumping to the bottom of the document. Pure CSS, so it works in the JS-free export. See *Footnotes* below.
 - **Frontmatter metadata panel** — a leading YAML or JSON header block renders as a collapsible panel instead of leaking into the document as markup. Native `<details>`, so it collapses without JavaScript and survives the JS-free export. See *Frontmatter* below.
+- **Callouts** — a blockquote that opens with `> [!NOTE]` or one of its four siblings, the alerts of GitHub Flavored Markdown, renders as a note or warning with a German label and a symbol. No new syntax, and no JavaScript in the exports. See *Callouts* below.
 - **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
 - **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
 - **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
@@ -28,28 +29,28 @@ That file is built from the sources in this folder with one command (see *Build*
 
 | Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
 |---|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 73 848 B + libs | 75 885 B + libs |
-| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 71 364 B | 107 151 B |
-| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 608 B | 52 412 B |
-| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 29 295 B | 48 566 B |
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 79 720 B + libs | 82 693 B + libs |
+| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 75 940 B | 113 539 B |
+| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 40 184 B | 58 800 B |
+| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 33 871 B | 54 015 B |
 
-Measured 2026-10-02 in Chromium 153 with `tests/vergleich.mjs`, all four variants through one build per document; Firefox differs by a few hundred bytes because it serialises the Mermaid SVG differently. The reference document is `tests/referenz.md`. Both documents carry two Mermaid diagrams, and those dominate the read-only exports.
+Measured 2026-10-02 in Chromium 153 with `tests/vergleich.mjs`, all four variants through one build per document; Firefox differs by a few hundred bytes because it serialises the Mermaid SVG differently. The reference document is `tests/referenz.md`; since story 2.2 it has five callouts, so its figures are not those of the document before. Both documents carry two Mermaid diagrams, and those dominate the read-only exports. A `kompakt` file comes out a few bytes apart from run to run: two of today's runs on the unchanged file gave 4 B less than the figures recorded before them.
 
 The built file beside the PoC, same run, same documents, same day:
 
 | | Demo text: PoC → built | Reference document: PoC → built |
 |---|---|---|
-| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 72 302 B | the same file |
-| `Mit Editor`, Chromium | 135 085 → 73 848 B | 137 119 → 75 885 B |
-| `nur-lesen`, Chromium | 71 052 → 71 364 B | 106 839 → 107 151 B |
-| `schlank`, Chromium | 35 296 → 35 608 B | 52 100 → 52 412 B |
-| `kompakt`, Chromium | 28 983 → 29 295 B | 48 254 → 48 566 B |
-| `Mit Editor`, Firefox | 135 069 → 73 832 B | 137 103 → 75 869 B |
-| `nur-lesen`, Firefox | 71 138 → 71 450 B | 107 192 → 107 504 B |
-| `schlank`, Firefox | 35 536 → 35 848 B | 52 048 → 52 360 B |
-| `kompakt`, Firefox | 29 419 → 29 731 B | 48 134 → 48 446 B |
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 78 174 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 79 720 B | 138 055 → 82 693 B |
+| `nur-lesen`, Chromium | 71 052 → 75 940 B | 108 484 → 113 539 B |
+| `schlank`, Chromium | 35 296 → 40 184 B | 53 745 → 58 800 B |
+| `kompakt`, Chromium | 28 983 → 33 871 B | 49 244 → 54 015 B |
+| `Mit Editor`, Firefox | 135 069 → 79 704 B | 138 063 → 82 701 B |
+| `nur-lesen`, Firefox | 71 138 → 76 026 B | 108 837 → 113 892 B |
+| `schlank`, Firefox | 35 536 → 40 424 B | 53 693 → 58 748 B |
+| `kompakt`, Firefox | 29 419 → 34 303 B | 49 188 → 53 951 B |
 
-The built file is 61 051 B smaller than the PoC and a `Mit Editor` file 61 237 B; nearly all of it is the minifying of script and styles. Three changes moved these figures after the build: the split into modules added 972 B to the file (see *The script's modules*), story 2.15 added 2 800 B, the pass runner, the warning and the export path, and the close button of the storage banner with the German footnotes heading added 571 B. Each read-only export is 312 B larger than the PoC's. The build took 96 B out, because an export embeds the document styles and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B); story 2.15 put 408 B in, the style of the warning (10 845 B). Outside its `<style>` every read-only export is the one the PoC writes, in both browsers and for both documents, once the ids Mermaid generates are masked and apart from the footnotes heading, which reads "Fußnoten" where the PoC has "Footnotes": since story 2.15 diagrams are drawn one at a time, which changes those ids. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+The built file is 55 179 B smaller than the PoC and a `Mit Editor` file 55 365 B; nearly all of it is the minifying of script and styles. Four changes moved these figures after the build: the split into modules added 972 B to the file (see *The script's modules*), story 2.15 added 2 800 B, the pass runner, the warning and the export path, the close button of the storage banner with the German footnotes heading added 571 B, and story 2.2 added 5 872 B, the callouts: 4 576 B of document styles, 2 790 B of them the five symbols, and 1 296 B of script. A read-only export of a document without callouts is 4 888 B larger than the PoC's, and all of that is its stylesheet. The build took 96 B out, because an export embeds the document styles and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B); story 2.15 put 408 B in, the style of the warning (10 845 B), and story 2.2 4 576 B, the styles of the callouts (15 421 B). Outside its `<style>` every read-only export of the demo text is the one the PoC writes, in both browsers, once the ids Mermaid generates are masked and apart from the footnotes heading, which reads "Fußnoten" where the PoC has "Footnotes": since story 2.15 diagrams are drawn one at a time, which changes those ids. That held for the reference document as well as long as it had no callout (see *Callouts*, what they did to documents). With its five callouts an export of it is another 167 B larger than the PoC's outside the stylesheet: the PoC writes them as quotations that begin with their marker. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -75,6 +76,7 @@ In the PoC both were variables of the script, `DEMO` and `SAMPLE`. Why they move
 | List | Pass (`name`) | Function |
 |---|---|---|
 | `DOCUMENT_PASSES` | `Metadaten` | `injectFrontmatterPanel()` |
+| | `Hinweise` | `buildCallouts()` |
 | | `Überschriften` | `assignHeadingIds()` |
 | | `Inhaltsverzeichnis` | `processInlineToc()` |
 | | `Fußnoten-Vorschau` | `attachFootnotePreviews()` |
@@ -88,7 +90,7 @@ In the PoC both were variables of the script, `DEMO` and `SAMPLE`. Why they move
 - **The rail is rebuilt at the end of every render, whatever failed before it.** The browser runs take "the rail was rewritten" as "the render is finished". Markdown that cannot be parsed puts a warning in place of the content, and the rail is then rebuilt empty. Until story 2.15 that case returned before the rail and showed a box that only the editor had a style for.
 - **One render at a time.** A render requested while another runs starts when that one has finished, and reads the source then; the preview ends as the last one's. The promise `render()` returns is fulfilled when its render is done and is never rejected. Before, two renders interleaved on the preview: the first built its rail from headings that were no longer in the page, and its Mermaid run failed on detached nodes.
 - **Mermaid draws one diagram at a time.** `mermaid.initialize` sets `suppressErrorRendering`, so Mermaid throws instead of drawing its error picture into the block, which is what 12.0.0 does by default and what every export then carried. The pass runs each diagram on its own; one with an error becomes a warning with Mermaid's message in its place, and the others are drawn. Running per diagram changes the ids Mermaid takes from the clock and nothing else.
-- **Which headings count** is said once: `documentHeadings()` in `src/app/toc.js`. Heading ids, the inline table of contents, the rail and the rail of an export ask there, each when it runs.
+- **Which headings count** is said once: `documentHeadings()` in `src/app/toc.js`. Heading ids, the inline table of contents, the rail and the rail of an export ask there, each when it runs. A heading inside a callout does not count, which is why `Hinweise` runs before `Überschriften` (see *Callouts*).
 
 **The warning** (`buildWarning()` in `src/app/warning.js`, class `dokufix-warning`) is a document construct: its style is in `src/doc.css`, so it reads the same in the preview and in all four variants. It is recognisable without colour, because the word "Warnung:" stands in its markup. Its text is German; the detail below it is the message of whatever failed, as it came. Three things produce one: Markdown that cannot be parsed, a pass that failed, a diagram with an error.
 
@@ -272,6 +274,53 @@ The second way body text used to disappear was an **unterminated** block: the cl
 
 **Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It is handed the source and reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
 
+### Callouts
+
+A blockquote whose first line is only an alert marker renders as a callout: a note or a warning that reads as one.
+
+```markdown
+> [!NOTE]
+> Der Automat druckt den Beleg auf Wunsch ein zweites Mal.
+```
+
+| Marker | Label | Symbol (Octicon) | Colour of edge, label and symbol |
+|---|---|---|---|
+| `[!NOTE]` | Hinweis | `info` | `#0969da` |
+| `[!TIP]` | Tipp | `light-bulb` | `#1a7f37` |
+| `[!IMPORTANT]` | Wichtig | `report` | `#8250df` |
+| `[!WARNING]` | Achtung | `alert` | `#9a6700` |
+| `[!CAUTION]` | Vorsicht | `stop` | `#cf222e` |
+
+**The convention is GitHub's:** the alerts of GitHub Flavored Markdown, these five types and no others. dokufix adds no syntax. The same source renders as an alert on GitHub, with GitHub's English labels, and in a renderer that does not know the convention as a quotation that begins with the line `[!NOTE]`, which is what dokufix itself showed until story 2.2.
+
+**What is recognised.** `buildCallouts()` in `src/app/callouts.js` is the document pass `Hinweise`. It works on the markup `marked` emits, not on the Markdown, and leaves the tokens of `marked` alone.
+
+| Source | Result |
+|---|---|
+| `> [!NOTE]`, then `> text` | callout; the marker is gone, the content keeps its formatting, lists and nested blocks |
+| `> [!note]`, `> [!Note]` | callout: the case does not matter |
+| `> [!WARNING]`, then a list, a new paragraph or a code block | callout; no empty paragraph is left where the marker stood |
+| `> [!IMPORTANT]` with a hard break behind it (two blanks or a backslash) | callout; the line break is gone |
+| `> [!CAUTION]` and nothing else | callout with its label alone |
+| a marker in a quote inside a quote, in a list item, in another callout | callout |
+| `> [!NOTE] text`, anything else on the marker's line | ordinary blockquote, unchanged |
+| `> [!FOO]`, an unknown type | ordinary blockquote, unchanged |
+| a marker that is not the first line of its quote | ordinary blockquote, unchanged |
+
+**The markup** is `<div class="dokufix-callout dokufix-callout-note" role="note">`, and its first child is `<p class="dokufix-callout-label">Hinweis</p>`. The type is that word, text in the markup; colour and symbol are decoration from `src/doc.css`. A callout is document content like the metadata panel: the pass produces it in the preview, every export copies the preview, so it is in all four variants, and `nur-lesen` needs no script for it.
+
+**Beside the product's warning.** `[!WARNING]` reads "Achtung", so that the word "Warnung" belongs to the product's own warning alone (see *Render passes*). The two differ in more than colour: a callout has an edge on its left and nothing else around it, and its label is a line of its own with a symbol; the warning is a box with a border all round and a background, and "Warnung:" opens its first line.
+
+**A heading inside a callout is no document heading.** `> ### Titel` in a callout is styled as a heading and is nothing else: it gets no id, so a link to it has no target; it is not in the inline table of contents, not in the rail of the editor and not in the rail of an export; with numbering switched on it gets no number, and the headings after it are numbered as they are without it. The first three follow from `documentHeadings()`. The numbering is switched off in `src/doc.css`, by rules for headings inside `.dokufix-callout` that outweigh the numbering rules: where a heading stands is something a selector sees, so no class is set for it. A heading in an ordinary blockquote counts as before.
+
+**The symbols** are Octicons, the ones GitHub shows for the five alert types: `info`, `light-bulb`, `report`, `alert` and `stop`, each in its 16 px form, from the npm package `@primer/octicons` in version 19.38.0 (MIT licence, "Copyright (c) 2026 GitHub Inc."). The package is not a dependency. The path data of `build/svg/<name>-16.svg` stands unchanged in `src/doc.css`, each icon as a `data:` URI on the `::before` of the label, with `<`, `>` and `#` percent-encoded and the colour of the type as `fill`. So a symbol looks the same on every system, travels with the document styles into all four variants, and the markup stays text. The URIs pass through esbuild, the build's guard against `</style`, the style check and `compactCss()` of the export path as they are written: `tests/callouts.test.mjs` compares the built file with the source, and the comparison run loads each symbol in each variant and expects a picture of 16 × 16 px.
+
+**The licence notice is not in the file yet.** The MIT licence permits the copying on the condition that its copyright notice and permission notice are included in all copies or substantial portions. `dist/dokufix.html` and every file written from it carry the path data of the five icons and neither notice; `src/doc.css` names set, version and licence in a comment, which the build removes. The notice comes with a story of its own, a link "Lizenzinformationen" (entry 18 of the epic).
+
+**What callouts did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before story 2.2 against the one after, Chromium 153 and Firefox 153, with the reference document as it was before the story and with the demo text, neither of which has a callout): all 136 screenshots are pixel-identical, and all assertions are green. Outside its `<style>` each of the twelve read-only exports is the file it was, byte for byte; the stylesheet in it grew by 4 576 B, the rules for callouts. The file itself and every `Mit Editor` file grew by 5 872 B (72 302 → 78 174 B). Then the reference document got its five callouts; with it all assertions are green in all four variants and both browsers, and its sizes are under *Download variants*. Control: built with the two numbering rules for headings inside a callout and the filter in `documentHeadings()` taken out, the run fails in every variant (Chromium) on the three checks that concern them: the heading has an id and stands in table of contents and rail, it counts, and the page with numbering on equals the one with the heading forced into the count.
+
+**Known limit: a masked marker becomes a callout.** `> \[!NOTE\]` is how Markdown writes a quotation that begins with the literal text `[!NOTE]`. `marked` emits the same markup for it as for `> [!NOTE]`, so the pass cannot tell the two apart; that needs an extension of `marked` on token level. Until then a quotation that is to begin with that text writes it as code (`` > `[!NOTE]` ``) or puts more on the marker's line (`> [!NOTE] text`); both stay quotations.
+
 ### Table of Contents (two layers)
 
 Two complementary mechanisms, deliberately separate:
@@ -426,7 +475,7 @@ The page names each of the other four once, as a slot: `{{slot:doc.css}}`, `{{sl
 
 ### The script's modules
 
-Until story 2.14 the script was one file of 2111 lines in which every function and every variable was visible to every other. It became `src/app.js` and nineteen modules under `src/app/`, cut along the sections the one file had; story 2.15 added five and renamed one, so there are twenty-four. esbuild bundles them into the one script of the built file, as before. The split moved code and rewrote none: every line of the old file stands in a module, apart from the three things described below (how shared state is reached, what runs at load, three comments that said "above" or "at the bottom").
+Until story 2.14 the script was one file of 2111 lines in which every function and every variable was visible to every other. It became `src/app.js` and nineteen modules under `src/app/`, cut along the sections the one file had; story 2.15 added five and renamed one, and story 2.2 added one, so there are twenty-five. esbuild bundles them into the one script of the built file, as before. The split moved code and rewrote none: every line of the old file stands in a module, apart from the three things described below (how shared state is reached, what runs at load, three comments that said "above" or "at the bottom").
 
 | Module | What it owns |
 |---|---|
@@ -443,6 +492,7 @@ Until story 2.14 the script was one file of 2111 lines in which every function a
 | `app/passes.js` | `runPasses()`, the runner of a list of passes, each in its own containment |
 | `app/transient.js` | the attribute `data-dokufix-transient` and `removeTransient()` |
 | `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel as a pass, `deriveDocTitle()` |
+| `app/callouts.js` | callouts as a pass: recognising the alert marker of a blockquote, the callout element with its label; the class by which `toc.js` leaves out headings inside one |
 | `app/render.js` | `render()`: parse, the two pass lists (`DOCUMENT_PASSES`, `RUNTIME_PASSES`), the rail; one render at a time; the Mermaid pass |
 | `app/toc.js` | `documentHeadings()`, heading ids and the inline `[[toc]]` as passes, `headingLabelText()`, `tocLinkHandler()` and the run-time pass that attaches it |
 | `app/footnotes.js` | footnote previews and return paths as passes; also `buildStaticRailHtml()`, which stood in that section of the one file |
@@ -460,9 +510,9 @@ Until story 2.14 the script was one file of 2111 lines in which every function a
 - *Shared state is one object.* An imported name cannot be assigned to. So a value belongs in `state` when a module other than the one it belongs to assigns to it. That is true of nine: `docUuid`, `currentVersion`, `versionHistory`, `commitBaseline`, `storedSource` and `cleanBaseline`, which the async init in `src/app.js` sets and, all but `storedSource`, `Mit Editor` as well; and `demoText`, `demoGz` and `initDone`, which only the async init sets, for the modules that read them. They are the properties of `state` in `app/state.js`; a module imports `state` and reads and writes `state.currentVersion`, which a search finds. A value that only its own module assigns to stays a `let` there (`_dbPromise`, `saveTimer`, `persistFailedFlag`, `mermaidId`, the rail's two handlers, `downloadInFlight`). Such a `let` may be exported: `Mit Editor` imports `saveTimer` and reads its current value, and could not assign to it.
 - *A module does nothing when it is loaded.* Its top level holds functions, constants and element lookups. What acts at load stands in `src/app.js`: the library setup and the async init are written there, and every listener and the restoring of the numbering preference is a `register…()` function of its module, which `src/app.js` calls in the order the statements had in the one file: `registerAssetUrlCleanup()`, `registerVersionDialog()`, `registerRailClicks()`, `registerEditorInput()`, `registerImageInput()`, `registerReset()`, `registerDownloadMenu()`, `registerNumbering()`, `registerHamburger()`, `registerViewToggle()`. Without that the order would follow from who imports whom, and change whenever an import is added; two listeners on `document` for the same event (the download menu and the hamburger on `click`, the menu and the view mode on `Escape`) would swap silently. One thing did move: the element lookups of the modules now run before the library setup, because a module's top level runs before the entry's. They only read the page.
 - *Modules may import each other in a circle,* as long as it is for functions that are called later. One circle is left: `render()` calls the asset pipeline, and the image input calls `render()`. That works because of the rule before: no module reads another's export while it loads. Until story 2.15 there were two larger ones. `escapeHtml()` stood in `render.js`, and six modules imported it from there; it is in `html.js` now. And the download helpers stood in the menu, which imports the downloads; they are in `downloads/download.js` now.
-- *A module of pure logic loads without a page.* It imports no module that looks up an element when it is loaded (`dom.js`, `rail.js`, `persistence.js`, `editor.js`, the downloads), and nothing at its top level touches the page. What a test is to reach works on what it is handed: a pass gets its root and makes elements with `root.ownerDocument`. A function in such a module that only ever runs from a listener may use the page's globals, and says so in its comment: `tocLinkHandler()` in `toc.js` uses `document` and `history`. Today these are `html.js`, `warning.js`, `passes.js`, `transient.js`, `frontmatter.js` and `toc.js`. A test imports such a module in Node as it is (`tests/frontmatter.test.mjs`, `tests/passes.test.mjs`); where it needs a DOM it takes `linkedom`. So logic that a test should reach is written into such a module. What needs layout, Mermaid or storage stays in the browser runs.
+- *A module of pure logic loads without a page.* It imports no module that looks up an element when it is loaded (`dom.js`, `rail.js`, `persistence.js`, `editor.js`, the downloads), and nothing at its top level touches the page. What a test is to reach works on what it is handed: a pass gets its root and makes elements with `root.ownerDocument`. A function in such a module that only ever runs from a listener may use the page's globals, and says so in its comment: `tocLinkHandler()` in `toc.js` uses `document` and `history`. Today these are `html.js`, `warning.js`, `passes.js`, `transient.js`, `frontmatter.js`, `toc.js` and `callouts.js`. A test imports such a module in Node as it is (`tests/frontmatter.test.mjs`, `tests/passes.test.mjs`, `tests/callouts.test.mjs`); where it needs a DOM it takes `linkedom`. So logic that a test should reach is written into such a module. What needs layout, Mermaid or storage stays in the browser runs.
 
-**Where a new component goes.** Into a module of its own under `src/app/`. It exports its pass, a function of `(root, context)` that works on the rendered document as `attachFootnotePreviews()` does, and `render.js` gets one line: the pass in `DOCUMENT_PASSES`, with a German name, at its place in the order (see *Render passes*). Every export copies the preview, so the component reaches all four downloads from there. Its styles go into `src/doc.css` (see *Document styles*). What it needs only in a running page, a listener or a control, is a second function in `RUNTIME_PASSES`; an element that function adds carries `data-dokufix-transient`. What it has to change when a document leaves the page is a step in `EXPORT_STEPS`. Where its logic can be written without a page, it is, and gets a test in Node. A listener that is attached once for the whole page is still a `register…()` that `src/app.js` calls, after the ones that are there. If it shares a value with another module that both assign to, the value becomes a property of `state`.
+**Where a new component goes.** Into a module of its own under `src/app/`. It exports its pass, a function of `(root, context)` that works on the rendered document as `attachFootnotePreviews()` does, and `render.js` gets one line: the pass in `DOCUMENT_PASSES`, with a German name, at its place in the order (see *Render passes*). Every export copies the preview, so the component reaches all four downloads from there. Its styles go into `src/doc.css` (see *Document styles*). What it needs only in a running page, a listener or a control, is a second function in `RUNTIME_PASSES`; an element that function adds carries `data-dokufix-transient`. What it has to change when a document leaves the page is a step in `EXPORT_STEPS`. Where its logic can be written without a page, it is, and gets a test in Node. `app/callouts.js` is the first component built this way. A listener that is attached once for the whole page is still a `register…()` that `src/app.js` calls, after the ones that are there. If it shares a value with another module that both assign to, the value becomes a property of `state`.
 
 **What the split did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before the split against the one after, reference document and demo text, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical, all assertions are green, and the three read-only exports are byte-identical in both browsers for both documents. One thing about the run itself showed here: in Chromium the exports of the reference document come out in one of two forms from run to run, for the file before the split as for the one after. The run types the document and clicks `Mit Editor` about 250 ms later, which is the delay of the editor's debounced save; whether that save runs first decides how often the clock is read, and Mermaid takes its diagram ids from the clock (`mermaid-…016` or `mermaid-…018`). Nothing else differs, and runs that fell the same way are byte-identical, old file against new. The file itself and every `Mit Editor` file grew by 972 B (67 959 → 68 931 B): `state.currentVersion` cannot be shortened by the minifier the way a variable can, and ten functions were added. `tests/speichern.mjs` is green in both browsers.
 
@@ -475,7 +525,7 @@ Six tools, all run from the repository root: five in `tests/`, and ESLint with `
 | Command | What it answers | Needs |
 |---|---|---|
 | `npm run check` | Is `dist/` what the sources give, does every document style sit in `doc.css`, and does every module declare or import each name it uses? | Node, `npm install` |
-| `npm test` | Do the build, the style check and the lint fail where they have to, and do the frontmatter parser and the pass runner do what they say? | Node, `npm install` |
+| `npm test` | Do the build, the style check and the lint fail where they have to, and do the frontmatter parser, the pass runner and the callouts do what they say? | Node, `npm install` |
 | `node tests/vergleich.mjs …` | Does a document still look the same in all four variants? | `npm install`, Chromium, Firefox, the CDN |
 | `node tests/speichern.mjs` | Does a saved file hold its document, and a file saved from it, and is it the built file otherwise? | `npm install`, Chromium, Firefox, the CDN |
 | `node tests/durchlaeufe.mjs` | Does a failure end as a warning in the document and in every export, do two renders run one after the other, does a transient element stay out of a saved file? | `npm install`, Chromium, Firefox, the CDN |
@@ -504,12 +554,13 @@ Six tools, all run from the repository root: five in `tests/`, and ESLint with `
 
 ### Tests (`npm test`)
 
-`node --test tests/*.test.mjs`, 121 cases. The cases about the build, the style check and the lint work on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to. The cases about the product's logic import its modules as they are (see *The script's modules*, the rule for modules of pure logic).
+`node --test tests/*.test.mjs`, 150 cases. The cases about the build, the style check and the lint work on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to. The cases about the product's logic import its modules as they are (see *The script's modules*, the rule for modules of pure logic).
 
 - `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, each named with the module the frame stands in, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
 - `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources or a module under `src/app/` changed; a module that imports a name another does not export, or a file that is not there, or assigns to an import ends the build with module and name and nothing written; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`. For the readable build: `--dev` writes a file that is the committed page outside its script and its styles, not minified, with a source map that names the modules; it never writes the committed file; `--dev --watch` builds again when a source changes and goes on after a build that failed.
 - `tests/frontmatter.test.mjs` runs the frontmatter parser in Node: what is read (pairs, nested maps, sequences, quoting, comments, JSON), what is not frontmatter and stays untouched (a thematic break, one prose line, a block that is never closed), what is shown raw with its reason, the five inputs of *Frontmatter* among them, and `deriveDocTitle()`.
-- `tests/passes.test.mjs` runs the pass runner in Node over a fragment that `linkedom` 0.18.13 parses: the order of the list, a pass that returns a promise, a pass that throws or whose promise is rejected (the others run, one warning each at the top in the order of the list, the error on the console, the runner does not reject), the markup of the warning, `removeTransient()`, and three real passes driven by the runner: metadata panel, heading ids, inline table of contents.
+- `tests/passes.test.mjs` runs the pass runner in Node over a fragment that `linkedom` 0.18.13 parses: the order of the list, a pass that returns a promise, a pass that throws or whose promise is rejected (the others run, one warning each at the top in the order of the list, the error on the console, the runner does not reject), the markup of the warning, `removeTransient()`, and real passes driven by the runner: metadata panel, heading ids, inline table of contents; and with the callout pass in front, which headings count: one inside a callout gets no id and no entry, at any depth, one in an ordinary blockquote does.
+- `tests/callouts.test.mjs` runs the callout pass in Node over markup as `marked` 18.0.14 emits it; `marked` comes from the CDN and is not installed, so each case carries the measured markup with its Markdown beside it. The table of *Callouts* line by line: the five types with class, label and role, the marker in any case, a list, a paragraph, a code block or a hard break behind the marker, the marker alone, a callout in a quote, in a list item and in another callout; eleven inputs that stay as they are, byte for byte; the masked marker as the known limit. And the symbols: each type has a `data:` URI in `src/doc.css` that is an escaped SVG of 16 px with one path in the colour of its edge and label, and the built file carries each URI unchanged.
 - `tests/lint.test.mjs` proves the lint: a module that lost an import, one that uses a name of the shared state without `state.`, one that uses a name nobody declares, one that assigns to an import, one that imports what it does not use and one that imports a namespace each give exit 1 with module, line and name; a function nobody calls and a local nobody reads pass.
 
 ### Comparison run (`tests/vergleich.mjs`)
@@ -527,10 +578,11 @@ node tests/vergleich.mjs --out tests/out/nachher --compare tests/out/vorher  # a
   node tests/vergleich.mjs --file poc/dokufix-poc.html --out tests/out/00-poc
   node tests/vergleich.mjs --out tests/out/01-dist --compare tests/out/00-poc --strict
   ```
-- **Document.** `tests/referenz.md`, an invented text that contains every construct dokufix styles: frontmatter, a footnote cited three times, `[[toc]]`, headings down to h4, table, code, blockquote, lists, an image as `data:` URI, a missing `#asset-` reference and two Mermaid diagrams. `--demo` builds from the built-in demo text instead, `--doc <file>` from any other Markdown file.
+- **Document.** `tests/referenz.md`, an invented text that contains every construct dokufix styles: frontmatter, a footnote cited three times, `[[toc]]`, headings down to h4, table, code, blockquote, the five callouts, one of them with a list and one with a heading inside, lists, an image as `data:` URI, a missing `#asset-` reference and two Mermaid diagrams. `--demo` builds from the built-in demo text instead, `--doc <file>` from any other Markdown file.
 - **Screenshots.** Each variant in light and dark at 1400 and 1600 px, once at rest and once with every state switched on (`-zustand`: heading numbering, open metadata panel, a revealed footnote preview, landing highlight with its marked arrow), plus the preview pane inside the editor. `--compare` reports the differing pixels per image and writes a red-on-white mask of them to `<browser>/diff/`. Two runs of the same file are pixel-identical in Chromium and in Firefox, so every reported pixel is a real difference.
 - **Sizes.** `sizes.json` per browser, with the library versions the CDN actually served. `--compare` prints the delta per variant. Two runs of the same file give the same byte counts.
-- **Assertions.** In every variant: metadata panel, footnote preview on focus, landing highlight and marked return arrow, heading numbering, rail at 1600 px and not at 1400 px; `nur-lesen` contains no `<script>`; no read-only export carries a rule of the editor interface. A failed assertion exits 1. Differing pixels do not, unless `--strict` is given, because some differences are decided ones. An image that only the run or only the baseline has counts as differing. A `--compare` folder without a run for the browser, or one that is the `--out` folder itself, stops the run with exit 1 before anything is built or deleted.
+- **Assertions.** In every variant: metadata panel, footnote preview on focus, landing highlight and marked return arrow, heading numbering, rail at 1600 px and not at 1400 px; callouts (below); `nur-lesen` contains no `<script>`; no read-only export carries a rule of the editor interface. A failed assertion exits 1. Differing pixels do not, unless `--strict` is given, because some differences are decided ones. An image that only the run or only the baseline has counts as differing. A `--compare` folder without a run for the browser, or one that is the `--out` folder itself, stops the run with exit 1 before anything is built or deleted.
+- **Callouts.** The run reads from the Markdown how many callouts of which type the document has and which headings stand inside one, and expects in every variant: one callout per alert blockquote, in order, and no blockquote left that opens with a marker; each labelled with the word of its type, visible, as its first line; an edge on the left only, edge and label in the colour of the type; a symbol that the browser loads as a picture of 16 × 16 px, one per type; the heading inside a callout without an id and in neither table of contents nor rail; a `[!WARNING]` callout and the product's warning, which the run puts beside it for the measurement, apart in more than colour. For the numbering a browser does not say which number a counter shows. So the page is photographed three times with numbering on: as it is, with the heading inside the callout forced out of the count by a style, and with it forced in. As it is, the page has to equal the first and differ from the second. A document without callouts is checked for having none. A file that predates callouts, the PoC among them, fails these checks on the reference document; its screenshots and sizes are written all the same.
 - **Browsers.** Chromium from `/usr/bin/chromium` and Firefox from the Playwright cache (`--browser chromium|firefox|all`; `CHROMIUM` and `FIREFOX` override the paths). WebKit is not run.
 
 Four things the run does on purpose, each because the obvious way gave wrong results or none:
@@ -593,7 +645,7 @@ src/
 │   ├── dom.js          The elements more than one module works on.
 │   ├── gzip.js, idb.js, assets.js, document.js, persistence.js
 │   ├── html.js, warning.js, passes.js, transient.js
-│   ├── frontmatter.js, render.js, toc.js, footnotes.js, rail.js, editor.js
+│   ├── frontmatter.js, callouts.js, render.js, toc.js, footnotes.js, rail.js, editor.js
 │   └── downloads/      menu.js, download.js, with-editor.js, export-body.js, readonly-open.js, readonly-slim.js, readonly-compact.js
 ├── demo.md             The demo text.
 └── README.md           This file.
@@ -603,7 +655,8 @@ tests/                  Checks that look at sources and built file from outside.
 ├── build.test.mjs      Breaks copies of src/ and expects the build to fail; same sources, same file; the readable build.
 ├── lint.test.mjs       Breaks copies of src/ and expects the lint to fail.
 ├── frontmatter.test.mjs  The frontmatter parser, in Node.
-├── passes.test.mjs     The pass runner over a parsed fragment, in Node.
+├── passes.test.mjs     The pass runner over a parsed fragment, in Node; which headings count.
+├── callouts.test.mjs   Callouts over markup as marked emits it, in Node; the symbols in the document styles.
 ├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
 ├── speichern.mjs       Save round trip: two generations of "Mit Editor", each compared with the built file.
 ├── durchlaeufe.mjs     Failure cases: a diagram with an error, a pass that throws, two renders at once, transient elements.
