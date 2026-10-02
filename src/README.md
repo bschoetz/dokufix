@@ -28,7 +28,7 @@ That file is built from the sources in this folder with one command (see *Build*
 
 | Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
 |---|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 69 781 B + libs | 71 815 B + libs |
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 70 765 B + libs | 72 799 B + libs |
 | **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 70 956 B | 106 743 B |
 | **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 200 B | 52 004 B |
 | **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 28 887 B | 48 158 B |
@@ -39,17 +39,17 @@ The built file beside the PoC, same run, same documents, same day:
 
 | | Demo text: PoC → built | Reference document: PoC → built |
 |---|---|---|
-| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 67 959 B | the same file |
-| `Mit Editor`, Chromium | 135 085 → 69 781 B | 137 119 → 71 815 B |
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 68 943 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 70 765 B | 137 119 → 72 799 B |
 | `nur-lesen`, Chromium | 71 052 → 70 956 B | 106 839 → 106 743 B |
 | `schlank`, Chromium | 35 296 → 35 200 B | 52 100 → 52 004 B |
 | `kompakt`, Chromium | 28 983 → 28 887 B | 48 254 → 48 158 B |
-| `Mit Editor`, Firefox | 135 069 → 69 765 B | 137 103 → 71 799 B |
+| `Mit Editor`, Firefox | 135 069 → 70 749 B | 137 103 → 72 783 B |
 | `nur-lesen`, Firefox | 71 138 → 71 042 B | 107 192 → 107 096 B |
 | `schlank`, Firefox | 35 536 → 35 440 B | 52 048 → 51 952 B |
 | `kompakt`, Firefox | 29 419 → 29 323 B | 48 134 → 48 038 B |
 
-The build takes 65 394 B out of the file itself and 65 304 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+The build takes 64 410 B out of the file itself and 64 320 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. (Before the script was split into modules it was 984 B more: see *The script's modules*.) Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -85,7 +85,7 @@ Until story 2.1 each of these rules existed twice, written by hand: `#preview`-p
 | rendered document content: headings, tables, footnotes, a new `dokufix-` component | `src/doc.css` | `.dokufix-doc h2{…}`, `.dokufix-doc .dokufix-callout{…}` |
 | the look of the rail | the same file | `.dokufix-rail a{…}`, unscoped, because the rail sits beside the content container |
 | the editor interface, the preview pane as a box, where the rail stands in the editor | `src/app.css`, the app stylesheet below the block | `#preview{…}`, `body.mode-view #preview{…}`, `.dokufix-rail a.active{…}` |
-| the page of a read-only export: reset, margins, footer, rail grid | `READONLY_FRAME_CSS` in `src/app.js` | `body{…}`, `.reader-body{…}`, `.dokufix-meta{…}` |
+| the page of a read-only export: reset, margins, footer, rail grid | `READONLY_FRAME_CSS` in `src/app/downloads/readonly-css.js` | `body{…}`, `.reader-body{…}`, `.dokufix-meta{…}` |
 
 `.dokufix-doc` is the class on the content container: `#preview` in the editor, `<main class="reader-body dokufix-doc">` in an export. That class is the only change to the exported markup.
 
@@ -95,7 +95,7 @@ Until story 2.1 each of these rules existed twice, written by hand: `#preview`-p
 node tests/check-doc-styles.mjs
 ```
 
-No dependencies, no browser. It reads the sources, because that is where a rule is written: the block is `doc.css`, the app stylesheet is `app.css`, the export frame and the export functions are in `app.js`, the block's element and the preview are in `index.html`. It exits 1 and names file, line and selector
+No dependencies, no browser. It reads the sources, because that is where a rule is written: the block is `doc.css`, the app stylesheet is `app.css`, the export frame and the export functions are in the modules under `src/app/downloads/` (the check reads every `.js` under `src/` and names the module a problem is in), the block's element and the preview are in `index.html`. It exits 1 and names file, line and selector
 
 - when a document rule sits outside `doc.css`. In the export frame that is any selector other than the ten the frame has today, which the check lists one by one (`FRAME_SELECTORS`); `.reader-body h5{…}` fails like a bare `h5{…}`. In `app.css`, in a `<style>` an export writes itself and in a `<style>` somebody adds to the page it is a `.dokufix-doc` selector, a `#preview <descendant>` selector, a `dokufix-` name, or any class or attribute name that a selector of the block uses (`.footnotes li{…}`, `.mermaid svg{…}`, `a[data-footnote-ref]{…}`);
 - when a selector in `doc.css` does not start with `.dokufix-doc`, `.numbered .dokufix-doc` or `.dokufix-rail`;
@@ -370,31 +370,67 @@ npm run build      # writes dist/dokufix.html
 | `src/index.html` | the page: head, markup, the data blocks, the three CDN tags | taken as written, not minified |
 | `src/doc.css` | the document styles | minified, into `<style id="dokufix-doc-css">` |
 | `src/app.css` | the editor's styles | minified, into the `<style>` after it |
-| `src/app.js` | the script, one file | bundled into one IIFE and minified |
+| `src/app.js` with `src/app/` | the script: the entry and the modules it imports | bundled into one IIFE and minified |
 | `src/demo.md` | the demo text, plain Markdown | written as `{"text": …}` into `#dokufix-demo` |
 
 The page names each of the other four once, as a slot: `{{slot:doc.css}}`, `{{slot:app.css}}`, `{{slot:app.js}}`, `{{slot:demo.md}}`.
 
 - **The built file is committed.** Two builds of the same sources are byte-identical, so `git status` stays clean after `npm run build` unless a source changed. Change a source, build, commit both. Never edit `dist/dokufix.html` by hand; the next build overwrites it.
 - **`node build.mjs --check`** builds in memory, writes nothing, and exits 1 with "is stale" when `dist/dokufix.html` is not what the sources give.
-- **The build exits 1 and writes nothing** when a source is missing, when a slot is missing from the page, stands there twice or is not one of the four, and when the minified script contains `</script` or `<!--` or a minified stylesheet `</style`.
+- **The build exits 1 and writes nothing** when a source is missing, when a slot is missing from the page, stands there twice or is not one of the four, when the minified script contains `</script` or `<!--` or a minified stylesheet `</style`, and when the modules do not fit together: one imports a name the other does not export, or a file that is not there, or assigns to a name it imported. The message names the module, line and name.
 - **`<!--` in the script is written as `\x3c!--`** after bundling; why is under *`</script>` escaping*.
 - **esbuild 0.28.2**, through its API: `bundle`, `format: 'iife'`, `minify` and `charset: 'utf8'` for the script, `minify` and `charset: 'utf8'` for the two stylesheets. Without `charset: 'utf8'` esbuild writes every non-ASCII character as an escape.
 - **The code in the file is minified**, in the built file and in every `Mit Editor` file saved from it. The readable code is here, under `src/`.
 - **The script's names are not global any more.** Bundled into an IIFE, `render()` or `initDone` cannot be reached from outside. Nothing in the page needs that; a check that wants to know what the page is doing looks at the DOM (see *Comparison run*).
 - **The libraries are not embedded.** `marked`, `marked-footnote` and Mermaid stay on the CDN at their pinned versions and stay free globals of the script (see *Libraries*).
-- **The script is still one file.** Splitting it into modules is the next entry of the epic; the bundle is already in place so that the split can be compared with the same checks.
+- **The script is written as ES modules** and still arrives as one script. See *The script's modules*.
 
 **What the build did to documents** (2026-10-02, `tests/vergleich.mjs`, PoC against built file, reference document and demo text, Chromium 153 and Firefox 153, light and dark, 1400 and 1600 px, at rest and with every state switched on): all 136 screenshots are pixel-identical, and all assertions are green in both. The same run on the PoC gives the screenshots the PoC's own harness gave before (`poc/tests/out/03-nach-review`, all 136 identical, byte counts equal), so the successor sees what its predecessor saw. Sizes are under *Download variants*.
 
+### The script's modules
+
+Until story 2.14 the script was one file of 2111 lines in which every function and every variable was visible to every other. It is now `src/app.js` and nineteen modules under `src/app/`, cut along the sections the one file had. esbuild bundles them into the one script of the built file, as before. The split moved code and rewrote none: every line of the old file stands in a module, apart from the three things described below (how shared state is reached, what runs at load, three comments that said "above" or "at the bottom").
+
+| Module | What it owns |
+|---|---|
+| `app.js` | the entry: the library setup (`mermaid.initialize`, `marked.use`), the call of every `register…()` in a fixed order, the async init |
+| `app/state.js` | `state`, the values that more than one module assigns to |
+| `app/dom.js` | the elements more than one module works on: `sourceEl`, `previewEl`, `btnEl`, `resetEl` |
+| `app/gzip.js` | `gzipB64()`, `ungzipB64()` |
+| `app/idb.js` | the IndexedDB layer (`openDB()`, `idbGetDoc()` and the others) and the storage-error banner |
+| `app/assets.js` | images: the pipeline from a file to a stored asset, resolving `#asset-` references in the rendered HTML, inlining them for the exports, baking and seeding them for `Mit Editor`; and the three ways an image comes in (paste, drop, `+ Bild`) |
+| `app/document.js` | reading a data block (`readTextBlock()`), the document's identity (`generateDocUuid()`, `fallbackUuidFromLocation()`) |
+| `app/persistence.js` | loading and persisting the document record, the migration from localStorage, versions and the history dialog, the dirty state |
+| `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel, `deriveDocTitle()` |
+| `app/render.js` | `render()`, the one pass from source to preview, and `escapeHtml()` |
+| `app/toc.js` | heading ids, the inline `[[toc]]`, `headingLabelText()` |
+| `app/footnotes.js` | footnote previews and return paths; also `tocLinkHandler()` and `buildStaticRailHtml()`, which stood in that section of the one file |
+| `app/rail.js` | the scrollspy rail |
+| `app/editor.js` | the toolbar: render button and typing, "Demo zurücksetzen", heading numbering, hamburger, the switch between view and editor |
+| `app/downloads/menu.js` | the download menu, the in-flight gate, `safeFilenameBase()`, `triggerDownload()` |
+| `app/downloads/with-editor.js` | `Mit Editor` |
+| `app/downloads/readonly-css.js` | what the three read-only exports share: the export frame, `readonlyCss()`, the footer |
+| `app/downloads/readonly-open.js`, `readonly-slim.js`, `readonly-compact.js` | one read-only export each |
+
+**Four rules.**
+
+- *A module imports what it uses and exports what others need.* Nothing is shared as a global, and no `window.` or `globalThis.` property passes a value from one module to another. Imports are named (`import { render } from './render.js'`), never `import * as`: see *Lint*.
+- *Shared state is one object.* An imported name cannot be assigned to. Ten values are assigned to by more than one module: `docUuid`, `currentVersion`, `versionHistory`, `commitBaseline`, `storedSource`, `cleanBaseline`, `demoText`, `demoGz`, `initDone`, `mermaidId`. They are the properties of `state` in `app/state.js`; a module imports `state` and reads and writes `state.currentVersion`, which a search finds. A value that only its own module assigns to stays a `let` there (`_dbPromise`, `saveTimer`, `persistFailedFlag`, the rail's two handlers, `downloadInFlight`). Such a `let` may be exported: `Mit Editor` imports `saveTimer` and reads its current value, and could not assign to it.
+- *A module does nothing when it is loaded.* Its top level holds functions, constants and element lookups. What acts at load stands in `src/app.js`: the library setup and the async init are written there, and every listener and the restoring of the numbering preference is a `register…()` function of its module, which `src/app.js` calls in the order the statements had in the one file: `registerAssetUrlCleanup()`, `registerVersionDialog()`, `registerRailClicks()`, `registerEditorInput()`, `registerImageInput()`, `registerReset()`, `registerDownloadMenu()`, `registerNumbering()`, `registerHamburger()`, `registerViewToggle()`. Without that the order would follow from who imports whom, and change whenever an import is added; two listeners on `document` for the same event (the download menu and the hamburger on `click`, the menu and the view mode on `Escape`) would swap silently. One thing did move: the element lookups of the modules now run before the library setup, because a module's top level runs before the entry's. They only read the page.
+- *Modules may import each other in a circle,* as long as it is for functions that are called later: `render()` calls the asset pipeline and the image input calls `render()`; table of contents, footnotes and rail use each other's helpers; the menu calls the downloads and the downloads call `triggerDownload()`. That works because of the rule before: no module reads another's export while it loads.
+
+**Where a new component goes.** Into a module of its own under `src/app/`. It exports the function that works on the rendered preview, as `attachFootnotePreviews()` does, and `render()` in `app/render.js` imports it and calls it at its place in the pass; every export reads the preview back out, so the component reaches all four downloads from there. Its styles go into `src/doc.css` (see *Document styles*). If it needs a listener that is attached once, it exports a `register…()` and `src/app.js` calls it, after the ones that are there. If it shares a value with another module that both assign to, the value becomes a property of `state`.
+
+**What the split did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before the split against the one after, reference document and demo text, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical, all assertions are green, and the three read-only exports are byte-identical in both browsers for both documents. One thing about the run itself showed here: in Chromium the exports of the reference document come out in one of two forms from run to run, for the file before the split as for the one after. The run types the document and clicks `Mit Editor` about 250 ms later, which is the delay of the editor's debounced save; whether that save runs first decides how often the clock is read, and Mermaid takes its diagram ids from the clock (`mermaid-…016` or `mermaid-…018`). Nothing else differs, and runs that fell the same way are byte-identical, old file against new. The file itself and every `Mit Editor` file grew by 984 B (67 959 → 68 943 B): `state.currentVersion` cannot be shortened by the minifier the way a variable can, and ten functions were added. `tests/speichern.mjs` is green in both browsers.
+
 ## Checks
 
-Four tools, all in `tests/`, all run from the repository root. They look at the sources and at the built file from outside; the product contains no hook for any of them.
+Five tools, all run from the repository root: four in `tests/`, and ESLint with `eslint.config.mjs`. They look at the sources and at the built file from outside; the product contains no hook for any of them.
 
 | Command | What it answers | Needs |
 |---|---|---|
-| `npm run check` | Is `dist/` what the sources give, and does every document style sit in `doc.css`? | Node, `npm install` |
-| `npm test` | Do the build and the style check fail where they have to? | Node, `npm install` |
+| `npm run check` | Is `dist/` what the sources give, does every document style sit in `doc.css`, and does every module declare or import each name it uses? | Node, `npm install` |
+| `npm test` | Do the build, the style check and the lint fail where they have to? | Node, `npm install` |
 | `node tests/vergleich.mjs …` | Does a document still look the same in all four variants? | `npm install`, Chromium, Firefox, the CDN |
 | `node tests/speichern.mjs` | Does a saved file hold its document, and a file saved from it? | `npm install`, Chromium, Firefox, the CDN |
 
@@ -402,12 +438,29 @@ Four tools, all in `tests/`, all run from the repository root. They look at the 
 
 `node tests/check-doc-styles.mjs` — fails when a style for document content sits anywhere but in `src/doc.css`. Described under *Document styles (one source)*. It reads the sources and the built file as text and needs neither a browser nor `npm install`. `npm run check` runs `node build.mjs --check` first, so a stale `dist/` is reported before the styles are looked at.
 
+### Lint (`eslint src`)
+
+`npx eslint src`, the third step of `npm run check`: ESLint 10.11.0 with three rules over every `.js` under `src/`. It is there for what esbuild does not see. Bundling, esbuild takes a name that a module neither declares nor imports for a global and says nothing, and the page fails when that line runs, which for a download or an error path may be never in a test.
+
+| A module … | The build | The lint |
+|---|---|---|
+| uses a name it neither declares nor imports | passes | fails: `no-undef` |
+| imports a name the other module does not export, and uses it | fails | passes |
+| imports a file that does not exist | fails | passes |
+| assigns to a name it imported | fails | fails: `no-import-assign` |
+| imports a name and does not use it, exported or not | passes, the import is dropped unread | fails: `dokufix/no-unused-imports` |
+
+- **Globals.** A name counts as declared when it is one of the browser's (the list of the `globals` package, 17.13.0) or one of `marked`, `markedFootnote`, `mermaid`, which the page loads from the CDN.
+- **`dokufix/no-unused-imports`** is written in `eslint.config.mjs`, a dozen lines on ESLint's own scope analysis. ESLint's `no-unused-vars` has no option that limits it to imports; it would also report a function nobody calls and a local nobody reads, and those are not this check's business.
+- **Two things it cannot see.** A missing import of a name that is also a browser global (`name`, `status`, `open`, `history`) passes `no-undef`; none of the script's top-level names is one (checked 2026-10-02), and a new one should not be. And with `import * as x`, a member the other module does not export is only a warning of esbuild and no error; the modules use named imports only.
+
 ### Tests (`npm test`)
 
 `node --test tests/*.test.mjs`. Every case works on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to.
 
-- `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
-- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources changed; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`.
+- `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, each named with the module the frame stands in, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
+- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources or a module under `src/app/` changed; a module that imports a name another does not export, or a file that is not there, or assigns to an import ends the build with module and name and nothing written; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`.
+- `tests/lint.test.mjs` proves the lint: a module that lost an import, one that uses a name of the shared state without `state.`, one that uses a name nobody declares, one that assigns to an import and one that imports what it does not use each give exit 1 with module, line and name; a function nobody calls and a local nobody reads pass.
 
 ### Comparison run (`tests/vergleich.mjs`)
 
@@ -460,20 +513,28 @@ Every save types a version description that contains `<!-- <script>` and `</scri
 
 ```
 build.mjs               The build. One command, see "Build".
-package.json            esbuild and playwright-core, pinned exactly; scripts build, check, test, vergleich.
+package.json            esbuild, eslint, globals and playwright-core, pinned exactly; scripts build, check, test, vergleich.
+eslint.config.mjs       The lint: three rules over src/. See "Lint".
 dist/
 └── dokufix.html        The product. Built, committed, never edited by hand. Open in browser.
 src/
 ├── index.html          The page: head, markup, data blocks, CDN tags, one slot per other source.
 ├── doc.css             Document styles, the one source for everything that travels with a document.
 ├── app.css             Styles of the editor interface.
-├── app.js              The script, one file.
+├── app.js              The script's entry: library setup, the register…() calls in order, the async init.
+├── app/                The script's modules. See "The script's modules".
+│   ├── state.js        The values more than one module assigns to.
+│   ├── dom.js          The elements more than one module works on.
+│   ├── gzip.js, idb.js, assets.js, document.js, persistence.js
+│   ├── frontmatter.js, render.js, toc.js, footnotes.js, rail.js, editor.js
+│   └── downloads/      menu.js, with-editor.js, readonly-css.js, readonly-open.js, readonly-slim.js, readonly-compact.js
 ├── demo.md             The demo text.
 └── README.md           This file.
 tests/                  Checks that look at sources and built file from outside. See "Checks".
 ├── check-doc-styles.mjs       Fails when a document style sits outside doc.css.
 ├── check-doc-styles.test.mjs  Breaks copies of src/ and expects the check to fail.
 ├── build.test.mjs      Breaks copies of src/ and expects the build to fail; same sources, same file.
+├── lint.test.mjs       Breaks copies of src/ and expects the lint to fail.
 ├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
 ├── speichern.mjs       Save round trip: two generations of "Mit Editor".
 ├── referenz.md         Neutral reference document, the one input of every comparison.
