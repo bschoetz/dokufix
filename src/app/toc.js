@@ -7,7 +7,8 @@ import { escapeHtml } from './html.js';
 // Both feed off the same set of generated heading IDs.
 //
 // This module loads without a page: its passes work on the root they are
-// handed, and tocLinkHandler() touches the page only when a link is clicked.
+// handed. tocLinkHandler() is the exception the rule for modules of pure logic
+// allows: it only ever runs from a listener, so it uses the page's globals.
 
 // Which headings count: the one place that says so. Heading ids, the inline
 // table of contents, the rail of the editor and the rail of an export all ask
@@ -115,7 +116,9 @@ export function attachTocClicks(root){
   root.querySelectorAll('nav.dokufix-toc').forEach(nav => nav.addEventListener('click', tocLinkHandler));
 }
 
-// Click handler of the inline table of contents and of the rail.
+// Click handler of the inline table of contents and of the rail. It runs only
+// from a listener in a running page, so it uses the page's globals (document,
+// history) and no test in Node calls it.
 export function tocLinkHandler(e){
   const a = e.target.closest('a[href^="#"]');
   if (!a) return;
