@@ -1,0 +1,489 @@
+# dokufix — Proof of Concept, built from sources
+
+A working prototype of the **dokufix** vision: one HTML file that is simultaneously the viewer, the editor, and the artifact for technical documentation written in Markdown + Mermaid.
+
+Open `dist/dokufix.html` in any modern browser. No install, no server, no account.
+
+That file is built from the sources in this folder with one command (see *Build*). It succeeds `poc/dokufix-poc.html`, which was written by hand and stays frozen as story 2.1 left it, with its README and its checks. The built file looks the same and does the same; what changed underneath is under *Build* and *Self-replication mechanism*. This README succeeds `poc/README.md`.
+
+## What this PoC demonstrates
+
+- **Markdown + Mermaid rendering** in the browser via `marked` and `mermaid` (loaded from CDN at pinned versions — production will inline these; see *Libraries*).
+- **Viewer ↔ Editor toggle.** Default mode is the reader experience; a discreet "Editor ↩" button in the corner reveals the editing UI.
+- **IndexedDB persistence** — one record per dokufix file (keyed by UUID) holds the live markdown source, version history, and commit baseline. Image assets live in a separate object store, keyed by SHA-256 content hash. Documents that were saved by an older localStorage-based build of the PoC are migrated transparently on first open with the new code.
+- **Image upload (paste, drag-and-drop, file picker)** — drop a file onto the editor, paste a screenshot from the clipboard, or use the `+ Bild` button. The image is decoded via `createImageBitmap` (with `imageOrientation: 'from-image'` so EXIF orientation is applied to the pixels), optionally downscaled to a max of 1600 px wide, re-encoded as WebP @ 0.85, hashed, and stored in IndexedDB. The canvas roundtrip is what strips EXIF metadata as a side effect; `createImageBitmap` itself doesn't strip anything. The markdown gets a `![alt](#asset-<hash>)` reference; the render pass swaps that reference for a Blob URL pulled from IndexedDB. Read-only exports replace `#asset-` and `blob:` URLs with inline `data:` URLs so the recipient has no IDB or runtime dependency. `Mit Editor` downloads include every asset referenced by the current source **or by any history snapshot** in a separate `<script type="application/json" id="dokufix-assets">` block — content-addressed, so a re-seed of an identical hash is a no-op.
+- **Explicit save** — leaving edit mode does **not** auto-save; saving is a deliberate user action via the Download menu.
+- **Self-replication** — the "Mit Editor" download produces a new HTML file with the user's content baked in (gzip-compressed). The receiver opens that file and starts from there.
+- **Three read-only export tiers** — open / schlank / kompakt, each with different size-vs-portability tradeoffs.
+- **Footnotes with hover previews** — GFM footnote syntax (`[^id]` / `[^id]:`) via `marked-footnote`, plus a preview that appears when the reader hovers or keyboard-focuses a marker, so an aside can be read without jumping to the bottom of the document. Pure CSS, so it works in the JS-free export. See *Footnotes* below.
+- **Frontmatter metadata panel** — a leading YAML or JSON header block renders as a collapsible panel instead of leaking into the document as markup. Native `<details>`, so it collapses without JavaScript and survives the JS-free export. See *Frontmatter* below.
+- **Heading numbering toggle** — opt-in 1.2.3 outline numbering via pure CSS counters.
+- **Two-layer Table of Contents** — author-placed inline `[[toc]]` marker (renders as a static nested list inside the document, ships through every export variant) plus a JS-driven right-side scrollspy rail in read mode on wide viewports.
+- **Dirty-state indicator** — a header badge (and a `●` prefix in the browser tab title) shows whether the editor content matches what is baked into the file. Resets to clean after a "Mit Editor" download.
+- **In-file version history with per-version source snapshots** — each "Mit Editor" download and each "commit-only" action appends a `{v, t (ISO), m (message), s (gzipped source)}` entry to a JSON block embedded in the file (`<script type="application/json" id="dokufix-history">` — non-executing, just data). A clickable `v{N}` badge in the header opens a modal listing every saved version, newest first. The full source of any prior version is recoverable from the file alone — the artifact is auditable on its own. Read-only exports inherit a small `Version N · DD.MM.YYYY HH:MM · message · exportiert <date>` footer at the end of the document.
+- **Per-document identity** — each saved file carries a UUID in its history JSON. The IndexedDB doc record is keyed by this UUID, so two dokufix files in the same browser no longer share storage. Files without a UUID (older or never-saved) use a deterministic `loc-{hash}` fallback derived from `location.origin + location.pathname` (URL hash and query are deliberately excluded so ToC anchor clicks don't relocate the storage on the next reload); on first save the fallback upgrades to a real `crypto.randomUUID()` and the IndexedDB record is rekeyed to the new identifier.
+- **Mobile-friendly** — hamburger menu collapses the editor toolbar on narrow viewports.
+
+## Download variants
+
+| Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
+|---|---|---|---|---|---|
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 69 812 B + libs | 71 846 B + libs |
+| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 70 956 B | 106 743 B |
+| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 200 B | 52 004 B |
+| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 28 887 B | 48 158 B |
+
+Measured 2026-10-02 in Chromium 153 with `tests/vergleich.mjs`, all four variants through one build per document; Firefox differs by a few hundred bytes because it serialises the Mermaid SVG differently. The reference document is `tests/referenz.md`. Both documents carry two Mermaid diagrams, and those dominate the read-only exports.
+
+The built file beside the PoC, same run, same documents, same day:
+
+| | Demo text: PoC → built | Reference document: PoC → built |
+|---|---|---|
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 67 990 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 69 812 B | 137 119 → 71 846 B |
+| `nur-lesen`, Chromium | 71 052 → 70 956 B | 106 839 → 106 743 B |
+| `schlank`, Chromium | 35 296 → 35 200 B | 52 100 → 52 004 B |
+| `kompakt`, Chromium | 28 983 → 28 887 B | 48 254 → 48 158 B |
+| `Mit Editor`, Firefox | 135 069 → 69 796 B | 137 103 → 71 830 B |
+| `nur-lesen`, Firefox | 71 138 → 71 042 B | 107 192 → 107 096 B |
+| `schlank`, Firefox | 35 536 → 35 440 B | 52 048 → 51 952 B |
+| `kompakt`, Firefox | 29 419 → 29 323 B | 48 134 → 48 038 B |
+
+The build takes 65 363 B out of the file itself and 65 273 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+
+Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
+
+## Architecture notes
+
+### Demo text and the file's document
+
+Two distinct concepts, deliberately separated. Each lives in a data block of the page, a `<script type="application/json">` that is not executed:
+
+- **`#dokufix-demo`** — the immutable original demo text. The "Demo zurücksetzen" button always restores from this. A save carries it along and never changes what it says.
+- **`#dokufix-source`** — this file's document: what gets loaded on first open if no IndexedDB record exists yet for this document UUID. Empty in the built file. On `Mit Editor` download it is written with the user's current content.
+
+A block holds `{"text": "…"}` or `{"gz": "…"}` (gzip, then base64), and the init reads either. The build writes the demo text as `{"text": …}` from `src/demo.md`; a save writes both blocks as `{"gz": …}`.
+
+Loading order on open: IndexedDB doc record (live draft) > `#dokufix-source` (file's baked content) > `#dokufix-demo`.
+
+In the PoC both were variables of the script, `DEMO` and `SAMPLE`. Why they moved is under *Self-replication mechanism*.
+
+### Document styles (one source)
+
+Every style that travels with a document is written in one place: `src/doc.css`. The build puts it, minified, into `<style id="dokufix-doc-css">`, the first stylesheet in `<head>`. From there on nothing changed against the PoC:
+
+- The **preview** uses the block as an ordinary stylesheet.
+- **`Mit Editor`** clones the whole document, so the block travels unchanged.
+- The three **read-only exports** embed the block's text at the moment the file is written: `readonlyCss()` reads it from the page, removes comments and whitespace (after the build there is hardly any left), and appends the export frame. Nothing is derived when the file is opened, so `nur-lesen` still contains no script.
+
+Until story 2.1 each of these rules existed twice, written by hand: `#preview`-prefixed in the app stylesheet and unprefixed in a string called `READONLY_CSS`. Nothing compared the two, and in epic 1 the anchor positioning of the footnote preview sat in the first and was missing from the second, so every read-only export shipped without it.
+
+**Where a rule goes.**
+
+| The rule styles … | It goes into … | Written as … |
+|---|---|---|
+| rendered document content: headings, tables, footnotes, a new `dokufix-` component | `src/doc.css` | `.dokufix-doc h2{…}`, `.dokufix-doc .dokufix-callout{…}` |
+| the look of the rail | the same file | `.dokufix-rail a{…}`, unscoped, because the rail sits beside the content container |
+| the editor interface, the preview pane as a box, where the rail stands in the editor | `src/app.css`, the app stylesheet below the block | `#preview{…}`, `body.mode-view #preview{…}`, `.dokufix-rail a.active{…}` |
+| the page of a read-only export: reset, margins, footer, rail grid | `READONLY_FRAME_CSS` in `src/app.js` | `body{…}`, `.reader-body{…}`, `.dokufix-meta{…}` |
+
+`.dokufix-doc` is the class on the content container: `#preview` in the editor, `<main class="reader-body dokufix-doc">` in an export. That class is the only change to the exported markup.
+
+**The check.**
+
+```
+node tests/check-doc-styles.mjs
+```
+
+No dependencies, no browser. It reads the sources, because that is where a rule is written: the block is `doc.css`, the app stylesheet is `app.css`, the export frame and the export functions are in `app.js`, the block's element and the preview are in `index.html`. It exits 1 and names file, line and selector
+
+- when a document rule sits outside `doc.css`. In the export frame that is any selector other than the ten the frame has today, which the check lists one by one (`FRAME_SELECTORS`); `.reader-body h5{…}` fails like a bare `h5{…}`. In `app.css`, in a `<style>` an export writes itself and in a `<style>` somebody adds to the page it is a `.dokufix-doc` selector, a `#preview <descendant>` selector, a `dokufix-` name, or any class or attribute name that a selector of the block uses (`.footnotes li{…}`, `.mermaid svg{…}`, `a[data-footnote-ref]{…}`);
+- when a selector in `doc.css` does not start with `.dokufix-doc`, `.numbered .dokufix-doc` or `.dokufix-rail`;
+- when a read-only export no longer builds its stylesheet with `readonlyCss()` or its `<main>` lost the class;
+- when the block's element is missing from the page or doubled, or holds anything but the slot for `doc.css`, and when `READONLY_CSS` comes back;
+- when the built file does not have exactly one block, or an empty one. That is all the check reads from the built file: there the script is bundled and minified, and the names it looks for are gone.
+
+The `dokufix-` prefix alone is not the test. dokufix's own components carry it, but what `marked`, `marked-footnote` and Mermaid produce does not (`.footnotes`, `.mermaid`, `[data-footnote-ref]`), so the check takes the class and attribute names from the block's own selectors. Three short allowlists name what a frame may use anyway: the frame names `.dokufix-meta` and `.dokufix-rail-pending`, `.dokufix-rail` together with `.has-items` or `a.active`, and three selectors that share a name with the block but style something else (`.version-modal[open]`, and `.mermaid[data-gz]` with its `::before` in the `<noscript>` style of `schlank`). What the check cannot see: a rule that reaches document content through another ancestor and names none of these, such as `.pane-preview h5{…}`, and rules written with CSS nesting, which its reader does not unfold. Run it after every change to a style.
+
+**Two things that are load-bearing.**
+
+- *Order.* In `src/index.html` the block stands before the app stylesheet, and `readonlyCss()` puts the frame after the block. Where a frame rule and a document rule have the same specificity, the frame has to win: `.dokufix-meta p` against `.dokufix-doc p` in the exports, `.dokufix-rail a.active` against `.dokufix-rail .rail-h4 a` in the editor.
+- *Specificity moved.* Document selectors dropped from id to class specificity in the preview and rose from element to class specificity in the exports. That was verified by screenshot, not assumed (below). One consequence needed a frame rule: the "needs JavaScript" notice of `kompakt` sits outside the content container, so `p{margin-bottom:1em}` no longer reached it and the rail beside it stood 17 px higher with JavaScript off; `noscript p{margin-bottom:1em}` in the frame restores that.
+
+**What the change did to documents** (2026-10-02, `tests/vergleich.mjs`, Chromium 153 and Firefox 153, light and dark, 1400 and 1600 px, at rest and with every state switched on):
+
+- Demo text, which has no image: all 68 screenshots are pixel-identical before and after.
+- Reference document: `Mit Editor` and the preview pane are pixel-identical. The three read-only exports differ, and only by the decided image margin: the one source carries `margin:8px 0` on images, which the preview always had and the exports never did, so each of the two images in the reference document moves what follows down by 16 px. Control: the same build with that one declaration removed gives read-only exports that are pixel-identical to before.
+- `object-fit:contain` on the missing-image placeholder was the other difference between the twins; it existed only in the exports and is now everywhere. It changes no pixel in the preview.
+- With JavaScript switched off, the three read-only exports render as before, again apart from the image margin (checked in Chromium at 1400 and 1600 px).
+
+### Libraries
+
+Three libraries come from the CDN, each at a fixed version:
+
+| Library | Version | URL below `https://cdn.jsdelivr.net/npm/` |
+|---|---|---|
+| `marked` | 18.0.14 | `marked@18.0.14/lib/marked.umd.js` |
+| `marked-footnote` | 1.4.0 | `marked-footnote@1.4.0/dist/index.umd.min.js` |
+| `mermaid` | 12.0.0 | `mermaid@12.0.0/dist/mermaid.min.js` |
+
+Until story 2.1 the URLs carried no version. That did not mean "latest": `marked/marked.min.js` resolved to 15.0.12 and stayed there, because `marked.min.js` is no longer shipped from version 16 on, while the Mermaid URL followed every release. A file saved as `Mit Editor` carries these URLs with it, so an unpinned file renders differently next year without anyone having touched it.
+
+**Raising a version** is a change to the look of every document. Change the URL, then run `tests/vergleich.mjs` against the state before and attribute every difference (see *Checks*).
+
+**Mermaid runs with `securityLevel: 'strict'`** instead of `'loose'`. Measured on 12.0.0 with a flowchart that uses everything `loose` allows:
+
+| In the diagram source | `loose` | `strict` |
+|---|---|---|
+| `click X call fn()` — a click runs a JavaScript function of the page | runs | does nothing |
+| `click X href "https://…"`, `"mailto:…"`, a relative address — a click follows an ordinary link | link | link |
+| `click X href "javascript:…"` or `"data:…"` | link with that target | no target: the `href` is removed |
+| HTML in a label (`<b>`, `<i>`, `<br>`, `<a>`, `<img>`) | rendered, sanitised | rendered, sanitised |
+| `onerror=` and other event attributes in a label | removed | removed |
+
+So `strict` removes two things: the JavaScript callback, and `javascript:` and `data:` link targets. Ordinary links stay, and nothing else that was measured changes. Only flowchart and sequence diagrams have been looked at under `strict`; other diagram types are unchecked (tracked in `_bmad-output/initiative-dokufix/deferred-work.md`).
+
+**What the two changes did to documents** (2026-10-02, reference document and demo text, all four variants, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical before and after. `marked` 18.0.14 produces byte-identical HTML for both documents. `strict` changes one thing in the output: Mermaid's sanitiser trims the whitespace inside `class` attributes of the SVG (`class="node default  "` becomes `class="node default"`), which makes `nur-lesen` 22 B smaller for the reference document and 24 B for the demo text. With that whitespace normalised, the exports before and after are identical byte for byte. `Mit Editor` grows by the 547 B that the longer URLs and their comments add to the file itself.
+
+### Footnotes
+
+Standard GFM footnotes work: `[^id]` places a marker, `[^id]:` defines it, and `marked-footnote` (registered via the single `marked.use()` call in the file) renders the definition list at the document end with return arrows. dokufix adds no syntax here.
+
+**Hover / focus preview.** Each marker carries a preview of its footnote, revealed on `:hover` or `:focus-within` of the host `<sup class="dokufix-fn-host">`. The reveal is **pure CSS** — there is no listener — which is what lets it work in the JS-free `nur-lesen` export. `attachFootnotePreviews()` only injects inert markup at render time; because every export variant calls `render()` and then reads `previewEl.innerHTML` back out, the previews travel into all four downloads without any export-specific code.
+
+**Preview content is flattened to inline.** This is load-bearing, not cosmetic. The preview `<span>` lives in the `<sup>` that sits inside the paragraph carrying the marker. A footnote definition is block content (`<p>`, sometimes lists) — and a `<p>` nested inside a `<p>` makes the HTML parser close the outer paragraph early. In the live DOM you would not notice; in an *export*, where the markup is serialised and re-parsed by the recipient's browser, it would quietly shred the document structure. So `fnFlattenInline()` unwraps block elements (joining them with a space) and keeps only phrasing content. Links are unwrapped to their text as well, for a second reason: the preview is `aria-hidden="true"` (the footnote text is already reachable through the marker's own link, and announcing it twice is noise), and an `aria-hidden` subtree must not contain focusable elements. Backrefs and nested markers are stripped, the latter so a footnote citing a footnote cannot nest previews.
+
+**Positioning, and the trade-off it carries.** A centred box cannot fit when its marker sits closer to the viewport edge than half the box width — at ~900 px (where the content column nearly fills the window) a right-edge marker pushed the preview ~200 px off-screen. Plain CSS cannot detect that without JavaScript.
+
+CSS anchor positioning fixes it: `@position-try` keeps the box on screen at every tested width (1600/1200/900/800/600/390), each preview anchored to its own marker. The fallback chain covers **both axes** — `block-start` tries for the inline overflow, `block-end` tries for the block axis. An earlier version listed only `block-start` tries, which vary the inline axis alone, so a marker near the top of the viewport had nothing to flip to; the block axis had never been tested (the widths above are six numbers and no heights). The box also carries a `max-height` with a fade: a preview is a preview, and without a ceiling a long footnote grows past the viewport top, where content is unreachable because browsers do not make overflow above the scroll origin scrollable.
+
+Three non-obvious requirements, all load-bearing:
+
+- the block must reach **every** variant. For a while it did not: it sat in the app stylesheet twice and in the export stylesheet not at all, so the read-only exports, the artifacts that actually travel, kept the centred base and kept clipping. Since story 2.1 there is one copy, today in `src/doc.css`, and the exports embed the block built from it (see *Document styles*). `node tests/check-doc-styles.mjs` fails when a rule for it turns up anywhere else;
+- the host `<sup>` must **not** be `position:relative` inside the `@supports` block — a tiny containing block leaves the try-fallbacks nothing to evaluate against and they silently never fire;
+- the `transition` must stay — without it Firefox does not reveal the preview at all.
+
+**The `@supports` gate is syntactic, not behavioural.** `@supports (anchor-name:--a) and (position-try-fallbacks:--b)` asks whether the engine *parses* these properties, not whether the fallbacks actually fire — and Firefox answers yes to the first while failing the second. So the gate cannot separate a working engine from a partial one, and any engine that parses the syntax gets the refinement whether or not it can honour it. This is why positioning is verified by **measurement** rather than by trusting the gate.
+
+**Engine behaviour.** Chromium/Edge reveal in ~40–100 ms at every width. Firefox was initially reported here as slow (~700 ms) and as leaving previews stuck open — **both were artifacts of Playwright's synthetic mouse and do not reproduce for a human.** Confirmed by hands-on review (2026-07-16): with a real mouse in Firefox the preview appears immediately.
+
+One real behaviour worth knowing: **clicking** a marker leaves its preview open, because the click focuses the anchor and the reveal rule is `:hover, :focus-within`. Clicking anywhere else in the document dismisses it. That is inherent to the JS-free design rather than a defect — `:focus-within` is exactly what makes the preview keyboard-reachable, and on touch devices (where `:hover` does not exist) it is the only way a preview can be seen at all. Accepted by the product owner after review.
+
+Automated coverage of this feature is therefore only as good as synthetic input allows; the harness assertions around un-hover in Firefox are marked as known synthetic-input deviations rather than treated as product failures. Judge hover behaviour with a real pointer.
+
+**Landing highlight and return-path disambiguation.** `marked-footnote` renders every reference to the same footnote with the *same visible number* and the *same href*: three citations of `[^norm]` all read `1` and all link to `#footnote-norm`, while the definition grows three return arrows `↩ ↩² ↩³`. On arrival you cannot tell which entry you landed on, nor which arrow leads back to where you came from.
+
+`:target` only ever knows the current fragment, so CSS cannot distinguish the three cases. The only JS-free fix is to give each marker a **distinct** target: `linkFootnoteReturnPaths()` gives every arrow a stable id (`footnote-back-<id>[-N]`) and points the matching marker at it. Then
+
+- `a[data-footnote-backref]:target` marks exactly the arrow that leads back, and
+- `li:has(a[data-footnote-backref]:target)` shades the definition around it, while
+- `li:target` still shades when arriving via the plain `#footnote-<id>` anchor (external bookmarks, copied URLs).
+
+All pure CSS, so it works in the JS-free export. `attachFootnotePreviews()` must run **before** the retarget — it resolves each definition through the marker's href, so retargeting first would build every preview out of the `↩` anchor instead of the footnote. That ordering used to be guarded by a comment alone, with a silent failure mode (every preview rendering as `↩`, no error); the lookup is now scoped `li#…`, so a wrong order resolves to nothing and skips the preview instead of producing a confidently wrong one.
+
+**Pairing goes through the definition, not the marker's id.** The obvious implementation — read the arrow's `href`, `querySelector` that id, retarget it — is wrong, because `marked-footnote` does not guarantee those ids are unique. A document containing both `[^bgb]` (cited twice) and `[^bgb-2]` mints `id="footnote-ref-bgb-2"` **twice**; `querySelector` takes the first, and `[^bgb-2]`'s marker gets repointed at footnote `bgb`'s arrow — the reader clicks and lands on the wrong footnote, while the hover preview still shows the right text. A marker's *href* names its definition unambiguously, so each definition pairs its Nth marker with its Nth arrow; both are in reference order. Ids generated this way share one flat namespace with the definitions (`footnote-<label>`), so `[^back-x]` beside `[^x]` can still collide — on a collision the marker keeps pointing at its definition, which keeps the jump correct and loses only the arrow marking for that one reference.
+
+**Accessibility trade-off — the cost of doing this without JavaScript.** The marker now lands on the return arrow, which sits at the *end* of the footnote text. Measured on a real export: `:target` resolves to `<a id="footnote-back-norm-2" aria-label="Back to reference norm">`, so a screen-reader user activating a footnote marker hears *"Back to reference"* before the footnote's prose, and must navigate backwards to read it. It is shipped knowingly, not overlooked.
+
+Two costs that a first write-up of this trade-off missed, and that anyone weighing the reversal should have in front of them:
+
+- **Sighted readers are not unaffected.** Fragment navigation start-aligns the target, and the target is now the arrow at the *end* of the definition. A footnote taller than the 90 px `scroll-margin-top` therefore lands the reader on `↩` with its own prose scrolled above the viewport top — they must scroll **up** to read what they came for. The `li`'s `scroll-margin-top` cannot compensate, because the `li` is no longer the target. Short footnotes are unaffected; long ones are exactly the case policy and audit documents produce.
+- **Assistive-technology users pay the cost and get none of the benefit.** All arrows of a multi-referenced footnote carry the same accessible name — `[^bgb]`'s two arrows both read `aria-label="Back to reference bgb"`. Telling the arrows apart is the entire point of the feature, and the only signal that distinguishes them is colour. So the group that pays the reading-order cost is the one group the feature cannot help.
+
+*Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in the document styles. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`.
+
+**Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured 2026-07-16 on a document with three short footnotes (two definitions, one cited twice), all four variants through the same build and the same document, `b74cfce` (frontmatter panel merged, previews not yet added) as the baseline:
+
+| variant | before | after | delta |
+|---|---|---|---|
+| `nur-lesen` | 8 838 B | 12 045 B | +3 207 B (+36.3 %) |
+| `schlank` | 8 840 B | 12 047 B | +3 207 B (+36.3 %) |
+| `kompakt` | 8 705 B | 11 268 B | +2 563 B (+29.4 %) |
+| `Mit Editor` | 113 056 B | 136 431 B | +23 375 B (+20.7 %) |
+
+Read these carefully, because they are not the numbers an earlier draft carried. They span **story 1.2 and story 1.3 and the review patches**, not the preview alone, and they are larger than the first figures partly because the read-only exports now actually carry the `@supports` block they were always meant to have — the earlier measurement was taken on exports that silently lacked it. `Mit Editor` is a different animal again: it embeds the whole application, so its delta is mostly the source growth of the branch, not the cost of the feature.
+
+gzip absorbs much of the duplication, which is exactly the kind of redundancy it is good at. Footnote-heavy documents pay proportionally more; the per-footnote marginal cost is about the length of the footnote's own text.
+
+### Frontmatter (YAML / JSON metadata header)
+
+A metadata block at the very top of the document renders as a collapsible panel above the first heading, not as document content.
+
+Without this, marked treats the block as ordinary Markdown: per CommonMark a lone `---` is a thematic break, *except* when it follows paragraph text, where it becomes a setext H2 underline. So `---\ntitle: Foo\n---` rendered as `<hr>` plus `<h2>title: Foo</h2>` — visible garbage in the preview and in every export.
+
+**Delimiters.** The first line must be exactly `---` (sniffed as JSON when the content starts with `{`, YAML otherwise), or explicitly `---json` / `---yaml`. A closing `---` line must follow. TOML (`+++`) is not supported.
+
+**Panel.** `<details class="dokufix-frontmatter">`, collapsed by default — the document should read as a document on first open. The summary line shows a digest of whichever of `title`, `version`, `date`, `author` are present (case-insensitive), in that order, joined with `·` — all of them, not just the first — falling back to an entry count when none is. Expanding reveals every key/value pair; nested maps become indented sub-rows, sequences become lists. Everything is HTML-escaped. Because it's a native `<details>`, it is keyboard-operable and needs no JavaScript — it works in the `nur-lesen` export.
+
+**The YAML subset — and its limits.** dokufix does *not* bundle a YAML library. One (~30 KB) against a ~16 KB artifact fails the "body for information" test. Instead there is a deliberate subset covering what document frontmatter actually contains:
+
+| Supported | Not supported |
+|---|---|
+| `key: value` pairs | block scalars (`\|`, `>`) |
+| nested maps by indentation | anchors / aliases (`&`, `*`) |
+| sequences of scalars (`- item`), indented or flush with the key | sequences of maps (`- key: value`) |
+| single- and double-quoted scalars | tags (`!!str`) |
+| `#` comments, full-line and trailing | flow collections (`{a: 1}`, `[a, b]`) — except as the JSON path |
+| | tab indentation, multi-document streams |
+
+Anything outside the subset makes the parser fail **loudly rather than partially**: the panel then shows the raw block verbatim under a "nicht lesbar" summary. A half-parsed panel that silently dropped a key would be a data-integrity failure; showing the original text is honest and loses nothing. There is deliberately no type coercion — values stay strings, so YAML's `no`-becomes-`false` class of surprises can't occur. The values are displayed, never computed on.
+
+Fail-loudly is a claim worth auditing, because it quietly failed in five places at once and every one of them looked fine from the outside: duplicate keys overwrote each other, `__proto__` disappeared through `Object.prototype`'s setter, `{a: 1}` under an explicit `---yaml` fence half-parsed into key `{a` / value `1}`, `- Autor Name: Ben` slipped past a sequence guard whose alphabet was narrower than the parser's, and an unknown escape like `é` rendered literally. All five now throw. The lesson generalises: **every regex that recognises a key must use the same alphabet.** Three used to disagree, and each disagreement was a silent bug.
+
+**Multi-document streams** are listed as unsupported above and are worth spelling out, because the failure is not loud: the closing-`---` search stops at the first delimiter, so `---\na: 1\n---\nb: 2\n---` parses document 1 into a confident-looking panel and leaks `b: 2` into the body as a setext `<h2>`. That is standard frontmatter behaviour and is not going to change; it is simply not the raw panel this section otherwise promises.
+
+**Not mistaken for a thematic break, and not swallowing prose.** A document may legitimately open with `---`, so detection is separate from parsing — and it needs **two** signals, not one. "First meaningful line is a `key:`" is not enough on its own, because that shape is equally an ordinary sentence: `---\nNote: this is a draft.\n---` used to be reinterpreted as a one-entry mapping, which moved the author's prose out of the body into a collapsed panel. The tie must never break toward hiding body text. So a block is frontmatter when it holds **two or more entries, or one recognized metadata key** (`title`/`version`/`date`/`author`) — one prose line satisfies neither, while a lone `title: X` still gets its panel. A `{` first line is JSON and unambiguous on its own.
+
+The second way body text used to disappear was an **unterminated** block: the closing-`---` search is document-wide, so it latched onto the next thematic break and dragged whole paragraphs into the candidate, which then failed to parse and buried them under "nicht lesbar". Frontmatter never contains blank-line-separated prose; a document does. That signature now disqualifies the block, so the malformed source renders as what it is and the prose stays where the author put it.
+
+`---\nSome intro.\n---` and an empty `---\n---` are left completely untouched. An explicit but empty header (`---json\n---`) is consumed and renders nothing — announcing "nicht lesbar" over an empty `<pre>` would be a lie. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
+
+**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
+
+### Table of Contents (two layers)
+
+Two complementary mechanisms, deliberately separate:
+
+- **Inline `[[toc]]` marker** — write `[[toc]]` (default H2+H3) or `[[toc:N]]` for `N` in 1–6 (depth) on its own line in the markdown. The marker only fires when the paragraph contains nothing but the literal text — wrapping it in inline elements (e.g., `` `[[toc]]` `` to *talk about* the marker) leaves it as visible content. At render time, the matching paragraph is replaced with a nested `<nav class="dokufix-toc">` list. The list is **static HTML** — it travels through every export variant including the JS-free `nur-lesen` one, and the numbering toggle reaches it via a dedicated `tocH2/tocH3/tocH4` counter scope (no double-counting with body headings).
+- **Right-side rail** — auto-generated from H2/H3/H4 headings, visible above ~1500 px viewport when the document has ≥ 4 such headings. At wide viewports the body switches to a 2-column **grid**: a 1000 px content column (centered in its track) and a 425 px rail column, sharing the same horizontal budget with a 73 px gap instead of overlapping. The body caps at 1562 px (1000 + 73 + 425 + 64 padding), so from 1562 px upward both columns hit their exact target widths; between 1500 and 1561 px the content track flexes a little while the rail stays pinned. The rail uses `position: sticky; top: 80px` so it stays in view during scroll while still participating in the grid for sizing. Two flavors of the same UI:
+  - **Live (editor / `Mit Editor` downloads):** scroll-based "reading line" scrollspy picks the last heading whose top edge sits at or above 25 % of the viewport — so there is always exactly one active entry (the first heading before scrolling, the last after the document ends, the just-scrolled-past one in between). The active link is auto-scrolled into view inside the rail's own scroll container so it stays visible in long tables of contents. Smooth-scrolls on click. Visible only in read mode.
+  - **Static (read-only downloads — `nur-lesen`, `schlank`, `kompakt`):** pre-built HTML emitted at export time with the same heading list and CSS, but no JS dependency. Clicking jumps via native anchor — no scrollspy, no smooth scroll. Survives the JS-free `nur-lesen` variant.
+
+Heading IDs are slugified deterministically. German `ä/ö/ü/ß` (and uppercase variants) are explicitly spelled out, then `String.prototype.normalize('NFKD')` folds the remaining Latin diacritics (`é → e`, `à → a`, `ñ → n`, `ç → c`) before stripping combining marks. CJK and other non-Latin scripts that don't decompose under NFKD collapse to `section`, deduped with `-N` suffixes. Anchor links remain stable across re-renders for the same heading text.
+
+### Version history
+
+The history block (`#dokufix-history`) shape:
+
+```json
+{
+  "uuid": "987d2a3b-d26c-4d07-b3ff-b4e3ae0c6615",
+  "version": 3,
+  "history": [
+    { "v": 1, "t": "2026-05-13T14:32:00.000Z", "m": "Erste Fassung",   "s": "<gzip+base64>" },
+    { "v": 2, "t": "2026-05-13T15:45:00.000Z", "m": "",                "s": "<gzip+base64>" },
+    { "v": 3, "t": "2026-05-14T09:12:00.000Z", "m": "Audit ergänzt",   "s": "<gzip+base64>" }
+  ]
+}
+```
+
+The `s` field of each entry is `gzipB64()` of the markdown source at that version — captured at commit time. Every prior version is fully recoverable from the file alone (basis of the audit story).
+
+Two ways to create a new entry:
+
+1. **"Mit Editor" download (canonical save).** Asks for an optional message via `prompt()`. Cancel aborts entirely; Enter on an empty input proceeds without a message. The counter bumps, the entry lands in the history list (including a gzipped snapshot of the current source), and the file is emitted with everything baked in. Counter increment and persistence happen *after* `triggerDownload` returns, so a popup-blocker or serialization failure can't leave a phantom version with no on-disk artifact.
+2. **Commit-only (button in the version modal).** Same prompt, same bump, same history append — but no file is produced. The new state is persisted to `localStorage` (under the UUID-scoped versions key) so it survives a reload. Later "Mit Editor" downloads pick up all accumulated commits in a single file.
+
+Both flows are **skipped silently when the source matches the last committed/saved state** (the `commitBaseline`). Clicking "Mit Editor" on an unchanged document re-emits the same version without a prompt or counter bump; clicking the commit button when nothing has changed shake-animates instead of prompting. By design, every prompt corresponds to actual uncommitted changes.
+
+On load, version state comes from whichever of two sources is more recent: the file's baked-in `<script type="application/json" id="dokufix-history">` block, or `localStorage`. localStorage wins when commit-onlys have happened since the last download. History entries are shape-validated on load (well-formed `{v, t}` minimum); malformed entries are silently filtered out rather than crashing init. `null`, negative, or fractional `version` values normalize to `0`. Files without the history block (older dokufix files predating this feature) load as `version: 0, history: []`; the first save bootstraps the history at `v1`.
+
+`</script>` substrings in commit messages or source snapshots are escaped to `<\/script>` before being written into the JSON block, so the HTML parser doesn't close the script tag early.
+
+If `localStorage` setItem fails (quota exhausted, private-mode disabled), the version badge gains a red `.persist-failed` class with a pulse animation and an accessible title attribute — silent data loss is no longer possible.
+
+Read-only downloads do *not* bump the version — they ship a `Version N · DD.MM.YYYY HH:MM · message · exportiert <date>` footer at the end of the document. Files with `version: 0` still emit a footer carrying just the export timestamp (the spec wants timestamps as always-present metadata). For the `kompakt` variant the footer lives inside the gzip payload so it survives decompression.
+
+### Dirty-state baseline
+
+The dirty indicator compares the live editor against `cleanBaseline`, which is set to the file's document, or to the demo text where the file has none, at load time — i.e. whatever is actually baked into *this* HTML file on disk. Consequences:
+
+- An IndexedDB draft that differs from the baked content reads as **geändert** immediately on open. That's the intended "you have unsynced work" signal after a crash or tab close.
+- A successful "Mit Editor" download resets `cleanBaseline` to the just-saved content → badge flips to clean. The downloaded HTML file also carries the new baseline, so the receiver opens it as clean.
+- The other download variants (read-only) don't touch the baseline, since they don't carry editable source out the door.
+
+### Persistence (IndexedDB)
+
+One database per origin, named `dokufix-v1`, with two object stores:
+
+- **`docs`** (keyPath: `uuid`) — one record per dokufix file: `{ uuid, source, version, history, commitBaseline, updatedAt }`. The whole record is rewritten on every persist; markdown + history JSON is small enough that this is cheap.
+- **`assets`** (keyPath: `hash`) — image Blobs, keyed by SHA-256 hex. Content-addressed → uploading the same image twice deduplicates automatically; no GC needed in the PoC.
+
+On first load of a doc whose UUID has a pre-existing `dokufix-doc-<uuid>-source` / `…-versions` pair in the old localStorage layout, the data is migrated into the IDB doc record and the legacy keys are deleted. Idempotent — the migration only fires when no IDB record exists yet for the UUID.
+
+The heading-numbering preference (`dokufix-poc-numbering`) deliberately stays in localStorage. It's doc-independent UX state and has no business cluttering the per-document IDB record.
+
+If IndexedDB is unavailable (some browser private modes, restrictive site settings), the init code surfaces a banner and continues in a degraded read-only mode — the baked document or demo text is still loaded into the editor so the user can read what they just opened, but `persistDoc` calls will keep flipping the persist-failed flag. There is no localStorage fallback in this PoC, since storing images there would be a non-starter anyway.
+
+### Image assets
+
+Images live in IndexedDB and are referenced from the markdown source via `![alt](#asset-<sha256>)`. Three input pathways converge on a single pipeline:
+
+1. **Paste** — clipboard `paste` event on the textarea. Captures `it.kind === 'file' && it.type.startsWith('image/')`. Lets normal text paste through untouched.
+2. **Drag & drop** — `dragenter`/`dragover`/`drop` on the source pane. A drop overlay highlights the target during the drag.
+3. **`+ Bild` button** — hidden `<input type="file" accept="image/*" multiple>` triggered by a toolbar button.
+
+The pipeline: `createImageBitmap({ imageOrientation: 'from-image' })` decodes and applies EXIF orientation. Two size guards run before allocating the canvas: a 5 MB per-file input cap (cheap to check, blocks pathological inputs early) and a 25-megapixel decoded-pixel cap (a 4.9 MB heavily-compressed JPEG can decode to 12000×8000 = 96 MP and OOM the tab during `drawImage`; the encoded-byte cap doesn't protect against that). If the bitmap is wider than 1600 px, it's downscaled. The result is drawn to an `OffscreenCanvas` and re-encoded as WebP @ 0.85 (fallback to `<canvas>.toBlob` if OffscreenCanvas isn't available). The output bytes are SHA-256-hashed via `crypto.subtle.digest`; the hex digest becomes both the IDB key and the markdown reference. The decoded `ImageBitmap` is released via `bitmap.close()` in a `finally` block so a failed encoding pass doesn't leak the native buffer. Alt-text derived from the filename is sanitized — characters that would otherwise break out of the markdown image syntax (`[`, `]`, `(`, `)`, `\`, `` ` ``, `<`, `>`) are stripped, so a malicious filename like `x](http://attacker.com/track.png).png` can't inject an attacker-controlled `src`.
+
+**Render-time resolution.** After `marked.parse(md)`, the HTML string is run through `resolveAssetRefsInHtml`, which `idbBatchGetAssets`-fetches every `#asset-<hash>` referenced in the document. Each match is rewritten to a Blob URL via `URL.createObjectURL`. Unresolved hashes get a transparent 1×1 GIF data URL as the `src` plus a `data-missing-asset` attribute; CSS turns those into a red "Bild fehlt" placeholder. (Using `src=""` for missing assets would trigger the browser to fetch the document URL itself, which is a footgun.) After each render, `pruneAssetUrlCache` revokes Blob URLs whose hashes are no longer referenced from the source — without this, every distinct image inserted in a session would hold its decoded pixels in memory until tab close. The missing-asset rule is a document style, so every read-only export carries it too: a recipient who opens an export with a stale or missing asset sees the same "Bild fehlt" placeholder rather than an empty image element.
+
+**Heading-slug guard.** Heading anchors and asset references share the `#`-fragment namespace. `slugify` explicitly rejects any heading slug that would start with `asset-` (or be exactly `asset`), prefixing it to `h-asset-…`. Without this, a heading literally titled "Asset Inventory" could otherwise be resolved as an image ref.
+
+**Baking on "Mit Editor" download.** `bakeAssetsForDocument` collects every asset hash referenced by the current source *and by every history snapshot* (each snapshot is gzipped markdown — we decompress and re-scan). Every matched Blob is Base64-encoded into a JSON map `{ hash → { m: mime, d: base64 } }` and serialized into the `<script type="application/json" id="dokufix-assets">` block in the document clone. If the bake fails (transaction abort, base64 conversion error on a corrupt asset), the download is aborted with a user-facing message rather than silently emitting a broken file. On the receiver's first open, `seedAssetsFromBakedBlock` parses that block and writes each entry into IndexedDB — but only after **re-hashing the decoded bytes** and verifying the result matches the asserted hash. Mismatched entries are logged and skipped: a hostile sender can't pair an attacker-supplied blob with an arbitrary lookup key. Content-addressed dedup keeps re-seeds of identical hashes idempotent.
+
+**Read-only export inlining.** `inlineAssetRefsAsDataUrls` runs on the cloned preview HTML before serialization for all three read-only variants. It handles both `src="#asset-<hash>"` (unresolved) and `src="blob:<url>"` (already resolved by the live render pass — the cache's reverse map gives back the hash). Output is `src="data:image/webp;base64,…"`. Missing assets keep the same transparent placeholder + `data-missing-asset` shape used in the live preview, so the receiver sees the same "Bild fehlt" treatment in the export. For the `kompakt` variant this is further gzipped along with the rest of the body; binary image bytes don't compress meaningfully a second time, but the Base64 envelope itself shrinks by ~30 %.
+
+### Compression
+
+All compression uses native browser **`CompressionStream('gzip')`** — no library dependency.
+
+Brotli would compress 15–25% better, but is currently *missing* from `CompressionStream` in Chrome / Edge as of May 2026 (Firefox 147 and Safari 18.4 have shipped it). We stay on gzip until Chrome catches up. Migration is a one-line swap.
+
+### `</script>` escaping
+
+Template literals embedded inside the main `<script>` element use `<\/script>` to avoid the HTML parser prematurely closing the outer script tag. Classic gotcha — escape both the payload-holder tag and the inner decoder script.
+
+The build guards the same thing twice. esbuild writes `<\/script` wherever it meets `</script` in the script, and `build.mjs` refuses to write a file whose minified script still contains `</script` or whose minified styles contain `</style`. The demo text goes into its data block with every `<` written as `\u003c`, so a demo text may contain `</script>` or `<!--`.
+
+### Self-replication mechanism
+
+"Mit Editor" clones the page (`document.documentElement.cloneNode(true)`), takes out what is transient (the rendered preview, the rail, an open menu, the dirty mark), writes four data blocks of the clone through the DOM, and serialises the clone:
+
+| Block | What a save writes into it |
+|---|---|
+| `#dokufix-history` | UUID, version and history, each entry with its gzipped source |
+| `#dokufix-assets` | every image the source or a history entry refers to |
+| `#dokufix-demo` | `{"gz": …}`, the demo text; taken over as it is from a file that already carried it gzipped |
+| `#dokufix-source` | `{"gz": …}`, the current source |
+
+The receiver's async init reads both text blocks before the first render. The script travels as it is: in a saved file, and in a file saved from that one, it is the script of `dist/dokufix.html` byte for byte. `tests/speichern.mjs` checks exactly that, and that both generations hold their document.
+
+**Why not as the PoC did it.** The PoC kept both texts in the script, as `DEMO`/`DEMO_GZ` and `SAMPLE`/`SAMPLE_GZ` between comment marks, and a save rewrote the text of the script between those marks with a regular expression. That works as long as the script in the file is the script as written. Measured on 2026-10-02: once esbuild touches the script, saving breaks, because esbuild removes the comment marks; minified, the saved file opens without an error and carries the demo text instead of the document. Hence the rule for everything that follows: no code searches or rewrites script text. What a save has to change lives in a data block.
+
+### `<script type="text/plain">` payload
+
+The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="text/plain">` element. This works because the browser does not execute the script (wrong MIME), but the contents are accessible via `textContent`. Decoder reads, decompresses via `DecompressionStream`, sets `innerHTML`.
+
+## Build
+
+```
+npm install        # once, in the repository root: esbuild and playwright-core, both pinned exactly
+npm run build      # writes dist/dokufix.html
+```
+
+`build.mjs` puts five sources into one file:
+
+| Source | What it is | What the build does with it |
+|---|---|---|
+| `src/index.html` | the page: head, markup, the data blocks, the three CDN tags | taken as written, not minified |
+| `src/doc.css` | the document styles | minified, into `<style id="dokufix-doc-css">` |
+| `src/app.css` | the editor's styles | minified, into the `<style>` after it |
+| `src/app.js` | the script, one file | bundled into one IIFE and minified |
+| `src/demo.md` | the demo text, plain Markdown | written as `{"text": …}` into `#dokufix-demo` |
+
+The page names each of the other four once, as a slot: `{{slot:doc.css}}`, `{{slot:app.css}}`, `{{slot:app.js}}`, `{{slot:demo.md}}`.
+
+- **The built file is committed.** Two builds of the same sources are byte-identical, so `git status` stays clean after `npm run build` unless a source changed. Change a source, build, commit both. Never edit `dist/dokufix.html` by hand; the next build overwrites it.
+- **`node build.mjs --check`** builds in memory, writes nothing, and exits 1 with "is stale" when `dist/dokufix.html` is not what the sources give.
+- **The build exits 1 and writes nothing** when a slot is missing from the page, stands there twice or is not one of the four, and when the minified script contains `</script` or a minified stylesheet `</style`.
+- **esbuild 0.28.2**, through its API: `bundle`, `format: 'iife'`, `minify` and `charset: 'utf8'` for the script, `minify` and `charset: 'utf8'` for the two stylesheets. Without `charset: 'utf8'` esbuild writes every non-ASCII character as an escape.
+- **The code in the file is minified**, in the built file and in every `Mit Editor` file saved from it. The readable code is here, under `src/`.
+- **The script's names are not global any more.** Bundled into an IIFE, `render()` or `initDone` cannot be reached from outside. Nothing in the page needs that; a check that wants to know what the page is doing looks at the DOM (see *Comparison run*).
+- **The libraries are not embedded.** `marked`, `marked-footnote` and Mermaid stay on the CDN at their pinned versions and stay free globals of the script (see *Libraries*).
+- **The script is still one file.** Splitting it into modules is the next entry of the epic; the bundle is already in place so that the split can be compared with the same checks.
+
+**What the build did to documents** (2026-10-02, `tests/vergleich.mjs`, PoC against built file, reference document and demo text, Chromium 153 and Firefox 153, light and dark, 1400 and 1600 px, at rest and with every state switched on): all 136 screenshots are pixel-identical, and all assertions are green in both. The same run on the PoC gives the screenshots the PoC's own harness gave before (`poc/tests/out/03-nach-review`, all 136 identical, byte counts equal), so the successor sees what its predecessor saw. Sizes are under *Download variants*.
+
+## Checks
+
+Four tools, all in `tests/`, all run from the repository root. They look at the sources and at the built file from outside; the product contains no hook for any of them.
+
+| Command | What it answers | Needs |
+|---|---|---|
+| `npm run check` | Is `dist/` what the sources give, and does every document style sit in `doc.css`? | Node, `npm install` |
+| `npm test` | Do the build and the style check fail where they have to? | Node, `npm install` |
+| `node tests/vergleich.mjs …` | Does a document still look the same in all four variants? | `npm install`, Chromium, Firefox, the CDN |
+| `node tests/speichern.mjs` | Does a saved file hold its document, and a file saved from it? | `npm install`, Chromium, Firefox, the CDN |
+
+### Style check (`tests/check-doc-styles.mjs`)
+
+`node tests/check-doc-styles.mjs` — fails when a style for document content sits anywhere but in `src/doc.css`. Described under *Document styles (one source)*. It reads the sources and the built file as text and needs neither a browser nor `npm install`. `npm run check` runs `node build.mjs --check` first, so a stale `dist/` is reported before the styles are looked at.
+
+### Tests (`npm test`)
+
+`node --test tests/*.test.mjs`. Every case works on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to.
+
+- `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
+- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources changed; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so does `</style` in a minified stylesheet; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page.
+
+### Comparison run (`tests/vergleich.mjs`)
+
+Builds all four download variants from one document in one run, reopens each the way a recipient would, and records what they look like and how big they are. It is the tool for any change that must not alter the look of a document.
+
+```
+node tests/vergleich.mjs --out tests/out/vorher                              # before the change
+node tests/vergleich.mjs --out tests/out/nachher --compare tests/out/vorher  # after it
+```
+
+- **File under test.** `dist/dokufix.html`; `--file <file>` (alias `--poc`) takes any other dokufix editor file. The built file against the PoC:
+
+  ```
+  node tests/vergleich.mjs --file poc/dokufix-poc.html --out tests/out/00-poc
+  node tests/vergleich.mjs --out tests/out/01-dist --compare tests/out/00-poc --strict
+  ```
+- **Document.** `tests/referenz.md`, an invented text that contains every construct dokufix styles: frontmatter, a footnote cited three times, `[[toc]]`, headings down to h4, table, code, blockquote, lists, an image as `data:` URI, a missing `#asset-` reference and two Mermaid diagrams. `--demo` builds from the built-in demo text instead, `--doc <file>` from any other Markdown file.
+- **Screenshots.** Each variant in light and dark at 1400 and 1600 px, once at rest and once with every state switched on (`-zustand`: heading numbering, open metadata panel, a revealed footnote preview, landing highlight with its marked arrow), plus the preview pane inside the editor. `--compare` reports the differing pixels per image and writes a red-on-white mask of them to `<browser>/diff/`. Two runs of the same file are pixel-identical in Chromium and in Firefox, so every reported pixel is a real difference.
+- **Sizes.** `sizes.json` per browser, with the library versions the CDN actually served. `--compare` prints the delta per variant. Two runs of the same file give the same byte counts.
+- **Assertions.** In every variant: metadata panel, footnote preview on focus, landing highlight and marked return arrow, heading numbering, rail at 1600 px and not at 1400 px; `nur-lesen` contains no `<script>`; no read-only export carries a rule of the editor interface. A failed assertion exits 1. Differing pixels do not, unless `--strict` is given, because some differences are decided ones. An image that only the run or only the baseline has counts as differing. A `--compare` folder without a run for the browser, or one that is the `--out` folder itself, stops the run with exit 1 before anything is built or deleted.
+- **Browsers.** Chromium from `/usr/bin/chromium` and Firefox from the Playwright cache (`--browser chromium|firefox|all`; `CHROMIUM` and `FIREFOX` override the paths). WebKit is not run.
+
+Four things the run does on purpose, each because the obvious way gave wrong results or none:
+
+- **It waits on the DOM, not on names of the script.** The PoC's harness read `initDone`, called `render()` and read `downloadInFlight`. A bundle has no such names. Instead: init is done when `#dokufix-rail` has the class `has-items`, because the rail is the last thing the first render builds. A render is finished when a marker element the run put into the rail before pressing "Rendern" is gone, because every render ends by rewriting the rail. A download is through when no `button[data-download]` is disabled. All three hold for the PoC as well, which is how the two can be compared by one run.
+- **`Date` and `Math.random` are deterministic stand-ins.** The read-only exports print their export time, Mermaid derives its SVG ids from `Date.now()`, and Mermaid 12 draws node outlines with randomised control points. The clock still ticks, one millisecond per reading: with a frozen `Date.now()` both diagrams of a document get the same id and Mermaid draws the second into the first.
+- **The footnote preview is revealed by focus, not by hover.** Hover under Playwright's synthetic mouse is what produced the retracted Firefox numbers (see *Footnotes*).
+- **Known deviation in the Playwright Firefox build.** Once a page has been open for about a second, focusing a marker no longer reveals its preview: the host matches `:focus-within`, the rule on its child does not take effect. With `position-try-fallbacks` switched off on the preview it appears. This was measured on the file before any change of story 2.1 and has not been checked by hand in a real Firefox. Where it happens the run switches the fallbacks off with a style tag and prints a note instead of failing.
+
+### Save round trip (`tests/speichern.mjs`)
+
+`node tests/speichern.mjs` — the check for the one thing no screenshot shows: that a saved file carries its document. Per browser, each opening in a browser context of its own, so with fresh storage:
+
+1. open `dist/dokufix.html`: the editor holds `src/demo.md`; type document A, save as `Mit Editor`;
+2. open that file: the editor holds A, version `v1`, not marked as changed; type document B, save;
+3. open that file: the editor holds B, version `v2`; "Demo zurücksetzen" gives the original demo text;
+4. build a copy of `src/` whose demo text contains `</script>`, `<!--` and `<script>`, open it: the editor holds that text unchanged.
+
+It also reads both saved files as text: `#dokufix-source` and `#dokufix-demo` hold `{"gz": …}` that unpack to the document and to the demo text, and the script is the script of the file under test, byte for byte. A and B contain what could break a block or a replacement: `</script>`, `<!--`, backticks, `${…}`, `$&`, backslashes, quotes, non-ASCII. The saved files stay in `tests/out/speichern/`. Exit 1 when anything fails. Control: with the line that writes `#dokufix-source` taken out of the save, the run fails in both generations.
+
+## Known PoC limitations (deferred to MVP)
+
+- **CDN-loaded libraries** — pinned to fixed versions (see *Libraries*), but still loaded from the network. Production target is single-file inline. That turns the editor variant from about 70 KB into several megabytes: `mermaid.min.js` 12.0.0 alone is 5.6 MB before compression.
+- **No File System Access API integration** — Chromium-only, optional power-user path. Not in PoC. See product brief distillate for design.
+- **Mermaid SVG bloat unaddressed** — each SVG ships a redundant 1.5–3 KB `<style>` block. Future optimization: dedupe to a single document-level `<style>`.
+- **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
+- **Per-version history grows linearly with snapshots** — full gzip snapshots per version dominate file size once a document accumulates many versions. A diff-based encoding (gzipped patch against prior version, ~10× smaller) is in the backlog for the MVP build pipeline.
+
+## File layout
+
+```
+build.mjs               The build. One command, see "Build".
+package.json            esbuild and playwright-core, pinned exactly; scripts build, check, test, vergleich.
+dist/
+└── dokufix.html        The product. Built, committed, never edited by hand. Open in browser.
+src/
+├── index.html          The page: head, markup, data blocks, CDN tags, one slot per other source.
+├── doc.css             Document styles, the one source for everything that travels with a document.
+├── app.css             Styles of the editor interface.
+├── app.js              The script, one file.
+├── demo.md             The demo text.
+└── README.md           This file.
+tests/                  Checks that look at sources and built file from outside. See "Checks".
+├── check-doc-styles.mjs       Fails when a document style sits outside doc.css.
+├── check-doc-styles.test.mjs  Breaks copies of src/ and expects the check to fail.
+├── build.test.mjs      Breaks copies of src/ and expects the build to fail; same sources, same file.
+├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
+├── speichern.mjs       Save round trip: two generations of "Mit Editor".
+├── referenz.md         Neutral reference document, the one input of every comparison.
+└── out/                Exports and screenshots of the runs. Not in git.
+poc/                    The hand-written single file of story 2.1 with its README and checks. Frozen.
+```
+
+The product is a single file. Everything you see when you open it (HTML, CSS, JS, demo content, assets) lives inside `dist/dokufix.html`, and a file saved from it needs nothing from this repository. `src/`, `build.mjs` and `tests/` are how that file is made and checked, not part of it.
+
+## Related artifacts
+
+- Product brief: `../_bmad-output/initiative-dokufix/brief-dokufix/brief-dokufix.md`
+- Distillate (technical decisions, open questions): `../_bmad-output/initiative-dokufix/distillate-dokufix/distillate-dokufix.md`
+- One-pager pitches (DE/EN): `../_bmad-output/inbox/one-pager-dokufix-users*.md`
+- Landing page: `../_bmad-output/inbox/landing-dokufix.html`
+- Original brainstorming: `../_bmad-output/initiative-dokufix/brainstorm-session/brainstorm-session.md`
