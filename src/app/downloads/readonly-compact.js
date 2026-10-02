@@ -1,29 +1,21 @@
 import { gzipB64 } from '../gzip.js';
-import { inlineAssetRefsAsDataUrls } from '../assets.js';
-import { previewEl } from '../dom.js';
-import { deriveDocTitle } from '../frontmatter.js';
-import { render } from '../render.js';
-import { buildStaticRailHtml } from '../footnotes.js';
-import { safeFilenameBase, triggerDownload } from './menu.js';
-import { readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './readonly-css.js';
+import { safeFilenameBase, triggerDownload } from './download.js';
+import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './export-body.js';
 
 // --- Download #2c — read-only, fully gzip-compressed, tiny JS decoder ---
 export async function downloadReadonlyCompact(){
-  await render();
-
-  const title = deriveDocTitle('dokufix-Dokument');
-  // Image refs become data: URLs before gzipping. Binary PNG/WebP doesn't
-  // compress meaningfully a second time, but base64 itself shrinks by ~30 %
-  // through gzip, so the overall cost vs an open export is modest.
-  const inlinedBody = await inlineAssetRefsAsDataUrls(previewEl.innerHTML);
-  const bodyHtml = inlinedBody + buildMetaFooterHtml();
+  // Image refs are data: URLs before gzipping (an export step). Binary PNG/WebP
+  // doesn't compress meaningfully a second time, but base64 itself shrinks by
+  // ~30 % through gzip, so the overall cost vs an open export is modest.
+  const { title, body, rail } = await buildExportBody();
+  const bodyHtml = body + buildMetaFooterHtml();
   const payload = await gzipB64(bodyHtml);
   // Rail stays outside the compressed payload so it appears immediately
   // (no flash of empty navigation while the body decompresses).
   // Mark the rail as pending — clicks would race against decompression
   // (anchor targets don't exist until the body is filled). CSS dims it
   // and disables pointer events; the decoder removes the class on done.
-  const railHtmlPending = buildStaticRailHtml(previewEl.querySelectorAll('h1, h2, h3, h4, h5, h6'))
+  const railHtmlPending = rail
     .replace(/class="dokufix-rail has-items"/, 'class="dokufix-rail has-items dokufix-rail-pending"');
 
   const html = `<!DOCTYPE html>

@@ -3,7 +3,7 @@ import { idbGetDoc, idbPutDoc } from './idb.js';
 import { fallbackUuidFromLocation } from './document.js';
 import { sourceEl } from './dom.js';
 import { state } from './state.js';
-import { escapeHtml } from './render.js';
+import { escapeHtml } from './html.js';
 
 // --- Browser-side persistence (IndexedDB) ---------------------
 // One record per dokufix file lives in IDB under its UUID, in store 'docs':
@@ -239,11 +239,14 @@ export function registerVersionDialog(){
 // A "Mit Editor"-Download resets the baseline to the new saved content.
 export const baseTitle = document.title;
 const dirtyBadgeEl = document.getElementById('dirty-badge');
+// What the badge says when nothing changed: the text it has in src/index.html.
+// "Mit Editor" writes it into the saved file, which opens clean.
+export const CLEAN_BADGE_TEXT = 'wie in Datei';
 export function updateDirtyState(){
   const dirty = sourceEl.value !== state.cleanBaseline;
   document.body.classList.toggle('is-dirty', dirty);
   document.title = (dirty ? '● ' : '') + baseTitle;
-  if (dirtyBadgeEl) dirtyBadgeEl.textContent = dirty ? 'geändert' : 'wie in Datei';
+  if (dirtyBadgeEl) dirtyBadgeEl.textContent = dirty ? 'geändert' : CLEAN_BADGE_TEXT;
 }
 
 // Loading the file's document is async (its block may need decompression). See the async init in src/app.js.

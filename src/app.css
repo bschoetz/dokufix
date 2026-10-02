@@ -274,11 +274,6 @@
     background:#d4ff00;color:#1c1c1e;border-color:#d4ff00;
   }
   header button.toggle-on:hover{background:#bce300;border-color:#bce300}
-  .error{
-    background:#fff0ee;border-left:4px solid #ff5b3a;
-    padding:12px 16px;color:#8b1300;font-family:ui-monospace,monospace;font-size:13px;
-    margin:1em 0;border-radius:0 4px 4px 0;
-  }
   @media (max-width:820px){
     .layout{grid-template-columns:1fr;grid-template-rows:1fr 1fr}
     header .hint{display:none}

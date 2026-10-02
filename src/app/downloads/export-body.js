@@ -1,6 +1,56 @@
-import { state } from '../state.js';
+import { inlineAssetRefsAsDataUrls } from '../assets.js';
+import { sourceEl, previewEl } from '../dom.js';
+import { deriveDocTitle } from '../frontmatter.js';
+import { buildStaticRailHtml } from '../footnotes.js';
+import { escapeHtml } from '../html.js';
 import { formatVersionDate } from '../persistence.js';
-import { escapeHtml } from '../render.js';
+import { render } from '../render.js';
+import { state } from '../state.js';
+import { removeTransient } from '../transient.js';
+
+// --- The one export path ----------------------------------------
+// What the three read-only exports share: where their content comes from,
+// their stylesheet and their footer. An export module holds its template and
+// what only it does (gzip of the diagrams, of the whole body), nothing else.
+//
+// buildExportBody() renders, takes a detached copy of the preview and runs the
+// export steps on that copy, in order. A step is a function that gets the copy
+// and changes it; it may be async. Whatever has to be taken out of a document
+// or changed in it when it leaves the page is a step in EXPORT_STEPS, written
+// once, and reaches all three exports from there. The live preview is never
+// touched.
+//
+// A step that throws ends the export: a file with a step left out would be a
+// wrong file that looks right.
+
+// Elements that exist only while the page runs; see transient.js.
+function removeTransientElements(copy){
+  removeTransient(copy);
+}
+
+// Every image asset becomes a data: URL — the receiver of a read-only export
+// has no IDB and may not even have JS, so blob URLs (live preview) and
+// "#asset-…" refs (unresolved) both need to become self-contained.
+async function inlineImages(copy){
+  const html = copy.innerHTML;
+  const inlined = await inlineAssetRefsAsDataUrls(html);
+  if (inlined !== html) copy.innerHTML = inlined;
+}
+
+const EXPORT_STEPS = [removeTransientElements, inlineImages];
+
+// Returns { title, body, rail }: the document's title, its content as HTML and
+// the static rail, '' where the document has too few headings for one.
+// extraSteps run after EXPORT_STEPS: what one export alone does to the copy.
+export async function buildExportBody(extraSteps = []){
+  await render(); // the preview reflects the current source AND Mermaid SVGs are inlined
+  // The copy is taken in the same turn the render ends in: a render that was
+  // requested meanwhile has not started yet.
+  const copy = previewEl.cloneNode(true);
+  const title = deriveDocTitle(sourceEl.value, 'dokufix-Dokument');
+  for (const step of [...EXPORT_STEPS, ...extraSteps]) await step(copy);
+  return { title, body: copy.innerHTML, rail: buildStaticRailHtml(copy) };
+}
 
 // --- Styles of the read-only exports ---------------------------
 // A read-only export gets two things, in this order:

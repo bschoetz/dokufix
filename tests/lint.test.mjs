@@ -64,7 +64,7 @@ test('"npm run check" runs the lint over src/', () => {
 // ---------- an undeclared name ----------
 // The split's own mistake: the function moved, its import did not.
 {
-  const importLine = "import { escapeHtml } from './render.js';\n";
+  const importLine = "import { escapeHtml } from './html.js';\n";
   const text = original('app/toc.js');
   const used = lineCount(text.slice(0, text.indexOf('escapeHtml(', text.indexOf(importLine) + importLine.length))) + 1;
   fails('a module uses a name it no longer imports', { 'app/toc.js': mutate(text, importLine, '\n') },

@@ -1,6 +1,5 @@
-import { escapeHtml } from './render.js';
-import { headingLabelText } from './toc.js';
-import { tocLinkHandler } from './footnotes.js';
+import { escapeHtml } from './html.js';
+import { documentHeadings, headingLabelText, tocLinkHandler } from './toc.js';
 
 // --- Right-side scrollspy rail --------------------------------
 const railEl = document.getElementById('dokufix-rail');
@@ -18,7 +17,10 @@ const READING_LINE_RATIO = 0.25;
 let railScrollHandler = null;
 let railResizeHandler = null;
 
-export function buildRail(headings){
+// Rebuilds the rail from the headings of root. The last step of every render,
+// whatever failed before it: the checks take "the rail was rewritten" as
+// "the render is finished".
+export function buildRail(root){
   if (!railEl) return;
 
   // Detach previous handlers before rebuilding (re-render of editor source).
@@ -31,7 +33,7 @@ export function buildRail(headings){
     railResizeHandler = null;
   }
 
-  const items = Array.from(headings).filter(h => /^H[234]$/.test(h.tagName));
+  const items = Array.from(documentHeadings(root)).filter(h => /^H[234]$/.test(h.tagName));
   if (items.length < RAIL_MIN_HEADINGS){
     railEl.classList.remove('has-items');
     railEl.innerHTML = '';

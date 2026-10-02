@@ -25,6 +25,10 @@ mermaid.initialize({
   // a flowchart, that is the whole difference to 'loose': ordinary links (https:,
   // mailto:, relative) and sanitised HTML in labels stay as they are.
   securityLevel: 'strict',
+  // A diagram with an error: Mermaid throws instead of drawing its error
+  // picture into the node (the default in 12.0.0). The Diagramme pass in
+  // app/render.js catches that and puts a warning where the diagram would be.
+  suppressErrorRendering: true,
   flowchart: { curve: 'basis' }
 });
 

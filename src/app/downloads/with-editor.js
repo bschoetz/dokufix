@@ -4,8 +4,9 @@ import { bakeAssetsForDocument } from '../assets.js';
 import { generateDocUuid } from '../document.js';
 import { sourceEl } from '../dom.js';
 import { state } from '../state.js';
-import { persistDoc, saveTimer, updateVersionBadge, baseTitle, updateDirtyState } from '../persistence.js';
-import { safeFilenameBase, triggerDownload, setDownloadInFlight } from './menu.js';
+import { persistDoc, saveTimer, updateVersionBadge, baseTitle, updateDirtyState, CLEAN_BADGE_TEXT } from '../persistence.js';
+import { removeTransient } from '../transient.js';
+import { safeFilenameBase, triggerDownload, setDownloadInFlight } from './download.js';
 
 // --- Download #1 — full dokufix file (with editor baked in) ---
 
@@ -86,7 +87,16 @@ export async function downloadWithEditor(){
 
     const docClone = document.documentElement.cloneNode(true);
 
-    // Strip transient UI state from the clone
+    // What exists only while the page runs does not go into the file. An
+    // element a component added carries data-dokufix-transient and is removed
+    // here, wherever it stands; nothing below has to know it.
+    removeTransient(docClone);
+    // Mermaid appends this element to <body> with the first diagram it draws.
+    // It is not ours to mark, so it is named.
+    docClone.querySelectorAll('.mermaidTooltip').forEach(el => el.remove());
+    // The rest is state on elements of the page itself, reset one by one.
+    // tests/speichern.mjs compares the saved file with the built one and fails
+    // on whatever is missing here.
     docClone.querySelectorAll('.menu-wrap.open').forEach(el => el.classList.remove('open'));
     // The "in-flight" disabled state must not survive into the saved file —
     // receivers must be able to use their download buttons immediately.
@@ -96,6 +106,9 @@ export async function downloadWithEditor(){
     // Reset the title — strip the leading "● " from dirty-state.
     const titleClone = docClone.querySelector('title');
     if (titleClone) titleClone.textContent = baseTitle;
+    // And the badge: the saved file opens clean, so it says so.
+    const badgeClone = docClone.querySelector('#dirty-badge');
+    if (badgeClone) badgeClone.textContent = CLEAN_BADGE_TEXT;
     // Make sure the downloaded file opens in view mode by default (the receiver should see the document)
     docClone.querySelector('body')?.classList.add('mode-view');
     // Empty the rendered preview — receiver's render() runs on load and re-renders fresh.

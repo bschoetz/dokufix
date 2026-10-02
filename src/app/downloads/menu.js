@@ -1,5 +1,5 @@
 import { state } from '../state.js';
-import { deriveDocTitle } from '../frontmatter.js';
+import { downloadInFlight, setDownloadInFlight } from './download.js';
 import { downloadWithEditor } from './with-editor.js';
 import { downloadReadonlyOpen } from './readonly-open.js';
 import { downloadReadonlySlim } from './readonly-slim.js';
@@ -43,28 +43,5 @@ export function registerDownloadMenu(){
         setDownloadInFlight(false);
       }
     });
-  });
-}
-
-// Filename helper — pull title from the first H1 of the markdown
-export function safeFilenameBase(){
-  let base = deriveDocTitle('dokufix-dokument');
-  base = base.replace(/[<>:"/\\|?*\x00-\x1f]/g, '-').replace(/\s+/g, '-').slice(0, 80);
-  return base || 'dokufix-dokument';
-}
-export function triggerDownload(filename, content, mime='text/html;charset=utf-8'){
-  const blob = new Blob([content], { type: mime });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1500);
-}
-
-let downloadInFlight = false;
-export function setDownloadInFlight(flag){
-  downloadInFlight = flag;
-  downloadWrap.querySelectorAll('button[data-download]').forEach(b => {
-    b.disabled = flag;
   });
 }

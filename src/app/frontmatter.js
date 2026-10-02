@@ -1,7 +1,9 @@
-import { sourceEl, previewEl } from './dom.js';
-import { escapeHtml } from './render.js';
+import { escapeHtml } from './html.js';
 
 // --- Frontmatter -------------------------------------------------------
+// Pure logic: this module loads without a page. The parser works on text, the
+// panel on the root it is handed. tests/frontmatter.test.mjs runs it in Node.
+//
 // A leading YAML/JSON metadata block is not document content. Left alone,
 // marked renders "---\ntitle: X\n---" as an <hr> plus a setext <h2> (the
 // closing delimiter underlines the last line) — visible garbage in the
@@ -266,8 +268,8 @@ export function splitFrontmatter(src){
 // Single source of truth for "what is this document called?" — used by the
 // download filename and by all three read-only export <title>s. Reads the
 // BODY, so a "#"-prefixed YAML comment can't masquerade as the heading.
-export function deriveDocTitle(fallback){
-  const m = splitFrontmatter(sourceEl.value).body.match(/^#\s+(.+?)\s*$/m);
+export function deriveDocTitle(source, fallback){
+  const m = splitFrontmatter(source).body.match(/^#\s+(.+?)\s*$/m);
   return (m ? m[1] : fallback).trim();
 }
 
@@ -324,11 +326,11 @@ function buildFrontmatterHtml(fm){
     '<div class="dokufix-fm-body">' + buildFrontmatterRowsHtml(fm.data) + '</div></details>';
 }
 
-// Post-DOM injection, mirroring processInlineToc: every export variant calls
-// render() and then reads previewEl.innerHTML back out, so mutating the live
-// preview here is what makes the panel ship into all four downloads for free.
+// A document pass, mirroring processInlineToc: every export variant renders
+// and then takes a copy of the preview, so mutating the rendered document
+// here is what makes the panel ship into all four downloads for free.
 // Emits no headings, so assignHeadingIds/buildRail stay unaffected.
-export function injectFrontmatterPanel(fm){
+export function injectFrontmatterPanel(root, fm){
   const html = buildFrontmatterHtml(fm);
-  if (html) previewEl.insertAdjacentHTML('afterbegin', html);
+  if (html) root.insertAdjacentHTML('afterbegin', html);
 }

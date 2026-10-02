@@ -1,6 +1,5 @@
-import { previewEl } from './dom.js';
-import { escapeHtml } from './render.js';
-import { headingLabelText } from './toc.js';
+import { escapeHtml } from './html.js';
+import { documentHeadings, headingLabelText } from './toc.js';
 import { RAIL_MIN_HEADINGS } from './rail.js';
 
 // --- Footnote previews -------------------------------------------------
@@ -98,9 +97,9 @@ function buildFootnotePreview(li){
 // footnote, while its hover preview still showed the right text. A marker's href
 // names its definition unambiguously, so pair the Nth marker of a definition with
 // its Nth arrow: both are in reference order.
-export function linkFootnoteReturnPaths(){
-  const refs = Array.from(previewEl.querySelectorAll('a[data-footnote-ref]'));
-  for (const li of previewEl.querySelectorAll('.footnotes li[id]')){
+export function linkFootnoteReturnPaths(root){
+  const refs = Array.from(root.querySelectorAll('a[data-footnote-ref]'));
+  for (const li of root.querySelectorAll('.footnotes li[id]')){
     const arrows = li.querySelectorAll('a[data-footnote-backref]');
     if (!arrows.length) continue;
     const markers = refs.filter(a => a.getAttribute('href') === '#' + li.id);
@@ -114,15 +113,15 @@ export function linkFootnoteReturnPaths(){
       // guards its reserved "asset-" namespace the same way. On a collision,
       // leave the marker pointing at its definition: the jump still works and
       // only the arrow marking is lost for that one reference.
-      if (previewEl.querySelector('#' + CSS.escape(backId))) return;
+      if (root.querySelector('#' + CSS.escape(backId))) return;
       back.id = backId;
       ref.setAttribute('href', '#' + backId);
     });
   }
 }
 
-export function attachFootnotePreviews(){
-  const refs = previewEl.querySelectorAll('a[data-footnote-ref]');
+export function attachFootnotePreviews(root){
+  const refs = root.querySelectorAll('a[data-footnote-ref]');
   for (const ref of refs){
     const sup = ref.parentElement;
     if (!sup || sup.tagName !== 'SUP') continue;
@@ -136,7 +135,7 @@ export function attachFootnotePreviews(){
     // preview would silently render as "↩" — no error, just wrong. Now it resolves
     // to nothing and the preview is skipped. CSS.escape is total over strings and
     // cannot throw, so no try/catch is needed here.
-    const li = previewEl.querySelector('.footnotes li#' + CSS.escape(href.slice(1)));
+    const li = root.querySelector('.footnotes li#' + CSS.escape(href.slice(1)));
     if (!li) continue; // definition missing → no preview, ref still jumps
     const span = buildFootnotePreview(li);
     if (!span) continue;
@@ -145,25 +144,11 @@ export function attachFootnotePreviews(){
   }
 }
 
-export function tocLinkHandler(e){
-  const a = e.target.closest('a[href^="#"]');
-  if (!a) return;
-  const id = a.getAttribute('href').slice(1);
-  const target = document.getElementById(id);
-  if (!target) return;
-  e.preventDefault();
-  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  // Some browsers (older Safari, file:// in some Chromium builds) throw
-  // SecurityError on history API in non-http contexts. Smooth scroll has
-  // already happened — just swallow the hash-update failure.
-  try { history.replaceState(null, '', '#' + id); }
-  catch (err) { /* ignore */ }
-}
-
-// Build a static rail HTML string (no scrollspy) for read-only exports.
+// Build a static rail HTML string (no scrollspy) for read-only exports, from
+// the headings of the root it is handed (an export's copy of the preview).
 // Same structure as the live rail; just anchor links, no JS dependency.
-export function buildStaticRailHtml(headings){
-  const items = Array.from(headings).filter(h => /^H[234]$/.test(h.tagName));
+export function buildStaticRailHtml(root){
+  const items = Array.from(documentHeadings(root)).filter(h => /^H[234]$/.test(h.tagName));
   if (items.length < RAIL_MIN_HEADINGS) return '';
   let html = '<aside class="dokufix-rail has-items" aria-label="Navigation"><ol>';
   for (const h of items){

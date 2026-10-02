@@ -1,12 +1,20 @@
-import { previewEl } from './dom.js';
-import { escapeHtml } from './render.js';
-import { tocLinkHandler } from './footnotes.js';
+import { escapeHtml } from './html.js';
 
 // --- Table of Contents ----------------------------------------
 // Two layers, see README:
 //   1. Inline [[toc]] (or [[toc:N]]) marker in markdown → static nested list.
 //   2. Right-side scrollspy rail in read mode (wide viewports only).
 // Both feed off the same set of generated heading IDs.
+//
+// This module loads without a page: its passes work on the root they are
+// handed, and tocLinkHandler() touches the page only when a link is clicked.
+
+// Which headings count: the one place that says so. Heading ids, the inline
+// table of contents, the rail of the editor and the rail of an export all ask
+// here, each at the moment it runs.
+export function documentHeadings(root){
+  return root.querySelectorAll('h1, h2, h3, h4, h5, h6');
+}
 
 function slugify(text, used){
   // Fold most Latin diacritics via NFKD decomposition (é → e, ç → c, ñ → n).
@@ -34,7 +42,9 @@ function slugify(text, used){
   return candidate;
 }
 
-export function assignHeadingIds(headings){
+// Document pass. Heading IDs come first — both the inline ToC and the rail need them.
+export function assignHeadingIds(root){
+  const headings = documentHeadings(root);
   const used = new Set();
   headings.forEach(h => { if (h.id) used.add(h.id); });
   headings.forEach(h => { if (!h.id) h.id = slugify(h.textContent, used); });
@@ -72,8 +82,11 @@ export function headingLabelText(h){
   return clone.textContent;
 }
 
-export function processInlineToc(headings){
-  const paras = previewEl.querySelectorAll('p');
+// Document pass: the list is static HTML and travels into every export. What
+// makes its links scroll smoothly in a running page is attachTocClicks() below.
+export function processInlineToc(root){
+  const headings = documentHeadings(root);
+  const paras = root.querySelectorAll('p');
   for (const p of paras){
     // Stricter than textContent.trim(): the paragraph must contain ONLY a
     // text node matching the marker — no inline elements (e.g., <code>,
@@ -87,12 +100,33 @@ export function processInlineToc(headings){
     const maxLevel = m[1] ? parseInt(m[1], 10) : 3;
     const inner = buildTocHtml(headings, maxLevel);
     if (!inner){ p.remove(); continue; }
-    const nav = document.createElement('nav');
+    const nav = root.ownerDocument.createElement('nav');
     nav.className = 'dokufix-toc';
     nav.setAttribute('aria-label', 'Inhaltsverzeichnis');
     nav.innerHTML = inner;
-    // Smooth scroll on click + update hash without jumping
-    nav.addEventListener('click', tocLinkHandler);
     p.replaceWith(nav);
   }
+}
+
+// Run-time pass: smooth scroll on click + update hash without jumping. A
+// listener exists only in a running page, so it is not part of the document
+// pass above; an export's table of contents jumps by its plain anchors.
+export function attachTocClicks(root){
+  root.querySelectorAll('nav.dokufix-toc').forEach(nav => nav.addEventListener('click', tocLinkHandler));
+}
+
+// Click handler of the inline table of contents and of the rail.
+export function tocLinkHandler(e){
+  const a = e.target.closest('a[href^="#"]');
+  if (!a) return;
+  const id = a.getAttribute('href').slice(1);
+  const target = document.getElementById(id);
+  if (!target) return;
+  e.preventDefault();
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Some browsers (older Safari, file:// in some Chromium builds) throw
+  // SecurityError on history API in non-http contexts. Smooth scroll has
+  // already happened — just swallow the hash-update failure.
+  try { history.replaceState(null, '', '#' + id); }
+  catch (err) { /* ignore */ }
 }

@@ -21,7 +21,7 @@ const original = name => fs.readFileSync(path.join(srcDir, name), 'utf8');
 const built = fs.readFileSync(builtFile, 'utf8');
 
 // The module that holds the export frame, and the one of the "offen" export.
-const FRAME_FILE = 'app/downloads/readonly-css.js';
+const FRAME_FILE = 'app/downloads/export-body.js';
 const OPEN_FILE = 'app/downloads/readonly-open.js';
 const FRAME = 'const READONLY_FRAME_CSS = `';
 const BLOCK = '<style id="dokufix-doc-css">\n{{slot:doc.css}}\n</style>\n';
@@ -67,9 +67,9 @@ test('the sources and the built file as they are pass', () => {
 
 fails('#preview descendant rule in the app stylesheet', prepend('app.css', '#preview h5{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "#preview h5"/);
 fails('dokufix- rule in the app stylesheet', prepend('app.css', '.dokufix-x{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.dokufix-x"/);
-fails('#preview descendant rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '#preview h5{color:red}\n'), /src\/app\/downloads\/readonly-css\.js line \d+, the export frame.*"#preview h5"/);
-fails('dokufix- rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.dokufix-x{color:red}\n'), /src\/app\/downloads\/readonly-css\.js line \d+, the export frame.*"\.dokufix-x"/);
-fails('document rule with an ancestor in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.reader-body h5{color:red}\n'), /src\/app\/downloads\/readonly-css\.js line \d+, the export frame.*"\.reader-body h5"/);
+fails('#preview descendant rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '#preview h5{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"#preview h5"/);
+fails('dokufix- rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.dokufix-x{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"\.dokufix-x"/);
+fails('document rule with an ancestor in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.reader-body h5{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"\.reader-body h5"/);
 fails('unprefixed document construct in the app stylesheet', prepend('app.css', '.footnotes li{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.footnotes li".*\.footnotes/);
 fails('editor selector in front of .dokufix-doc in the block', prepend('doc.css', 'body.mode-view .dokufix-doc h5{color:red}\n'), /src\/doc\.css line 1: "body\.mode-view \.dokufix-doc h5" does not start with \.dokufix-doc/);
 fails('export that no longer embeds the document styles', inFile(OPEN_FILE, '<style>${readonlyCss()}</style>', '<style>${READONLY_FRAME_CSS}</style>'), /src\/app\/downloads\/readonly-open\.js line \d+, downloadReadonlyOpen\(\).*does not embed/);
