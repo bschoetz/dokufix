@@ -38,6 +38,12 @@
 //   4. Markdown cannot be parsed marked is made to throw: the warning is
 //                                all the preview holds, the rail is rebuilt and
 //                                empty; then the three read-only exports
+//   7. a broken marker           one block marker with a misspelt name among
+//                                working ones: it is a warning at its place and
+//                                its list stays a list, the cards and the step
+//                                list around it are built, no pass failed and
+//                                nothing is on the console; then all four
+//                                downloads, reopened: the same in each
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -137,6 +143,16 @@ const overlapDoc = name => [
   '## ' + name + ' vier', 'Text.',
 ].join('\n\n') + '\n';
 const MARKED_MESSAGE = 'Absicht: marked.parse wirft (durchlaeufe)';
+// Three block markers, the one in the middle with a misspelt name.
+const DOC_MARKERS = [
+  '# Markierungen', '[[toc]]',
+  '## Karten', '<!-- dokufix: cards -->\n- **Eins** Am Automaten.\n- **Zwei** An der Theke.',
+  '## Kaputt', '<!-- dokufix: crads -->\n- bleibt eine Aufzählung\n- mit zwei Einträgen',
+  '## Schritte', '<!-- dokufix: steps -->\n3. *Leserin:* Medium einlegen.\n4. Beleg mitnehmen.',
+  '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  '[^a]: Die Fußnote.',
+].join('\n\n') + '\n';
+const MARKER_WARNING = 'Unbekannte Markierung „dokufix: crads“.';
 
 // ---------- the copy of src/ with two passes more ----------
 const THROWING_PASS = 'Prüfschritt';
@@ -256,7 +272,24 @@ const facts = page => page.evaluate(() => {
       text: w.textContent, label: (w.querySelector('.dokufix-warning-title > strong') || { textContent: '' }).textContent,
       transient: w.hasAttribute('data-dokufix-transient'), style: styleOf(w),
       before: w.previousElementSibling ? w.previousElementSibling.tagName + '#' + w.previousElementSibling.id : '',
+      after: w.nextElementSibling ? w.nextElementSibling.tagName + '.' + w.nextElementSibling.className : '',
     })),
+    // Cards and step lists: the title of each card, the number and the actor
+    // of each step, and whether the document styles reach them.
+    cards: Array.from(container.querySelectorAll('ul.dokufix-cards > li')).map(li => (li.querySelector(':scope > .dokufix-card-title') || { textContent: '' }).textContent),
+    steps: Array.from(container.querySelectorAll('ol.dokufix-steps > li')).map(li =>
+      (li.querySelector(':scope > .dokufix-step-number') || { textContent: '' }).textContent + ' ' + (li.querySelector(':scope > .dokufix-step-actor') || { textContent: '' }).textContent),
+    componentLook: (() => {
+      const list = container.querySelector('ul.dokufix-cards'), card = list && list.querySelector(':scope > li'), tile = container.querySelector('.dokufix-step-number');
+      return [list ? getComputedStyle(list).display : '', card ? getComputedStyle(card).borderTopWidth : '', tile ? getComputedStyle(tile).position : ''].join(' ');
+    })(),
+    // A block marker that is still a comment.
+    markersLeft: (() => {
+      const walker = document.createTreeWalker(container, NodeFilter.SHOW_COMMENT);
+      let n = 0;
+      while (walker.nextNode()) if (/^\s*dokufix:/i.test(walker.currentNode.data)) n++;
+      return n;
+    })(),
     children: kids.map(k => k.tagName.toLowerCase() + (k.className ? '.' + String(k.className).split(' ')[0] : '')),
     diagrams: container.querySelectorAll('.mermaid svg').length,
     // Mermaid's error picture: an SVG with this role and this sentence in it.
@@ -283,15 +316,17 @@ const facts = page => page.evaluate(() => {
   };
 });
 const STYLED = { border: '6px solid', background: 'rgb(255, 248, 225)', padding: '16px', detail: 'pre-wrap on rgba(0, 0, 0, 0)' };
-const isStyled = w => Object.keys(STYLED).every(k => w.style[k] === STYLED[k]);
+const isStyled = (w, look = STYLED) => Object.keys(look).every(k => w.style[k] === look[k]);
+// A warning that is one line: the warning of a marker has no detail below it.
+const STYLED_ONE_LINE = { ...STYLED, detail: 'none' };
 // The one warning a case expects, by the texts it has to contain.
-function checkWarning(scope, f, texts, what){
+function checkWarning(scope, f, texts, what, look = STYLED){
   const visible = f.warnings.filter(w => !w.transient);
   const w = visible[0];
   check(scope, 'one warning, ' + what, visible.length === 1 && texts.every(t => w.text.includes(t)), f.warnings.map(x => x.text));
   if (!w) return;
   check(scope, 'the warning says "Warnung:" in its text, so it is recognisable without colour', w.label === 'Warnung:' && w.text.startsWith('Warnung: '), w.text.slice(0, 60));
-  check(scope, 'the warning is styled by the document styles', isStyled(w), w.style);
+  check(scope, 'the warning is styled by the document styles', isStyled(w, look), w.style);
 }
 function checkErrors(scope, o, expected){
   check(scope, 'the error is on the console', expected.every(t => o.consoleErrors.some(e => e.includes(t))), o.consoleErrors.join(' | ').slice(0, 400) || 'nothing logged');
@@ -471,6 +506,36 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         check(s, 'the warning and the export\'s footer, no rail', x.children[0] === 'div.dokufix-warning' && x.footer && x.railLinks === 0, { children: x.children, footer: x.footer, railLinks: x.railLinks });
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
+      await o.context.close();
+    });
+
+    // ----- 7. a broken marker among working ones
+    await attempt(name + ' a broken marker', async () => {
+      const scope = name + ' a broken marker';
+      let o = await open(browser, opts.file, editorReady);
+      await typeAndRender(o.page, DOC_MARKERS);
+      const markerPage = (s, x, text) => {
+        checkWarning(s, x, [MARKER_WARNING], 'naming the marker', STYLED_ONE_LINE);
+        check(s, 'the warning stands at the marker\'s place, and its list stays a list', x.warnings.length === 1 && x.warnings[0].before === 'H2#kaputt' && x.warnings[0].after === 'UL.', x.warnings.map(w => [w.before, w.after]));
+        check(s, 'the working markers took effect: two cards with their titles, two steps counted from 3, one with its actor; no marker is left',
+          x.cards.join('|') === 'Eins|Zwei' && x.steps.join('|') === '3 Leserin|4 ' && x.markersLeft === 0, { cards: x.cards, steps: x.steps, markersLeft: x.markersLeft });
+        check(s, 'cards and steps are styled by the document styles', x.componentLook === 'grid 1px absolute', x.componentLook);
+        check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
+        if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
+      };
+      const f = await facts(o.page);
+      markerPage(scope, f, '');
+      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 4, { railHasItems: f.railHasItems, railLinks: f.railLinks });
+      // A marker that cannot act is no failure of a pass: nothing is logged.
+      check(scope, 'no pass failed: nothing on the console, no page error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
+      await checkExports(scope, browser, o.page, dir, 'markierung', READONLY, markerPage);
+      // "Mit Editor": the saved file renders its document again when it is opened.
+      const saved = path.join(dir, 'markierung-mit-editor.html');
+      await download(o.page, 'full', saved);
+      await o.context.close();
+      o = await open(browser, saved, editorReady);
+      markerPage(scope + ', mit-editor', await facts(o.page), '');
+      check(scope + ', mit-editor', 'opens without an error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
       await o.context.close();
     });
 
