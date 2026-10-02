@@ -28,8 +28,9 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Überschriften, Listen, Tabellen
 - *Kursiv*, **fett**, ~~durchgestrichen~~
 - Inline-`Code` und Code-Blöcke
-- Blockzitate
+- Blockzitate und Hinweise
 - Status-Chips
+- Karten und Schrittlisten
 - **Mermaid-Diagramme**
 
 ## Wie das hier zusammenspielt
@@ -75,6 +76,43 @@ Ein Code-Span, der mit einem Farbpunkt beginnt, wird zu einem Status-Chip: Aus `
 ### Kundenportal `🔵 im Test`
 
 Ein Chip steht im Fließtext, in Tabellen, in Überschriften wie der hier, in **fettem Text: `🟡 geplant`** und in Verweisen: [`🟢 in Betrieb`](#status-chips). In einem Renderer, der dokufix nicht kennt, bleibt er ein Code-Span mit Farbpunkt.
+
+## Hinweise
+
+Ein Zitat, dessen erste Zeile nur eine Marke trägt, wird zum Hinweis. Fünf Marken gibt es: `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]` und `[!CAUTION]`.
+
+> [!NOTE]
+> Geschrieben wird ein Hinweis wie ein Alert auf GitHub: die Marke in der ersten Zeile des Zitats, darunter der Text.
+
+> [!TIP]
+> Im Editor lässt sich jede Marke ausprobieren: eine andere einsetzen und neu rendern.
+
+> [!WARNING]
+> Die Marke steht allein in der ersten Zeile. Folgt ihr in derselben Zeile Text, bleibt das Zitat ein Zitat.
+
+## Karten
+
+Eine Markierung über einer Aufzählung macht aus ihren Einträgen Karten. Der fette Text am Anfang eines Eintrags wird zum Titel der Karte.
+
+<!-- dokufix: cards -->
+- **Mit Editor** Die Datei bleibt bearbeitbar. Wer sie bekommt, schreibt sie fort.
+- **Offen** Ein reines Lesedokument ohne ein einziges Skript.
+- **Schlank** Der Text steht lesbar in der Datei, die Diagramme sind gepackt.
+- **Kompakt** Alles ist gepackt: die kleinste Datei.
+
+Die Markierung ist ein Kommentar in der Zeile über der Liste: `<!-- dokufix: cards -->`. In einem Renderer, der dokufix nicht kennt, ist der Kommentar unsichtbar und die Liste eine Liste.
+
+## Schrittliste
+
+Dieselbe Art Markierung macht aus einer nummerierten Liste eine Schrittliste: `<!-- dokufix: steps -->`. Ein kursiver Anfang mit Doppelpunkt nennt, wer handelt.
+
+<!-- dokufix: steps -->
+1. *Autorin:* Den Text im Editor schreiben und rendern.
+2. *Autorin:* Im Download-Menü die passende Auslieferung wählen.
+3. *Empfänger:* Die Datei im Browser öffnen.
+4. Lesen, oder weiterschreiben, wenn der Editor mitgeliefert wurde.
+
+Eine Markierung, die nicht wirken kann, wird an ihrer Stelle zur Warnung, und die Liste bleibt eine Liste. Probieren Sie es im Editor: Schreiben Sie `crads` statt `cards`.
 
 ## Der Metadaten-Kopf
 
