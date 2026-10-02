@@ -28,10 +28,10 @@ That file is built from the sources in this folder with one command (see *Build*
 
 | Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
 |---|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 70 753 B + libs | 72 787 B + libs |
-| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 70 956 B | 106 743 B |
-| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 200 B | 52 004 B |
-| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 28 887 B | 48 158 B |
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 72 903 B + libs | 74 940 B + libs |
+| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 71 364 B | 107 151 B |
+| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 608 B | 52 412 B |
+| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 29 295 B | 48 566 B |
 
 Measured 2026-10-02 in Chromium 153 with `tests/vergleich.mjs`, all four variants through one build per document; Firefox differs by a few hundred bytes because it serialises the Mermaid SVG differently. The reference document is `tests/referenz.md`. Both documents carry two Mermaid diagrams, and those dominate the read-only exports.
 
@@ -39,17 +39,17 @@ The built file beside the PoC, same run, same documents, same day:
 
 | | Demo text: PoC → built | Reference document: PoC → built |
 |---|---|---|
-| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 68 931 B | the same file |
-| `Mit Editor`, Chromium | 135 085 → 70 753 B | 137 119 → 72 787 B |
-| `nur-lesen`, Chromium | 71 052 → 70 956 B | 106 839 → 106 743 B |
-| `schlank`, Chromium | 35 296 → 35 200 B | 52 100 → 52 004 B |
-| `kompakt`, Chromium | 28 983 → 28 887 B | 48 254 → 48 158 B |
-| `Mit Editor`, Firefox | 135 069 → 70 737 B | 137 103 → 72 771 B |
-| `nur-lesen`, Firefox | 71 138 → 71 042 B | 107 192 → 107 096 B |
-| `schlank`, Firefox | 35 536 → 35 440 B | 52 048 → 51 952 B |
-| `kompakt`, Firefox | 29 419 → 29 323 B | 48 134 → 48 038 B |
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 71 347 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 72 903 B | 137 119 → 74 940 B |
+| `nur-lesen`, Chromium | 71 052 → 71 364 B | 106 839 → 107 151 B |
+| `schlank`, Chromium | 35 296 → 35 608 B | 52 100 → 52 412 B |
+| `kompakt`, Chromium | 28 983 → 29 295 B | 48 254 → 48 566 B |
+| `Mit Editor`, Firefox | 135 069 → 72 887 B | 137 103 → 74 924 B |
+| `nur-lesen`, Firefox | 71 138 → 71 450 B | 107 192 → 107 504 B |
+| `schlank`, Firefox | 35 536 → 35 848 B | 52 048 → 52 360 B |
+| `kompakt`, Firefox | 29 419 → 29 731 B | 48 134 → 48 446 B |
 
-The build takes 64 422 B out of the file itself and 64 332 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. (Before the script was split into modules it was 972 B more: see *The script's modules*.) Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+The built file is 62 006 B smaller than the PoC and a `Mit Editor` file 62 182 B; nearly all of it is the minifying of script and styles. Three stories moved these figures after the build: the split into modules added 972 B to the file (see *The script's modules*), and story 2.15 added 2 416 B, the pass runner, the warning and the export path. Each read-only export is 312 B larger than the PoC's. The build took 96 B out, because an export embeds the document styles and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B); story 2.15 put 408 B in, the style of the warning (10 845 B). Outside its `<style>` every read-only export is the one the PoC writes, in both browsers and for both documents, byte for byte once the ids Mermaid generates are masked: since story 2.15 diagrams are drawn one at a time, which changes those ids. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -68,6 +68,36 @@ Loading order on open: IndexedDB doc record (live draft) > `#dokufix-source` (fi
 
 In the PoC both were variables of the script, `DEMO` and `SAMPLE`. Why they moved is under *Self-replication mechanism*.
 
+### Render passes
+
+`render()` in `src/app/render.js` is four steps: parse the Markdown into the preview, run the document passes, run the run-time passes, rebuild the rail. A pass is one step that works on the rendered document, `{ name, run(root, context) }`. `root` is the element that holds the document; `context` is `{ frontmatter }`, what was split off the source before it was parsed; `run` may be async. The two lists stand in `render.js`, in the order they run:
+
+| List | Pass (`name`) | Function |
+|---|---|---|
+| `DOCUMENT_PASSES` | `Metadaten` | `injectFrontmatterPanel()` |
+| | `Überschriften` | `assignHeadingIds()` |
+| | `Inhaltsverzeichnis` | `processInlineToc()` |
+| | `Fußnoten-Vorschau` | `attachFootnotePreviews()` |
+| | `Fußnoten-Rücksprung` | `linkFootnoteReturnPaths()` |
+| | `Diagramme` | `renderDiagrams()` |
+| `RUNTIME_PASSES` | `Sprungmarken im Inhaltsverzeichnis` | `attachTocClicks()` |
+
+- **This is where a component plugs in.** It adds its pass to a list, at its place in the order. Nothing else in `render()` changes. See *Where a new component goes*.
+- **Two lists, not one.** A document pass produces the document: what a reader sees, and what an export takes along when it copies the preview. A run-time pass attaches what only a running page has: a listener today, later a filter field or a live viewer. Nothing a run-time pass does is part of the document, and an element it adds is transient (below).
+- **Each pass is contained.** `runPasses()` in `src/app/passes.js` runs a list. A pass that throws, or whose promise is rejected, is logged to the console, and the passes after it still run. When the list is through, each failed pass gets one warning at the top of the document that names it: "Der Schritt „Inhaltsverzeichnis“ ist fehlgeschlagen. Das Dokument kann unvollständig sein." What the pass had done before it failed stays. The warning of a failed run-time pass is marked transient: the document is complete, so no export carries it.
+- **The rail is rebuilt at the end of every render, whatever failed before it.** The browser runs take "the rail was rewritten" as "the render is finished". Markdown that cannot be parsed puts a warning in place of the content, and the rail is then rebuilt empty. Until story 2.15 that case returned before the rail and showed a box that only the editor had a style for.
+- **One render at a time.** A render requested while another runs starts when that one has finished, and reads the source then; the preview ends as the last one's. The promise `render()` returns is fulfilled when its render is done and is never rejected. Before, two renders interleaved on the preview: the first built its rail from headings that were no longer in the page, and its Mermaid run failed on detached nodes.
+- **Mermaid draws one diagram at a time.** `mermaid.initialize` sets `suppressErrorRendering`, so Mermaid throws instead of drawing its error picture into the block, which is what 12.0.0 does by default and what every export then carried. The pass runs each diagram on its own; one with an error becomes a warning with Mermaid's message in its place, and the others are drawn. Running per diagram changes the ids Mermaid takes from the clock and nothing else.
+- **Which headings count** is said once: `documentHeadings()` in `src/app/toc.js`. Heading ids, the inline table of contents, the rail and the rail of an export ask there, each when it runs.
+
+**The warning** (`buildWarning()` in `src/app/warning.js`, class `dokufix-warning`) is a document construct: its style is in `src/doc.css`, so it reads the same in the preview and in all four variants. It is recognisable without colour, because the word "Warnung:" stands in its markup. Its text is German; the detail below it is the message of whatever failed, as it came. Three things produce one: Markdown that cannot be parsed, a pass that failed, a diagram with an error.
+
+**Transient elements.** An element that exists only while the page runs carries the attribute `data-dokufix-transient`. `Mit Editor` removes every such element from its clone of the page, wherever it stands; the read-only exports remove them from their copy of the preview (`removeTransient()` in `src/app/transient.js`). A component that puts something into the page that is not the document marks it, and touches neither download. What cannot be marked has to be named in the clean-up of the clone. Today that is one element: `.mermaidTooltip`, which Mermaid appends to `<body>` with the first diagram it draws.
+
+**The export path.** The three read-only exports get their content from one function, `buildExportBody()` in `src/app/downloads/export-body.js`. It renders, takes a detached copy of the preview, runs the export steps on the copy in order, and returns title, body and rail. A step is a function that gets the copy and changes it; the live preview is never touched. `EXPORT_STEPS` holds what every export needs: transient elements out, images as `data:` URLs. An export hands in what only it does: `schlank` gzips each diagram. The export modules keep their templates and nothing else. Whatever a component has to strip or change when a document leaves the page is one step in that list, not a line in three files. A step that throws ends the export; a file with a step left out would be a wrong file that looks right.
+
+**What story 2.15 did to documents** is under *The script's modules*.
+
 ### Document styles (one source)
 
 Every style that travels with a document is written in one place: `src/doc.css`. The build puts it, minified, into `<style id="dokufix-doc-css">`, the first stylesheet in `<head>`. From there on nothing changed against the PoC:
@@ -85,7 +115,7 @@ Until story 2.1 each of these rules existed twice, written by hand: `#preview`-p
 | rendered document content: headings, tables, footnotes, a new `dokufix-` component | `src/doc.css` | `.dokufix-doc h2{…}`, `.dokufix-doc .dokufix-callout{…}` |
 | the look of the rail | the same file | `.dokufix-rail a{…}`, unscoped, because the rail sits beside the content container |
 | the editor interface, the preview pane as a box, where the rail stands in the editor | `src/app.css`, the app stylesheet below the block | `#preview{…}`, `body.mode-view #preview{…}`, `.dokufix-rail a.active{…}` |
-| the page of a read-only export: reset, margins, footer, rail grid | `READONLY_FRAME_CSS` in `src/app/downloads/readonly-css.js` | `body{…}`, `.reader-body{…}`, `.dokufix-meta{…}` |
+| the page of a read-only export: reset, margins, footer, rail grid | `READONLY_FRAME_CSS` in `src/app/downloads/export-body.js` | `body{…}`, `.reader-body{…}`, `.dokufix-meta{…}` |
 
 `.dokufix-doc` is the class on the content container: `#preview` in the editor, `<main class="reader-body dokufix-doc">` in an export. That class is the only change to the exported markup.
 
@@ -149,7 +179,7 @@ So `strict` removes two things: the JavaScript callback, and `javascript:` and `
 
 Standard GFM footnotes work: `[^id]` places a marker, `[^id]:` defines it, and `marked-footnote` (registered via the single `marked.use()` call in the file) renders the definition list at the document end with return arrows. dokufix adds no syntax here.
 
-**Hover / focus preview.** Each marker carries a preview of its footnote, revealed on `:hover` or `:focus-within` of the host `<sup class="dokufix-fn-host">`. The reveal is **pure CSS** — there is no listener — which is what lets it work in the JS-free `nur-lesen` export. `attachFootnotePreviews()` only injects inert markup at render time; because every export variant calls `render()` and then reads `previewEl.innerHTML` back out, the previews travel into all four downloads without any export-specific code.
+**Hover / focus preview.** Each marker carries a preview of its footnote, revealed on `:hover` or `:focus-within` of the host `<sup class="dokufix-fn-host">`. The reveal is **pure CSS** — there is no listener — which is what lets it work in the JS-free `nur-lesen` export. `attachFootnotePreviews()` only injects inert markup at render time; because every read-only export renders and then copies the preview (see *Render passes*), and a `Mit Editor` file renders again when it is opened, the previews travel into all four downloads without any export-specific code.
 
 **Preview content is flattened to inline.** This is load-bearing, not cosmetic. The preview `<span>` lives in the `<sup>` that sits inside the paragraph carrying the marker. A footnote definition is block content (`<p>`, sometimes lists) — and a `<p>` nested inside a `<p>` makes the HTML parser close the outer paragraph early. In the live DOM you would not notice; in an *export*, where the markup is serialised and re-parsed by the recipient's browser, it would quietly shred the document structure. So `fnFlattenInline()` unwraps block elements (joining them with a space) and keeps only phrasing content. Links are unwrapped to their text as well, for a second reason: the preview is `aria-hidden="true"` (the footnote text is already reachable through the marker's own link, and announcing it twice is noise), and an `aria-hidden` subtree must not contain focusable elements. Backrefs and nested markers are stripped, the latter so a footnote citing a footnote cannot nest previews.
 
@@ -179,7 +209,7 @@ Automated coverage of this feature is therefore only as good as synthetic input 
 - `li:has(a[data-footnote-backref]:target)` shades the definition around it, while
 - `li:target` still shades when arriving via the plain `#footnote-<id>` anchor (external bookmarks, copied URLs).
 
-All pure CSS, so it works in the JS-free export. `attachFootnotePreviews()` must run **before** the retarget — it resolves each definition through the marker's href, so retargeting first would build every preview out of the `↩` anchor instead of the footnote. That ordering used to be guarded by a comment alone, with a silent failure mode (every preview rendering as `↩`, no error); the lookup is now scoped `li#…`, so a wrong order resolves to nothing and skips the preview instead of producing a confidently wrong one.
+All pure CSS, so it works in the JS-free export. `attachFootnotePreviews()` must run **before** the retarget, which is its place in `DOCUMENT_PASSES` — it resolves each definition through the marker's href, so retargeting first would build every preview out of the `↩` anchor instead of the footnote. That ordering used to be guarded by a comment alone, with a silent failure mode (every preview rendering as `↩`, no error); the lookup is now scoped `li#…`, so a wrong order resolves to nothing and skips the preview instead of producing a confidently wrong one.
 
 **Pairing goes through the definition, not the marker's id.** The obvious implementation — read the arrow's `href`, `querySelector` that id, retarget it — is wrong, because `marked-footnote` does not guarantee those ids are unique. A document containing both `[^bgb]` (cited twice) and `[^bgb-2]` mints `id="footnote-ref-bgb-2"` **twice**; `querySelector` takes the first, and `[^bgb-2]`'s marker gets repointed at footnote `bgb`'s arrow — the reader clicks and lands on the wrong footnote, while the hover preview still shows the right text. A marker's *href* names its definition unambiguously, so each definition pairs its Nth marker with its Nth arrow; both are in reference order. Ids generated this way share one flat namespace with the definitions (`footnote-<label>`), so `[^back-x]` beside `[^x]` can still collide — on a collision the marker keeps pointing at its definition, which keeps the jump correct and loses only the arrow marking for that one reference.
 
@@ -228,7 +258,7 @@ Without this, marked treats the block as ordinary Markdown: per CommonMark a lon
 
 Anything outside the subset makes the parser fail **loudly rather than partially**: the panel then shows the raw block verbatim under a "nicht lesbar" summary. A half-parsed panel that silently dropped a key would be a data-integrity failure; showing the original text is honest and loses nothing. There is deliberately no type coercion — values stay strings, so YAML's `no`-becomes-`false` class of surprises can't occur. The values are displayed, never computed on.
 
-Fail-loudly is a claim worth auditing, because it quietly failed in five places at once and every one of them looked fine from the outside: duplicate keys overwrote each other, `__proto__` disappeared through `Object.prototype`'s setter, `{a: 1}` under an explicit `---yaml` fence half-parsed into key `{a` / value `1}`, `- Autor Name: Ben` slipped past a sequence guard whose alphabet was narrower than the parser's, and an unknown escape like `é` rendered literally. All five now throw. The lesson generalises: **every regex that recognises a key must use the same alphabet.** Three used to disagree, and each disagreement was a silent bug.
+Fail-loudly is a claim worth auditing, because it quietly failed in five places at once and every one of them looked fine from the outside: duplicate keys overwrote each other, `__proto__` disappeared through `Object.prototype`'s setter, `{a: 1}` under an explicit `---yaml` fence half-parsed into key `{a` / value `1}`, `- Autor Name: Ben` slipped past a sequence guard whose alphabet was narrower than the parser's, and an unknown escape like `é` rendered literally. Four of them now throw. The fifth is kept: on a map without a prototype `__proto__` is an entry like any other, and the panel shows it. `tests/frontmatter.test.mjs` holds all five as cases, beside the rest of this section. The lesson generalises: **every regex that recognises a key must use the same alphabet.** Three used to disagree, and each disagreement was a silent bug.
 
 **Multi-document streams** are listed as unsupported above and are worth spelling out, because the failure is not loud: the closing-`---` search stops at the first delimiter, so `---\na: 1\n---\nb: 2\n---` parses document 1 into a confident-looking panel and leaks `b: 2` into the body as a setext `<h2>`. That is standard frontmatter behaviour and is not going to change; it is simply not the raw panel this section otherwise promises.
 
@@ -238,7 +268,7 @@ The second way body text used to disappear was an **unterminated** block: the cl
 
 `---\nSome intro.\n---` and an empty `---\n---` are left completely untouched. An explicit but empty header (`---json\n---`) is consumed and renders nothing — announcing "nicht lesbar" over an empty `<pre>` would be a lie. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
 
-**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
+**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It is handed the source and reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
 
 ### Table of Contents (two layers)
 
@@ -339,7 +369,7 @@ The build guards the same thing twice. esbuild writes `<\/script` wherever it me
 
 ### Self-replication mechanism
 
-"Mit Editor" clones the page (`document.documentElement.cloneNode(true)`), takes out what is transient (the rendered preview, the rail, an open menu, the dirty mark), writes four data blocks of the clone through the DOM, and serialises the clone:
+"Mit Editor" clones the page (`document.documentElement.cloneNode(true)`), takes out what belongs to the running page, writes four data blocks of the clone through the DOM, and serialises the clone. What is taken out: every element marked `data-dokufix-transient` (see *Render passes*), Mermaid's `.mermaidTooltip`, the rendered preview and the rail; and state on elements of the page itself is reset one by one: an open menu, disabled download buttons, the dirty mark with the title and the badge's text, the drop highlight, the storage banner. The data blocks:
 
 | Block | What a save writes into it |
 |---|---|
@@ -350,6 +380,8 @@ The build guards the same thing twice. esbuild writes `<\/script` wherever it me
 
 The receiver's async init reads both text blocks before the first render. The script travels as it is: in a saved file, and in a file saved from that one, it is the script of `dist/dokufix.html` byte for byte. `tests/speichern.mjs` checks exactly that, and that both generations hold their document.
 
+A saved file is the built file with other data blocks, and nothing else: that is what keeps a file from growing with every generation. `tests/speichern.mjs` compares the two as a whole and allows four differences, each listed with its reason (see *Save round trip*). Two leftovers were found that way on 2026-10-02 and removed: the badge still read "geändert" in a file that opens clean, and Mermaid's tooltip element came along. Heading numbering travels with a saved file on purpose (the class `numbered` on `<body>` and the state of its button); that is one of the four.
+
 **Why not as the PoC did it.** The PoC kept both texts in the script, as `DEMO`/`DEMO_GZ` and `SAMPLE`/`SAMPLE_GZ` between comment marks, and a save rewrote the text of the script between those marks with a regular expression. That works as long as the script in the file is the script as written. Measured on 2026-10-02: once esbuild touches the script, saving breaks, because esbuild removes the comment marks; minified, the saved file opens without an error and carries the demo text instead of the document. Hence the rule for everything that follows: no code searches or rewrites script text. What a save has to change lives in a data block.
 
 ### `<script type="text/plain">` payload
@@ -359,8 +391,9 @@ The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="tex
 ## Build
 
 ```
-npm install        # once, in the repository root: esbuild and playwright-core, both pinned exactly
+npm install        # once, in the repository root: esbuild, eslint, globals, linkedom and playwright-core, all pinned exactly
 npm run build      # writes dist/dokufix.html
+npm run watch      # writes dist/dokufix.dev.html, readable, again on every change under src/
 ```
 
 `build.mjs` puts five sources into one file:
@@ -378,6 +411,8 @@ The page names each of the other four once, as a slot: `{{slot:doc.css}}`, `{{sl
 - **The built file is committed.** Two builds of the same sources are byte-identical, so `git status` stays clean after `npm run build` unless a source changed. Change a source, build, commit both. Never edit `dist/dokufix.html` by hand; the next build overwrites it.
 - **`node build.mjs --check`** builds in memory, writes nothing, and exits 1 with "is stale" when `dist/dokufix.html` is not what the sources give.
 - **The build exits 1 and writes nothing** when a source is missing, when a slot is missing from the page, stands there twice or is not one of the four, when the minified script contains `</script` or `<!--` or a minified stylesheet `</style`, and when the modules do not fit together: one imports a name the other does not export, or a file that is not there, or assigns to a name it imported. The message names the module, line and name.
+- **`node build.mjs --dev`** writes a second file, `dist/dokufix.dev.html`: the same page with script and styles not minified, and with a source map at the end of the script, as a `data:` URL, so it is still one file. It is for reading and debugging: the browser's debugger shows the modules under `src/app/` by name. The file is in `.gitignore`. `--dev` refuses to write `dist/dokufix.html`, `--check` does not look at the readable file, and the two options do not go together. **`npm run watch`** is `node build.mjs --dev --watch`: it builds the readable file and builds it again whenever a file under `src/` changes; a build that fails prints why, leaves the last file, and the watch goes on.
+- **Node.** `package.json` names what the tools need under `engines`: `^20.19.0 || ^22.13.0 || >=24`, the range of ESLint 10. The watch uses recursive `fs.watch`, the comparison run `zlib.crc32`; both are in that range.
 - **`<!--` in the script is written as `\x3c!--`** after bundling; why is under *`</script>` escaping*.
 - **esbuild 0.28.2**, through its API: `bundle`, `format: 'iife'`, `minify` and `charset: 'utf8'` for the script, `minify` and `charset: 'utf8'` for the two stylesheets. Without `charset: 'utf8'` esbuild writes every non-ASCII character as an escape.
 - **The code in the file is minified**, in the built file and in every `Mit Editor` file saved from it. The readable code is here, under `src/`.
@@ -389,7 +424,7 @@ The page names each of the other four once, as a slot: `{{slot:doc.css}}`, `{{sl
 
 ### The script's modules
 
-Until story 2.14 the script was one file of 2111 lines in which every function and every variable was visible to every other. It is now `src/app.js` and nineteen modules under `src/app/`, cut along the sections the one file had. esbuild bundles them into the one script of the built file, as before. The split moved code and rewrote none: every line of the old file stands in a module, apart from the three things described below (how shared state is reached, what runs at load, three comments that said "above" or "at the bottom").
+Until story 2.14 the script was one file of 2111 lines in which every function and every variable was visible to every other. It became `src/app.js` and nineteen modules under `src/app/`, cut along the sections the one file had; story 2.15 added five and renamed one, so there are twenty-four. esbuild bundles them into the one script of the built file, as before. The split moved code and rewrote none: every line of the old file stands in a module, apart from the three things described below (how shared state is reached, what runs at load, three comments that said "above" or "at the bottom").
 
 | Module | What it owns |
 |---|---|
@@ -401,38 +436,47 @@ Until story 2.14 the script was one file of 2111 lines in which every function a
 | `app/assets.js` | images: the pipeline from a file to a stored asset, resolving `#asset-` references in the rendered HTML, inlining them for the exports, baking and seeding them for `Mit Editor`; and the three ways an image comes in (paste, drop, `+ Bild`) |
 | `app/document.js` | reading a data block (`readTextBlock()`), the document's identity (`generateDocUuid()`, `fallbackUuidFromLocation()`) |
 | `app/persistence.js` | loading and persisting the document record, the migration from localStorage, versions and the history dialog, the dirty state |
-| `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel, `deriveDocTitle()` |
-| `app/render.js` | `render()`, the one pass from source to preview, and `escapeHtml()` |
-| `app/toc.js` | heading ids, the inline `[[toc]]`, `headingLabelText()` |
-| `app/footnotes.js` | footnote previews and return paths; also `tocLinkHandler()` and `buildStaticRailHtml()`, which stood in that section of the one file |
+| `app/html.js` | `escapeHtml()` |
+| `app/warning.js` | `buildWarning()`, the warning a reader sees where something could not be rendered |
+| `app/passes.js` | `runPasses()`, the runner of a list of passes, each in its own containment |
+| `app/transient.js` | the attribute `data-dokufix-transient` and `removeTransient()` |
+| `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel as a pass, `deriveDocTitle()` |
+| `app/render.js` | `render()`: parse, the two pass lists (`DOCUMENT_PASSES`, `RUNTIME_PASSES`), the rail; one render at a time; the Mermaid pass |
+| `app/toc.js` | `documentHeadings()`, heading ids and the inline `[[toc]]` as passes, `headingLabelText()`, `tocLinkHandler()` and the run-time pass that attaches it |
+| `app/footnotes.js` | footnote previews and return paths as passes; also `buildStaticRailHtml()`, which stood in that section of the one file |
 | `app/rail.js` | the scrollspy rail |
 | `app/editor.js` | the toolbar: render button and typing, "Demo zurücksetzen", heading numbering, hamburger, the switch between view and editor |
-| `app/downloads/menu.js` | the download menu, the in-flight gate, `safeFilenameBase()`, `triggerDownload()` |
+| `app/downloads/menu.js` | the download menu: it opens, closes and starts the download that was chosen |
+| `app/downloads/download.js` | what every download needs: `safeFilenameBase()`, `triggerDownload()`, the in-flight gate |
 | `app/downloads/with-editor.js` | `Mit Editor` |
-| `app/downloads/readonly-css.js` | what the three read-only exports share: the export frame, `readonlyCss()`, the footer |
-| `app/downloads/readonly-open.js`, `readonly-slim.js`, `readonly-compact.js` | one read-only export each |
+| `app/downloads/export-body.js` | what the three read-only exports share: `buildExportBody()` with the export steps, the export frame, `readonlyCss()`, the footer |
+| `app/downloads/readonly-open.js`, `readonly-slim.js`, `readonly-compact.js` | one read-only export each: its template, and what only it does to the copy |
 
-**Four rules.**
+**Five rules.**
 
 - *A module imports what it uses and exports what others need.* Nothing is shared as a global, and no `window.` or `globalThis.` property passes a value from one module to another. Imports are named (`import { render } from './render.js'`), never `import * as`; the lint fails on one, see *Lint*.
 - *Shared state is one object.* An imported name cannot be assigned to. So a value belongs in `state` when a module other than the one it belongs to assigns to it. That is true of nine: `docUuid`, `currentVersion`, `versionHistory`, `commitBaseline`, `storedSource` and `cleanBaseline`, which the async init in `src/app.js` sets and, all but `storedSource`, `Mit Editor` as well; and `demoText`, `demoGz` and `initDone`, which only the async init sets, for the modules that read them. They are the properties of `state` in `app/state.js`; a module imports `state` and reads and writes `state.currentVersion`, which a search finds. A value that only its own module assigns to stays a `let` there (`_dbPromise`, `saveTimer`, `persistFailedFlag`, `mermaidId`, the rail's two handlers, `downloadInFlight`). Such a `let` may be exported: `Mit Editor` imports `saveTimer` and reads its current value, and could not assign to it.
 - *A module does nothing when it is loaded.* Its top level holds functions, constants and element lookups. What acts at load stands in `src/app.js`: the library setup and the async init are written there, and every listener and the restoring of the numbering preference is a `register…()` function of its module, which `src/app.js` calls in the order the statements had in the one file: `registerAssetUrlCleanup()`, `registerVersionDialog()`, `registerRailClicks()`, `registerEditorInput()`, `registerImageInput()`, `registerReset()`, `registerDownloadMenu()`, `registerNumbering()`, `registerHamburger()`, `registerViewToggle()`. Without that the order would follow from who imports whom, and change whenever an import is added; two listeners on `document` for the same event (the download menu and the hamburger on `click`, the menu and the view mode on `Escape`) would swap silently. One thing did move: the element lookups of the modules now run before the library setup, because a module's top level runs before the entry's. They only read the page.
-- *Modules may import each other in a circle,* as long as it is for functions that are called later: `render()` calls the asset pipeline and the image input calls `render()`; table of contents, footnotes and rail use each other's helpers; the menu calls the downloads and the downloads call `triggerDownload()`. That works because of the rule before: no module reads another's export while it loads.
+- *Modules may import each other in a circle,* as long as it is for functions that are called later. One circle is left: `render()` calls the asset pipeline, and the image input calls `render()`. That works because of the rule before: no module reads another's export while it loads. Until story 2.15 there were two larger ones. `escapeHtml()` stood in `render.js`, and six modules imported it from there; it is in `html.js` now. And the download helpers stood in the menu, which imports the downloads; they are in `downloads/download.js` now.
+- *A module of pure logic loads without a page.* It imports no module that looks up an element when it is loaded (`dom.js`, `rail.js`, `persistence.js`, `editor.js`, the downloads), and it reaches a page only through what it is handed: a pass gets its root and makes elements with `root.ownerDocument`. Today these are `html.js`, `warning.js`, `passes.js`, `transient.js`, `frontmatter.js` and `toc.js`. A test imports such a module in Node as it is (`tests/frontmatter.test.mjs`, `tests/passes.test.mjs`); where it needs a DOM it takes `linkedom`. So logic that a test should reach is written into such a module. What needs layout, Mermaid or storage stays in the browser runs.
 
-**Where a new component goes.** Into a module of its own under `src/app/`. It exports the function that works on the rendered preview, as `attachFootnotePreviews()` does, and `render()` in `app/render.js` imports it and calls it at its place in the pass; every export reads the preview back out, so the component reaches all four downloads from there. Its styles go into `src/doc.css` (see *Document styles*). If it needs a listener that is attached once, it exports a `register…()` and `src/app.js` calls it, after the ones that are there. If it shares a value with another module that both assign to, the value becomes a property of `state`.
+**Where a new component goes.** Into a module of its own under `src/app/`. It exports its pass, a function of `(root, context)` that works on the rendered document as `attachFootnotePreviews()` does, and `render.js` gets one line: the pass in `DOCUMENT_PASSES`, with a German name, at its place in the order (see *Render passes*). Every export copies the preview, so the component reaches all four downloads from there. Its styles go into `src/doc.css` (see *Document styles*). What it needs only in a running page, a listener or a control, is a second function in `RUNTIME_PASSES`; an element that function adds carries `data-dokufix-transient`. What it has to change when a document leaves the page is a step in `EXPORT_STEPS`. Where its logic can be written without a page, it is, and gets a test in Node. A listener that is attached once for the whole page is still a `register…()` that `src/app.js` calls, after the ones that are there. If it shares a value with another module that both assign to, the value becomes a property of `state`.
 
 **What the split did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before the split against the one after, reference document and demo text, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical, all assertions are green, and the three read-only exports are byte-identical in both browsers for both documents. One thing about the run itself showed here: in Chromium the exports of the reference document come out in one of two forms from run to run, for the file before the split as for the one after. The run types the document and clicks `Mit Editor` about 250 ms later, which is the delay of the editor's debounced save; whether that save runs first decides how often the clock is read, and Mermaid takes its diagram ids from the clock (`mermaid-…016` or `mermaid-…018`). Nothing else differs, and runs that fell the same way are byte-identical, old file against new. The file itself and every `Mit Editor` file grew by 972 B (67 959 → 68 931 B): `state.currentVersion` cannot be shortened by the minifier the way a variable can, and ten functions were added. `tests/speichern.mjs` is green in both browsers.
 
+**What story 2.15 did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before the story against the one after, reference document and demo text, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical, and all assertions are green. The three read-only exports are the text they were, in both browsers and for both documents, apart from two things: the ids Mermaid generates, because diagrams are drawn one at a time now, and 408 B in the stylesheet, which are the rules of the warning. With the ids masked, the payload of `kompakt` and the diagrams of `schlank` unpacked, each export equals its counterpart outside its `<style>`, and the new stylesheet is the old one with those 408 B put in. The file itself grew by 2 416 B (68 931 → 71 347 B). A `Mit Editor` file grew by 2 153 B, which is 263 B less: it no longer carries Mermaid's tooltip element. `tests/speichern.mjs` and `tests/durchlaeufe.mjs` are green in both browsers.
+
 ## Checks
 
-Five tools, all run from the repository root: four in `tests/`, and ESLint with `eslint.config.mjs`. They look at the sources and at the built file from outside; the product contains no hook for any of them.
+Six tools, all run from the repository root: five in `tests/`, and ESLint with `eslint.config.mjs`. They look at the sources and at the built file from outside; the product contains no hook for any of them.
 
 | Command | What it answers | Needs |
 |---|---|---|
 | `npm run check` | Is `dist/` what the sources give, does every document style sit in `doc.css`, and does every module declare or import each name it uses? | Node, `npm install` |
-| `npm test` | Do the build, the style check and the lint fail where they have to? | Node, `npm install` |
+| `npm test` | Do the build, the style check and the lint fail where they have to, and do the frontmatter parser and the pass runner do what they say? | Node, `npm install` |
 | `node tests/vergleich.mjs …` | Does a document still look the same in all four variants? | `npm install`, Chromium, Firefox, the CDN |
-| `node tests/speichern.mjs` | Does a saved file hold its document, and a file saved from it? | `npm install`, Chromium, Firefox, the CDN |
+| `node tests/speichern.mjs` | Does a saved file hold its document, and a file saved from it, and is it the built file otherwise? | `npm install`, Chromium, Firefox, the CDN |
+| `node tests/durchlaeufe.mjs` | Does a failure end as a warning in the document and in every export, do two renders run one after the other, does a transient element stay out of a saved file? | `npm install`, Chromium, Firefox, the CDN |
 
 ### Style check (`tests/check-doc-styles.mjs`)
 
@@ -458,10 +502,12 @@ Five tools, all run from the repository root: four in `tests/`, and ESLint with 
 
 ### Tests (`npm test`)
 
-`node --test tests/*.test.mjs`. Every case works on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to.
+`node --test tests/*.test.mjs`, 121 cases. The cases about the build, the style check and the lint work on a copy of `src/` in a temporary folder; the sources and `dist/` are never written to. The cases about the product's logic import its modules as they are (see *The script's modules*, the rule for modules of pure logic).
 
 - `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, each named with the module the frame stands in, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
-- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources or a module under `src/app/` changed; a module that imports a name another does not export, or a file that is not there, or assigns to an import ends the build with module and name and nothing written; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`.
+- `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources or a module under `src/app/` changed; a module that imports a name another does not export, or a file that is not there, or assigns to an import ends the build with module and name and nothing written; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`. For the readable build: `--dev` writes a file that is the committed page outside its script and its styles, not minified, with a source map that names the modules; it never writes the committed file; `--dev --watch` builds again when a source changes and goes on after a build that failed.
+- `tests/frontmatter.test.mjs` runs the frontmatter parser in Node: what is read (pairs, nested maps, sequences, quoting, comments, JSON), what is not frontmatter and stays untouched (a thematic break, one prose line, a block that is never closed), what is shown raw with its reason, the five inputs of *Frontmatter* among them, and `deriveDocTitle()`.
+- `tests/passes.test.mjs` runs the pass runner in Node over a fragment that `linkedom` 0.18.13 parses: the order of the list, a pass that returns a promise, a pass that throws or whose promise is rejected (the others run, one warning each at the top in the order of the list, the error on the console, the runner does not reject), the markup of the warning, `removeTransient()`, and three real passes driven by the runner: metadata panel, heading ids, inline table of contents.
 - `tests/lint.test.mjs` proves the lint: a module that lost an import, one that uses a name of the shared state without `state.`, one that uses a name nobody declares, one that assigns to an import, one that imports what it does not use and one that imports a namespace each give exit 1 with module, line and name; a function nobody calls and a local nobody reads pass.
 
 ### Comparison run (`tests/vergleich.mjs`)
@@ -501,7 +547,21 @@ Four things the run does on purpose, each because the obvious way gave wrong res
 3. open that file: the editor holds B, version `v2`; "Demo zurücksetzen" gives the original demo text;
 4. build a copy of `src/` whose demo text contains `</script>`, `<!--` and `<script>`, open it: the editor holds that text unchanged.
 
-Every save types a version description that contains `<!-- <script>` and `</script>`. The run also reads both saved files as text: `#dokufix-history` parses and holds that description as typed, `#dokufix-source` and `#dokufix-demo` hold `{"gz": …}` that unpack to the document and to the demo text, and the script is the script of the file under test, byte for byte. A and B contain what could break a block or a replacement: `</script>`, `<!--`, backticks, `${…}`, `$&`, backslashes, quotes, non-ASCII. The saved files stay in `tests/out/speichern/`. Exit 1 when anything fails. Controls: with the line that writes `#dokufix-source` taken out of the save, the run fails in both generations; with `encodeJsonForScript()` escaping only `</script>`, as it did in the PoC, the run ends with a timeout while opening the second generation (Chromium).
+Every save types a version description that contains `<!-- <script>` and `</script>`; the second save is made with heading numbering switched on, and the second generation has to open numbered. The run also reads both saved files as text: `#dokufix-history` parses and holds that description as typed, `#dokufix-source` and `#dokufix-demo` hold `{"gz": …}` that unpack to the document and to the demo text, and the script is the script of the file under test, byte for byte. A and B contain what could break a block or a replacement: `</script>`, `<!--`, backticks, `${…}`, `$&`, backslashes, quotes, non-ASCII. The saved files stay in `tests/out/speichern/`. Exit 1 when anything fails. Controls: with the line that writes `#dokufix-source` taken out of the save, the run fails in both generations; with `encodeJsonForScript()` escaping only `</script>`, as it did in the PoC, the run ends with a timeout while opening the second generation (Chromium).
+
+**The saved file as a whole.** A save clones the running page, so whatever the page gained while it ran can end up in the file. The run compares each saved file with the built file. A saved file is the browser's serialisation of the clone, so its text is not the built file's even when nothing leaked: `hidden` becomes `hidden=""`, and the line breaks around `<html>` and `</body>` move. So both files are opened with scripts switched off and read back from the DOM, which gives two texts in the same form. They must be equal apart from four differences, which the run lists with their reasons (`ALLOWED`): the content of the data blocks, the version mark, and heading numbering, which is the class `numbered` on `<body>` and the state of its button. Anything else fails the run, which prints the place and both texts. A difference that is not on the list is a leftover; the place to remove it is the clean-up of the clone in `with-editor.js`, not the list. Controls: with the line that resets the badge's text taken out of the save, or the one that removes Mermaid's tooltip element, the comparison fails in both generations and shows the text or the element; and in every run a copy of the first generation with one element more has to be reported as different.
+
+### Failure cases (`tests/durchlaeufe.mjs`)
+
+`node tests/durchlaeufe.mjs` — the check for what a render and an export do when something fails. The comparison run shows that a valid document looks as it did; it says nothing about one that is not valid. Per browser, five cases:
+
+1. *A diagram with an error.* One Mermaid block with a syntax error between two valid ones: that block is a warning with Mermaid's message, the other two are drawn, there is no error picture, and nothing of Mermaid's is left outside the preview. Then all four downloads, reopened: the warning is in each, styled.
+2. *Overlapping renders.* A second render is requested while the first is in its passes. Each rail is built from the document the preview shows at that moment, and the preview ends as the second one's.
+3. *A transient element.* Elements marked `data-dokufix-transient` in `<head>`, in `<body>` and inside the interface: none is in the saved `Mit Editor` file. An element that is not marked is.
+4. *Markdown cannot be parsed.* `marked` is given a hook that throws: the warning is all the preview holds, and the rail is rebuilt and empty. The three read-only exports carry the warning.
+5. *A pass throws.* A copy of `src/` is built with two passes more, as the save round trip builds a copy with another demo text; the product has no switch for this. A document pass that throws stands in the middle of the list: one warning names it at the top, every other pass did its work, the rail is built, and the three read-only exports carry the warning. A run-time pass adds a transient element and then throws: its warning and its element are in the page and in no export.
+
+In every case the error is on the console and no promise is rejected. The run waits on the DOM as the comparison run does; `marked` is the library's global and not a name of the script, which is why case 4 can reach it from outside. Exports and saved files stay in `tests/out/durchlaeufe/`. Exit 1 when anything fails. Control: run on the built file as it was before story 2.15 (`--file`), cases 1 to 4 fail. The error picture is in the preview and in all four downloads; the first render builds its rail while the preview already shows the second document; the marked elements are in the saved file; and case 4 ends with a timeout, because that render never rebuilt the rail.
 
 ## Known PoC limitations (deferred to MVP)
 
@@ -515,10 +575,11 @@ Every save types a version description that contains `<!-- <script>` and `</scri
 
 ```
 build.mjs               The build. One command, see "Build".
-package.json            esbuild, eslint, globals and playwright-core, pinned exactly; scripts build, check, test, vergleich.
+package.json            esbuild, eslint, globals, linkedom and playwright-core, pinned exactly; scripts build, watch, check, test, vergleich.
 eslint.config.mjs       The lint: four rules over src/. See "Lint".
 dist/
-└── dokufix.html        The product. Built, committed, never edited by hand. Open in browser.
+├── dokufix.html        The product. Built, committed, never edited by hand. Open in browser.
+└── dokufix.dev.html    The readable build (node build.mjs --dev). Not in git.
 src/
 ├── index.html          The page: head, markup, data blocks, CDN tags, one slot per other source.
 ├── doc.css             Document styles, the one source for everything that travels with a document.
@@ -528,17 +589,21 @@ src/
 │   ├── state.js        The values more than one module assigns to.
 │   ├── dom.js          The elements more than one module works on.
 │   ├── gzip.js, idb.js, assets.js, document.js, persistence.js
+│   ├── html.js, warning.js, passes.js, transient.js
 │   ├── frontmatter.js, render.js, toc.js, footnotes.js, rail.js, editor.js
-│   └── downloads/      menu.js, with-editor.js, readonly-css.js, readonly-open.js, readonly-slim.js, readonly-compact.js
+│   └── downloads/      menu.js, download.js, with-editor.js, export-body.js, readonly-open.js, readonly-slim.js, readonly-compact.js
 ├── demo.md             The demo text.
 └── README.md           This file.
 tests/                  Checks that look at sources and built file from outside. See "Checks".
 ├── check-doc-styles.mjs       Fails when a document style sits outside doc.css.
 ├── check-doc-styles.test.mjs  Breaks copies of src/ and expects the check to fail.
-├── build.test.mjs      Breaks copies of src/ and expects the build to fail; same sources, same file.
+├── build.test.mjs      Breaks copies of src/ and expects the build to fail; same sources, same file; the readable build.
 ├── lint.test.mjs       Breaks copies of src/ and expects the lint to fail.
+├── frontmatter.test.mjs  The frontmatter parser, in Node.
+├── passes.test.mjs     The pass runner over a parsed fragment, in Node.
 ├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
-├── speichern.mjs       Save round trip: two generations of "Mit Editor".
+├── speichern.mjs       Save round trip: two generations of "Mit Editor", each compared with the built file.
+├── durchlaeufe.mjs     Failure cases: a diagram with an error, a pass that throws, two renders at once, transient elements.
 ├── referenz.md         Neutral reference document, the one input of every comparison.
 └── out/                Exports and screenshots of the runs. Not in git.
 poc/                    The hand-written single file of story 2.1 with its README and checks. Frozen.
