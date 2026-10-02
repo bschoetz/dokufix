@@ -281,7 +281,7 @@ const facts = page => page.evaluate(() => {
       (li.querySelector(':scope > .dokufix-step-number') || { textContent: '' }).textContent + ' ' + (li.querySelector(':scope > .dokufix-step-actor') || { textContent: '' }).textContent),
     componentLook: (() => {
       const list = container.querySelector('ul.dokufix-cards'), card = list && list.querySelector(':scope > li'), tile = container.querySelector('.dokufix-step-number');
-      return [list ? getComputedStyle(list).display : '', card ? getComputedStyle(card).borderTopWidth : '', tile ? getComputedStyle(tile).position : ''].join(' ');
+      return [list ? getComputedStyle(list).display : '', card ? getComputedStyle(card).borderTopWidth : '', tile ? getComputedStyle(tile).backgroundColor : ''].join(' ');
     })(),
     // A block marker that is still a comment.
     markersLeft: (() => {
@@ -519,7 +519,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         check(s, 'the warning stands at the marker\'s place, and its list stays a list', x.warnings.length === 1 && x.warnings[0].before === 'H2#kaputt' && x.warnings[0].after === 'UL.', x.warnings.map(w => [w.before, w.after]));
         check(s, 'the working markers took effect: two cards with their titles, two steps counted from 3, one with its actor; no marker is left',
           x.cards.join('|') === 'Eins|Zwei' && x.steps.join('|') === '3 Leserin|4 ' && x.markersLeft === 0, { cards: x.cards, steps: x.steps, markersLeft: x.markersLeft });
-        check(s, 'cards and steps are styled by the document styles', x.componentLook === 'grid 1px absolute', x.componentLook);
+        check(s, 'cards and steps are styled by the document styles', x.componentLook === 'grid 1px rgb(240, 240, 243)', x.componentLook);
         check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };

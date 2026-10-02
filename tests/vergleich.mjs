@@ -224,7 +224,7 @@ function expectationsFor(md){
   const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
                 callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0,
                 tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [], linkedChips: 0,
-                cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0 };
+                cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0 };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -317,12 +317,13 @@ function expectationsFor(md){
 // line, with blank lines between items or indented lines behind them; a table
 // that starts with "|". Not read: a comment across several lines, a marker in
 // a quotation or in a list item, an item that goes on in a line that is not
-// indented. A document with one of these fails the counts although the build
-// is right.
+// indented, the same marker twice before one block. A document with one of
+// these fails the counts although the build is right.
+// Counted as well: the steps that cite a footnote; see assertStepFootnote().
 // Counted beside them: the comments that are no markers, which have to stay,
 // and the places where a marker stands as code, a code span or a fenced block.
 function markerExpectations(body){
-  const out = { cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0 };
+  const out = { cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0 };
   const COMMENT = /<!--([\s\S]*?)-->/g;
   const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
   const AS_CODE = /<!--\s*dokufix:/i;
@@ -372,7 +373,10 @@ function markerExpectations(body){
       const verdict = judgeMarker(marker, block.tag);
       if (verdict.warning) out.markerWarnings.push(verdict.warning);
       else if (verdict.entry.name === 'cards') out.cards.push(block.items.map(item => titleOf(item.text)));
-      else if (verdict.entry.name === 'steps') out.steps.push(block.items.map((item, n) => ({ number: String(block.items[0].written + n), actor: actorOf(item.text) })));
+      else if (verdict.entry.name === 'steps'){
+        out.steps.push(block.items.map((item, n) => ({ number: String(block.items[0].written + n), actor: actorOf(item.text) })));
+        out.stepFootnotes += block.items.filter(item => /\[\^[^\]\s]+\]/.test(item.text)).length;
+      }
       else throw new Error('the run has no expectation for the marker "' + verdict.entry.name + '"');
     }
   });
@@ -896,7 +900,6 @@ const markerFacts = page => page.evaluate(() => {
             tag: li.tagName, box: box(li), position: ls.position, indent: parseFloat(ls.paddingLeft),
             number: number ? number.textContent : null, numberFirst: !!number && number === li.firstChild, numberTag: number ? number.tagName : '',
             numberVisible: !!number && visible(number), tile: number ? box(number) : null, tint: ns ? ns.backgroundColor : '', placed: ns ? ns.position : '',
-            againstItem: !!number && number.offsetParent === li,
             actor: actor ? actor.textContent : null, actorTag: actor ? actor.tagName : '', actorBox: actor ? box(actor) : null,
             actorLook: as ? [as.display, as.fontStyle, as.textTransform, as.color].join(' ') : '',
             text, strayActors: li.querySelectorAll(':scope > .dokufix-step-actor, :scope > p > .dokufix-step-actor').length - (actor ? 1 : 0),
@@ -972,13 +975,15 @@ async function assertMarkers(page, check, exp){
   if (f.steps.length){
     const items = f.steps.flatMap(list => list.items);
     const lists = f.steps.filter(list => list.marker !== 'none');
-    // The tile: the first thing in its item, visible, on its tint, placed
-    // against the item, left of the step's text and not over it.
-    const badTiles = items.filter(s => !(s.numberFirst && s.numberTag === 'SPAN' && s.numberVisible && s.tint === STEP_TILE && s.placed === 'absolute' && s.againstItem && s.position === 'relative' &&
+    // The tile: the first thing in its item, visible, on its tint, left of
+    // the step's text and not over it. Neither the tile nor its item is
+    // positioned: a positioned item would be the containing block of the
+    // preview of a footnote cited in the step (assertStepFootnote()).
+    const badTiles = items.filter(s => !(s.numberFirst && s.numberTag === 'SPAN' && s.numberVisible && s.tint === STEP_TILE && s.placed === 'static' && s.position === 'static' &&
       s.tile.left >= s.box.left - 0.6 && s.tile.right <= s.box.left + s.indent + 0.6 && s.tile.top >= s.box.top - 0.6 && s.tile.bottom <= s.box.bottom + 0.6 &&
       s.tile.width >= 20 && s.tile.height >= 20 && !!s.text && s.text.left >= s.tile.right && s.inline === 0));
-    check('every step shows its number as a tile: the list without its own markers, the number the first thing in its item, on its tint, left of the text, with no inline style',
-      lists.length === 0 && badTiles.length === 0, json(lists.map(l => l.marker)) + ' ' + json(badTiles.map(s => [s.number, s.numberFirst, s.numberVisible, s.tint, s.placed, s.againstItem, s.tile, s.box, s.indent, s.text, s.inline])));
+    check('every step shows its number as a tile: the list without its own markers, the number the first thing in its item, on its tint, left of the text, neither it nor its item positioned, with no inline style',
+      lists.length === 0 && badTiles.length === 0, json(lists.map(l => l.marker)) + ' ' + json(badTiles.map(s => [s.number, s.numberFirst, s.numberVisible, s.tint, s.placed, s.position, s.tile, s.box, s.indent, s.text, s.inline])));
     const starts = f.steps.filter(list => String(Number(list.start || 1)) !== list.items[0].number);
     check('a step list keeps its start value, and its first tile shows it', starts.length === 0, json(starts.map(l => [l.start, l.items[0].number])));
     const acting = items.filter(s => s.actor !== null);
@@ -989,6 +994,86 @@ async function assertMarkers(page, check, exp){
         json(badActors.map(s => [s.actor, s.actorTag, s.actorLook, s.actorBox, s.text])));
     }
   }
+}
+
+// A footnote cited inside a step. Its preview is placed against the page, by
+// its marker; a step that is positioned would be its containing block instead,
+// and the preview would lie over its own marker and the step. So the preview
+// has to stand where the preview of the same kind of marker stands in a
+// numbered list without the component: above its marker, over it, inside the
+// window. Measured at 900 px, where the text column nearly fills the window.
+// The two are measured at one scroll position: the step's marker is scrolled
+// to the middle of the window, and the marker of the plain list has to be in
+// the window then, so the reference document puts that list directly below
+// the step list.
+// Not judged in the Playwright Firefox build, with a note instead. There a
+// preview does not appear with its fallbacks (see the header), and with them
+// switched off it does not follow its marker down a scrolled page: measured
+// on this document, the preview of the plain list lies about 5000 px above
+// the window, as the one of the step does. A browser that cannot place the
+// preview of a plain list says nothing about a step. Chromium carries this
+// check.
+const STEP_FOOTNOTE_WIDTH = 900;
+async function assertStepFootnote(page, check, exp, label){
+  if (!exp.stepFootnotes) return;
+  await page.setViewportSize({ width: STEP_FOOTNOTE_WIDTH, height: 1000 });
+  await page.waitForTimeout(100);
+  // Focuses a footnote marker in a list of that kind and says where marker
+  // and preview stand; null when there is none. scroll: the first such marker
+  // is scrolled to the middle of the window; otherwise the first one that is
+  // inside the window as it stands is taken.
+  const place = async (list, scroll) => {
+    const found = await page.evaluate(([sel, scroll]) => {
+      const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+      if (document.activeElement) document.activeElement.blur();
+      const inWindow = x => { const r = x.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; };
+      const a = Array.from(root.querySelectorAll(sel + ' > li a[data-footnote-ref]')).find(x => !x.closest('.footnotes, .dokufix-fn-preview, nav') && (scroll || inWindow(x)));
+      if (!a) return false;
+      a.setAttribute('data-vergleich-marker', '');
+      if (scroll) a.scrollIntoView({ block: 'center' });
+      a.focus({ preventScroll: true });
+      return true;
+    }, [list, scroll]);
+    if (!found) return null;
+    const shown = await settles(page, () => {
+      const cs = getComputedStyle(document.querySelector('[data-vergleich-marker]').parentElement.querySelector(':scope > .dokufix-fn-preview'));
+      return cs.visibility === 'visible' && Number(cs.opacity) === 1;
+    });
+    const where = await page.evaluate(() => {
+      const a = document.querySelector('[data-vergleich-marker]');
+      const box = el => { const r = el.getBoundingClientRect(); return { left: Math.round(r.left * 10) / 10, top: Math.round(r.top * 10) / 10, right: Math.round(r.right * 10) / 10, bottom: Math.round(r.bottom * 10) / 10 }; };
+      const out = { marker: box(a), preview: box(a.parentElement.querySelector(':scope > .dokufix-fn-preview')), window: { width: document.documentElement.clientWidth, height: innerHeight } };
+      a.removeAttribute('data-vergleich-marker');
+      a.blur();
+      return out;
+    });
+    return { shown, ...where };
+  };
+  const both = async () => ({ step: await place('ol.dokufix-steps', true), plain: await place('ol:not(.dokufix-steps)', false) });
+  let { step, plain } = await both();
+  if (label === 'firefox' && step && plain && !(step.shown && plain.shown)){
+    await page.addStyleTag({ content: NO_FALLBACKS }); // known deviation, see header
+    ({ step, plain } = await both());
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.waitForTimeout(100);
+  if (!step || !plain){
+    check('a footnote cited inside a step, and one in a numbered list without the component in the same window, to compare it with', false, 'in a step: ' + !!step + ', in a plain list: ' + !!plain);
+    return;
+  }
+  // Above its marker and over it, inside the window.
+  const stands = x => x.shown && x.preview.bottom <= x.marker.top + 1 && x.preview.left <= x.marker.left + 1 && x.preview.right >= x.marker.right - 1 &&
+    x.preview.left >= 0 && x.preview.right <= x.window.width + 0.6 && x.preview.top >= 0 && x.preview.bottom <= x.window.height && x.preview.right - x.preview.left > 50;
+  // The same place against the marker: as far above it, and as far to its side.
+  const offset = x => [x.marker.top - x.preview.bottom, (x.preview.left + x.preview.right) / 2 - (x.marker.left + x.marker.right) / 2];
+  const same = Math.abs(offset(step)[0] - offset(plain)[0]) <= 1 && Math.abs(offset(step)[1] - offset(plain)[1]) <= 1;
+  // See above: where this build cannot place the preview of the plain list,
+  // there is nothing to compare the step with.
+  const judged = !(label === 'firefox' && !stands(plain));
+  check('the preview of a footnote cited inside a step stands where it stands for a numbered list without the component: above its marker, inside the window (' + STEP_FOOTNOTE_WIDTH + ' px)',
+    !judged || (stands(step) && stands(plain) && same), 'in a step: ' + JSON.stringify(step) + '; in a plain list: ' + JSON.stringify(plain),
+    judged ? '' : 'not judged: the preview of the plain list does not stand above its marker here either, preview ' + JSON.stringify(plain.preview) + ' for the marker ' + JSON.stringify(plain.marker) + ' (known deviation of the Playwright Firefox build)');
 }
 
 // ---------- assertions ----------
@@ -1202,6 +1287,8 @@ async function assertVariant(launch, file, key, exp, results, label){
       if (!note) check('preview stays inside the viewport',
         rect.left >= 0 && rect.right <= rect.w && rect.top >= 0 && rect.bottom <= rect.h && rect.right - rect.left > 50, JSON.stringify(rect));
       await page.evaluate(() => document.activeElement && document.activeElement.blur());
+      // --- and of a footnote cited inside a step (story 2.4)
+      await assertStepFootnote(page, check, exp, label);
     }
 
     // --- landing highlight and marked return arrow (story 1.3)

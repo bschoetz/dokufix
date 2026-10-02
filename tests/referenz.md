@@ -186,9 +186,14 @@ Vor einer nummerierten Liste macht `steps` aus den Einträgen Schritte. Ein kurs
 
 <!-- dokufix: steps -->
 1. *Leserin:* Medium auf die Ablage legen.
-2. *Automat:* Signatur lesen und das Konto entlasten.
+2. *Automat:* Signatur lesen und das Konto entlasten.[^automat]
 3. *Nie* ein Medium ohne Beleg zurücklassen.
 4. Beleg mitnehmen.
+
+Zum Vergleich dieselbe Fußnote in einer nummerierten Liste ohne Markierung:
+
+1. Signatur lesen und das Konto entlasten.[^automat]
+2. Beleg mitnehmen.
 
 Eine Liste, die mit 3 beginnt, zählt ab 3; ihre Einträge sind durch Leerzeilen getrennt:
 
@@ -273,6 +278,8 @@ Mehr steht hier nicht. Das Dokument endet mit den Fußnoten und, in den Ausliefe
 [^quelle]: Benutzungsordnung der fiktiven Stadtbibliothek, Abschnitt 4. Diese Fußnote wird absichtlich an drei Stellen zitiert, damit unten drei Rückwärtspfeile stehen.
 
 [^lang]: Eine längere Fußnote mit `Code`, *Hervorhebung* und genug Text, dass die Vorschau umbrechen muss: Die Bibliothek führt für jedes Medium eine Signatur, einen Standort und einen Zustand; alle drei Angaben erscheinen auf dem Beleg, den der Automat bei Ausleihe und Rückgabe druckt.
+
+[^automat]: Der Automat liest die Signatur vom Etikett des Mediums. Die Fußnote wird in einem Schritt und gleich darunter in einer gewöhnlichen nummerierten Liste zitiert.
 
 [^status]: Auch in einer Fußnote steht ein Status: `🟡 gestört` heißt, dass die Theke aushilft.
 
