@@ -17,8 +17,8 @@
 //   --strict           exit 1 when --compare finds any differing pixel
 //
 // Exit code 1 when an assertion fails (epic 1 behaviour, callouts, status chips,
-// the licence information, no <script> in nur-lesen, no editor rules in a
-// read-only export).
+// block markers with cards and step lists, the licence information, no <script>
+// in nur-lesen, no editor rules in a read-only export).
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -76,6 +76,11 @@ import { NOTICES, LICENCE_TEXTS, LICENCES_LINK_TEXT } from '../src/app/licences.
 // heading's label gives is asked where the product makes it.
 import { readChip } from '../src/app/chips.js';
 import { slugify } from '../src/app/toc.js';
+// What a comment says as a marker, and what a marker comes to before a block
+// of a given kind, its component or the text of its warning, is asked where
+// the product decides it. What the run reads itself is the Markdown: which
+// markers stand in it, and which block follows each.
+import { readMarker, judgeMarker } from '../src/app/markers.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -189,6 +194,17 @@ const CHIPS_ONE_COLOUR =
 // circle and a square of 8 px differ in their four corners, about 14 pixels.
 const MARK_MIN_DIFFERENCE = 8;
 
+// Cards and step lists (story 2.4): the thin border of a card, the tint of a
+// number tile and the colour of an actor (src/doc.css), and the look of the
+// product's warning, which a marker that cannot act becomes.
+const CARD_BORDER = '1px solid rgb(229, 229, 234)';
+const STEP_TILE = 'rgb(240, 240, 243)';
+const STEP_ACTOR = 'rgb(110, 110, 115)';
+const WARNING_LOOK = { edge: '6px solid', background: 'rgb(255, 248, 225)' };
+// The width at which cards have to stand below each other: two columns of
+// 210 px with their gap do not fit into the text column of any variant.
+const CARDS_NARROW = 400;
+
 // The link "license information" (story 2.18). Every text its view has to show:
 // per entry its name, version, the title of its licence and its copyright
 // lines, and each licence text.
@@ -207,7 +223,8 @@ const NARROW = 820;
 function expectationsFor(md){
   const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
                 callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0,
-                tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [], linkedChips: 0 };
+                tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [], linkedChips: 0,
+                cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0 };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -284,7 +301,82 @@ function expectationsFor(md){
     // Numbering knows h2 to h4.
     if (h[1].length >= 2 && h[1].length <= 4) exp.calloutHeadingsNumbered++;
   }
+  Object.assign(exp, markerExpectations(body));
   return exp;
+}
+
+// Block markers: every comment that markers.js reads as a marker, in the order
+// of the document, with the block that follows it, and what judgeMarker() says
+// it comes to: cards, a step list, or a warning with its text. For cards the
+// title of each item, the bold text it starts with; for a step list the number
+// of each item and its actor, the emphasised text with a colon it starts with.
+// Read as far as the reference document needs it: a comment on one line; a
+// marker on a line of its own at the beginning of the line, alone or with
+// other comments, has the block behind it, any other has none; a list whose
+// items start at the beginning of a line with "-" or "1.", each item on one
+// line, with blank lines between items or indented lines behind them; a table
+// that starts with "|". Not read: a comment across several lines, a marker in
+// a quotation or in a list item, an item that goes on in a line that is not
+// indented. A document with one of these fails the counts although the build
+// is right.
+// Counted beside them: the comments that are no markers, which have to stay,
+// and the places where a marker stands as code, a code span or a fenced block.
+function markerExpectations(body){
+  const out = { cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0 };
+  const COMMENT = /<!--([\s\S]*?)-->/g;
+  const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
+  const AS_CODE = /<!--\s*dokufix:/i;
+  const BULLET = /^[-*+][ \t]+(.*)$/, NUMBERED = /^(\d{1,9})[.)][ \t]+(.*)$/;
+  const lines = body.split(/\r?\n/);
+  // Which lines belong to fenced code, the fences included.
+  let fenced = false, fenceHasMarker = false;
+  const inFence = lines.map(line => {
+    if (/^(```|~~~)/.test(line)){ fenced = !fenced; if (fenced) fenceHasMarker = false; return true; }
+    if (fenced && AS_CODE.test(line) && !fenceHasMarker){ fenceHasMarker = true; out.markersAsCode++; }
+    return fenced;
+  });
+  const withoutCode = line => line.replace(CODE_SPAN, '');
+  const onlyComments = line => /<!--/.test(line) && withoutCode(line).replace(COMMENT, '').trim() === '';
+  // The block that starts at the first line from `from` on that is neither
+  // blank nor only comments: its tag, and for a list its items.
+  const blockAfter = from => {
+    let i = from;
+    while (i < lines.length && !inFence[i] && (!lines[i].trim() || onlyComments(lines[i]))) i++;
+    if (i >= lines.length || inFence[i]) return { tag: i < lines.length ? 'PRE' : '' };
+    const start = BULLET.test(lines[i]) ? BULLET : NUMBERED.test(lines[i]) ? NUMBERED : null;
+    if (!start) return { tag: lines[i].startsWith('|') ? 'TABLE' : 'P' };
+    const items = [];
+    for (; i < lines.length && !inFence[i]; i++){
+      const m = lines[i].match(start);
+      if (m){ items.push(start === BULLET ? { text: m[1] } : { text: m[2], written: Number(m[1]) }); continue; }
+      if (/^[ \t]+\S/.test(lines[i])) continue;                 // an indented line belongs to the item before it
+      if (lines[i].trim()) break;
+      // A blank line: the list goes on when an item or an indented line follows.
+      let next = i + 1;
+      while (next < lines.length && !lines[next].trim()) next++;
+      if (next >= lines.length || inFence[next] || !(start.test(lines[next]) || /^[ \t]+\S/.test(lines[next]))) break;
+    }
+    return { tag: start === BULLET ? 'UL' : 'OL', items };
+  };
+  const titleOf = text => { const m = text.match(/^\*\*(?!\*)(.+?)\*\*(?!\*)/); return m ? m[1] : null; };
+  const actorOf = text => { const m = text.match(/^([*_])(?!\1)([^*_]*?\S)\s*:\s*\1(?!\1)/); return m ? m[2] : null; };
+  lines.forEach((line, i) => {
+    if (inFence[i]) return;
+    for (const m of line.matchAll(CODE_SPAN)) if (AS_CODE.test(m[2])) out.markersAsCode++;
+    const bare = withoutCode(line);
+    const alone = bare.startsWith('<!--') && onlyComments(line);
+    for (const m of bare.matchAll(COMMENT)){
+      const marker = readMarker(m[1]);
+      if (!marker){ out.comments++; continue; }
+      const block = alone ? blockAfter(i + 1) : { tag: '' };
+      const verdict = judgeMarker(marker, block.tag);
+      if (verdict.warning) out.markerWarnings.push(verdict.warning);
+      else if (verdict.entry.name === 'cards') out.cards.push(block.items.map(item => titleOf(item.text)));
+      else if (verdict.entry.name === 'steps') out.steps.push(block.items.map((item, n) => ({ number: String(block.items[0].written + n), actor: actorOf(item.text) })));
+      else throw new Error('the run has no expectation for the marker "' + verdict.entry.name + '"');
+    }
+  });
+  return out;
 }
 
 // Deterministic Date and Math.random for one context; see the header. Every
@@ -733,6 +825,172 @@ async function assertChips(page, check, exp, keep){
   }
 }
 
+// ---------- block markers: cards, step lists, warnings ----------
+// What a page shows of its cards, its step lists and its warnings, and which
+// comments are left in the document.
+const markerFacts = page => page.evaluate(() => {
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+  const round = n => Math.round(n * 10) / 10;
+  const box = el => { const r = el.getBoundingClientRect(); return { left: round(r.left), top: round(r.top), right: round(r.right), bottom: round(r.bottom), width: round(r.width), height: round(r.height) }; };
+  const visible = el => { const r = el.getBoundingClientRect(); return el.checkVisibility({ visibilityProperty: true }) && r.width > 0 && r.height > 0; };
+  const edges = cs => ['Top', 'Right', 'Bottom', 'Left'].map(side => cs['border' + side + 'Width'] + ' ' + cs['border' + side + 'Style'] + ' ' + cs['border' + side + 'Color']);
+  // The first node of an item that is not blank, looked for in its first
+  // paragraph when it has one; a step's number does not count.
+  const lead = li => {
+    const real = node => { let n = node.firstChild; while (n && ((n.nodeType === 3 && !n.data.trim()) || (n.nodeType === 1 && n.classList.contains('dokufix-step-number')))) n = n.nextSibling; return n; };
+    const first = real(li);
+    return first && first.nodeType === 1 && first.tagName === 'P' ? real(first) : first;
+  };
+  // Where the text behind an element starts, inside the element's parent.
+  const textAfter = el => {
+    const range = document.createRange();
+    range.setStartAfter(el);
+    range.setEndAfter(el.parentNode.lastChild);
+    const rect = Array.from(range.getClientRects()).find(r => r.width > 0 && r.height > 0);
+    return rect ? { left: round(rect.left), top: round(rect.top) } : null;
+  };
+  const comments = [];
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
+  while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('.mermaid')) comments.push(walker.currentNode.data);
+  return {
+    window: document.documentElement.clientWidth,
+    comments,
+    // A marker that stands as code: the code elements that hold its text.
+    asCode: Array.from(root.querySelectorAll('code')).filter(c => /<!--\s*dokufix:/i.test(c.textContent)).length,
+    cards: Array.from(root.querySelectorAll('.dokufix-cards')).map(list => {
+      const cs = getComputedStyle(list);
+      return {
+        tag: list.tagName, display: cs.display, marker: cs.listStyleType, box: box(list),
+        items: Array.from(list.children).map(li => {
+          const ls = getComputedStyle(li), first = lead(li);
+          const title = first && first.nodeType === 1 && first.classList.contains('dokufix-card-title') ? first : null;
+          return {
+            tag: li.tagName, visible: visible(li), box: box(li), edges: edges(ls), radius: ls.borderTopLeftRadius,
+            title: title ? title.textContent : null, titleTag: title ? title.tagName : '', titleDisplay: title ? getComputedStyle(title).display : '',
+            // Its text starts below the title, when it has both.
+            below: title && textAfter(title) ? textAfter(title).top >= box(title).bottom - 1 : null,
+            // A title the pass marked that is not the first thing in its item.
+            strayTitles: li.querySelectorAll('.dokufix-card-title').length - (title ? 1 : 0),
+          };
+        }),
+      };
+    }),
+    steps: Array.from(root.querySelectorAll('.dokufix-steps')).map(list => {
+      const cs = getComputedStyle(list);
+      return {
+        tag: list.tagName, marker: cs.listStyleType, start: list.getAttribute('start'),
+        items: Array.from(list.children).map(li => {
+          const ls = getComputedStyle(li), number = li.querySelector(':scope > .dokufix-step-number');
+          const ns = number && getComputedStyle(number), first = lead(li);
+          const actor = first && first.nodeType === 1 && first.classList.contains('dokufix-step-actor') ? first : null;
+          const as = actor && getComputedStyle(actor);
+          // Where the step's own text starts: behind the actor, or behind the number.
+          const text = actor ? textAfter(actor) : (number && (() => {
+            const range = document.createRange();
+            range.selectNodeContents(li);
+            range.setStartAfter(number);
+            const rect = Array.from(range.getClientRects()).find(r => r.width > 0 && r.height > 0);
+            return rect ? { left: round(rect.left), top: round(rect.top) } : null;
+          })());
+          return {
+            tag: li.tagName, box: box(li), position: ls.position, indent: parseFloat(ls.paddingLeft),
+            number: number ? number.textContent : null, numberFirst: !!number && number === li.firstChild, numberTag: number ? number.tagName : '',
+            numberVisible: !!number && visible(number), tile: number ? box(number) : null, tint: ns ? ns.backgroundColor : '', placed: ns ? ns.position : '',
+            againstItem: !!number && number.offsetParent === li,
+            actor: actor ? actor.textContent : null, actorTag: actor ? actor.tagName : '', actorBox: actor ? box(actor) : null,
+            actorLook: as ? [as.display, as.fontStyle, as.textTransform, as.color].join(' ') : '',
+            text, strayActors: li.querySelectorAll(':scope > .dokufix-step-actor, :scope > p > .dokufix-step-actor').length - (actor ? 1 : 0),
+            inline: li.querySelectorAll('[style]').length + (li.hasAttribute('style') ? 1 : 0),
+          };
+        }),
+      };
+    }),
+    warnings: Array.from(root.querySelectorAll('.dokufix-warning')).map(w => {
+      const cs = getComputedStyle(w);
+      return {
+        text: w.textContent, visible: visible(w), edge: cs.borderLeftWidth + ' ' + cs.borderLeftStyle, background: cs.backgroundColor,
+        // A warning is a block: it stands in nothing that holds text only.
+        inText: !!w.parentElement.closest('p, h1, h2, h3, h4, h5, h6'),
+        next: w.nextElementSibling ? w.nextElementSibling.tagName.toLowerCase() + (w.nextElementSibling.className ? '.' + String(w.nextElementSibling.className).split(' ')[0] : '') : '',
+      };
+    }),
+  };
+});
+async function assertMarkers(page, check, exp){
+  const f = await markerFacts(page);
+  const json = JSON.stringify;
+  // --- every marker is gone: applied, or replaced by its warning
+  const left = f.comments.filter(text => readMarker(text));
+  check('block markers: none is left as a comment; the ' + exp.comments + ' other comment(s) of the document stay; a marker written as code stays code, ' + exp.markersAsCode + ' time(s)',
+    left.length === 0 && f.comments.length - left.length === exp.comments && f.asCode === exp.markersAsCode,
+    'markers left: ' + json(left) + '; other comments: ' + (f.comments.length - left.length) + ' of ' + exp.comments + '; as code: ' + f.asCode + ' of ' + exp.markersAsCode);
+  // --- with a document that has none, the counts are the check
+  const titles = f.cards.map(list => list.items.map(item => item.title));
+  check('cards: one list per marker "cards" before a bullet list, in the order of the document; each item a card, its title the bold text it starts with',
+    json(titles) === json(exp.cards) && f.cards.every(list => list.tag === 'UL' && list.items.every(item => item.tag === 'LI' && item.strayTitles === 0)),
+    json(titles) + ', expected ' + json(exp.cards));
+  const steps = f.steps.map(list => list.items.map(item => ({ number: item.number, actor: item.actor })));
+  check('step lists: one per marker "steps" before a numbered list; each item with its number, counted from the list\'s start value, and its actor without the colon',
+    json(steps) === json(exp.steps) && f.steps.every(list => list.tag === 'OL' && list.items.every(item => item.tag === 'LI' && item.strayActors === 0)),
+    json(steps) + ', expected ' + json(exp.steps));
+  const warnings = f.warnings.filter(w => /Markierung/.test(w.text));
+  check('markers that cannot act: one warning each, in the order of the document, naming the marker and what it expects',
+    json(warnings.map(w => w.text)) === json(exp.markerWarnings.map(text => 'Warnung: ' + text)),
+    json(warnings.map(w => w.text)) + ', expected ' + json(exp.markerWarnings.map(text => 'Warnung: ' + text)));
+  if (warnings.length){
+    const bad = warnings.filter(w => !w.visible || w.inText || w.edge !== WARNING_LOOK.edge || w.background !== WARNING_LOOK.background);
+    check('every such warning is the product\'s warning: visible, styled by the document styles, a block of its own and inside no paragraph', bad.length === 0, json(bad));
+  }
+
+  if (f.cards.length){
+    const cards = f.cards.flatMap(list => list.items);
+    const lists = f.cards.filter(list => list.display !== 'grid' || list.marker !== 'none');
+    const boxes = cards.filter(c => !c.visible || c.radius !== '6px' || c.edges.some(e => e !== CARD_BORDER));
+    check('every card is styled: its list a grid without list markers, the card with a thin border all round', lists.length === 0 && boxes.length === 0,
+      json(lists.map(l => [l.display, l.marker])) + ' ' + json(boxes.map(c => [c.title, c.visible, c.radius, c.edges])));
+    const titled = cards.filter(c => c.title !== null);
+    const badTitles = titled.filter(c => c.titleTag !== 'STRONG' || c.titleDisplay !== 'block' || c.below === false);
+    check('the title of a card is a line of its own, the text below it: ' + titled.length + ' of ' + cards.length + ' cards have one', badTitles.length === 0,
+      json(badTitles.map(c => [c.title, c.titleTag, c.titleDisplay, c.below])));
+    // --- a grid that wraps. Wide: the cards of a list stand beside each other
+    // and inside their list. Narrow: below each other, as wide as the list.
+    const several = f.cards.filter(list => list.items.length > 1);
+    const inside = (c, l) => c.left >= l.left - 0.6 && c.right <= l.right + 0.6;
+    const notBeside = several.filter(list => !(list.items[1].box.top === list.items[0].box.top && list.items[1].box.left > list.items[0].box.right) || !list.items.every(c => inside(c.box, list.box)));
+    await page.setViewportSize({ width: CARDS_NARROW, height: 1000 });
+    await page.waitForTimeout(100);
+    const narrow = await markerFacts(page);
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.waitForTimeout(100);
+    const notBelow = narrow.cards.filter(list => list.items.length > 1).filter(list =>
+      !list.items.every((c, i) => inside(c.box, list.box) && c.box.left === list.items[0].box.left && Math.abs(c.box.width - list.box.width) <= 1 && (i === 0 || c.box.top >= list.items[i - 1].box.bottom)));
+    check('cards stand in a grid that wraps: beside each other at ' + f.window + ' px, below each other at ' + CARDS_NARROW + ' px, always inside their list (' + several.length + ' lists with more than one card)',
+      several.length > 0 && notBeside.length === 0 && notBelow.length === 0 && narrow.cards.length === f.cards.length,
+      'not beside: ' + json(notBeside.map(l => l.items.map(c => c.box.left + '/' + c.box.top))) + '; not below: ' + json(notBelow.map(l => l.items.map(c => c.box.left + '/' + c.box.top + '/' + c.box.width))));
+  }
+
+  if (f.steps.length){
+    const items = f.steps.flatMap(list => list.items);
+    const lists = f.steps.filter(list => list.marker !== 'none');
+    // The tile: the first thing in its item, visible, on its tint, placed
+    // against the item, left of the step's text and not over it.
+    const badTiles = items.filter(s => !(s.numberFirst && s.numberTag === 'SPAN' && s.numberVisible && s.tint === STEP_TILE && s.placed === 'absolute' && s.againstItem && s.position === 'relative' &&
+      s.tile.left >= s.box.left - 0.6 && s.tile.right <= s.box.left + s.indent + 0.6 && s.tile.top >= s.box.top - 0.6 && s.tile.bottom <= s.box.bottom + 0.6 &&
+      s.tile.width >= 20 && s.tile.height >= 20 && !!s.text && s.text.left >= s.tile.right && s.inline === 0));
+    check('every step shows its number as a tile: the list without its own markers, the number the first thing in its item, on its tint, left of the text, with no inline style',
+      lists.length === 0 && badTiles.length === 0, json(lists.map(l => l.marker)) + ' ' + json(badTiles.map(s => [s.number, s.numberFirst, s.numberVisible, s.tint, s.placed, s.againstItem, s.tile, s.box, s.indent, s.text, s.inline])));
+    const starts = f.steps.filter(list => String(Number(list.start || 1)) !== list.items[0].number);
+    check('a step list keeps its start value, and its first tile shows it', starts.length === 0, json(starts.map(l => [l.start, l.items[0].number])));
+    const acting = items.filter(s => s.actor !== null);
+    if (acting.length){
+      const badActors = acting.filter(s => !(s.actorTag === 'EM' && s.actorLook === 'block normal uppercase ' + STEP_ACTOR && !/:\s*$/.test(s.actor) &&
+        !!s.text && s.text.top >= s.actorBox.bottom - 1 && s.actorBox.left >= s.tile.right));
+      check('the actor of a step stands above the step as a label of its own, without its colon: ' + acting.length + ' of ' + items.length + ' steps name one', badActors.length === 0,
+        json(badActors.map(s => [s.actor, s.actorTag, s.actorLook, s.actorBox, s.text])));
+    }
+  }
+}
+
 // ---------- assertions ----------
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
@@ -887,6 +1145,9 @@ async function assertVariant(launch, file, key, exp, results, label){
 
     // --- status chips (story 2.3). With a document that has none, the count is the check.
     await assertChips(page, check, exp, path.join(path.dirname(file), 'marken-' + key));
+
+    // --- block markers, cards and step lists (story 2.4). With a document that has none, the counts are the check.
+    await assertMarkers(page, check, exp);
 
     // --- metadata panel (story 1.1)
     if (exp.frontmatter){

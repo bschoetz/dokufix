@@ -159,6 +159,111 @@ Fünf Arten von Hinweisen, geschrieben wie die Alerts von GitHub: ein Zitat, des
 > [!CAUTION]
 > Beschädigte Akkus gehören nicht in den Automaten, sondern an die Theke.
 
+## Karten
+
+Ein Kommentar, der mit `dokufix:` beginnt, macht aus dem Block direkt danach einen Baustein. Vor einer Aufzählung macht `cards` aus jedem Eintrag eine Karte; der fette Text am Anfang ist ihr Titel.
+
+<!-- dokufix: cards -->
+- **Selbstverbuchung** Am Automaten im Eingang, ohne Wartezeit. Der Automat ist `🟢 in Betrieb`.
+- **Theke** Mit Beratung, zu den Öffnungszeiten.
+- **Fernleihe**  
+  Über das Formular; die Frist setzt das gebende Haus.
+- Vorab **fett** mittendrin: eine Karte ohne Titel.
+
+Eine Aufzählung mit Leerzeilen zwischen den Einträgen, und eine Leerzeile zwischen Markierung und Liste:
+
+<!-- dokufix: cards -->
+
+- **Lesesaal** Ruhig, mit einer Steckdose an jedem Platz.
+
+- **Gruppenraum** Für bis zu sechs Personen.
+
+  Die Buchung läuft über die Theke.
+
+## Schritte
+
+Vor einer nummerierten Liste macht `steps` aus den Einträgen Schritte. Ein kursiver Anfang mit Doppelpunkt nennt, wer handelt.
+
+<!-- dokufix: steps -->
+1. *Leserin:* Medium auf die Ablage legen.
+2. *Automat:* Signatur lesen und das Konto entlasten.
+3. *Nie* ein Medium ohne Beleg zurücklassen.
+4. Beleg mitnehmen.
+
+Eine Liste, die mit 3 beginnt, zählt ab 3; ihre Einträge sind durch Leerzeilen getrennt:
+
+<!-- dokufix: steps -->
+3. *Katalog:* Vormerkung prüfen.
+
+4. Medium in das Abholregal stellen.
+
+### Zwei Markierungen vor einem Block
+
+Jede wirkt für sich auf denselben Block: `cards` macht die Aufzählung zu Karten, `steps` wird zur Warnung.
+
+<!-- dokufix: cards -->
+<!-- dokufix: steps -->
+- **Erste Karte** Die Markierung `cards` wirkt.
+- **Zweite Karte** Die Markierung `steps` erwartet eine nummerierte Liste.
+
+### Markierungen ohne Wirkung
+
+Ein unbekannter Name:
+
+<!-- dokufix: crads -->
+- Diese Aufzählung bleibt eine Aufzählung.
+- Die Warnung steht über ihr.
+
+Der falsche Block, einmal eine Aufzählung und einmal eine Tabelle:
+
+<!-- dokufix: steps -->
+- eine Aufzählung, keine nummerierte Liste
+
+<!-- dokufix: cards -->
+| Raum | Plätze |
+|---|---|
+| Lesesaal | 40 |
+| Gruppenraum | 6 |
+
+Ein Absatz zwischen Markierung und Liste:
+
+<!-- dokufix: cards -->
+Dieser Absatz steht dazwischen.
+
+- Auch diese Aufzählung bleibt eine Aufzählung.
+
+Etwas hinter dem Namen, das die Markierung nicht kennt, ein Name mit Bindestrich und eine Markierung ohne Namen:
+
+<!-- dokufix: cards zwei -->
+- erster Eintrag
+
+<!-- dokufix: side-note wichtig -->
+- zweiter Eintrag
+
+<!-- dokufix: -->
+- dritter Eintrag
+
+Eine Markierung mitten in einem Absatz <!-- dokufix: steps --> hat keinen Block hinter sich; ihre Warnung steht hinter dem Absatz.
+
+Die Markierungen danach wirken weiter:
+
+<!-- dokufix: steps -->
+1. Dieser Schritt steht hinter allen Warnungen dieses Abschnitts.
+
+### Was keine Markierung ist
+
+Als Code bleibt die Markierung Text: `<!-- dokufix: cards -->`, auch im Codeblock:
+
+```markdown
+<!-- dokufix: steps -->
+1. Erster Schritt
+```
+
+Ein anderer Kommentar bleibt, was er ist, und die Liste hinter ihm eine Liste:
+
+<!-- Notiz der Redaktion: vor der Freigabe prüfen -->
+- ein gewöhnlicher Eintrag
+
 ---
 
 ## Schluss
