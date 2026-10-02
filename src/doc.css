@@ -236,9 +236,10 @@
 
   /* Status chips — a code span that starts with a colour dot, a blank and a
      label, `🟢 Live` (buildChips() in src/app/chips.js). A pill in small
-     capitals of the monospace stack; text and mark in the palette of the
-     callouts, on a tint that leaves the label a contrast of at least 4.5 : 1
-     (tests/chips.test.mjs works it out from these rules).
+     capitals of the monospace stack. The mark has a colour of the callouts'
+     palette; the label is a darker shade of it, so that it reads well at
+     11 px: on its tint it has a contrast of at least 6.5 : 1, the mark of at
+     least 4.5 : 1 (tests/chips.test.mjs works both out from these rules).
      The status is not carried by colour alone. Before the label stands a mark
      whose shape differs per colour: a filled circle (green), a triangle
      (yellow), a square (red), a ring (grey), a diamond (blue). It is drawn
@@ -257,34 +258,36 @@
     margin:-2px 0;padding:1px 8px;border:1px solid transparent;border-radius:10px;
     font:400 11px/1.3 ui-monospace,monospace;
     letter-spacing:.06em;text-transform:uppercase;
-    color:#57606a;background:#eaeef2;
+    color:#424a53;background:#eaeef2;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   /* The box is the square. The mark stands on the baseline and is about as
      high as the capitals beside it. The universal reset of the two frames does
-     not reach a pseudo-element, hence box-sizing. */
+     not reach a pseudo-element, hence box-sizing. The mark is filled with its
+     own colour, which each rule below sets: the lighter one of the pair. */
   .dokufix-doc .dokufix-chip::before{
     content:"";display:inline-block;box-sizing:border-box;
     width:8px;height:8px;margin-right:6px;
-    background:currentColor;
+    color:#57606a;background:currentColor;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
-  .dokufix-doc .dokufix-chip-green{color:#1a7f37;background:#dafbe1}
-  .dokufix-doc .dokufix-chip-green::before{border-radius:50%}
+  .dokufix-doc .dokufix-chip-green{color:#116329;background:#dafbe1}
+  .dokufix-doc .dokufix-chip-green::before{color:#1a7f37;border-radius:50%}
   /* Triangle and diamond fill half of their box, so theirs is a little larger
      and the margins take the difference back: every label starts at the same
      place. */
-  .dokufix-doc .dokufix-chip-yellow{color:#9a6700;background:#fff8c5}
+  .dokufix-doc .dokufix-chip-yellow{color:#7d4e00;background:#fff8c5}
   .dokufix-doc .dokufix-chip-yellow::before{
-    width:10px;height:9px;margin:0 5px 0 -1px;
+    color:#9a6700;width:10px;height:9px;margin:0 5px 0 -1px;
     clip-path:polygon(50% 0,100% 100%,0 100%);
   }
-  .dokufix-doc .dokufix-chip-red{color:#cf222e;background:#ffebe9}
-  .dokufix-doc .dokufix-chip-grey{color:#57606a;background:#eaeef2}
-  .dokufix-doc .dokufix-chip-grey::before{background:transparent;border:2px solid;border-radius:50%}
-  .dokufix-doc .dokufix-chip-blue{color:#0969da;background:#ddf4ff}
+  .dokufix-doc .dokufix-chip-red{color:#a40e26;background:#ffebe9}
+  .dokufix-doc .dokufix-chip-red::before{color:#cf222e}
+  .dokufix-doc .dokufix-chip-grey{color:#424a53;background:#eaeef2}
+  .dokufix-doc .dokufix-chip-grey::before{color:#57606a;background:transparent;border:2px solid;border-radius:50%}
+  .dokufix-doc .dokufix-chip-blue{color:#0550ae;background:#ddf4ff}
   .dokufix-doc .dokufix-chip-blue::before{
-    width:10px;height:10px;margin:0 5px -1px -1px;
+    color:#0969da;width:10px;height:10px;margin:0 5px -1px -1px;
     clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
   }
   /* A chip in a link. The link's underline does not reach it: the chip is a

@@ -166,15 +166,15 @@ const CALLOUT_HEADINGS_IN =
   '.numbered .dokufix-doc .dokufix-callout h3::before{counter-increment:h3 !important;content:counter(h2) "." counter(h3) " " !important}' +
   '.numbered .dokufix-doc .dokufix-callout h4::before{counter-increment:h4 !important;content:counter(h2) "." counter(h3) "." counter(h4) " " !important}';
 
-// The five colours of a status chip: the word a screen reader says, and the
-// colour of label and mark on the tint of the pill (src/app/chips.js,
-// src/doc.css).
+// The five colours of a status chip: the word a screen reader says, the
+// colour of the label, which is the darker one, the colour of the mark, and
+// the tint of the pill (src/app/chips.js, src/doc.css).
 const CHIPS = {
-  green:  { word: 'grün', colour: 'rgb(26, 127, 55)',  tint: 'rgb(218, 251, 225)' },
-  yellow: { word: 'gelb', colour: 'rgb(154, 103, 0)',  tint: 'rgb(255, 248, 197)' },
-  red:    { word: 'rot',  colour: 'rgb(207, 34, 46)',  tint: 'rgb(255, 235, 233)' },
-  grey:   { word: 'grau', colour: 'rgb(87, 96, 106)',  tint: 'rgb(234, 238, 242)' },
-  blue:   { word: 'blau', colour: 'rgb(9, 105, 218)',  tint: 'rgb(221, 244, 255)' },
+  green:  { word: 'grün', text: 'rgb(17, 99, 41)',  colour: 'rgb(26, 127, 55)',  tint: 'rgb(218, 251, 225)' },
+  yellow: { word: 'gelb', text: 'rgb(125, 78, 0)',  colour: 'rgb(154, 103, 0)',  tint: 'rgb(255, 248, 197)' },
+  red:    { word: 'rot',  text: 'rgb(164, 14, 38)', colour: 'rgb(207, 34, 46)',  tint: 'rgb(255, 235, 233)' },
+  grey:   { word: 'grau', text: 'rgb(66, 74, 83)',  colour: 'rgb(87, 96, 106)',  tint: 'rgb(234, 238, 242)' },
+  blue:   { word: 'blau', text: 'rgb(5, 80, 174)',  colour: 'rgb(9, 105, 218)',  tint: 'rgb(221, 244, 255)' },
 };
 // For the pictures of the marks: every chip in one colour, so that what is
 // left to tell two apart is the shape of the mark.
@@ -183,7 +183,8 @@ const CHIPS = {
 // text do not fall alike.
 const CHIPS_ONE_COLOUR =
   '#vergleich-chips{position:fixed;left:0;top:0;width:200px;height:400px;margin:0;background:#fff;z-index:2147483647}' +
-  '#vergleich-chips .dokufix-chip{position:absolute;left:20px;color:#000 !important;background:#fff !important}';
+  '#vergleich-chips .dokufix-chip{position:absolute;left:20px;color:#000 !important;background:#fff !important}' +
+  '#vergleich-chips .dokufix-chip::before{color:#000 !important}';
 // Two marks count as different shapes from this many differing pixels on. A
 // circle and a square of 8 px differ in their four corners, about 14 pixels.
 const MARK_MIN_DIFFERENCE = 8;
@@ -584,7 +585,7 @@ const chipFacts = page => page.evaluate(() => {
       linked: !!chip.closest('a[href]'), underlined: /underline/.test(cs.textDecorationLine),
       // The word is placed against its chip: it scrolls with it wherever the chip stands.
       position: cs.position, wordInChip: !!word && word.offsetParent === chip,
-      mark: { content: ms.content, display: ms.display, width: parseFloat(ms.width), height: parseFloat(ms.height), image: ms.backgroundImage },
+      mark: { content: ms.content, display: ms.display, width: parseFloat(ms.width), height: parseFloat(ms.height), image: ms.backgroundImage, colour: ms.color },
       word: word ? word.textContent : null, wordFirst: !!word && word === chip.firstChild,
       // Hidden from the eye, not from a screen reader: it is rendered, it is
       // not visibility:hidden, and it takes no more room than one pixel.
@@ -666,9 +667,9 @@ async function assertChips(page, check, exp, keep){
   const labels = bad(c => [c.tag, c.visible, c.label], c => c.tag === 'SPAN' && c.visible && !!c.label && c.label.trim() === c.label);
   check('every chip shows its label: visible, the dot gone', labels.length === 0, labels.join(' | '));
   const styles = bad(c => [c.text, c.tint, c.radius, c.display, c.font, c.family, c.mark],
-    (c, want) => c.text === want.colour && c.tint === want.tint && c.radius === '10px' && c.display === 'inline-block' && c.font === '11px 400 uppercase' && /monospace/.test(c.family) &&
+    (c, want) => c.text === want.text && c.mark.colour === want.colour && c.tint === want.tint && c.radius === '10px' && c.display === 'inline-block' && c.font === '11px 400 uppercase' && /monospace/.test(c.family) &&
       (c.mark.content === '""' || c.mark.content === "''") && c.mark.display === 'inline-block' && c.mark.width >= 8 && c.mark.height >= 8 && c.mark.image === 'none');
-  check('every chip is styled: a pill in small capitals of the monospace stack, label and mark in the colour of its class on its tint, the mark drawn without an image', styles.length === 0, styles.join(' | '));
+  check('every chip is styled: a pill in small capitals of the monospace stack, the label in the dark shade of its class and the mark in its colour on its tint, the mark drawn without an image', styles.length === 0, styles.join(' | '));
   const words = bad(c => [c.word, c.wordFirst, c.wordRendered, c.wordHidden, c.wordBox, c.wordCase],
     (c, want) => c.word === want.word + ': ' && c.wordFirst && c.wordRendered && c.wordHidden && c.wordCase === 'none');
   check('every chip names its colour as text for assistive technology: before the label, rendered, and not visible', words.length === 0, words.join(' | '));

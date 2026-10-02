@@ -284,7 +284,10 @@ const luminance = hex => {
 };
 const contrast = (a, b) => { const x = luminance(a), y = luminance(b); return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05); };
 
-test('each colour has its rule: text in a colour of the callouts\' palette or grey, on a tint, contrast at least 4.5 : 1', () => {
+// The label is a darker shade than the mark, so that it reads well at 11 px
+// (Ben, 2026-10-02): at least 6.5 : 1 on its tint. The mark keeps the colour of
+// the callouts' palette, grey its own, at least 4.5 : 1.
+test('each colour has its rule: the label dark on a tint, contrast at least 6.5 : 1; the mark in a colour of the callouts\' palette or grey, at least 4.5 : 1', () => {
   const palette = { green: '#1a7f37', yellow: '#9a6700', red: '#cf222e', blue: '#0969da' };
   const tints = new Set();
   for (const [, colour] of COLOURS){
@@ -292,24 +295,30 @@ test('each colour has its rule: text in a colour of the callouts\' palette or gr
     assert.ok(rule, colour + ': a rule');
     assert.match(rule.color || '', /^#[0-9a-f]{6}$/, colour + ': a text colour');
     assert.match(rule.background || '', /^#[0-9a-f]{6}$/, colour + ': a background');
+    const mark = ruleOf(docCss, '.dokufix-doc .dokufix-chip-' + colour + '::before');
+    assert.ok(mark, colour + ': a rule for its mark');
+    assert.match(mark.color || '', /^#[0-9a-f]{6}$/, colour + ': a colour of the mark');
     if (palette[colour]){
-      assert.equal(rule.color, palette[colour], colour + ': the colour of the callouts\' palette');
+      assert.equal(mark.color, palette[colour], colour + ': the mark has the colour of the callouts\' palette');
       assert.ok(docCss.includes('border-left-color:' + palette[colour]), colour + ': a callout has that colour');
     }
     const ratio = contrast(rule.color, rule.background);
-    assert.ok(ratio >= 4.5, colour + ': contrast ' + ratio.toFixed(2) + ' : 1');
+    assert.ok(ratio >= 6.5, colour + ': contrast of the label ' + ratio.toFixed(2) + ' : 1');
+    assert.ok(luminance(rule.color) < luminance(mark.color), colour + ': the label is darker than the mark');
+    const markRatio = contrast(mark.color, rule.background);
+    assert.ok(markRatio >= 4.5, colour + ': contrast of the mark ' + markRatio.toFixed(2) + ' : 1');
     tints.add(rule.background);
   }
   assert.equal(tints.size, 5, 'five different tints');
   // A chip without a colour class does not exist, but the base rule is readable too.
   const base = ruleOf(docCss, '.dokufix-doc .dokufix-chip');
-  assert.ok(contrast(base.color, base.background) >= 4.5);
+  assert.ok(contrast(base.color, base.background) >= 6.5);
 });
 test('each colour has a mark of its own shape, drawn in the styles: no font, no image', () => {
   const base = ruleOf(docCss, '.dokufix-doc .dokufix-chip::before');
   assert.ok(base, 'the mark is the ::before of the chip');
   assert.equal(base.content, '""', 'the mark is no character of a font');
-  assert.equal(base.background, 'currentColor', 'the mark has the colour of the label');
+  assert.equal(base.background, 'currentColor', 'the mark is filled with its own colour, which each colour\'s rule sets');
   const shapes = new Map();
   for (const [, colour] of COLOURS){
     const own = ruleOf(docCss, '.dokufix-doc .dokufix-chip-' + colour + '::before') || {};
