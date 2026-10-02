@@ -35,6 +35,22 @@
 // the document and to the demo text, and the script is the one of the file
 // under test, byte for byte, in both generations.
 //
+// And it compares each saved file with the file under test as a whole. A save
+// clones the running page, so whatever the page gained while it ran can end up
+// in the file: an element a library appended, a text a state left behind. A
+// saved file is the browser's serialisation of that clone, so its text is not
+// the built file's even when nothing leaked (hidden becomes hidden="", the line
+// breaks around <html> and </body> move). So both files are opened with scripts
+// switched off and read back from the DOM, which gives two texts in the same
+// form. They must be equal apart from the differences in ALLOWED, each of which
+// is listed there with its reason. Anything else fails the run and is shown.
+// As a control the run adds one element to a copy of the first generation and
+// expects the comparison to report it.
+//
+// Before the second save the run switches heading numbering on. It travels
+// with a saved file, which is one of the allowed differences, and the second
+// generation has to open numbered.
+//
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
 // The version description contains "<!-- <script>" and "</script>".
@@ -124,6 +140,15 @@ function firstDifference(got, want){
     JSON.stringify(got.slice(i, i + 40)) + ', expected ' + JSON.stringify(want.slice(i, i + 40));
 }
 const same = (scope, name, got, want) => check(scope, name, got === want, got === want ? '' : firstDifference(got, want));
+// The same for two long texts: with what stands in front of the difference,
+// enough to see which element it is in.
+function differenceInContext(got, want){
+  let i = 0;
+  while (i < got.length && i < want.length && got[i] === want[i]) i++;
+  const from = Math.max(0, i - 120);
+  return 'lengths ' + got.length + ' and ' + want.length + ', first difference at ' + i + ', after ' + JSON.stringify(got.slice(from, i)) +
+    ': saved file has ' + JSON.stringify(got.slice(i, i + 160)) + ', built file has ' + JSON.stringify(want.slice(i, i + 160));
+}
 
 // ---------- the page, through its DOM ----------
 // Opens a file in a context of its own and waits until init and the first
@@ -145,6 +170,7 @@ const state = page => page.evaluate(() => ({
   h1: (document.querySelector('#preview h1') || { textContent: '' }).textContent,
   version: document.getElementById('version-btn').textContent,
   dirty: document.body.classList.contains('is-dirty'),
+  numbered: document.body.classList.contains('numbered'),
 }));
 // Presses a button that ends in a render, and waits for the render: a marker
 // put into the rail is gone when the rail has been rebuilt.
@@ -157,11 +183,13 @@ async function pressAndWaitForRender(page, selector){
   await page.click(selector);
   await page.waitForFunction(() => !document.getElementById('speichern-render-pending'), null, { timeout: 90000 });
 }
-// Types a document into the editor, renders it and saves it as "Mit Editor".
-async function editAndSave(page, text, file){
+// Types a document into the editor, renders it and saves it as "Mit Editor";
+// with numbering, heading numbering is switched on before the save.
+async function editAndSave(page, text, file, numbering = false){
   if (await page.evaluate(() => document.body.classList.contains('mode-view'))) await page.click('#edit-btn');
   await page.fill('#source', text);
   await pressAndWaitForRender(page, '#render-btn');
+  if (numbering) await page.click('#numbering-btn');
   await page.click('#download-btn');
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 60000 }),
@@ -194,6 +222,52 @@ function appScript(html){
   const start = html.indexOf('<script>'), end = html.lastIndexOf('</script>');
   return start < 0 || end < start ? null : html.slice(start + '<script>'.length, end);
 }
+// ---------- a saved file, as the browser reads it ----------
+// What a saved file may differ in from the built file, and why. Each entry
+// names elements and what is set to the same value in both files before they
+// are compared. Nothing is on this list without a reason: a difference that
+// is not here is a leftover, and the place to remove it is the clean-up of the
+// clone in src/app/downloads/with-editor.js.
+const ALLOWED = [
+  { why: 'the data blocks are what a save writes: history, demo text, document, images',
+    selector: 'script[type="application/json"]', text: '' },
+  { why: 'the version mark shows the version the file was saved as',
+    selector: '#version-btn', text: '' },
+  { why: 'heading numbering travels with a saved file (decision of 2026-10-02): the class on <body>',
+    selector: 'body', removeClass: 'numbered' },
+  { why: 'heading numbering, as above: the state of its button',
+    selector: '#numbering-btn', removeClass: 'toggle-on', attribute: ['aria-pressed', 'false'] },
+];
+// A file as the browser serialises it with scripts off, the allowed differences
+// taken out; and what the version mark said before that.
+async function serialised(browser, file){
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(pathToFileURL(file).href);
+    return await page.evaluate(allowed => {
+      const mark = document.getElementById('version-btn');
+      const versionMark = mark ? mark.textContent : null;
+      for (const a of allowed){
+        for (const el of document.querySelectorAll(a.selector)){
+          if ('text' in a) el.textContent = a.text;
+          if (a.removeClass) el.classList.remove(a.removeClass);
+          if (a.attribute) el.setAttribute(a.attribute[0], a.attribute[1]);
+        }
+      }
+      return { html: '<!DOCTYPE html>\n' + document.documentElement.outerHTML, versionMark };
+    }, ALLOWED);
+  } finally {
+    await context.close();
+  }
+}
+async function checkAgainstBuiltFile(scope, browser, file, built, version){
+  const saved = await serialised(browser, file);
+  check(scope, 'file: the version mark reads v' + version, saved.versionMark === 'v' + version, JSON.stringify(saved.versionMark));
+  check(scope, 'file: apart from the ' + ALLOWED.length + ' listed differences it is the built file, as the browser serialises both',
+    saved.html === built.html, saved.html === built.html ? '' : differenceInContext(saved.html, built.html));
+}
+
 function checkSavedFile(scope, file, original, doc, demo, version){
   const html = fs.readFileSync(file, 'utf8');
   let history = null, historyError = '';
@@ -224,6 +298,9 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
   const original = fs.readFileSync(opts.file, 'utf8');
   const browser = await BROWSERS[name]();
   try {
+    const built = await serialised(browser, opts.file);
+    check(name + ' file under test', 'read back with scripts off, it is a page with its script', built.html.length > 10000 && built.html.includes('id="dokufix-source"'), built.html.length + ' characters');
+
     // 1. the file under test
     let scope = name + ' file under test';
     let o = await open(browser, opts.file);
@@ -235,6 +312,13 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     checkSavedFile(name + ' generation 1', gen1, original, DOC_A, demo, 1);
+    await checkAgainstBuiltFile(name + ' generation 1', browser, gen1, built, 1);
+    // Control: the comparison has to notice an element that does not belong there.
+    const leftover = path.join(dir, 'generation-1-mit-rest.html');
+    const gen1Text = fs.readFileSync(gen1, 'utf8');
+    fs.writeFileSync(leftover, gen1Text.slice(0, gen1Text.lastIndexOf('</body>')) + '<div class="rest"></div>' + gen1Text.slice(gen1Text.lastIndexOf('</body>')));
+    const withLeftover = await serialised(browser, leftover);
+    check(name + ' generation 1', 'control: a copy with one element more is reported as different', withLeftover.html !== built.html && withLeftover.html.includes('<div class="rest">'));
 
     // 2. first generation
     scope = name + ' generation 1';
@@ -243,10 +327,12 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     same(scope, 'opened with fresh storage, the editor holds document A', s.source, DOC_A);
     check(scope, 'the preview shows document A', s.h1 === 'Dokument A', JSON.stringify(s.h1));
     check(scope, 'version v1, not marked as changed', s.version === 'v1' && !s.dirty, JSON.stringify({ version: s.version, dirty: s.dirty }));
-    await editAndSave(o.page, DOC_B, gen2);
+    check(scope, 'headings not numbered', !s.numbered);
+    await editAndSave(o.page, DOC_B, gen2, true);
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     checkSavedFile(name + ' generation 2', gen2, original, DOC_B, demo, 2);
+    await checkAgainstBuiltFile(name + ' generation 2', browser, gen2, built, 2);
 
     // 3. second generation
     scope = name + ' generation 2';
@@ -255,6 +341,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     same(scope, 'opened with fresh storage, the editor holds document B', s.source, DOC_B);
     check(scope, 'the preview shows document B', s.h1 === 'Dokument B', JSON.stringify(s.h1));
     check(scope, 'version v2, not marked as changed', s.version === 'v2' && !s.dirty, JSON.stringify({ version: s.version, dirty: s.dirty }));
+    check(scope, 'heading numbering, switched on before the save, came along', s.numbered);
     await o.page.click('#edit-btn');
     await pressAndWaitForRender(o.page, '#reset-btn');
     s = await state(o.page);
