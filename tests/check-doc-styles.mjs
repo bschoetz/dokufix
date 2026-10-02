@@ -15,8 +15,9 @@
 //
 //   doc.css      the block
 //   app.css      the app stylesheet
-//   app.js       the export frame (READONLY_FRAME_CSS), the downloadReadonly…
-//                functions and every <style> they write
+//   every .js    under src/, the script and its modules: the export frame
+//                (READONLY_FRAME_CSS), the downloadReadonly… functions and
+//                every <style> they write, in whichever module they stand
 //   index.html   the page: the block's element with its slot, the preview
 //
 // and the built file for the one thing only it can show: that the block
@@ -98,7 +99,13 @@ function source(name){
   const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
   return { name: path.join(path.basename(srcDir), name), text: text === null ? '' : text, missing: text === null };
 }
-const page = source('index.html'), docCss = source('doc.css'), appCss = source('app.css'), script = source('app.js');
+const page = source('index.html'), docCss = source('doc.css'), appCss = source('app.css');
+// The script is src/app.js and the modules it imports. Every .js under src/ is
+// read, in a fixed order, and a problem names the module it was found in.
+const entry = source('app.js');
+const scripts = (fs.existsSync(srcDir) ? fs.readdirSync(srcDir, { recursive: true }) : [])
+  .filter(name => name.endsWith('.js')).sort().map(source);
+const allScripts = path.join(path.basename(srcDir), '**', '*.js');
 const lineOf = (text, offset) => text.slice(0, offset).split('\n').length;
 const at = (src, offset) => src.name + ' line ' + lineOf(src.text, offset);
 
@@ -175,20 +182,26 @@ for (const m of page.text.matchAll(STYLE_RE)){
   const css = m[2].replace(/\{\{slot:[^{}]*\}\}/g, s => ' '.repeat(s.length));
   sheets.push({ kind: 'a <style> in the page', css, base, src: page });
 }
-for (const m of script.text.matchAll(STYLE_RE)){
-  // ${…} is a template placeholder inside a script, not CSS.
-  const css = m[2].replace(/\$\{[^}]*\}/g, s => ' '.repeat(s.length));
-  sheets.push({ kind: 'a <style> written by the script', css, base: m.index + m[0].indexOf('>') + 1, src: script });
+let frameFound = false;
+for (const script of scripts){
+  for (const m of script.text.matchAll(STYLE_RE)){
+    // ${…} is a template placeholder inside a script, not CSS.
+    const css = m[2].replace(/\$\{[^}]*\}/g, s => ' '.repeat(s.length));
+    sheets.push({ kind: 'a <style> written by the script', css, base: m.index + m[0].indexOf('>') + 1, src: script });
+  }
+  const frame = script.text.match(new RegExp('\\b' + FRAME_CONST + '\\s*=\\s*`([\\s\\S]*?)`'));
+  if (frame){
+    frameFound = true;
+    sheets.push({ kind: 'the export frame (' + FRAME_CONST + ')', css: frame[1], base: frame.index + frame[0].indexOf('`') + 1, src: script, frame: true });
+  }
 }
-const frame = script.text.match(new RegExp('\\b' + FRAME_CONST + '\\s*=\\s*`([\\s\\S]*?)`'));
-if (frame) sheets.push({ kind: 'the export frame (' + FRAME_CONST + ')', css: frame[1], base: frame.index + frame[0].indexOf('`') + 1, src: script, frame: true });
 
 // ---------- checks ----------
 const results = [];
 function check(title, problems){
   results.push({ title, problems });
 }
-const missing = [page, docCss, appCss, script].filter(s => s.missing).map(s => s.name + ' not found');
+const missing = [page, docCss, appCss, entry].filter(s => s.missing).map(s => s.name + ' not found');
 
 // 1
 {
@@ -269,14 +282,15 @@ const namesIn = sel => [
       }
     }
   }
-  if (!frame) problems.push(script.name + ': the export frame ' + FRAME_CONST + ' was not found');
+  if (!frameFound) problems.push(allScripts + ': the export frame ' + FRAME_CONST + ' was not found');
   check('no document rule outside the block', problems);
 }
 
 // 4 and 5 need the export functions. A function ends at a line that is exactly
 // "}": the "})();" inside an export's template is not the end.
-const exportFns = [...script.text.matchAll(/^(?:async\s+)?function\s+(downloadReadonly\w*)\s*\([^)]*\)\s*\{[\s\S]*?^\}$/gm)]
-  .map(m => ({ name: m[1], body: m[0], offset: m.index }));
+const exportFns = scripts.flatMap(script =>
+  [...script.text.matchAll(/^(?:export\s+)?(?:async\s+)?function\s+(downloadReadonly\w*)\s*\([^)]*\)\s*\{[\s\S]*?^\}$/gm)]
+    .map(m => ({ name: m[1], body: m[0], offset: m.index, src: script })));
 
 // 4
 {
@@ -288,7 +302,7 @@ const exportFns = [...script.text.matchAll(/^(?:async\s+)?function\s+(downloadRe
   for (const fn of exportFns){
     const main = fn.body.match(/<main\b[^>]*>/);
     if (!main || !new RegExp('\\bclass="[^"]*\\b' + DOC_CLASS + '\\b').test(main[0])){
-      problems.push(at(script, fn.offset) + ', ' + fn.name + '(): its <main> does not carry class "' + DOC_CLASS + '"');
+      problems.push(at(fn.src, fn.offset) + ', ' + fn.name + '(): its <main> does not carry class "' + DOC_CLASS + '"');
     }
   }
   check('the content containers carry class "' + DOC_CLASS + '"', problems);
@@ -297,16 +311,17 @@ const exportFns = [...script.text.matchAll(/^(?:async\s+)?function\s+(downloadRe
 // 5
 {
   const problems = [];
-  if (!exportFns.length) problems.push(script.name + ': no downloadReadonly…() function found');
-  if (!new RegExp('function\\s+' + HELPER + '\\s*\\(').test(script.text)) problems.push(script.name + ': the helper ' + HELPER + '() is missing');
-  else if (!new RegExp('function\\s+' + HELPER + '\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?' + BLOCK_ID + '[\\s\\S]*?^\\}$', 'm').test(script.text)){
-    problems.push(script.name + ': ' + HELPER + '() does not read #' + BLOCK_ID);
+  if (!exportFns.length) problems.push(allScripts + ': no downloadReadonly…() function found');
+  const helperIn = scripts.find(script => new RegExp('function\\s+' + HELPER + '\\s*\\(').test(script.text));
+  if (!helperIn) problems.push(allScripts + ': the helper ' + HELPER + '() is missing');
+  else if (!new RegExp('function\\s+' + HELPER + '\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?' + BLOCK_ID + '[\\s\\S]*?^\\}$', 'm').test(helperIn.text)){
+    problems.push(helperIn.name + ': ' + HELPER + '() does not read #' + BLOCK_ID);
   }
   for (const fn of exportFns){
     const styles = [...fn.body.matchAll(/<style\b[^>]*>((?:(?!<style\b)[\s\S])*?)<\/style>/g)].filter(m => !/<noscript>\s*$/.test(fn.body.slice(0, m.index)));
     const uses = styles.some(m => m[1].trim() === '${' + HELPER + '()}');
-    if (!uses) problems.push(at(script, fn.offset) + ', ' + fn.name + '(): does not embed the document styles; its template needs <style>${' + HELPER + '()}</style>');
-    else if (styles.length > 1) problems.push(at(script, fn.offset) + ', ' + fn.name + '(): has a second <style> beside ${' + HELPER + '()}');
+    if (!uses) problems.push(at(fn.src, fn.offset) + ', ' + fn.name + '(): does not embed the document styles; its template needs <style>${' + HELPER + '()}</style>');
+    else if (styles.length > 1) problems.push(at(fn.src, fn.offset) + ', ' + fn.name + '(): has a second <style> beside ${' + HELPER + '()}');
   }
   check('every read-only export uses ' + HELPER + '()', problems);
 }
@@ -314,7 +329,7 @@ const exportFns = [...script.text.matchAll(/^(?:async\s+)?function\s+(downloadRe
 // 6
 {
   const problems = [];
-  for (const src of [script, page]){
+  for (const src of [...scripts, page]){
     for (const m of src.text.matchAll(new RegExp('\\b' + OLD_TWIN + '\\b', 'g'))) problems.push(at(src, m.index) + ': ' + OLD_TWIN + ' is back');
   }
   check(OLD_TWIN + ' is gone', problems);

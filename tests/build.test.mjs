@@ -62,9 +62,11 @@ test('--check passes on the committed file', () => {
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /up to date/);
 });
-for (const name of ['doc.css', 'app.css', 'app.js', 'demo.md', 'index.html']){
+// app/gzip.js stands for the modules under src/app/: the script is bundled from
+// app.js and everything it imports.
+for (const name of ['doc.css', 'app.css', 'app.js', 'app/gzip.js', 'demo.md', 'index.html']){
   test('--check fails when ' + name + ' changed and dist/ was not rebuilt', () => {
-    const addition = { 'doc.css': '.dokufix-doc h6{color:red}\n', 'app.css': '.x{color:red}\n', 'app.js': 'console.log("x");\n', 'demo.md': 'Ein Satz mehr.\n', 'index.html': '<!-- x -->\n' }[name];
+    const addition = { 'doc.css': '.dokufix-doc h6{color:red}\n', 'app.css': '.x{color:red}\n', 'app.js': 'console.log("x");\n', 'app/gzip.js': 'console.log("x");\n', 'demo.md': 'Ein Satz mehr.\n', 'index.html': '<!-- x -->\n' }[name];
     const before = fs.readFileSync(committed);
     const r = build({ [name]: original(name) + addition }, ['--check'], committed);
     assert.equal(r.status, 1, r.stdout);
@@ -76,6 +78,29 @@ test('--check fails when the built file is missing', () => {
   const r = build({}, ['--check']);
   assert.equal(r.status, 1, r.stdout);
   assert.match(r.stderr, /is missing/);
+  assert.equal(r.html, null);
+});
+
+// ---------- the script's modules ----------
+// esbuild links the modules while it bundles them. An import that leads nowhere
+// and an assignment to an imported name are errors there, and the build ends
+// with the module and the name. What esbuild does not see is in lint.test.mjs.
+test('a module imports a name the other module does not export: exit 1, module and name named, nothing written', () => {
+  const r = build({ 'app/rail.js': 'import { nichtDa } from \'./gzip.js\';\n' + original('app/rail.js') + 'export function probe(){ return nichtDa; }\n' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /src\/app\/rail\.js:1:\d+: No matching export in "[^"]*src\/app\/gzip\.js" for import "nichtDa"/);
+  assert.equal(r.html, null);
+});
+test('a module imports a file that does not exist: exit 1, module and file named, nothing written', () => {
+  const r = build({ 'app/rail.js': 'import { nichtDa } from \'./gibt-es-nicht.js\';\n' + original('app/rail.js') + 'export function probe(){ return nichtDa; }\n' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /src\/app\/rail\.js:1:\d+: Could not resolve "\.\/gibt-es-nicht\.js"/);
+  assert.equal(r.html, null);
+});
+test('a module assigns to a name it imported: exit 1, module and name named, nothing written', () => {
+  const r = build({ 'app/editor.js': original('app/editor.js') + 'export function probe(){ sourceEl = null; }\n' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /src\/app\/editor\.js:\d+:\d+: Cannot assign to import "sourceEl"/);
   assert.equal(r.html, null);
 });
 
@@ -138,10 +163,13 @@ test('"</script" in the minified script: refused, with the reason', () => {
 test('"<!--" in a string, a template and a regular expression: built without it, same values', () => {
   const probe = 'globalThis.probe = [\'<!-- a -->\', `<!-- ${1 + 1} -->`, "<" + "!--", /<!--\\s*(\\w+)/u.exec("x <!-- dokufix: y -->")[1], "x <!-- y".replace(/<!--/gu, "#")];\n';
   // In the page's own script, in front of the export templates: it builds, and no "<!--" is left.
-  const whole = build({ 'app.js': probe + original('app.js') });
+  // In the module the entry imports first, because what stands in app.js itself
+  // is bundled behind every module, so behind the templates.
+  const whole = build({ 'app/idb.js': probe + original('app/idb.js') });
   assert.equal(whole.status, 0, whole.stderr);
   const app = whole.html.slice(whole.html.indexOf('<script>') + '<script>'.length, whole.html.lastIndexOf('</script>'));
   assert.ok(app.length > 10000 && app.includes('\\x3c!--'), 'the script was found, with the added lines in it');
+  assert.ok(app.indexOf('\\x3c!--') < app.indexOf('<script'), 'the added lines stand in front of the export templates');
   assert.ok(!app.includes('<!--'), 'no "<!--" inside the script');
   // On its own, where it can be run: the values are what the source says.
   const r = build({ 'app.js': probe });

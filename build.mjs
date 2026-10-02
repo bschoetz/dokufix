@@ -12,7 +12,8 @@
 //
 //   {{slot:doc.css}}   document styles, minified, inside <style id="dokufix-doc-css">
 //   {{slot:app.css}}   editor styles, minified
-//   {{slot:app.js}}    the script: bundled into one IIFE, minified
+//   {{slot:app.js}}    the script: src/app.js with the modules it imports,
+//                      bundled into one IIFE, minified
 //   {{slot:demo.md}}   the demo text, as {"text": …} inside the #dokufix-demo block
 //
 // The page's own markup goes into the built file as it is written.
@@ -32,7 +33,9 @@
 //   - the minified script contains "</script" or "<!--", or a minified stylesheet
 //     "</style": each would break its element, in the built file and in every
 //     file saved from it;
-//   - esbuild reports an error.
+//   - esbuild reports an error, such as a module that imports a name the other
+//     module does not export, or a file that is not there, or that assigns to a
+//     name it imported.
 //
 // Two builds of the same sources are byte-identical, which is what --check and
 // the committed dist/dokufix.html rely on: no time, no path and no random value
@@ -82,8 +85,10 @@ export function assemble(template, parts){
 
 function printWarnings(warnings, file){
   for (const w of warnings){
-    const at = w.location ? ':' + w.location.line + ':' + w.location.column : '';
-    console.error('warning: ' + file + at + ': ' + w.text);
+    // The location names the file the warning is in: for the script that is the
+    // module, not the entry it was bundled from.
+    const at = w.location ? w.location.file + ':' + w.location.line + ':' + w.location.column : file;
+    console.error('warning: ' + at + ': ' + w.text);
   }
 }
 
