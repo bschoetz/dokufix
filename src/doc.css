@@ -250,9 +250,10 @@
      outlines the chip where the system replaces the colours (forced-colors).
      The negative margin takes padding and border out of the height the line
      reckons with: without it a chip makes a table row or a heading up to a
-     pixel higher than the same line without one. */
+     pixel higher than the same line without one.
+     The chip is positioned for the hidden text in it, see below. */
   .dokufix-doc .dokufix-chip{
-    display:inline-block;vertical-align:middle;
+    position:relative;display:inline-block;vertical-align:middle;
     margin:-2px 0;padding:1px 8px;border:1px solid transparent;border-radius:10px;
     font:400 11px/1.3 ui-monospace,monospace;
     letter-spacing:.06em;text-transform:uppercase;
@@ -286,9 +287,16 @@
     width:10px;height:10px;margin:0 5px -1px -1px;
     clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
   }
+  /* A chip in a link. The link's underline does not reach it: the chip is a
+     box of its own, and it keeps its colour. So it carries the underline
+     itself, or nothing would say that it leads somewhere. */
+  .dokufix-doc a .dokufix-chip{text-decoration:underline}
   /* The name of the colour, for assistive technology: in the markup, read
      aloud, not seen. Not display:none, which would hide it from a screen
-     reader as well. It keeps its case: the capitals are the chip's look. */
+     reader as well. It keeps its case: the capitals are the chip's look.
+     It is placed against its chip, which is positioned for that. Placed
+     against the page it would not scroll with the preview pane of the editor,
+     and would make the page behind the pane as high as the document. */
   .dokufix-doc .dokufix-chip-status{
     position:absolute;width:1px;height:1px;overflow:hidden;
     clip-path:inset(50%);white-space:nowrap;text-transform:none;

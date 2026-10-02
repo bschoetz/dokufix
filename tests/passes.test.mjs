@@ -291,14 +291,23 @@ test('the anchors of headings with a chip are the ones they had as code spans, a
   const markup = WITH_CHIP_HEADINGS +
     // a heading with a footnote marker, as marked-footnote emits it, and two alike
     '<h2>Frist<sup><a id="footnote-ref-quelle" href="#footnote-quelle" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></h2>\n' +
-    '<h3>Größe und Maß</h3>\n<h3>Größe und Maß</h3>\n<h2><code>Code</code> im Titel</h2>\n';
+    '<h3>Größe und Maß</h3>\n<h3>Größe und Maß</h3>\n<h2><code>Code</code> im Titel</h2>\n' +
+    // A status that touches the text before it: "## Bestellung:`🟢 Live`",
+    // "## Stand`🟢 Live`" and "## `🟢 Live`/`🔴 Tot`". The blank that kept the
+    // two words apart stood inside the code span, behind the dot.
+    '<h2>Bestellung:<code>🟢 Live</code></h2>\n<h2>Stand<code>🟢 Live</code></h2>\n<h2><code>🟢 Live</code>/<code>🔴 Tot</code></h2>\n';
   const before = rootWith(markup);
   assignHeadingIds(before);
   const after = rootWith(markup);
   buildChips(after);
   assignHeadingIds(after);
   assert.deepEqual(documentHeadings(after).map(h => h.id), documentHeadings(before).map(h => h.id));
-  assert.deepEqual(documentHeadings(after).map(h => h.id).slice(6), ['frist1', 'groesse-und-mass', 'groesse-und-mass-2', 'code-im-titel']);
+  assert.deepEqual(documentHeadings(after).map(h => h.id).slice(6),
+    ['frist1', 'groesse-und-mass', 'groesse-und-mass-2', 'code-im-titel', 'bestellung-live-2', 'stand-live', 'live-tot']);
+  // Their entries keep the words apart as well, with one blank; a heading
+  // that has a blank before its chip does not get a second one.
+  assert.deepEqual(documentHeadings(after).map(headingLabelText).slice(10), ['Bestellung: Live', 'Stand Live', 'Live/ Tot']);
+  assert.deepEqual(documentHeadings(after).map(headingLabelText).slice(1, 3), ['Bestellung Live', 'Live']);
 });
 test('the table of contents sees chips only when their pass ran first: that is the order in render.js', async () => {
   const root = rootWith(WITH_CHIP_HEADINGS);

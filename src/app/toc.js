@@ -90,11 +90,18 @@ function buildTocHtml(headings, maxLevel){
 // assistive technology (chips.js). That text is left out as well: the entry of
 // "## Bestellung `🟢 Live`" reads "Bestellung Live", and its anchor is the one
 // of that text. assignHeadingIds() asks here too.
-const NOT_LABEL = '.dokufix-fn-preview, .' + CHIP_STATUS_CLASS;
+// Where the word stood, a chip that touches the text before it gets a blank:
+// "## Bestellung:`🟢 Live`" reads "Bestellung: Live". As a code span it held
+// that blank itself, behind the dot, and the anchor was made with it; without
+// it the anchor of such a heading would change and its entry would run the
+// two words together. A chip that has a blank before it, or opens the
+// heading, gets none.
 export function headingLabelText(h){
   const clone = h.cloneNode(true);
-  clone.querySelectorAll(NOT_LABEL).forEach(n => n.remove());
-  return clone.textContent;
+  clone.querySelectorAll('.dokufix-fn-preview').forEach(n => n.remove());
+  // U+0000 marks where a word stood; a parsed document never holds one.
+  clone.querySelectorAll('.' + CHIP_STATUS_CLASS).forEach(n => { n.textContent = '\0'; });
+  return clone.textContent.replace(/(^|\s)\0/g, '$1').replace(/\0/g, ' ');
 }
 
 // Document pass: the list is static HTML and travels into every export. What

@@ -206,7 +206,7 @@ const NARROW = 820;
 function expectationsFor(md){
   const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
                 callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0,
-                tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [] };
+                tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [], linkedChips: 0 };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -256,6 +256,8 @@ function expectationsFor(md){
       const status = readChip(spanText(m[2]));
       if (status) (inFootnote ? exp.footnoteChips : exp.chips).push({ colour: status.colour, label: status.label });
     }
+    // A status that is the text of a link, "[`🔵 im Test`](…)".
+    for (const m of line.matchAll(/\[(`+)(.+?)\1\]\(/g)) if (readChip(spanText(m[2]))) exp.linkedChips++;
     const heading = line.match(/^(#{1,6})[ \t]+(.+?)[ \t]*$/);
     if (heading){
       let chips = 0;
@@ -579,6 +581,9 @@ const chipFacts = page => page.evaluate(() => {
       visible: chip.checkVisibility({ visibilityProperty: true }) && r.width > 0 && r.height > 0,
       text: cs.color, tint: cs.backgroundColor, radius: cs.borderTopLeftRadius, display: cs.display,
       font: cs.fontSize + ' ' + cs.fontWeight + ' ' + cs.textTransform, family: cs.fontFamily,
+      linked: !!chip.closest('a[href]'), underlined: /underline/.test(cs.textDecorationLine),
+      // The word is placed against its chip: it scrolls with it wherever the chip stands.
+      position: cs.position, wordInChip: !!word && word.offsetParent === chip,
       mark: { content: ms.content, display: ms.display, width: parseFloat(ms.width), height: parseFloat(ms.height), image: ms.backgroundImage },
       word: word ? word.textContent : null, wordFirst: !!word && word === chip.firstChild,
       // Hidden from the eye, not from a screen reader: it is rendered, it is
@@ -667,6 +672,14 @@ async function assertChips(page, check, exp, keep){
   const words = bad(c => [c.word, c.wordFirst, c.wordRendered, c.wordHidden, c.wordBox, c.wordCase],
     (c, want) => c.word === want.word + ': ' && c.wordFirst && c.wordRendered && c.wordHidden && c.wordCase === 'none');
   check('every chip names its colour as text for assistive technology: before the label, rendered, and not visible', words.length === 0, words.join(' | '));
+  const placed = bad(c => [c.position, c.wordInChip], c => c.position === 'relative' && c.wordInChip);
+  check('the hidden text of every chip is placed against its chip, not against the page', placed.length === 0, placed.join(' | '));
+  // A chip has its own colour and is a box of its own, so the underline of a
+  // link around it does not reach it. It has to carry one itself.
+  const links = shown.filter(c => c.linked !== c.underlined);
+  check('a chip in a link is underlined, and no other chip is: ' + exp.linkedChips + ' in the document',
+    links.length === 0 && shown.filter(c => c.linked).length === exp.linkedChips,
+    shown.filter(c => c.linked).length + ' chips in a link; wrong: ' + short(links));
   // What a screen reader is handed, as far as a run can ask: the accessible
   // text of the first chip of each colour, as Playwright reads it from the page.
   const colours = Object.keys(CHIPS).filter(colour => shown.some(c => c.colour === colour));
@@ -1039,6 +1052,32 @@ async function assertVariant(launch, file, key, exp, results, label){
     if (key === 'mit-editor'){
       // --- edit mode: the link is one of the toolbar's actions
       await page.click('#edit-btn');
+      // --- edit mode: the preview scrolls inside its pane, and the page does
+      // not scroll at all. Something of the document that is placed against
+      // the page instead of against its own place in the preview, such as a
+      // hidden text that is position:absolute with no positioned ancestor,
+      // does not scroll with the preview and makes the page higher than the
+      // window.
+      // Measured with the footnote previews taken out of the page. They are
+      // placed that way themselves (anchor positioning, the host is not
+      // positioned), and with them the page of the editor can be scrolled:
+      // so it is on the built file before status chips, with the demo text,
+      // in both browsers. That is theirs to fix; the run says so in a note
+      // and holds everything else to the rule.
+      const pageSize = () => page.evaluate(() => {
+        const p = document.getElementById('preview'), d = document.documentElement;
+        p.scrollTop = p.scrollHeight;
+        const out = { page: d.scrollHeight + ' x ' + d.scrollWidth, window: d.clientHeight + ' x ' + d.clientWidth, previewScrolledBy: p.scrollTop,
+                      scrollable: d.scrollHeight > d.clientHeight || d.scrollWidth > d.clientWidth };
+        p.scrollTop = 0;
+        return out;
+      });
+      const withPreviews = await pageSize();
+      const noPreviews = await page.addStyleTag({ content: '.dokufix-fn-preview{display:none !important}' });
+      const scroll = await pageSize();
+      await noPreviews.evaluate(el => el.remove());
+      check('edit mode, the preview scrolled to its end: the page itself cannot be scrolled (footnote previews taken out)', !scroll.scrollable && scroll.previewScrolledBy > 0, JSON.stringify(scroll),
+        withPreviews.scrollable ? 'with the footnote previews in the page it can: page ' + withPreviews.page + ', window ' + withPreviews.window + ' (so it is without status chips too)' : '');
       const tf = await licenceFacts(page);
       const header = await page.evaluate(() => { const r = document.querySelector('header').getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
       check('edit mode: the link stands in the toolbar, visible, and the one of read mode is not shown',
