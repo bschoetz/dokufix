@@ -1,7 +1,9 @@
-// The values that more than one module assigns to. An imported name cannot be
-// assigned to, so they are the properties of one object: a module that reads or
-// writes one imports `state` and says state.currentVersion. A value that only
-// its own module assigns to stays a `let` there.
+// The values that a module other than the one they belong to assigns to: the
+// async init in src/app.js sets all of them, "Mit Editor" some. An imported
+// name cannot be assigned to, so they are the properties of one object: a
+// module that reads or writes one imports `state` and says
+// state.currentVersion. A value that only its own module assigns to stays a
+// `let` there.
 export const state = {
   demoText: '',   // the demo text, readable
   demoGz: '',     // the same as the demo block carried it gzipped, '' if it carried text
@@ -15,8 +17,6 @@ export const state = {
   storedSource: null,   // last source loaded from IDB (or null on fresh open)
 
   cleanBaseline: '',
-
-  mermaidId: 0,
 
   // Init gate — set true at end of the async IIFE. Until then, download
   // buttons (and any state-mutating user actions) are disabled so a click

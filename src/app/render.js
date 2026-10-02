@@ -1,10 +1,11 @@
 import { pruneAssetUrlCache, resolveAssetRefsInHtml } from './assets.js';
 import { sourceEl, previewEl } from './dom.js';
-import { state } from './state.js';
 import { splitFrontmatter, injectFrontmatterPanel } from './frontmatter.js';
 import { assignHeadingIds, processInlineToc } from './toc.js';
 import { attachFootnotePreviews, linkFootnoteReturnPaths } from './footnotes.js';
 import { buildRail } from './rail.js';
+
+let mermaidId = 0;
 
 export async function render() {
   const fm = splitFrontmatter(sourceEl.value);
@@ -42,7 +43,7 @@ export async function render() {
   previewEl.querySelectorAll('pre code.language-mermaid').forEach(block => {
     const div = document.createElement('div');
     div.className = 'mermaid';
-    div.id = 'mermaid-' + (++state.mermaidId);
+    div.id = 'mermaid-' + (++mermaidId);
     div.textContent = block.textContent;
     block.parentElement.replaceWith(div);
   });

@@ -5,7 +5,7 @@
 // The script is cut into modules, and esbuild bundles them without asking where
 // a name comes from: a name that a module neither declares nor imports is taken
 // for a global, and an import nothing uses is dropped unread. ESLint, with the
-// three rules of eslint.config.mjs, is the check for both. Each case copies
+// rules of eslint.config.mjs, is the check for both. Each case copies
 // src/, breaks one thing in the copy, and expects exit 1 with the module, the
 // line and the name. The sources themselves are never written to.
 
@@ -93,6 +93,15 @@ fails('a module imports a name it does not use',
 fails('a module imports a name it does not use, and the other module does not export it',
   { 'app/rail.js': "import { nichtDa } from './gzip.js';\n" + original('app/rail.js') },
   'app/rail.js', 1, "'nichtDa' is imported but never used", 'dokufix/no-unused-imports');
+
+// ---------- a namespace import ----------
+// With import * as x, esbuild only warns when x.name is not exported ("will
+// always be undefined"), writes the file and exits 0, and no-undef has nothing
+// to say about a member. So the form itself fails. (ESLint prints the message
+// without its last full stop.)
+fails('a module imports another as a namespace',
+  { 'app/rail.js': "import * as G from './gzip.js';\n" + original('app/rail.js') + 'export function probe(){ return G.nichtDa; }\n' },
+  'app/rail.js', 1, 'Import the names you use: import { a, b } from …. With import * as x, a member the other module does not export is undefined at run time and the build does not fail', 'no-restricted-syntax');
 
 // ---------- and only there ----------
 test('a function nobody calls, a parameter and a local nobody reads pass: the rule is about imports', () => {

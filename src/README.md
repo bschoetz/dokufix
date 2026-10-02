@@ -28,7 +28,7 @@ That file is built from the sources in this folder with one command (see *Build*
 
 | Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
 |---|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 70 765 B + libs | 72 799 B + libs |
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 70 753 B + libs | 72 787 B + libs |
 | **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 70 956 B | 106 743 B |
 | **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 200 B | 52 004 B |
 | **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 28 887 B | 48 158 B |
@@ -39,17 +39,17 @@ The built file beside the PoC, same run, same documents, same day:
 
 | | Demo text: PoC → built | Reference document: PoC → built |
 |---|---|---|
-| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 68 943 B | the same file |
-| `Mit Editor`, Chromium | 135 085 → 70 765 B | 137 119 → 72 799 B |
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 68 931 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 70 753 B | 137 119 → 72 787 B |
 | `nur-lesen`, Chromium | 71 052 → 70 956 B | 106 839 → 106 743 B |
 | `schlank`, Chromium | 35 296 → 35 200 B | 52 100 → 52 004 B |
 | `kompakt`, Chromium | 28 983 → 28 887 B | 48 254 → 48 158 B |
-| `Mit Editor`, Firefox | 135 069 → 70 749 B | 137 103 → 72 783 B |
+| `Mit Editor`, Firefox | 135 069 → 70 737 B | 137 103 → 72 771 B |
 | `nur-lesen`, Firefox | 71 138 → 71 042 B | 107 192 → 107 096 B |
 | `schlank`, Firefox | 35 536 → 35 440 B | 52 048 → 51 952 B |
 | `kompakt`, Firefox | 29 419 → 29 323 B | 48 134 → 48 038 B |
 
-The build takes 64 410 B out of the file itself and 64 320 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. (Before the script was split into modules it was 984 B more: see *The script's modules*.) Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+The build takes 64 422 B out of the file itself and 64 332 B out of every `Mit Editor` file; nearly all of it is the minifying of script and styles. (Before the script was split into modules it was 972 B more: see *The script's modules*.) Each read-only export loses 96 B: it embeds the document styles, and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B). Outside its `<style>` every read-only export is byte-identical to the one the PoC writes, in both browsers and for both documents. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -414,14 +414,14 @@ Until story 2.14 the script was one file of 2111 lines in which every function a
 
 **Four rules.**
 
-- *A module imports what it uses and exports what others need.* Nothing is shared as a global, and no `window.` or `globalThis.` property passes a value from one module to another. Imports are named (`import { render } from './render.js'`), never `import * as`: see *Lint*.
-- *Shared state is one object.* An imported name cannot be assigned to. Ten values are assigned to by more than one module: `docUuid`, `currentVersion`, `versionHistory`, `commitBaseline`, `storedSource`, `cleanBaseline`, `demoText`, `demoGz`, `initDone`, `mermaidId`. They are the properties of `state` in `app/state.js`; a module imports `state` and reads and writes `state.currentVersion`, which a search finds. A value that only its own module assigns to stays a `let` there (`_dbPromise`, `saveTimer`, `persistFailedFlag`, the rail's two handlers, `downloadInFlight`). Such a `let` may be exported: `Mit Editor` imports `saveTimer` and reads its current value, and could not assign to it.
+- *A module imports what it uses and exports what others need.* Nothing is shared as a global, and no `window.` or `globalThis.` property passes a value from one module to another. Imports are named (`import { render } from './render.js'`), never `import * as`; the lint fails on one, see *Lint*.
+- *Shared state is one object.* An imported name cannot be assigned to. So a value belongs in `state` when a module other than the one it belongs to assigns to it. That is true of nine: `docUuid`, `currentVersion`, `versionHistory`, `commitBaseline`, `storedSource` and `cleanBaseline`, which the async init in `src/app.js` sets and, all but `storedSource`, `Mit Editor` as well; and `demoText`, `demoGz` and `initDone`, which only the async init sets, for the modules that read them. They are the properties of `state` in `app/state.js`; a module imports `state` and reads and writes `state.currentVersion`, which a search finds. A value that only its own module assigns to stays a `let` there (`_dbPromise`, `saveTimer`, `persistFailedFlag`, `mermaidId`, the rail's two handlers, `downloadInFlight`). Such a `let` may be exported: `Mit Editor` imports `saveTimer` and reads its current value, and could not assign to it.
 - *A module does nothing when it is loaded.* Its top level holds functions, constants and element lookups. What acts at load stands in `src/app.js`: the library setup and the async init are written there, and every listener and the restoring of the numbering preference is a `register…()` function of its module, which `src/app.js` calls in the order the statements had in the one file: `registerAssetUrlCleanup()`, `registerVersionDialog()`, `registerRailClicks()`, `registerEditorInput()`, `registerImageInput()`, `registerReset()`, `registerDownloadMenu()`, `registerNumbering()`, `registerHamburger()`, `registerViewToggle()`. Without that the order would follow from who imports whom, and change whenever an import is added; two listeners on `document` for the same event (the download menu and the hamburger on `click`, the menu and the view mode on `Escape`) would swap silently. One thing did move: the element lookups of the modules now run before the library setup, because a module's top level runs before the entry's. They only read the page.
 - *Modules may import each other in a circle,* as long as it is for functions that are called later: `render()` calls the asset pipeline and the image input calls `render()`; table of contents, footnotes and rail use each other's helpers; the menu calls the downloads and the downloads call `triggerDownload()`. That works because of the rule before: no module reads another's export while it loads.
 
 **Where a new component goes.** Into a module of its own under `src/app/`. It exports the function that works on the rendered preview, as `attachFootnotePreviews()` does, and `render()` in `app/render.js` imports it and calls it at its place in the pass; every export reads the preview back out, so the component reaches all four downloads from there. Its styles go into `src/doc.css` (see *Document styles*). If it needs a listener that is attached once, it exports a `register…()` and `src/app.js` calls it, after the ones that are there. If it shares a value with another module that both assign to, the value becomes a property of `state`.
 
-**What the split did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before the split against the one after, reference document and demo text, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical, all assertions are green, and the three read-only exports are byte-identical in both browsers for both documents. One thing about the run itself showed here: in Chromium the exports of the reference document come out in one of two forms from run to run, for the file before the split as for the one after. The run types the document and clicks `Mit Editor` about 250 ms later, which is the delay of the editor's debounced save; whether that save runs first decides how often the clock is read, and Mermaid takes its diagram ids from the clock (`mermaid-…016` or `mermaid-…018`). Nothing else differs, and runs that fell the same way are byte-identical, old file against new. The file itself and every `Mit Editor` file grew by 984 B (67 959 → 68 943 B): `state.currentVersion` cannot be shortened by the minifier the way a variable can, and ten functions were added. `tests/speichern.mjs` is green in both browsers.
+**What the split did to documents** (2026-10-02, `tests/vergleich.mjs`, the built file before the split against the one after, reference document and demo text, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical, all assertions are green, and the three read-only exports are byte-identical in both browsers for both documents. One thing about the run itself showed here: in Chromium the exports of the reference document come out in one of two forms from run to run, for the file before the split as for the one after. The run types the document and clicks `Mit Editor` about 250 ms later, which is the delay of the editor's debounced save; whether that save runs first decides how often the clock is read, and Mermaid takes its diagram ids from the clock (`mermaid-…016` or `mermaid-…018`). Nothing else differs, and runs that fell the same way are byte-identical, old file against new. The file itself and every `Mit Editor` file grew by 972 B (67 959 → 68 931 B): `state.currentVersion` cannot be shortened by the minifier the way a variable can, and ten functions were added. `tests/speichern.mjs` is green in both browsers.
 
 ## Checks
 
@@ -440,7 +440,7 @@ Five tools, all run from the repository root: four in `tests/`, and ESLint with 
 
 ### Lint (`eslint src`)
 
-`npx eslint src`, the third step of `npm run check`: ESLint 10.11.0 with three rules over every `.js` under `src/`. It is there for what esbuild does not see. Bundling, esbuild takes a name that a module neither declares nor imports for a global and says nothing, and the page fails when that line runs, which for a download or an error path may be never in a test.
+`npx eslint src`, the third step of `npm run check`: ESLint 10.11.0 with four rules over every `.js` under `src/`. It is there for what esbuild does not see. Bundling, esbuild takes a name that a module neither declares nor imports for a global and says nothing, and the page fails when that line runs, which for a download or an error path may be never in a test.
 
 | A module … | The build | The lint |
 |---|---|---|
@@ -449,10 +449,12 @@ Five tools, all run from the repository root: four in `tests/`, and ESLint with 
 | imports a file that does not exist | fails | passes |
 | assigns to a name it imported | fails | fails: `no-import-assign` |
 | imports a name and does not use it, exported or not | passes, the import is dropped unread | fails: `dokufix/no-unused-imports` |
+| imports another as a namespace (`import * as x`) and reads `x.name`, which that module does not export | passes with a warning; `x.name` is `undefined` when the line runs | fails on the `import * as` itself: `no-restricted-syntax` |
 
 - **Globals.** A name counts as declared when it is one of the browser's (the list of the `globals` package, 17.13.0) or one of `marked`, `markedFootnote`, `mermaid`, which the page loads from the CDN.
 - **`dokufix/no-unused-imports`** is written in `eslint.config.mjs`, a dozen lines on ESLint's own scope analysis. ESLint's `no-unused-vars` has no option that limits it to imports; it would also report a function nobody calls and a local nobody reads, and those are not this check's business.
-- **Two things it cannot see.** A missing import of a name that is also a browser global (`name`, `status`, `open`, `history`) passes `no-undef`; none of the script's top-level names is one (checked 2026-10-02), and a new one should not be. And with `import * as x`, a member the other module does not export is only a warning of esbuild and no error; the modules use named imports only.
+- **`import * as` is refused as a form,** used or not, by `no-restricted-syntax` on `ImportNamespaceSpecifier`. Neither tool can tell which member of a namespace exists, so the modules import by name, where both can.
+- **One thing it cannot see.** A missing import of a name that is also a browser global (`name`, `status`, `open`, `history`) passes `no-undef`; none of the script's top-level names is one (checked 2026-10-02), and a new one should not be.
 
 ### Tests (`npm test`)
 
@@ -460,7 +462,7 @@ Five tools, all run from the repository root: four in `tests/`, and ESLint with 
 
 - `tests/check-doc-styles.test.mjs` proves the style check: it breaks a copy once per case (a `#preview h5` or `.dokufix-x` rule in `app.css` or the export frame, `.reader-body h5` in the export frame, each named with the module the frame stands in, `.footnotes li` in `app.css`, `body.mode-view .dokufix-doc h5` in `doc.css`, an export without `readonlyCss()`, the block's element missing or doubled in the page, a document rule in a `<style>` of the page or in the block's element, a built file without the block, with an empty one, with two) and expects exit 1 with file, line and culprit named.
 - `tests/build.test.mjs` proves the build: unchanged sources give the committed file byte for byte; `--check` fails with "is stale" when any of the five sources or a module under `src/app/` changed; a module that imports a name another does not export, or a file that is not there, or assigns to an import ends the build with module and name and nothing written; a slot missing, doubled or unknown ends the build with the slot named and nothing written; so do a missing source and `</style` in a minified stylesheet; a script with `<!--` in a string, a template and a regular expression is built without it and gives the same values; the build runs when started through a symlink; a demo text containing `</script>`, `<!--` and `$&` leaves its block and everything behind it intact. One case cannot be reached through the sources: esbuild escapes every `</script` it meets, so the refusal of a script containing it is shown on the step that assembles the page, and so is the refusal of a script that still contains `<!--`.
-- `tests/lint.test.mjs` proves the lint: a module that lost an import, one that uses a name of the shared state without `state.`, one that uses a name nobody declares, one that assigns to an import and one that imports what it does not use each give exit 1 with module, line and name; a function nobody calls and a local nobody reads pass.
+- `tests/lint.test.mjs` proves the lint: a module that lost an import, one that uses a name of the shared state without `state.`, one that uses a name nobody declares, one that assigns to an import, one that imports what it does not use and one that imports a namespace each give exit 1 with module, line and name; a function nobody calls and a local nobody reads pass.
 
 ### Comparison run (`tests/vergleich.mjs`)
 
@@ -514,7 +516,7 @@ Every save types a version description that contains `<!-- <script>` and `</scri
 ```
 build.mjs               The build. One command, see "Build".
 package.json            esbuild, eslint, globals and playwright-core, pinned exactly; scripts build, check, test, vergleich.
-eslint.config.mjs       The lint: three rules over src/. See "Lint".
+eslint.config.mjs       The lint: four rules over src/. See "Lint".
 dist/
 └── dokufix.html        The product. Built, committed, never edited by hand. Open in browser.
 src/

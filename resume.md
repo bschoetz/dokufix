@@ -26,7 +26,7 @@ Frame: **"body for information"** — HTML is the current skin, can be shed (MD 
 - `src/app/` — the script, one module per concern: `state.js` and `dom.js` (what modules share), `gzip.js`, `idb.js`, `assets.js`, `document.js`, `persistence.js`, `frontmatter.js`, `render.js`, `toc.js`, `footnotes.js`, `rail.js`, `editor.js`, and `downloads/` with the menu and the four downloads. A new component gets a module of its own there and is called from `render()`. See `src/README.md`, "The script's modules".
 - `src/README.md` — architecture notes, the build, the checks, known limitations, escaping gotchas, deferred-to-MVP list.
 - `tests/` — checks that look at the sources and the built file from outside: `check-doc-styles.mjs` (fails when a document style sits outside `src/doc.css`, no dependencies), `build.test.mjs`, `check-doc-styles.test.mjs` and `lint.test.mjs` (`npm test`), `vergleich.mjs` (builds all four variants from `referenz.md`, screenshots them in Chromium and Firefox, compares against an earlier run or against the PoC), `speichern.mjs` (a saved file and a file saved from it hold their document). See `src/README.md`, "Checks".
-- `eslint.config.mjs` — the lint over `src/`, part of `npm run check`: fails when a module uses a name it neither declares nor imports, assigns to an import, or imports what it does not use. esbuild does not see the first and the last.
+- `eslint.config.mjs` — the lint over `src/`, part of `npm run check`: fails when a module uses a name it neither declares nor imports, assigns to an import, imports what it does not use, or imports a namespace (`import * as`). esbuild does not see the first and the last.
 - `poc/` — the hand-written single file as story 2.1 left it, with its README and its checks. Frozen; the built file is compared against it.
 
 ### Planning and tracking
@@ -44,7 +44,7 @@ Frame: **"body for information"** — HTML is the current skin, can be shed (MD 
 - **One built file from sources** — `src/` → `dist/dokufix.html` with esbuild 0.28.2, script bundled as one IIFE, script and styles minified, the built file committed, a second build byte-identical.
 - **Three read-only tiers** — offen (no JS), schlank (text plain + SVG gz), kompakt (everything gz).
 - **Libraries pinned** — `marked` 18.0.14, `marked-footnote` 1.4.0, Mermaid 12.0.0 with `securityLevel: 'strict'`; still loaded from the CDN.
-- **The script is ES modules, bundled into one script** — a module imports what it uses and exports what others need, nothing is a global. The ten values that more than one module assigns to are properties of `state` in `src/app/state.js`. A module does nothing when it is loaded: listeners are `register…()` functions that `src/app.js` calls in a fixed order. ESLint 10.11.0 with three rules checks the names.
+- **The script is ES modules, bundled into one script** — a module imports what it uses and exports what others need, nothing is a global. The nine values that a module other than their own assigns to are properties of `state` in `src/app/state.js`; an imported name cannot be assigned to. A module does nothing when it is loaded: listeners are `register…()` functions that `src/app.js` calls in a fixed order. ESLint 10.11.0 with four rules checks the names.
 - **One source for document styles** — `src/doc.css`, built into `<style id="dokufix-doc-css">`, used by the preview and embedded by the read-only exports; a check fails when a document rule sits anywhere else.
 
 ## Next

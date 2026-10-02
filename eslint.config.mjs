@@ -7,6 +7,9 @@
 //                               three libraries the page loads from the CDN
 //   no-import-assign            an assignment to an imported name
 //   dokufix/no-unused-imports   an import nothing uses
+//   no-restricted-syntax        import * as x: with it, x.name for a name the
+//                               other module does not export is only a warning
+//                               of esbuild, and the build passes
 //
 // The third is ESLint's no-unused-vars narrowed to imports, which the core rule
 // has no option for: it would also report a function nobody calls and a local
@@ -50,6 +53,10 @@ export default [
       'no-undef': 'error',
       'no-import-assign': 'error',
       'dokufix/no-unused-imports': 'error',
+      'no-restricted-syntax': ['error', {
+        selector: 'ImportNamespaceSpecifier',
+        message: 'Import the names you use: import { a, b } from …. With import * as x, a member the other module does not export is undefined at run time and the build does not fail.',
+      }],
     },
   },
 ];
