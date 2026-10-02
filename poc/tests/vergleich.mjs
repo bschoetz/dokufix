@@ -18,7 +18,9 @@
 // Exit code 1 when an assertion fails (epic 1 behaviour, no <script> in nur-lesen,
 // no editor rules in a read-only export). Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
-// them so a human can attribute each one.
+// them so a human can attribute each one. An image that only one side has counts
+// as differing. A --compare folder that holds no run for a browser, or that is
+// the --out folder itself, stops the run with exit 1 before anything is built.
 //
 // Date and Math.random are replaced by deterministic stand-ins, because the
 // read-only exports print their export time, Mermaid derives its SVG ids from
@@ -72,6 +74,9 @@ function parseArgs(argv){
   a.poc = path.resolve(a.poc);
   a.doc = path.resolve(a.doc);
   if (a.compare) a.compare = path.resolve(a.compare);
+  // The run empties its output folder first. Pointed at the baseline, it would
+  // delete what it is about to compare with and then report "identical".
+  if (a.compare && a.compare === a.out) throw new Error('--out and --compare are the same folder; the run would delete its own baseline');
   return a;
 }
 
@@ -579,13 +584,13 @@ function comparePng(beforeFile, afterFile, diffFile){
 function compareRun(run, baselineRoot){
   const baseDir = path.join(baselineRoot, run.name);
   const out = { images: [], sizes: null, libraries: null };
-  if (!fs.existsSync(baseDir)){
-    console.log('  no baseline for ' + run.name + ' in ' + baselineRoot);
-    return out;
-  }
-  const names = fs.readdirSync(run.dir).filter(f => f.endsWith('.png')).sort();
-  for (const f of names){
+  const pngs = dir => fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+  const names = pngs(run.dir);
+  // An image only the baseline has is a difference too, not a smaller comparison.
+  const all = [...new Set([...names, ...pngs(baseDir)])].sort();
+  for (const f of all){
     const before = path.join(baseDir, f);
+    if (!names.includes(f)){ out.images.push({ image: f, missingRun: true }); continue; }
     if (!fs.existsSync(before)){ out.images.push({ image: f, missingBaseline: true }); continue; }
     out.images.push({ image: f, ...comparePng(before, path.join(run.dir, f), path.join(run.dir, 'diff', f)) });
   }
@@ -624,10 +629,11 @@ function report(run, cmp){
   for (const r of run.results.filter(x => x.note)) console.log('  note ' + r.scope + ': ' + r.name + ' — ' + r.note);
   let differing = 0;
   if (cmp){
-    const same = cmp.images.filter(i => !i.missingBaseline && i.differing === 0).length;
+    const same = cmp.images.filter(i => i.differing === 0).length;
     console.log('screenshots: ' + same + ' of ' + cmp.images.length + ' identical to the baseline');
     for (const i of cmp.images){
       if (i.missingBaseline){ console.log('  ' + i.image + ': no baseline image'); differing++; continue; }
+      if (i.missingRun){ console.log('  ' + i.image + ': only in the baseline'); differing++; continue; }
       if (!i.differing) continue;
       differing++;
       console.log('  ' + i.image + ': ' + i.differing + ' px differ, rows ' + i.box.top + '–' + i.box.bottom +
@@ -641,6 +647,15 @@ function report(run, cmp){
 const opts = parseArgs(process.argv.slice(2));
 const md = opts.demo ? null : fs.readFileSync(opts.doc, 'utf8');
 const names = opts.browser === 'all' ? ['chromium', 'firefox'] : [opts.browser];
+// A baseline that is not there cannot be compared with. Say so before anything
+// is built or deleted, and fail: "nothing differs" would be a false result.
+if (opts.compare){
+  const missing = names.filter(n => !fs.existsSync(path.join(opts.compare, n, 'sizes.json')));
+  if (missing.length){
+    console.error('no baseline for ' + missing.join(' and ') + ' in ' + opts.compare + ' (expected <browser>/sizes.json from an earlier --out run)');
+    process.exit(1);
+  }
+}
 let failed = 0, differing = 0;
 for (const name of names){
   const run = await runBrowser(name, opts, md);

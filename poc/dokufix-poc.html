@@ -871,9 +871,10 @@
 mermaid.initialize({
   startOnLoad: false,
   theme: 'default',
-  // strict: a diagram can no longer call JavaScript ("click X call fn()").
-  // Measured on 12.0.0 with a flowchart, that is the whole difference to
-  // 'loose': sanitised HTML in labels and "click X href" links stay as they are.
+  // strict: a diagram can no longer call JavaScript ("click X call fn()"), and
+  // "click X href" loses javascript: and data: targets. Measured on 12.0.0 with
+  // a flowchart, that is the whole difference to 'loose': ordinary links (https:,
+  // mailto:, relative) and sanitised HTML in labels stay as they are.
   securityLevel: 'strict',
   flowchart: { curve: 'basis' }
 });

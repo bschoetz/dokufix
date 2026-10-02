@@ -19,6 +19,7 @@ const original = fs.readFileSync(poc, 'utf8');
 const APP_SHEET = '<style>\n';
 const FRAME = 'const READONLY_FRAME_CSS = `';
 const BLOCK = /<style id="dokufix-doc-css">[\s\S]*?<\/style>\n/;
+const BLOCK_OPEN = '<style id="dokufix-doc-css">\n';
 
 function run(html){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-check-'));
@@ -52,6 +53,9 @@ fails('#preview descendant rule in the app stylesheet', mutate(APP_SHEET, APP_SH
 fails('dokufix- rule in the app stylesheet', mutate(APP_SHEET, APP_SHEET + '  .dokufix-x{color:red}\n'), /the app stylesheet.*"\.dokufix-x"/);
 fails('#preview descendant rule in the export frame', mutate(FRAME, FRAME + '#preview h5{color:red}\n'), /the export frame.*"#preview h5"/);
 fails('dokufix- rule in the export frame', mutate(FRAME, FRAME + '.dokufix-x{color:red}\n'), /the export frame.*"\.dokufix-x"/);
+fails('document rule with an ancestor in the export frame', mutate(FRAME, FRAME + '.reader-body h5{color:red}\n'), /the export frame.*"\.reader-body h5"/);
+fails('unprefixed document construct in the app stylesheet', mutate(APP_SHEET, APP_SHEET + '  .footnotes li{color:red}\n'), /the app stylesheet.*"\.footnotes li".*\.footnotes/);
+fails('editor selector in front of .dokufix-doc in the block', mutate(BLOCK_OPEN, BLOCK_OPEN + '  body.mode-view .dokufix-doc h5{color:red}\n'), /"body\.mode-view \.dokufix-doc h5" does not start with \.dokufix-doc/);
 fails('export that no longer embeds the document styles', mutate('<style>${readonlyCss()}</style>', '<style>${READONLY_FRAME_CSS}</style>'), /downloadReadonlyOpen\(\).*does not embed/);
 fails('block missing', mutate(BLOCK, ''), /found 0 blocks/);
 fails('block doubled', mutate(BLOCK, m => m + m), /found 2 blocks/);

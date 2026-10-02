@@ -11,16 +11,26 @@
 // Checks, one line each. Exit 0 when all hold, exit 1 otherwise.
 //
 //   1. the block exists exactly once
-//   2. every rule in the block is scoped by .dokufix-doc, or styles the rail
-//   3. no document rule outside the block: no .dokufix-doc selector, no
-//      "#preview <descendant>", no dokufix- name that is not on the allowlist,
-//      and no bare element rule in the export frame
+//   2. every selector in the block starts with .dokufix-doc (or .numbered
+//      .dokufix-doc), or with .dokufix-rail
+//   3. no document rule outside the block. In the export frame: no selector
+//      but the ones listed in FRAME_SELECTORS. In every other stylesheet: no
+//      .dokufix-doc selector, no "#preview <descendant>", no dokufix- name and
+//      no class or attribute name the block's own selectors use, unless
+//      allowlisted
 //   4. the content containers carry the shared class
 //   5. every read-only export builds its stylesheet with readonlyCss()
 //   6. the old twin READONLY_CSS is gone
 //
-// The allowlist is the frame: things that exist only around a document, not in it.
-// It leans on the rule that every document construct is dokufix- prefixed (NFR5).
+// The allowlists are the frame: things that exist only around a document, not in it.
+// dokufix's own components are dokufix- prefixed (NFR5), but what marked,
+// marked-footnote and Mermaid produce is not (.footnotes, .mermaid,
+// [data-footnote-ref]). So the prefix alone is not the test: every class and
+// attribute name that a selector of the block uses counts as a document construct.
+//
+// What the check cannot see: a rule that reaches document content through some
+// other ancestor and names none of these (".pane-preview h5"), and CSS nesting,
+// which this reader does not unfold.
 //
 // No dependencies. Plain text and a CSS reader just big enough for this file.
 
@@ -34,13 +44,23 @@ const FRAME_CONST = 'READONLY_FRAME_CSS';
 const HELPER = 'readonlyCss';
 const OLD_TWIN = 'READONLY_CSS';
 
-// dokufix- names a frame may use. .dokufix-rail only where the selector is about
-// layout (.has-items) or the scrollspy (a.active); its look is a document style.
+// dokufix- names a stylesheet outside the block may use. .dokufix-rail only where
+// the selector is about layout (.has-items) or the scrollspy (a.active); its look
+// is a document style.
 const ALLOWED_ALWAYS = new Set(['.dokufix-meta', '.dokufix-rail-pending']);
 const railAllowed = sel => /\.has-items\b/.test(sel) || /\ba\.active\b/.test(sel);
-// What a selector of the export frame may hang on: these classes, or html, body,
-// noscript and * (see check 3).
-const FRAME_ANCHORS = /\.reader-body\b|\.dokufix-meta\b|\.dokufix-rail-pending\b|\.dokufix-rail\b/;
+// Selectors outside the block that may use a class or attribute name the block
+// uses too, because they style something else: the editor's version dialog, and
+// the "diagram needs JavaScript" notice of the schlank export.
+const ALLOWED_OUTSIDE = new Set(['.version-modal[open]', '.mermaid[data-gz]', '.mermaid[data-gz]::before']);
+// The export frame, selector by selector. Anything else in READONLY_FRAME_CSS
+// fails: a rule for document content belongs into the block, and a new frame
+// rule is added here on purpose.
+const FRAME_SELECTORS = new Set([
+  '*', 'body', '.reader-body', '.dokufix-meta', '.dokufix-meta p', 'noscript p',
+  'body:has(aside.dokufix-rail.has-items)', 'body:has(aside.dokufix-rail.has-items) .reader-body',
+  '.dokufix-rail.has-items', '.dokufix-rail-pending',
+]);
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const file = path.resolve(process.argv[2] || path.join(here, '../dokufix-poc.html'));
@@ -103,7 +123,10 @@ function* walk(cssRaw, base){
 // ---------- where CSS lives in the file ----------
 const sources = [];   // { kind, css, base }
 let blockCount = 0, block = null;
-for (const m of html.matchAll(/<style\b([^>]*)>([\s\S]*?)<\/style>/g)){
+// A match never runs across another "<style": a comment in the script that
+// mentions the tag must not swallow the JavaScript up to the next </style>.
+const STYLE_RE = /<style\b([^>]*)>((?:(?!<style\b)[\s\S])*?)<\/style>/g;
+for (const m of html.matchAll(STYLE_RE)){
   const base = m.index + m[0].indexOf('>') + 1;
   if (new RegExp('\\bid=["\']' + BLOCK_ID + '["\']').test(m[1])){
     blockCount++;
@@ -129,27 +152,52 @@ check('one <style id="' + BLOCK_ID + '"> block',
   blockCount === 1 ? [] : ['found ' + blockCount + ' blocks, expected exactly one']);
 
 // 2
+// ".dokufix-doc" or ".numbered .dokufix-doc", then a space or the end; or
+// ".dokufix-rail" as a whole class name, so not ".dokufix-rail-pending".
+const IN_BLOCK = new RegExp('^(?:(?:\\.numbered )?\\.' + DOC_CLASS + '(?= |$)|\\.dokufix-rail(?![\\w-]))');
 {
   const problems = [];
   if (block){
     for (const r of walk(block.css, block.base)){
       if (r.atRule) continue;
-      if (!r.selector.includes('.' + DOC_CLASS) && !/^\.dokufix-rail\b/.test(r.selector)){
-        problems.push('line ' + lineOf(r.offset) + ': "' + r.selector + '" is not scoped by .' + DOC_CLASS + '; it would style the editor interface as well');
+      if (!IN_BLOCK.test(r.selector)){
+        problems.push('line ' + lineOf(r.offset) + ': "' + r.selector + '" does not start with .' + DOC_CLASS + ' or .dokufix-rail; in the block a selector starts with the content container and nothing in front of it');
       }
     }
   }
-  check('every rule in the block is scoped by .' + DOC_CLASS + ' or styles the rail', problems);
+  check('every selector in the block starts with .' + DOC_CLASS + ' or .dokufix-rail', problems);
 }
 
 // 3
+// Class names (".footnotes") and attribute names ("[data-footnote-ref]") of a selector.
+const namesIn = sel => [
+  ...(sel.match(/\.-?[A-Za-z_][\w-]*/g) || []),
+  ...[...sel.matchAll(/\[\s*([\w-]+)/g)].map(m => '[' + m[1] + ']'),
+];
 {
   const problems = [];
   const where = (src, r) => 'line ' + lineOf(r.offset) + ', ' + src.kind + ': ';
+  // What the block styles, by name. .dokufix-doc and .numbered are the scope,
+  // not a construct; dokufix- names are judged by their own rule below.
+  const blockNames = new Set();
+  if (block){
+    for (const r of walk(block.css, block.base)){
+      if (!IN_BLOCK.test(r.selector)) continue;   // check 2 reports it; its names are not the block's
+      for (const n of namesIn(r.selector)){
+        if (n !== '.' + DOC_CLASS && n !== '.numbered' && !n.startsWith('.dokufix-')) blockNames.add(n);
+      }
+    }
+  }
   for (const src of sources){
     for (const r of walk(src.css, src.base)){
       const text = r.selector || r.atRule;
       const quoted = '"' + text + '"';
+      if (src.frame){
+        if (!FRAME_SELECTORS.has(text)){
+          problems.push(where(src, r) + quoted + ' is not one of the frame\'s selectors; a rule for document content goes into #' + BLOCK_ID + ' as .' + DOC_CLASS + ' …');
+        }
+        continue;
+      }
       if (new RegExp('\\.' + DOC_CLASS + '\\b').test(text)){
         problems.push(where(src, r) + quoted + ' is a document rule; move it into #' + BLOCK_ID);
         continue;
@@ -166,11 +214,9 @@ check('one <style id="' + BLOCK_ID + '"> block',
         problems.push(where(src, r) + quoted + ' uses ' + [...new Set(bad)].join(', ') + ', a document construct; move it into #' + BLOCK_ID);
         continue;
       }
-      if (src.frame && r.selector){
-        const frameOnly = r.selector === '*' || /^(html|body|noscript)(?![\w-])/.test(r.selector) || FRAME_ANCHORS.test(r.selector);
-        if (!frameOnly){
-          problems.push(where(src, r) + quoted + ' is an element rule in the export frame; a rule for document content goes into #' + BLOCK_ID + ' as .' + DOC_CLASS + ' ' + r.selector);
-        }
+      const shared = [...new Set(namesIn(text).filter(n => blockNames.has(n)))];
+      if (shared.length && !ALLOWED_OUTSIDE.has(text)){
+        problems.push(where(src, r) + quoted + ' uses ' + shared.join(', ') + ', which the document styles use; move it into #' + BLOCK_ID);
       }
     }
   }
@@ -178,8 +224,9 @@ check('one <style id="' + BLOCK_ID + '"> block',
   check('no document rule outside the block', problems);
 }
 
-// 4 and 5 need the export functions.
-const exportFns = [...html.matchAll(/^(?:async\s+)?function\s+(downloadReadonly\w*)\s*\([^)]*\)\s*\{[\s\S]*?^\}/gm)]
+// 4 and 5 need the export functions. A function ends at a line that is exactly
+// "}": the "})();" inside an export's template is not the end.
+const exportFns = [...html.matchAll(/^(?:async\s+)?function\s+(downloadReadonly\w*)\s*\([^)]*\)\s*\{[\s\S]*?^\}$/gm)]
   .map(m => ({ name: m[1], body: m[0], offset: m.index }));
 
 // 4
@@ -203,11 +250,11 @@ const exportFns = [...html.matchAll(/^(?:async\s+)?function\s+(downloadReadonly\
   const problems = [];
   if (!exportFns.length) problems.push('no downloadReadonly…() function found');
   if (!new RegExp('function\\s+' + HELPER + '\\s*\\(').test(html)) problems.push('the helper ' + HELPER + '() is missing');
-  else if (!new RegExp('function\\s+' + HELPER + '\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?' + BLOCK_ID + '[\\s\\S]*?^\\}', 'm').test(html)){
+  else if (!new RegExp('function\\s+' + HELPER + '\\s*\\([^)]*\\)\\s*\\{[\\s\\S]*?' + BLOCK_ID + '[\\s\\S]*?^\\}$', 'm').test(html)){
     problems.push(HELPER + '() does not read #' + BLOCK_ID);
   }
   for (const fn of exportFns){
-    const styles = [...fn.body.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)].filter(m => !/<noscript>\s*$/.test(fn.body.slice(0, m.index)));
+    const styles = [...fn.body.matchAll(/<style\b[^>]*>((?:(?!<style\b)[\s\S])*?)<\/style>/g)].filter(m => !/<noscript>\s*$/.test(fn.body.slice(0, m.index)));
     const uses = styles.some(m => m[1].trim() === '${' + HELPER + '()}');
     if (!uses) problems.push(fn.name + '(), line ' + lineOf(fn.offset) + ': does not embed the document styles; its template needs <style>${' + HELPER + '()}</style>');
     else if (styles.length > 1) problems.push(fn.name + '(), line ' + lineOf(fn.offset) + ': has a second <style> beside ${' + HELPER + '()}');

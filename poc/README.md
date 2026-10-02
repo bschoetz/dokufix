@@ -84,7 +84,14 @@ Until story 2.1 each of these rules existed twice, written by hand: `#preview`-p
 node poc/tests/check-doc-styles.mjs
 ```
 
-No dependencies, no browser. It exits 1 and names selector and line when a document rule sits outside the block (`#preview h5{…}` in the app stylesheet, `.dokufix-x{…}` or a bare `h5{…}` in the export frame), when a rule inside the block is not scoped, when a read-only export no longer builds its stylesheet with `readonlyCss()` or its `<main>` lost the class, when the block is missing or doubled, and when `READONLY_CSS` comes back. It relies on the rule that every document construct is `dokufix-`-prefixed: a prefixed selector outside the block is drift unless it is on the short allowlist of frame names (`.dokufix-meta`, `.dokufix-rail-pending`, and `.dokufix-rail` together with `.has-items` or `a.active`). Run it after every change to a style.
+No dependencies, no browser. It exits 1 and names selector and line
+
+- when a document rule sits outside the block. In the export frame that is any selector other than the ten the frame has today, which the check lists one by one (`FRAME_SELECTORS`); `.reader-body h5{…}` fails like a bare `h5{…}`. In the app stylesheet and in a `<style>` an export writes itself it is a `.dokufix-doc` selector, a `#preview <descendant>` selector, a `dokufix-` name, or any class or attribute name that a selector of the block uses (`.footnotes li{…}`, `.mermaid svg{…}`, `a[data-footnote-ref]{…}`);
+- when a selector inside the block does not start with `.dokufix-doc`, `.numbered .dokufix-doc` or `.dokufix-rail`;
+- when a read-only export no longer builds its stylesheet with `readonlyCss()` or its `<main>` lost the class;
+- when the block is missing or doubled, and when `READONLY_CSS` comes back.
+
+The `dokufix-` prefix alone is not the test. dokufix's own components carry it, but what `marked`, `marked-footnote` and Mermaid produce does not (`.footnotes`, `.mermaid`, `[data-footnote-ref]`), so the check takes the class and attribute names from the block's own selectors. Three short allowlists name what a frame may use anyway: the frame names `.dokufix-meta` and `.dokufix-rail-pending`, `.dokufix-rail` together with `.has-items` or `a.active`, and three selectors that share a name with the block but style something else (`.version-modal[open]`, and `.mermaid[data-gz]` with its `::before` in the `<noscript>` style of `schlank`). What the check cannot see: a rule that reaches document content through another ancestor and names none of these, such as `.pane-preview h5{…}`, and rules written with CSS nesting, which its reader does not unfold. Run it after every change to a style.
 
 **Two things that are load-bearing.**
 
@@ -117,11 +124,12 @@ Until story 2.1 the URLs carried no version. That did not mean "latest": `marked
 | In the diagram source | `loose` | `strict` |
 |---|---|---|
 | `click X call fn()` — a click runs a JavaScript function of the page | runs | does nothing |
-| `click X href "…"` — a click follows a link | link | link |
+| `click X href "https://…"`, `"mailto:…"`, a relative address — a click follows an ordinary link | link | link |
+| `click X href "javascript:…"` or `"data:…"` | link with that target | no target: the `href` is removed |
 | HTML in a label (`<b>`, `<i>`, `<br>`, `<a>`, `<img>`) | rendered, sanitised | rendered, sanitised |
 | `onerror=` and other event attributes in a label | removed | removed |
 
-So what `strict` removes is the JavaScript callback and nothing else that was measured. Only flowchart and sequence diagrams have been looked at under `strict`; other diagram types are unchecked (tracked in `_bmad-output/initiative-dokufix/deferred-work.md`).
+So `strict` removes two things: the JavaScript callback, and `javascript:` and `data:` link targets. Ordinary links stay, and nothing else that was measured changes. Only flowchart and sequence diagrams have been looked at under `strict`; other diagram types are unchecked (tracked in `_bmad-output/initiative-dokufix/deferred-work.md`).
 
 **What the two changes did to documents** (2026-10-02, reference document and demo text, all four variants, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical before and after. `marked` 18.0.14 produces byte-identical HTML for both documents. `strict` changes one thing in the output: Mermaid's sanitiser trims the whitespace inside `class` attributes of the SVG (`class="node default  "` becomes `class="node default"`), which makes `nur-lesen` 22 B smaller for the reference document and 24 B for the demo text. With that whitespace normalised, the exports before and after are identical byte for byte. `Mit Editor` grows by the 547 B that the longer URLs and their comments add to the file itself.
 
@@ -348,7 +356,7 @@ The PoC has no build step and does not depend on anything in `tests/`. The check
 
 `node poc/tests/check-doc-styles.mjs` — fails when a style for document content sits anywhere but in `<style id="dokufix-doc-css">`. Described under *Document styles (one source)*. It reads the file as text and needs neither a browser nor `npm install`.
 
-`node --test poc/tests/` proves the check itself: `tests/check-doc-styles.test.mjs` breaks a copy of the PoC once per case (a `#preview h5` or `.dokufix-x` rule in the app stylesheet or the export frame, an export without `readonlyCss()`, the block missing or doubled) and expects exit 1 with the culprit named.
+`node --test poc/tests/` proves the check itself: `tests/check-doc-styles.test.mjs` breaks a copy of the PoC once per case (a `#preview h5` or `.dokufix-x` rule in the app stylesheet or the export frame, `.reader-body h5` in the export frame, `.footnotes li` in the app stylesheet, `body.mode-view .dokufix-doc h5` inside the block, an export without `readonlyCss()`, the block missing or doubled) and expects exit 1 with the culprit named.
 
 ### Comparison run (`tests/vergleich.mjs`)
 
@@ -364,7 +372,7 @@ node vergleich.mjs --out out/nachher --compare out/vorher
 - **Document.** `tests/referenz.md`, an invented text that contains every construct dokufix styles: frontmatter, a footnote cited three times, `[[toc]]`, headings down to h4, table, code, blockquote, lists, an image as `data:` URI, a missing `#asset-` reference and two Mermaid diagrams. `--demo` builds from the built-in demo text instead, `--doc <file>` from any other Markdown file.
 - **Screenshots.** Each variant in light and dark at 1400 and 1600 px, once at rest and once with every state switched on (`-zustand`: heading numbering, open metadata panel, a revealed footnote preview, landing highlight with its marked arrow), plus the preview pane inside the editor. `--compare` reports the differing pixels per image and writes a red-on-white mask of them to `<browser>/diff/`. Two runs of the same file are pixel-identical in Chromium and in Firefox, so every reported pixel is a real difference.
 - **Sizes.** `sizes.json` per browser, with the library versions the CDN actually served. `--compare` prints the delta per variant. Two runs of the same file give the same byte counts.
-- **Assertions.** In every variant: metadata panel, footnote preview on focus, landing highlight and marked return arrow, heading numbering, rail at 1600 px and not at 1400 px; `nur-lesen` contains no `<script>`; no read-only export carries a rule of the editor interface. A failed assertion exits 1. Differing pixels do not, unless `--strict` is given, because some differences are decided ones.
+- **Assertions.** In every variant: metadata panel, footnote preview on focus, landing highlight and marked return arrow, heading numbering, rail at 1600 px and not at 1400 px; `nur-lesen` contains no `<script>`; no read-only export carries a rule of the editor interface. A failed assertion exits 1. Differing pixels do not, unless `--strict` is given, because some differences are decided ones. An image that only the run or only the baseline has counts as differing. A `--compare` folder without a run for the browser, or one that is the `--out` folder itself, stops the run with exit 1 before anything is built or deleted.
 - **Browsers.** Chromium from `/usr/bin/chromium` and Firefox from the Playwright cache (`--browser chromium|firefox|all`; `CHROMIUM` and `FIREFOX` override the paths). WebKit is not run.
 
 Three things the run does on purpose, each because the obvious way gave wrong results:
