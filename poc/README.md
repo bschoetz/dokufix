@@ -6,7 +6,7 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 
 ## What this PoC demonstrates
 
-- **Markdown + Mermaid rendering** in the browser via `marked` and `mermaid` (loaded from CDN — production will inline these).
+- **Markdown + Mermaid rendering** in the browser via `marked` and `mermaid` (loaded from CDN at pinned versions — production will inline these; see *Libraries*).
 - **Viewer ↔ Editor toggle.** Default mode is the reader experience; a discreet "Editor ↩" button in the corner reveals the editing UI.
 - **IndexedDB persistence** — one record per dokufix file (keyed by UUID) holds the live markdown source, version history, and commit baseline. Image assets live in a separate object store, keyed by SHA-256 content hash. Documents that were saved by an older localStorage-based build of the PoC are migrated transparently on first open with the new code.
 - **Image upload (paste, drag-and-drop, file picker)** — drop a file onto the editor, paste a screenshot from the clipboard, or use the `+ Bild` button. The image is decoded via `createImageBitmap` (with `imageOrientation: 'from-image'` so EXIF orientation is applied to the pixels), optionally downscaled to a max of 1600 px wide, re-encoded as WebP @ 0.85, hashed, and stored in IndexedDB. The canvas roundtrip is what strips EXIF metadata as a side effect; `createImageBitmap` itself doesn't strip anything. The markdown gets a `![alt](#asset-<hash>)` reference; the render pass swaps that reference for a Blob URL pulled from IndexedDB. Read-only exports replace `#asset-` and `blob:` URLs with inline `data:` URLs so the recipient has no IDB or runtime dependency. `Mit Editor` downloads include every asset referenced by the current source **or by any history snapshot** in a separate `<script type="application/json" id="dokufix-assets">` block — content-addressed, so a re-seed of an identical hash is a no-op.
@@ -43,6 +43,33 @@ Two distinct concepts, deliberately separated:
 - **`SAMPLE`** — this file's per-document default (what gets loaded on first open if no IndexedDB record exists yet for this document UUID). On `Mit Editor` download, this is replaced with the user's current content.
 
 Loading order on open: IndexedDB doc record (live draft) > `SAMPLE` (file's baked content) > `DEMO`.
+
+### Libraries
+
+Three libraries come from the CDN, each at a fixed version:
+
+| Library | Version | URL below `https://cdn.jsdelivr.net/npm/` |
+|---|---|---|
+| `marked` | 18.0.14 | `marked@18.0.14/lib/marked.umd.js` |
+| `marked-footnote` | 1.4.0 | `marked-footnote@1.4.0/dist/index.umd.min.js` |
+| `mermaid` | 12.0.0 | `mermaid@12.0.0/dist/mermaid.min.js` |
+
+Until story 2.1 the URLs carried no version. That did not mean "latest": `marked/marked.min.js` resolved to 15.0.12 and stayed there, because `marked.min.js` is no longer shipped from version 16 on, while the Mermaid URL followed every release. A file saved as `Mit Editor` carries these URLs with it, so an unpinned file renders differently next year without anyone having touched it.
+
+**Raising a version** is a change to the look of every document. Change the URL, then run `tests/vergleich.mjs` against the state before and attribute every difference (see *Checks*).
+
+**Mermaid runs with `securityLevel: 'strict'`** instead of `'loose'`. Measured on 12.0.0 with a flowchart that uses everything `loose` allows:
+
+| In the diagram source | `loose` | `strict` |
+|---|---|---|
+| `click X call fn()` — a click runs a JavaScript function of the page | runs | does nothing |
+| `click X href "…"` — a click follows a link | link | link |
+| HTML in a label (`<b>`, `<i>`, `<br>`, `<a>`, `<img>`) | rendered, sanitised | rendered, sanitised |
+| `onerror=` and other event attributes in a label | removed | removed |
+
+So what `strict` removes is the JavaScript callback and nothing else that was measured. Only flowchart and sequence diagrams have been looked at under `strict`; other diagram types are unchecked (tracked in `_bmad-output/initiative-dokufix/deferred-work.md`).
+
+**What the two changes did to documents** (2026-10-02, reference document and demo text, all four variants, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical before and after. `marked` 18.0.14 produces byte-identical HTML for both documents. `strict` changes one thing in the output: Mermaid's sanitiser trims the whitespace inside `class` attributes of the SVG (`class="node default  "` becomes `class="node default"`), which makes `nur-lesen` 22 B smaller for the reference document and 24 B for the demo text. With that whitespace normalised, the exports before and after are identical byte for byte. `Mit Editor` grows by the 547 B that the longer URLs and their comments add to the file itself.
 
 ### Footnotes
 
@@ -288,7 +315,7 @@ Three things the run does on purpose, each because the obvious way gave wrong re
 
 ## Known PoC limitations (deferred to MVP)
 
-- **CDN-loaded libraries** — production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
+- **CDN-loaded libraries** — pinned to fixed versions (see *Libraries*), but still loaded from the network. Production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
 - **No File System Access API integration** — Chromium-only, optional power-user path. Not in PoC. See product brief distillate for design.
 - **Mermaid SVG bloat unaddressed** — each SVG ships a redundant 1.5–3 KB `<style>` block. Future optimization: dedupe to a single document-level `<style>`.
 - **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
