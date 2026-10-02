@@ -100,7 +100,7 @@ Eine Markierung über einer Aufzählung macht aus ihren Einträgen Karten. Der f
 - **Schlank** Der Text steht lesbar in der Datei, die Diagramme sind gepackt.
 - **Kompakt** Alles ist gepackt: die kleinste Datei.
 
-Die Markierung ist ein Kommentar in der Zeile über der Liste: `<!-- dokufix: cards -->`. In einem Renderer, der dokufix nicht kennt, ist der Kommentar unsichtbar und die Liste eine Liste.
+Die Markierung ist ein Kommentar in der Zeile über der Liste: `<!-- dokufix: cards -->`. In einem Renderer, der HTML-Kommentare durchlässt, etwa auf GitHub, ist der Kommentar unsichtbar und die Liste eine Liste.
 
 ## Schrittliste
 

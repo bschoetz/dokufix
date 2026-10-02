@@ -1,6 +1,7 @@
 // --- The warning ---------------------------------------------------------
 // What a reader sees where something could not be rendered: Markdown that
-// could not be read, a pass that failed, a diagram with an error. It is a
+// could not be read, a pass that failed, a diagram with an error, a block
+// marker that cannot take effect. It is a
 // document construct like the metadata panel: its look is in src/doc.css, so
 // it reads the same in the preview and in every export.
 //

@@ -67,6 +67,7 @@ const W = {
   argument: written => 'Die Markierung „' + written + '“ nimmt keine Angabe hinter ihrem Namen.',
   list: written => 'Die Markierung „' + written + '“ erwartet direkt danach eine Aufzählung.',
   numbered: written => 'Die Markierung „' + written + '“ erwartet direkt danach eine nummerierte Liste.',
+  twice: written => 'Die Markierung „' + written + '“ steht mehr als einmal vor demselben Block.',
 };
 
 // ---------- reading a marker ----------
@@ -197,6 +198,31 @@ test('cards: a hard break behind the title goes, the title is a line of its own'
   // A break further on stays.
   const later = passOver('<!-- dokufix: cards -->\n<ul>\n<li><strong>Titel</strong> Text<br>mehr</li>\n</ul>\n');
   assert.equal(later.querySelectorAll('br').length, 1);
+});
+test('cards: a colon directly behind the title goes, with the blanks around it', () => {
+  // - **Titel**: Text     - **Titel** : Text     - **Titel**:Text     - **Titel**:
+  const root = passOver('<!-- dokufix: cards -->\n<ul>\n<li><strong>Titel</strong>: Text</li>\n<li><strong>Titel</strong> : Text</li>\n<li><strong>Titel</strong>:Text</li>\n<li><strong>Titel</strong>:</li>\n</ul>\n');
+  assert.deepEqual(Array.from(root.querySelectorAll('li')).map(li => li.innerHTML), [
+    '<strong class="dokufix-card-title">Titel</strong>Text',
+    '<strong class="dokufix-card-title">Titel</strong>Text',
+    '<strong class="dokufix-card-title">Titel</strong>Text',
+    '<strong class="dokufix-card-title">Titel</strong>',
+  ]);
+  // In a list with blank lines between its items, and with a hard break behind the colon.
+  // - **Titel**: Text          - **Titel**:␣␣
+  //                              Text
+  const loose = passOver('<!-- dokufix: cards -->\n<ul>\n<li><p><strong>Titel</strong>: Text</p>\n</li>\n<li><p><strong>Titel</strong>:<br>Text</p>\n</li>\n</ul>\n');
+  assert.deepEqual(Array.from(loose.querySelectorAll('li > p')).map(p => p.innerHTML), [
+    '<strong class="dokufix-card-title">Titel</strong>Text',
+    '<strong class="dokufix-card-title">Titel</strong>Text',
+  ]);
+  // A colon further on stays, and so does one inside the bold text or behind bold text that is no title.
+  const kept = passOver('<!-- dokufix: cards -->\n<ul>\n<li><strong>Titel</strong> Text: mehr</li>\n<li><strong>Titel:</strong> Text</li>\n<li>Vorab <strong>fett</strong>: Text</li>\n</ul>\n');
+  assert.deepEqual(Array.from(kept.querySelectorAll('li')).map(li => li.innerHTML), [
+    '<strong class="dokufix-card-title">Titel</strong> Text: mehr',
+    '<strong class="dokufix-card-title">Titel:</strong> Text',
+    'Vorab <strong>fett</strong>: Text',
+  ]);
 });
 test('cards: what else an item may start with is no title; a nested list is no list of cards', () => {
   // - ***Titel*** a   - *kursiv* a   - [**Link**](…) a   - **[Link](…)** a   - [ ] offen
@@ -375,6 +401,28 @@ test('two markers that both act on one block, driven with a list of two', () => 
   applyMarkerList(root, list);
   assert.deepEqual(seen, ['eins TABLE', 'zwei TABLE "Spalte A"']);
   assert.equal(root.innerHTML, '<table class="a b"><tbody><tr><td>x</td></tr></tbody></table>\n');
+});
+test('the same marker twice before one block: the component is applied once, every further one is a warning that says so', () => {
+  // <!-- dokufix: steps -->
+  // <!-- dokufix: steps -->
+  // 3. a
+  // 4. b
+  const steps = passOver('<!-- dokufix: steps -->\n<!-- dokufix: steps -->\n<ol start="3">\n<li>a</li>\n<li>b</li>\n</ol>\n');
+  assert.equal(steps.innerHTML, warningHtml(W.twice('dokufix: steps')) + '\n' +
+    '<ol class="dokufix-steps" start="3">\n<li><span class="dokufix-step-number">3</span>a</li>\n<li><span class="dokufix-step-number">4</span>b</li>\n</ol>\n');
+  // Three times, one of them written in capitals, with another marker among them.
+  const cards = passOver('<!-- dokufix: cards -->\n<!-- DOKUFIX: Cards -->\n<!-- dokufix: crads -->\n<!-- dokufix: cards -->\n<ul>\n<li><strong>A</strong>: a</li>\n</ul>\n');
+  assert.deepEqual(warnings(cards), ['Warnung: ' + W.twice('DOKUFIX: Cards'), 'Warnung: ' + W.unknown('dokufix: crads'), 'Warnung: ' + W.twice('dokufix: cards')]);
+  assert.equal(cards.querySelector('ul').outerHTML, '<ul class="dokufix-cards">\n<li><strong class="dokufix-card-title">A</strong>a</li>\n</ul>');
+  assert.deepEqual(comments(cards), []);
+  // A marker that did not act does not count: the one behind it is the first that does.
+  const first = passOver('<!-- dokufix: cards zwei -->\n<!-- dokufix: cards -->\n<ul>\n<li>a</li>\n</ul>\n');
+  assert.deepEqual(warnings(first), ['Warnung: ' + W.argument('dokufix: cards zwei')]);
+  assert.equal(first.querySelectorAll('ul.dokufix-cards').length, 1);
+  // The same marker before two blocks is no repetition.
+  const two = passOver('<!-- dokufix: cards -->\n<ul>\n<li>a</li>\n</ul>\n<!-- dokufix: cards -->\n<ul>\n<li>b</li>\n</ul>\n');
+  assert.deepEqual(warnings(two), []);
+  assert.equal(two.querySelectorAll('ul.dokufix-cards').length, 2);
 });
 test('a comment that is no marker may stand between a marker and its block', () => {
   const root = passOver('<!-- dokufix: cards -->\n<!-- Notiz -->\n<ul>\n<li>a</li>\n</ul>\n');
@@ -603,21 +651,42 @@ test('cards have their rules: a grid that wraps, columns of at least 210 px, a t
   assert.ok(title, 'a rule for the title');
   assert.equal(title.display, 'block');
 });
-test('step lists have their rules: no marker of the list, the number a tile placed against its item, the actor a line of its own', () => {
+test('step lists have their rules: no marker of the list, the number a tile left of its item, the actor a line of its own', () => {
   const list = ruleOf(docCss, '.dokufix-doc .dokufix-steps');
   assert.ok(list, 'a rule for the list');
   assert.equal(list['list-style'], 'none');
   const item = ruleOf(docCss, '.dokufix-doc .dokufix-steps > li');
-  assert.equal(item.position, 'relative');
+  assert.ok(item, 'a rule for an item');
   const number = ruleOf(docCss, '.dokufix-doc .dokufix-step-number');
   assert.ok(number, 'a rule for the number');
-  assert.equal(number.position, 'absolute');
+  // The tile floats into the item's padding. It is not placed against the
+  // item: a positioned item would be the containing block of the preview of
+  // a footnote cited in the step.
+  assert.equal(number.float, 'left');
+  assert.equal(item.position, undefined);
+  assert.equal(number.position, undefined);
+  assert.match(number.margin, new RegExp(' -' + item['padding-left'] + '$'), 'pulled back by the padding of the item');
   assert.match(number.background, /^#[0-9a-f]{6}$/);
   assert.equal(number['print-color-adjust'], 'exact');
   assert.equal(number['-webkit-print-color-adjust'], 'exact');
   const actor = ruleOf(docCss, '.dokufix-doc .dokufix-step-actor');
   assert.ok(actor, 'a rule for the actor');
   assert.equal(actor.display, 'block');
+});
+test('no rule of cards and step lists positions anything: a footnote preview is placed against the page', () => {
+  const block = docCss.slice(docCss.indexOf('/* Cards'), docCss.indexOf('/* Footnotes')).replace(/\/\*[\s\S]*?\*\//g, '');
+  assert.ok(!/position\s*:/.test(block), 'no position declaration');
+});
+test('in the preview of a footnote the number and the actor of a step are plain text of the line', () => {
+  const rule = ruleOf(docCss, '.dokufix-doc .dokufix-fn-preview :is(.dokufix-step-number,.dokufix-step-actor)');
+  assert.ok(rule, 'one rule for both');
+  assert.equal(rule.display, 'inline');
+  assert.equal(rule.float, 'none');
+  assert.equal(rule.font, 'inherit');
+  assert.equal(rule['text-transform'], 'none');
+  assert.equal(rule.background, 'none');
+  // It stands behind the rules it takes back, with a selector that outweighs them.
+  assert.ok(docCss.indexOf('.dokufix-fn-preview :is(.dokufix-step-number') > docCss.indexOf('.dokufix-doc .dokufix-step-actor{'));
 });
 test('the styles go by the classes the pass sets, never by where a <strong> or an <em> stands', () => {
   // NFR11: which element is a title, a number or an actor is decided in the pass.

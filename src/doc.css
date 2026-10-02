@@ -158,7 +158,8 @@
 
   /* Warning — what a reader sees where something could not be rendered:
      Markdown that could not be read, a pass that failed, a diagram with an
-     error (buildWarning() in src/app/warning.js). A document construct: it is
+     error, a block marker that cannot take effect (buildWarning() in
+     src/app/warning.js). A document construct: it is
      styled here and nowhere else, so an export shows it as the preview does.
      Recognisable without colour: the word "Warnung" stands in the markup, and
      the box has a heavy rule on its left. */
@@ -338,23 +339,26 @@
      (buildSteps() in src/app/steps.js). The list's own marker is switched off;
      the number of each item is text the pass wrote into it, shown as a small
      tile left of the step. So a list that starts at 3 counts from 3, with no
-     counter and no inline style. The tile is placed against its item, which is
-     positioned for that.
+     counter and no inline style. The tile floats, pulled into the room the
+     item's padding leaves left of the step. The item is not positioned: a
+     positioned item would be the containing block of the preview of a
+     footnote cited in the step, which has to be placed against the page (see
+     the footnote preview below).
      The actor, the emphasised "Website:" an item starts with, stands above the
      step as a small label; the pass set its class and took the colon out.
      The tile's tint is a background, and a browser leaves backgrounds out when
      it prints unless it is told not to; see the callout label above. */
   .dokufix-doc .dokufix-steps{list-style:none;margin:0 0 1em}
   .dokufix-doc .dokufix-steps > li{
-    position:relative;min-height:26px;
+    min-height:26px;
     margin:0 0 10px;padding-left:42px;
   }
   .dokufix-doc .dokufix-steps > li:last-child{margin-bottom:0}
   .dokufix-doc .dokufix-steps > li > p{margin-bottom:.5em}
   .dokufix-doc .dokufix-steps > li > :last-child{margin-bottom:0}
   .dokufix-doc .dokufix-step-number{
-    position:absolute;left:0;top:1px;
-    min-width:28px;padding:0 4px;border-radius:4px;
+    float:left;min-width:28px;
+    margin:1px 0 0 -42px;padding:0 4px;border-radius:4px;
     font:600 12px/24px ui-monospace,monospace;text-align:center;
     color:#3a3a3f;background:#f0f0f3;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
@@ -364,6 +368,15 @@
     font:600 11px/1.6 ui-monospace,monospace;
     letter-spacing:.06em;text-transform:uppercase;
     color:#6e6e73;
+  }
+  /* A step list in a footnote: the preview of that footnote is one run of
+     text and keeps both elements with their classes. There number and actor
+     are plain text of the line. */
+  .dokufix-doc .dokufix-fn-preview :is(.dokufix-step-number,.dokufix-step-actor){
+    display:inline;float:none;min-width:0;
+    margin:0 .35em 0 0;padding:0;
+    font:inherit;letter-spacing:normal;text-transform:none;
+    color:inherit;background:none;
   }
 
   /* Footnotes (marked-footnote / GFM style) */

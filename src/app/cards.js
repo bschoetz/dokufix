@@ -1,4 +1,4 @@
-import { ELEMENT, isBlank, firstReal, itemHost } from './nodes.js';
+import { ELEMENT, TEXT, isBlank, firstReal, itemHost } from './nodes.js';
 
 // --- Cards -----------------------------------------------------------------
 // A bullet list with the marker "cards" before it becomes a row of cards, one
@@ -18,6 +18,8 @@ import { ELEMENT, isBlank, firstReal, itemHost } from './nodes.js';
 // the class and never ask where a <strong> stands. As marked emits an item:
 //
 //   - **Titel** Text      <li><strong>Titel</strong> Text</li>               title
+//   - **Titel**: Text     <li><strong>Titel</strong>: Text</li>              title; the colon goes, as the
+//                                                                            colon of a step's actor does
 //   - **Titel**␣␣         <li><strong>Titel</strong><br>Text</li>            title; the break goes,
 //     Text                                                                   the title is a line of its own
 //   - **Titel** Text      <li><p><strong>Titel</strong> Text</p>\n</li>      title: a list with blank lines
@@ -39,9 +41,19 @@ export function buildCards(list){
     const first = firstReal(itemHost(li));
     if (!first || first.nodeType !== ELEMENT || first.tagName !== 'STRONG') continue;
     first.classList.add(CARD_TITLE_CLASS);
-    // The title is shown as a line of its own. A hard break behind it would
-    // put an empty line between the title and the text.
+    // The title is shown as a line of its own. A colon directly behind it
+    // would open the line below, so it goes, with the blanks around it.
     let next = first.nextSibling;
+    if (next && next.nodeType === TEXT){
+      const rest = next.data.replace(/^\s*:\s*/, '');
+      if (rest !== next.data){
+        const text = next;
+        if (rest) text.data = rest;
+        else { next = text.nextSibling; text.remove(); }
+      }
+    }
+    // A hard break behind the title would put an empty line between the
+    // title and the text.
     while (next && isBlank(next)) next = next.nextSibling;
     if (next && next.nodeType === ELEMENT && next.tagName === 'BR') next.remove();
   }

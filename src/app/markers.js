@@ -41,7 +41,8 @@ import { STEPS } from './steps.js';
 // A marker that can take effect is applied and removed from the document. One
 // that cannot becomes the product's warning (warning.js) at its place, and the
 // block stays what it was: an unknown name, a block of another kind, no block
-// directly after it, something after the name that the marker does not take.
+// directly after it, something after the name that the marker does not take,
+// the same marker a second time before one block.
 // Nothing fails silently, and nothing fails loudly either: no marker stops the
 // ones after it, and none reaches the containment of the pass runner.
 //
@@ -106,6 +107,7 @@ const WARNINGS = {
   unknown: (marker, markers) => 'Unbekannte Markierung „' + marker.written + '“. ' + known(markers),
   argument: marker => 'Die Markierung „' + marker.written + '“ nimmt keine Angabe hinter ihrem Namen.',
   block: (marker, entry) => 'Die Markierung „' + marker.written + '“ erwartet direkt danach ' + BLOCKS[entry.block] + '.',
+  twice: marker => 'Die Markierung „' + marker.written + '“ steht mehr als einmal vor demselben Block.',
   failed: marker => 'Die Markierung „' + marker.written + '“ konnte nicht angewendet werden.',
 };
 
@@ -178,7 +180,9 @@ function removeMarker(comment){
 // Applies every marker under root from the given list. First all of them are
 // read, each with the block that follows it; then each is applied or becomes
 // its warning. So what one marker does to the document does not change what
-// the next one finds: two markers before one block both get that block.
+// the next one finds: two markers before one block both get that block. A
+// component is applied to a block once: the same marker a second time before
+// that block becomes a warning.
 export function applyMarkerList(root, markers){
   const doc = root.ownerDocument;
   const found = [];
@@ -187,10 +191,17 @@ export function applyMarkerList(root, markers){
     if (marker) found.push({ comment, marker, block: blockAfter(comment) });
   }
   const placed = new Map();
+  // Per block, the names of the markers that were applied to it.
+  const applied = new Map();
   for (const { comment, marker, block } of found){
     const verdict = judgeMarker(marker, block ? block.tagName : '', markers);
     if (verdict.warning){
       replaceWithWarning(root, comment, buildWarning(doc, verdict.warning), placed);
+      continue;
+    }
+    const names = applied.get(block) || new Set();
+    if (names.has(verdict.entry.name)){
+      replaceWithWarning(root, comment, buildWarning(doc, WARNINGS.twice(marker)), placed);
       continue;
     }
     try {
@@ -202,6 +213,7 @@ export function applyMarkerList(root, markers){
       replaceWithWarning(root, comment, buildWarning(doc, WARNINGS.failed(marker), errorMessage(error)), placed);
       continue;
     }
+    applied.set(block, names.add(verdict.entry.name));
     removeMarker(comment);
   }
 }
