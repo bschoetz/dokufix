@@ -60,6 +60,8 @@
 //      and the version mark carries its warning. The run takes IndexedDB away
 //      with an init script, before the page's script runs; the product has no
 //      switch for it
+//      After the save: the banner lies over the "Editor" button, its close
+//      button hides it, and the "Editor" button can then be clicked
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -410,6 +412,18 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       }, DOC_A),
     ]);
     await degradedDownload.saveAs(degraded);
+    // The banner lies over the "Editor" button, so it can be closed: with real
+    // clicks, which only land on what is on top.
+    const covered = await o.page.evaluate(() => {
+      const r = document.getElementById('edit-btn').getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !!top && !!top.closest('#storage-error');
+    });
+    check(scope, 'the banner lies over the "Editor" button', covered);
+    await o.page.click('#storage-error .storage-error-close');
+    check(scope, 'its close button hides the banner', await o.page.evaluate(() => document.getElementById('storage-error').hidden));
+    await o.page.click('#edit-btn', { timeout: 5000 });
+    check(scope, 'the "Editor" button can then be clicked', await o.page.evaluate(() => !document.body.classList.contains('mode-view')));
     // The console says that storage is missing; that is this state. A page error would be something else.
     const pageErrors = o.errors.filter(e => !e.startsWith('console: '));
     check(scope, 'no page error', pageErrors.length === 0, pageErrors.join(' | '));

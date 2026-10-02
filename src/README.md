@@ -28,7 +28,7 @@ That file is built from the sources in this folder with one command (see *Build*
 
 | Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
 |---|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 73 287 B + libs | 75 324 B + libs |
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 73 848 B + libs | 75 885 B + libs |
 | **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 71 364 B | 107 151 B |
 | **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 608 B | 52 412 B |
 | **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 29 295 B | 48 566 B |
@@ -39,17 +39,17 @@ The built file beside the PoC, same run, same documents, same day:
 
 | | Demo text: PoC → built | Reference document: PoC → built |
 |---|---|---|
-| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 71 731 B | the same file |
-| `Mit Editor`, Chromium | 135 085 → 73 287 B | 137 119 → 75 324 B |
+| The file itself (`poc/dokufix-poc.html` → `dist/dokufix.html`) | 133 353 → 72 302 B | the same file |
+| `Mit Editor`, Chromium | 135 085 → 73 848 B | 137 119 → 75 885 B |
 | `nur-lesen`, Chromium | 71 052 → 71 364 B | 106 839 → 107 151 B |
 | `schlank`, Chromium | 35 296 → 35 608 B | 52 100 → 52 412 B |
 | `kompakt`, Chromium | 28 983 → 29 295 B | 48 254 → 48 566 B |
-| `Mit Editor`, Firefox | 135 069 → 73 271 B | 137 103 → 75 308 B |
+| `Mit Editor`, Firefox | 135 069 → 73 832 B | 137 103 → 75 869 B |
 | `nur-lesen`, Firefox | 71 138 → 71 450 B | 107 192 → 107 504 B |
 | `schlank`, Firefox | 35 536 → 35 848 B | 52 048 → 52 360 B |
 | `kompakt`, Firefox | 29 419 → 29 731 B | 48 134 → 48 446 B |
 
-The built file is 61 622 B smaller than the PoC and a `Mit Editor` file 61 798 B; nearly all of it is the minifying of script and styles. Two stories moved these figures after the build: the split into modules added 972 B to the file (see *The script's modules*), and story 2.15 added 2 800 B, the pass runner, the warning and the export path. Each read-only export is 312 B larger than the PoC's. The build took 96 B out, because an export embeds the document styles and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B); story 2.15 put 408 B in, the style of the warning (10 845 B). Outside its `<style>` every read-only export is the one the PoC writes, in both browsers and for both documents, byte for byte once the ids Mermaid generates are masked: since story 2.15 diagrams are drawn one at a time, which changes those ids. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
+The built file is 61 051 B smaller than the PoC and a `Mit Editor` file 61 237 B; nearly all of it is the minifying of script and styles. Three changes moved these figures after the build: the split into modules added 972 B to the file (see *The script's modules*), story 2.15 added 2 800 B, the pass runner, the warning and the export path, and the close button of the storage banner with the German footnotes heading added 571 B. Each read-only export is 312 B larger than the PoC's. The build took 96 B out, because an export embeds the document styles and esbuild minifies them a little further than `compactCss()` did (the export's stylesheet: 10 533 → 10 437 B); story 2.15 put 408 B in, the style of the warning (10 845 B). Outside its `<style>` every read-only export is the one the PoC writes, in both browsers and for both documents, once the ids Mermaid generates are masked and apart from the footnotes heading, which reads "Fußnoten" where the PoC has "Footnotes": since story 2.15 diagrams are drawn one at a time, which changes those ids. The PoC's own figures and how story 2.1 moved them are in `poc/README.md`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -176,6 +176,8 @@ So `strict` removes two things: the JavaScript callback, and `javascript:` and `
 **What the two changes did to documents** (2026-10-02, reference document and demo text, all four variants, Chromium 153 and Firefox 153): all 136 screenshots are pixel-identical before and after. `marked` 18.0.14 produces byte-identical HTML for both documents. `strict` changes one thing in the output: Mermaid's sanitiser trims the whitespace inside `class` attributes of the SVG (`class="node default  "` becomes `class="node default"`), which makes `nur-lesen` 22 B smaller for the reference document and 24 B for the demo text. With that whitespace normalised, the exports before and after are identical byte for byte. `Mit Editor` grows by the 547 B that the longer URLs and their comments add to the file itself.
 
 ### Footnotes
+
+The heading `marked-footnote` puts above the footnotes is visually hidden, but it is a heading: it shows in the table of contents and in the rail. Its text is set to "Fußnoten" through the library's `description` option (`src/app.js`); the default is the English "Footnotes".
 
 Standard GFM footnotes work: `[^id]` places a marker, `[^id]:` defines it, and `marked-footnote` (registered via the single `marked.use()` call in the file) renders the definition list at the document end with return arrows. dokufix adds no syntax here.
 
@@ -333,7 +335,7 @@ On first load of a doc whose UUID has a pre-existing `dokufix-doc-<uuid>-source`
 
 The heading-numbering preference (`dokufix-poc-numbering`) deliberately stays in localStorage. It's doc-independent UX state and has no business cluttering the per-document IDB record.
 
-If IndexedDB is unavailable (some browser private modes, restrictive site settings), the init code surfaces a banner and continues in a degraded read-only mode — the baked document or demo text is still loaded into the editor so the user can read what they just opened, but `persistDoc` calls will keep flipping the persist-failed flag. There is no localStorage fallback in this PoC, since storing images there would be a non-starter anyway.
+If IndexedDB is unavailable (some browser private modes, restrictive site settings), the init code surfaces a banner and continues in a degraded read-only mode — the baked document or demo text is still loaded into the editor so the user can read what they just opened, but `persistDoc` calls will keep flipping the persist-failed flag. There is no localStorage fallback in this PoC, since storing images there would be a non-starter anyway. The banner lies over the top of the page, the "Editor" button included, so it has a close button; closing hides it for as long as the page is open.
 
 ### Image assets
 

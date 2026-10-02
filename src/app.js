@@ -6,7 +6,7 @@
 // in the order it ran when the script was one file: the library setup, each
 // module's listeners (its register…() function), the async init. That order
 // is written down in this file and does not follow from who imports whom.
-import { openDB, showStorageError } from './app/idb.js';
+import { openDB, showStorageError, registerStorageBanner } from './app/idb.js';
 import { seedAssetsFromBakedBlock, registerAssetUrlCleanup, registerImageInput } from './app/assets.js';
 import { readTextBlock, fallbackUuidFromLocation } from './app/document.js';
 import { sourceEl } from './app/dom.js';
@@ -32,9 +32,11 @@ mermaid.initialize({
   flowchart: { curve: 'basis' }
 });
 
-// Enable GFM footnotes ([^id] inline + [^id]: definition)
+// Enable GFM footnotes ([^id] inline + [^id]: definition). description is the
+// text of the heading marked-footnote puts above the footnotes; a reader meets
+// it in the table of contents and in the rail, so it is German.
 if (typeof markedFootnote === 'function') {
-  marked.use(markedFootnote());
+  marked.use(markedFootnote({ description: 'Fußnoten' }));
 }
 
 registerAssetUrlCleanup();
@@ -47,6 +49,7 @@ registerDownloadMenu();
 registerNumbering();
 registerHamburger();
 registerViewToggle();
+registerStorageBanner();
 
 // Async init — reads the demo text and this file's document from their data
 // blocks (decompressing them if they are gzipped), opens IDB, migrates legacy

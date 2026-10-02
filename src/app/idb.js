@@ -72,3 +72,11 @@ export function showStorageError(detail){
   if (msgEl && detail) msgEl.textContent = '(' + detail + ') ';
   el.hidden = false;
 }
+// The banner lies over the top of the page, the "Editor" button included. Its
+// close button hides it for as long as the page is open; the next opening
+// shows it again if storage is still unavailable.
+export function registerStorageBanner(){
+  const el = document.getElementById('storage-error');
+  const closeBtn = el && el.querySelector('.storage-error-close');
+  if (closeBtn) closeBtn.addEventListener('click', () => { el.hidden = true; });
+}
