@@ -51,7 +51,7 @@
 // with a saved file, which is one of the allowed differences, and the second
 // generation has to open numbered.
 //
-// Two more saves visit states of the page that leave marks on its own
+// Three more saves visit states of the page that leave marks on its own
 // elements, and each saved file is compared with the built file the same way:
 //
 //   5. a narrow window, saved with the hamburger panel open (the download menu
@@ -62,6 +62,9 @@
 //      switch for it
 //      After the save: the banner lies over the "Editor" button, its close
 //      button hides it, and the "Editor" button can then be clicked
+//   7. the view of the link "license information" open, in read mode and in
+//      the toolbar. Both elements are made by the script and marked transient,
+//      so the saved file has neither; opened, it makes them again, closed
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -429,6 +432,34 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'no page error', pageErrors.length === 0, pageErrors.join(' | '));
     await o.context.close();
     await checkAgainstBuiltFile(scope, browser, degraded, built, 1);
+
+    // 7. saved with the licence view open, the one of read mode and the one in the toolbar
+    scope = name + ' licence view open';
+    const withView = path.join(dir, 'lizenz-offen.html');
+    const licences = page => page.evaluate(() => Array.from(document.querySelectorAll('details.dokufix-licences')).map(d => d.open));
+    o = await open(browser, opts.file);
+    await o.page.click('body > details.dokufix-licences > summary');
+    await o.page.click('#edit-btn');
+    await o.page.fill('#source', DOC_A);
+    await o.page.click('#header-actions > details.dokufix-licences > summary');
+    const viewsOpen = await licences(o.page);
+    await o.page.click('#download-btn');
+    const [viewDownload] = await Promise.all([
+      o.page.waitForEvent('download', { timeout: 60000 }),
+      o.page.click('button[data-download="full"]'),
+    ]);
+    await viewDownload.saveAs(withView);
+    check(scope, 'both views were open when the file was saved', viewsOpen.length === 2 && viewsOpen.every(Boolean), JSON.stringify(viewsOpen));
+    check(scope, 'and are still open in the running page', JSON.stringify(await licences(o.page)) === '[true,true]');
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    await checkAgainstBuiltFile(scope, browser, withView, built, 1);
+    o = await open(browser, withView);
+    s = await state(o.page);
+    same(scope, 'the saved file holds document A', s.source, DOC_A);
+    check(scope, 'opened, it has the link twice again, both closed', JSON.stringify(await licences(o.page)) === '[false,false]', JSON.stringify(await licences(o.page)));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
 
     // 4. a demo text that contains markup
     scope = name + ' demo text with markup';

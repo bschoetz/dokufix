@@ -1,7 +1,9 @@
 import { sourceEl, btnEl, resetEl } from './dom.js';
+import { licencesHtml } from './licences.js';
 import { state } from './state.js';
 import { persistDoc, scheduleSave, updateDirtyState } from './persistence.js';
 import { render } from './render.js';
+import { TRANSIENT_ATTR } from './transient.js';
 
 // --- Render button and typing ----------------------------------
 export function registerEditorInput(){
@@ -87,4 +89,24 @@ export function registerViewToggle(){
       sourceEl.focus();
     }
   });
+}
+
+// "license information": the link and its view (licences.js). It is frame, not
+// document, so it stands twice: in the toolbar, as the first of the actions,
+// and in the page itself for read mode, where the toolbar is hidden. Both are
+// made here, at load, and marked transient: a saved file takes neither along,
+// so it stays the built file, and an open view does not travel. The list
+// exists once in the file, in the script. Opening and closing is the
+// <details> element's own; there is no listener.
+export function registerLicences(){
+  const make = () => {
+    const holder = document.createElement('template');
+    holder.innerHTML = licencesHtml();
+    const el = holder.content.firstElementChild;
+    el.setAttribute(TRANSIENT_ATTR, '');
+    return el;
+  };
+  document.getElementById('header-actions').prepend(make());
+  const editBtn = document.getElementById('edit-btn');
+  editBtn.parentNode.insertBefore(make(), editBtn);
 }

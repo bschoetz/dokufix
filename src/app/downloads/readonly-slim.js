@@ -1,4 +1,5 @@
 import { gzipB64 } from '../gzip.js';
+import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
 import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './export-body.js';
 
@@ -39,6 +40,7 @@ export async function downloadReadonlySlim(){
 ${noscript}
 </head>
 <body${bodyClassForExport()}>
+${licencesHtml()}
 <main class="reader-body dokufix-doc">
 ${body}
 ${buildMetaFooterHtml()}

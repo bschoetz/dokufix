@@ -16,8 +16,9 @@
 //   --demo             build from the built-in demo text instead of --doc
 //   --strict           exit 1 when --compare finds any differing pixel
 //
-// Exit code 1 when an assertion fails (epic 1 behaviour, callouts, no <script> in
-// nur-lesen, no editor rules in a read-only export). Differing pixels alone do not fail the
+// Exit code 1 when an assertion fails (epic 1 behaviour, callouts, the licence
+// information, no <script> in nur-lesen, no editor rules in a read-only export).
+// Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
 // as differing. A --compare folder that holds no run for a browser, or that is
@@ -65,6 +66,10 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+// The list behind the link "license information": what the view has to name.
+// tests/licences.test.mjs checks the list itself; this run checks that every
+// variant shows it.
+import { NOTICES, LICENCE_TEXTS, LICENCES_LINK_TEXT } from '../src/app/licences.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -154,6 +159,20 @@ const CALLOUT_HEADINGS_IN =
   '.numbered .dokufix-doc .dokufix-callout h2::before{counter-increment:h2 !important;content:counter(h2) ". " !important}' +
   '.numbered .dokufix-doc .dokufix-callout h3::before{counter-increment:h3 !important;content:counter(h2) "." counter(h3) " " !important}' +
   '.numbered .dokufix-doc .dokufix-callout h4::before{counter-increment:h4 !important;content:counter(h2) "." counter(h3) "." counter(h4) " " !important}';
+
+// The link "license information" (story 2.18). Every text its view has to show:
+// per entry its name, version, the title of its licence and its copyright
+// lines, and each licence text.
+const LICENCE_TEXTS_SHOWN = [
+  ...NOTICES.flatMap(n => [n.name, n.version, (LICENCE_TEXTS[n.licence] || { title: n.licence }).title, ...n.copyright]),
+  ...Object.values(LICENCE_TEXTS).flatMap(t => [t.title, ...t.paragraphs]),
+];
+// The widths the place of the link is measured at, beyond the two of the
+// screenshots: the narrow layout (up to 820 px), the first width of the wide
+// one, widths narrower than the text column and wider, and around 1500 px,
+// where the rail appears.
+const LICENCE_WIDTHS = [320, 600, 820, 821, 900, 1000, 1200, 1400, 1499, 1500, 1562, 1600, 1900];
+const NARROW = 820;
 
 // ---------- what the document should produce ----------
 function expectationsFor(md){
@@ -339,6 +358,148 @@ async function enterStates(page, browserName){
   await page.waitForTimeout(500);
 }
 
+// ---------- the link "license information" ----------
+// What a page shows of the link and its view, and where the document stands.
+// The element is a <details>: the link is its summary, the view its content.
+// An editor file has two, one in the toolbar and one in <body> for read mode;
+// "shown" is the one that is rendered. options.without: measure the document
+// with every such element taken out of the page, and put them back.
+const licenceFacts = (page, options = {}) => page.evaluate(opts => {
+  const box = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
+  // Rendered and not hidden: not display:none, not inside a closed <details>,
+  // not visibility:hidden, and with a size.
+  const visible = el => { if (!el) return false; const r = el.getBoundingClientRect(); return el.checkVisibility({ visibilityProperty: true }) && r.width > 0 && r.height > 0; };
+  const all = Array.from(document.querySelectorAll('details.dokufix-licences'));
+  const places = all.map(el => [el, el.parentNode, el.nextSibling]);
+  const where = all.map(el => ({
+    parent: el.parentElement.tagName.toLowerCase() + (el.parentElement.id ? '#' + el.parentElement.id : ''),
+    first: el === el.parentElement.firstElementChild,
+    next: el.nextElementSibling ? el.nextElementSibling.tagName.toLowerCase() + (el.nextElementSibling.id ? '#' + el.nextElementSibling.id : '') : '',
+    transient: el.hasAttribute('data-dokufix-transient'), open: el.open,
+  }));
+  const el = all.find(d => d.getClientRects().length > 0) || null;
+  const summary = el && el.querySelector(':scope > summary');
+  const view = el && el.querySelector(':scope > .dokufix-licences-view');
+  const facts = {
+    where, shownIn: el ? where[all.indexOf(el)].parent : '', open: el ? el.open : null,
+    link: box(summary), linkVisible: visible(summary), linkText: summary ? summary.textContent : null,
+    view: box(view), viewVisible: visible(view), viewText: view ? view.textContent : '',
+    entries: view ? Array.from(view.querySelectorAll('li > strong:first-child')).map(x => x.textContent) : [],
+    // What lies on top in the middle of the view: the view itself when it lies over the page.
+    viewOnTop: (() => {
+      if (!visible(view)) return false;
+      const r = view.getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, Math.min(r.top + r.height / 2, innerHeight - 2));
+      return !!top && view.contains(top);
+    })(),
+  };
+  if (opts.without) all.forEach(x => x.remove());
+  // The content container: the preview in the editor file, <main> in a read-only export.
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body');
+  const rs = getComputedStyle(root), rr = root.getBoundingClientRect();
+  const first = root.firstElementChild;
+  const rail = document.querySelector('.dokufix-rail');
+  // The text column: the content container without its padding. Its top is
+  // where the first line of the document can start.
+  facts.column = { left: rr.left + parseFloat(rs.paddingLeft), right: rr.right - parseFloat(rs.paddingRight), top: rr.top + parseFloat(rs.paddingTop) };
+  // Where the document stands. All of it is the same with the element taken
+  // out, closed and open, or the element moves something.
+  facts.doc = {
+    root: [rr.left, rr.top, rr.width, rr.height].join(' '),
+    first: first ? (() => { const r = first.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].join(' '); })() : '',
+    rail: rail ? (() => { const r = rail.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].join(' '); })() : '',
+    toolbar: ['header', '#numbering-btn', '#view-btn'].map(sel => { const x = document.querySelector(sel); if (!x) return ''; const r = x.getBoundingClientRect(); return [r.left, r.top, r.width, r.height].join(' '); }).join(' | '),
+    page: document.documentElement.scrollWidth + ' x ' + document.documentElement.scrollHeight,
+  };
+  facts.rail = rail && rail.getClientRects().length ? box(rail) : null;
+  facts.button = box(document.getElementById('edit-btn'));
+  facts.window = { width: document.documentElement.clientWidth, height: innerHeight, scrollY };
+  if (opts.without) places.forEach(([x, parent, next]) => parent.insertBefore(x, next));
+  return facts;
+}, options);
+const round = b => b ? [b.left, b.top, b.right, b.bottom].map(n => Math.round(n * 10) / 10).join(' ') : 'none';
+const overlap = (a, b) => !!a && !!b && a.left < b.right && b.left < a.right && a.top < b.bottom && b.top < a.bottom;
+// What is wrong with the place of the link in read mode or in an export, as a
+// list; empty when it stands where it should. In the empty top margin, above
+// the first line, inside the window; its right edge on the right edge of the
+// text column, so never above the rail. One exception, the editor file in a
+// narrow window: there "Editor ↩" stands in that corner, and the link stands
+// left of it.
+function licencePlaceProblems(f, key, width){
+  const problems = [];
+  const l = f.link, c = f.column, EPS = 0.6;
+  if (!l || !f.linkVisible) return ['the link is not visible'];
+  if (f.linkText !== LICENCES_LINK_TEXT) problems.push('it reads ' + JSON.stringify(f.linkText));
+  if (f.open) problems.push('its view is open');
+  if (f.shownIn !== 'body') problems.push('it stands in ' + f.shownIn + ', not in <body>');
+  if (l.top < 0 || l.bottom > c.top + EPS) problems.push('not in the top margin above the first line (link ' + round(l) + ', first line at ' + c.top + ')');
+  if (l.left < 0 || l.right > f.window.width + EPS) problems.push('not inside the window (link ' + round(l) + ', window ' + f.window.width + ')');
+  if (l.left < c.left - EPS || l.right > c.right + EPS) problems.push('not inside the text column (link ' + round(l) + ', column ' + c.left + '–' + c.right + ')');
+  const besideButton = key === 'mit-editor' && width <= NARROW;
+  if (besideButton){
+    if (!f.button || l.right > f.button.left) problems.push('not left of "Editor ↩" (link ' + round(l) + ', button ' + round(f.button) + ')');
+  } else if (Math.abs(l.right - c.right) > EPS){
+    problems.push('its right edge is not the text column\'s (link ' + round(l) + ', column ends at ' + c.right + ')');
+  }
+  if (f.rail && l.right > f.rail.left) problems.push('it stands above the rail (link ' + round(l) + ', rail ' + round(f.rail) + ')');
+  if (key === 'mit-editor' && overlap(l, f.button)) problems.push('it overlaps "Editor ↩" (link ' + round(l) + ', button ' + round(f.button) + ')');
+  return problems;
+}
+// What the open view has to show, as a list of what is missing or wrong.
+function licenceViewProblems(f){
+  const problems = [];
+  if (!f.open || !f.viewVisible) return ['the view is not open (open ' + f.open + ', visible ' + f.viewVisible + ')'];
+  if (JSON.stringify(f.entries) !== JSON.stringify(NOTICES.map(n => n.name))) problems.push('entries ' + JSON.stringify(f.entries));
+  const missing = LICENCE_TEXTS_SHOWN.filter(t => !f.viewText.includes(t));
+  if (missing.length) problems.push('missing: ' + missing.map(t => JSON.stringify(t.slice(0, 50))).join(', '));
+  if (f.view.left < 0 || f.view.right > f.window.width + 0.6 || f.view.top < 0) problems.push('not inside the window (view ' + round(f.view) + ', window ' + f.window.width + ')');
+  return problems;
+}
+// The link and its view in one page, at the size the page has: the document
+// stands where it stands without the element; a click on the link opens the
+// view over the page and moves nothing; a second click closes it.
+// selector: the summary to click.
+async function assertLicenceOpens(page, check, selector, what){
+  const without = await licenceFacts(page, { without: true });
+  const closed = await licenceFacts(page);
+  // A file without the link, or with a link nobody can see: one failed check,
+  // and no click that would wait for it.
+  if (!closed.linkVisible){
+    check(what + ': there is a link to click', false, 'the link is not visible');
+    return { closed, open: closed };
+  }
+  check(what + ': the document stands where it stands without the link', JSON.stringify(closed.doc) === JSON.stringify(without.doc),
+    'with ' + JSON.stringify(closed.doc) + ', without ' + JSON.stringify(without.doc));
+  await page.click(selector, { timeout: 5000 }).catch(() => {});
+  const open = await licenceFacts(page);
+  const viewProblems = licenceViewProblems(open);
+  check(what + ': a click opens the view, which names the ' + NOTICES.length + ' entries with version, licence and copyright lines, and the licence text',
+    viewProblems.length === 0, viewProblems.join('; '));
+  check(what + ': the open view lies over the page and moves nothing', open.viewOnTop && JSON.stringify(open.doc) === JSON.stringify(closed.doc) && round(open.link) === round(closed.link),
+    'on top ' + open.viewOnTop + '; closed ' + JSON.stringify(closed.doc) + ', open ' + JSON.stringify(open.doc) + '; link ' + round(closed.link) + ' → ' + round(open.link));
+  await page.click(selector, { timeout: 5000 }).catch(() => {});
+  const again = await licenceFacts(page);
+  check(what + ': a second click closes it', again.open === false && !again.viewVisible && JSON.stringify(again.doc) === JSON.stringify(closed.doc),
+    'open ' + again.open + ', view visible ' + again.viewVisible);
+  return { closed, open };
+}
+// A read-only export with scripts switched off: the link is there, opens and closes.
+async function assertLicenceWithoutScripts(launch, file, check){
+  const browser = await launch();
+  try {
+    const context = await browser.newContext({ ...CONTEXT, viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto(pathToFileURL(file).href);
+    const f = await licenceFacts(page);
+    check('licence link with scripts off: visible, in the top margin, inside the window',
+      f.linkVisible && f.linkText === LICENCES_LINK_TEXT && f.link.top >= 0 && f.link.bottom <= f.column.top + 0.6 && f.link.left >= 0 && f.link.right <= f.window.width,
+      JSON.stringify({ visible: f.linkVisible, text: f.linkText, link: round(f.link), firstLine: f.column.top }));
+    await assertLicenceOpens(page, check, 'details.dokufix-licences > summary', 'licence link with scripts off');
+  } finally {
+    await browser.close();
+  }
+}
+
 // ---------- assertions ----------
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
@@ -361,6 +522,12 @@ async function assertVariant(launch, file, key, exp, results, label){
     check('has a stylesheet', style.length > 500, style.length + ' bytes');
     const hits = EDITOR_RULES.filter(re => re.test(style)).map(String);
     check('stylesheet has no editor rules', hits.length === 0, hits.join(' '));
+    // The licence element as the export writes it: once, directly after <body>,
+    // closed, and not packed, so it is there before any script has run.
+    const elements = text.match(/<details class="dokufix-licences"[^>]*>/g) || [];
+    check('licence element: written once, directly after <body>, closed',
+      elements.length === 1 && elements[0] === '<details class="dokufix-licences">' && /<body[^>]*>\n<details class="dokufix-licences"><summary>/.test(text),
+      JSON.stringify(elements));
   }
 
   const { close, page, errors } = await openVariant(launch, file, key, exp, 1400, 'light');
@@ -618,6 +785,69 @@ async function assertVariant(launch, file, key, exp, results, label){
         asItIs.equals(forcedOut) && !asItIs.equals(forcedIn),
         'as it is = forced out of the count: ' + asItIs.equals(forcedOut) + '; as it is = forced into it: ' + asItIs.equals(forcedIn));
     }
+    // --- the link "license information" and its view (story 2.18)
+    await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); window.scrollTo(0, 0); });
+    const lf = await licenceFacts(page);
+    const wantWhere = READONLY.has(key)
+      ? [{ parent: 'body', first: true, transient: false, open: false }]
+      // The editor makes two at load and marks them transient: the first of the
+      // toolbar's actions, and one in <body> before "Editor ↩" for read mode.
+      : [{ parent: 'div#header-actions', first: true, transient: true, open: false }, { parent: 'body', first: false, next: 'button#edit-btn', transient: true, open: false }];
+    const whereOk = lf.where.length === wantWhere.length && wantWhere.every((w, i) => Object.keys(w).every(k => lf.where[i][k] === w[k]));
+    check('licence element: where it belongs, closed' + (READONLY.has(key) ? ', part of the file' : ', made by the script and marked transient'), whereOk, JSON.stringify(lf.where));
+    await assertLicenceOpens(page, check, 'body > details.dokufix-licences > summary', 'licence link');
+    // Its place at every width: the two of the screenshots are checked where
+    // they are taken; here the same page is resized through the layouts.
+    const misplaced = [];
+    for (const width of LICENCE_WIDTHS){
+      await page.setViewportSize({ width, height: 1000 });
+      await page.waitForTimeout(100);
+      const problems = licencePlaceProblems(await licenceFacts(page), key, width);
+      if (problems.length) misplaced.push(width + ' px: ' + problems.join('; '));
+    }
+    check('licence link from ' + LICENCE_WIDTHS[0] + ' to ' + LICENCE_WIDTHS[LICENCE_WIDTHS.length - 1] + ' px: in the top margin, inside the window, at the right edge of the text column' +
+      (key === 'mit-editor' ? ', never over "Editor ↩"' : ''), misplaced.length === 0, misplaced.join(' | '));
+    // The view in a narrow window: inside it.
+    await page.setViewportSize({ width: 600, height: 1000 });
+    await page.waitForTimeout(100);
+    await assertLicenceOpens(page, check, 'body > details.dokufix-licences > summary', 'licence link at 600 px');
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.waitForTimeout(100);
+
+    if (key === 'mit-editor'){
+      // --- edit mode: the link is one of the toolbar's actions
+      await page.click('#edit-btn');
+      const tf = await licenceFacts(page);
+      const header = await page.evaluate(() => { const r = document.querySelector('header').getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
+      check('edit mode: the link stands in the toolbar, visible, and the one of read mode is not shown',
+        tf.linkVisible && tf.linkText === LICENCES_LINK_TEXT && tf.shownIn === 'div#header-actions' && tf.link.top >= header.top && tf.link.bottom <= header.bottom && tf.link.left >= 0 && tf.link.right <= tf.window.width,
+        JSON.stringify({ visible: tf.linkVisible, text: tf.linkText, shownIn: tf.shownIn, link: round(tf.link), toolbar: round(header) }));
+      const toolbar = await assertLicenceOpens(page, check, '#header-actions > details.dokufix-licences > summary', 'edit mode, licence link');
+      check('edit mode: the open view hangs below the toolbar', toolbar.open.viewVisible && toolbar.open.view.top >= header.bottom - 1, round(toolbar.open.view) + ', toolbar ' + round(header));
+      // --- a narrow window: the actions are a panel behind the hamburger
+      await page.setViewportSize({ width: 600, height: 900 });
+      await page.waitForTimeout(100);
+      const hidden = await licenceFacts(page);
+      await page.click('#hamburger');
+      const panel = await page.evaluate(() => { const r = document.getElementById('header-actions').getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
+      const pf = await licenceFacts(page);
+      const inside = (a, b) => !!a && a.left >= b.left - 0.6 && a.right <= b.right + 0.6 && a.top >= b.top - 0.6 && a.bottom <= b.bottom + 0.6;
+      check('edit mode at 600 px: the link is in the hamburger panel, and only there',
+        !hidden.linkVisible && pf.linkVisible && pf.shownIn === 'div#header-actions' && inside(pf.link, panel) && panel.left >= 0 && panel.right <= pf.window.width + 0.6,
+        JSON.stringify({ beforePanelOpened: hidden.linkVisible, visible: pf.linkVisible, link: round(pf.link), panel: round(panel) }));
+      if (pf.linkVisible){
+        await page.click('#header-actions > details.dokufix-licences > summary');
+        const po = await licenceFacts(page);
+        const panelOpen = await page.evaluate(() => { const r = document.getElementById('header-actions').getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
+        const viewProblems = licenceViewProblems(po);
+        check('edit mode at 600 px: the view opens inside the panel, as wide as the panel was', viewProblems.length === 0 && inside(po.view, panelOpen) && round(panelOpen).split(' ')[0] === round(panel).split(' ')[0] && panelOpen.bottom <= po.window.height,
+          viewProblems.join('; ') + ' view ' + round(po.view) + ', panel ' + round(panel) + ' → ' + round(panelOpen));
+        await page.click('#header-actions > details.dokufix-licences > summary');
+      }
+      await page.click('#hamburger');
+    } else {
+      await assertLicenceWithoutScripts(launch, file, check);
+    }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {
     await close();
@@ -652,6 +882,10 @@ async function runBrowser(name, opts, md){
               const want = width >= 1500 ? 'block' : 'none';
               makeChecker(results, name + ' ' + v.key)('rail is ' + want + ' at ' + width + ' px',
                 rail && rail.display === want && rail.links > 0, JSON.stringify(rail));
+              // The link "license information", where the screenshot shows it.
+              const misplaced = licencePlaceProblems(await licenceFacts(page), v.key, width);
+              makeChecker(results, name + ' ' + v.key)('licence link at ' + width + ' px: visible, reads "' + LICENCES_LINK_TEXT + '", above the document, at the right edge of the text column',
+                misplaced.length === 0, misplaced.join('; '));
             }
             await shot(page, path.join(dir, base + '.png'));
             await enterStates(page, name);

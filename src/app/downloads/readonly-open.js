@@ -1,3 +1,4 @@
+import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
 import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './export-body.js';
 
@@ -14,6 +15,7 @@ export async function downloadReadonlyOpen(){
 <style>${readonlyCss()}</style>
 </head>
 <body${bodyClassForExport()}>
+${licencesHtml()}
 <main class="reader-body dokufix-doc">
 ${body}
 ${buildMetaFooterHtml()}

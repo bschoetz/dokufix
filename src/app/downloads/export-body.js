@@ -62,6 +62,20 @@ export async function buildExportBody(extraSteps = []){
 // "noscript p" is frame too: the kompakt export's "needs JavaScript" notice sits
 // outside the content container, and without this rule the rail beside it would
 // stand 17 px higher than it did when p{} was an unscoped rule.
+// The link "license information" with its view is frame as well (licences.js):
+// it stands outside the content container, placed against the page in the
+// empty top margin, at the right edge of the text column. <body> is not
+// positioned, on purpose: it would become the containing block of the footnote
+// previews and change where they appear in a narrow window. So that edge is
+// worked out from the page's width: the body is 950 px wide and centred with
+// 32 px of padding (50 % - 443 px, at least 32 px), 22 px of padding in a
+// narrow window, and beside a rail a grid of at most 1562 px whose padding,
+// rail and gap are 530 px. These rules are the second copy of the ones in
+// src/app.css, kept alike by hand; the editor's toolbar is the one place only
+// that file knows.
+// Each export writes the element fresh from licencesHtml(), directly after
+// <body>: closed, whatever the editor shows, and outside what kompakt packs,
+// so it opens there without JavaScript too.
 // A rule for document content does NOT go into the frame. It goes into the
 // block in <head>, or the editor and "Mit Editor" never see it.
 // tests/check-doc-styles.mjs fails when one turns up here.
@@ -82,7 +96,17 @@ noscript p{margin-bottom:1em}
   .dokufix-rail.has-items{display:block;position:sticky;top:80px;max-height:calc(100vh - 100px);align-self:start}
 }
 .dokufix-rail-pending{pointer-events:none;opacity:.4;transition:opacity .25s ease}
-@media (max-width:820px){body{padding:64px 22px 96px;font-size:16px}}`;
+@media (max-width:820px){body{padding:64px 22px 96px;font-size:16px}}
+.dokufix-licences{position:absolute;z-index:40;top:56px;right:max(32px, calc(50% - 443px));font-size:12px;line-height:1.4;color:#6e6e73}
+.dokufix-licences summary{display:block;cursor:pointer;text-decoration:underline;white-space:nowrap}
+.dokufix-licences summary::-webkit-details-marker{display:none}
+.dokufix-licences summary:hover{color:#1c1c1e}
+.dokufix-licences-view{position:absolute;top:calc(100% + 6px);right:0;width:min(560px, calc(100vw - 44px));max-height:70vh;overflow:auto;padding:14px 16px;background:#fff;color:#1c1c1e;border:1px solid #d1d1d6;border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,0.18);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.dokufix-licences-view p{margin-bottom:.7em}
+.dokufix-licences-view ul{list-style:none;margin-bottom:.7em}
+.dokufix-licences-view li{margin-bottom:.5em}
+@media (min-width:1500px){body:has(aside.dokufix-rail.has-items) .dokufix-licences{right:calc(max(0px, 50% - 781px) + 530px)}}
+@media (max-width:820px){.dokufix-licences{top:40px;right:22px}}`;
 
 // Comments out, whitespace down to what CSS needs. Quoted strings are left
 // alone: content:"Bild fehlt: " must keep its space.

@@ -66,8 +66,11 @@ const SLOT = name => '{{slot:' + name + '}}';
 
 // dokufix- names a stylesheet outside the block may use. .dokufix-rail only where
 // the selector is about layout (.has-items) or the scrollspy (a.active); its look
-// is a document style.
-const ALLOWED_ALWAYS = new Set(['.dokufix-meta', '.dokufix-rail-pending']);
+// is a document style. .dokufix-licences and .dokufix-licences-view are the link
+// "license information" and its view (src/app/licences.js): frame, the element
+// stands outside the content container. Each name is listed; another name that
+// begins the same way is not allowed by that.
+const ALLOWED_ALWAYS = new Set(['.dokufix-meta', '.dokufix-rail-pending', '.dokufix-licences', '.dokufix-licences-view']);
 const railAllowed = sel => /\.has-items\b/.test(sel) || /\ba\.active\b/.test(sel);
 // Selectors outside the block that may use a class or attribute name the block
 // uses too, because they style something else: the editor's version dialog, and
@@ -80,6 +83,11 @@ const FRAME_SELECTORS = new Set([
   '*', 'body', '.reader-body', '.dokufix-meta', '.dokufix-meta p', 'noscript p',
   'body:has(aside.dokufix-rail.has-items)', 'body:has(aside.dokufix-rail.has-items) .reader-body',
   '.dokufix-rail.has-items', '.dokufix-rail-pending',
+  // the link "license information" and its view
+  '.dokufix-licences', '.dokufix-licences summary', '.dokufix-licences summary::-webkit-details-marker',
+  '.dokufix-licences summary:hover', '.dokufix-licences-view', '.dokufix-licences-view p',
+  '.dokufix-licences-view ul', '.dokufix-licences-view li',
+  'body:has(aside.dokufix-rail.has-items) .dokufix-licences',
 ]);
 
 // ---------- arguments and files ----------

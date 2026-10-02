@@ -29,7 +29,12 @@
 //                                other, and the preview ends as the second's
 //   3. a transient element       elements marked data-dokufix-transient in
 //                                <head>, in <body> and inside the interface:
-//                                none is in the saved "Mit Editor" file
+//                                none is in the saved "Mit Editor" file. The
+//                                link "license information" is such an element,
+//                                twice; its views are open while the files are
+//                                written: the saved file has neither, and each
+//                                read-only export carries the element it writes
+//                                itself, once and closed
 //   4. Markdown cannot be parsed marked is made to throw: the warning is
 //                                all the preview holds, the rail is rebuilt and
 //                                empty; then the three read-only exports
@@ -270,6 +275,11 @@ const facts = page => page.evaluate(() => {
     railLinks: rail ? rail.querySelectorAll('a').length : 0,
     railHasItems: !!rail && rail.classList.contains('has-items'),
     footer: !!document.querySelector('footer.dokufix-meta'),
+    // The link "license information" with its view: where each stands and whether it is open.
+    licences: Array.from(document.querySelectorAll('details.dokufix-licences')).map(d => ({
+      open: d.open, transient: d.hasAttribute('data-dokufix-transient'),
+      firstInBody: d.parentElement === document.body && d === document.body.firstElementChild,
+    })),
   };
 });
 const STYLED = { border: '6px solid', background: 'rgb(255, 248, 225)', padding: '16px', detail: 'pre-wrap on rgba(0, 0, 0, 0)' };
@@ -402,13 +412,32 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         document.querySelector('.pane-preview').appendChild(nested);
         // Not marked: this one is a leftover, and the save takes it along.
         document.body.appendChild(make('i', 'durchlaeufe-nicht-markiert', false));
-        return document.querySelectorAll('[data-dokufix-transient]').length;
+        return document.querySelectorAll('[data-dokufix-transient][id^="durchlaeufe-"]').length;
       });
+      // The page's own transient elements: the link "license information", in
+      // <body> for read mode and in the toolbar. Both views are opened, the
+      // first while the page is still in read mode.
+      await o.page.click('body > details.dokufix-licences > summary');
+      await editMode(o.page);
+      await o.page.click('#header-actions > details.dokufix-licences > summary');
+      const views = () => o.page.evaluate(() => Array.from(document.querySelectorAll('details.dokufix-licences'))
+        .map(d => d.open && d.hasAttribute('data-dokufix-transient')));
+      check(scope, 'the page has the licence link twice, marked, and both views are open', JSON.stringify(await views()) === '[true,true]', await views());
       const withTransient = path.join(dir, 'transient-mit-editor.html');
       await download(o.page, 'full', withTransient);
       const savedText = fs.readFileSync(withTransient, 'utf8');
-      check(scope, 'the page held four marked elements when it was saved', placed === 4, placed);
-      check(scope, 'the marked elements are still in the running page', await o.page.evaluate(() => document.querySelectorAll('[data-dokufix-transient]').length) === 4);
+      check(scope, 'the page held four marked elements of this run when it was saved', placed === 4, placed);
+      check(scope, 'the marked elements are still in the running page', await o.page.evaluate(() => document.querySelectorAll('[data-dokufix-transient][id^="durchlaeufe-"]').length) === 4);
+      // The read-only exports, written while both views are open: each writes
+      // the element itself, so it is there once, closed and not marked.
+      await checkExports(scope, browser, o.page, dir, 'transient', READONLY, (s, x, text) => {
+        const written = text.match(/<details class="dokufix-licences"[^>]*>/g) || [];
+        check(s, 'carries the licence element once, directly after <body>, closed, although the views were open',
+          written.length === 1 && written[0] === '<details class="dokufix-licences">' && x.licences.length === 1 && !x.licences[0].open && x.licences[0].firstInBody, { written, licences: x.licences });
+        check(s, 'nothing transient: not the attribute, not an element of this run', x.transient === 0 && !text.includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), x.transient);
+        if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
+      });
+      check(scope, 'both views are still open in the running page', JSON.stringify(await views()) === '[true,true]', await views());
       await o.context.close();
       // The saved file, read with scripts off: its script names the attribute, so
       // the text of the file cannot be searched for it.
@@ -418,9 +447,11 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       const left = await offPage.evaluate(() => ({
         marked: document.querySelectorAll('[data-dokufix-transient]').length,
         ids: Array.from(document.querySelectorAll('[id^="durchlaeufe-"]')).map(el => el.id),
+        licences: document.querySelectorAll('details.dokufix-licences').length,
       }));
       await off.close();
       check(scope, 'no marked element, and nothing inside one, is in the saved file', left.marked === 0 && !savedText.includes('durchlaeufe-t-'), left);
+      check(scope, 'the saved file has no licence element: the script makes it when the file is opened', left.licences === 0, left);
       check(scope, 'control: the element that was not marked is in the saved file', left.ids.join(' ') === 'durchlaeufe-nicht-markiert', left);
     });
 

@@ -14,7 +14,7 @@ import { state } from './app/state.js';
 import { loadDocState, sanitizeVersion, isValidEntry, setPersistFailed, updateVersionBadge, registerVersionDialog, updateDirtyState } from './app/persistence.js';
 import { render } from './app/render.js';
 import { registerRailClicks } from './app/rail.js';
-import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle } from './app/editor.js';
+import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle, registerLicences } from './app/editor.js';
 import { registerDownloadMenu } from './app/downloads/menu.js';
 
 mermaid.initialize({
@@ -50,6 +50,7 @@ registerNumbering();
 registerHamburger();
 registerViewToggle();
 registerStorageBanner();
+registerLicences();
 
 // Async init — reads the demo text and this file's document from their data
 // blocks (decompressing them if they are gzipped), opens IDB, migrates legacy

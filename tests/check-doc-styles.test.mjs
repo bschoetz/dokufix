@@ -71,6 +71,12 @@ fails('#preview descendant rule in the export frame', inFile(FRAME_FILE, FRAME, 
 fails('dokufix- rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.dokufix-x{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"\.dokufix-x"/);
 fails('document rule with an ancestor in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.reader-body h5{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"\.reader-body h5"/);
 fails('unprefixed document construct in the app stylesheet', prepend('app.css', '.footnotes li{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.footnotes li".*\.footnotes/);
+// The link "license information" is frame, and its selectors are listed one by
+// one in the check. A rule of it that is not listed fails like any other.
+fails('unlisted licence name in the app stylesheet', prepend('app.css', '.dokufix-licences-x{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.dokufix-licences-x" uses \.dokufix-licences-x/);
+fails('unlisted licence rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.dokufix-licences h5{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"\.dokufix-licences h5"/);
+fails('licence rule with an attribute the document styles use, in the app stylesheet', prepend('app.css', '.dokufix-licences[open] summary{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.dokufix-licences\[open\] summary" uses \[open\]/);
+fails('licence rule that names a document construct, in the app stylesheet', prepend('app.css', '.dokufix-licences .dokufix-callout{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.dokufix-licences \.dokufix-callout" uses \.dokufix-callout/);
 fails('editor selector in front of .dokufix-doc in the block', prepend('doc.css', 'body.mode-view .dokufix-doc h5{color:red}\n'), /src\/doc\.css line 1: "body\.mode-view \.dokufix-doc h5" does not start with \.dokufix-doc/);
 fails('export that no longer embeds the document styles', inFile(OPEN_FILE, '<style>${readonlyCss()}</style>', '<style>${READONLY_FRAME_CSS}</style>'), /src\/app\/downloads\/readonly-open\.js line \d+, downloadReadonlyOpen\(\).*does not embed/);
 fails('block missing from the page', inFile('index.html', BLOCK, ''), /src\/index\.html: found 0 blocks/);
