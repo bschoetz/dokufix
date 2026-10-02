@@ -1407,12 +1407,10 @@ async function assertVariant(launch, file, key, exp, results, label){
       // hidden text that is position:absolute with no positioned ancestor,
       // does not scroll with the preview and makes the page higher than the
       // window.
-      // Measured with the footnote previews taken out of the page. They are
-      // placed that way themselves (anchor positioning, the host is not
-      // positioned), and with them the page of the editor can be scrolled:
-      // so it is on the built file before status chips, with the demo text,
-      // in both browsers. That is theirs to fix; the run says so in a note
-      // and holds everything else to the rule.
+      // The footnote previews are placed that way themselves (anchor
+      // positioning, the host is not positioned). In edit mode the box below
+      // the toolbar is their containing block and cuts off what reaches past
+      // it (src/app.css), so the page has nothing to scroll with them in it.
       const pageSize = () => page.evaluate(() => {
         const p = document.getElementById('preview'), d = document.documentElement;
         p.scrollTop = p.scrollHeight;
@@ -1421,12 +1419,47 @@ async function assertVariant(launch, file, key, exp, results, label){
         p.scrollTop = 0;
         return out;
       });
-      const withPreviews = await pageSize();
-      const noPreviews = await page.addStyleTag({ content: '.dokufix-fn-preview{display:none !important}' });
+      // Both measurements are taken with the page as it ships: the style that
+      // switches the fallbacks off in Playwright's Firefox (NO_FALLBACKS) is
+      // out of action for them. With it in the page the previews are placed
+      // otherwise, and the file before the rule passed in that browser.
+      const helperStyles = on => page.evaluate(([css, on]) => {
+        for (const el of document.querySelectorAll('style')) if (el.textContent === css && el.sheet) el.sheet.disabled = !on;
+      }, [NO_FALLBACKS, on]);
+      await helperStyles(false);
       const scroll = await pageSize();
-      await noPreviews.evaluate(el => el.remove());
-      check('edit mode, the preview scrolled to its end: the page itself cannot be scrolled (footnote previews taken out)', !scroll.scrollable && scroll.previewScrolledBy > 0, JSON.stringify(scroll),
-        withPreviews.scrollable ? 'with the footnote previews in the page it can: page ' + withPreviews.page + ', window ' + withPreviews.window + ' (so it is without status chips too)' : '');
+      check('edit mode, the preview scrolled to its end: the page itself cannot be scrolled', !scroll.scrollable && scroll.previewScrolledBy > 0, JSON.stringify(scroll));
+      // --- edit mode: a click on an entry of the inline table of contents
+      // scrolls the preview to its heading and nothing else. Before the rule
+      // above the page scrolled too, and the toolbar left the window.
+      if (exp.toc){
+        const place = () => page.evaluate(() => {
+          const top = sel => Math.round(document.querySelector(sel).getBoundingClientRect().top);
+          return { toolbar: top('body > header'), paneHeader: top('.pane-preview .pane-header'), pageScrolledBy: Math.round(scrollY),
+                   layoutScrolledBy: document.querySelector('.layout').scrollTop, previewScrolledBy: Math.round(document.getElementById('preview').scrollTop) };
+        });
+        const before = await place();
+        await page.evaluate(() => { const links = document.querySelectorAll('#preview nav.dokufix-toc a'); links[Math.floor(links.length / 2)].click(); });
+        // The scroll is smooth: wait until the preview has moved and stands still.
+        await page.waitForFunction(() => document.getElementById('preview').scrollTop > 0, null, { timeout: 5000 }).catch(() => {});
+        let after = await place();
+        for (let i = 0; i < 20; i++){
+          await page.waitForTimeout(200);
+          const now = await place();
+          if (now.previewScrolledBy === after.previewScrolledBy){ after = now; break; }
+          after = now;
+        }
+        check('edit mode, a click on an entry of the table of contents in the preview: the preview scrolls to the heading, and toolbar and pane header stay where they are',
+          after.previewScrolledBy > 0 && after.toolbar === before.toolbar && after.paneHeader === before.paneHeader && after.pageScrolledBy === 0 && after.layoutScrolledBy === 0,
+          'before ' + JSON.stringify(before) + ', after ' + JSON.stringify(after));
+        // Back to where the page was: the click wrote the heading's anchor into the address.
+        await page.evaluate(() => {
+          history.replaceState(null, '', location.pathname + location.search);
+          document.getElementById('preview').scrollTo({ top: 0, behavior: 'instant' });
+          scrollTo({ top: 0, behavior: 'instant' });
+        });
+      }
+      await helperStyles(true);
       const tf = await licenceFacts(page);
       const header = await page.evaluate(() => { const r = document.querySelector('header').getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
       check('edit mode: the link stands in the toolbar, visible, and the one of read mode is not shown',

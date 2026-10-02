@@ -228,6 +228,21 @@
     background:#d8d8da;
     overflow:hidden;
   }
+  /* Edit mode: nothing below the toolbar reaches out of this box, and the page
+     behind the editor has nothing to scroll. A footnote preview is
+     position:absolute and its host is not positioned (src/doc.css), so without
+     a positioned ancestor it is placed against the page. The hidden previews
+     of a long document then made the page thousands of pixels high, and a
+     click on an entry of the table of contents in the preview scrolled the
+     page as well as the pane: the toolbar left the window (Chromium, measured
+     2026-10-02). So this box is the containing block of the previews, and it
+     cuts off what reaches past it. overflow:clip, not hidden: a box with
+     overflow:hidden can still be scrolled by scrollIntoView(), and was, by the
+     height of the pane's header. min-height:0, which overflow:hidden gave a
+     flex item for free, keeps the box as high as the window leaves it.
+     Where a preview appears does not change by this. Read mode is untouched:
+     there no ancestor of a preview is positioned, as in a read-only export. */
+  body:not(.mode-view) .layout{position:relative;overflow:clip;min-height:0}
   .pane{
     background:#fff;
     display:flex;
