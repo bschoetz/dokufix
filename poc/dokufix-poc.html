@@ -4,6 +4,355 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>dokufix — PoC</title>
+<style id="dokufix-doc-css">
+  /* DOCUMENT STYLES — the one source for everything that travels with a document.
+
+     The preview uses this block as an ordinary stylesheet. The three read-only
+     exports embed its text (readonlyCss(), comments and whitespace removed), and
+     "Mit Editor" carries the block along because it clones the whole document.
+     So a rule written here reaches all four variants, and a rule written anywhere
+     else reaches some of them. That second case is how a feature once went missing
+     from every read-only export; poc/tests/check-doc-styles.mjs now fails on it.
+
+     What belongs here: the look of rendered document content. Every selector is
+     scoped by .dokufix-doc, the class on the content container (#preview here,
+     the reader-body main element in an export). The only exception is the look
+     of the rail, which sits beside the container and keeps unscoped .dokufix-rail
+     selectors.
+     What does not belong here: the frame around the document. Page margins, the
+     rail grid and its breakpoint, the export footer and everything of the editor
+     interface live in the stylesheet below and in READONLY_FRAME_CSS.
+
+     This block must stay ahead of the stylesheet below, and readonlyCss() puts the
+     frame after it: where a frame rule and a document rule have the same
+     specificity (.dokufix-meta p against .dokufix-doc p, a.active against
+     .rail-h4 a) the frame has to win. */
+
+  .dokufix-doc h1,.dokufix-doc h2,.dokufix-doc h3,.dokufix-doc h4{
+    line-height:1.2;margin-top:1.4em;margin-bottom:0.5em;
+    letter-spacing:-0.015em;font-weight:800;
+  }
+  .dokufix-doc h1{font-size:34px;margin-top:0}
+  .dokufix-doc h2{font-size:25px;border-bottom:1px solid #e5e5ea;padding-bottom:6px}
+  .dokufix-doc h3{font-size:19px}
+  .dokufix-doc p{margin-bottom:1em}
+  .dokufix-doc ul,.dokufix-doc ol{margin:0 0 1em 1.5em}
+  .dokufix-doc li{margin-bottom:4px}
+  .dokufix-doc code:not(pre code){
+    background:#f0f0f3;padding:2px 6px;border-radius:3px;
+    font-family:ui-monospace,monospace;font-size:0.88em;color:#c41a16;
+  }
+  .dokufix-doc pre{
+    background:#1c1c1e;color:#f5f5f7;padding:16px 20px;
+    border-radius:6px;overflow-x:auto;margin:0 0 1em;
+    font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;
+  }
+  .dokufix-doc pre code{background:transparent;padding:0;color:inherit}
+  .dokufix-doc blockquote{
+    border-left:4px solid #d4ff00;padding:10px 18px;
+    background:#fafafa;margin:0 0 1em;color:#3a3a3f;
+  }
+  .dokufix-doc blockquote p:last-child{margin-bottom:0}
+  .dokufix-doc table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
+  .dokufix-doc th,.dokufix-doc td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
+  .dokufix-doc th{background:#fafafa;font-weight:700}
+  .dokufix-doc img{max-width:100%;height:auto;border-radius:4px;margin:8px 0}
+  .dokufix-doc img[data-missing-asset]{
+    display:inline-block;min-width:200px;padding:14px 18px;
+    background:#fff3f3;border:1px dashed #c44;border-radius:6px;
+    color:#8b1300;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    text-align:center;object-fit:contain;
+  }
+  .dokufix-doc img[data-missing-asset]::after{
+    content:"Bild fehlt: " attr(data-missing-asset);
+    word-break:break-all;
+  }
+  .dokufix-doc a{color:#0066cc}
+  .dokufix-doc .mermaid{margin:24px 0;text-align:center}
+  .dokufix-doc .mermaid svg{max-width:100%;height:auto}
+  .dokufix-doc hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+
+  /* Inline Table of Contents — injected where the markdown contains [[toc]] */
+  .dokufix-doc .dokufix-toc{
+    margin:1.5em 0 2em;
+    padding:1.1em 1.4em 1.2em;
+    background:#fafafa;
+    border:1px solid #e5e5ea;
+    border-radius:6px;
+    font-size:.94em;
+  }
+  .dokufix-doc .dokufix-toc ol{
+    list-style:none;margin:0;padding:0;
+  }
+  .dokufix-doc .dokufix-toc > ol{counter-reset:tocH2}
+  .dokufix-doc .dokufix-toc ol ol{
+    margin:.3em 0 .3em 1.2em;
+    padding-left:.6em;
+    border-left:1px solid #e5e5ea;
+    counter-reset:tocH3;
+  }
+  .dokufix-doc .dokufix-toc ol ol ol{counter-reset:tocH4}
+  .dokufix-doc .dokufix-toc li{margin:.25em 0;line-height:1.4}
+  .dokufix-doc .dokufix-toc a{
+    text-decoration:none;color:#1c1c1e;
+    border-bottom:1px solid transparent;
+    transition:color .12s ease, border-color .12s ease;
+  }
+  .dokufix-doc .dokufix-toc a:hover{color:#0066cc;border-bottom-color:currentColor}
+  /* Numbered ToC: mirror body.numbered, separate counter scope */
+  .numbered .dokufix-doc .dokufix-toc > ol > li > a::before{
+    counter-increment:tocH2;content:counter(tocH2) ". ";
+    color:#8e8e92;font-weight:600;margin-right:.15em;
+  }
+  .numbered .dokufix-doc .dokufix-toc ol ol > li > a::before{
+    counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";
+    color:#8e8e92;font-weight:600;margin-right:.15em;
+  }
+  .numbered .dokufix-doc .dokufix-toc ol ol ol > li > a::before{
+    counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";
+    color:#8e8e92;font-weight:600;margin-right:.15em;
+  }
+
+  /* Frontmatter — YAML/JSON metadata header as a collapsible panel.
+     Native <details>: keyboard-operable and JS-free, so it survives the
+     nur-lesen export. Collapsed by default — the document should read as a
+     document on first open, with metadata as context rather than headline. */
+  .dokufix-doc .dokufix-frontmatter{
+    margin:0 0 2em;
+    background:#fafafa;
+    border:1px solid #e5e5ea;
+    border-radius:6px;
+    font-size:.92em;
+  }
+  .dokufix-doc .dokufix-frontmatter summary{
+    cursor:pointer;
+    padding:.7em 1.1em;
+    display:flex;align-items:baseline;gap:.55em;
+    list-style:none;
+    border-radius:6px;
+    user-select:none;
+  }
+  .dokufix-doc .dokufix-frontmatter summary::-webkit-details-marker{display:none}
+  .dokufix-doc .dokufix-frontmatter summary::before{
+    content:"▸";color:#8e8e92;font-size:.9em;
+    display:inline-block;transition:transform .12s ease;
+  }
+  .dokufix-doc .dokufix-frontmatter[open] > summary::before{transform:rotate(90deg)}
+  .dokufix-doc .dokufix-frontmatter summary:hover{background:#f0f0f2}
+  .dokufix-doc .dokufix-fm-label{font-weight:600;color:#1c1c1e}
+  .dokufix-doc .dokufix-fm-digest{
+    color:#8e8e92;min-width:0;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .dokufix-doc .dokufix-fm-body{padding:0 1.1em 1em}
+  .dokufix-doc .dokufix-fm-rows{
+    margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;
+  }
+  .dokufix-doc .dokufix-fm-rows dt{color:#8e8e92;font-weight:600;white-space:nowrap}
+  .dokufix-doc .dokufix-fm-rows dd{margin:0;color:#1c1c1e;min-width:0;overflow-wrap:anywhere}
+  .dokufix-doc .dokufix-fm-rows dd > .dokufix-fm-rows{
+    margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid #e5e5ea;
+  }
+  .dokufix-doc .dokufix-fm-list{margin:0;padding-left:1.1em}
+  .dokufix-doc .dokufix-fm-list li{margin:.1em 0}
+  .dokufix-doc .dokufix-fm-empty{color:#8e8e92}
+  .dokufix-doc .dokufix-fm-raw{
+    margin:0;padding:.8em 1em;
+    background:#fff;border:1px solid #e5e5ea;border-radius:4px;
+    font-size:.9em;white-space:pre-wrap;overflow-x:auto;
+  }
+  .dokufix-doc .dokufix-fm-unparsed .dokufix-fm-digest{color:#a06000}
+
+  /* Footnotes (marked-footnote / GFM style) */
+  .dokufix-doc .footnotes{
+    margin-top:3em;padding-top:1.5em;
+    border-top:1px solid #e5e5ea;
+    font-size:.9em;color:#3a3a3f;
+  }
+  .dokufix-doc .footnotes h2{display:none}
+  .dokufix-doc .footnotes ol{margin:0 0 0 1.5em}
+  .dokufix-doc .footnotes li{margin-bottom:.5em}
+  .dokufix-doc .footnotes li p{margin:0}
+  .dokufix-doc sup a, .dokufix-doc a[data-footnote-ref]{
+    text-decoration:none;font-weight:700;
+    padding:0 2px;color:#0066cc;
+  }
+  .dokufix-doc a[data-footnote-backref]{
+    text-decoration:none;margin-left:4px;opacity:.55;
+  }
+  .dokufix-doc a[data-footnote-backref]:hover{opacity:1}
+
+  /* Landing highlight + return-path disambiguation.
+     li:target covers arrival via the plain #footnote-<id> anchor (external
+     bookmarks, copied URLs). li:has(...) covers arrival via a marker, which
+     now targets its own arrow — see linkFootnoteReturnPaths(). */
+  .dokufix-doc .footnotes li:target,
+  .dokufix-doc .footnotes li:has(a[data-footnote-backref]:target){
+    background:rgba(212,255,0,.30);
+    box-shadow:0 0 0 7px rgba(212,255,0,.30);
+    border-radius:2px;
+    transition:background-color .25s ease, box-shadow .25s ease;
+  }
+  .dokufix-doc .footnotes li{scroll-margin-top:90px}
+  /* Exactly the arrow that leads back where you came from. */
+  .dokufix-doc .footnotes a[data-footnote-backref]:target{
+    background:#d4ff00;
+    opacity:1;
+    padding:0 4px;
+    border-radius:3px;
+    scroll-margin-top:90px;
+    outline:2px solid #d4ff00;
+    /* Match the definition's fade: the two highlight as one gesture, and the
+       padding jump would otherwise shove neighbouring text sideways instantly. */
+    transition:background-color .25s ease, padding .25s ease, outline-color .25s ease;
+  }
+  /* forced-colors strips background and box-shadow, which is the entire landing
+     highlight — leaving only the arrow's outline visible, i.e. exactly the element
+     whose reading position is the documented trade-off. Re-state the highlight in
+     system colours so "which footnote did I land on" survives high-contrast mode. */
+  @media (forced-colors: active){
+    .dokufix-doc .footnotes li:target,
+    .dokufix-doc .footnotes li:has(a[data-footnote-backref]:target){
+      outline:3px solid Highlight;
+      outline-offset:3px;
+    }
+    .dokufix-doc .footnotes a[data-footnote-backref]:target{
+      outline:2px solid Highlight;
+      forced-color-adjust:none;
+      background:Highlight;
+      color:HighlightText;
+    }
+  }
+
+  /* Footnote hover/focus preview. Pure CSS on purpose: no listener means it
+     works in the JS-free nur-lesen export. Base positioning is plain absolute +
+     translate, which every target engine supports; anchor positioning refines it
+     under @supports below (NFR7). */
+  .dokufix-doc .dokufix-fn-host{position:relative}
+  .dokufix-doc .dokufix-fn-preview{
+    position:absolute;
+    left:50%;bottom:calc(100% + 8px);
+    transform:translateX(-50%);
+    z-index:20;
+    width:max-content;
+    max-width:min(32rem, 90vw);
+    /* A preview is a preview. Without a ceiling a long footnote grows past the
+       viewport top, where content is unreachable because browsers do not make
+       overflow above the scroll origin scrollable — and pointer-events:none
+       rules out scrolling the box itself. The fade signals the cut; the full
+       text is always in the definition list below. */
+    max-height:min(50vh, 20rem);
+    overflow:hidden;
+    mask-image:linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
+    padding:.7em .9em;
+    background:#fff;
+    border:1px solid #e5e5ea;
+    border-radius:6px;
+    box-shadow:0 6px 20px rgba(0,0,0,.13);
+    /* rem, not em: the host <sup> is font-size:smaller and would shrink it */
+    font-size:.85rem;font-weight:400;line-height:1.5;
+    color:#3a3a3f;text-align:left;
+    white-space:normal;
+    vertical-align:baseline;
+    visibility:hidden;opacity:0;
+    transition:opacity .12s ease, visibility .12s ease;
+    /* Decorative duplicate of the definition — never a hit target. */
+    pointer-events:none;
+  }
+  .dokufix-doc .dokufix-fn-host:hover > .dokufix-fn-preview,
+  .dokufix-doc .dokufix-fn-host:focus-within > .dokufix-fn-preview{
+    visibility:visible;opacity:1;
+  }
+  .dokufix-doc .dokufix-fn-preview code{font-size:.92em}
+  /* Keep the box inside the viewport when its marker sits near an edge. A centred
+     box cannot fit when the marker is closer to the edge than half the box width,
+     and plain CSS can't detect that — at ~900px a right-edge marker pushed the
+     preview ~200px off-screen.
+     The fallback chain covers BOTH axes. It used to list only block-start tries,
+     which vary the inline axis alone, so a marker near the top of the viewport had
+     nothing to flip to and opened upward off-screen regardless — the block axis was
+     never tested (the README recorded six widths and no heights).
+     The host must NOT be position:relative here: a tiny containing block leaves the
+     try-fallbacks nothing to evaluate against and they never fire.
+     The transition in the base rule above is load-bearing — without it Firefox does
+     not reveal the preview at all.
+     Note the gate is syntactic: Firefox reports support for these properties while
+     the fallbacks do not actually fire, so @supports cannot tell a working engine
+     from a partial one. Positioning is verified by measurement (see poc/README.md);
+     hover *timing* here cannot be trusted to automation — Playwright's synthetic
+     mouse produced the Firefox numbers that human review later retracted
+     (deferred-work.md → "Deferred from: story 1-2").
+     Revert path: delete this block — the exports read it from here, there is no
+     second copy — which restores the fast base and reinstates the ~900px clipping. */
+  @position-try --dokufix-fn-start{position-area:block-start span-inline-start}
+  @position-try --dokufix-fn-end{position-area:block-start span-inline-end}
+  @position-try --dokufix-fn-below{position-area:block-end center;margin-block:8px 0}
+  @position-try --dokufix-fn-below-start{position-area:block-end span-inline-start;margin-block:8px 0}
+  @position-try --dokufix-fn-below-end{position-area:block-end span-inline-end;margin-block:8px 0}
+  @supports (anchor-name:--a) and (position-try-fallbacks:--b){
+    .dokufix-doc .dokufix-fn-host{
+      position:static;
+      anchor-name:--dokufix-fn;
+      /* Belt and braces: each preview already resolves to its own <sup>,
+         the last matching anchor preceding it in tree order. */
+      anchor-scope:--dokufix-fn;
+    }
+    .dokufix-doc .dokufix-fn-preview{
+      position-anchor:--dokufix-fn;
+      position-area:block-start center;
+      left:auto;right:auto;bottom:auto;transform:none;
+      margin-bottom:8px;
+      position-try-fallbacks:--dokufix-fn-start, --dokufix-fn-end, --dokufix-fn-below, --dokufix-fn-below-start, --dokufix-fn-below-end;
+    }
+  }
+
+  /* Gliederungsnummerierung — opt-in via body.numbered */
+  .numbered .dokufix-doc{counter-reset:h2}
+  .numbered .dokufix-doc h2{counter-reset:h3}
+  .numbered .dokufix-doc h3{counter-reset:h4}
+  .numbered .dokufix-doc h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
+  .numbered .dokufix-doc h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+  .numbered .dokufix-doc h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+
+  /* Scrollspy rail, the look. Hidden here; each frame decides where and from
+     which width it is shown (the stylesheet below, READONLY_FRAME_CSS). */
+  .dokufix-rail{
+    display:none;z-index:40;
+    overflow-y:auto;overflow-x:hidden;
+    font-size:13px;line-height:1.4;
+    padding:4px 0;
+  }
+  .dokufix-rail::before{
+    content:"Auf dieser Seite";
+    display:block;
+    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
+    color:#8e8e92;font-weight:700;
+    padding:0 14px 8px;
+  }
+  .dokufix-rail ol{
+    list-style:none;margin:0;padding:0;
+    border-left:2px solid #e5e5ea;
+  }
+  .dokufix-rail li{margin:0}
+  .dokufix-rail ol ol{
+    border-left:0;margin:0;padding:0;
+  }
+  .dokufix-rail a{
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    padding:5px 14px;
+    margin-left:-2px;
+    border-left:2px solid transparent;
+    color:#6e6e73;text-decoration:none;
+    transition:color .15s ease, border-left-color .15s ease;
+    word-break:break-word;
+  }
+  .dokufix-rail a:hover{color:#1c1c1e}
+  .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
+  .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
+</style>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%}
@@ -263,302 +612,18 @@
     pointer-events:none;z-index:5;
   }
   .pane-source.is-drop-target .drop-overlay{display:flex}
-  #preview img{max-width:100%;height:auto;border-radius:4px;margin:8px 0}
-  #preview img[data-missing-asset]{
-    display:inline-block;min-width:200px;padding:14px 18px;
-    background:#fff3f3;border:1px dashed #c44;border-radius:6px;
-    color:#8b1300;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-    text-align:center;
-  }
-  #preview img[data-missing-asset]::after{
-    content:"Bild fehlt: " attr(data-missing-asset);
-    word-break:break-all;
-  }
   textarea{
     flex:1;width:100%;border:0;padding:24px;
     font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;
     font-size:13.5px;line-height:1.6;resize:none;outline:none;color:#1c1c1e;
     background:#fff;
   }
+  /* The preview container, the frame only. What the document inside it looks
+     like is in #dokufix-doc-css (class .dokufix-doc), not here. */
   #preview{
     flex:1;padding:36px 44px;overflow:auto;
     font-size:16px;
   }
-  #preview h1,#preview h2,#preview h3,#preview h4{
-    line-height:1.2;margin-top:1.4em;margin-bottom:0.5em;
-    letter-spacing:-0.015em;font-weight:800;
-  }
-  #preview h1{font-size:34px;margin-top:0}
-  #preview h2{font-size:25px;border-bottom:1px solid #e5e5ea;padding-bottom:6px}
-  #preview h3{font-size:19px}
-  #preview p{margin-bottom:1em}
-  #preview ul,#preview ol{margin:0 0 1em 1.5em}
-  #preview li{margin-bottom:4px}
-  #preview code:not(pre code){
-    background:#f0f0f3;padding:2px 6px;border-radius:3px;
-    font-family:ui-monospace,monospace;font-size:0.88em;color:#c41a16;
-  }
-  #preview pre{
-    background:#1c1c1e;color:#f5f5f7;padding:16px 20px;
-    border-radius:6px;overflow-x:auto;margin:0 0 1em;
-    font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;
-  }
-  #preview pre code{background:transparent;padding:0;color:inherit}
-  #preview blockquote{
-    border-left:4px solid #d4ff00;padding:10px 18px;
-    background:#fafafa;margin:0 0 1em;color:#3a3a3f;
-  }
-  #preview blockquote p:last-child{margin-bottom:0}
-  #preview table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
-  #preview th,#preview td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
-  #preview th{background:#fafafa;font-weight:700}
-  #preview img{max-width:100%;height:auto;border-radius:4px}
-  #preview a{color:#0066cc}
-  #preview .mermaid{margin:24px 0;text-align:center}
-  #preview .mermaid svg{max-width:100%;height:auto}
-  #preview hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
-
-  /* Inline Table of Contents — injected where the markdown contains [[toc]] */
-  #preview .dokufix-toc{
-    margin:1.5em 0 2em;
-    padding:1.1em 1.4em 1.2em;
-    background:#fafafa;
-    border:1px solid #e5e5ea;
-    border-radius:6px;
-    font-size:.94em;
-  }
-  #preview .dokufix-toc ol{
-    list-style:none;margin:0;padding:0;
-  }
-  #preview .dokufix-toc > ol{counter-reset:tocH2}
-  #preview .dokufix-toc ol ol{
-    margin:.3em 0 .3em 1.2em;
-    padding-left:.6em;
-    border-left:1px solid #e5e5ea;
-    counter-reset:tocH3;
-  }
-  #preview .dokufix-toc ol ol ol{counter-reset:tocH4}
-  #preview .dokufix-toc li{margin:.25em 0;line-height:1.4}
-  #preview .dokufix-toc a{
-    text-decoration:none;color:#1c1c1e;
-    border-bottom:1px solid transparent;
-    transition:color .12s ease, border-color .12s ease;
-  }
-  #preview .dokufix-toc a:hover{color:#0066cc;border-bottom-color:currentColor}
-  /* Numbered ToC: mirror body.numbered, separate counter scope */
-  .numbered #preview .dokufix-toc > ol > li > a::before{
-    counter-increment:tocH2;content:counter(tocH2) ". ";
-    color:#8e8e92;font-weight:600;margin-right:.15em;
-  }
-  .numbered #preview .dokufix-toc ol ol > li > a::before{
-    counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";
-    color:#8e8e92;font-weight:600;margin-right:.15em;
-  }
-  .numbered #preview .dokufix-toc ol ol ol > li > a::before{
-    counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";
-    color:#8e8e92;font-weight:600;margin-right:.15em;
-  }
-
-  /* Frontmatter — YAML/JSON metadata header as a collapsible panel.
-     Native <details>: keyboard-operable and JS-free, so it survives the
-     nur-lesen export. Collapsed by default — the document should read as a
-     document on first open, with metadata as context rather than headline. */
-  #preview .dokufix-frontmatter{
-    margin:0 0 2em;
-    background:#fafafa;
-    border:1px solid #e5e5ea;
-    border-radius:6px;
-    font-size:.92em;
-  }
-  #preview .dokufix-frontmatter summary{
-    cursor:pointer;
-    padding:.7em 1.1em;
-    display:flex;align-items:baseline;gap:.55em;
-    list-style:none;
-    border-radius:6px;
-    user-select:none;
-  }
-  #preview .dokufix-frontmatter summary::-webkit-details-marker{display:none}
-  #preview .dokufix-frontmatter summary::before{
-    content:"▸";color:#8e8e92;font-size:.9em;
-    display:inline-block;transition:transform .12s ease;
-  }
-  #preview .dokufix-frontmatter[open] > summary::before{transform:rotate(90deg)}
-  #preview .dokufix-frontmatter summary:hover{background:#f0f0f2}
-  #preview .dokufix-fm-label{font-weight:600;color:#1c1c1e}
-  #preview .dokufix-fm-digest{
-    color:#8e8e92;min-width:0;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  #preview .dokufix-fm-body{padding:0 1.1em 1em}
-  #preview .dokufix-fm-rows{
-    margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;
-  }
-  #preview .dokufix-fm-rows dt{color:#8e8e92;font-weight:600;white-space:nowrap}
-  #preview .dokufix-fm-rows dd{margin:0;color:#1c1c1e;min-width:0;overflow-wrap:anywhere}
-  #preview .dokufix-fm-rows dd > .dokufix-fm-rows{
-    margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid #e5e5ea;
-  }
-  #preview .dokufix-fm-list{margin:0;padding-left:1.1em}
-  #preview .dokufix-fm-list li{margin:.1em 0}
-  #preview .dokufix-fm-empty{color:#8e8e92}
-  #preview .dokufix-fm-raw{
-    margin:0;padding:.8em 1em;
-    background:#fff;border:1px solid #e5e5ea;border-radius:4px;
-    font-size:.9em;white-space:pre-wrap;overflow-x:auto;
-  }
-  #preview .dokufix-fm-unparsed .dokufix-fm-digest{color:#a06000}
-
-  /* Footnotes (marked-footnote / GFM style) */
-  #preview .footnotes{
-    margin-top:3em;padding-top:1.5em;
-    border-top:1px solid #e5e5ea;
-    font-size:.9em;color:#3a3a3f;
-  }
-  #preview .footnotes h2{display:none}
-  #preview .footnotes ol{margin:0 0 0 1.5em}
-  #preview .footnotes li{margin-bottom:.5em}
-  #preview .footnotes li p{margin:0}
-  #preview sup a, #preview a[data-footnote-ref]{
-    text-decoration:none;font-weight:700;
-    padding:0 2px;color:#0066cc;
-  }
-  #preview a[data-footnote-backref]{
-    text-decoration:none;margin-left:4px;opacity:.55;
-  }
-  #preview a[data-footnote-backref]:hover{opacity:1}
-
-  /* Landing highlight + return-path disambiguation.
-     li:target covers arrival via the plain #footnote-<id> anchor (external
-     bookmarks, copied URLs). li:has(...) covers arrival via a marker, which
-     now targets its own arrow — see linkFootnoteReturnPaths(). */
-  #preview .footnotes li:target,
-  #preview .footnotes li:has(a[data-footnote-backref]:target){
-    background:rgba(212,255,0,.30);
-    box-shadow:0 0 0 7px rgba(212,255,0,.30);
-    border-radius:2px;
-    transition:background-color .25s ease, box-shadow .25s ease;
-  }
-  #preview .footnotes li{scroll-margin-top:90px}
-  /* Exactly the arrow that leads back where you came from. */
-  #preview .footnotes a[data-footnote-backref]:target{
-    background:#d4ff00;
-    opacity:1;
-    padding:0 4px;
-    border-radius:3px;
-    scroll-margin-top:90px;
-    outline:2px solid #d4ff00;
-    /* Match the definition's fade: the two highlight as one gesture, and the
-       padding jump would otherwise shove neighbouring text sideways instantly. */
-    transition:background-color .25s ease, padding .25s ease, outline-color .25s ease;
-  }
-  /* forced-colors strips background and box-shadow, which is the entire landing
-     highlight — leaving only the arrow's outline visible, i.e. exactly the element
-     whose reading position is the documented trade-off. Re-state the highlight in
-     system colours so "which footnote did I land on" survives high-contrast mode. */
-  @media (forced-colors: active){
-    #preview .footnotes li:target,
-    #preview .footnotes li:has(a[data-footnote-backref]:target){
-      outline:3px solid Highlight;
-      outline-offset:3px;
-    }
-    #preview .footnotes a[data-footnote-backref]:target{
-      outline:2px solid Highlight;
-      forced-color-adjust:none;
-      background:Highlight;
-      color:HighlightText;
-    }
-  }
-
-  /* Footnote hover/focus preview. Pure CSS on purpose: no listener means it
-     works in the JS-free nur-lesen export. Base positioning is plain absolute +
-     translate, which every target engine supports; anchor positioning refines it
-     under @supports below (NFR7). */
-  #preview .dokufix-fn-host{position:relative}
-  #preview .dokufix-fn-preview{
-    position:absolute;
-    left:50%;bottom:calc(100% + 8px);
-    transform:translateX(-50%);
-    z-index:20;
-    width:max-content;
-    max-width:min(32rem, 90vw);
-    /* A preview is a preview. Without a ceiling a long footnote grows past the
-       viewport top, where content is unreachable because browsers do not make
-       overflow above the scroll origin scrollable — and pointer-events:none
-       rules out scrolling the box itself. The fade signals the cut; the full
-       text is always in the definition list below. */
-    max-height:min(50vh, 20rem);
-    overflow:hidden;
-    mask-image:linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
-    padding:.7em .9em;
-    background:#fff;
-    border:1px solid #e5e5ea;
-    border-radius:6px;
-    box-shadow:0 6px 20px rgba(0,0,0,.13);
-    /* rem, not em: the host <sup> is font-size:smaller and would shrink it */
-    font-size:.85rem;font-weight:400;line-height:1.5;
-    color:#3a3a3f;text-align:left;
-    white-space:normal;
-    vertical-align:baseline;
-    visibility:hidden;opacity:0;
-    transition:opacity .12s ease, visibility .12s ease;
-    /* Decorative duplicate of the definition — never a hit target. */
-    pointer-events:none;
-  }
-  #preview .dokufix-fn-host:hover > .dokufix-fn-preview,
-  #preview .dokufix-fn-host:focus-within > .dokufix-fn-preview{
-    visibility:visible;opacity:1;
-  }
-  #preview .dokufix-fn-preview code{font-size:.92em}
-  /* Keep the box inside the viewport when its marker sits near an edge. A centred
-     box cannot fit when the marker is closer to the edge than half the box width,
-     and plain CSS can't detect that — at ~900px a right-edge marker pushed the
-     preview ~200px off-screen.
-     The fallback chain covers BOTH axes. It used to list only block-start tries,
-     which vary the inline axis alone, so a marker near the top of the viewport had
-     nothing to flip to and opened upward off-screen regardless — the block axis was
-     never tested (the README recorded six widths and no heights).
-     The host must NOT be position:relative here: a tiny containing block leaves the
-     try-fallbacks nothing to evaluate against and they never fire.
-     The transition in the base rule above is load-bearing — without it Firefox does
-     not reveal the preview at all.
-     Note the gate is syntactic: Firefox reports support for these properties while
-     the fallbacks do not actually fire, so @supports cannot tell a working engine
-     from a partial one. Positioning is verified by measurement (see poc/README.md);
-     hover *timing* here cannot be trusted to automation — Playwright's synthetic
-     mouse produced the Firefox numbers that human review later retracted
-     (deferred-work.md → "Deferred from: story 1-2").
-     Revert path: delete this block AND its twin in READONLY_CSS — restores the fast
-     base and reinstates the ~900px clipping. */
-  @position-try --dokufix-fn-start{position-area:block-start span-inline-start}
-  @position-try --dokufix-fn-end{position-area:block-start span-inline-end}
-  @position-try --dokufix-fn-below{position-area:block-end center;margin-block:8px 0}
-  @position-try --dokufix-fn-below-start{position-area:block-end span-inline-start;margin-block:8px 0}
-  @position-try --dokufix-fn-below-end{position-area:block-end span-inline-end;margin-block:8px 0}
-  @supports (anchor-name:--a) and (position-try-fallbacks:--b){
-    #preview .dokufix-fn-host{
-      position:static;
-      anchor-name:--dokufix-fn;
-      /* Belt and braces: each preview already resolves to its own <sup>,
-         the last matching anchor preceding it in tree order. */
-      anchor-scope:--dokufix-fn;
-    }
-    #preview .dokufix-fn-preview{
-      position-anchor:--dokufix-fn;
-      position-area:block-start center;
-      left:auto;right:auto;bottom:auto;transform:none;
-      margin-bottom:8px;
-      position-try-fallbacks:--dokufix-fn-start, --dokufix-fn-end, --dokufix-fn-below, --dokufix-fn-below-start, --dokufix-fn-below-end;
-    }
-  }
-
-  /* Gliederungsnummerierung — opt-in via body.numbered */
-  .numbered #preview{counter-reset:h2}
-  .numbered #preview h2{counter-reset:h3}
-  .numbered #preview h3{counter-reset:h4}
-  .numbered #preview h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
-  .numbered #preview h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
-  .numbered #preview h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
 
   /* Toggle-button active state */
   header button.toggle-on{
@@ -666,48 +731,13 @@
   }
   body.mode-view .toggle-back{display:inline-block}
 
-  /* Right-side scrollspy rail.
-     Hidden by default. On wide viewports (and only in read mode for the editor),
-     the body becomes a 2-column grid: content on the left, rail on the right,
-     sharing the available horizontal space instead of overlapping. The rail
-     uses `position: sticky` so it stays in view during scroll while still
-     participating in the grid for sizing. */
-  .dokufix-rail{
-    display:none;z-index:40;
-    overflow-y:auto;overflow-x:hidden;
-    font-size:13px;line-height:1.4;
-    padding:4px 0;
-  }
-  .dokufix-rail::before{
-    content:"Auf dieser Seite";
-    display:block;
-    font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
-    color:#8e8e92;font-weight:700;
-    padding:0 14px 8px;
-  }
-  .dokufix-rail ol{
-    list-style:none;margin:0;padding:0;
-    border-left:2px solid #e5e5ea;
-  }
-  .dokufix-rail li{margin:0}
-  .dokufix-rail ol ol{
-    border-left:0;margin:0;padding:0;
-  }
-  .dokufix-rail a{
-    display:-webkit-box;
-    -webkit-line-clamp:2;
-    -webkit-box-orient:vertical;
-    overflow:hidden;
-    padding:5px 14px;
-    margin-left:-2px;
-    border-left:2px solid transparent;
-    color:#6e6e73;text-decoration:none;
-    transition:color .15s ease, border-left-color .15s ease;
-    word-break:break-word;
-  }
-  .dokufix-rail a:hover{color:#1c1c1e}
-  .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
-  .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
+  /* Right-side scrollspy rail, the layout. Its look is a document style and lives
+     in #dokufix-doc-css, where the rail is hidden by default. On wide viewports
+     (and only in read mode for the editor), the body becomes a 2-column grid:
+     content on the left, rail on the right, sharing the available horizontal
+     space instead of overlapping. The rail uses `position: sticky` so it stays in
+     view during scroll while still participating in the grid for sizing.
+     The active entry needs the scrollspy, so it exists only where the editor runs. */
   .dokufix-rail a.active{
     color:#1c1c1e;font-weight:700;
     border-left-color:#1c1c1e;
@@ -793,7 +823,7 @@
   </section>
   <section class="pane pane-preview">
     <div class="pane-header">Vorschau · gelayoutetes Dokument</div>
-    <article id="preview"></article>
+    <article id="preview" class="dokufix-doc"></article>
   </section>
 </main>
 
@@ -2752,117 +2782,54 @@ try {
   if (localStorage.getItem(NUMBERING_KEY) === '1') applyNumbering(true);
 } catch(e){}
 
-// Common CSS used by both read-only download variants
-const READONLY_CSS = `*{box-sizing:border-box;margin:0;padding:0}
+// --- Styles of the read-only exports ---------------------------
+// A read-only export gets two things, in this order:
+//   1. the document styles, read from the #dokufix-doc-css block in <head>
+//      when the file is written — the same block the preview is using, so
+//      the two cannot drift apart;
+//   2. the frame below: reset, page margins, the footer, the rail grid.
+// "noscript p" is frame too: the kompakt export's "needs JavaScript" notice sits
+// outside the content container, and without this rule the rail beside it would
+// stand 17 px higher than it did when p{} was an unscoped rule.
+// A rule for document content does NOT go into the frame. It goes into the
+// block in <head>, or the editor and "Mit Editor" never see it.
+// poc/tests/check-doc-styles.mjs fails when one turns up here.
+const READONLY_FRAME_CSS = `*{box-sizing:border-box;margin:0;padding:0}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
   color:#1c1c1e;background:#fff;line-height:1.5;
   max-width:950px;margin:0 auto;padding:80px 32px 120px;
   font-size:17px;-webkit-font-smoothing:antialiased;
 }
-h1,h2,h3,h4{line-height:1.2;margin:1.4em 0 .5em;letter-spacing:-0.015em;font-weight:800}
-h1{font-size:34px;margin-top:0}
-h2{font-size:25px;border-bottom:1px solid #e5e5ea;padding-bottom:6px}
-h3{font-size:19px}
-p{margin-bottom:1em}
-ul,ol{margin:0 0 1em 1.5em} li{margin-bottom:4px}
-code:not(pre code){background:#f0f0f3;padding:2px 6px;border-radius:3px;font-family:ui-monospace,monospace;font-size:.88em;color:#c41a16}
-pre{background:#1c1c1e;color:#f5f5f7;padding:16px 20px;border-radius:6px;overflow-x:auto;margin:0 0 1em;font-family:ui-monospace,monospace;font-size:13px;line-height:1.5}
-pre code{background:transparent;padding:0;color:inherit}
-blockquote{border-left:4px solid #d4ff00;padding:10px 18px;background:#fafafa;margin:0 0 1em;color:#3a3a3f}
-blockquote p:last-child{margin-bottom:0}
-table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
-th,td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
-th{background:#fafafa;font-weight:700}
-img{max-width:100%;height:auto;border-radius:4px}
-img[data-missing-asset]{display:inline-block;min-width:200px;padding:14px 18px;background:#fff3f3;border:1px dashed #c44;border-radius:6px;color:#8b1300;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;text-align:center;object-fit:contain}
-img[data-missing-asset]::after{content:"Bild fehlt: " attr(data-missing-asset);word-break:break-all}
-a{color:#0066cc}
-.mermaid{margin:24px 0;text-align:center}
-.mermaid svg{max-width:100%;height:auto}
-hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
-.dokufix-rail{display:none;z-index:40;overflow-y:auto;overflow-x:hidden;font-size:13px;line-height:1.4;padding:4px 0}
-.dokufix-rail::before{content:"Auf dieser Seite";display:block;font-size:10px;letter-spacing:0.16em;text-transform:uppercase;color:#8e8e92;font-weight:700;padding:0 14px 8px}
-.dokufix-rail ol{list-style:none;margin:0;padding:0;border-left:2px solid #e5e5ea}
-.dokufix-rail li{margin:0}
-.dokufix-rail ol ol{border-left:0;margin:0;padding:0}
-.dokufix-rail a{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;padding:5px 14px;margin-left:-2px;border-left:2px solid transparent;color:#6e6e73;text-decoration:none;transition:color .15s ease,border-left-color .15s ease;word-break:break-word}
-.dokufix-rail a:hover{color:#1c1c1e}
-.dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
-.dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
 .reader-body{min-width:0}
 .dokufix-meta{margin-top:4em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.85em;color:#8e8e92}
 .dokufix-meta p{margin:0}
+noscript p{margin-bottom:1em}
 @media (min-width:1500px){
   body:has(aside.dokufix-rail.has-items){max-width:1562px;display:grid;grid-template-columns:minmax(0, 1fr) 425px;column-gap:73px;padding:80px 32px 120px}
   body:has(aside.dokufix-rail.has-items) .reader-body{max-width:1000px;margin:0 auto;width:100%}
   .dokufix-rail.has-items{display:block;position:sticky;top:80px;max-height:calc(100vh - 100px);align-self:start}
 }
 .dokufix-rail-pending{pointer-events:none;opacity:.4;transition:opacity .25s ease}
-.dokufix-toc{margin:1.5em 0 2em;padding:1.1em 1.4em 1.2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.94em}
-.dokufix-toc ol{list-style:none;margin:0;padding:0}
-.dokufix-toc > ol{counter-reset:tocH2}
-.dokufix-toc ol ol{margin:.3em 0 .3em 1.2em;padding-left:.6em;border-left:1px solid #e5e5ea;counter-reset:tocH3}
-.dokufix-toc ol ol ol{counter-reset:tocH4}
-.dokufix-toc li{margin:.25em 0;line-height:1.4}
-.dokufix-toc a{text-decoration:none;color:#1c1c1e;border-bottom:1px solid transparent;transition:color .12s ease,border-color .12s ease}
-.dokufix-toc a:hover{color:#0066cc;border-bottom-color:currentColor}
-.numbered .dokufix-toc > ol > li > a::before{counter-increment:tocH2;content:counter(tocH2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
-.numbered .dokufix-toc ol ol > li > a::before{counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
-.numbered .dokufix-toc ol ol ol > li > a::before{counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
-.dokufix-frontmatter{margin:0 0 2em;background:#fafafa;border:1px solid #e5e5ea;border-radius:6px;font-size:.92em}
-.dokufix-frontmatter summary{cursor:pointer;padding:.7em 1.1em;display:flex;align-items:baseline;gap:.55em;list-style:none;border-radius:6px;user-select:none}
-.dokufix-frontmatter summary::-webkit-details-marker{display:none}
-.dokufix-frontmatter summary::before{content:"▸";color:#8e8e92;font-size:.9em;display:inline-block;transition:transform .12s ease}
-.dokufix-frontmatter[open]>summary::before{transform:rotate(90deg)}
-.dokufix-frontmatter summary:hover{background:#f0f0f2}
-.dokufix-fm-label{font-weight:600;color:#1c1c1e}
-.dokufix-fm-digest{color:#8e8e92;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dokufix-fm-body{padding:0 1.1em 1em}
-.dokufix-fm-rows{margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35em .9em}
-.dokufix-fm-rows dt{color:#8e8e92;font-weight:600;white-space:nowrap}
-.dokufix-fm-rows dd{margin:0;color:#1c1c1e;min-width:0;overflow-wrap:anywhere}
-.dokufix-fm-rows dd>.dokufix-fm-rows{margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid #e5e5ea}
-.dokufix-fm-list{margin:0;padding-left:1.1em}
-.dokufix-fm-list li{margin:.1em 0}
-.dokufix-fm-empty{color:#8e8e92}
-.dokufix-fm-raw{margin:0;padding:.8em 1em;background:#fff;border:1px solid #e5e5ea;border-radius:4px;font-size:.9em;white-space:pre-wrap;overflow-x:auto}
-.dokufix-fm-unparsed .dokufix-fm-digest{color:#a06000}
-.footnotes{margin-top:3em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.9em;color:#3a3a3f}
-.footnotes h2{display:none}
-.footnotes ol{margin:0 0 0 1.5em}
-.footnotes li{margin-bottom:.5em}
-.footnotes li p{margin:0}
-sup a,a[data-footnote-ref]{text-decoration:none;font-weight:700;padding:0 2px;color:#0066cc}
-a[data-footnote-backref]{text-decoration:none;margin-left:4px;opacity:.55}
-a[data-footnote-backref]:hover{opacity:1}
-.footnotes li:target,.footnotes li:has(a[data-footnote-backref]:target){background:rgba(212,255,0,.30);box-shadow:0 0 0 7px rgba(212,255,0,.30);border-radius:2px;transition:background-color .25s ease,box-shadow .25s ease}
-.footnotes li{scroll-margin-top:90px}
-.footnotes a[data-footnote-backref]:target{background:#d4ff00;opacity:1;padding:0 4px;border-radius:3px;scroll-margin-top:90px;outline:2px solid #d4ff00;transition:background-color .25s ease,padding .25s ease,outline-color .25s ease}
-@media (forced-colors: active){
-.footnotes li:target,.footnotes li:has(a[data-footnote-backref]:target){outline:3px solid Highlight;outline-offset:3px}
-.footnotes a[data-footnote-backref]:target{outline:2px solid Highlight;forced-color-adjust:none;background:Highlight;color:HighlightText}
-}
-.dokufix-fn-host{position:relative}
-.dokufix-fn-preview{position:absolute;left:50%;bottom:calc(100% + 8px);transform:translateX(-50%);z-index:20;width:max-content;max-width:min(32rem,90vw);max-height:min(50vh,20rem);overflow:hidden;mask-image:linear-gradient(to bottom,#000 calc(100% - 1.6em),transparent);padding:.7em .9em;background:#fff;border:1px solid #e5e5ea;border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.13);font-size:.85rem;font-weight:400;line-height:1.5;color:#3a3a3f;text-align:left;white-space:normal;vertical-align:baseline;visibility:hidden;opacity:0;transition:opacity .12s ease,visibility .12s ease;pointer-events:none}
-.dokufix-fn-host:hover>.dokufix-fn-preview,.dokufix-fn-host:focus-within>.dokufix-fn-preview{visibility:visible;opacity:1}
-.dokufix-fn-preview code{font-size:.92em}
-@position-try --dokufix-fn-start{position-area:block-start span-inline-start}
-@position-try --dokufix-fn-end{position-area:block-start span-inline-end}
-@position-try --dokufix-fn-below{position-area:block-end center;margin-block:8px 0}
-@position-try --dokufix-fn-below-start{position-area:block-end span-inline-start;margin-block:8px 0}
-@position-try --dokufix-fn-below-end{position-area:block-end span-inline-end;margin-block:8px 0}
-@supports (anchor-name:--a) and (position-try-fallbacks:--b){
-.dokufix-fn-host{position:static;anchor-name:--dokufix-fn;anchor-scope:--dokufix-fn}
-.dokufix-fn-preview{position-anchor:--dokufix-fn;position-area:block-start center;left:auto;right:auto;bottom:auto;transform:none;margin-bottom:8px;position-try-fallbacks:--dokufix-fn-start,--dokufix-fn-end,--dokufix-fn-below,--dokufix-fn-below-start,--dokufix-fn-below-end}
-}
-.numbered{counter-reset:h2}
-.numbered h2{counter-reset:h3}
-.numbered h3{counter-reset:h4}
-.numbered h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
-.numbered h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
-.numbered h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
 @media (max-width:820px){body{padding:64px 22px 96px;font-size:16px}}`;
+
+// Comments out, whitespace down to what CSS needs. Quoted strings are left
+// alone: content:"Bild fehlt: " must keep its space.
+function compactCss(css){
+  const STR = '("(?:[^"\\\\]|\\\\.)*"|\'(?:[^\'\\\\]|\\\\.)*\')';
+  return css
+    .replace(new RegExp(STR + '|\\/\\*[\\s\\S]*?\\*\\/|\\s+', 'g'), (m, str) => str || (m[0] === '/' ? '' : ' '))
+    .replace(new RegExp(STR + '|\\s*([{};])\\s*', 'g'), (m, str, punct) => str || punct)
+    .replace(new RegExp(STR + '|;}', 'g'), (m, str) => str || '}')
+    .trim();
+}
+
+// The complete stylesheet of a read-only export. Every export template must
+// use this and nothing else for its <style>.
+function readonlyCss(){
+  const block = document.getElementById('dokufix-doc-css');
+  return compactCss(block ? block.textContent : '') + '\n' + READONLY_FRAME_CSS;
+}
 
 function bodyClassForExport(){
   return document.body.classList.contains('numbered') ? ' class="numbered"' : '';
@@ -2902,10 +2869,10 @@ async function downloadReadonlyOpen(){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escTitle(title)}</title>
-<style>${READONLY_CSS}</style>
+<style>${readonlyCss()}</style>
 </head>
 <body${bodyClassForExport()}>
-<main class="reader-body">
+<main class="reader-body dokufix-doc">
 ${bodyHtml}
 ${buildMetaFooterHtml()}
 </main>
@@ -2956,11 +2923,11 @@ async function downloadReadonlySlim(){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escTitle(title)}</title>
-<style>${READONLY_CSS}</style>
+<style>${readonlyCss()}</style>
 ${noscript}
 </head>
 <body${bodyClassForExport()}>
-<main class="reader-body">
+<main class="reader-body dokufix-doc">
 ${wrapper.innerHTML}
 ${buildMetaFooterHtml()}
 ${decoder}
@@ -2997,11 +2964,11 @@ async function downloadReadonlyCompact(){
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escTitle(title)}</title>
-<style>${READONLY_CSS}</style>
+<style>${readonlyCss()}</style>
 </head>
 <body${bodyClassForExport()}>
 <noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.html) anfordern.</p></noscript>
-<main class="reader-body"><div id="d"></div></main>
+<main class="reader-body dokufix-doc"><div id="d"></div></main>
 ${railHtmlPending}
 <script type="text/plain" id="p">${payload}<\/script>
 <script>

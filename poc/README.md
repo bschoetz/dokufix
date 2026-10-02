@@ -24,12 +24,25 @@ Open `dokufix-poc.html` in any modern browser. No install, no server, no account
 
 ## Download variants
 
-| Variant | What's in the file | Receiver can re-edit? | JS required to open? | Approx. size (demo content) |
-|---|---|---|---|---|
-| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | ~16 KB + libs |
-| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | ~30 KB |
-| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | ~10 KB |
-| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | ~6 KB |
+| Variant | What's in the file | Receiver can re-edit? | JS required to open? | Size (demo text) | Size (reference document) |
+|---|---|---|---|---|---|
+| **Mit Editor** | Full editor + gzipped Markdown source + immutable demo-text reset capability | ✅ Yes | ✅ (via CDN libs) | 135 002 B + libs | 137 036 B + libs |
+| **Ohne Editor — offen** (`-nur-lesen.html`) | Pre-rendered HTML + inline SVG diagrams, no JavaScript at all | ❌ No | ❌ | 71 052 B | 106 839 B |
+| **Ohne Editor — schlank** (`-schlank.html`) | Plaintext HTML + Mermaid SVGs gzip-compressed individually, tiny inline decoder | ❌ No | ⚠️ For diagrams only — text remains readable | 35 296 B | 52 100 B |
+| **Ohne Editor — kompakt** (`-kompakt.html`) | Entire body gzip-compressed + tiny decoder | ❌ No | ✅ | 28 983 B | 48 254 B |
+
+Measured 2026-10-02 in Chromium 153 with `tests/vergleich.mjs`, all four variants through one build per document; Firefox differs by a few hundred bytes because it serialises the Mermaid SVG differently. The reference document is `tests/referenz.md`. Both documents carry two Mermaid diagrams, and those dominate: the two SVGs are 49 320 B of the demo text's 71 052 B `nur-lesen` file. The figures this table used to show (~16 KB, ~30 KB, ~10 KB, ~6 KB) dated from an earlier Mermaid and an editor without images, version history, frontmatter and footnote previews.
+
+How story 2.1 moved these numbers, same build, same documents, Chromium:
+
+| Variant | Demo text: before → pinned → one source | Reference document: before → pinned → one source |
+|---|---|---|
+| `Mit Editor` | 138 937 → 139 484 → 135 002 B | 140 971 → 141 518 → 137 036 B |
+| `nur-lesen` | 69 965 → 69 941 → 71 052 B | 105 750 → 105 728 → 106 839 B |
+| `schlank` | 34 189 → 34 185 → 35 296 B | 50 989 → 50 989 → 52 100 B |
+| `kompakt` | 27 876 → 27 872 → 28 983 B | 47 147 → 47 143 → 48 254 B |
+
+Pinning is neutral. One source for the document styles takes 4 482 B out of `Mit Editor`, which no longer carries the styles twice, and adds 1 111 B to each read-only export: their rules are now scoped by `.dokufix-doc`, and the stylesheet sits outside the gzip payload even in `kompakt`.
 
 Footnote hover previews add a material amount to every variant — roughly +30 % on the read-only ones for a document with three short footnotes, because each footnote's text is duplicated inline. Measured figures per variant are under [Footnotes → Size cost](#footnotes).
 
@@ -43,6 +56,47 @@ Two distinct concepts, deliberately separated:
 - **`SAMPLE`** — this file's per-document default (what gets loaded on first open if no IndexedDB record exists yet for this document UUID). On `Mit Editor` download, this is replaced with the user's current content.
 
 Loading order on open: IndexedDB doc record (live draft) > `SAMPLE` (file's baked content) > `DEMO`.
+
+### Document styles (one source)
+
+Every style that travels with a document lives in one place: `<style id="dokufix-doc-css">`, the first stylesheet in `<head>`.
+
+- The **preview** uses the block as an ordinary stylesheet.
+- **`Mit Editor`** clones the whole document, so the block travels unchanged.
+- The three **read-only exports** embed the block's text at the moment the file is written: `readonlyCss()` reads it, removes comments and whitespace, and appends the export frame. Nothing is derived when the file is opened, so `nur-lesen` still contains no script.
+
+Until story 2.1 each of these rules existed twice, written by hand: `#preview`-prefixed in the app stylesheet and unprefixed in a string called `READONLY_CSS`. Nothing compared the two, and in epic 1 the anchor positioning of the footnote preview sat in the first and was missing from the second, so every read-only export shipped without it.
+
+**Where a rule goes.**
+
+| The rule styles … | It goes into … | Written as … |
+|---|---|---|
+| rendered document content: headings, tables, footnotes, a new `dokufix-` component | `<style id="dokufix-doc-css">` | `.dokufix-doc h2{…}`, `.dokufix-doc .dokufix-callout{…}` |
+| the look of the rail | the same block | `.dokufix-rail a{…}`, unscoped, because the rail sits beside the content container |
+| the editor interface, the preview pane as a box, where the rail stands in the editor | the app stylesheet below the block | `#preview{…}`, `body.mode-view #preview{…}`, `.dokufix-rail a.active{…}` |
+| the page of a read-only export: reset, margins, footer, rail grid | `READONLY_FRAME_CSS` | `body{…}`, `.reader-body{…}`, `.dokufix-meta{…}` |
+
+`.dokufix-doc` is the class on the content container: `#preview` in the editor, `<main class="reader-body dokufix-doc">` in an export. That class is the only change to the exported markup.
+
+**The check.**
+
+```
+node poc/tests/check-doc-styles.mjs
+```
+
+No dependencies, no browser. It exits 1 and names selector and line when a document rule sits outside the block (`#preview h5{…}` in the app stylesheet, `.dokufix-x{…}` or a bare `h5{…}` in the export frame), when a rule inside the block is not scoped, when a read-only export no longer builds its stylesheet with `readonlyCss()` or its `<main>` lost the class, when the block is missing or doubled, and when `READONLY_CSS` comes back. It relies on the rule that every document construct is `dokufix-`-prefixed: a prefixed selector outside the block is drift unless it is on the short allowlist of frame names (`.dokufix-meta`, `.dokufix-rail-pending`, and `.dokufix-rail` together with `.has-items` or `a.active`). Run it after every change to a style.
+
+**Two things that are load-bearing.**
+
+- *Order.* The block stands before the app stylesheet, and `readonlyCss()` puts the frame after the block. Where a frame rule and a document rule have the same specificity, the frame has to win: `.dokufix-meta p` against `.dokufix-doc p` in the exports, `.dokufix-rail a.active` against `.dokufix-rail .rail-h4 a` in the editor.
+- *Specificity moved.* Document selectors dropped from id to class specificity in the preview and rose from element to class specificity in the exports. That was verified by screenshot, not assumed (below). One consequence needed a frame rule: the "needs JavaScript" notice of `kompakt` sits outside the content container, so `p{margin-bottom:1em}` no longer reached it and the rail beside it stood 17 px higher with JavaScript off; `noscript p{margin-bottom:1em}` in the frame restores that.
+
+**What the change did to documents** (2026-10-02, `tests/vergleich.mjs`, Chromium 153 and Firefox 153, light and dark, 1400 and 1600 px, at rest and with every state switched on):
+
+- Demo text, which has no image: all 68 screenshots are pixel-identical before and after.
+- Reference document: `Mit Editor` and the preview pane are pixel-identical. The three read-only exports differ, and only by the decided image margin: the one source carries `margin:8px 0` on images, which the preview always had and the exports never did, so each of the two images in the reference document moves what follows down by 16 px. Control: the same build with that one declaration removed gives read-only exports that are pixel-identical to before.
+- `object-fit:contain` on the missing-image placeholder was the other difference between the twins; it existed only in the exports and is now everywhere. It changes no pixel in the preview.
+- With JavaScript switched off, the three read-only exports render as before, again apart from the image margin (checked in Chromium at 1400 and 1600 px).
 
 ### Libraries
 
@@ -85,7 +139,7 @@ CSS anchor positioning fixes it: `@position-try` keeps the box on screen at ever
 
 Three non-obvious requirements, all load-bearing:
 
-- the block must live in **both** stylesheets. It shipped for a while in the app sheet only — pasted there twice, in fact, once in the export sheet's unprefixed style — so the read-only exports, the artifacts that actually travel, kept the centred base and kept clipping. Verify with `grep -c position-try` on both, not by eye;
+- the block must reach **every** variant. For a while it did not: it sat in the app stylesheet twice and in the export stylesheet not at all, so the read-only exports, the artifacts that actually travel, kept the centred base and kept clipping. Since story 2.1 there is one copy, in `<style id="dokufix-doc-css">`, and the exports embed that block (see *Document styles*). `node poc/tests/check-doc-styles.mjs` fails when a rule for it turns up anywhere else;
 - the host `<sup>` must **not** be `position:relative` inside the `@supports` block — a tiny containing block leaves the try-fallbacks nothing to evaluate against and they silently never fire;
 - the `transition` must stay — without it Firefox does not reveal the preview at all.
 
@@ -116,7 +170,7 @@ Two costs that a first write-up of this trade-off missed, and that anyone weighi
 - **Sighted readers are not unaffected.** Fragment navigation start-aligns the target, and the target is now the arrow at the *end* of the definition. A footnote taller than the 90 px `scroll-margin-top` therefore lands the reader on `↩` with its own prose scrolled above the viewport top — they must scroll **up** to read what they came for. The `li`'s `scroll-margin-top` cannot compensate, because the `li` is no longer the target. Short footnotes are unaffected; long ones are exactly the case policy and audit documents produce.
 - **Assistive-technology users pay the cost and get none of the benefit.** All arrows of a multi-referenced footnote carry the same accessible name — `[^bgb]`'s two arrows both read `aria-label="Back to reference bgb"`. Telling the arrows apart is the entire point of the feature, and the only signal that distinguishes them is colour. So the group that pays the reading-order cost is the one group the feature cannot help.
 
-*Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in both stylesheets. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`.
+*Reversal (≈15 lines):* drop `linkFootnoteReturnPaths()` and the `:has()` selector, keep `li:target`. The landing highlight survives intact and JS-free; only "which arrow is mine" is lost. *Heavier alternative:* one empty landing anchor per reference at the **start** of each definition, paired to its arrow through a bounded set of static rules (`li:has(.dokufix-fn-landing-2:target) .dokufix-fn-back-2`), which restores reading order at the cost of N rule pairs in the document styles. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`.
 
 **Size cost.** The preview duplicates each footnote's text inline, roughly doubling it. Measured 2026-07-16 on a document with three short footnotes (two definitions, one cited twice), all four variants through the same build and the same document, `b74cfce` (frontmatter panel merged, previews not yet added) as the baseline:
 
@@ -241,7 +295,7 @@ Images live in IndexedDB and are referenced from the markdown source via `![alt]
 
 The pipeline: `createImageBitmap({ imageOrientation: 'from-image' })` decodes and applies EXIF orientation. Two size guards run before allocating the canvas: a 5 MB per-file input cap (cheap to check, blocks pathological inputs early) and a 25-megapixel decoded-pixel cap (a 4.9 MB heavily-compressed JPEG can decode to 12000×8000 = 96 MP and OOM the tab during `drawImage`; the encoded-byte cap doesn't protect against that). If the bitmap is wider than 1600 px, it's downscaled. The result is drawn to an `OffscreenCanvas` and re-encoded as WebP @ 0.85 (fallback to `<canvas>.toBlob` if OffscreenCanvas isn't available). The output bytes are SHA-256-hashed via `crypto.subtle.digest`; the hex digest becomes both the IDB key and the markdown reference. The decoded `ImageBitmap` is released via `bitmap.close()` in a `finally` block so a failed encoding pass doesn't leak the native buffer. Alt-text derived from the filename is sanitized — characters that would otherwise break out of the markdown image syntax (`[`, `]`, `(`, `)`, `\`, `` ` ``, `<`, `>`) are stripped, so a malicious filename like `x](http://attacker.com/track.png).png` can't inject an attacker-controlled `src`.
 
-**Render-time resolution.** After `marked.parse(md)`, the HTML string is run through `resolveAssetRefsInHtml`, which `idbBatchGetAssets`-fetches every `#asset-<hash>` referenced in the document. Each match is rewritten to a Blob URL via `URL.createObjectURL`. Unresolved hashes get a transparent 1×1 GIF data URL as the `src` plus a `data-missing-asset` attribute; CSS turns those into a red "Bild fehlt" placeholder. (Using `src=""` for missing assets would trigger the browser to fetch the document URL itself, which is a footgun.) After each render, `pruneAssetUrlCache` revokes Blob URLs whose hashes are no longer referenced from the source — without this, every distinct image inserted in a session would hold its decoded pixels in memory until tab close. The same missing-asset CSS rule ships in the read-only export stylesheet, so a recipient who opens an export with a stale or missing asset sees the same "Bild fehlt" placeholder rather than an empty image element.
+**Render-time resolution.** After `marked.parse(md)`, the HTML string is run through `resolveAssetRefsInHtml`, which `idbBatchGetAssets`-fetches every `#asset-<hash>` referenced in the document. Each match is rewritten to a Blob URL via `URL.createObjectURL`. Unresolved hashes get a transparent 1×1 GIF data URL as the `src` plus a `data-missing-asset` attribute; CSS turns those into a red "Bild fehlt" placeholder. (Using `src=""` for missing assets would trigger the browser to fetch the document URL itself, which is a footgun.) After each render, `pruneAssetUrlCache` revokes Blob URLs whose hashes are no longer referenced from the source — without this, every distinct image inserted in a session would hold its decoded pixels in memory until tab close. The missing-asset rule is a document style, so every read-only export carries it too: a recipient who opens an export with a stale or missing asset sees the same "Bild fehlt" placeholder rather than an empty image element.
 
 **Heading-slug guard.** Heading anchors and asset references share the `#`-fragment namespace. `slugify` explicitly rejects any heading slug that would start with `asset-` (or be exactly `asset`), prefixing it to `h-asset-…`. Without this, a heading literally titled "Asset Inventory" could otherwise be resolved as an image ref.
 
@@ -290,6 +344,10 @@ The "kompakt" variant ships gzip+base64-encoded HTML inside a `<script type="tex
 
 The PoC has no build step and does not depend on anything in `tests/`. The checks there run in Node and look at the file from outside.
 
+### Style check (`tests/check-doc-styles.mjs`)
+
+`node poc/tests/check-doc-styles.mjs` — fails when a style for document content sits anywhere but in `<style id="dokufix-doc-css">`. Described under *Document styles (one source)*. It reads the file as text and needs neither a browser nor `npm install`.
+
 ### Comparison run (`tests/vergleich.mjs`)
 
 Builds all four download variants from one document in one run, reopens each the way a recipient would, and records what they look like and how big they are. It is the tool for any change that must not alter the look of a document.
@@ -315,7 +373,7 @@ Three things the run does on purpose, each because the obvious way gave wrong re
 
 ## Known PoC limitations (deferred to MVP)
 
-- **CDN-loaded libraries** — pinned to fixed versions (see *Libraries*), but still loaded from the network. Production target is single-file inline. Will roughly 200× the editor variant's file size from ~16 KB to ~3 MB once Mermaid is bundled.
+- **CDN-loaded libraries** — pinned to fixed versions (see *Libraries*), but still loaded from the network. Production target is single-file inline. That turns the editor variant from about 135 KB into several megabytes: `mermaid.min.js` 12.0.0 alone is 5.6 MB before compression.
 - **No File System Access API integration** — Chromium-only, optional power-user path. Not in PoC. See product brief distillate for design.
 - **Mermaid SVG bloat unaddressed** — each SVG ships a redundant 1.5–3 KB `<style>` block. Future optimization: dedupe to a single document-level `<style>`.
 - **Heading ID stability** — slugify is deterministic per heading text, but reordering or renaming headings shifts the `-N` dedupe suffix for other slugs. External bookmarks to `#einleitung-2` go stale when an earlier colliding heading is renamed. Tracked in `_bmad-output/initiative-dokufix/deferred-work.md`; a content-addressed slug (hash of text + position) would be the principled fix.
@@ -328,6 +386,7 @@ poc/
 ├── dokufix-poc.html    The PoC itself. Open in browser.
 ├── README.md           This file.
 └── tests/              Checks that look at the PoC from outside. See "Checks".
+    ├── check-doc-styles.mjs  Fails when a document style sits outside its one source.
     ├── referenz.md         Neutral reference document, the one input of every comparison.
     ├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
     ├── package.json        One development dependency: playwright-core.
