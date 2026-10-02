@@ -1,5 +1,6 @@
 import { escapeHtml } from './html.js';
 import { CALLOUT_CLASS } from './callouts.js';
+import { CHIP_STATUS_CLASS } from './chips.js';
 
 // --- Table of Contents ----------------------------------------
 // Two layers, see README:
@@ -21,7 +22,8 @@ export function documentHeadings(root){
     .filter(h => !h.closest('.' + CALLOUT_CLASS));
 }
 
-function slugify(text, used){
+// Exported for the checks: the comparison run asks which anchor a label gives.
+export function slugify(text, used){
   // Fold most Latin diacritics via NFKD decomposition (é → e, ç → c, ñ → n).
   // German-specific letters are spelled out explicitly because NFKD splits
   // them differently (ä → "a" + combining diaeresis, which would collapse to
@@ -48,11 +50,14 @@ function slugify(text, used){
 }
 
 // Document pass. Heading IDs come first — both the inline ToC and the rail need them.
+// The anchor is made from the same text as the label of the heading's entry,
+// through the one function below: what is no part of the label is no part of
+// the anchor either.
 export function assignHeadingIds(root){
   const headings = documentHeadings(root);
   const used = new Set();
   headings.forEach(h => { if (h.id) used.add(h.id); });
-  headings.forEach(h => { if (!h.id) h.id = slugify(h.textContent, used); });
+  headings.forEach(h => { if (!h.id) h.id = slugify(headingLabelText(h), used); });
 }
 
 function buildTocHtml(headings, maxLevel){
@@ -81,9 +86,14 @@ function buildTocHtml(headings, maxLevel){
 // and does not care that the span is visibility:hidden. processInlineToc() happens
 // to run before the preview pass and would escape today, but that is call ordering,
 // not a guarantee — buildRail() and buildStaticRailHtml() run after it.
+// A status chip in a heading carries the name of its colour as text for
+// assistive technology (chips.js). That text is left out as well: the entry of
+// "## Bestellung `🟢 Live`" reads "Bestellung Live", and its anchor is the one
+// of that text. assignHeadingIds() asks here too.
+const NOT_LABEL = '.dokufix-fn-preview, .' + CHIP_STATUS_CLASS;
 export function headingLabelText(h){
   const clone = h.cloneNode(true);
-  clone.querySelectorAll('.dokufix-fn-preview').forEach(n => n.remove());
+  clone.querySelectorAll(NOT_LABEL).forEach(n => n.remove());
   return clone.textContent;
 }
 

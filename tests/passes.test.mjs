@@ -7,7 +7,8 @@
 // Mermaid stays in the browser runs (tests/durchlaeufe.mjs, tests/vergleich.mjs).
 //
 // The modules imported here are the ones that load without a page:
-// passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js.
+// passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js,
+// chips.js.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -15,9 +16,10 @@ import { parseHTML } from 'linkedom';
 import { runPasses } from '../src/app/passes.js';
 import { buildWarning } from '../src/app/warning.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
-import { assignHeadingIds, processInlineToc, documentHeadings } from '../src/app/toc.js';
+import { assignHeadingIds, processInlineToc, documentHeadings, headingLabelText } from '../src/app/toc.js';
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
 import { buildCallouts } from '../src/app/callouts.js';
+import { buildChips } from '../src/app/chips.js';
 
 // A root like the preview, holding the given markup.
 function rootWith(html){
@@ -225,4 +227,104 @@ test('a heading inside a callout that stands in a list item or in another callou
   assignHeadingIds(root);
   assert.deepEqual(documentHeadings(root).map(h => h.textContent), ['Eins', 'Zwei']);
   assert.equal(root.querySelectorAll('h2[id], h4[id]').length, 2);
+});
+
+// ---------- headings with a status chip ----------
+// The markup is what marked emits for
+//
+//   # Handbuch
+//   [[toc:4]]
+//   ## Bestellung `🟢 Live`
+//   ## `🟢 Live`
+//   ### Lager `x 🟢`
+//   ## `🔴 Live`
+//   #### Vormerkung `⚪ geplant` und `🔵 im Test`
+//
+// The passes are the ones of render.js, in its order.
+const WITH_CHIP_HEADINGS =
+  '<h1>Handbuch</h1>\n<p>[[toc:4]]</p>\n<h2>Bestellung <code>🟢 Live</code></h2>\n<h2><code>🟢 Live</code></h2>\n' +
+  '<h3>Lager <code>x 🟢</code></h3>\n<h2><code>🔴 Live</code></h2>\n' +
+  '<h4>Vormerkung <code>⚪ geplant</code> und <code>🔵 im Test</code></h4>\n';
+const CHIP_PASSES = [
+  { name: 'Hinweise', run: buildCallouts },
+  { name: 'Status-Chips', run: buildChips },
+  { name: 'Überschriften', run: assignHeadingIds },
+  { name: 'Inhaltsverzeichnis', run: processInlineToc },
+];
+test('a heading with a chip: its entry reads the label, its anchor is the one of that text', async () => {
+  const root = rootWith(WITH_CHIP_HEADINGS);
+  const failed = await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  assert.deepEqual(failed, []);
+  assert.equal(root.querySelectorAll('h2 .dokufix-chip, h4 .dokufix-chip').length, 5);
+  assert.deepEqual(documentHeadings(root).map(h => h.id),
+    ['handbuch', 'bestellung-live', 'live', 'lager-x', 'live-2', 'vormerkung-geplant-und-im-test']);
+  assert.deepEqual(Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.getAttribute('href') + ' ' + a.textContent),
+    ['#bestellung-live Bestellung Live', '#live Live', '#lager-x Lager x 🟢', '#live-2 Live', '#vormerkung-geplant-und-im-test Vormerkung geplant und im Test']);
+  // The label the rails use is the same function.
+  assert.deepEqual(documentHeadings(root).map(headingLabelText),
+    ['Handbuch', 'Bestellung Live', 'Live', 'Lager x 🟢', 'Live', 'Vormerkung geplant und im Test']);
+  // The heading itself still carries the text for assistive technology.
+  assert.equal(root.querySelector('h2').textContent, 'Bestellung grün: Live');
+});
+test('a heading that is only a chip has an entry and an anchor, never empty ones', async () => {
+  // ## `🟢 Live`, and "## `🟡 !`", whose label has nothing an anchor can be made of
+  const root = rootWith('<p>[[toc]]</p>\n<h2><code>🟢 Live</code></h2>\n<h2><code>🟡 !</code></h2>\n');
+  await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  assert.deepEqual(documentHeadings(root).map(h => h.id), ['live', 'section']);
+  const entries = Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.textContent);
+  assert.deepEqual(entries, ['Live', '!']);
+  assert.ok(entries.every(text => text.trim() !== ''));
+});
+test('the word for assistive technology is in neither entry nor anchor, whatever the colour', async () => {
+  const dots = ['🟢', '🟡', '🔴', '⚪', '🔵'];
+  const root = rootWith('<p>[[toc]]</p>\n' + dots.map((dot, i) => '<h2>Teil ' + (i + 1) + ' <code>' + dot + ' Stand</code></h2>\n').join(''));
+  await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  assert.deepEqual(documentHeadings(root).map(h => h.id), [1, 2, 3, 4, 5].map(n => 'teil-' + n + '-stand'));
+  assert.deepEqual(Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.textContent), [1, 2, 3, 4, 5].map(n => 'Teil ' + n + ' Stand'));
+  // Five headings, five words, none of them in a label.
+  assert.equal(new Set(Array.from(root.querySelectorAll('.dokufix-chip-status')).map(s => s.textContent)).size, 5);
+});
+test('the anchors of headings with a chip are the ones they had as code spans, and other anchors do not move', () => {
+  // Before there were chips the code span was part of the heading's text and
+  // the dot fell out of the anchor. So a document that already wrote a status
+  // into a heading keeps its links.
+  const markup = WITH_CHIP_HEADINGS +
+    // a heading with a footnote marker, as marked-footnote emits it, and two alike
+    '<h2>Frist<sup><a id="footnote-ref-quelle" href="#footnote-quelle" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></h2>\n' +
+    '<h3>Größe und Maß</h3>\n<h3>Größe und Maß</h3>\n<h2><code>Code</code> im Titel</h2>\n';
+  const before = rootWith(markup);
+  assignHeadingIds(before);
+  const after = rootWith(markup);
+  buildChips(after);
+  assignHeadingIds(after);
+  assert.deepEqual(documentHeadings(after).map(h => h.id), documentHeadings(before).map(h => h.id));
+  assert.deepEqual(documentHeadings(after).map(h => h.id).slice(6), ['frist1', 'groesse-und-mass', 'groesse-und-mass-2', 'code-im-titel']);
+});
+test('the table of contents sees chips only when their pass ran first: that is the order in render.js', async () => {
+  const root = rootWith(WITH_CHIP_HEADINGS);
+  await runPasses(root, [
+    { name: 'Überschriften', run: assignHeadingIds },
+    { name: 'Inhaltsverzeichnis', run: processInlineToc },
+    { name: 'Status-Chips', run: buildChips },
+  ], { frontmatter: { kind: null } });
+  // Wrong order: the entry was written while the heading still held the code span with its dot.
+  assert.equal(root.querySelector('nav.dokufix-toc a').textContent, 'Bestellung 🟢 Live');
+});
+test('a chip in a heading inside a callout: a chip, and the heading still does not count', async () => {
+  // > [!TIP]
+  // > ### Automat `🟢 Live`
+  const root = rootWith('<h2>Eins</h2>\n<blockquote>\n<p>[!TIP]</p>\n<h3>Automat <code>🟢 Live</code></h3>\n</blockquote>\n');
+  await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  const inside = root.querySelector('.dokufix-callout h3');
+  assert.equal(inside.querySelectorAll('.dokufix-chip-green').length, 1);
+  assert.ok(!inside.hasAttribute('id'));
+  assert.deepEqual(documentHeadings(root).map(h => h.id), ['eins']);
+});
+test('the label of a heading leaves out the footnote preview and the chip\'s word, both', () => {
+  // As the heading stands after every document pass: a chip and a marker with its preview.
+  const root = rootWith('<h2>Frist <span class="dokufix-chip dokufix-chip-green"><span class="dokufix-chip-status">grün: </span>Live</span>' +
+    '<sup class="dokufix-fn-host"><a href="#footnote-back-quelle" data-footnote-ref="">1</a><span class="dokufix-fn-preview" aria-hidden="true">Die ganze Fußnote.</span></sup></h2>');
+  assert.equal(headingLabelText(root.querySelector('h2')), 'Frist Live1');
+  // The heading is not changed by being asked.
+  assert.equal(root.querySelectorAll('.dokufix-chip-status, .dokufix-fn-preview').length, 2);
 });

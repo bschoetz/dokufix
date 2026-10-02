@@ -101,12 +101,44 @@ Der Automat meldet jede Rückgabe als eine Zeile:
 }
 ```
 
+## Status
+
+Ein Status steht als Code-Spanne, die mit einem Farbpunkt, einem Leerzeichen und einem Text beginnt. Der Automat im Eingang ist `🟢 in Betrieb`, die Klappe an der Außenwand `🟡 gestört`, der Automat im Lesesaal `🔴 außer Betrieb`, der im Magazin `⚪ geplant` und der an der Theke `🔵 im Test`.[^status]
+
+Derselbe Text in zwei Farben: `🟢 Test` neben `🔴 Test`, `⚪ x` neben `🔵 x`. Gewöhnlicher Code bleibt Code: `x`, `x 🟢`, `🟢` und `🟢x`.
+
+| Gerät | Standort | Status |
+|---|---|---|
+| Automat 1 | Eingang | `🟢 in Betrieb` |
+| Automat 2 | Lesesaal | `🔴 außer Betrieb` |
+| Klappe | Außenwand | `🟡 gestört` |
+| Automat 3 | Magazin | `⚪ geplant` |
+| Automat 4 | Theke | `🔵 im Test` |
+
+- in einer Liste: `🟢 in Betrieb`
+- in einem Verweis: [`🔵 im Test`](https://example.org/automat)
+- fett: **`🔴 außer Betrieb`**
+
+Im Codeblock bleibt die Zeile, wie sie ist:
+
+```text
+🟢 in Betrieb
+```
+
+### Automat im Eingang `🟢 in Betrieb`
+
+Eine Überschrift mit einem Status.
+
+### `⚪️ geplant`
+
+Eine Überschrift, die nur aus einem Status besteht; ihr Farbpunkt trägt einen Variantenselektor.
+
 ## Hinweise
 
 Fünf Arten von Hinweisen, geschrieben wie die Alerts von GitHub: ein Zitat, dessen erste Zeile nur die Marke trägt.
 
 > [!NOTE]
-> Der Automat druckt den Beleg auf Wunsch ein zweites Mal. Maßgeblich ist das **Konto**, nicht der Beleg.
+> Der Automat druckt den Beleg auf Wunsch ein zweites Mal. Maßgeblich ist das **Konto**, nicht der Beleg. Der Belegdrucker ist `🟢 in Betrieb`.
 
 > [!TIP]
 > Wer die Frist im Kalender führt, trägt den Tag der Verlängerung ein, nicht das Ende der alten Frist.
@@ -136,5 +168,7 @@ Mehr steht hier nicht. Das Dokument endet mit den Fußnoten und, in den Ausliefe
 [^quelle]: Benutzungsordnung der fiktiven Stadtbibliothek, Abschnitt 4. Diese Fußnote wird absichtlich an drei Stellen zitiert, damit unten drei Rückwärtspfeile stehen.
 
 [^lang]: Eine längere Fußnote mit `Code`, *Hervorhebung* und genug Text, dass die Vorschau umbrechen muss: Die Bibliothek führt für jedes Medium eine Signatur, einen Standort und einen Zustand; alle drei Angaben erscheinen auf dem Beleg, den der Automat bei Ausleihe und Rückgabe druckt.
+
+[^status]: Auch in einer Fußnote steht ein Status: `🟡 gestört` heißt, dass die Theke aushilft.
 
 [^hinweis]: Die Exportzeile trägt Datum und Uhrzeit; der Vergleichslauf gibt die Uhrzeit deshalb vor.

@@ -16,8 +16,9 @@
 //   --demo             build from the built-in demo text instead of --doc
 //   --strict           exit 1 when --compare finds any differing pixel
 //
-// Exit code 1 when an assertion fails (epic 1 behaviour, callouts, the licence
-// information, no <script> in nur-lesen, no editor rules in a read-only export).
+// Exit code 1 when an assertion fails (epic 1 behaviour, callouts, status chips,
+// the licence information, no <script> in nur-lesen, no editor rules in a
+// read-only export).
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -70,6 +71,11 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 // tests/licences.test.mjs checks the list itself; this run checks that every
 // variant shows it.
 import { NOTICES, LICENCE_TEXTS, LICENCES_LINK_TEXT } from '../src/app/licences.js';
+// What a status is, is said in one module, and this run asks there: which code
+// span of the Markdown is one, with which colour and label. And which anchor a
+// heading's label gives is asked where the product makes it.
+import { readChip } from '../src/app/chips.js';
+import { slugify } from '../src/app/toc.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -160,6 +166,28 @@ const CALLOUT_HEADINGS_IN =
   '.numbered .dokufix-doc .dokufix-callout h3::before{counter-increment:h3 !important;content:counter(h2) "." counter(h3) " " !important}' +
   '.numbered .dokufix-doc .dokufix-callout h4::before{counter-increment:h4 !important;content:counter(h2) "." counter(h3) "." counter(h4) " " !important}';
 
+// The five colours of a status chip: the word a screen reader says, and the
+// colour of label and mark on the tint of the pill (src/app/chips.js,
+// src/doc.css).
+const CHIPS = {
+  green:  { word: 'grün', colour: 'rgb(26, 127, 55)',  tint: 'rgb(218, 251, 225)' },
+  yellow: { word: 'gelb', colour: 'rgb(154, 103, 0)',  tint: 'rgb(255, 248, 197)' },
+  red:    { word: 'rot',  colour: 'rgb(207, 34, 46)',  tint: 'rgb(255, 235, 233)' },
+  grey:   { word: 'grau', colour: 'rgb(87, 96, 106)',  tint: 'rgb(234, 238, 242)' },
+  blue:   { word: 'blau', colour: 'rgb(9, 105, 218)',  tint: 'rgb(221, 244, 255)' },
+};
+// For the pictures of the marks: every chip in one colour, so that what is
+// left to tell two apart is the shape of the mark.
+// And every chip at a whole pixel of its own: where a glyph or an edge falls
+// between two pixels decides how it is smoothed, and two chips in one line of
+// text do not fall alike.
+const CHIPS_ONE_COLOUR =
+  '#vergleich-chips{position:fixed;left:0;top:0;width:200px;height:400px;margin:0;background:#fff;z-index:2147483647}' +
+  '#vergleich-chips .dokufix-chip{position:absolute;left:20px;color:#000 !important;background:#fff !important}';
+// Two marks count as different shapes from this many differing pixels on. A
+// circle and a square of 8 px differ in their four corners, about 14 pixels.
+const MARK_MIN_DIFFERENCE = 8;
+
 // The link "license information" (story 2.18). Every text its view has to show:
 // per entry its name, version, the title of its licence and its copyright
 // lines, and each licence text.
@@ -177,7 +205,8 @@ const NARROW = 820;
 // ---------- what the document should produce ----------
 function expectationsFor(md){
   const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
-                callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0 };
+                callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0,
+                tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [] };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -188,7 +217,9 @@ function expectationsFor(md){
       .filter(Boolean).join(' · ');
   }
   exp.mermaid = (body.match(/^```mermaid[ \t]*$/gm) || []).length;
-  exp.toc = /^\[\[toc(?::[1-6])?\]\][ \t]*$/m.test(body);
+  const toc = body.match(/^\[\[toc(?::([1-6]))?\]\][ \t]*$/m);
+  exp.toc = !!toc;
+  exp.tocDepth = toc ? Number(toc[1] || 3) : 0;
   exp.missing = (body.match(/!\[[^\]]*\]\(#asset-[0-9a-f]{12,64}\)/gi) || []).length;
   exp.images = (body.match(/!\[[^\]]*\]\(/g) || []).length - exp.missing;
   const cites = {};
@@ -202,10 +233,39 @@ function expectationsFor(md){
   // list item or in a nested quote, and a masked marker ("> \[!NOTE\]"), which
   // the product turns into a callout. A document with one of these fails the
   // count below although the build is right; see src/README.md, "Comparison run".
+  //
+  // Status chips: every code span that chips.js reads as a status, in the
+  // order of the document, with colour and label; the ones in a footnote
+  // definition apart, because the footnotes stand at the end of the page
+  // whatever the place of their definitions. And the headings that hold one,
+  // with the label their entry in the table of contents and the rail has to
+  // read: the heading's text with every code span put as its label. Read as
+  // far as the reference document needs it: a code span on one line, outside
+  // fenced code; a heading written with "#", outside a quote, with no inline
+  // markup besides code spans. Not read: an indented code block, a code span
+  // across two lines, a <code> written as HTML.
+  const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
+  // A code span loses one blank at each end when it has one at both.
+  const spanText = raw => /^ .* $/.test(raw) && raw.trim() ? raw.slice(1, -1) : raw;
   let fenced = false, quote = false, callout = false;
   for (const line of body.split(/\r?\n/)){
     if (/^(```|~~~)/.test(line)){ fenced = !fenced; quote = callout = false; continue; }
     if (fenced) continue;
+    const inFootnote = /^\[\^[^\]\s]+\]:/.test(line);
+    for (const m of line.matchAll(CODE_SPAN)){
+      const status = readChip(spanText(m[2]));
+      if (status) (inFootnote ? exp.footnoteChips : exp.chips).push({ colour: status.colour, label: status.label });
+    }
+    const heading = line.match(/^(#{1,6})[ \t]+(.+?)[ \t]*$/);
+    if (heading){
+      let chips = 0;
+      const label = heading[2].replace(CODE_SPAN, (all, ticks, raw) => {
+        const status = readChip(spanText(raw));
+        if (status) chips++;
+        return status ? status.label : spanText(raw);
+      });
+      if (chips) exp.chipHeadings.push({ level: heading[1].length, label, chips });
+    }
     if (!line.startsWith('>')){ quote = callout = false; continue; }
     const text = line.slice(1).trim();
     if (!quote){
@@ -500,6 +560,165 @@ async function assertLicenceWithoutScripts(launch, file, check){
   }
 }
 
+// ---------- status chips ----------
+// What a page shows of its chips. Three places: the document, the footnotes at
+// its end, and the previews of the footnotes, which are copies and hidden at
+// rest. What only a visible chip can show is asked of the first two.
+const chipFacts = page => page.evaluate(() => {
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+  const colourOf = el => (el.className.match(/dokufix-chip-(?!status)([a-z]+)/) || [0, ''])[1];
+  const fact = chip => {
+    const word = chip.querySelector(':scope > .dokufix-chip-status');
+    const cs = getComputedStyle(chip), ms = getComputedStyle(chip, '::before'), ws = word && getComputedStyle(word);
+    const r = chip.getBoundingClientRect(), wr = word && word.getBoundingClientRect();
+    const last = chip.lastChild;
+    return {
+      colour: colourOf(chip), tag: chip.tagName,
+      // The label is the chip's own text, behind the word.
+      label: last && last.nodeType === 3 ? last.data : null,
+      visible: chip.checkVisibility({ visibilityProperty: true }) && r.width > 0 && r.height > 0,
+      text: cs.color, tint: cs.backgroundColor, radius: cs.borderTopLeftRadius, display: cs.display,
+      font: cs.fontSize + ' ' + cs.fontWeight + ' ' + cs.textTransform, family: cs.fontFamily,
+      mark: { content: ms.content, display: ms.display, width: parseFloat(ms.width), height: parseFloat(ms.height), image: ms.backgroundImage },
+      word: word ? word.textContent : null, wordFirst: !!word && word === chip.firstChild,
+      // Hidden from the eye, not from a screen reader: it is rendered, it is
+      // not visibility:hidden, and it takes no more room than one pixel.
+      wordRendered: !!word && ws.display !== 'none' && ws.visibility === 'visible' && !word.closest('[aria-hidden="true"]'),
+      wordBox: word ? Math.round(wr.width * 10) / 10 + ' x ' + Math.round(wr.height * 10) / 10 : '',
+      wordHidden: !!word && ws.position === 'absolute' && ws.overflow === 'hidden' && ws.clipPath === 'inset(50%)' && wr.width <= 1 && wr.height <= 1,
+      wordCase: ws ? ws.textTransform : '',
+    };
+  };
+  const all = Array.from(root.querySelectorAll('.dokufix-chip'));
+  const inPreview = c => !!c.closest('.dokufix-fn-preview'), inFootnotes = c => !!c.closest('.footnotes');
+  // The label of a heading as its entries have to read it: its text without
+  // the word of a chip and without a footnote preview.
+  const labelOf = h => { const c = h.cloneNode(true); c.querySelectorAll('.dokufix-chip-status, .dokufix-fn-preview').forEach(n => n.remove()); return c.textContent; };
+  const entry = (sel, id) => { const a = Array.from(document.querySelectorAll(sel)).find(x => x.getAttribute('href') === '#' + id); return a ? a.textContent : null; };
+  return {
+    body: all.filter(c => !inPreview(c) && !inFootnotes(c)).map(fact),
+    footnotes: all.filter(c => !inPreview(c) && inFootnotes(c)).map(fact),
+    // A preview is a copy of its definition: as many chips in it as there.
+    previews: Array.from(root.querySelectorAll('sup.dokufix-fn-host')).map(sup => {
+      const href = (sup.querySelector(':scope > a[data-footnote-ref]') || { getAttribute: () => '' }).getAttribute('href') || '';
+      const target = href.length > 1 ? document.getElementById(href.slice(1)) : null;
+      const li = target && target.closest('.footnotes li');
+      const preview = sup.querySelector(':scope > .dokufix-fn-preview');
+      return { definition: li ? li.querySelectorAll('.dokufix-chip').length : -1, preview: preview ? preview.querySelectorAll('.dokufix-chip').length : -1 };
+    }).filter(x => x.definition !== 0 || x.preview !== 0),
+    // Every inline code element that is left, by its text: none of them a status.
+    code: Array.from(root.querySelectorAll('code')).filter(c => !c.closest('pre')).map(c => c.textContent),
+    headings: Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(h => !h.closest('.dokufix-callout') && h.querySelector('.dokufix-chip')).map(h => ({
+      level: Number(h.tagName[1]), id: h.id, label: labelOf(h), text: h.textContent, chips: h.querySelectorAll('.dokufix-chip').length,
+      toc: entry('nav.dokufix-toc a', h.id), rail: entry('.dokufix-rail a', h.id),
+    })),
+    emptyEntries: Array.from(document.querySelectorAll('nav.dokufix-toc a, .dokufix-rail a')).filter(a => !a.textContent.trim()).map(a => a.getAttribute('href')),
+    hasToc: !!document.querySelector('nav.dokufix-toc'), railLinks: document.querySelectorAll('.dokufix-rail a').length,
+  };
+});
+// The marks, photographed. For each colour the page has, a copy of its first
+// chip with the label "x", all in one colour (CHIPS_ONE_COLOUR), and a second
+// copy of the first as the control. Two pictures of the same chip have to be
+// equal, two of different colours have to differ by the shape of the mark.
+async function chipMarkPictures(page, colours, keep){
+  const tag = await page.addStyleTag({ content: CHIPS_ONE_COLOUR });
+  await page.evaluate(list => {
+    const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+    const row = document.createElement('div');
+    row.id = 'vergleich-chips';
+    [...list, list[0]].forEach((colour, i) => {
+      const copy = root.querySelector('.dokufix-chip-' + colour + ':not(.dokufix-fn-preview *)').cloneNode(true);
+      copy.lastChild.data = 'x';
+      copy.style.top = (20 + i * 40) + 'px';
+      row.append(copy);
+    });
+    root.appendChild(row);
+  }, colours);
+  const pictures = [];
+  try {
+    for (let i = 0; i <= colours.length; i++) pictures.push(await page.locator('#vergleich-chips > .dokufix-chip').nth(i).screenshot({ animations: 'disabled' }));
+    // Kept beside the exports when the run is asked to: what the check looked at.
+    if (keep) pictures.forEach((png, i) => fs.writeFileSync(keep + '-' + (i < colours.length ? colours[i] : 'kontrolle') + '.png', png));
+  } finally {
+    await page.evaluate(() => { const row = document.getElementById('vergleich-chips'); if (row) row.remove(); window.scrollTo(0, 0); });
+    await tag.evaluate(el => el.remove());
+  }
+  return pictures;
+}
+async function assertChips(page, check, exp, keep){
+  const f = await chipFacts(page);
+  const short = list => JSON.stringify(list.map(c => c.colour + ' ' + c.label));
+  const sorted = list => list.map(c => c.colour + ' ' + c.label).sort();
+  const stillCode = f.code.filter(text => readChip(text));
+  check('status chips: one per status code span, in the order of the document, each with the colour of its dot and its label; none left as code',
+    short(f.body) === short(exp.chips) && JSON.stringify(sorted(f.footnotes)) === JSON.stringify(sorted(exp.footnoteChips)) && stillCode.length === 0,
+    short(f.body) + ', expected ' + short(exp.chips) + '; in footnotes ' + short(f.footnotes) + ', expected ' + short(exp.footnoteChips) + '; still code: ' + JSON.stringify(stillCode));
+  check('no entry of the table of contents or the rail is empty', f.emptyEntries.length === 0, JSON.stringify(f.emptyEntries));
+  const shown = [...f.body, ...f.footnotes];
+  if (!exp.chips.length && !exp.footnoteChips.length) return;
+
+  const bad = (what, test) => shown.filter(c => !test(c, CHIPS[c.colour] || {})).map(c => c.colour + ' ' + JSON.stringify(c.label) + ': ' + JSON.stringify(what(c)));
+  const labels = bad(c => [c.tag, c.visible, c.label], c => c.tag === 'SPAN' && c.visible && !!c.label && c.label.trim() === c.label);
+  check('every chip shows its label: visible, the dot gone', labels.length === 0, labels.join(' | '));
+  const styles = bad(c => [c.text, c.tint, c.radius, c.display, c.font, c.family, c.mark],
+    (c, want) => c.text === want.colour && c.tint === want.tint && c.radius === '10px' && c.display === 'inline-block' && c.font === '11px 400 uppercase' && /monospace/.test(c.family) &&
+      (c.mark.content === '""' || c.mark.content === "''") && c.mark.display === 'inline-block' && c.mark.width >= 8 && c.mark.height >= 8 && c.mark.image === 'none');
+  check('every chip is styled: a pill in small capitals of the monospace stack, label and mark in the colour of its class on its tint, the mark drawn without an image', styles.length === 0, styles.join(' | '));
+  const words = bad(c => [c.word, c.wordFirst, c.wordRendered, c.wordHidden, c.wordBox, c.wordCase],
+    (c, want) => c.word === want.word + ': ' && c.wordFirst && c.wordRendered && c.wordHidden && c.wordCase === 'none');
+  check('every chip names its colour as text for assistive technology: before the label, rendered, and not visible', words.length === 0, words.join(' | '));
+  // What a screen reader is handed, as far as a run can ask: the accessible
+  // text of the first chip of each colour, as Playwright reads it from the page.
+  const colours = Object.keys(CHIPS).filter(colour => shown.some(c => c.colour === colour));
+  const spoken = [];
+  for (const colour of colours){
+    const want = CHIPS[colour].word + ': ' + shown.find(c => c.colour === colour).label;
+    const snapshot = await page.locator('.dokufix-chip-' + colour + ':not(.dokufix-fn-preview *)').first().ariaSnapshot().catch(e => 'no snapshot: ' + e.message.split('\n')[0]);
+    if (!snapshot.toLowerCase().includes(want.toLowerCase())) spoken.push(colour + ': ' + JSON.stringify(snapshot) + ', expected ' + JSON.stringify(want));
+  }
+  check('the accessible text of a chip is the name of its colour and its label', spoken.length === 0, spoken.join(' | '));
+  const sameLabel = shown.filter(c => shown.some(d => d.label === c.label && d.colour !== c.colour));
+  if (sameLabel.length){
+    const alike = sameLabel.filter(c => sameLabel.some(d => d.label === c.label && d.colour !== c.colour && d.word === c.word));
+    check('two chips with the same label and different colours differ in their text for assistive technology', alike.length === 0, short(alike));
+  }
+  if (f.previews.length){
+    const unequal = f.previews.filter(x => x.definition !== x.preview);
+    check('a chip in a footnote is a chip in the preview of that footnote', unequal.length === 0, JSON.stringify(f.previews));
+  }
+
+  // --- without colour: the marks differ pairwise in their shape
+  if (colours.length > 1){
+    const pictures = await chipMarkPictures(page, colours, keep);
+    const control = comparePng(pictures[0], pictures[colours.length], null).differing;
+    const close = [];
+    for (let i = 0; i < colours.length; i++){
+      for (let j = i + 1; j < colours.length; j++){
+        const d = comparePng(pictures[i], pictures[j], null).differing;
+        if (d < MARK_MIN_DIFFERENCE) close.push(colours[i] + ' and ' + colours[j] + ': ' + d + ' px');
+      }
+    }
+    check('all in one colour, the chips of ' + colours.length + ' colours still differ pairwise: the mark of each has a shape of its own',
+      control === 0 && close.length === 0, 'two pictures of the same chip differ in ' + control + ' px; ' + close.join(' | '));
+  }
+
+  // --- a chip in a heading: the entry reads the label, the anchor is the one of that text
+  const want = exp.chipHeadings;
+  check('headings with a chip: the ones the document has, each entry reading the heading\'s text with the chip\'s label and nothing of its colour',
+    JSON.stringify(f.headings.map(h => [h.level, h.label, h.chips])) === JSON.stringify(want.map(h => [h.level, h.label, h.chips])),
+    JSON.stringify(f.headings.map(h => [h.level, h.label, h.chips])) + ', expected ' + JSON.stringify(want.map(h => [h.level, h.label, h.chips])));
+  if (f.headings.length){
+    const anchors = f.headings.filter(h => { const slug = slugify(h.label, new Set()); return !(h.id === slug || (h.id.startsWith(slug + '-') && /^\d+$/.test(h.id.slice(slug.length + 1)))); });
+    check('headings with a chip: the anchor is the one of the entry\'s text', anchors.length === 0, JSON.stringify(anchors.map(h => [h.label, h.id])));
+    const entries = f.headings.filter(h =>
+      (f.hasToc && h.level >= 2 && h.level <= exp.tocDepth && h.toc !== h.label) ||
+      (f.railLinks > 0 && h.level >= 2 && h.level <= 4 && h.rail !== h.label) ||
+      !h.label.trim() || h.text === h.label);
+    check('headings with a chip: in the table of contents and in the rail under that text, never empty; the heading itself keeps the word for assistive technology',
+      entries.length === 0, JSON.stringify(entries));
+  }
+}
+
 // ---------- assertions ----------
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
@@ -651,6 +870,9 @@ async function assertVariant(launch, file, key, exp, results, label){
         c.top === '0px' && c.right === '0px' && c.bottom === '0px' && w.top === '1px' && w.right === '1px' && w.bottom === '1px' && w.left !== c.left &&
         c.ownLine && !w.ownLine && c.labelDisplay !== w.labelDisplay && c.symbol && !w.symbol, JSON.stringify(pair));
     }
+
+    // --- status chips (story 2.3). With a document that has none, the count is the check.
+    await assertChips(page, check, exp, path.join(path.dirname(file), 'marken-' + key));
 
     // --- metadata panel (story 1.1)
     if (exp.frontmatter){
@@ -960,8 +1182,10 @@ async function runBrowser(name, opts, md){
 
 // ---------- PNG, just enough to compare two screenshots ----------
 const PNG_SIG = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
+// file: a path, or the picture itself as a Buffer.
 function decodePng(file){
-  const buf = fs.readFileSync(file);
+  const buf = Buffer.isBuffer(file) ? file : fs.readFileSync(file);
+  if (Buffer.isBuffer(file)) file = '(a screenshot in memory)';
   if (!buf.subarray(0, 8).equals(PNG_SIG)) throw new Error('not a PNG: ' + file);
   let width = 0, height = 0, channels = 0;
   const idat = [];
