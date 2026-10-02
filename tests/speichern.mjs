@@ -51,6 +51,16 @@
 // with a saved file, which is one of the allowed differences, and the second
 // generation has to open numbered.
 //
+// Two more saves visit states of the page that leave marks on its own
+// elements, and each saved file is compared with the built file the same way:
+//
+//   5. a narrow window, saved with the hamburger panel open (the download menu
+//      sits inside that panel)
+//   6. IndexedDB unavailable, so the storage banner is shown with its reason
+//      and the version mark carries its warning. The run takes IndexedDB away
+//      with an init script, before the page's script runs; the product has no
+//      switch for it
+//
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
 // The version description contains "<!-- <script>" and "</script>".
@@ -153,8 +163,10 @@ function differenceInContext(got, want){
 // ---------- the page, through its DOM ----------
 // Opens a file in a context of its own and waits until init and the first
 // render are done: the rail is the last thing a render builds.
-async function open(browser, file){
-  const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
+// options: { viewport, initScript }, for the states of steps 5 and 6.
+async function open(browser, file, options = {}){
+  const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: options.viewport || { width: 1400, height: 1000 }, acceptDownloads: true });
+  if (options.initScript) await context.addInitScript(options.initScript);
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -237,6 +249,8 @@ const ALLOWED = [
     selector: 'body', removeClass: 'numbered' },
   { why: 'heading numbering, as above: the state of its button',
     selector: '#numbering-btn', removeClass: 'toggle-on', attribute: ['aria-pressed', 'false'] },
+  { why: 'where "hidden" stands among the attributes of the storage banner: a banner that was shown lost the attribute, and the save puts it back behind the others. That it is there is compared',
+    selector: '#storage-error', lastAttribute: 'hidden' },
 ];
 // A file as the browser serialises it with scripts off, the allowed differences
 // taken out; and what the version mark said before that.
@@ -253,6 +267,11 @@ async function serialised(browser, file){
           if ('text' in a) el.textContent = a.text;
           if (a.removeClass) el.classList.remove(a.removeClass);
           if (a.attribute) el.setAttribute(a.attribute[0], a.attribute[1]);
+          if (a.lastAttribute && el.hasAttribute(a.lastAttribute)){
+            const value = el.getAttribute(a.lastAttribute);
+            el.removeAttribute(a.lastAttribute);
+            el.setAttribute(a.lastAttribute, value);
+          }
         }
       }
       return { html: '<!DOCTYPE html>\n' + document.documentElement.outerHTML, versionMark };
@@ -348,6 +367,54 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     same(scope, '"Demo zurücksetzen" gives the original demo text', s.source, demo);
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
+
+    // 5. a narrow window, saved with the hamburger panel open
+    scope = name + ' narrow window';
+    const narrow = path.join(dir, 'schmal.html');
+    o = await open(browser, opts.file, { viewport: { width: 600, height: 900 } });
+    await o.page.click('#edit-btn');
+    await o.page.fill('#source', DOC_A);
+    await o.page.click('#hamburger');
+    await o.page.click('#download-btn');
+    const panelOpen = await o.page.evaluate(() => document.getElementById('header-actions').classList.contains('open')
+      && document.getElementById('hamburger').getAttribute('aria-expanded') === 'true');
+    const [narrowDownload] = await Promise.all([
+      o.page.waitForEvent('download', { timeout: 60000 }),
+      o.page.click('button[data-download="full"]'),
+    ]);
+    await narrowDownload.saveAs(narrow);
+    check(scope, 'the hamburger panel was open when the file was saved', panelOpen);
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    await checkAgainstBuiltFile(scope, browser, narrow, built, 1);
+
+    // 6. IndexedDB unavailable
+    scope = name + ' storage unavailable';
+    const degraded = path.join(dir, 'ohne-speicher.html');
+    o = await open(browser, opts.file, { initScript: () => { Object.defineProperty(window, 'indexedDB', { value: undefined, configurable: true }); } });
+    const marks = await o.page.evaluate(() => ({
+      banner: !document.getElementById('storage-error').hidden,
+      reason: document.querySelector('#storage-error .storage-error-msg').textContent,
+      title: document.getElementById('version-btn').title,
+    }));
+    check(scope, 'the page shows the storage banner with its reason, and the version mark its warning',
+      marks.banner && marks.reason.trim().length > 2 && marks.title.startsWith('Achtung'), JSON.stringify(marks));
+    // Through the DOM: the banner lies over the toolbar.
+    const [degradedDownload] = await Promise.all([
+      o.page.waitForEvent('download', { timeout: 60000 }),
+      o.page.evaluate(text => {
+        const source = document.getElementById('source');
+        source.value = text;
+        source.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('button[data-download="full"]').click();
+      }, DOC_A),
+    ]);
+    await degradedDownload.saveAs(degraded);
+    // The console says that storage is missing; that is this state. A page error would be something else.
+    const pageErrors = o.errors.filter(e => !e.startsWith('console: '));
+    check(scope, 'no page error', pageErrors.length === 0, pageErrors.join(' | '));
+    await o.context.close();
+    await checkAgainstBuiltFile(scope, browser, degraded, built, 1);
 
     // 4. a demo text that contains markup
     scope = name + ' demo text with markup';

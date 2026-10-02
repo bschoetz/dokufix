@@ -136,6 +136,9 @@ export function scheduleSave(){
 }
 
 let persistFailedFlag = false;
+// The badge's title while storage works: the one it has in src/index.html.
+// "Mit Editor" writes it into the saved file.
+export const VERSION_BADGE_TITLE = 'Versionsverlauf anzeigen';
 export function setPersistFailed(failed){
   if (persistFailedFlag === failed) return;
   persistFailedFlag = failed;
@@ -143,7 +146,7 @@ export function setPersistFailed(failed){
     versionBtn.classList.toggle('persist-failed', failed);
     versionBtn.title = failed
       ? 'Achtung: Versionsdaten konnten nicht im Browser gespeichert werden (Quota?). Klick für Details.'
-      : 'Versionsverlauf anzeigen';
+      : VERSION_BADGE_TITLE;
   }
 }
 

@@ -4,7 +4,7 @@ import { bakeAssetsForDocument } from '../assets.js';
 import { generateDocUuid } from '../document.js';
 import { sourceEl } from '../dom.js';
 import { state } from '../state.js';
-import { persistDoc, saveTimer, updateVersionBadge, baseTitle, updateDirtyState, CLEAN_BADGE_TEXT } from '../persistence.js';
+import { persistDoc, saveTimer, updateVersionBadge, baseTitle, updateDirtyState, CLEAN_BADGE_TEXT, VERSION_BADGE_TITLE } from '../persistence.js';
 import { removeTransient } from '../transient.js';
 import { safeFilenameBase, triggerDownload, setDownloadInFlight } from './download.js';
 
@@ -98,6 +98,10 @@ export async function downloadWithEditor(){
     // tests/speichern.mjs compares the saved file with the built one and fails
     // on whatever is missing here.
     docClone.querySelectorAll('.menu-wrap.open').forEach(el => el.classList.remove('open'));
+    // The hamburger panel of a narrow window: the download menu sits inside
+    // it, so it is open while the file is saved.
+    docClone.querySelectorAll('.header-actions.open').forEach(el => el.classList.remove('open'));
+    docClone.querySelector('#hamburger')?.setAttribute('aria-expanded', 'false');
     // The "in-flight" disabled state must not survive into the saved file —
     // receivers must be able to use their download buttons immediately.
     docClone.querySelectorAll('button[disabled]').forEach(b => b.removeAttribute('disabled'));
@@ -138,13 +142,19 @@ export async function downloadWithEditor(){
     if (assetsClone) assetsClone.textContent = encodeJsonForScript(assetsPayload);
     // Receiver opens cleanly — hide any storage-error banner the sender saw.
     const errClone = docClone.querySelector('#storage-error');
-    if (errClone) errClone.hidden = true;
+    if (errClone){
+      errClone.hidden = true;
+      // And without the sender's reason in it.
+      const msgClone = errClone.querySelector('.storage-error-msg');
+      if (msgClone) msgClone.textContent = '';
+    }
     // Drop the transient .is-drop-target class on the source pane clone.
     docClone.querySelectorAll('.is-drop-target').forEach(el => el.classList.remove('is-drop-target'));
     const versionBadgeClone = docClone.querySelector('#version-btn');
     if (versionBadgeClone){
       versionBadgeClone.textContent = 'v' + pendingVersion;
       versionBadgeClone.classList.remove('persist-failed');
+      versionBadgeClone.title = VERSION_BADGE_TITLE;
     }
 
     // Write the demo text and the current source into the clone's data blocks,
