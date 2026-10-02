@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>dokufix — PoC</title>
+<style id="dokufix-doc-css">
+{{slot:doc.css}}
+</style>
+<style>
+{{slot:app.css}}
+</style>
+</head>
+<body class="mode-view">
+
+<header>
+  <h1>dokufix</h1>
+  <span class="tag">PoC</span>
+  <span id="dirty-badge" class="dirty-badge" aria-live="polite" title="Vergleicht den aktuellen Editor-Inhalt mit dem, was zuletzt in dieser Datei gespeichert wurde">wie in Datei</span>
+  <button id="version-btn" class="version-badge" type="button" title="Versionsverlauf anzeigen">v0</button>
+  <span class="hint"><kbd>Strg</kbd>+<kbd>Enter</kbd> rendert</span>
+  <span class="spacer"></span>
+  <button id="hamburger" class="hamburger" type="button" aria-label="Menü öffnen" aria-expanded="false">☰</button>
+  <div class="header-actions" id="header-actions">
+    <button id="numbering-btn" class="ghost" type="button" title="Gliederungsnummerierung an/aus" aria-pressed="false">1.2.3</button>
+    <button id="reset-btn" class="ghost" type="button" title="Editor-Inhalt auf den Demo-Beispieltext zurücksetzen">Demo zurücksetzen</button>
+    <button id="render-btn" type="button">Rendern →</button>
+    <span class="menu-wrap" id="download-wrap">
+      <button id="download-btn" class="ghost" type="button" aria-haspopup="menu" aria-expanded="false">Herunterladen ▾</button>
+      <div class="menu" role="menu" aria-label="Download-Optionen">
+        <button type="button" data-download="full" role="menuitem">
+          <span class="m-title">Mit Editor</span>
+          <span class="m-sub">Vollständige dokufix-Datei. Quelltext ist gzip-komprimiert eingebettet. Empfänger kann lesen, editieren und neu speichern.</span>
+        </button>
+        <button type="button" data-download="readonly-open" role="menuitem">
+          <span class="m-title">Ohne Editor — offen <span class="badge">PUR</span></span>
+          <span class="m-sub">Reines Lesedokument, kein JavaScript. Maximale Portabilität, im Texteditor lesbar.</span>
+        </button>
+        <button type="button" data-download="readonly-slim" role="menuitem">
+          <span class="m-title">Ohne Editor — schlank <span class="badge">SVG-GZ</span></span>
+          <span class="m-sub">Text als Klartext (grep-bar, im Editor lesbar), nur die Mermaid-Diagramme sind einzeln gzip-komprimiert. Ohne JavaScript bleibt der Text lesbar, Diagramme fehlen.</span>
+        </button>
+        <button type="button" data-download="readonly-compact" role="menuitem">
+          <span class="m-title">Ohne Editor — kompakt <span class="badge">GZ</span></span>
+          <span class="m-sub">Lesedokument, alles gzip-komprimiert. Maximal klein; benötigt JavaScript zum Entpacken.</span>
+        </button>
+      </div>
+    </span>
+    <button id="view-btn" class="ghost" type="button" title="Pure View ohne Editor-Chrome">Lesen →</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="pane pane-source">
+    <div class="pane-header">
+      <span>Quelle · Markdown + Mermaid</span>
+      <button id="img-btn" type="button" class="img-btn" title="Bild einfügen — oder per Drag &amp; Drop / Strg+V hineinpasten">+ Bild</button>
+      <input id="img-input" type="file" accept="image/*" multiple hidden>
+    </div>
+    <textarea id="source" spellcheck="false"></textarea>
+    <div class="drop-overlay" id="drop-overlay" aria-hidden="true">Bild fallenlassen</div>
+  </section>
+  <section class="pane pane-preview">
+    <div class="pane-header">Vorschau · gelayoutetes Dokument</div>
+    <article id="preview" class="dokufix-doc"></article>
+  </section>
+</main>
+
+<aside id="dokufix-rail" class="dokufix-rail" aria-label="Navigation"></aside>
+
+<button id="edit-btn" type="button" class="toggle-back" aria-label="Zurück zum Editor">Editor ↩</button>
+
+<dialog id="version-modal" class="version-modal" aria-labelledby="version-modal-title">
+  <header class="version-modal-head">
+    <h2 id="version-modal-title">Versionsverlauf</h2>
+    <button class="version-modal-close" type="button" aria-label="Schließen">×</button>
+  </header>
+  <div class="version-modal-body"></div>
+  <footer class="version-modal-foot">
+    <button id="commit-btn" type="button" class="commit-btn">+ Neue Version festschreiben</button>
+    <span class="commit-hint">Beschreibung jetzt notieren, Datei später erzeugen.</span>
+  </footer>
+</dialog>
+
+<!-- Persistent in-file version history (JSON payload, not executed) -->
+<script type="application/json" id="dokufix-history">{"version":0,"history":[]}</script>
+
+<!-- The original demo text, the one "Demo zurücksetzen" restores. {"text": …} as built, {"gz": …} (gzip, base64) in a saved file. A save never changes what it says. -->
+<script type="application/json" id="dokufix-demo">{{slot:demo.md}}</script>
+
+<!-- This file's document. Empty as built, so the demo text is shown; "Mit Editor" writes the saved source here as {"gz": …}. -->
+<script type="application/json" id="dokufix-source">{"text":""}</script>
+
+<!-- Baked image assets (hash → {m: mime, d: base64}). Seeded into IndexedDB on load. -->
+<script type="application/json" id="dokufix-assets">{}</script>
+
+<!-- Storage-error banner (hidden until init detects IDB failure) -->
+<div id="storage-error" hidden role="alert"
+     style="position:fixed;top:0;left:0;right:0;background:#fee;border-bottom:1px solid #c44;color:#8b1300;padding:12px 18px;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;z-index:9999">
+  <strong>Speicher nicht verfügbar.</strong>
+  <span class="storage-error-msg"></span>
+  IndexedDB ist im aktuellen Browserprofil deaktiviert — wahrscheinlich ein privater Modus oder eine restriktive Site-Einstellung.
+  Entwurf und Versionsverlauf können in dieser Sitzung nicht erhalten werden.
+</div>
+
+<!-- CDN libraries (PoC only — production bundle will inline these).
+     Every version is pinned: an unpinned URL follows the CDN's idea of "latest",
+     which left marked on 15.0.12 (marked.min.js stopped shipping with 16) while
+     Mermaid moved with every release. Raise a version here, then run
+     poc/tests/vergleich.mjs against the state before. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/marked-footnote@1.4.0/dist/index.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@12.0.0/dist/mermaid.min.js"></script>
+
+<script>
+{{slot:app.js}}
+</script>
+
+</body>
+</html>
