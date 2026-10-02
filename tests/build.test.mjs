@@ -1,5 +1,6 @@
-// Proves what build.mjs promises: the same file from the same sources, and exit 1
-// with nothing written where a source would give a broken page.
+// Proves what build.mjs promises: the same file from the same sources, exit 1
+// with nothing written where a source would give a broken page, and a readable
+// second file (--dev, --watch) that never takes the place of the committed one.
 //
 //   npm test          (node --test tests/*.test.mjs)
 //
@@ -12,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { assemble, BuildError, SLOTS } from '../build.mjs';
 
@@ -79,6 +80,108 @@ test('--check fails when the built file is missing', () => {
   assert.equal(r.status, 1, r.stdout);
   assert.match(r.stderr, /is missing/);
   assert.equal(r.html, null);
+});
+
+// ---------- the readable build ----------
+// The page's own script: from the first <script> without attributes to the
+// last </script> of the file.
+const appScript = html => html.slice(html.indexOf('<script>') + '<script>'.length, html.lastIndexOf('</script>'));
+test('--dev writes a second file: the same page, not minified, with a source map', () => {
+  const before = fs.readFileSync(committed);
+  const r = build({}, ['--dev']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /not minified, with a source map/);
+  const min = fs.readFileSync(committed, 'utf8');
+  const script = appScript(r.html);
+  // Not minified: the names and the lines of the sources are there.
+  assert.match(script, /^ {2}async function renderOnce\(\) \{$/m);
+  assert.ok(script.split('\n').length > 1000, 'the script has its lines');
+  assert.match(r.html, /^\.dokufix-doc \.dokufix-warning \{$/m);
+  assert.ok(!/async function renderOnce/.test(appScript(min)), 'the committed file is the minified one');
+  // The source map stands at the end of the script and names the modules.
+  const map = script.match(/\n\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)\s*$/);
+  assert.ok(map, 'the script ends with its source map');
+  const parsed = JSON.parse(Buffer.from(map[1], 'base64').toString('utf8'));
+  assert.ok(parsed.sources.some(s => s.endsWith('src/app/render.js')), parsed.sources.join(' '));
+  assert.ok(parsed.sources.some(s => s.endsWith('src/app.js')), parsed.sources.join(' '));
+  assert.equal(parsed.sourcesContent.length, parsed.sources.length);
+  // What holds for the committed file holds for this one: nothing ends the script early.
+  assert.ok(!/<\/script/i.test(script) && !script.includes('<!--'));
+  // The page around the script is the same: its markup and its data blocks.
+  assert.deepEqual(JSON.parse(dataBlock(r.html, 'dokufix-demo')), { text: original('demo.md') });
+  const outside = html => {
+    const script = appScript(html), at = html.indexOf(script);
+    return (html.slice(0, at) + html.slice(at + script.length)).replace(/<style[\s\S]*?<\/style>/g, '<style></style>');
+  };
+  assert.ok(outside(min).length > 5000 && outside(r.html) === outside(min), 'outside its script and its styles the readable file is the committed one');
+  assert.ok(before.equals(fs.readFileSync(committed)), '--dev wrote to the committed file');
+});
+test('--dev never writes the committed file', () => {
+  const before = fs.readFileSync(committed);
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--dev', '--out', committed], { encoding: 'utf8' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /--dev does not write dist\/dokufix\.html/);
+  assert.ok(before.equals(fs.readFileSync(committed)));
+});
+test('--dev and --check do not go together, and --watch needs --dev', () => {
+  const both = build({}, ['--dev', '--check']);
+  assert.equal(both.status, 1, both.stdout);
+  assert.match(both.stderr, /--dev and --check do not go together/);
+  assert.equal(both.html, null);
+  const watch = build({}, ['--watch']);
+  assert.equal(watch.status, 1, watch.stdout);
+  assert.match(watch.stderr, /--watch goes with --dev/);
+  assert.equal(watch.html, null);
+});
+test('--check does not look at a readable file beside the committed one', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  const out = path.join(dir, 'dokufix.html');
+  fs.copyFileSync(committed, out);
+  fs.writeFileSync(path.join(dir, 'dokufix.dev.html'), 'something else entirely');
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--check', '--out', out], { encoding: 'utf8' });
+  fs.rmSync(dir, { recursive: true });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /up to date/);
+});
+test('--dev --watch builds, and builds again when a source changes', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  const copy = path.join(dir, 'src'), out = path.join(dir, 'dokufix.dev.html');
+  fs.cpSync(srcDir, copy, { recursive: true });
+  const child = spawn(process.execPath, [path.join(root, 'build.mjs'), '--dev', '--watch', '--src', copy, '--out', out]);
+  let said = '';
+  child.stdout.on('data', d => { said += d; });
+  child.stderr.on('data', d => { said += d; });
+  const until = async (what, done) => {
+    for (let i = 0; i < 300; i++){
+      if (done()) return;
+      await new Promise(resolve => setTimeout(resolve, 50));
+    }
+    assert.fail('timed out waiting for ' + what + '; the build said:\n' + said);
+  };
+  try {
+    await until('the watch to start', () => /watching /.test(said));
+    assert.ok(fs.existsSync(out), 'the first build wrote the file');
+    const sentence = 'Ein Satz, den erst die Beobachtung sieht.';
+    assert.ok(!fs.readFileSync(out, 'utf8').includes(sentence));
+    fs.appendFileSync(path.join(copy, 'demo.md'), '\n' + sentence + '\n');
+    await until('the rebuild after a change to demo.md', () => fs.readFileSync(out, 'utf8').includes(sentence));
+    // A source that does not build: the reason is printed, the last file stays, the watch goes on.
+    const good = fs.readFileSync(path.join(copy, 'app/gzip.js'), 'utf8');
+    fs.writeFileSync(path.join(copy, 'app/gzip.js'), 'import { nichtDa } from \'./state.js\';\nexport const x = nichtDa;\n' + good);
+    await until('the message of the failed build', () => /No matching export/.test(said));
+    assert.ok(fs.readFileSync(out, 'utf8').includes(sentence), 'the last good file is still there');
+    fs.writeFileSync(path.join(copy, 'app/gzip.js'), good + '// wieder heil\n');
+    await until('the rebuild after the repair', () => (said.match(/ written \(/g) || []).length >= 3);
+  } finally {
+    child.kill();
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+test('package.json: the watch script, and the Node the tools need', () => {
+  const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+  assert.equal(pkg.scripts.watch, 'node build.mjs --dev --watch');
+  assert.equal(typeof pkg.engines.node, 'string');
+  assert.equal(pkg.devDependencies.linkedom, '0.18.13');
 });
 
 // ---------- the script's modules ----------

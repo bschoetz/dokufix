@@ -1,2 +1,4 @@
 _bmad-output/
 node_modules/
+# The readable build (node build.mjs --dev); the committed file is dist/dokufix.html
+dist/dokufix.dev.html

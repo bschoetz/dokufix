@@ -3,10 +3,19 @@
 //   node build.mjs            write dist/dokufix.html
 //   node build.mjs --check    write nothing; exit 1 when dist/dokufix.html is not
 //                             what the sources give
+//   node build.mjs --dev      write dist/dokufix.dev.html instead: the same page
+//                             with script and styles not minified and a source
+//                             map in the script. For reading and debugging; not
+//                             in git, never the committed file, and --check does
+//                             not look at it
+//   node build.mjs --dev --watch
+//                             the same, and again whenever a file under src/
+//                             changes ("npm run watch")
 //
 // Options, for the tests, which build copies of src/:
 //   --src <dir>    the sources (default: src/ beside this file)
-//   --out <file>   the built file (default: dist/dokufix.html beside this file)
+//   --out <file>   the built file (default: dist/dokufix.html beside this file,
+//                  with --dev dist/dokufix.dev.html)
 //
 // src/index.html is the page. It names each of the other sources once, as a slot:
 //
@@ -39,7 +48,8 @@
 //
 // Two builds of the same sources are byte-identical, which is what --check and
 // the committed dist/dokufix.html rely on: no time, no path and no random value
-// goes into the file.
+// goes into the file. (The --dev file carries the paths of the sources in its
+// source map, relative to where it is written.)
 
 import * as esbuild from 'esbuild';
 import fs from 'node:fs';
@@ -47,6 +57,9 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
+// The committed file, and the readable one beside it.
+const COMMITTED = path.join(here, 'dist', 'dokufix.html');
+const DEV = path.join(here, 'dist', 'dokufix.dev.html');
 
 export const SLOTS = ['doc.css', 'app.css', 'app.js', 'demo.md'];
 const SLOT_RE = /\{\{slot:([^{}]*)\}\}/g;
@@ -92,31 +105,36 @@ function printWarnings(warnings, file){
   }
 }
 
-async function minifyCss(css, name){
+async function minifyCss(css, name, dev){
   const result = await esbuild.transform(css,
-    { loader: 'css', minify: true, charset: 'utf8', sourcefile: name, logLevel: 'silent' });
+    { loader: 'css', minify: !dev, charset: 'utf8', sourcefile: name, logLevel: 'silent' });
   printWarnings(result.warnings, name);
   return result.code.trim();
 }
 
-async function bundleScript(file){
+// dev: not minified, and the source map stands at the end of the script as a
+// data: URL, so the one file is still all there is. outFile is where the page
+// will be written; the map names the sources relative to it.
+async function bundleScript(file, dev, outFile){
   const result = await esbuild.build({
     entryPoints: [file],
     bundle: true,
     format: 'iife',
-    minify: true,
+    minify: !dev,
     // Without this esbuild writes every non-ASCII character as an escape.
     charset: 'utf8',
     write: false,
     logLevel: 'silent',
+    ...(dev ? { sourcemap: 'inline', outfile: outFile.replace(/\.html$/, '') + '.js' } : {}),
   });
   printWarnings(result.warnings, path.basename(file));
   // See the header: "<!--" must not stand in a script element.
   return result.outputFiles[0].text.trim().replaceAll('<!--', '\\x3c!--');
 }
 
-// The built page as a string.
-export async function build(srcDir){
+// The built page as a string. options: { dev, out }, see bundleScript().
+export async function build(srcDir, options = {}){
+  const dev = !!options.dev;
   const read = name => {
     const file = path.join(srcDir, name);
     if (!fs.existsSync(file)) throw new BuildError('source not found: ' + file);
@@ -129,9 +147,9 @@ export async function build(srcDir){
   let parts;
   try {
     parts = {
-      'doc.css': await minifyCss(docCss, 'doc.css'),
-      'app.css': await minifyCss(appCss, 'app.css'),
-      'app.js': await bundleScript(path.join(srcDir, 'app.js')),
+      'doc.css': await minifyCss(docCss, 'doc.css', dev),
+      'app.css': await minifyCss(appCss, 'app.css', dev),
+      'app.js': await bundleScript(path.join(srcDir, 'app.js'), dev, options.out || DEV),
       'demo.md': jsonForDataBlock({ text: demo }),
     };
   } catch (e){
@@ -143,33 +161,67 @@ export async function build(srcDir){
 }
 
 function parseArgs(argv){
-  const a = { check: false, src: path.join(here, 'src'), out: path.join(here, 'dist', 'dokufix.html') };
+  const a = { check: false, dev: false, watch: false, src: path.join(here, 'src'), out: null };
   for (let i = 0; i < argv.length; i++){
     const k = argv[i];
-    if (k === '--check') a.check = true;
+    if (k === '--check' || k === '--dev' || k === '--watch') a[k.slice(2)] = true;
     else if (k === '--src' || k === '--out'){
       if (argv[i + 1] === undefined) throw new BuildError(k + ' needs a value');
       a[k.slice(2)] = path.resolve(argv[++i]);
     }
     else throw new BuildError('unknown argument: ' + k);
   }
+  if (a.dev && a.check) throw new BuildError('--dev and --check do not go together: the check is about the committed file, which is the minified one');
+  if (a.watch && !a.dev) throw new BuildError('--watch goes with --dev: the committed file is built on purpose, not on every change');
+  if (a.out === null) a.out = a.dev ? DEV : COMMITTED;
+  // The readable file must never take the place of the committed one.
+  if (a.dev && a.out === COMMITTED) throw new BuildError('--dev does not write ' + path.relative(here, COMMITTED) + ': that is the committed file, and it is the minified one');
   return a;
+}
+
+const shownPath = file => path.relative(process.cwd(), file) || file;
+const shownSize = html => Buffer.byteLength(html).toLocaleString('en-US').replace(/,/g, ' ') + ' B';
+
+async function buildAndWrite(opts){
+  const html = await build(opts.src, { dev: opts.dev, out: opts.out });
+  fs.mkdirSync(path.dirname(opts.out), { recursive: true });
+  fs.writeFileSync(opts.out, html);
+  console.log(shownPath(opts.out) + ' written (' + shownSize(html) + (opts.dev ? ', not minified, with a source map' : '') + ')');
+}
+
+// Builds, then builds again whenever something under the sources changes. A
+// build that fails says why and leaves the last file; the watch goes on.
+async function watch(opts){
+  let running = false, again = false, timer = null;
+  const once = async () => {
+    if (running){ again = true; return; }
+    running = true;
+    try { await buildAndWrite(opts); }
+    catch (e){ console.error(e instanceof BuildError ? e.message : e); }
+    running = false;
+    if (again){ again = false; once(); }
+  };
+  await once();
+  // An editor writes a file in several steps; one build for all of them.
+  fs.watch(opts.src, { recursive: true }, () => {
+    clearTimeout(timer);
+    timer = setTimeout(once, 100);
+  });
+  console.log('watching ' + shownPath(opts.src) + ' (Ctrl+C ends it)');
 }
 
 async function main(){
   const opts = parseArgs(process.argv.slice(2));
-  const html = await build(opts.src);
-  const shown = path.relative(process.cwd(), opts.out) || opts.out;
-  const size = Buffer.byteLength(html).toLocaleString('en-US').replace(/,/g, ' ') + ' B';
+  if (opts.watch) return watch(opts);
   if (opts.check){
+    const html = await build(opts.src);
+    const shown = shownPath(opts.out);
     if (!fs.existsSync(opts.out)) throw new BuildError(shown + ' is missing; run "npm run build"');
     if (fs.readFileSync(opts.out, 'utf8') !== html) throw new BuildError(shown + ' is stale: it is not what the sources give; run "npm run build" and commit the result');
-    console.log(shown + ' is up to date (' + size + ')');
+    console.log(shown + ' is up to date (' + shownSize(html) + ')');
     return;
   }
-  fs.mkdirSync(path.dirname(opts.out), { recursive: true });
-  fs.writeFileSync(opts.out, html);
-  console.log(shown + ' written (' + size + ')');
+  await buildAndWrite(opts);
 }
 
 // Run as a command, not imported. The real path: started through a symlink,
