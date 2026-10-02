@@ -199,10 +199,16 @@
     margin:0 0 .5em;
     font-weight:600;line-height:1.3;
   }
+  /* The symbol is a background, and a browser leaves backgrounds out when it
+     prints unless it is told not to: without print-color-adjust a printed page
+     or a PDF has the label with a gap in front of it. The -webkit- form is for
+     Chromium before 136, which the browser target (shipped from 2025 onward)
+     still includes. */
   .dokufix-doc .dokufix-callout-label::before{
     content:"";flex:none;
     width:16px;height:16px;
     background:no-repeat center/16px 16px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .dokufix-doc .dokufix-callout > :last-child{margin-bottom:0}
   /* A heading right under the label keeps to it. */

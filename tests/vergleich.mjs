@@ -158,7 +158,7 @@ const CALLOUT_HEADINGS_IN =
 // ---------- what the document should produce ----------
 function expectationsFor(md){
   const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
-                callouts: [], calloutHeadings: [] };
+                callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0 };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -179,7 +179,10 @@ function expectationsFor(md){
   // Callouts: a blockquote whose first line is only an alert marker, and the
   // headings inside one. Read line by line, and only for a quote that starts
   // at the beginning of its line and is not nested: that is how the reference
-  // document writes them. Fenced code is skipped.
+  // document writes them. Fenced code is skipped. Not read: a callout in a
+  // list item or in a nested quote, and a masked marker ("> \[!NOTE\]"), which
+  // the product turns into a callout. A document with one of these fails the
+  // count below although the build is right; see src/README.md, "Comparison run".
   let fenced = false, quote = false, callout = false;
   for (const line of body.split(/\r?\n/)){
     if (/^(```|~~~)/.test(line)){ fenced = !fenced; quote = callout = false; continue; }
@@ -193,8 +196,11 @@ function expectationsFor(md){
       if (m) exp.callouts.push(m[1].toLowerCase());
       continue;
     }
-    const h = callout && text.match(/^#{1,6}[ \t]+(.+?)[ \t]*$/);
-    if (h) exp.calloutHeadings.push(h[1]);
+    const h = callout && text.match(/^(#{1,6})[ \t]+(.+?)[ \t]*$/);
+    if (!h) continue;
+    exp.calloutHeadings.push(h[2]);
+    // Numbering knows h2 to h4.
+    if (h[1].length >= 2 && h[1].length <= 4) exp.calloutHeadingsNumbered++;
   }
   return exp;
 }
@@ -585,7 +591,9 @@ async function assertVariant(launch, file, key, exp, results, label){
     // times with numbering on: as it is, with the heading forced out of the
     // count, and with it forced in. As it is, it has to be the first of the
     // two and not the second; the second proves that the picture would show it.
-    if (exp.calloutHeadings.length){
+    // Only with a heading of level 2 to 4 inside a callout: h1, h5 and h6 are
+    // not numbered anywhere, so there is nothing to tell apart.
+    if (exp.calloutHeadingsNumbered){
       const computed = await page.evaluate(() => {
         document.body.classList.add('numbered');
         if (document.activeElement) document.activeElement.blur();
@@ -597,7 +605,7 @@ async function assertVariant(launch, file, key, exp, results, label){
         });
       });
       const counted = computed.filter(h => h.reset !== 'none' || h.increment !== 'none' || h.content !== 'none');
-      check('a heading inside a callout gets no number and does not count', computed.length > 0 && counted.length === 0, JSON.stringify(computed));
+      check('a heading inside a callout gets no number and does not count', computed.length === exp.calloutHeadingsNumbered && counted.length === 0, JSON.stringify(computed));
       const photo = async css => {
         const tag = css ? await page.addStyleTag({ content: css }) : null;
         const png = await page.screenshot({ fullPage: true, animations: 'disabled', caret: 'hide' });

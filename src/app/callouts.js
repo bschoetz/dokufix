@@ -6,10 +6,12 @@
 //                            <p>Text.</p>
 //                          </div>
 //
-// The five markers are the ones GitHub knows for its alerts, so a document
-// reads the same there: NOTE, TIP, IMPORTANT, WARNING, CAUTION, in any case.
-// dokufix adds no syntax; a renderer that does not know the convention shows a
-// quotation that begins with the marker.
+// The five markers are the ones GitHub knows for its alerts: NOTE, TIP,
+// IMPORTANT, WARNING, CAUTION, in any case. dokufix adds no syntax; a renderer
+// that does not know the convention shows a quotation that begins with the
+// marker. One difference to GitHub: there an alert cannot be nested within
+// another element, so a marker in a quote inside a quote, in a list item or in
+// another callout is a callout here and a plain quotation on GitHub.
 //
 // The type is text in the markup: the label is the callout's first child and
 // carries the word. The colour and the symbol beside it (src/doc.css) are
@@ -27,9 +29,11 @@
 //   > [!NOTE] text         <p>[!NOTE] text</p>                     ordinary blockquote
 //   > [!FOO]               <p>[!FOO]</p>                           ordinary blockquote
 //
-// Known limit: a masked marker, "> \[!NOTE\]", arrives as the same markup as an
-// unmasked one and becomes a callout. Telling the two apart needs the tokens,
-// not the DOM.
+// Known limits, both because the markup is the same as that of a callout and
+// telling them apart needs the tokens, not the DOM: a masked marker,
+// "> \[!NOTE\]", becomes a callout; and so does a marker with a raw <br>
+// behind it on its line, "> [!NOTE]<br>text", which arrives like a hard break
+// and loses the <br>.
 //
 // A heading inside a callout is no document heading: documentHeadings() in
 // toc.js leaves it out, by the class exported here.
