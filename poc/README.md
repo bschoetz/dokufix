@@ -348,6 +348,8 @@ The PoC has no build step and does not depend on anything in `tests/`. The check
 
 `node poc/tests/check-doc-styles.mjs` — fails when a style for document content sits anywhere but in `<style id="dokufix-doc-css">`. Described under *Document styles (one source)*. It reads the file as text and needs neither a browser nor `npm install`.
 
+`node --test poc/tests/` proves the check itself: `tests/check-doc-styles.test.mjs` breaks a copy of the PoC once per case (a `#preview h5` or `.dokufix-x` rule in the app stylesheet or the export frame, an export without `readonlyCss()`, the block missing or doubled) and expects exit 1 with the culprit named.
+
 ### Comparison run (`tests/vergleich.mjs`)
 
 Builds all four download variants from one document in one run, reopens each the way a recipient would, and records what they look like and how big they are. It is the tool for any change that must not alter the look of a document.
@@ -387,6 +389,7 @@ poc/
 ├── README.md           This file.
 └── tests/              Checks that look at the PoC from outside. See "Checks".
     ├── check-doc-styles.mjs  Fails when a document style sits outside its one source.
+    ├── check-doc-styles.test.mjs  Breaks copies of the PoC and expects the check to fail.
     ├── referenz.md         Neutral reference document, the one input of every comparison.
     ├── vergleich.mjs       Comparison run: four variants, screenshots, sizes, assertions.
     ├── package.json        One development dependency: playwright-core.
