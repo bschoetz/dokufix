@@ -519,7 +519,9 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await searchDownload.saveAs(withSearch);
     check(scope, 'the panel was open with a term and its results when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0, JSON.stringify(searchOpen));
     check(scope, 'and is still open in the running page', JSON.stringify(await searchState(o.page)) === JSON.stringify(searchOpen), JSON.stringify(await searchState(o.page)));
-    check(scope, 'the saved file holds no panel', !/search-panel|search-input/.test(fs.readFileSync(withSearch, 'utf8').replace(/<script>[\s\S]*?<\/script>|<style>[\s\S]*?<\/style>/g, '')));
+    // Without its scripts and styles: the page's script and the reader bundle in
+    // its data block name the panel's classes, and so does the stylesheet.
+    check(scope, 'the saved file holds no panel', !/search-panel|search-input/.test(fs.readFileSync(withSearch, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '')));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     await checkAgainstBuiltFile(scope, browser, withSearch, built, 1);

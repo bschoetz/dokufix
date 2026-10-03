@@ -15,6 +15,9 @@
 //
 //   doc.css      the block
 //   app.css      the app stylesheet
+//   search.css   the search panel's stylesheet, which the build puts behind
+//                the app stylesheet and into the reader bundle of `schlank`
+//                and `kompakt`; frame, like the panel
 //   every .js    under src/, the script and its modules: the export frame
 //                (READONLY_FRAME_CSS), the downloadReadonly… functions and
 //                every <style> they write, in whichever module they stand
@@ -108,7 +111,7 @@ function source(name){
   const text = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
   return { name: path.join(path.basename(srcDir), name), text: text === null ? '' : text, missing: text === null };
 }
-const page = source('index.html'), docCss = source('doc.css'), appCss = source('app.css');
+const page = source('index.html'), docCss = source('doc.css'), appCss = source('app.css'), searchCss = source('search.css');
 // The script is src/app.js and the modules it imports. Every .js under src/ is
 // read, in a fixed order, and a problem names the module it was found in.
 const entry = source('app.js');
@@ -180,7 +183,8 @@ const IS_BLOCK = new RegExp('\\bid=["\']' + BLOCK_ID + '["\']');
 // The block is doc.css, all of it. Everything else that holds CSS is a
 // stylesheet outside the block: { kind, css, base, src }.
 const block = { css: docCss.text, base: 0, src: docCss };
-const sheets = [{ kind: 'the app stylesheet', css: appCss.text, base: 0, src: appCss }];
+const sheets = [{ kind: 'the app stylesheet', css: appCss.text, base: 0, src: appCss },
+  { kind: 'the stylesheet of the search panel', css: searchCss.text, base: 0, src: searchCss }];
 // In the page: the block's element, the element of the app stylesheet, and
 // whatever else somebody may write there.
 const pageBlocks = [];
@@ -210,7 +214,7 @@ const results = [];
 function check(title, problems){
   results.push({ title, problems });
 }
-const missing = [page, docCss, appCss, entry].filter(s => s.missing).map(s => s.name + ' not found');
+const missing = [page, docCss, appCss, searchCss, entry].filter(s => s.missing).map(s => s.name + ' not found');
 
 // 1
 {

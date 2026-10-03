@@ -386,9 +386,10 @@ test('the steps sit in the export path: the shared one after the transient eleme
   const read = name => fs.readFileSync(path.join(here, '../src/app/downloads/' + name), 'utf8');
   assert.match(read('readonly-open.js'), /buildExportBody\(\[removeFilterMarks\]\)/);
   for (const name of ['readonly-slim.js', 'readonly-compact.js', 'with-editor.js']) assert.ok(!read(name).includes('removeFilterMarks'), name);
-  // schlank and kompakt carry the bundle of the filter when the document has a filter table; nur-lesen never.
-  for (const name of ['readonly-slim.js', 'readonly-compact.js']) assert.match(read(name), /filterScriptFor\(body\)/, name);
-  assert.ok(!/filterScriptFor|<script/.test(read('readonly-open.js')), 'nur-lesen carries no script');
+  // schlank and kompakt carry the reader bundle, the filter with the search, in every file; nur-lesen never.
+  for (const name of ['readonly-slim.js', 'readonly-compact.js']) assert.match(read(name), /= readerScript\(\);/, name);
+  assert.doesNotMatch(read('export-body.js'), /data-dokufix-filter|filterScriptFor/, 'no gate on a filter table');
+  assert.ok(!/readerScript|<script/.test(read('readonly-open.js')), 'nur-lesen carries no script');
 });
 test('applyFilter works on the table it is handed and returns how many rows are shown', () => {
   const root = rootWith(FIELDS_TABLE);

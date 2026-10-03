@@ -9,14 +9,14 @@
 import { openDB, showStorageError, registerStorageBanner } from './app/idb.js';
 import { seedAssetsFromBakedBlock, registerAssetUrlCleanup, registerImageInput } from './app/assets.js';
 import { readTextBlock, fallbackUuidFromLocation } from './app/document.js';
-import { sourceEl } from './app/dom.js';
+import { sourceEl, previewEl } from './app/dom.js';
 import { state } from './app/state.js';
 import { loadDocState, sanitizeVersion, isValidEntry, setPersistFailed, updateVersionBadge, registerVersionDialog, updateDirtyState } from './app/persistence.js';
 import { render } from './app/render.js';
 import { registerRailClicks } from './app/rail.js';
 import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle, registerLicences } from './app/editor.js';
 import { registerDownloadMenu } from './app/downloads/menu.js';
-import { registerSearch } from './app/search.js';
+import { registerSearch, closeSearch } from './app/search.js';
 
 // A page whose script tag of Mermaid failed has no mermaid; the script runs
 // on, and every diagram that needs it becomes a warning (app/diagrams.js,
@@ -55,7 +55,12 @@ registerHamburger();
 registerViewToggle();
 registerStorageBanner();
 registerLicences();
-registerSearch();
+// The search reads the preview and opens in read mode; leaving read mode, in
+// whatever way, closes it.
+const inReadMode = () => document.body.classList.contains('mode-view');
+registerSearch({ root: previewEl, inReadMode });
+new MutationObserver(() => { if (!inReadMode()) closeSearch(); })
+  .observe(document.body, { attributes: true, attributeFilter: ['class'] });
 
 // Async init — reads the demo text and this file's document from their data
 // blocks (decompressing them if they are gzipped), opens IDB, migrates legacy

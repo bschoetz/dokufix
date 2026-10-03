@@ -33,8 +33,8 @@ import { TRANSIENT_ATTR } from './transient.js';
 // A row that does not match gets the class dokufix-filter-out, which the
 // document styles (src/doc.css) hide on screen and not in print. The field
 // exists where JavaScript runs: the editor, "Mit Editor", and the read-only
-// exports `schlank` and `kompakt`, which carry this code as a bundle of its
-// own (src/filter.js) and run it when they open (Ben, 2026-10-03). `nur-lesen`
+// exports `schlank` and `kompakt`, which carry this code in their reader
+// bundle (src/reader.js) and run it when they open (Ben, 2026-10-03). `nur-lesen`
 // has no script and shows the complete table without a field; that is the
 // documented exception to NFR1 and NFR2 (see src/README.md, "Tables"). One
 // export step takes the class of a hidden row out of all three read-only
@@ -219,7 +219,7 @@ export function showFilteredRows(copy){
 
 // Export step of `nur-lesen` alone, which has no script and so no field: the
 // mark of a filter table goes. `schlank` and `kompakt` keep it; the filter
-// they run when they open (src/filter.js) finds its tables by it.
+// they run when they open (src/reader.js) finds its tables by it.
 export function removeFilterMarks(copy){
   for (const el of Array.from(copy.querySelectorAll('[' + FILTER_ATTR + ']'))) el.removeAttribute(FILTER_ATTR);
 }

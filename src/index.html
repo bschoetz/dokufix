@@ -94,8 +94,8 @@
 <!-- Baked image assets (hash → {m: mime, d: base64}). Seeded into IndexedDB on load. As built: the images of the demo text, from src/assets/; a save writes the images of the document, its versions and the demo text. -->
 <script type="application/json" id="dokufix-assets">{{slot:assets}}</script>
 
-<!-- The free-text filter for the read-only exports "schlank" and "kompakt" (src/filter.js), as a bundle that does not run here; the two exports copy it into their file. -->
-<script type="text/plain" id="dokufix-filter-js">{{slot:filter.js}}</script>
+<!-- The reader bundle of the read-only exports "schlank" and "kompakt" (src/reader.js): the table filter and the search, with the panel's styles. It does not run here; the two exports copy it into their file. -->
+<script type="text/plain" id="dokufix-reader-js">{{slot:reader.js}}</script>
 
 <!-- Storage-error banner (hidden until init detects IDB failure). It lies over the top of the page, the "Editor" button included, so it can be closed. -->
 <div id="storage-error" hidden role="alert"

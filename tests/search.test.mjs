@@ -339,6 +339,10 @@ test('the panel makes its elements with createElement and textContent: no innerH
   }
 });
 
+test('the panel takes its root and its read mode from its caller: it imports none of the page\'s elements', () => {
+  assert.doesNotMatch(read('app/search.js'), /from '\.\/(dom|rail|persistence|editor|render)\.js'|getElementById|mode-view/);
+});
+
 test('the match and the places are pure: neither imports the page\'s elements', () => {
   for (const name of ['app/search-match.js', 'app/search-places.js']){
     assert.doesNotMatch(read(name), /from '\.\/(dom|rail|persistence|editor)\.js'|\bdocument\.[a-zA-Z]|\bwindow\.[a-zA-Z]/, name);
@@ -348,6 +352,9 @@ test('the match and the places are pure: neither imports the page\'s elements', 
 test('the panel is transient, and the script calls registerSearch() after registerLicences(); render.js knows nothing of the search', () => {
   assert.match(read('app/search.js'), /panel\.setAttribute\(TRANSIENT_ATTR, ''\)/);
   const app = read('app.js');
-  assert.ok(app.indexOf('registerSearch();') > app.indexOf('registerLicences();') && app.indexOf('registerLicences();') > 0);
+  assert.ok(app.indexOf('registerSearch({ root: previewEl, inReadMode });') > app.indexOf('registerLicences();') && app.indexOf('registerLicences();') > 0);
+  // The page closes the panel on leaving read mode; the reader bundle of the exports has none to leave.
+  assert.match(app, /new MutationObserver\(\(\) => \{ if \(!inReadMode\(\)\) closeSearch\(\); \}\)/);
+  assert.match(read('reader.js'), /registerSearch\(\{ root, inReadMode: \(\) => true \}\)/);
   assert.doesNotMatch(read('app/render.js'), /search(-match|-places)?\.js|collectPlaces|findHits|Search/);
 });

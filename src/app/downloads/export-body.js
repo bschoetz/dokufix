@@ -45,13 +45,12 @@ async function inlineImages(copy){
 // build their field from it, and `nur-lesen` hands in removeFilterMarks itself.
 const EXPORT_STEPS = [removeTransientElements, showFilteredRows, inlineImages];
 
-// The bundle of the free-text filter (src/filter.js), read from the page's
-// data block #dokufix-filter-js, for `schlank` and `kompakt`: the script they
-// run when they open, or '' when the document has no filter table, so a file
-// without one carries none. The build guarantees it holds no "</script".
-export function filterScriptFor(body){
-  if (!/\sdata-dokufix-filter="/.test(body)) return '';
-  const block = document.getElementById('dokufix-filter-js');
+// The reader bundle (src/reader.js), the table filter and the search, read
+// from the page's data block #dokufix-reader-js: the script `schlank` and
+// `kompakt` run when they open, in every file they write. The build
+// guarantees it holds no "</script".
+export function readerScript(){
+  const block = document.getElementById('dokufix-reader-js');
   return block ? block.textContent.trim() : '';
 }
 

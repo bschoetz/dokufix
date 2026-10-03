@@ -372,9 +372,12 @@ function buildCopy(outDir, module, edits, name){
   return built;
 }
 
-// A file's text without its scripts: schlank and kompakt carry the code of the
-// free-text filter, which names the class and the attribute of its field.
+// A file's text without its scripts: schlank and kompakt carry the reader
+// bundle, whose code names the class and the attribute of the filter's field.
 const withoutScripts = text => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
+// What is transient in a read-only export once it has opened: the fields of the
+// filter, and in schlank and kompakt the panel of the search, once.
+const onlyOwnTransient = (s, x) => x.searchPanels === (s.endsWith('nur-lesen') ? 0 : 1) && x.transient === x.filters.length + x.searchPanels;
 
 // ---------- results ----------
 const results = [];
@@ -527,6 +530,8 @@ const facts = page => page.evaluate(() => {
     mermaidOutside: Array.from(document.querySelectorAll('[id^="dmermaid"], [id^="imermaid"], [id^="mermaid-"]'))
       .filter(el => !container.contains(el)).map(el => el.tagName + '#' + el.id),
     transient: document.querySelectorAll('[data-dokufix-transient]').length,
+    // The panel of the search, which the reader bundle of schlank and kompakt makes when the file opens.
+    searchPanels: document.querySelectorAll('body > .search-panel[data-dokufix-transient]').length,
     panel: !!container.querySelector('details.dokufix-frontmatter'),
     // A heading inside a callout gets no id, by design (see src/README.md, Callouts).
     headingsWithoutId: Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(h => !h.id && !h.closest('.dokufix-callout')).length,
@@ -698,9 +703,10 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         const written = text.match(/<details class="dokufix-licences"[^>]*>/g) || [];
         check(s, 'carries the licence element once, directly after <body>, closed, although the views were open',
           written.length === 1 && written[0] === '<details class="dokufix-licences">' && x.licences.length === 1 && !x.licences[0].open && x.licences[0].firstInBody, { written, licences: x.licences });
-        // The search fields that schlank and kompakt make themselves when they
-        // open are transient; the code that makes them names the attribute.
-        check(s, 'nothing transient: not the attribute, not an element of this run', x.transient === x.filters.length && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), x.transient);
+        // The search fields and the search panel that schlank and kompakt make
+        // themselves when they open are transient; the code that makes them
+        // names the attribute.
+        check(s, 'nothing transient but the fields and the search panel the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels });
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       check(scope, 'both views are still open in the running page', JSON.stringify(await views()) === '[true,true]', await views());
@@ -1057,7 +1063,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         checkWarning(s, x, ['Der Schritt „' + THROWING_PASS + '“ ist fehlgeschlagen.', THROWING_MESSAGE], 'naming the pass');
         check(s, 'it is the first thing in the document, and the rest is there', x.children[0] === 'div.dokufix-warning' && x.children[1] === 'details.dokufix-frontmatter' && x.tocLinks > 0 && x.diagrams === DEMO_DIAGRAMS, x.children.slice(0, 4));
         check(s, 'nothing transient: neither the run-time warning nor the element of the run-time pass',
-          x.transient === x.filters.length && x.warnings.length === 1 && !text.includes(TRANSIENT_ID) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes(RUNTIME_PASS), x.warnings.map(w => w.text));
+          onlyOwnTransient(s, x) && x.warnings.length === 1 && !text.includes(TRANSIENT_ID) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes(RUNTIME_PASS), x.warnings.map(w => w.text));
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       await o.context.close();

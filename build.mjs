@@ -20,15 +20,21 @@
 // src/index.html is the page. It names each of the other sources once, as a slot:
 //
 //   {{slot:doc.css}}   document styles, minified, inside <style id="dokufix-doc-css">
-//   {{slot:app.css}}   editor styles, minified
+//   {{slot:app.css}}   editor styles, minified, and behind them the styles of
+//                      the search panel (src/search.css), minified
 //   {{slot:app.js}}    the script: src/app.js with the modules it imports,
 //                      bundled into one IIFE, minified
 //   {{slot:demo.md}}   the demo text, as {"text": …} inside the #dokufix-demo block
-//   {{slot:filter.js}} the free-text filter for the read-only exports `schlank`
-//                      and `kompakt`: src/filter.js with the modules it imports,
-//                      bundled into one IIFE, minified also with --dev, inside
-//                      <script type="text/plain" id="dokufix-filter-js">, where
-//                      it does not run; the two exports copy it into their file
+//   {{slot:reader.js}} the reader bundle of the read-only exports `schlank` and
+//                      `kompakt`, the table filter and the search: src/reader.js
+//                      with the modules it imports, bundled into one IIFE,
+//                      minified also with --dev, inside
+//                      <script type="text/plain" id="dokufix-reader-js">, where
+//                      it does not run; the two exports copy it into their file.
+//                      It carries src/search.css, minified, as the string
+//                      SEARCH_CSS (an esbuild define), and adds it to the file
+//                      it runs in: the panel has one stylesheet, in the page
+//                      and in an export
 //   {{slot:assets}}    the images of the demo text, from src/assets/, as
 //                      {"<sha256>": {"m": mime, "d": base64}} inside the
 //                      #dokufix-assets block, which the page seeds into its
@@ -54,10 +60,9 @@
 //     bytes, or has a type an image of the page cannot have; the page refuses
 //     an image whose bytes do not give its hash;
 //   - the demo text refers to an image (#asset-<hash>) that src/assets/ does not hold;
-//   - the minified script or the bundle of the filter contains "</script" or
-//     "<!--", or a minified stylesheet
-//     "</style": each would break its element, in the built file and in every
-//     file saved from it;
+//   - the minified script or the reader bundle contains "</script" or "<!--",
+//     or a minified stylesheet "</style": each would break its element, in the
+//     built file and in every file saved from it;
 //   - esbuild reports an error, such as a module that imports a name the other
 //     module does not export, or a file that is not there, or that assigns to a
 //     name it imported.
@@ -78,7 +83,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const COMMITTED = path.join(here, 'dist', 'dokufix.html');
 const DEV = path.join(here, 'dist', 'dokufix.dev.html');
 
-export const SLOTS = ['doc.css', 'app.css', 'app.js', 'filter.js', 'demo.md', 'assets'];
+export const SLOTS = ['doc.css', 'app.css', 'app.js', 'reader.js', 'demo.md', 'assets'];
 const SLOT_RE = /\{\{slot:([^{}]*)\}\}/g;
 
 export class BuildError extends Error {}
@@ -91,7 +96,7 @@ export function jsonForDataBlock(value){
 }
 
 // Puts the finished parts into the page. parts: { 'doc.css', 'app.css', 'app.js',
-// 'filter.js', 'demo.md', 'assets' }, each the text that replaces its slot.
+// 'reader.js', 'demo.md', 'assets' }, each the text that replaces its slot.
 export function assemble(template, parts){
   const found = [...template.matchAll(SLOT_RE)].map(m => m[1]);
   const problems = [];
@@ -103,7 +108,7 @@ export function assemble(template, parts){
   for (const name of new Set(found.filter(f => !SLOTS.includes(f)))){
     problems.push('unknown slot {{slot:' + name + '}} in index.html; the slots are ' + SLOTS.join(', '));
   }
-  for (const [name, what] of [['app.js', 'the minified script'], ['filter.js', 'the bundle of the filter']]){
+  for (const [name, what] of [['app.js', 'the minified script'], ['reader.js', 'the reader bundle']]){
     const text = parts[name] || '';
     if (/<\/script/i.test(text)) problems.push(what + ' contains "</script"; it would end the script element early');
     if (text.includes('<!--')) problems.push(what + ' contains "<!--"; together with a "<script" behind it, it would keep the script element from ending');
@@ -168,8 +173,9 @@ export function readAssets(dir, demo){
 
 // dev: not minified, and the source map stands at the end of the script as a
 // data: URL, so the one file is still all there is. outFile is where the page
-// will be written; the map names the sources relative to it.
-async function bundleScript(file, dev, outFile){
+// will be written; the map names the sources relative to it. define: names the
+// script uses that the build replaces with a value, as esbuild's define.
+async function bundleScript(file, dev, outFile, define = {}){
   const result = await esbuild.build({
     entryPoints: [file],
     bundle: true,
@@ -179,6 +185,7 @@ async function bundleScript(file, dev, outFile){
     charset: 'utf8',
     write: false,
     logLevel: 'silent',
+    define,
     ...(dev ? { sourcemap: 'inline', outfile: outFile.replace(/\.html$/, '') + '.js' } : {}),
   });
   printWarnings(result.warnings, path.basename(file));
@@ -196,17 +203,23 @@ export async function build(srcDir, options = {}){
   };
   const template = read('index.html');
   const demo = read('demo.md');
-  const docCss = read('doc.css'), appCss = read('app.css');
+  const docCss = read('doc.css'), appCss = read('app.css'), searchCss = read('search.css');
   read('app.js');   // esbuild reads them itself; this is for the message when one is missing
-  read('filter.js');
+  read('reader.js');
   let parts;
   try {
+    // The panel's styles, minified once for the reader bundle, which is
+    // minified with --dev as well; the page takes the same text, or with
+    // --dev the readable one.
+    const searchMin = await minifyCss(searchCss, 'search.css', false);
+    const searchPage = dev ? await minifyCss(searchCss, 'search.css', true) : searchMin;
+    if (/<\/style/i.test(searchMin)) throw new BuildError('the minified search.css contains "</style"; it would end the style element early');
     parts = {
       'doc.css': await minifyCss(docCss, 'doc.css', dev),
-      'app.css': await minifyCss(appCss, 'app.css', dev),
+      'app.css': (await minifyCss(appCss, 'app.css', dev)) + '\n' + searchPage,
       'app.js': await bundleScript(path.join(srcDir, 'app.js'), dev, options.out || DEV),
       // Minified with --dev as well: an export carries it as it is.
-      'filter.js': await bundleScript(path.join(srcDir, 'filter.js'), false, null),
+      'reader.js': await bundleScript(path.join(srcDir, 'reader.js'), false, null, { SEARCH_CSS: JSON.stringify(searchMin) }),
       'demo.md': jsonForDataBlock({ text: demo }),
       'assets': jsonForDataBlock(readAssets(path.join(srcDir, 'assets'), demo)),
     };
