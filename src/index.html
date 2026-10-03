@@ -91,8 +91,8 @@
 <!-- This file's document. Empty as built, so the demo text is shown; "Mit Editor" writes the saved source here as {"gz": …}. -->
 <script type="application/json" id="dokufix-source">{"text":""}</script>
 
-<!-- Baked image assets (hash → {m: mime, d: base64}). Seeded into IndexedDB on load. -->
-<script type="application/json" id="dokufix-assets">{}</script>
+<!-- Baked image assets (hash → {m: mime, d: base64}). Seeded into IndexedDB on load. As built: the images of the demo text, from src/assets/; a save writes the images of the document, its versions and the demo text. -->
+<script type="application/json" id="dokufix-assets">{{slot:assets}}</script>
 
 <!-- Storage-error banner (hidden until init detects IDB failure). It lies over the top of the page, the "Editor" button included, so it can be closed. -->
 <div id="storage-error" hidden role="alert"

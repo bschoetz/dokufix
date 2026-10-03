@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import vm from 'node:vm';
+import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { assemble, BuildError, SLOTS } from '../build.mjs';
@@ -23,13 +24,17 @@ const srcDir = path.join(root, 'src');
 const committed = path.join(root, 'dist/dokufix.html');
 const original = name => fs.readFileSync(path.join(srcDir, name), 'utf8');
 
-// Runs build.mjs on a copy of src/ in which the given files are replaced.
+// Runs build.mjs on a copy of src/ in which the given files are replaced: a
+// text or bytes, or null to remove the file.
 // Returns the process result and, if the build wrote one, the built file's text.
 function build(changed = {}, extraArgs = [], out = null){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
   const copy = path.join(dir, 'src');
   fs.cpSync(srcDir, copy, { recursive: true });
-  for (const [name, text] of Object.entries(changed)) fs.writeFileSync(path.join(copy, name), text);
+  for (const [name, text] of Object.entries(changed)){
+    if (text === null) fs.rmSync(path.join(copy, name));
+    else fs.writeFileSync(path.join(copy, name), text);
+  }
   const target = out || path.join(dir, 'dist/dokufix.html');
   const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--src', copy, '--out', target, ...extraArgs], { encoding: 'utf8' });
   const html = !out && fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : null;
@@ -329,4 +334,49 @@ test('demo text with </script>, <!-- and replacement patterns: the block stays i
 });
 test('the built demo block holds src/demo.md unchanged', () => {
   assert.deepEqual(JSON.parse(dataBlock(fs.readFileSync(committed, 'utf8'), 'dokufix-demo')), { text: original('demo.md') });
+});
+
+// ---------- the images of the demo text ----------
+// src/assets/<sha256>.<ext>, written into the #dokufix-assets block as
+// { "<sha256>": { "m": mime, "d": base64 } }.
+const assetFiles = fs.readdirSync(path.join(srcDir, 'assets')).sort();
+const sha256 = bytes => crypto.createHash('sha256').update(bytes).digest('hex');
+test('the built file carries every image of src/assets/ under the SHA-256 of its bytes, and the demo text names each one', () => {
+  const block = JSON.parse(dataBlock(fs.readFileSync(committed, 'utf8'), 'dokufix-assets'));
+  assert.ok(assetFiles.length > 0, 'src/assets/ holds an image');
+  assert.deepEqual(Object.keys(block), assetFiles.map(f => f.replace(/\.[a-z]+$/, '')));
+  for (const file of assetFiles){
+    const bytes = fs.readFileSync(path.join(srcDir, 'assets', file));
+    const hash = file.replace(/\.[a-z]+$/, '');
+    assert.equal(sha256(bytes), hash, file + ': its name is its hash');
+    assert.deepEqual(block[hash], { m: 'image/webp', d: bytes.toString('base64') });
+    assert.ok(original('demo.md').includes('(#asset-' + hash + ')'), 'the demo text shows ' + file);
+  }
+});
+test('an image whose bytes do not give its name: exit 1, file named, nothing written', () => {
+  const file = assetFiles[0];
+  const bytes = Buffer.from(fs.readFileSync(path.join(srcDir, 'assets', file)));
+  bytes[bytes.length - 1] ^= 1;
+  const r = build({ ['assets/' + file]: bytes });
+  assert.equal(r.status, 1, r.stdout);
+  assert.ok(r.stderr.includes('src/assets/' + file + ': its bytes hash to ' + sha256(bytes)), r.stderr);
+  assert.equal(r.html, null);
+});
+test('the demo text names an image src/assets/ does not hold: exit 1, hash named, nothing written', () => {
+  const missing = 'ab'.repeat(32);
+  const r = build({ 'demo.md': original('demo.md') + '\n![x](#asset-' + missing + ')\n' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.ok(r.stderr.includes('demo.md refers to #asset-' + missing + ', which src/assets/ does not hold'), r.stderr);
+  assert.equal(r.html, null);
+  // Without the file the demo text names, the same.
+  const gone = build({ ['assets/' + assetFiles[0]]: null });
+  assert.equal(gone.status, 1, gone.stdout);
+  assert.ok(gone.stderr.includes('demo.md refers to #asset-' + assetFiles[0].replace(/\.[a-z]+$/, '')), gone.stderr);
+});
+test('a file in src/assets/ that is not named <sha256>.<ext> of an image type: exit 1, file named', () => {
+  for (const name of ['kuchen.webp', 'ab'.repeat(32) + '.svg']){
+    const r = build({ ['assets/' + name]: 'x' });
+    assert.equal(r.status, 1, name + ': ' + r.stdout);
+    assert.ok(r.stderr.includes('src/assets/' + name + ': an image is named <sha256>.<ext>'), r.stderr);
+  }
 });

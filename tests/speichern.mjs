@@ -28,7 +28,11 @@
 //   2. open generation 1                 the editor holds A, version v1, clean
 //      type document B, save             → generation 2
 //   3. open generation 2                 the editor holds B, version v2
-//      "Demo zurücksetzen"               the editor holds the original demo text
+//      "Demo zurücksetzen"               the editor holds the original demo text,
+//                                        and every image it names is shown: a
+//                                        save carries the images of the demo text
+//                                        (both generations hold them in their
+//                                        #dokufix-assets block, by their hash)
 //   4. build a copy of src/ whose demo text contains </script>, <!-- and the
 //      like, open it                     the editor holds that text unchanged
 //
@@ -77,6 +81,7 @@
 // through its buttons; the run waits on the DOM as tests/vergleich.mjs does.
 
 import { chromium, firefox } from 'playwright-core';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -376,6 +381,22 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await pressAndWaitForRender(o.page, '#reset-btn');
     s = await state(o.page);
     same(scope, '"Demo zurücksetzen" gives the original demo text', s.source, demo);
+    // The images the demo text names: in the file's block, and shown, although
+    // neither document A nor B names one and the storage is fresh.
+    const demoImages = [...new Set(Array.from(demo.matchAll(/#asset-([0-9a-f]{64})/g), m => m[1]))];
+    for (const [label, file] of [['generation 1', gen1], ['generation 2', gen2]]){
+      const block = fs.readFileSync(file, 'utf8').match(/<script type="application\/json" id="dokufix-assets">([\s\S]*?)<\/script>/);
+      const held = block ? JSON.parse(block[1]) : {};
+      const wrong = demoImages.filter(h => !held[h] || crypto.createHash('sha256').update(Buffer.from(held[h].d, 'base64')).digest('hex') !== h);
+      check(name + ' ' + label, 'the file carries every image the demo text names, its bytes giving its hash (' + demoImages.length + ')', wrong.length === 0, wrong.join(' '));
+    }
+    const images = await o.page.evaluate(async () => {
+      const imgs = Array.from(document.querySelectorAll('#preview img'));
+      await Promise.all(imgs.map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; })));
+      return imgs.map(img => ({ missing: img.hasAttribute('data-missing-asset'), width: img.naturalWidth, src: img.src.slice(0, 5) }));
+    });
+    check(scope, 'after "Demo zurücksetzen" every image of the demo text is shown, none is a missing-image placeholder (' + demoImages.length + ')',
+      images.length === demoImages.length && images.every(i => !i.missing && i.width > 1 && i.src === 'blob:'), JSON.stringify(images));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 

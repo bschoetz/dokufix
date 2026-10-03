@@ -293,9 +293,17 @@ export async function inlineAssetRefsAsDataUrls(html){
 
 // Build the JSON payload for the #dokufix-assets script block. Includes any
 // asset referenced by the current source AND any referenced in history
-// snapshots — every prior version stays fully reconstructible from the file.
+// snapshots — every prior version stays fully reconstructible from the file —
+// AND any the demo text refers to, so that "Demo zurücksetzen" shows its
+// images in every saved file (Ben, 2026-10-03).
+//
+// An asset that storage does not hold, or every asset when storage is not
+// there at all, is taken from this page's own block if it is there: a file
+// passes on what it carries. Without storage and without that, the bake fails
+// as before.
 export async function bakeAssetsForDocument(){
   const hashes = new Set(collectAssetHashes(sourceEl.value));
+  for (const h of collectAssetHashes(state.demoText)) hashes.add(h);
   for (const e of state.versionHistory){
     if (!e || typeof e.s !== 'string' || !e.s) continue;
     try {
@@ -306,14 +314,40 @@ export async function bakeAssetsForDocument(){
     }
   }
   if (!hashes.size) return {};
-  const assetMap = await idbBatchGetAssets([...hashes]);
+  const carried = bakedBlockEntries();
+  let assetMap = new Map();
+  try { assetMap = await idbBatchGetAssets([...hashes]); }
+  catch (e) {
+    if (![...hashes].some(h => carried[h])) throw e;
+    console.warn('Asset bake without storage, from the file\'s own block:', e);
+  }
   const out = {};
-  for (const [h, rec] of assetMap.entries()){
-    if (!rec || !rec.blob) continue;
-    try {
-      const b64 = await blobToBase64(rec.blob);
-      out[h] = { m: rec.mime || 'image/webp', d: b64 };
-    } catch (e) { console.warn('Asset bake failed for ' + h + ':', e); }
+  for (const h of hashes){
+    const rec = assetMap.get(h);
+    if (rec && rec.blob){
+      try {
+        const b64 = await blobToBase64(rec.blob);
+        out[h] = { m: rec.mime || 'image/webp', d: b64 };
+        continue;
+      } catch (e) { console.warn('Asset bake failed for ' + h + ':', e); }
+    }
+    if (carried[h]) out[h] = carried[h];
+  }
+  return out;
+}
+
+// The entries of this page's own #dokufix-assets block, by hash: { m, d }.
+function bakedBlockEntries(){
+  const el = document.getElementById('dokufix-assets');
+  const out = {};
+  let parsed;
+  try { parsed = JSON.parse((el && el.textContent || '').trim() || '{}'); }
+  catch (e) { return out; }
+  if (!parsed || typeof parsed !== 'object') return out;
+  for (const [hash, val] of Object.entries(parsed)){
+    if (/^[0-9a-f]{64}$/i.test(hash) && val && typeof val.d === 'string' && val.d){
+      out[hash.toLowerCase()] = { m: typeof val.m === 'string' ? val.m : 'image/webp', d: val.d };
+    }
   }
   return out;
 }

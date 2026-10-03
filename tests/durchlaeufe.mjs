@@ -385,7 +385,8 @@ const facts = page => page.evaluate(() => {
       .filter(el => !container.contains(el)).map(el => el.tagName + '#' + el.id),
     transient: document.querySelectorAll('[data-dokufix-transient]').length,
     panel: !!container.querySelector('details.dokufix-frontmatter'),
-    headingsWithoutId: Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(h => !h.id).length,
+    // A heading inside a callout gets no id, by design (see src/README.md, Callouts).
+    headingsWithoutId: Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(h => !h.id && !h.closest('.dokufix-callout')).length,
     tocLinks: container.querySelectorAll('nav.dokufix-toc a').length,
     markers: container.querySelectorAll('a[data-footnote-ref]').length,
     previews: container.querySelectorAll('sup.dokufix-fn-host > .dokufix-fn-preview').length,

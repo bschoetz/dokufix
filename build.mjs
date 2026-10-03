@@ -24,7 +24,13 @@
 //   {{slot:app.js}}    the script: src/app.js with the modules it imports,
 //                      bundled into one IIFE, minified
 //   {{slot:demo.md}}   the demo text, as {"text": …} inside the #dokufix-demo block
+//   {{slot:assets}}    the images of the demo text, from src/assets/, as
+//                      {"<sha256>": {"m": mime, "d": base64}} inside the
+//                      #dokufix-assets block, which the page seeds into its
+//                      storage when it opens
 //
+// An image of the demo text lies in src/assets/ under its SHA-256, the name the
+// demo text refers to it by: src/assets/<sha256>.webp, ![…](#asset-<sha256>).
 // The page's own markup goes into the built file as it is written.
 //
 // One thing is done to the script after esbuild: every "<!--" in it is written
@@ -38,7 +44,11 @@
 //
 // The build exits 1, and writes nothing, when
 //   - a source is missing;
-//   - a slot is missing from the page, stands there twice, or is not one of the four;
+//   - a slot is missing from the page, stands there twice, or is not one of the five;
+//   - a file in src/assets/ is not named <sha256>.<ext> by the SHA-256 of its
+//     bytes, or has a type an image of the page cannot have; the page refuses
+//     an image whose bytes do not give its hash;
+//   - the demo text refers to an image (#asset-<hash>) that src/assets/ does not hold;
 //   - the minified script contains "</script" or "<!--", or a minified stylesheet
 //     "</style": each would break its element, in the built file and in every
 //     file saved from it;
@@ -52,6 +62,7 @@
 // source map, relative to where it is written.)
 
 import * as esbuild from 'esbuild';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -61,7 +72,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const COMMITTED = path.join(here, 'dist', 'dokufix.html');
 const DEV = path.join(here, 'dist', 'dokufix.dev.html');
 
-export const SLOTS = ['doc.css', 'app.css', 'app.js', 'demo.md'];
+export const SLOTS = ['doc.css', 'app.css', 'app.js', 'demo.md', 'assets'];
 const SLOT_RE = /\{\{slot:([^{}]*)\}\}/g;
 
 export class BuildError extends Error {}
@@ -74,7 +85,7 @@ export function jsonForDataBlock(value){
 }
 
 // Puts the finished parts into the page. parts: { 'doc.css', 'app.css', 'app.js',
-// 'demo.md' }, each the text that replaces its slot.
+// 'demo.md', 'assets' }, each the text that replaces its slot.
 export function assemble(template, parts){
   const found = [...template.matchAll(SLOT_RE)].map(m => m[1]);
   const problems = [];
@@ -110,6 +121,40 @@ async function minifyCss(css, name, dev){
     { loader: 'css', minify: !dev, charset: 'utf8', sourcefile: name, logLevel: 'silent' });
   printWarnings(result.warnings, name);
   return result.code.trim();
+}
+
+// The images of the demo text, by type of file.
+const ASSET_TYPES = { '.webp': 'image/webp', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif' };
+// How the page refers to an image: the hash after "#asset-" (src/app/assets.js).
+const ASSET_REF_RE = /#asset-([0-9a-f]{12,64})/gi;
+
+// The block of the images: every file in src/assets/, in the order of its name,
+// checked against its name; and every image the demo text names, checked
+// against the block. Returns the object the block holds.
+export function readAssets(dir, demo){
+  const out = {};
+  const problems = [];
+  const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort() : [];
+  for (const file of files){
+    const m = /^([0-9a-f]{64})(\.[a-z]+)$/.exec(file);
+    const type = m && ASSET_TYPES[m[2]];
+    if (!type){
+      problems.push('src/assets/' + file + ': an image is named <sha256>.<ext>, with one of ' + Object.keys(ASSET_TYPES).join(' '));
+      continue;
+    }
+    const bytes = fs.readFileSync(path.join(dir, file));
+    const hash = crypto.createHash('sha256').update(bytes).digest('hex');
+    if (hash !== m[1]){
+      problems.push('src/assets/' + file + ': its bytes hash to ' + hash + ', not to its name; the page would refuse it');
+      continue;
+    }
+    out[hash] = { m: type, d: bytes.toString('base64') };
+  }
+  for (const ref of new Set(Array.from(demo.matchAll(ASSET_REF_RE), r => r[1].toLowerCase()))){
+    if (!out[ref]) problems.push('demo.md refers to #asset-' + ref + ', which src/assets/ does not hold');
+  }
+  if (problems.length) throw new BuildError(problems.join('\n'));
+  return out;
 }
 
 // dev: not minified, and the source map stands at the end of the script as a
@@ -151,6 +196,7 @@ export async function build(srcDir, options = {}){
       'app.css': await minifyCss(appCss, 'app.css', dev),
       'app.js': await bundleScript(path.join(srcDir, 'app.js'), dev, options.out || DEV),
       'demo.md': jsonForDataBlock({ text: demo }),
+      'assets': jsonForDataBlock(readAssets(path.join(srcDir, 'assets'), demo)),
     };
   } catch (e){
     if (!e || !Array.isArray(e.errors)) throw e;
