@@ -3007,6 +3007,10 @@ const BPMN_AC2 = [
   ['through', 'no flow runs through a symbol, its own source and target included'],
   ['labels', 'no two flow labels lie on top of each other'],
   ['corner', 'flows that leave a gateway at one point are told apart, by route or by label'],
+  // Story 2.20: a flow back within a row lay on the edges of its tasks, and a
+  // gateway's label reached into its diamond or onto a flow.
+  ['along', 'no piece of a flow runs along the outline of a symbol'],
+  ['label', 'no event or gateway label lies on a flow or a symbol'],
 ];
 // What is not clean in a laid-out drawing, one sentence per finding, each
 // starting with the key of its property. model: the process as
@@ -3058,6 +3062,37 @@ function bpmnLayoutProblems(model, g){
     for (const group of groups.values()){
       if (group.length > 1 && group.some(fl => !g.labels[fl.id + '_label'])) out.push('corner: ' + group.map(fl => fl.id).join(' and ') + ' leave ' + n.id + ' at one point, and not each has a label');
     }
+  }
+  // A piece along an outline: parallel to a side of the symbol's box, less
+  // than 3 px off it, inside or outside, and beside the side for more than
+  // 3 px; a circle and a diamond touch their box only at the middle of a
+  // side, so there the piece has to pass that point. A piece that docks
+  // meets its side at a right angle and is not one.
+  const pieces = model.flows.flatMap(fl => (g.flows[fl.id] || []).slice(1).map((q, i) => [fl.id, g.flows[fl.id][i], q]));
+  for (const [id, p, q] of pieces){
+    const flat = Math.abs(p[1] - q[1]) < 0.5, steep = Math.abs(p[0] - q[0]) < 0.5;
+    if (flat === steep) continue;
+    const [u, v] = flat ? [1, 0] : [0, 1];
+    const lo = Math.min(p[v], q[v]), hi = Math.max(p[v], q[v]);
+    for (const n of model.nodes){
+      const b = g.shapes[n.id];
+      if (!b) continue;
+      const from = b[v], to = b[v] + b[v + 2], mid = (from + to) / 2;
+      const beside = type.get(n.id) === 'task' ? Math.min(hi, to) - Math.max(lo, from) > 3 : lo < mid - 0.5 && hi > mid + 0.5;
+      const side = [b[u], b[u] + b[u + 2]].find(e => Math.abs(p[u] - e) < 3);
+      if (side !== undefined && beside){ out.push('along: a piece of ' + id + ' from ' + fmt(p) + ' to ' + fmt(q) + ' runs along ' + n.id); break; }
+    }
+  }
+  // The label of an event or a gateway, the box of its text as drawn, on a
+  // piece of any flow or on any symbol, its own included.
+  const hits = (a, b) => a[0] < b[0] + b[2] - 0.5 && b[0] < a[0] + a[2] - 0.5 && a[1] < b[1] + b[3] - 0.5 && b[1] < a[1] + a[3] - 0.5;
+  for (const n of model.nodes.filter(x => x.type !== 'task')){
+    const box = g.labels[n.id + '_label'];
+    if (!box) continue;
+    const flow = pieces.find(([, p, q]) => hits(box, [Math.min(p[0], q[0]), Math.min(p[1], q[1]), Math.max(1, Math.abs(p[0] - q[0])), Math.max(1, Math.abs(p[1] - q[1]))]));
+    if (flow) out.push('label: the label of ' + n.id + ' lies on ' + flow[0]);
+    const symbol = model.nodes.find(m => g.shapes[m.id] && hits(box, g.shapes[m.id]));
+    if (symbol) out.push('label: the label of ' + n.id + ' lies on ' + symbol.id);
   }
   return out;
 }

@@ -355,6 +355,39 @@ Ohne Bahnen und ohne Pool steht alles in einer Reihe:
 
 Alle Knoten einer Bahn stehen in einer Reihe. Parallele Zweige gehören deshalb in verschiedene Bahnen, sonst laufen sie hintereinander und kreuzen sich.
 
+### Mit Schleife
+
+Ein Pfeil zurück zu einem früheren Schritt derselben Bahn, eine Schleife, läuft um die Reihe herum, oberhalb oder unterhalb der Symbole, und dockt oben oder unten an:
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Buchpflege" name="Reparatur" processRef="Prozess_Reparatur"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Reparatur" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="B_Theke" name="Theke"><bpmn:flowNodeRef>B_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ausgeben</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="B_Werkstatt" name="Werkstatt"><bpmn:flowNodeRef>B_Ansehen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Kleben</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Pressen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Frage</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="B_Start" name="Buch beschädigt"/>
+    <bpmn:task id="B_Ansehen" name="Schaden ansehen"/>
+    <bpmn:task id="B_Kleben" name="Rücken kleben"/>
+    <bpmn:task id="B_Pressen" name="Über Nacht pressen"/>
+    <bpmn:exclusiveGateway id="B_Frage" name="Hält es?"/>
+    <bpmn:task id="B_Ausgeben" name="Wieder ausgeben"/>
+    <bpmn:endEvent id="B_Ende" name="Im Regal"/>
+    <bpmn:sequenceFlow id="B1" sourceRef="B_Start" targetRef="B_Ansehen"/>
+    <bpmn:sequenceFlow id="B2" sourceRef="B_Ansehen" targetRef="B_Kleben"/>
+    <bpmn:sequenceFlow id="B3" sourceRef="B_Kleben" targetRef="B_Pressen"/>
+    <bpmn:sequenceFlow id="B4" sourceRef="B_Pressen" targetRef="B_Frage"/>
+    <bpmn:sequenceFlow id="B5" sourceRef="B_Frage" targetRef="B_Ausgeben" name="ja"/>
+    <bpmn:sequenceFlow id="B6" sourceRef="B_Frage" targetRef="B_Ansehen" name="nein"/>
+    <bpmn:sequenceFlow id="B7" sourceRef="B_Ausgeben" targetRef="B_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
 ## Code-Block (kein Mermaid)
 
 ```javascript
@@ -620,6 +653,80 @@ Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Tei
     <bpmn:sequenceFlow id="N2" sourceRef="N_Pruefen" targetRef="N_Einarbeiten"/>
     <bpmn:sequenceFlow id="N3" sourceRef="N_Einarbeiten" targetRef="N_Ende"/>
     <bpmn:sequenceFlow id="N4" sourceRef="N_Frist" targetRef="N_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: zwei Schleifen in einer Reihe
+
+Zwei Rückflüsse in einer Bahn, einer um den anderen herum: Sie sollten beide oberhalb der Reihe laufen sehen, jeden auf einer eigenen Höhe, den kürzeren innen, und keinen Pfeil auf den Kanten der Aufgaben oder durch eine Raute.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Erwerbung" name="Anschaffungswunsch" processRef="Prozess_Erwerbung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Erwerbung" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="Z_Erwerbung" name="Erwerbung"><bpmn:flowNodeRef>Z_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Suchen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Gefunden</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Preis</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Frei</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Z_Leserin" name="Leserin"><bpmn:flowNodeRef>Z_Absage</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Abgesagt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Z_Start" name="Wunsch eingegangen"/>
+    <bpmn:task id="Z_Aufnehmen" name="Wunsch aufnehmen"/>
+    <bpmn:task id="Z_Suchen" name="Titel suchen"/>
+    <bpmn:exclusiveGateway id="Z_Gefunden" name="Gefunden?"/>
+    <bpmn:task id="Z_Preis" name="Preis prüfen"/>
+    <bpmn:exclusiveGateway id="Z_Frei" name="Freigegeben?"/>
+    <bpmn:task id="Z_Bestellen" name="Bestellen"/>
+    <bpmn:endEvent id="Z_Ende" name="Bestellt"/>
+    <bpmn:sendTask id="Z_Absage" name="Absage schreiben"/>
+    <bpmn:endEvent id="Z_Abgesagt" name="Abgesagt"/>
+    <bpmn:sequenceFlow id="Z1" sourceRef="Z_Start" targetRef="Z_Aufnehmen"/>
+    <bpmn:sequenceFlow id="Z2" sourceRef="Z_Aufnehmen" targetRef="Z_Suchen"/>
+    <bpmn:sequenceFlow id="Z3" sourceRef="Z_Suchen" targetRef="Z_Gefunden"/>
+    <bpmn:sequenceFlow id="Z4" sourceRef="Z_Gefunden" targetRef="Z_Preis" name="ja"/>
+    <bpmn:sequenceFlow id="Z5" sourceRef="Z_Gefunden" targetRef="Z_Suchen" name="nein"/>
+    <bpmn:sequenceFlow id="Z10" sourceRef="Z_Gefunden" targetRef="Z_Absage" name="vergriffen"/>
+    <bpmn:sequenceFlow id="Z6" sourceRef="Z_Preis" targetRef="Z_Frei"/>
+    <bpmn:sequenceFlow id="Z7" sourceRef="Z_Frei" targetRef="Z_Bestellen" name="ja"/>
+    <bpmn:sequenceFlow id="Z8" sourceRef="Z_Frei" targetRef="Z_Aufnehmen" name="nein"/>
+    <bpmn:sequenceFlow id="Z9" sourceRef="Z_Bestellen" targetRef="Z_Ende"/>
+    <bpmn:sequenceFlow id="Z11" sourceRef="Z_Absage" targetRef="Z_Abgesagt"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: Schleife in der mittleren Bahn
+
+Ein Rückfluss in der mittleren von drei Bahnen: Sie sollten ihn innerhalb seiner Bahn „Theke“ sehen, mit Abstand zu ihren Rändern; fehlt der Platz, wird die Bahn höher, und nichts ragt in die Nachbarbahn.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Fernleihe" name="Fernleihe" processRef="Prozess_Fernleihe"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Fernleihe" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="F_Leserin" name="Leserin"><bpmn:flowNodeRef>F_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Abholen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="F_Theke" name="Theke"><bpmn:flowNodeRef>F_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Frage</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="F_Leihverkehr" name="Leihverkehr"><bpmn:flowNodeRef>F_Senden</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Ende</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="F_Start" name="Titel fehlt"/>
+    <bpmn:task id="F_Aufnehmen" name="Bestellung aufnehmen"/>
+    <bpmn:task id="F_Pruefen" name="Angaben prüfen"/>
+    <bpmn:exclusiveGateway id="F_Frage" name="Angaben vollständig?"/>
+    <bpmn:sendTask id="F_Senden" name="An den Leihverkehr senden"/>
+    <bpmn:manualTask id="F_Abholen" name="Buch abholen"/>
+    <bpmn:endEvent id="F_Ende" name="Bestellt"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="F_Start" targetRef="F_Aufnehmen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="F_Aufnehmen" targetRef="F_Pruefen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="F_Pruefen" targetRef="F_Frage"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="F_Frage" targetRef="F_Aufnehmen" name="nein"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="F_Senden" targetRef="F_Ende"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

@@ -739,6 +739,253 @@ Ein Prozess ohne Pool und ohne Bahnen, ohne Koordinaten: alles in einer Reihe.
 </bpmn:definitions>
 ```
 
+### Zwei Schleifen
+
+Ein erfundener Prozess mit zwei Schleifen in derselben Bahn, ohne Koordinaten: ein Pool, drei Bahnen, 14 Symbole, 15 Flüsse. Beide Rückflüsse laufen um die Reihe herum, jeder mindestens 12 px von den Aufgaben entfernt und durch keine Raute; die Beschriftungen der beiden Gateways stehen frei von Pfeilen und Symbolen.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Hundemelken"
+                  targetNamespace="http://example.com/bpmn">
+
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Melkbetrieb" name="Hundemelkbetrieb" processRef="Process_Hundemelken" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Hundemelken" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Melker" name="Melker">
+        <bpmn:flowNodeRef>Start_Melkzeit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rufen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reinigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Ruhig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Beruhigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Melken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Alle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Belohnen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Huendin" name="Hündin">
+        <bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abgeben</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Verarbeitung" name="Verarbeitung">
+        <bpmn:flowNodeRef>Task_Filtern</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kuehlen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Dokumentieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Fertig</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- Lane Melker -->
+    <bpmn:startEvent id="Start_Melkzeit" name="Melkzeit erreicht">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Rufen" name="Hündin zum Melkstand rufen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Reinigen" name="Zitzen reinigen &amp; Euter massieren">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Ruhig" name="Hündin ruhig?">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Beruhigen" name="Beruhigen &amp; Leckerli geben">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Melken" name="Eine Zitze von Hand melken">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Alle" name="Alle Zitzen gemolken?">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Belohnen" name="Hündin belohnen &amp; entlassen">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Lane Hündin -->
+    <bpmn:task id="Task_Kommen" name="Zum Melkstand kommen &amp; ablegen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Abgeben" name="Stillhalten &amp; Milch abgeben">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Lane Verarbeitung -->
+    <bpmn:task id="Task_Filtern" name="Milch filtern">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Kuehlen" name="Auf 4 °C kühlen">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Dokumentieren" name="Menge wiegen &amp; dokumentieren">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Fertig" name="Milch eingelagert">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- Sequenzflüsse -->
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Melkzeit" targetRef="Task_Rufen" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Rufen" targetRef="Task_Kommen" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Kommen" targetRef="Task_Reinigen" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Reinigen" targetRef="GW_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_5" name="ja" sourceRef="GW_Ruhig" targetRef="Task_Melken" />
+    <bpmn:sequenceFlow id="Flow_6" name="nein" sourceRef="GW_Ruhig" targetRef="Task_Beruhigen" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Beruhigen" targetRef="Task_Reinigen" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Melken" targetRef="Task_Abgeben" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Abgeben" targetRef="GW_Alle" />
+    <bpmn:sequenceFlow id="Flow_10" name="nein" sourceRef="GW_Alle" targetRef="Task_Melken" />
+    <bpmn:sequenceFlow id="Flow_11" name="ja" sourceRef="GW_Alle" targetRef="Task_Belohnen" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Belohnen" targetRef="Task_Filtern" />
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Filtern" targetRef="Task_Kuehlen" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_Kuehlen" targetRef="Task_Dokumentieren" />
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_Dokumentieren" targetRef="End_Fertig" />
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Schleife über mehrere Schritte
+
+Ein Rückfluss über drei Aufgaben hinweg zurück zur ersten: er läuft um die Reihe herum und dockt oben oder unten an.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Mahnstelle" name="Mahnung" processRef="Prozess_Mahnung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Mahnung" isExecutable="false">
+    <bpmn:startEvent id="M_Start" name="Frist abgelaufen"/>
+    <bpmn:task id="M_Erinnern" name="Leserin erinnern"/>
+    <bpmn:task id="M_Notieren" name="Neue Frist notieren"/>
+    <bpmn:task id="M_Pruefen" name="Rückgabe prüfen"/>
+    <bpmn:exclusiveGateway id="M_Frage" name="Zurückgegeben?"/>
+    <bpmn:endEvent id="M_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="M1" sourceRef="M_Start" targetRef="M_Erinnern"/>
+    <bpmn:sequenceFlow id="M2" sourceRef="M_Erinnern" targetRef="M_Notieren"/>
+    <bpmn:sequenceFlow id="M3" sourceRef="M_Notieren" targetRef="M_Pruefen"/>
+    <bpmn:sequenceFlow id="M4" sourceRef="M_Pruefen" targetRef="M_Frage"/>
+    <bpmn:sequenceFlow id="M5" sourceRef="M_Frage" targetRef="M_Ende" name="ja"/>
+    <bpmn:sequenceFlow id="M6" sourceRef="M_Frage" targetRef="M_Erinnern" name="nein"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Zwei Rückflüsse in einer Reihe
+
+Zwei Rückflüsse auf derselben Seite der Reihe, einer um den anderen herum; ein dritter Weg vom ersten Gateway führt nach unten in die andere Bahn: jeder Rückfluss bekommt eine eigene Höhe, der kürzere liegt innen, keine zwei auf einer Linie.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Erwerbung" name="Anschaffungswunsch" processRef="Prozess_Erwerbung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Erwerbung" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="Z_Erwerbung" name="Erwerbung"><bpmn:flowNodeRef>Z_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Suchen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Gefunden</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Preis</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Frei</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Z_Leserin" name="Leserin"><bpmn:flowNodeRef>Z_Absage</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Abgesagt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Z_Start" name="Wunsch eingegangen"/>
+    <bpmn:task id="Z_Aufnehmen" name="Wunsch aufnehmen"/>
+    <bpmn:task id="Z_Suchen" name="Titel suchen"/>
+    <bpmn:exclusiveGateway id="Z_Gefunden" name="Gefunden?"/>
+    <bpmn:task id="Z_Preis" name="Preis prüfen"/>
+    <bpmn:exclusiveGateway id="Z_Frei" name="Freigegeben?"/>
+    <bpmn:task id="Z_Bestellen" name="Bestellen"/>
+    <bpmn:endEvent id="Z_Ende" name="Bestellt"/>
+    <bpmn:sendTask id="Z_Absage" name="Absage schreiben"/>
+    <bpmn:endEvent id="Z_Abgesagt" name="Abgesagt"/>
+    <bpmn:sequenceFlow id="Z1" sourceRef="Z_Start" targetRef="Z_Aufnehmen"/>
+    <bpmn:sequenceFlow id="Z2" sourceRef="Z_Aufnehmen" targetRef="Z_Suchen"/>
+    <bpmn:sequenceFlow id="Z3" sourceRef="Z_Suchen" targetRef="Z_Gefunden"/>
+    <bpmn:sequenceFlow id="Z4" sourceRef="Z_Gefunden" targetRef="Z_Preis" name="ja"/>
+    <bpmn:sequenceFlow id="Z5" sourceRef="Z_Gefunden" targetRef="Z_Suchen" name="nein"/>
+    <bpmn:sequenceFlow id="Z10" sourceRef="Z_Gefunden" targetRef="Z_Absage" name="vergriffen"/>
+    <bpmn:sequenceFlow id="Z6" sourceRef="Z_Preis" targetRef="Z_Frei"/>
+    <bpmn:sequenceFlow id="Z7" sourceRef="Z_Frei" targetRef="Z_Bestellen" name="ja"/>
+    <bpmn:sequenceFlow id="Z8" sourceRef="Z_Frei" targetRef="Z_Aufnehmen" name="nein"/>
+    <bpmn:sequenceFlow id="Z9" sourceRef="Z_Bestellen" targetRef="Z_Ende"/>
+    <bpmn:sequenceFlow id="Z11" sourceRef="Z_Absage" targetRef="Z_Abgesagt"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Rückfluss in einer mittleren Bahn
+
+Ein Rückfluss in der mittleren von drei Bahnen: sein Weg bleibt in seiner Bahn, mindestens 12 px von ihrem Rand; wo der Platz fehlt, wird die Bahn höher.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Fernleihe" name="Fernleihe" processRef="Prozess_Fernleihe"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Fernleihe" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="F_Leserin" name="Leserin"><bpmn:flowNodeRef>F_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Abholen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="F_Theke" name="Theke"><bpmn:flowNodeRef>F_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Frage</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="F_Leihverkehr" name="Leihverkehr"><bpmn:flowNodeRef>F_Senden</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Ende</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="F_Start" name="Titel fehlt"/>
+    <bpmn:task id="F_Aufnehmen" name="Bestellung aufnehmen"/>
+    <bpmn:task id="F_Pruefen" name="Angaben prüfen"/>
+    <bpmn:exclusiveGateway id="F_Frage" name="Angaben vollständig?"/>
+    <bpmn:sendTask id="F_Senden" name="An den Leihverkehr senden"/>
+    <bpmn:manualTask id="F_Abholen" name="Buch abholen"/>
+    <bpmn:endEvent id="F_Ende" name="Bestellt"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="F_Start" targetRef="F_Aufnehmen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="F_Aufnehmen" targetRef="F_Pruefen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="F_Pruefen" targetRef="F_Frage"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="F_Frage" targetRef="F_Aufnehmen" name="nein"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="F_Senden" targetRef="F_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Rückfluss an einem Ereignis
+
+Ein Rückfluss von einem Zwischenereignis zurück zu einem anderen: er dockt oben oder unten in der Mitte der Kreise an.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Vormerkung" isExecutable="false">
+    <bpmn:startEvent id="E_Start" name="Buch vorgemerkt"/>
+    <bpmn:intermediateCatchEvent id="E_Warten" name="Buch zurück"><bpmn:messageEventDefinition id="E_Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="E_Benachrichtigen" name="Leserin benachrichtigen"/>
+    <bpmn:exclusiveGateway id="E_Frage" name="Abgeholt?"/>
+    <bpmn:intermediateCatchEvent id="E_Frist" name="Eine Woche"><bpmn:timerEventDefinition id="E_Frist_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="E_Ende" name="Ausgeliehen"/>
+    <bpmn:sequenceFlow id="E1" sourceRef="E_Start" targetRef="E_Warten"/>
+    <bpmn:sequenceFlow id="E2" sourceRef="E_Warten" targetRef="E_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="E3" sourceRef="E_Benachrichtigen" targetRef="E_Frage"/>
+    <bpmn:sequenceFlow id="E4" sourceRef="E_Frage" targetRef="E_Ende" name="ja"/>
+    <bpmn:sequenceFlow id="E5" sourceRef="E_Frage" targetRef="E_Frist" name="nein"/>
+    <bpmn:sequenceFlow id="E6" sourceRef="E_Frist" targetRef="E_Warten"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
 ### BPMN ohne Wirkung
 
 Die drei Blöcke werden zu je einer Warnung mit dem Grund, die Diagramme davor bleiben gezeichnet.
