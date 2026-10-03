@@ -68,6 +68,36 @@
   /* The credit of a library below its diagram: "Gezeichnet mit bpmn-js". */
   .dokufix-doc .dokufix-diagram-credit{margin-top:4px;font-size:12px;line-height:1.4;color:#6e6e73}
   .dokufix-doc .dokufix-diagram-credit a{color:inherit}
+  /* The downloads below a drawn diagram (story 2.10, src/app/diagram-downloads.js):
+     below the diagram, centred, in the credit's 12 px and grey; in the markup
+     it stands between the view and the credit. The source link and, where a script runs, the
+     picture button look alike: a small button with the download symbol and
+     the extension of the file. The symbol is the 16 px Octicon "download"
+     (@primer/octicons 19.38.0, MIT, © GitHub Inc.), its path data as it
+     stands in the package, as a data: URI like the symbols of the callouts.
+     Below a BPMN diagram the downloads and the credit stand in one line (Ben,
+     2026-10-03): both are inline boxes, centred together by the figure's
+     text-align, vertically aligned, the credit wrapping below only where the
+     column is too narrow for both. The credit's markup is as story 2.7 wrote it.
+     Nothing of the downloads in print. */
+  .dokufix-doc .dokufix-diagram-downloads{display:none}
+  @media not print{
+    .dokufix-doc .dokufix-diagram-downloads{display:inline-flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px;vertical-align:middle}
+    .dokufix-doc .dokufix-diagram-downloads + .dokufix-diagram-credit{display:inline-block;margin:6px 0 0 10px;vertical-align:middle}
+  }
+  .dokufix-doc .dokufix-diagram-downloads > :is(a,button){
+    display:inline-flex;align-items:center;gap:4px;margin:0;padding:1px 8px 1px 6px;
+    border:1px solid #d1d1d6;border-radius:4px;background:#f5f5f7;
+    font:inherit;font-size:12px;line-height:1.4;color:#6e6e73;text-decoration:none;cursor:pointer;
+  }
+  .dokufix-doc .dokufix-diagram-downloads > :is(a,button):hover{background:#e9e9ee;color:#1c1c1e}
+  .dokufix-doc .dokufix-diagram-downloads > :is(a,button):focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+  /* download-16 */
+  .dokufix-doc .dokufix-diagram-downloads > :is(a,button)::before{
+    content:"";flex:none;width:12px;height:12px;
+    background:no-repeat center/12px 12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%236e6e73'%3E%3Cpath d='M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z'/%3E%3Cpath d='M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z'/%3E%3C/svg%3E");
+    -webkit-print-color-adjust:exact;print-color-adjust:exact;
+  }
   /* The large view of a diagram (story 2.9). Its controls are in the figure
      (src/app/diagrams.js): a checkbox, four radio buttons for the zoom, then
      the view with its bar and the stage, a label of the checkbox around the

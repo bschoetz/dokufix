@@ -109,8 +109,10 @@
 //                                and the download buttons are enabled again
 //
 // In the diagram cases (1, 10 to 13) every figure, in the page and in each
-// file, has the checkbox of its large view (story 2.9), and a diagram that
-// became a warning has none of its controls.
+// file, has the checkbox of its large view (story 2.9) and the line of its
+// downloads, a source link and, where a script runs, a picture button (story
+// 2.10), and a diagram that became a warning has none of these. In case 13
+// the refused diagrams have no line, and the drawn BPMN diagram keeps its own.
 //
 // In every case the error is on the console and no promise is rejected: the
 // run collects console errors and page errors and looks at both.
@@ -336,9 +338,10 @@ const FILTER_WARNING = 'Die Markierung „dokufix: filter "Suchen …"“ erwart
 const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, false];
 
 // ---------- the copy of src/ with two passes more ----------
-// The diagrams of the demo text: four of Mermaid (two of them the special
-// cases of the large view), six of BPMN (two with coordinates, four without).
-const DEMO_DIAGRAMS = 10;
+// The diagrams of the demo text: five of Mermaid (two of them the special
+// cases of the large view, one that of the downloads), six of BPMN (two with
+// coordinates, four without).
+const DEMO_DIAGRAMS = 11;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';
@@ -380,8 +383,10 @@ function buildCopy(outDir, module, edits, name){
 // bundle, whose code names the class and the attribute of the filter's field.
 const withoutScripts = text => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
 // What is transient in a read-only export once it has opened: the fields of the
-// filter, and in schlank and kompakt the panel of the search, once.
-const onlyOwnTransient = (s, x) => x.searchPanels === (s.endsWith('nur-lesen') ? 0 : 1) && x.transient === x.filters.length + x.searchPanels;
+// filter, and in schlank and kompakt the panel of the search, once, and the
+// picture button below each diagram (story 2.10).
+const onlyOwnTransient = (s, x) => x.searchPanels === (s.endsWith('nur-lesen') ? 0 : 1) && x.svgButtons === (s.endsWith('nur-lesen') ? 0 : x.figures.length) &&
+  x.transient === x.filters.length + x.searchPanels + x.svgButtons;
 
 // ---------- results ----------
 const results = [];
@@ -523,6 +528,11 @@ const facts = page => page.evaluate(() => {
     // The checkboxes of the large view (story 2.9), and the controls of one inside a warning.
     toggles: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-toggle').length,
     warningControls: container.querySelectorAll('.dokufix-warning :is(.dokufix-diagram-toggle, .dokufix-diagram-zoom, .dokufix-diagram-view)').length,
+    // The line of the downloads below a diagram (story 2.10): the source links,
+    // the picture buttons, and a line inside a warning.
+    sourceLinks: Array.from(container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads > a[download]')).map(a => a.getAttribute('download')),
+    svgButtons: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads > button[data-dokufix-transient]').length,
+    warningDownloads: container.querySelectorAll('.dokufix-warning :is(.dokufix-diagram-downloads, a[download])').length,
     // The figures, by their title.
     figures: Array.from(container.querySelectorAll('figure.dokufix-diagram')).map(f => f.getAttribute('aria-label')),
     // The BPMN diagrams: title, whether the SVG is there, and the markup of the credit below it.
@@ -562,8 +572,15 @@ const isStyled = (w, look = STYLED) => Object.keys(look).every(k => w.style[k] =
 const STYLED_ONE_LINE = { ...STYLED, detail: 'none' };
 // The large view of a diagram (story 2.9): every figure has its checkbox, and
 // a diagram that became a warning has none, nor any other of its controls.
-const checkViewControls = (scope, x) => check(scope, 'every figure has the checkbox of its large view, and no warning carries a control of one',
-  x.toggles === x.figures.length && x.warningControls === 0, { toggles: x.toggles, figures: x.figures.length, warningControls: x.warningControls });
+const checkViewControls = (scope, x) => {
+  check(scope, 'every figure has the checkbox of its large view, and no warning carries a control of one',
+    x.toggles === x.figures.length && x.warningControls === 0, { toggles: x.toggles, figures: x.figures.length, warningControls: x.warningControls });
+  // And the line of its downloads (story 2.10): a source link per figure, a
+  // picture button where a script runs, nothing below a warning.
+  const buttons = scope.endsWith('nur-lesen') ? 0 : x.figures.length;
+  check(scope, 'every figure has its source link' + (buttons ? ' and its picture button' : ', no picture button') + ', and no warning carries a download',
+    x.sourceLinks.length === x.figures.length && x.svgButtons === buttons && x.warningDownloads === 0, { sourceLinks: x.sourceLinks, svgButtons: x.svgButtons, figures: x.figures.length, warningDownloads: x.warningDownloads });
+};
 // The one warning a case expects, by the texts it has to contain.
 function checkWarning(scope, f, texts, what, look = STYLED){
   const visible = f.warnings.filter(w => !w.transient);
@@ -718,7 +735,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         // The search fields and the search panel that schlank and kompakt make
         // themselves when they open are transient; the code that makes them
         // names the attribute.
-        check(s, 'nothing transient but the fields and the search panel the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels });
+        check(s, 'nothing transient but the fields, the search panel and the picture buttons the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels, svgButtons: x.svgButtons });
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       check(scope, 'both views are still open in the running page', JSON.stringify(await views()) === '[true,true]', await views());
@@ -1046,6 +1063,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         check(s, 'the BPMN diagram with coordinates is drawn with its credit, and the passes around it ran',
           x.bpmn.join('|') === 'Mit Koordinaten true ' + credit && x.diagrams === 1 && x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
         checkViewControls(s, x);
+        check(s, 'the drawn BPMN diagram keeps its source link, the refused ones have none', JSON.stringify(x.sourceLinks) === JSON.stringify(['Mit-Koordinaten.bpmn']), x.sourceLinks);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
       const f = await facts(o.page);

@@ -52,7 +52,8 @@ export const NOTICES = [
     copyright: ['Copyright (c) 2014-present Camunda Services GmbH'],
   },
   {
-    // The path data of five icons, in the document styles (src/doc.css).
+    // The path data of six icons, in the document styles (src/doc.css): the five
+    // symbols of the callouts and the download symbol below a diagram.
     name: 'Octicons', package: '@primer/octicons', version: '19.38.0', licence: 'MIT', use: 'embedded',
     copyright: ['Copyright (c) 2026 GitHub Inc.'],
   },

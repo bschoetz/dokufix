@@ -783,6 +783,42 @@ Die drei Blöcke werden zu je einer Warnung mit dem Grund, die Diagramme davor b
 </bpmn:definitions>
 ```
 
+## Herunterladen
+
+Unter jedem gezeichneten Diagramm stehen kleine Knöpfe zum Herunterladen: die Quelle, `.mmd` oder `.bpmn`, und, wo ein Skript läuft, das Bild als `.svg`. Unter einer Warnung steht keiner.
+
+### Gleicher Titel
+
+Ein Mermaid-Diagramm, dessen Text `#`, `%`, `&` und Umlaute enthält, und ein BPMN-Prozess ohne Koordinaten unter derselben Überschrift: Ihre Dateien heißen `Gleicher-Titel.mmd` und `Gleicher-Titel-2.bpmn`.
+
+```mermaid
+flowchart LR
+    %% Zeichen, die die URL kodieren muss: # % & ' " < >
+    A["Mahnung #1 & Gebühr"] --> B["5 % Aufschlag über Öffnungszeit"]
+```
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess" isExecutable="false">
+    <bpmn:startEvent id="G_Start" name="Mahnung &amp; Gebühr"/>
+    <bpmn:task id="G_Zahlen" name="5 % zahlen"/>
+    <bpmn:endEvent id="G_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="G1" sourceRef="G_Start" targetRef="G_Zahlen"/>
+    <bpmn:sequenceFlow id="G2" sourceRef="G_Zahlen" targetRef="G_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Frist: 2/3 erreicht?
+
+Ein Titel mit Zeichen, die ein Dateiname nicht trägt: `Frist--2-3-erreicht-.mmd`.
+
+```mermaid
+flowchart LR
+    X[Frist] --> Y[Erinnerung]
+```
+
 ---
 
 ## Schluss

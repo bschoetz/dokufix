@@ -13,6 +13,7 @@ import { runPasses } from './passes.js';
 import { buildWarning, errorMessage } from './warning.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { renderDiagrams } from './diagrams.js';
+import { attachSvgDownloads } from './diagram-downloads.js';
 
 // --- From source to preview ------------------------------------------------
 // One render is four steps:
@@ -63,7 +64,8 @@ export const DOCUMENT_PASSES = [
 ];
 
 // Run-time passes attach what exists only while the page runs: a listener, the
-// search field of a table, later a live viewer. Nothing they do is part of the
+// search field of a table, the picture button below a diagram, later a live
+// viewer. Nothing they do is part of the
 // document. An element such a pass adds carries data-dokufix-transient (see
 // transient.js), so that no download takes it along. They run after every
 // document pass: the free-text filter finds each table in its wrapper, and the
@@ -72,6 +74,7 @@ export const DOCUMENT_PASSES = [
 export const RUNTIME_PASSES = [
   { name: 'Sprungmarken im Inhaltsverzeichnis', run: attachTocClicks },
   { name: 'Tabellenfilter', run: attachTableFilters },
+  { name: 'Diagramm-Bilder', run: attachSvgDownloads },
 ];
 
 // One render at a time. A render requested while another runs starts when

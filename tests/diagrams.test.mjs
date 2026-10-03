@@ -193,3 +193,60 @@ test('without Mermaid in the page a Mermaid block is the warning that says so, o
     if (before !== undefined) globalThis.mermaid = before;
   }
 });
+
+// ---------- the downloads (story 2.10) ----------
+// A kind of the test's own with what the product's kinds download: the text
+// read after the render, as BPMN reads the XML it drew.
+const withSource = { ...fake, credit: { before: 'Gezeichnet mit ', href: 'https://example.org', text: 'x' },
+  render(d){ fake.render(d); d.drawnText = 'gezeichnet: ' + d.source; },
+  download: { ext: '.x', mime: 'text/plain;charset=utf-8', what: 'X-Text', text: d => d.drawnText } };
+
+test('a drawn diagram gets the line of its downloads between the view and the credit, its source as drawn, named by its title', async () => {
+  drawn.length = 0;
+  const root = rootWith('<h2>Ablauf</h2>' + block('x', 'a # 5 % &amp; ä') + block('mermaid', 'flowchart LR'));
+  await drawDiagrams(root, { x: withSource, mermaid: { ...fake, download: DIAGRAM_KINDS.mermaid.download } });
+  const [first, second] = Array.from(root.querySelectorAll('figure'));
+  assert.deepEqual(Array.from(first.children).slice(-3).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')),
+    ['div.dokufix-diagram-view', 'div.dokufix-diagram-downloads', 'figcaption.dokufix-diagram-credit']);
+  const link = first.querySelector('.dokufix-diagram-downloads > a');
+  assert.equal(link.getAttribute('download'), 'Ablauf.x');
+  assert.equal(link.textContent, '.x');
+  assert.equal(link.getAttribute('href'), 'data:text/plain;charset=utf-8,gezeichnet: a %23 5 %25 %26 %C3%A4');
+  // Without a credit the line is the last child; the same title gives -2.
+  assert.equal(second.lastElementChild.className, 'dokufix-diagram-downloads');
+  const mmd = second.lastElementChild.firstElementChild;
+  assert.equal(mmd.getAttribute('download'), 'Ablauf-2.mmd');
+  assert.equal(decodeURIComponent(mmd.getAttribute('href').replace(/^data:text\/plain;charset=utf-8,/, '')), 'flowchart LR');
+  assert.equal(mmd.getAttribute('title'), 'Mermaid-Text herunterladen: Ablauf-2.mmd');
+  // The line is not in the view: not in the stage, not in the SVG container.
+  assert.equal(root.querySelectorAll('.dokufix-diagram-view .dokufix-diagram-downloads').length, 0);
+  // A kind without a download, as the test's other kinds, gets no line.
+  const plain = rootWith('<h2>Eins</h2>' + block('mermaid', 'a'));
+  await drawDiagrams(plain, { mermaid: fake });
+  assert.equal(plain.querySelectorAll('.dokufix-diagram-downloads').length, 0);
+});
+
+test('a diagram that becomes a warning has no downloads; the names count it, so the others keep theirs', async () => {
+  const kinds = {
+    mermaid: { ...fake, download: DIAGRAM_KINDS.mermaid.download },
+    kaputt: { render(){ throw new Error('kaputt'); }, warning: () => 'Warnung', download: { ext: '.k', mime: 'text/plain', what: 'K', text: () => '' } },
+  };
+  const root = rootWith('<h2>Gleich</h2>' + block('mermaid', 'a') + block('kaputt', 'b') + block('mermaid', 'c') + '<h2>Ohne</h2>' + block('kaputt', 'd'));
+  await drawDiagrams(root, kinds);
+  assert.equal(root.querySelectorAll('.dokufix-warning .dokufix-diagram-downloads, .dokufix-warning a[download]').length, 0);
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-diagram-downloads > a')).map(a => a.getAttribute('download')), ['Gleich.mmd', 'Gleich-3.mmd']);
+});
+
+test('no heading before the diagram: its files are named "Diagramm"', async () => {
+  const root = rootWith(block('mermaid', 'a') + block('mermaid', 'b'));
+  await drawDiagrams(root, { mermaid: { ...fake, download: DIAGRAM_KINDS.mermaid.download } });
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-diagram-downloads > a')).map(a => a.getAttribute('download')), ['Diagramm.mmd', 'Diagramm-2.mmd']);
+});
+
+test('the kinds download their source: Mermaid the block\'s text as .mmd, BPMN the XML as drawn as .bpmn', () => {
+  const { mermaid, bpmn } = DIAGRAM_KINDS;
+  assert.deepEqual([mermaid.download.ext, bpmn.download.ext], ['.mmd', '.bpmn']);
+  assert.equal(mermaid.download.text({ source: 'flowchart LR\n' }), 'flowchart LR\n');
+  assert.equal(bpmn.download.text({ source: '<a/>', xml: '<a><di/></a>' }), '<a><di/></a>');
+  assert.equal(bpmn.download.text({ source: '<a/>' }), '<a/>');
+});

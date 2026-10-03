@@ -88,7 +88,9 @@
 //   9. the large view of a diagram open in read mode, at "150 %". Its controls
 //      are document content, and only their checked properties are set, never
 //      the attributes; opened, the saved file shows the diagram closed, at
-//      "Einpassen", and the page scrolls
+//      "Einpassen", and the page scrolls. The diagram has the line of its
+//      downloads (story 2.10) with the picture button, which is transient;
+//      opened, the saved file shows one again below the diagram
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -629,6 +631,9 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await viewDownload9.saveAs(withView9);
     check(scope, 'the view was open at "150 %" when the file was saved, over the window, the page not scrolling', JSON.stringify(viewOpen) === JSON.stringify({ open: true, zoom: '150', fixed: true, page: 'hidden' }), JSON.stringify(viewOpen));
     check(scope, 'and is still open in the running page', JSON.stringify(await viewState(o.page)) === JSON.stringify(viewOpen), JSON.stringify(await viewState(o.page)));
+    const pictureButtons = page => page.evaluate(() => Array.from(document.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads > button'))
+      .map(b => b.textContent + ' ' + b.hasAttribute('data-dokufix-transient')));
+    check(scope, 'the running page has the picture button below its diagram, transient', JSON.stringify(await pictureButtons(o.page)) === '[".svg true"]', JSON.stringify(await pictureButtons(o.page)));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     await checkAgainstBuiltFile(scope, browser, withView9, built, 1);
@@ -638,6 +643,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await o.page.waitForFunction(() => !!document.querySelector('#preview figure.dokufix-diagram svg'), null, { timeout: 30000 }).catch(() => {});
     const closed9 = await viewState(o.page);
     check(scope, 'opened, its diagram is closed, at "Einpassen", and the page scrolls', JSON.stringify(closed9) === JSON.stringify({ open: false, zoom: 'fit', fixed: false, page: 'visible' }), JSON.stringify(closed9));
+    check(scope, 'opened, it shows the picture button below its diagram again', JSON.stringify(await pictureButtons(o.page)) === '[".svg true"]', JSON.stringify(await pictureButtons(o.page)));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 

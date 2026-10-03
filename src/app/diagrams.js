@@ -1,6 +1,7 @@
 import { documentHeadings, headingLabelText } from './toc.js';
 import { buildWarning, errorMessage } from './warning.js';
 import { renderBpmn, bpmnWarningText, BPMN_CREDIT } from './bpmn.js';
+import { diagramFileNames, downloadsLine } from './diagram-downloads.js';
 
 // --- Diagrams --------------------------------------------------------------
 // Every diagram stands in one kind of figure, whatever draws it, with the
@@ -22,6 +23,9 @@ import { renderBpmn, bpmnWarningText, BPMN_CREDIT } from './bpmn.js';
 //       <label class="dokufix-diagram-stage" for="dokufix-diagram-1-open">
 //         <div class="dokufix-diagram-svg"><svg role="img" aria-label="Rückgabe" …></svg></div>
 //       </label>
+//     </div>
+//     <div class="dokufix-diagram-downloads" role="group" aria-label="Herunterladen">
+//       <a download="Rückgabe.bpmn" href="data:application/xml;charset=utf-8,…" title="BPMN-XML herunterladen: Rückgabe.bpmn">.bpmn</a>
 //     </div>
 //     <figcaption class="dokufix-diagram-credit">Gezeichnet mit <a href="https://bpmn.io">bpmn-js</a></figcaption>
 //   </figure>
@@ -47,6 +51,13 @@ import { renderBpmn, bpmnWarningText, BPMN_CREDIT } from './bpmn.js';
 // checks. Nothing outside this module knows which library drew a diagram. A
 // kind whose library asks for it gets a credit below the diagram, as a
 // figcaption that stays outside the SVG container and the view.
+//
+// A drawn diagram gets the line of its downloads (story 2.10,
+// src/app/diagram-downloads.js) between the view and the credit: its source
+// as a data: URL, named after its title, the Mermaid text as written (.mmd)
+// or the BPMN XML as drawn (.bpmn), the laid-out XML where the author's had
+// no coordinates. A diagram that becomes a warning has none. The picture
+// button beside it is added where a script runs (a run-time pass).
 //
 // Pure logic, apart from the renderer of each kind: the figure is made by the
 // document it is handed, and diagramTitle() reads the root. The renderers are
@@ -188,18 +199,25 @@ async function renderMermaid({ holder }){
 // which draws into diagram.holder or throws; warning(diagram), the text of the
 // warning that stands where a diagram that threw would have been; credit, the
 // link below the diagram, if its library asks for one.
+// download, what the line below a drawn diagram offers as its source: the
+// extension of the file, its MIME type in the data: URL, what it is, in the
+// link's title, and its text, read after the diagram is drawn. A kind
+// without one gets no line.
 // diagram: { kind, figure, holder, source, title, index }, index its place
-// among the diagrams of the document, from 1.
+// among the diagrams of the document, from 1; a BPMN diagram also has xml
+// once it is drawn, the XML bpmn-js drew (src/app/bpmn.js).
 export const DIAGRAM_KINDS = {
   mermaid: {
     render: renderMermaid,
     warning: () => 'Ein Diagramm konnte nicht gezeichnet werden.',
+    download: { ext: '.mmd', mime: 'text/plain;charset=utf-8', what: 'Mermaid-Text', text: diagram => diagram.source },
   },
   bpmn: {
     render: renderBpmn,
     warning: diagram => bpmnWarningText(diagram.title),
     // "Gezeichnet mit bpmn-js" under every BPMN diagram (Ben, 2026-10-01 and 2026-10-03).
     credit: BPMN_CREDIT,
+    download: { ext: '.bpmn', mime: 'application/xml;charset=utf-8', what: 'BPMN-XML', text: diagram => diagram.xml || diagram.source },
   },
 };
 
@@ -213,8 +231,10 @@ export function renderDiagrams(root){
 // drawn one at a time, in the order of the document, each in its own
 // containment: one that throws becomes the warning with the message of what
 // failed, without the controls of a large view, and the others are drawn. A
-// drawn diagram's figure gets its width as drawn. The tests hand in kinds of
-// their own.
+// drawn diagram's figure gets its width as drawn and the line of its
+// downloads, named by the titles of all diagrams of the document, the ones
+// that fail included, so that a name does not change with whether another
+// diagram is drawn. The tests hand in kinds of their own.
 export async function drawDiagrams(root, kinds){
   const doc = root.ownerDocument;
   const selector = Object.keys(kinds).map(kind => 'pre code.language-' + kind).join(', ');
@@ -228,12 +248,18 @@ export async function drawDiagrams(root, kinds){
     code.parentElement.replaceWith(figure);
     diagrams.push({ kind, figure, holder, source: code.textContent, title, index });
   }
-  for (const diagram of diagrams){
+  const names = diagramFileNames(diagrams.map(d => d.title));
+  for (const [i, diagram] of diagrams.entries()){
     const kind = kinds[diagram.kind];
     try {
       await kind.render(diagram);
       const width = drawnWidth(diagram.holder);
       if (width) diagram.figure.setAttribute('style', '--dokufix-diagram-width:' + width);
+      if (kind.download){
+        const line = downloadsLine(doc, names[i], { ...kind.download, text: kind.download.text(diagram) });
+        const credit = Array.from(diagram.figure.children).find(el => el.classList.contains(DIAGRAM_CREDIT_CLASS)) || null;
+        diagram.figure.insertBefore(line, credit);
+      }
     } catch (err){
       diagram.figure.replaceWith(buildWarning(doc, kind.warning(diagram), errorMessage(err)));
     }

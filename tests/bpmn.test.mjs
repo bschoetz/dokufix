@@ -374,7 +374,11 @@ test('a bpmn block becomes a figure with the credit below the SVG container; a r
   const figure = root.querySelector('figure');
   assert.equal(figure.getAttribute('class'), 'dokufix-diagram dokufix-diagram-bpmn');
   assert.equal(figure.getAttribute('aria-label'), 'Rückgabe');
-  assert.deepEqual(Array.from(figure.children).slice(-2).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')), ['div.dokufix-diagram-view', 'figcaption.dokufix-diagram-credit']);
+  assert.deepEqual(Array.from(figure.children).slice(-3).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')), ['div.dokufix-diagram-view', 'div.dokufix-diagram-downloads', 'figcaption.dokufix-diagram-credit']);
+  // The source below it is the XML as drawn, here the author's, which has coordinates (story 2.10).
+  const source = figure.querySelector('.dokufix-diagram-downloads > a');
+  assert.equal(source.getAttribute('download'), 'Rückgabe.bpmn');
+  assert.equal(decodeURIComponent(source.getAttribute('href').replace(/^data:application\/xml;charset=utf-8,/, '')), WITH_DI);
   assert.ok(figure.querySelector('.dokufix-diagram-view > .dokufix-diagram-stage > .dokufix-diagram-svg > svg'));
   // Its width as drawn, the SVG's max-width, is on the figure.
   assert.equal(figure.getAttribute('style'), '--dokufix-diagram-width:' + figure.querySelector('svg').style.maxWidth);

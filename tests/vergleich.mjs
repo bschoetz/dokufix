@@ -116,6 +116,10 @@ import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src
 // without coordinates, whether it can be laid out and what it holds, too.
 import { hasCoordinates, bpmnWarningText, BPMN_CREDIT } from '../src/app/bpmn.js';
 import { readProcess } from '../src/app/bpmn-layout.js';
+// The names of the downloads below the diagrams and how a source stands in
+// its link are asked where the product decides them (story 2.10).
+import { diagramFileNames, sourceDataUrl, DOWNLOADS_LABEL } from '../src/app/diagram-downloads.js';
+import { DIAGRAM_KINDS as KINDS } from '../src/app/diagrams.js';
 // Which places of the preview a search lists, how many hits each holds and
 // under which group headings they stand is asked where the product decides it,
 // over the preview read back into linkedom.
@@ -3012,14 +3016,173 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
         notices: Array.from(root.querySelectorAll('figure.dokufix-diagram .dokufix-diagram-svg[data-gz]')).map(h => getComputedStyle(h, '::before').content),
         svgs: root.querySelectorAll('figure.dokufix-diagram svg').length,
         credits: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn > figcaption > a')).map(a => { const r = a.getBoundingClientRect(); return a.parentElement.textContent + ' | ' + a.textContent + ' ' + (r.width > 0 && r.height > 0); }),
+        // The source link of each diagram, outside the packed container, and no picture button.
+        sources: Array.from(root.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads')).map(line => {
+          const a = line.querySelector(':scope > a[download]'), r = a ? a.getBoundingClientRect() : { width: 0, height: 0 };
+          return (a ? a.getAttribute('download') + ' ' + a.textContent : '-') + ' ' + (r.width > 0 && r.height > 0) + ' ' + !!line.closest('[data-gz]') + ' ' + line.querySelectorAll('button').length;
+        }),
       };
     });
     const bpmn = drawn.filter(d => d.kind === 'bpmn').length;
     check('diagrams with scripts off: each is the notice that it needs JavaScript, and every BPMN diagram keeps its credit, visible',
       f.svgs === 0 && f.notices.length === drawn.length && f.notices.every(n => n === '"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"') &&
       f.credits.length === bpmn && f.credits.every(c => c === BPMN_CREDIT_LINE + ' | ' + BPMN_CREDIT.text + ' true'), JSON.stringify(f));
+    const want = downloadNames(exp).filter((n, i) => exp.diagrams[i].drawn).map((n, i) => n + KINDS[drawn[i].kind].download.ext + ' ' + KINDS[drawn[i].kind].download.ext + ' true false 0');
+    check('diagrams with scripts off (story 2.10): every diagram keeps its source link, visible, outside the packed container, and has no picture button',
+      JSON.stringify(f.sources) === JSON.stringify(want), JSON.stringify(f.sources) + ', expected ' + JSON.stringify(want));
   } finally {
     await context.close();
+  }
+}
+
+// The downloads below a diagram (story 2.10). The base names of the files of
+// every diagram block of the document, drawn or not, in its order, as the
+// product names them.
+const downloadNames = exp => diagramFileNames(exp.diagrams.map(d => d.title));
+// What a downloaded source has to hold: the block's text as marked hands it
+// on, with its line feed at the end; for BPMN laid out by dokufix the
+// author's XML with the diagram part dokufix put in.
+const LAID_OUT_PART = /  <bpmndi:BPMNDiagram xmlns:bpmndi="http:\/\/www\.omg\.org\/spec\/BPMN\/20100524\/DI"[\s\S]*?<\/bpmndi:BPMNDiagram>\n/;
+function sourceProblem(d, got){
+  const want = d.source + '\n';
+  if (!d.laidOut) return got === want ? '' : 'differs from the block\'s text at ' + [...want].findIndex((c, i) => got[i] !== c);
+  if (!/<bpmndi:BPMNShape\b/.test(got)) return 'no BPMNShape';
+  return got.replace(LAID_OUT_PART, '') === want ? '' : 'without its diagram part not the author\'s XML';
+}
+// The picture button where a script runs: the editor file, schlank and kompakt.
+const PICTURED = new Set(['mit-editor', 'schlank', 'kompakt']);
+async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
+  const drawn = exp.diagrams.filter(d => d.drawn);
+  const names = downloadNames(exp).filter((n, i) => exp.diagrams[i].drawn);
+  const json = JSON.stringify;
+  const f = await page.evaluate(async () => {
+    const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+    return {
+      lines: await Promise.all(Array.from(root.querySelectorAll('figure.dokufix-diagram')).map(async fig => {
+        const line = fig.querySelector(':scope > .dokufix-diagram-downloads');
+        if (!line) return null;
+        const a = line.querySelector(':scope > a'), button = line.querySelector(':scope > button');
+        const look = el => { if (!el) return null; const cs = getComputedStyle(el), b = getComputedStyle(el, '::before'), r = el.getBoundingClientRect();
+          return { font: cs.fontSize, border: cs.borderTopWidth + ' ' + cs.borderTopStyle, radius: cs.borderTopLeftRadius, symbol: b.backgroundImage.startsWith('url("data:image/svg+xml') && b.width + ' ' + b.height, visible: r.width > 0 && r.height > 0 }; };
+        let content = null;
+        try { content = a ? await (await fetch(a.getAttribute('href'))).text() : null; } catch (e){ content = 'fetch failed: ' + e.message; }
+        return {
+          role: line.getAttribute('role'), label: line.getAttribute('aria-label'), inView: !!line.closest('.dokufix-diagram-view'),
+          children: Array.from(line.children).map(k => k.tagName.toLowerCase()).join(' '),
+          download: a ? a.getAttribute('download') : null, text: a ? a.textContent : null, title: a ? a.getAttribute('title') : null, content,
+          button: button ? { text: button.textContent, type: button.getAttribute('type'), transient: button.hasAttribute('data-dokufix-transient'), title: button.getAttribute('title') } : null,
+          look: [look(a), look(button)],
+          below: (() => { const v = fig.querySelector('.dokufix-diagram-view').getBoundingClientRect(), l = line.getBoundingClientRect(); return l.top >= v.bottom - 0.5; })(),
+          // Below a BPMN diagram the credit stands in the line of the downloads, to their right (Ben, 2026-10-03).
+          beside: (() => { const cap = fig.querySelector(':scope > .dokufix-diagram-credit'); if (!cap) return null;
+            const l = line.getBoundingClientRect(), c = cap.getBoundingClientRect();
+            return Math.abs((l.top + l.bottom) / 2 - (c.top + c.bottom) / 2) <= 2 && c.left >= l.right; })(),
+        };
+      })),
+      warningLines: root.querySelectorAll('.dokufix-warning .dokufix-diagram-downloads').length,
+    };
+  });
+  const lines = f.lines;
+  check('downloads: a line below every drawn diagram, outside its large view, a group named "' + DOWNLOADS_LABEL + '", with the source link named by its title (' + names.length + ')',
+    lines.length === drawn.length && lines.every((l, i) => l && l.role === 'group' && l.label === DOWNLOADS_LABEL && !l.inView && l.below && l.download === names[i] + KINDS[drawn[i].kind].download.ext && l.text === KINDS[drawn[i].kind].download.ext) && f.warningLines === 0,
+    json(lines.map(l => l && [l.download, l.text, l.role, l.label, l.inView, l.below])) + ', expected ' + json(names));
+  check('downloads: below a BPMN diagram the credit stands in one line with the downloads, to their right, vertically centred with them',
+    lines.every((l, i) => !l || (drawn[i].kind === 'bpmn' ? l.beside === true : l.beside === null)), json(lines.map(l => l && l.beside)));
+  const lower = names.map(n => n.toLowerCase());
+  check('downloads: two diagrams never share a name, the same title gets -2', new Set(lower).size === lower.length, json(names));
+  const wrong = lines.map((l, i) => l && l.content !== null ? sourceProblem(drawn[i], l.content) : 'no content').map((p, i) => p ? names[i] + ': ' + p : '').filter(Boolean);
+  check('downloads: every source, read through its data: URL, is the block\'s text, byte for byte; BPMN laid out by dokufix its XML with the diagram part (BPMNShape)', wrong.length === 0, wrong.join(' | '));
+  if (key === 'nur-lesen' || key === 'schlank'){
+    // As the file writes it: the attribute holds the minimal encoding, nothing escaped.
+    const verbatim = drawn.map((d, i) => d.laidOut ? '' : (text.includes('href="' + sourceDataUrl(d.source + '\n', KINDS[d.kind].download.mime) + '"') ? '' : names[i])).filter(Boolean);
+    check('downloads: the file writes each source link as the minimal encoding of the block\'s text, nothing escaped', verbatim.length === 0, verbatim.join(', '));
+  }
+  const buttons = lines.filter(l => l && l.button);
+  if (PICTURED.has(key)){
+    check('downloads: every line has its picture button, a transient button ".svg" named by its file, behind the source link',
+      lines.every((l, i) => l && l.children === 'a button' && l.button && l.button.text === '.svg' && l.button.type === 'button' && l.button.transient && l.button.title === 'Bild herunterladen: ' + names[i] + '.svg'),
+      json(lines.map(l => l && [l.children, l.button])));
+  } else {
+    check('downloads: no picture button where no script runs', buttons.length === 0 && lines.every(l => l && l.children === 'a'), json(lines.map(l => l && l.children)));
+  }
+  const looks = lines.flatMap(l => l ? l.look.filter(Boolean) : []).filter(x => !(x.font === '12px' && x.border === '1px solid' && x.radius === '4px' && x.symbol === '12px 12px' && x.visible));
+  check('downloads: each is a small button with the download symbol, 12 px', looks.length === 0, json(looks));
+
+  // One file of each kind through the browser's download: the source of a
+  // Mermaid and of a BPMN diagram, and where a script runs their pictures.
+  const saved = path.join(dir, 'herunterladen');
+  fs.mkdirSync(saved, { recursive: true });
+  const grab = async (index, which) => {
+    const loc = page.locator('figure.dokufix-diagram').nth(index).locator(':scope > .dokufix-diagram-downloads > ' + which);
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 15000 }), loc.click()]);
+    const file = path.join(saved, key + '-' + download.suggestedFilename());
+    await download.saveAs(file);
+    return { name: download.suggestedFilename(), file };
+  };
+  const results = [];
+  for (const kind of ['mermaid', 'bpmn']){
+    const i = drawn.findIndex(d => d.kind === kind);
+    if (i < 0) continue;
+    try {
+      const src = await grab(i, 'a');
+      const problem = src.name !== names[i] + KINDS[kind].download.ext ? 'named ' + src.name : sourceProblem(drawn[i], fs.readFileSync(src.file, 'utf8'));
+      results.push(kind + ' source ' + src.name + (problem ? ': ' + problem : ''));
+      check('downloads: the ' + kind + ' source through the browser, ' + src.name + ', is the block\'s text' + (drawn[i].laidOut ? ' with its diagram part' : ''), !problem, problem);
+    } catch (e){ check('downloads: the ' + kind + ' source through the browser', false, e.message.split('\n')[0]); }
+    if (!PICTURED.has(key)) continue;
+    try {
+      const pic = await grab(i, 'button');
+      const svgText = fs.readFileSync(pic.file, 'utf8');
+      const alone = await page.context().newPage();
+      try {
+        await alone.goto(pathToFileURL(pic.file).href);
+        const r = await alone.evaluate(() => {
+          const svg = document.documentElement, box = svg.getBoundingClientRect();
+          const colour = (sel, prop) => { const el = svg.querySelector(sel); return el ? getComputedStyle(el)[prop] : null; };
+          return { root: svg.localName, size: Math.round(box.width) + 'x' + Math.round(box.height), viewBox: svg.getAttribute('viewBox'), width: svg.getAttribute('width'), height: svg.getAttribute('height'), maxWidth: svg.style.maxWidth,
+                   colours: { task: colour('.dokufix-bpmn-task > .djs-visual > rect', 'stroke'), sequence: colour('.dokufix-bpmn-sequenceflow > .djs-visual > path', 'stroke'), end: colour('.dokufix-bpmn-endevent > .djs-visual > circle', 'stroke'), label: colour('.dokufix-bpmn-task > .djs-visual > text', 'fill') } };
+        });
+        await alone.screenshot({ path: pic.file.replace(/\.svg$/, '.png') });
+        const box = String(r.viewBox || '').split(/[\s,]+/).map(Number);
+        const sized = box.length === 4 && Number(r.width) === box[2] && Number(r.height) === box[3] && Math.abs(Number(r.size.split('x')[0]) - box[2]) <= 1 && !r.maxWidth;
+        const colours = kind === 'bpmn' ? Object.entries(r.colours).filter(([k, v]) => v !== null && v !== BPMN_COLOURS[k]).map(([k, v]) => k + ' ' + v) : [];
+        const ok = pic.name === names[i] + '.svg' && r.root === 'svg' && sized && !svgText.includes('var(') && colours.length === 0 && (kind !== 'bpmn' || r.colours.task === BPMN_COLOURS.task);
+        results.push(kind + ' picture ' + pic.name);
+        check('downloads: the ' + kind + ' picture, ' + pic.name + ', opened alone, renders at the size of its viewBox' + (kind === 'bpmn' ? ', no var( left, in the colours of the document (task stroke ' + BPMN_COLOURS.task + ')' : ', no var( left'),
+          ok, json({ name: pic.name, ...r, vars: (svgText.match(/var\(/g) || []).length, colours }));
+      } finally { await alone.close(); }
+    } catch (e){ check('downloads: the ' + kind + ' picture through the browser', false, e.message.split('\n')[0]); }
+  }
+  // The source of the first diagram whose title has characters a file name
+  // cannot take (the demo text's "Herunterladen: Gebühr 5 %/Tag?", the reference
+  // document's "Frist: 2/3 erreicht?"): saved under the name the product gives
+  // it, in both browsers (Firefox saves a "%" as "_").
+  const odd = drawn.findIndex(d => /[%/?]/.test(d.title));
+  if (odd >= 0){
+    try {
+      const src = await grab(odd, 'a');
+      const want = names[odd] + KINDS[drawn[odd].kind].download.ext;
+      const problem = src.name !== want ? 'named ' + src.name + ', expected ' + want : sourceProblem(drawn[odd], fs.readFileSync(src.file, 'utf8'));
+      results.push('source ' + src.name);
+      check('downloads: the source of "' + drawn[odd].title + '" through the browser is saved as ' + want + ' and is the block\'s text', !problem, problem);
+    } catch (e){ check('downloads: the source of "' + drawn[odd].title + '" through the browser', false, e.message.split('\n')[0]); }
+  }
+  // A click on them opened no view.
+  const open = await page.evaluate(() => Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(t => t.checked).length);
+  check('downloads: the clicks on source and picture opened no large view', open === 0, open, results.join('; '));
+  // With the view open the line lies under it, not in it.
+  if (drawn.length){
+    const covered = await page.evaluate(() => {
+      const fig = document.querySelector('figure.dokufix-diagram'), line = fig.querySelector(':scope > .dokufix-diagram-downloads');
+      fig.querySelector('.dokufix-diagram-toggle').checked = true;
+      const r = line.getBoundingClientRect(), view = fig.querySelector('.dokufix-diagram-view');
+      const x = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1), y = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+      const top = document.elementFromPoint(x, y);
+      const out = { inView: view.contains(line), onTop: !!top && line.contains(top), viewOnTop: !!top && view.contains(top) };
+      fig.querySelector('.dokufix-diagram-toggle').checked = false;
+      return out;
+    });
+    check('downloads: with the large view open the line is not in it and lies beneath it', !covered.inView && !covered.onTop && covered.viewOnTop, json(covered));
   }
 }
 
@@ -3504,9 +3667,9 @@ async function assertVariant(browser, file, key, exp, results, label){
     check('every diagram stands in its figure, in the order of the document, its title the heading before it: ' + JSON.stringify(wantFigures),
       JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) === JSON.stringify(wantFigures) && s.diagramsOutside === 0,
       JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) + ', outside a figure: ' + s.diagramsOutside);
-    const figureProblems = s.figures.filter(f => !f.svg || !/^input\.dokufix-diagram-toggle( input\.dokufix-diagram-zoom){4} div\.dokufix-diagram-view( figcaption\.dokufix-diagram-credit)?$/.test(f.children) || f.box !== '24px 0px 24px 0px center')
+    const figureProblems = s.figures.filter(f => !f.svg || !/^input\.dokufix-diagram-toggle( input\.dokufix-diagram-zoom){4} div\.dokufix-diagram-view div\.dokufix-diagram-downloads( figcaption\.dokufix-diagram-credit)?$/.test(f.children) || f.box !== '24px 0px 24px 0px center')
       .map(f => f.title + ': ' + JSON.stringify(f));
-    check('every figure holds the controls of its large view and its SVG in the SVG container, and stands with the margin a diagram had, centred', figureProblems.length === 0, figureProblems.join(' | '));
+    check('every figure holds the controls of its large view, its SVG in the SVG container and the line of its downloads, and stands with the margin a diagram had, centred', figureProblems.length === 0, figureProblems.join(' | '));
     // The accessible name, as the accessibility tree computes it.
     const unnamed = [];
     for (const d of exp.diagrams.filter(x => x.drawn)){
@@ -3518,6 +3681,8 @@ async function assertVariant(browser, file, key, exp, results, label){
     await assertBpmn(page, check, exp, key, text, label, path.dirname(file));
     // --- the large view of a diagram (story 2.9)
     await assertLargeView(page, check, exp, key);
+    // --- the downloads below a diagram (story 2.10)
+    await assertDiagramDownloads(page, check, exp, key, text, label, path.dirname(file));
     if (exp.toc) check('inline table of contents', s.tocLinks > 0 && s.tocBorder === '1px', s.tocLinks + ' links, border ' + s.tocBorder);
     check('embedded images shown', s.images === exp.images, s.images + ' of ' + exp.images);
     check('missing-image placeholders', s.missing === exp.missing && (exp.missing === 0 || s.placeholderBorder === 'dashed'),

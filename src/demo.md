@@ -34,7 +34,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Tabellen mit Unterzeile, Filter und Suchfeld
 - Bilder
 - Fußnoten mit Vorschau
-- **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten, jedes mit großer Ansicht
+- **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten, jedes mit großer Ansicht und zum Herunterladen
 - eine Suche über das ganze Dokument
 
 Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Auch jede Zeile einer Tabelle ist eine Stelle; ihr Ergebnis beginnt mit „Tabelle:“, und eine Zeile, die ein Filter der Tabelle gerade ausblendet, ist mit „(ausgeblendet)“ markiert. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Das „×“ oder Escape schließt sie; im Editor und in einer Datei mit Editor verlässt erst das nächste Escape den Lesemodus. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnet `/` sie ebenso.
@@ -52,6 +52,8 @@ flowchart LR
 ```
 
 Ein Klick auf ein Diagramm zeigt es groß über dem ganzen Fenster, eingepasst oder in 100, 150 und 200 %, und „Schließen“ oder ein zweiter Klick schließt es wieder, in jeder Fassung, auch in der offenen ohne Skript; wo ein Skript läuft, schließt es auch Escape, und `+` und `-` wechseln die Stufe.
+
+Unter jedem Diagramm stehen zwei kleine Knöpfe zum Herunterladen. Der erste gibt die Quelle: `.mmd`, den Mermaid-Text, wie er im Block steht, für einen Mermaid-Editor, oder `.bpmn`, das XML, wie es gezeichnet wurde, samt Koordinaten, für ein BPMN-Werkzeug wie den Camunda Modeler. Er geht in jeder Fassung, auch ohne Skript. Der zweite, `.svg`, gibt das Bild, das Sie sehen, für ein anderes Dokument; ihn gibt es, wo ein Skript läuft: im Editor, in der Datei mit Editor und in den Fassungen „schlank“ und „kompakt“. Die Dateien heißen nach der Überschrift über dem Diagramm.
 
 ## Eine Tabelle
 
@@ -507,6 +509,19 @@ flowchart LR
 ```
 
 Solange ein Diagramm groß offen ist, öffnet `/` keine Suche, und Escape schließt zuerst die große Ansicht. Ist die Suche schon offen, schließt das erste Escape die große Ansicht, das zweite die Suche.
+
+Die beiden Diagramme oben stehen unter derselben Überschrift. Ihre Knöpfe zum Herunterladen liegen unter ihnen, außerhalb der großen Ansicht, und ihre Dateien heißen verschieden: `Große-Ansicht.mmd` und `Große-Ansicht-2.mmd`, die Bilder ebenso.
+
+### Herunterladen: Gebühr 5 %/Tag?
+
+Ein Titel mit Zeichen, die ein Dateiname nicht trägt: Die Dateien dieses Diagramms heißen `Herunterladen--Gebühr-5---Tag-.mmd` und `.svg`. Sein Text enthält `#`, `%`, `&`, Anführungszeichen, spitze Klammern und Umlaute; die heruntergeladene Datei `.mmd` enthält ihn Zeichen für Zeichen, wie er hier im Block steht.
+
+```mermaid
+flowchart LR
+    %% Ein Kommentar mit Zeichen, die eine URL kodieren muss: # % & ' " < >
+    A["Mahnung #1 & Gebühr"] --> B["5 % pro Tag"]
+    B --> C["Rückgabe über Öffnungszeit"]
+```
 
 ### Suche
 
