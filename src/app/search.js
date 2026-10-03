@@ -1,5 +1,5 @@
 import { previewEl } from './dom.js';
-import { findHits, excerpt } from './search-match.js';
+import { findHits, excerpt, tooShort } from './search-match.js';
 import { collectPlaces } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
 
@@ -16,6 +16,10 @@ import { TRANSIENT_ATTR } from './transient.js';
 //   <button type="button" class="search-close" aria-label="Suche schließen">×</button>
 //   </div>
 //   <input type="search" id="search-input" class="search-input" autocomplete="off" spellcheck="false">
+//   <div class="search-switches">
+//   <label class="search-switch"><input type="checkbox">Groß- und Kleinschreibung beachten</label>
+//   <label class="search-switch"><input type="checkbox">Leerzeichen, Bindestriche und Punkte ignorieren</label>
+//   </div>
 //   <p class="search-summary" role="status">3 Treffer an 2 Stellen</p>
 //   <ol class="search-results">
 //   <li><button type="button" class="search-result">… eine <mark>Tabelle</mark> mit …</button></li>
@@ -35,6 +39,12 @@ import { TRANSIENT_ATTR } from './transient.js';
 // whatever way. A closed panel forgets its term; opened again, it reads the
 // preview afresh. The search runs on typing, after a short pause, outside the
 // render, so a failure in it breaks no render.
+//
+// Two switches below the field change how the term is compared
+// (search-match.js): case-sensitive, and light fuzzy, which ignores white
+// space, hyphens and dots. Both start off; flipping one searches again at
+// once. They keep their state when the panel closes, the term does not. A
+// term too short is not searched: the summary says so and nothing is listed.
 
 const PANEL_CLASS = 'search-panel';
 // How long typing pauses before the search runs, in milliseconds.
@@ -46,14 +56,23 @@ let panel = null;
 let input = null;
 let summary = null;
 let list = null;
+let caseBox = null;
+let fuzzyBox = null;
 let timer = 0;
 
 const inReadMode = () => document.body.classList.contains('mode-view');
 const isOpen = () => !!panel && !panel.hidden;
 
+// What the line above the results says when the term is too short.
+const TOO_SHORT = 'Zu kurz: mindestens drei Buchstaben oder Ziffern';
+
+// How the switches say the term is compared.
+const matchOptions = () => ({ caseSensitive: caseBox.checked, fuzzy: fuzzyBox.checked });
+
 // What the line above the results says: "" for no term.
-function summaryText(term, hits, places){
+function summaryText(term, hits, places, short){
   if (!term.trim()) return '';
+  if (short) return TOO_SHORT;
   if (!places) return 'Keine Treffer';
   return hits + ' Treffer an ' + places + (places === 1 ? ' Stelle' : ' Stellen');
 }
@@ -86,12 +105,14 @@ function search(){
   clearTimeout(timer);
   timer = 0;
   const term = input.value;
+  const options = matchOptions();
   try {
     const found = [];
     let hits = 0;
-    if (term.trim()){
+    const short = !!term.trim() && tooShort(term, options);
+    if (term.trim() && !short){
       for (const place of collectPlaces(previewEl)){
-        const at = findHits(term, place.text);
+        const at = findHits(term, place.text, options);
         if (!at.length) continue;
         found.push({ place, at });
         hits += at.length;
@@ -112,12 +133,25 @@ function search(){
       return li;
     });
     list.replaceChildren(...items);
-    summary.textContent = summaryText(term, hits, found.length);
+    summary.textContent = summaryText(term, hits, found.length, short);
   } catch (err){
     console.error('Suche fehlgeschlagen:', err);
     list.replaceChildren();
     summary.textContent = 'Die Suche ist fehlgeschlagen.';
   }
+}
+
+// A switch of the panel: a checkbox in its label, off, that searches again
+// when it is flipped.
+function makeSwitch(parent, text){
+  const label = document.createElement('label');
+  label.className = 'search-switch';
+  const box = document.createElement('input');
+  box.type = 'checkbox';
+  box.addEventListener('change', search);
+  label.append(box, text);
+  parent.append(label);
+  return box;
 }
 
 function buildPanel(){
@@ -153,6 +187,11 @@ function buildPanel(){
     timer = setTimeout(search, PAUSE);
   });
 
+  const switches = document.createElement('div');
+  switches.className = 'search-switches';
+  caseBox = makeSwitch(switches, 'Groß- und Kleinschreibung beachten');
+  fuzzyBox = makeSwitch(switches, 'Leerzeichen, Bindestriche und Punkte ignorieren');
+
   summary = document.createElement('p');
   summary.className = 'search-summary';
   summary.setAttribute('role', 'status');
@@ -160,7 +199,7 @@ function buildPanel(){
   list = document.createElement('ol');
   list.className = 'search-results';
 
-  panel.append(head, input, summary, list);
+  panel.append(head, input, switches, summary, list);
   document.body.appendChild(panel);
 }
 
@@ -175,7 +214,8 @@ export function openSearch(){
   input.focus();
 }
 
-// Closes the panel and forgets its term and results.
+// Closes the panel and forgets its term and results; the switches keep
+// their state.
 export function closeSearch(){
   if (!panel) return;
   clearTimeout(timer);
@@ -187,9 +227,10 @@ export function closeSearch(){
   if (hadFocus) document.activeElement.blur();
 }
 
-// Where a "/" is text: a field, a list of choices, anything editable.
+// Where a "/" is text: a field, a list of choices, anything editable; not a
+// checkbox or a radio button, which take no text.
 const typesText = el => !!el && el.nodeType === 1 &&
-  (!!el.closest('input, textarea, select') || el.isContentEditable);
+  (!!el.closest('input:not([type="checkbox"], [type="radio"]), textarea, select') || el.isContentEditable);
 
 export function registerSearch(){
   buildPanel();

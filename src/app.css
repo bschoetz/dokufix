@@ -543,6 +543,10 @@
     border:1px solid #c7c7cc;border-radius:4px;
   }
   .search-input:focus{outline:2px solid #1c1c1e;outline-offset:-1px}
+  /* The two switches below the field, one per line. */
+  .search-switches{display:flex;flex-direction:column;gap:2px;padding:8px 14px 0}
+  .search-switch{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
+  .search-switch input{margin:0}
   .search-summary{padding:8px 14px 6px;font-size:12px;color:#6e6e73}
   .search-summary:empty{padding:0}
   .search-results{flex:1;min-height:0;overflow-y:auto;list-style:none;border-top:1px solid #e5e5ea}

@@ -36,7 +36,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Fußnoten mit Vorschau
 - **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten
 
-Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin.
+Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe.
 
 ## Wie das hier zusammenspielt
 

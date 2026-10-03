@@ -2,48 +2,99 @@
 // Where a term occurs in the text of one place of the document, as ranges of
 // that text, and the part of the text a result shows around them. The places
 // and their text come from search-places.js, the panel that shows the results
-// from search.js.
+// from search.js; the table filter is to use it as well (epic 5, story 11), so
+// what the comparison does comes in as options, not as the panel's state.
 //
 //   findHits('tabelle', 'Eine Tabelle, noch eine Tabelle.')
 //     → [{ start: 5, end: 12 }, { start: 24, end: 31 }]
+//   findHits('statuschip', 'ein Status-Chip.', { fuzzy: true })
+//     → [{ start: 4, end: 15 }]
+//   findHits('tabelle', 'Tabelle', { caseSensitive: true }) → []
 //
 // The term is compared as the free-text filter compares it (filter.js): blanks
 // collapsed and none at its ends, case ignored, German rules of case
-// (toLocaleLowerCase('de')). Lowercasing can change the length of a text, "İ"
-// becomes "i̇", two UTF-16 units; so the text is lowered one character at a
-// time and each lowered unit remembers the character it came from. A range is
-// always one of the original text, and covers whole characters of it.
+// (toLocaleLowerCase('de')). Two options change that:
+// - caseSensitive: case counts; nothing is lowered.
+// - fuzzy, light fuzzy: white space, hyphens (-, U+2010, U+2011, the soft
+//   hyphen U+00AD) and dots are ignored in the term and in the text, so
+//   "statuschip", "Status Chip" and "status.chip" find "Status-Chip". Nothing
+//   else: no umlaut folded, "oe" is no "ö", no letters swapped.
+// Lowering can change the length of a text, "İ" becomes "i̇", two UTF-16
+// units, and fuzzy leaves characters out; so the text is compared one
+// character at a time, and each unit compared remembers the character it came
+// from. A range is always one of the original text and covers whole
+// characters of it; a fuzzy hit spans from its first to its last matched
+// character, the ignored ones between them included, none before or after.
+//
+// A term too short is not searched (tooShort()): it needs three letters or
+// digits, unless it holds another character, an emoji, "#", or "-" without
+// fuzzy, or is "ae", "oe", "ue" or "ss" in any case. A blank is neither a
+// letter nor another character, so "a b" is too short. Under fuzzy the rule
+// applies to what is compared: "S-C" is too short.
 //
 // Pure logic: strings in, numbers out.
 
 // White space collapsed, none at the ends.
 const tidy = text => String(text).replace(/\s+/g, ' ').trim();
 
-// The text lowered, and for each unit of the result where the character it
-// came from starts and ends in the original text.
-function lowered(text){
-  let low = '';
+// The characters light fuzzy ignores, in the term and in the text.
+const IGNORED = /^[\s\-\u2010\u2011\u00AD.]$/u;
+
+// The text as it is compared, and for each unit of it where the character it
+// came from starts and ends in the original text: lowered unless case counts,
+// without the characters fuzzy ignores.
+function compared(text, { caseSensitive = false, fuzzy = false } = {}){
+  let out = '';
   const from = [], to = [];
   let at = 0;
   for (const ch of text){
-    const part = ch.toLocaleLowerCase('de');
-    for (let k = 0; k < part.length; k++){ from.push(at); to.push(at + ch.length); }
-    low += part;
+    if (!(fuzzy && IGNORED.test(ch))){
+      const part = caseSensitive ? ch : ch.toLocaleLowerCase('de');
+      for (let k = 0; k < part.length; k++){ from.push(at); to.push(at + ch.length); }
+      out += part;
+    }
     at += ch.length;
   }
-  return { low, from, to };
+  return { out, from, to };
+}
+
+// The term as it is compared: tidied, without what fuzzy ignores.
+const termOf = (term, fuzzy) => {
+  const t = tidy(term);
+  return fuzzy ? Array.from(t).filter(ch => !IGNORED.test(ch)).join('') : t;
+};
+
+// The short terms searched all the same: the usual spellings of ä, ö, ü, ß.
+const EXEMPT = new Set(['ae', 'oe', 'ue', 'ss']);
+// How many letters or digits a term needs.
+const MIN_LETTERS = 3;
+
+// Whether a term is too short to be searched, by the rule above. An empty
+// term is too short as well; the panel says nothing for an empty field before
+// it asks.
+export function tooShort(term, { fuzzy = false } = {}){
+  const t = termOf(term, fuzzy);
+  if (EXEMPT.has(t.toLowerCase())) return false;
+  let letters = 0;
+  for (const ch of t){
+    if (/[\p{L}\p{N}]/u.test(ch)) letters++;
+    // A combining mark belongs to its letter; a blank is neither.
+    else if (!/[\s\p{M}]/u.test(ch)) return false;
+  }
+  return letters < MIN_LETTERS;
 }
 
 // Every occurrence of the term in the text, in order and not overlapping, as
 // { start, end } of the text: end is the index after the hit. [] for an empty
-// term and for a term that does not occur.
-export function findHits(term, text){
-  const wanted = lowered(tidy(term)).low;
+// term, one that fuzzy leaves empty, and a term that does not occur. Whether
+// the term is long enough is tooShort()'s to say, not this.
+export function findHits(term, text, options = {}){
+  const wanted = compared(termOf(term, options.fuzzy), options).out;
   if (!wanted) return [];
-  const { low, from, to } = lowered(String(text));
+  const { out, from, to } = compared(String(text), options);
   const hits = [];
   let end = 0;
-  for (let i = low.indexOf(wanted); i >= 0; i = low.indexOf(wanted, i + 1)){
+  for (let i = out.indexOf(wanted); i >= 0; i = out.indexOf(wanted, i + 1)){
     const start = from[i];
     // A hit that begins inside the character the last one ended in.
     if (start < end) continue;

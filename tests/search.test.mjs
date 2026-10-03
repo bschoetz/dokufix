@@ -11,9 +11,10 @@
 //
 // The cases are the rows of the story's matrix that need no layout: the hit
 // ranges, a text whose length changes when it is lowered, the part a result
-// shows, and which places there are with which text. That "/" opens the
-// panel, the summary and the marks in a browser, a click that scrolls and a
-// saved file without the panel are for the browser runs (tests/vergleich.mjs,
+// shows, and which places there are with which text; and, of story 2, case,
+// light fuzzy and the minimum length. That "/" opens the panel, the summary,
+// the marks and the switches in a browser, a click that scrolls and a saved
+// file without the panel are for the browser runs (tests/vergleich.mjs,
 // tests/speichern.mjs).
 
 import test from 'node:test';
@@ -22,7 +23,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
-import { findHits, excerpt } from '../src/app/search-match.js';
+import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
 import { collectPlaces } from '../src/app/search-places.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
@@ -82,6 +83,118 @@ test('findHits: where lowering changes the length, ranges are still ranges of th
   assert.deepEqual(covered('STRAẞE', findHits('straße', 'STRAẞE')), ['STRAẞE']);
   const emoji = '🚧 Baustelle 🚧 BAUSTELLE';
   assert.deepEqual(covered(emoji, findHits('baustelle', emoji)), ['Baustelle', 'BAUSTELLE']);
+});
+
+// ---------- the switches: case and light fuzzy (story 2) ----------
+test('findHits, light fuzzy: a term without its hyphen finds the word with it, the hit over the whole word', () => {
+  const text = 'ein Status-Chip.';
+  assert.deepEqual(findHits('statuschip', text, { fuzzy: true }), [{ start: 4, end: 15 }]);
+  assert.deepEqual(covered(text, findHits('statuschip', text, { fuzzy: true })), ['Status-Chip']);
+  assert.equal(covered(text, findHits('statuschip', text, { fuzzy: true }))[0].length, 11);
+});
+
+test('findHits, fuzzy off: a term without the hyphen does not find the word with it', () => {
+  assert.deepEqual(findHits('statuschip', 'Status-Chip'), []);
+  assert.deepEqual(findHits('statuschip', 'Status-Chip', { fuzzy: false }), []);
+});
+
+test('findHits, light fuzzy: blanks, hyphens and dots in the term are ignored as well', () => {
+  const text = 'ein Status-Chip.';
+  for (const term of ['Status Chip', 'status.chip', 'Status-Chip', 'sta-tus. chip', ' status chip ']){
+    assert.deepEqual(findHits(term, text, { fuzzy: true }), [{ start: 4, end: 15 }], term);
+  }
+});
+
+test('findHits, light fuzzy: every character it ignores, between the matched ones and not before or after them', () => {
+  // A blank, a no-break space, "-", U+2010, U+2011, the soft hyphen and a dot.
+  for (const gap of [' ', '\u00A0', '-', '\u2010', '\u2011', '\u00AD', '.', ' - ', '..']){
+    const text = 'x' + gap + 'Sta' + gap + 'tus' + gap + 'y';
+    assert.deepEqual(covered(text, findHits('status', text, { fuzzy: true })), ['Sta' + gap + 'tus'], JSON.stringify(gap));
+  }
+  // Ignored characters around the hit are no part of it.
+  const text = '-. Status .-';
+  assert.deepEqual(covered(text, findHits('status', text, { fuzzy: true })), ['Status']);
+  // Every hit, not overlapping, ranges of the original text.
+  const two = 'Status-Chip und STATUS CHIP und status.chip';
+  assert.deepEqual(covered(two, findHits('statuschip', two, { fuzzy: true })), ['Status-Chip', 'STATUS CHIP', 'status.chip']);
+});
+
+test('findHits, light fuzzy: nothing else is ignored or folded, no umlaut, no "oe" for "ö", no letters swapped', () => {
+  assert.deepEqual(findHits('Groesse', 'Größe', { fuzzy: true }), []);
+  assert.deepEqual(findHits('Große', 'Groesse', { fuzzy: true }), []);
+  assert.deepEqual(findHits('Strasse', 'Straße', { fuzzy: true }), []);
+  assert.deepEqual(findHits('Tabelle', 'Tabllee', { fuzzy: true }), []);
+  assert.deepEqual(findHits('a_b', 'ab', { fuzzy: true }), []);
+  assert.deepEqual(findHits('a/b', 'ab', { fuzzy: true }), []);
+});
+
+test('findHits, light fuzzy: a word broken by emphasis is one string in its place, and found', () => {
+  const [place] = collectPlaces(rootWith('<p>ein Sta<em>tus</em>-Chip.</p>'));
+  assert.equal(place.text, 'ein Status-Chip.');
+  assert.deepEqual(covered(place.text, findHits('statuschip', place.text, { fuzzy: true })), ['Status-Chip']);
+});
+
+test('findHits, case-sensitive: case counts, in the term and in the text', () => {
+  assert.deepEqual(findHits('tabelle', 'Tabelle', { caseSensitive: true }), []);
+  assert.deepEqual(findHits('Tabelle', 'Tabelle', { caseSensitive: true }), [{ start: 0, end: 7 }]);
+  const text = 'TABELLE und tabelle und Tabelle';
+  assert.deepEqual(covered(text, findHits('Tabelle', text, { caseSensitive: true })), ['Tabelle']);
+  assert.deepEqual(covered(text, findHits('tabelle', text, { caseSensitive: false })), ['TABELLE', 'tabelle', 'Tabelle']);
+});
+
+test('findHits, case-sensitive and light fuzzy: the hyphen is ignored, the case is not', () => {
+  assert.deepEqual(findHits('Status-chip', 'Status-Chip', { caseSensitive: true, fuzzy: true }), []);
+  assert.deepEqual(findHits('Status chip', 'Status-Chip', { caseSensitive: true, fuzzy: true }), []);
+  assert.deepEqual(findHits('StatusChip', 'Status-Chip', { caseSensitive: true, fuzzy: true }), [{ start: 0, end: 11 }]);
+});
+
+test('findHits, light fuzzy: a term it leaves empty finds nothing', () => {
+  assert.deepEqual(findHits('-.-', 'a-.-b', { fuzzy: true }), []);
+  assert.deepEqual(findHits(' . ', 'a . b', { fuzzy: true }), []);
+});
+
+test('findHits: where lowering changes the length, ranges stay ranges of the original text with fuzzy and with case', () => {
+  const text = 'İstanbul, Status-Chip, İSTANBUL';
+  assert.deepEqual(covered(text, findHits('statuschip', text, { fuzzy: true })), ['Status-Chip']);
+  assert.deepEqual(covered(text, findHits('İstanbul', text, { fuzzy: true })), ['İstanbul', 'İSTANBUL']);
+  assert.deepEqual(covered(text, findHits('İstanbul', text, { caseSensitive: true })), ['İstanbul']);
+  assert.deepEqual(covered(text, findHits('status-chip', text, { caseSensitive: true })), []);
+  const emoji = '🚧 Bau-stelle 🚧';
+  assert.deepEqual(covered(emoji, findHits('baustelle', emoji, { fuzzy: true })), ['Bau-stelle']);
+});
+
+// ---------- the minimum length (story 2) ----------
+test('tooShort: fewer than three letters or digits is too short, umlauts are letters, a blank is neither', () => {
+  for (const term of ['T', 'Ta', 'ä', 'Äh', '12', 'a b', ' a ', '1 2', 'ß']) assert.equal(tooShort(term), true, term);
+  for (const term of ['Tab', 'abc', 'äöü', '123', 'a b c', 'Ta1']) assert.equal(tooShort(term), false, term);
+});
+
+test('tooShort: "ae", "oe", "ue" and "ss" in any case are searched', () => {
+  for (const term of ['ae', 'oe', 'ue', 'ss', 'OE', 'Oe', 'oE', 'SS', 'Ue', ' oe ']) assert.equal(tooShort(term), false, term);
+  for (const term of ['ae', 'OE']) assert.equal(tooShort(term, { fuzzy: true }), false, term);
+  assert.equal(tooShort('ou'), true);
+  assert.equal(tooShort('o e'), true);
+});
+
+test('tooShort: a term with another character is searched, however short', () => {
+  for (const term of ['🟢', 'C#', '#', '-', 'a-', '§', '%', '€', '/']) assert.equal(tooShort(term), false, term);
+});
+
+test('tooShort, light fuzzy: the rule applies to what is compared', () => {
+  assert.equal(tooShort('S-C'), false);
+  assert.equal(tooShort('S-C', { fuzzy: true }), true);
+  assert.equal(tooShort('S.C', { fuzzy: true }), true);
+  assert.equal(tooShort('S-C-D', { fuzzy: true }), false);
+  assert.equal(tooShort('o-e', { fuzzy: true }), false);
+  assert.equal(tooShort('-.-', { fuzzy: true }), true);
+  assert.equal(tooShort('C#', { fuzzy: true }), false);
+});
+
+test('tooShort: an empty term, or one of blanks, is too short; case does not matter to the rule', () => {
+  assert.equal(tooShort(''), true);
+  assert.equal(tooShort('   '), true);
+  assert.equal(tooShort('Ta', { caseSensitive: true }), true);
+  assert.equal(tooShort('OE', { caseSensitive: true }), false);
 });
 
 // ---------- the part a result shows ----------

@@ -1979,6 +1979,49 @@ async function assertSearch(page, check){
   const empty = await search('');
   check('search: an emptied field says nothing and lists nothing', empty.summary === '' && empty.results.length === 0, json(empty.summary) + ', ' + empty.results.length);
 
+  // --- the switches and the minimum length (story 2): a flipped switch searches again at once
+  const SWITCH_SEL = 'body > .search-panel .search-switch input[type="checkbox"]';
+  const TOO_SHORT = 'Zu kurz: mindestens drei Buchstaben oder Ziffern';
+  const expectedWith = (term, options) => collectPlaces(root).map(p => ({ text: p.text, hits: findHits(term, p.text, options).length })).filter(p => p.hits);
+  const summaryOf = places => { const n = places.reduce((k, p) => k + p.hits, 0); return n ? n + ' Treffer an ' + places.length + (places.length === 1 ? ' Stelle' : ' Stellen') : 'Keine Treffer'; };
+  const flip = async n => {
+    await page.evaluate(t => { document.querySelector('body > .search-panel [role="status"]').textContent = t; }, PENDING);
+    await page.locator(SWITCH_SEL).nth(n).click();
+    await page.waitForFunction(t => document.querySelector('body > .search-panel [role="status"]').textContent !== t, PENDING, { timeout: 5000 }).catch(() => {});
+    return panelFacts();
+  };
+  const switchStates = () => page.locator(SWITCH_SEL).evaluateAll(els => els.map(el => el.checked));
+  const startStates = await switchStates();
+  check('search: two switches below the field, case-sensitive and light fuzzy, both off', sameList(startStates, [false, false]), json(startStates));
+  const plainChip = await search('statuschip');
+  const fuzzyChip = await flip(1);
+  const wantChip = expectedWith('statuschip', { fuzzy: true });
+  const wantPlainChip = expectedWith('statuschip', {});
+  const fuzzyStrip = t => t.replace(/[\s\-\u2010\u2011\u00AD.]/gu, '').toLowerCase();
+  check('search: "statuschip" finds only itself so written; light fuzzy flipped on lists, without typing again, every place with "Status-Chip" as well, all eleven characters marked',
+    plainChip.summary === summaryOf(wantPlainChip) && wantChip.length > wantPlainChip.length && fuzzyChip.summary === summaryOf(wantChip) && fuzzyChip.results.length === wantChip.length &&
+      fuzzyChip.results.some(r => r.marks.includes('Status-Chip')) && fuzzyChip.results.every(r => r.marks.length >= 1 && r.marks.every(m => fuzzyStrip(m) === 'statuschip')),
+    json({ plain: plainChip.summary, fuzzy: fuzzyChip.summary, expected: summaryOf(wantChip), marks: fuzzyChip.results.map(r => r.marks) }));
+  await flip(1);
+  const short = await search('Ta');
+  check('search: "Ta" lists nothing and the summary says it is too short', short.summary === TOO_SHORT && short.results.length === 0, json(short.summary) + ', ' + short.results.length);
+  const oe = await search('oe');
+  const wantOe = expectedWith('oe', {});
+  check('search: "oe" is searched although it has two letters' + (opts.demo ? ', and lists the one place of the demo text that holds it' : ''),
+    oe.summary === summaryOf(wantOe) && oe.results.length === wantOe.length && (!opts.demo || (wantOe.length === 1 && oe.results[0].text.includes('Goethe'))),
+    json(oe.summary) + ', ' + json(oe.results.map(r => r.text)));
+  await search('tabelle');
+  const caseOn = await flip(0);
+  const caseTyped = await search(SEARCH_TERM);
+  const wantCase = expectedWith(SEARCH_TERM, { caseSensitive: true });
+  check('search: case-sensitive flipped on, "tabelle" finds nothing; "' + SEARCH_TERM + '" lists the places that hold it so written',
+    expectedWith('tabelle', { caseSensitive: true }).length === 0 && caseOn.summary === 'Keine Treffer' && caseOn.results.length === 0 &&
+      caseTyped.summary === summaryOf(wantCase) && caseTyped.results.length === wantCase.length && caseTyped.results.every(r => r.marks.every(m => m === SEARCH_TERM)),
+    json({ lower: caseOn.summary, typed: caseTyped.summary, expected: summaryOf(wantCase) }));
+  await flip(0);
+  const endStates = await switchStates();
+  check('search: both switches are off again', sameList(endStates, [false, false]), json(endStates));
+
   // --- a click scrolls to the place, and the panel stays open
   await search(SEARCH_TERM);
   const target = want[want.length - 1];
