@@ -43,8 +43,33 @@
 .search-switch input{margin:0}
 .search-summary{padding:8px 14px 6px;font-size:12px;color:#6e6e73}
 .search-summary:empty{padding:0}
-.search-results{flex:1;min-height:0;overflow-y:auto;list-style:none;border-top:1px solid #e5e5ea}
+.search-results{flex:1;min-height:0;overflow-y:auto;list-style:none;margin:0;padding:0;border-top:1px solid #e5e5ea}
 .search-results:empty{border-top:0}
+/* The results under their group headings: one group per heading H2 to H4 of
+   the rail, nested as the headings are. A group heading is one line of 28 px,
+   its label cut with "…" where it is too long, its numbers on the right. It
+   sticks at the top of the list while its group scrolls under it, stacked by
+   depth: the outermost at the top, the one below it 28 px lower, the third
+   56 px lower; a heading leaves with the last result of its group. An outer
+   heading lies above the ones below it (z-index 3, 2, 1 by depth), so a
+   heading that leaves slides under its parent's, not over it. Indented by
+   level, and the results of a group with it. */
+.search-group-list{list-style:none;margin:0;padding:0}
+.search-group-head{
+  position:sticky;top:0;z-index:3;
+  display:flex;align-items:baseline;gap:8px;
+  box-sizing:border-box;height:28px;padding:5px 14px;
+  background:#f7f7fa;border-bottom:1px solid #e5e5ea;
+  font-size:12px;line-height:17px;white-space:nowrap;
+}
+.search-group .search-group > .search-group-head{top:28px;z-index:2}
+.search-group .search-group .search-group > .search-group-head{top:56px;z-index:1}
+.search-group-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700}
+.search-group-count{flex:none;color:#6e6e73}
+.search-group-h3 > .search-group-head,
+.search-group-h3 > .search-group-list > li > .search-result{padding-left:26px}
+.search-group-h4 > .search-group-head,
+.search-group-h4 > .search-group-list > li > .search-result{padding-left:38px}
 .search-result{
   display:block;width:100%;text-align:left;cursor:pointer;
   background:none;border:0;border-bottom:1px solid #e5e5ea;

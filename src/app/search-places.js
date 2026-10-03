@@ -2,7 +2,7 @@ import { ELEMENT, TEXT } from './nodes.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACET_BAR_CLASS, isFootnoteMarker } from './facets.js';
 import { STEP_NUMBER_CLASS } from './steps.js';
-import { headingLabelText } from './toc.js';
+import { documentHeadings, headingLabelText } from './toc.js';
 import { TRANSIENT_ATTR } from './transient.js';
 
 // --- Search: the places --------------------------------------------------------
@@ -106,4 +106,90 @@ export function collectPlaces(root){
   };
   visit(root);
   return places;
+}
+
+// --- Search: the results under their headings ---------------------------------
+// The results of a search, grouped under the headings they stand under.
+//
+//   groupResults(root, results) → { groups: [group, …], sections }
+//   results: [{ el, hits, … }, …], in the order of the document: el a place
+//     under root (any element), hits how many hits it holds
+//   group:   { heading, level, label, results, children, hits, places }
+//
+// The group headings are exactly the headings the rail lists (rail.js): the
+// headings of the document (documentHeadings() in toc.js) of the levels H2 to
+// H4, labelled as their entries are, with what a heading's place text leaves
+// out left out as well (headingText() above). A result belongs to the last of
+// them before it in the order of the document; a heading that holds the term
+// is a result in its own group. An H5 or H6 heading and what stands under it
+// belong to the H4 (or H3, H2) above it; a heading inside a callout is no group
+// heading, so a result in it belongs to the group the callout stands in.
+//
+// What stands before the first group heading forms a group of its own: first,
+// at the level of an H2, labelled with the text of the H1 before it, else
+// FIRST_GROUP_LABEL. An H3 or H4 before the first H2 is a child of it.
+//
+// A group is listed when it holds a result or one of its children is listed;
+// its results, the ones that belong to it, in the order of the document, stand
+// before its children. hits and places count its branch: its own results and
+// those of every group below it, so a parent listed only for its children
+// does not read "0 Treffer". sections counts the listed groups that hold a
+// result of their own.
+//
+// The groups go by the order of the document alone, not by the kind of a
+// place: any element under root can be a result. Pure logic, like
+// collectPlaces(): it reads root and changes nothing in it.
+
+export const FIRST_GROUP_LABEL = 'Am Anfang';
+const GROUP_TAG = /^H[234]$/;
+
+const levelOf = h => Number(tagOf(h).slice(1));
+const makeGroup = (heading, level, label) => ({ heading, level, label, results: [], children: [], hits: 0, places: 0 });
+
+export function groupResults(root, results){
+  const heads = documentHeadings(root);
+  const groupHeads = new Set(heads.filter(h => GROUP_TAG.test(tagOf(h))));
+  const titles = new Set(heads.filter(h => tagOf(h) === 'H1'));
+  const byEl = new Map();
+  for (const r of results){
+    if (!byEl.has(r.el)) byEl.set(r.el, []);
+    byEl.get(r.el).push(r);
+  }
+
+  const first = makeGroup(null, 2, '');
+  let title = null;
+  const top = [first];
+  // The open groups, outermost first: where the next heading's group goes.
+  const open = [first];
+  let current = first;
+  const visit = node => {
+    for (let el = node.firstElementChild; el; el = el.nextElementSibling){
+      if (groupHeads.has(el)){
+        const level = levelOf(el);
+        while (open.length && open[open.length - 1].level >= level) open.pop();
+        current = makeGroup(el, level, headingText(el));
+        (open.length ? open[open.length - 1].children : top).push(current);
+        open.push(current);
+      } else if (!title && titles.has(el) && current === first){
+        title = el;
+      }
+      const own = byEl.get(el);
+      if (own) current.results.push(...own);
+      visit(el);
+    }
+  };
+  visit(root);
+  first.label = (title && headingText(title)) || FIRST_GROUP_LABEL;
+
+  let sections = 0;
+  // Counts a group's branch and keeps it when it holds anything; false to drop it.
+  const keep = group => {
+    group.children = group.children.filter(keep);
+    group.places = group.results.length;
+    group.hits = group.results.reduce((n, r) => n + r.hits, 0);
+    for (const child of group.children){ group.places += child.places; group.hits += child.hits; }
+    if (group.results.length) sections++;
+    return group.places > 0;
+  };
+  return { groups: top.filter(keep), sections };
 }

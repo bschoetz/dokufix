@@ -500,7 +500,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     const withSearch = path.join(dir, 'suche-offen.html');
     const searchState = page => page.evaluate(() => {
       const p = document.querySelector('body > .search-panel');
-      return p ? { open: !p.hidden, term: p.querySelector('input').value, results: p.querySelectorAll('.search-results > li').length } : null;
+      return p ? { open: !p.hidden, term: p.querySelector('input').value, results: p.querySelectorAll('.search-results .search-result').length } : null;
     });
     o = await open(browser, opts.file);
     await o.page.evaluate(text => {
@@ -513,7 +513,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await o.page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
     await o.page.keyboard.press('/');
     await o.page.keyboard.type('Abschnitt');
-    await o.page.waitForFunction(() => document.querySelectorAll('body > .search-panel .search-results > li').length > 0, null, { timeout: 5000 }).catch(() => {});
+    await o.page.waitForFunction(() => document.querySelectorAll('body > .search-panel .search-results .search-result').length > 0, null, { timeout: 5000 }).catch(() => {});
     const searchOpen = await searchState(o.page);
     // Through the DOM: in read mode the toolbar is hidden, and leaving read mode closes the panel.
     const [searchDownload] = await Promise.all([

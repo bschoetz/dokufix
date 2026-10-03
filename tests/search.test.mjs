@@ -12,8 +12,10 @@
 // The cases are the rows of the story's matrix that need no layout: the hit
 // ranges, a text whose length changes when it is lowered, the part a result
 // shows, and which places there are with which text; and, of story 2, case,
-// light fuzzy and the minimum length. That "/" opens the panel, the summary,
-// the marks and the switches in a browser, a click that scrolls and a saved
+// light fuzzy and the minimum length; of story 4, the results grouped under
+// the headings, with the numbers of each branch. That "/" opens the panel, the
+// summary, the marks and the switches in a browser, the group headings that
+// stay at the top while the list scrolls, a click that scrolls and a saved
 // file without the panel are for the browser runs (tests/vergleich.mjs,
 // tests/speichern.mjs).
 
@@ -24,7 +26,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
-import { collectPlaces } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, FIRST_GROUP_LABEL } from '../src/app/search-places.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
 import { TRANSIENT_ATTR } from '../src/app/transient.js';
@@ -330,6 +332,105 @@ test('a search over the places: one result per place that holds the term, every 
   const root = rootWith('<h2>Tabellen</h2>\n<p>Eine Tabelle und noch eine tabelle.</p>\n<p>Keine hier.</p>\n<ul>\n<li>TABELLE</li>\n</ul>\n<table><tbody><tr><td>Tabelle</td></tr></tbody></table>\n');
   const found = collectPlaces(root).map(p => ({ tag: p.el.tagName, hits: findHits('tabelle', p.text).length })).filter(r => r.hits);
   assert.deepEqual(found, [{ tag: 'H2', hits: 1 }, { tag: 'P', hits: 2 }, { tag: 'LI', hits: 1 }]);
+});
+
+// ---------- the results under their headings (story 4) ----------
+// The groups of a search for term over the fragment, as plain data: level,
+// label, the numbers of the branch, the text of each own result, the children.
+function grouped(html, term){
+  const root = rootWith(html);
+  const found = collectPlaces(root).map(p => ({ el: p.el, text: p.text, hits: findHits(term, p.text).length })).filter(r => r.hits);
+  const { groups, sections } = groupResults(root, found);
+  const shape = g => ({ level: g.level, label: g.label, hits: g.hits, places: g.places, results: g.results.map(r => r.text), children: g.children.map(shape) });
+  return { groups: groups.map(shape), sections };
+}
+const group = (level, label, hits, places, results, children = []) => ({ level, label, hits, places, results, children });
+
+test('groupResults, two depths: the first H2 with its result; the second H2 as parent, without own results, with its H3; numbers per branch', () => {
+  const html = '<h1>Titel</h1>\n<h2>Eins</h2>\n<p>Eine Tabelle.</p>\n<h2>Zwei</h2>\n<p>Nichts hier.</p>\n<h3>Drei</h3>\n<p>Tabelle und Tabelle.</p>\n<ul>\n<li>Noch eine Tabelle</li>\n</ul>\n<h3>Vier</h3>\n<p>Leer.</p>\n<h2>Fünf</h2>\n';
+  assert.deepEqual(grouped(html, 'Tabelle'), {
+    groups: [
+      group(2, 'Eins', 1, 1, ['Eine Tabelle.']),
+      group(2, 'Zwei', 3, 2, [], [group(3, 'Drei', 3, 2, ['Tabelle und Tabelle.', 'Noch eine Tabelle'])]),
+    ],
+    sections: 2,
+  });
+});
+
+test('groupResults, before the first H2: a group of its own, first, at the level of an H2, labelled with the H1', () => {
+  const html = '<h1>Willkommen</h1>\n<p>Eine Tabelle vorab.</p>\n<h2>Teil</h2>\n<p>Die Tabelle im Teil.</p>\n';
+  assert.deepEqual(grouped(html, 'Tabelle'), {
+    groups: [group(2, 'Willkommen', 1, 1, ['Eine Tabelle vorab.']), group(2, 'Teil', 1, 1, ['Die Tabelle im Teil.'])],
+    sections: 2,
+  });
+  // The H1 that holds the term is a result of that group.
+  assert.deepEqual(grouped('<h1>Tabellen</h1>\n<p>Text.</p>\n<h2>Teil</h2>\n', 'Tabelle').groups, [group(2, 'Tabellen', 1, 1, ['Tabellen'])]);
+});
+
+test('groupResults, no H1: the first group is "' + FIRST_GROUP_LABEL + '"', () => {
+  assert.equal(FIRST_GROUP_LABEL, 'Am Anfang');
+  assert.deepEqual(grouped('<p>Eine Tabelle vorab.</p>\n<h2>Teil</h2>\n<p>Tabelle.</p>\n', 'Tabelle').groups,
+    [group(2, 'Am Anfang', 1, 1, ['Eine Tabelle vorab.']), group(2, 'Teil', 1, 1, ['Tabelle.'])]);
+  // An H1 after the first H2 labels nothing; an H1 without text neither.
+  assert.equal(grouped('<p>Tabelle.</p>\n<h2>Teil</h2>\n<h1>Spät</h1>\n', 'Tabelle').groups[0].label, 'Am Anfang');
+  assert.equal(grouped('<h1><img src="x.png" alt=""></h1>\n<p>Tabelle.</p>\n', 'Tabelle').groups[0].label, 'Am Anfang');
+});
+
+test('groupResults, the heading holds the term: the heading is a result in its own group', () => {
+  assert.deepEqual(grouped('<h2>Einleitung</h2>\n<p>Text.</p>\n<h2>Status-Chips</h2>\n<p>Ein Status.</p>\n', 'Status'),
+    { groups: [group(2, 'Status-Chips', 2, 2, ['Status-Chips', 'Ein Status.'])], sections: 1 });
+});
+
+test('groupResults, H5 and H6: a result under them is in the H4 group above, and so are the headings', () => {
+  const html = '<h2>A</h2>\n<h3>B</h3>\n<h4>C</h4>\n<h5>D</h5>\n<p>Eine Tabelle.</p>\n<h6>Tabelle sechs</h6>\n<p>Und Tabelle.</p>\n';
+  assert.deepEqual(grouped(html, 'Tabelle'), {
+    groups: [group(2, 'A', 3, 3, [], [group(3, 'B', 3, 3, [], [group(4, 'C', 3, 3, ['Eine Tabelle.', 'Tabelle sechs', 'Und Tabelle.'])])])],
+    sections: 1,
+  });
+});
+
+test('groupResults, a callout\'s heading: a result of the group the callout stands in, no group of its own', () => {
+  const html = '<h2>Hinweise</h2>\n<div class="dokufix-callout dokufix-callout-note" role="note"><p class="dokufix-callout-label">Hinweis</p>\n<h3>Tabelle im Hinweis</h3>\n<p>Text.</p>\n</div>\n<p>Danach eine Tabelle.</p>\n';
+  assert.deepEqual(grouped(html, 'Tabelle'),
+    { groups: [group(2, 'Hinweise', 2, 2, ['Tabelle im Hinweis', 'Danach eine Tabelle.'])], sections: 1 });
+});
+
+test('groupResults, no heading at all: one group "Am Anfang", one section', () => {
+  assert.deepEqual(grouped('<p>Eine Tabelle.</p>\n<p>Noch eine Tabelle.</p>\n', 'Tabelle'),
+    { groups: [group(2, 'Am Anfang', 2, 2, ['Eine Tabelle.', 'Noch eine Tabelle.'])], sections: 1 });
+});
+
+test('groupResults: an H3 or H4 before the first H2 is a child of the first group; an H4 right under an H2 its child', () => {
+  const html = '<h1>Titel</h1>\n<h3>Vorab</h3>\n<p>Tabelle.</p>\n<h2>Teil</h2>\n<h4>Tief</h4>\n<p>Tabelle.</p>\n';
+  assert.deepEqual(grouped(html, 'Tabelle').groups, [
+    group(2, 'Titel', 1, 1, [], [group(3, 'Vorab', 1, 1, ['Tabelle.'])]),
+    group(2, 'Teil', 1, 1, [], [group(4, 'Tief', 1, 1, ['Tabelle.'])]),
+  ]);
+});
+
+test('groupResults: a group heading is labelled as the rail labels it, without footnote, chip word or line break', () => {
+  const root = rootWith('<h2>Frist<sup class="dokufix-fn-host"><a href="#f" data-footnote-ref="">1</a><span class="dokufix-fn-preview">Fußnote.</span></sup> und<br>Ende</h2>\n' +
+    '<h3>Bestellung:<code>🟢 Live</code></h3>\n<p>Eine Tabelle.</p>\n');
+  buildChips(root);
+  const found = collectPlaces(root).filter(p => findHits('Tabelle', p.text).length).map(p => ({ el: p.el, hits: 1 }));
+  const [a] = groupResults(root, found).groups;
+  assert.deepEqual([a.label, a.children[0].label], ['Frist und Ende', 'Bestellung: Live']);
+});
+
+test('groupResults: it goes by the order of the document alone, so any element can be a result, and changes nothing', () => {
+  const root = rootWith('<h2>A</h2>\n<p>Text.</p>\n<h3>B</h3>\n<table><tbody><tr><td>Zelle</td></tr></tbody></table>\n<pre><code>Code</code></pre>\n<h2>C</h2>\n');
+  const before = root.outerHTML;
+  const td = root.querySelector('td'), pre = root.querySelector('pre');
+  const { groups, sections } = groupResults(root, [{ el: td, hits: 2 }, { el: pre, hits: 1 }]);
+  assert.equal(sections, 1);
+  assert.deepEqual(groups.map(g => [g.label, g.hits, g.places, g.children.map(c => [c.label, c.results.map(r => r.el)])]), [['A', 3, 2, [['B', [td, pre]]]]]);
+  assert.equal(root.outerHTML, before);
+  assert.deepEqual(groupResults(root, []), { groups: [], sections: 0 });
+});
+
+test('groupResults: the group headings are those of the rail, H2 to H4 of documentHeadings(); the source says so', () => {
+  assert.match(read('app/rail.js'), /documentHeadings\(root\)\)\.filter\(h => \/\^H\[234\]\$\/\.test\(h\.tagName\)\)/);
+  assert.match(read('app/search-places.js'), /const GROUP_TAG = \/\^H\[234\]\$\/;/);
 });
 
 // ---------- the sources ----------

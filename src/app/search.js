@@ -1,5 +1,5 @@
 import { findHits, excerpt, tooShort } from './search-match.js';
-import { collectPlaces } from './search-places.js';
+import { collectPlaces, groupResults } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { DIAGRAM_SVG_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
@@ -8,8 +8,12 @@ import { largeViewOpen } from './large-view.js';
 // In read mode the key "/" opens a search panel on the right of the window. It
 // lists one result per place of the document that holds the term, in the
 // order of the document, each with a part of its text and the term marked in
-// it, under a line that says how many hits there are at how many places. A
-// click on a result scrolls the document to its place; the panel stays open.
+// it, under a line that says how many hits there are at how many places in how
+// many sections. The results stand grouped under the headings H2 to H4 the
+// rail lists (groupResults() in search-places.js), each group heading with the
+// hits and places of its branch; a group heading is text, not a button, and
+// stays at the top of the list while its results scroll under it. A click on
+// a result scrolls the document to its place; the panel stays open.
 //
 //   <div class="search-panel" role="search" aria-label="Suche im Dokument" data-dokufix-transient hidden>
 //   <div class="search-head">
@@ -21,9 +25,15 @@ import { largeViewOpen } from './large-view.js';
 //   <label class="search-switch"><input type="checkbox">Groß- und Kleinschreibung beachten</label>
 //   <label class="search-switch"><input type="checkbox">Leerzeichen, Bindestriche und Punkte ignorieren</label>
 //   </div>
-//   <p class="search-summary" role="status">3 Treffer an 2 Stellen</p>
+//   <p class="search-summary" role="status">3 Treffer an 2 Stellen in 2 Abschnitten</p>
 //   <ol class="search-results">
+//   <li class="search-group search-group-h2">
+//   <div class="search-group-head"><span class="search-group-title">Eine Tabelle</span><span class="search-group-count">2 Treffer an 1 Stelle</span></div>
+//   <ol class="search-group-list">
 //   <li><button type="button" class="search-result">… eine <mark>Tabelle</mark> mit …</button></li>
+//   <li class="search-group search-group-h3">…</li>
+//   </ol>
+//   </li>
 //   </ol>
 //   </div>
 //
@@ -94,12 +104,15 @@ const TOO_SHORT = 'Zu kurz: mindestens drei Buchstaben oder Ziffern';
 // How the switches say the term is compared.
 const matchOptions = () => ({ caseSensitive: caseBox.checked, fuzzy: fuzzyBox.checked });
 
+// How many hits at how many places: the numbers of a group heading.
+const countText = (hits, places) => hits + ' Treffer an ' + places + (places === 1 ? ' Stelle' : ' Stellen');
+
 // What the line above the results says: "" for no term.
-function summaryText(term, hits, places, short){
+function summaryText(term, hits, places, sections, short){
   if (!term.trim()) return '';
   if (short) return TOO_SHORT;
   if (!places) return 'Keine Treffer';
-  return hits + ' Treffer an ' + places + (places === 1 ? ' Stelle' : ' Stellen');
+  return countText(hits, places) + ' in ' + sections + (sections === 1 ? ' Abschnitt' : ' Abschnitten');
 }
 
 // The part of a place's text a result shows, with its hits marked.
@@ -118,6 +131,45 @@ function previewOf(text, hits){
   if (at < part.text.length) frag.append(part.text.slice(at));
   if (part.cutEnd) frag.append(' …');
   return frag;
+}
+
+// A result: a button with the part of its place's text, which scrolls the
+// document to the place.
+function resultItem({ place, at }){
+  const li = document.createElement('li');
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'search-result';
+  button.append(previewOf(place.text, at));
+  button.addEventListener('click', () => {
+    // The root was rendered anew since: search it again.
+    if (!place.el.isConnected){ search(); return; }
+    place.el.scrollIntoView({ block: 'center' });
+  });
+  li.append(button);
+  return li;
+}
+
+// A group: its heading with the numbers of its branch, then its own results
+// and the groups below it.
+function groupItem(group){
+  const li = document.createElement('li');
+  li.className = 'search-group search-group-h' + group.level;
+  const head = document.createElement('div');
+  head.className = 'search-group-head';
+  const title = document.createElement('span');
+  title.className = 'search-group-title';
+  title.textContent = group.label;
+  title.title = group.label;
+  const count = document.createElement('span');
+  count.className = 'search-group-count';
+  count.textContent = countText(group.hits, group.places);
+  head.append(title, count);
+  const list = document.createElement('ol');
+  list.className = 'search-group-list';
+  list.append(...group.results.map(resultItem), ...group.children.map(groupItem));
+  li.append(head, list);
+  return li;
 }
 
 function clearResults(){
@@ -142,26 +194,13 @@ function search(){
       for (const place of root ? collectPlaces(root) : []){
         const at = findHits(term, place.text, options);
         if (!at.length) continue;
-        found.push({ place, at });
+        found.push({ el: place.el, hits: at.length, place, at });
         hits += at.length;
       }
     }
-    const items = found.map(({ place, at }) => {
-      const li = document.createElement('li');
-      const button = document.createElement('button');
-      button.type = 'button';
-      button.className = 'search-result';
-      button.append(previewOf(place.text, at));
-      button.addEventListener('click', () => {
-        // The root was rendered anew since: search it again.
-        if (!place.el.isConnected){ search(); return; }
-        place.el.scrollIntoView({ block: 'center' });
-      });
-      li.append(button);
-      return li;
-    });
-    list.replaceChildren(...items);
-    summary.textContent = summaryText(term, hits, found.length, short);
+    const { groups, sections } = found.length ? groupResults(root, found) : { groups: [], sections: 0 };
+    list.replaceChildren(...groups.map(groupItem));
+    summary.textContent = summaryText(term, hits, found.length, sections, short);
   } catch (err){
     console.error('Suche fehlgeschlagen:', err);
     list.replaceChildren();

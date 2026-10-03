@@ -116,10 +116,11 @@ import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src
 // without coordinates, whether it can be laid out and what it holds, too.
 import { hasCoordinates, bpmnWarningText, BPMN_CREDIT } from '../src/app/bpmn.js';
 import { readProcess } from '../src/app/bpmn-layout.js';
-// Which places of the preview a search lists and how many hits each holds is
-// asked where the product decides it, over the preview read back into linkedom.
+// Which places of the preview a search lists, how many hits each holds and
+// under which group headings they stand is asked where the product decides it,
+// over the preview read back into linkedom.
 import { parseHTML, DOMParser as XmlParser } from 'linkedom';
-import { collectPlaces } from '../src/app/search-places.js';
+import { collectPlaces, groupResults } from '../src/app/search-places.js';
 import { findHits } from '../src/app/search-match.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
 
@@ -1929,16 +1930,23 @@ async function assertFilters(page, check, exp, key){
   }
 }
 
-// The search of the reading view (epic 5, stories 1 to 3), in the editor file
+// The search of the reading view (epic 5, stories 1 to 4), in the editor file
 // and in `schlank` and `kompakt`: "/" opens the panel, typed terms list one
-// result per place of the content that holds them, a click scrolls to its
-// place, the panel stays open; the close button closes it and forgets the
-// term, and in the editor file so does leaving read mode; a "/" in a field is
-// typed. Which places there are and how many hits each holds the run asks
-// collectPlaces() and findHits() of the product, over the content container
-// as the page shows it (the preview, or main.reader-body in an export), read
-// back into linkedom; that the two read the same elements is checked first.
+// result per place of the content that holds them, grouped under the headings
+// H2 to H4 with the numbers of each branch, the group headings stay at the
+// top while the list scrolls, a click scrolls to its place, the panel stays
+// open; the close button closes it and forgets the term, and in the editor
+// file so does leaving read mode; a "/" in a field is typed. Which places
+// there are, how many hits each holds and under which group headings they
+// stand the run asks collectPlaces(), findHits() and groupResults() of the
+// product, over the content container as the page shows it (the preview, or
+// main.reader-body in an export), read back into linkedom; that the two read
+// the same elements is checked first.
 const SEARCH_TERM = 'Tabelle';
+// A term that occurs often in both documents: its list is longer than the panel.
+const LONG_TERM = 'die';
+// The height of a group heading in the panel (src/search.css).
+const GROUP_ROW = 28;
 async function assertSearch(page, check, key){
   const json = JSON.stringify;
   const editor = key === 'mit-editor';
@@ -1954,7 +1962,15 @@ async function assertSearch(page, check, key){
       exists: !!p, transient: !!p && p.hasAttribute('data-dokufix-transient'), inPreview: !!document.querySelector(rootSel + ' .search-panel'),
       shown: !!p && !p.hidden && getComputedStyle(p).display !== 'none', focused: !!input && document.activeElement === input,
       value: input ? input.value : null, summary: p ? p.querySelector('[role="status"]').textContent : null,
-      results: p ? Array.from(p.querySelectorAll('.search-results > li > button')).map(b => ({ text: b.textContent, marks: Array.from(b.querySelectorAll('mark')).map(m => m.textContent) })) : [],
+      results: p ? Array.from(p.querySelectorAll('.search-results .search-result')).map(b => ({ text: b.textContent, marks: Array.from(b.querySelectorAll('mark')).map(m => m.textContent) })) : [],
+      groups: p ? Array.from(p.querySelectorAll('.search-results .search-group')).map(li => {
+        let depth = 0;
+        for (let a = li.parentElement.closest('.search-group'); a; a = a.parentElement.closest('.search-group')) depth++;
+        const head = li.querySelector(':scope > .search-group-head');
+        return { level: Number((li.className.match(/\bsearch-group-h(\d)\b/) || [])[1]), depth,
+          label: head ? head.querySelector('.search-group-title').textContent : null, count: head ? head.querySelector('.search-group-count').textContent : null,
+          own: li.querySelectorAll(':scope > .search-group-list > li > .search-result').length, button: !!li.querySelector(':scope > .search-group-head button') };
+      }) : [],
       label: p ? (p.querySelector('label') || {}).textContent : null,
       panel: box(p), button: box(document.getElementById('edit-btn')), rail: box(document.querySelector('aside.dokufix-rail.has-items')),
       onTop: (() => { if (!p || p.hidden) return false; const r = p.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && p.contains(t); })(),
@@ -1996,16 +2012,35 @@ async function assertSearch(page, check, key){
   const nodeTags = Array.from(root.querySelectorAll(PLACE_SEL)).map(el => el.tagName.toUpperCase());
   check('search: the ' + (editor ? 'preview' : 'content') + ' read back in Node has the paragraphs, items and headings the page has', sameList(browserTags, nodeTags), browserTags.length + ' in the page, ' + nodeTags.length + ' in Node');
   const all = Array.from(root.querySelectorAll(PLACE_SEL));
-  const expected = term => collectPlaces(root).map(p => ({ text: p.text, hits: findHits(term, p.text).length, at: all.indexOf(p.el) })).filter(p => p.hits);
+  const expected = term => collectPlaces(root).map(p => ({ el: p.el, text: p.text, hits: findHits(term, p.text).length, at: all.indexOf(p.el) })).filter(p => p.hits);
+  // The groups the product makes of these places, flat in the order of the
+  // list, each with its depth, label, numbers and own results; the summary.
+  const countOf = (hits, places) => hits + ' Treffer an ' + places + (places === 1 ? ' Stelle' : ' Stellen');
+  const flatGroups = (groups, depth = 0) => groups.flatMap(g => [{ level: g.level, depth, label: g.label, count: countOf(g.hits, g.places), own: g.results.length, button: false }, ...flatGroups(g.children, depth + 1)]);
+  const groupsOf = places => groupResults(root, places);
+  const summaryOf = places => {
+    const n = places.reduce((k, p) => k + p.hits, 0);
+    if (!n) return 'Keine Treffer';
+    const k = groupsOf(places).sections;
+    return countOf(n, places.length) + ' in ' + k + (k === 1 ? ' Abschnitt' : ' Abschnitten');
+  };
   const want = expected(SEARCH_TERM);
-  const wantHits = want.reduce((n, p) => n + p.hits, 0);
-  const wantSummary = wantHits + ' Treffer an ' + want.length + (want.length === 1 ? ' Stelle' : ' Stellen');
+  const wantSummary = summaryOf(want);
   const typed = await search(SEARCH_TERM);
   const strip = t => t.replace(/^… /, '').replace(/ …$/, '');
   const mismatched = typed.results.map((r, i) => (want[i] && want[i].text.includes(strip(r.text)) && r.marks.length >= 1 && r.marks.length <= want[i].hits && r.marks.every(m => m.toLowerCase() === SEARCH_TERM.toLowerCase())) ? null : i + ': ' + json(r)).filter(Boolean);
   check('search: "' + SEARCH_TERM + '" lists one result per place of the ' + (editor ? 'preview' : 'content') + ' that holds it, in order, each a part of its text with the term marked; the summary says "' + wantSummary + '"',
     want.length > 1 && typed.results.length === want.length && typed.summary === wantSummary && mismatched.length === 0,
     'summary ' + json(typed.summary) + ', ' + typed.results.length + ' results, expected ' + want.length + '; ' + mismatched.slice(0, 3).join(' | '));
+  // --- story 4: the results under their headings, each with the numbers of its branch
+  const wantGroups = flatGroups(groupsOf(want).groups);
+  const groupLine = g => '  '.repeat(g.depth) + 'H' + g.level + ' ' + g.label + ' (' + g.count + (g.own ? ', ' + g.own + ' eigene' : '') + ')';
+  check('search: the results of "' + SEARCH_TERM + '" stand under the group headings H2 to H4 that hold them or a group below them, nested as the headings are, each with the hits and places of its branch, as text and not as buttons',
+    wantGroups.length > 0 && sameList(typed.groups.map(json), wantGroups.map(json)),
+    typed.groups.map(groupLine).join(' | ') + (sameList(typed.groups.map(json), wantGroups.map(json)) ? '' : ' — expected ' + wantGroups.map(groupLine).join(' | ')));
+  check('search: "' + SEARCH_TERM + '" occurs in two sections of different depth: a top group with results of its own, and one below a parent',
+    typed.groups.some(g => g.depth === 0 && g.own) && typed.groups.some(g => g.depth > 0 && g.own),
+    typed.groups.map(groupLine).join(' | '));
   const lower = await search(SEARCH_TERM.toLowerCase());
   check('search: "' + SEARCH_TERM.toLowerCase() + '" finds the same as "' + SEARCH_TERM + '"', lower.summary === typed.summary && sameList(lower.results.map(r => r.text), typed.results.map(r => r.text)), json(lower.summary));
   const none = await search('xyzzy');
@@ -2016,8 +2051,7 @@ async function assertSearch(page, check, key){
   // --- the switches and the minimum length (story 2): a flipped switch searches again at once
   const SWITCH_SEL = 'body > .search-panel .search-switch input[type="checkbox"]';
   const TOO_SHORT = 'Zu kurz: mindestens drei Buchstaben oder Ziffern';
-  const expectedWith = (term, options) => collectPlaces(root).map(p => ({ text: p.text, hits: findHits(term, p.text, options).length })).filter(p => p.hits);
-  const summaryOf = places => { const n = places.reduce((k, p) => k + p.hits, 0); return n ? n + ' Treffer an ' + places.length + (places.length === 1 ? ' Stelle' : ' Stellen') : 'Keine Treffer'; };
+  const expectedWith = (term, options) => collectPlaces(root).map(p => ({ el: p.el, text: p.text, hits: findHits(term, p.text, options).length })).filter(p => p.hits);
   const flip = async n => {
     await page.evaluate(t => { document.querySelector('body > .search-panel [role="status"]').textContent = t; }, PENDING);
     await page.locator(SWITCH_SEL).nth(n).click();
@@ -2056,16 +2090,84 @@ async function assertSearch(page, check, key){
   const endStates = await switchStates();
   check('search: both switches are off again', sameList(endStates, [false, false]), json(endStates));
 
+  // --- story 4: a long list scrolled; the heading of the group at the top and
+  // the headings of its parents stay at the top of the list, stacked
+  const long = await search(LONG_TERM);
+  const wantLong = expectedWith(LONG_TERM, {});
+  const stuck = await page.evaluate(async row => {
+    const list = document.querySelector('body > .search-panel .search-results');
+    const chainOf = el => { const chain = []; for (let li = el.closest('.search-group'); li; li = li.parentElement.closest('.search-group')) chain.unshift(li); return chain; };
+    const portTop = () => list.getBoundingClientRect().top + list.clientTop;
+    const max = list.scrollHeight - list.clientHeight;
+    list.scrollTop = 0;
+    const offset = el => el.getBoundingClientRect().top - portTop() + list.scrollTop;
+    // A result, in the deepest group there is, that the list can be scrolled
+    // to so that it stands right under the stack of its group headings while
+    // the top of its group, and the heading's own place, are out of view.
+    const target = Array.from(list.querySelectorAll('.search-result')).map(button => {
+      const chain = chainOf(button);
+      return { button, chain, at: offset(button) - chain.length * row - 4, inGroup: offset(button) - offset(chain[chain.length - 1]) };
+    }).filter(t => t.chain.length >= 1 && t.inGroup > t.chain.length * row + 4 && t.at <= max && t.at > 0)
+      .sort((a, b) => b.chain.length - a.chain.length)[0];
+    const facts = { long: list.scrollHeight > list.clientHeight * 1.5, height: list.clientHeight, scrollHeight: list.scrollHeight };
+    if (!target) return { ...facts, target: null };
+    list.scrollTop = target.at;
+    await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+    const top = portTop();
+    const heads = target.chain.map(li => { const h = li.querySelector(':scope > .search-group-head'); const r = h.getBoundingClientRect(); return { label: h.querySelector('.search-group-title').textContent, top: r.top - top, bottom: r.bottom - top }; });
+    const b = target.button.getBoundingClientRect();
+    const hit = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2);
+    const result = { ...facts, target: heads[heads.length - 1].label, depth: target.chain.length - 1, scrolled: list.scrollTop,
+      groupTop: target.chain[target.chain.length - 1].getBoundingClientRect().top - top, heads, resultTop: b.top - top,
+      resultShown: !!hit && target.button.contains(hit) };
+    // A hand-over: a group below a parent scrolled to its end, so that its
+    // heading leaves through the band of its parent's heading while the
+    // parent goes on below it. The parent's heading lies on top in its band.
+    list.scrollTop = 0;
+    const leaving = Array.from(list.querySelectorAll('.search-group')).map(li => {
+      const chain = chainOf(li);
+      const parent = chain[chain.length - 2];
+      if (!parent) return null;
+      const depth = chain.length - 1;
+      const bottom = li.getBoundingClientRect().bottom - portTop() + list.scrollTop;
+      const parentBottom = parent.getBoundingClientRect().bottom - portTop() + list.scrollTop;
+      return { li, parent, depth, at: bottom - ((depth - 1) * row + 20), rest: parentBottom - bottom };
+    }).filter(t => t && t.rest >= row + 20 && t.at > 0 && t.at <= max).sort((a, b) => b.depth - a.depth)[0];
+    if (leaving){
+      list.scrollTop = leaving.at;
+      await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+      const lt = portTop();
+      const parentHead = leaving.parent.querySelector(':scope > .search-group-head');
+      const childHead = leaving.li.querySelector(':scope > .search-group-head');
+      const y = lt + (leaving.depth - 1) * row + 10;
+      const atBand = document.elementFromPoint(list.getBoundingClientRect().left + 40, y);
+      const ch = childHead.getBoundingClientRect();
+      result.handover = { depth: leaving.depth, parent: parentHead.querySelector('.search-group-title').textContent, child: childHead.querySelector('.search-group-title').textContent,
+        childTop: ch.top - lt, childBottom: ch.bottom - lt, parentTop: parentHead.getBoundingClientRect().top - lt,
+        overlaps: ch.top < y && ch.bottom > y, parentOnTop: !!atBand && parentHead.contains(atBand) };
+    } else result.handover = null;
+    list.scrollTop = 0;
+    return result;
+  }, GROUP_ROW);
+  const stacked = !!stuck.target && stuck.heads.every((h, i) => Math.abs(h.top - (i ? stuck.heads[i - 1].bottom : 0)) <= 1 && Math.abs(h.bottom - h.top - GROUP_ROW) <= 1);
+  // The reference document has a group below a parent with results enough to
+  // scroll, and one that ends while its parent goes on; the demo text has
+  // neither, and its run scrolls a group of the top.
+  const handedOver = !!stuck.handover && stuck.handover.overlaps && stuck.handover.parentOnTop && Math.abs(stuck.handover.parentTop - (stuck.handover.depth - 1) * GROUP_ROW) <= 1;
+  check('search: "' + LONG_TERM + '" lists more than the panel shows; scrolled into ' + (opts.demo ? 'the deepest group with results enough' : 'a group below a parent') + ', its heading and the headings of its parents stay at the top of the list, stacked by depth, the group\'s results under them' + (opts.demo ? '' : '; where a group below a parent ends and its heading leaves, the parent\'s heading lies over it in its band'),
+    long.summary === summaryOf(wantLong) && long.results.length === wantLong.length && stuck.long && (opts.demo || stuck.depth >= 1) && stuck.groupTop < 0 && stacked && stuck.resultShown && stuck.resultTop >= stuck.heads[stuck.heads.length - 1].bottom - 1 && (opts.demo || handedOver),
+    json({ summary: long.summary, expected: summaryOf(wantLong), ...stuck }));
+
   // --- a click scrolls to the place, and the panel stays open
   await search(SEARCH_TERM);
   const target = want[want.length - 1];
-  await page.locator('body > .search-panel .search-results > li > button').last().click();
+  await page.locator('body > .search-panel .search-results .search-result').last().click();
   await frames(page);
   const landed = await page.evaluate(([rootSel, sel, at]) => {
     const el = document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at];
     const r = el.getBoundingClientRect();
     const p = document.querySelector('body > .search-panel');
-    return { top: r.top, bottom: r.bottom, height: innerHeight, scrolled: Math.round(scrollY), open: !p.hidden, results: p.querySelectorAll('.search-results > li').length };
+    return { top: r.top, bottom: r.bottom, height: innerHeight, scrolled: Math.round(scrollY), open: !p.hidden, results: p.querySelectorAll('.search-results .search-result').length };
   }, [ROOT_SEL, PLACE_SEL, target.at]);
   check('search: a click on the last result scrolls the document to its place, and the panel stays open with its results',
     landed.scrolled > 0 && landed.top >= 0 && landed.bottom <= landed.height && landed.open && landed.results === want.length, json(landed));
@@ -3207,7 +3309,7 @@ async function assertVariant(browser, file, key, exp, results, label){
     await assertTables(page, check, exp, key);
     // --- the free-text filter (story 2.6): a field in the editor file, in schlank and in kompakt, nothing of it in nur-lesen.
     await assertFilters(page, check, exp, key);
-    // --- the search of the reading view (epic 5, stories 1 to 3): the editor file, schlank and kompakt; nothing of it in nur-lesen.
+    // --- the search of the reading view (epic 5, stories 1 to 4): the editor file, schlank and kompakt; nothing of it in nur-lesen.
     if (key === 'nur-lesen'){
       const style = (text.match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1];
       const live = await page.evaluate(() => ({ panels: document.querySelectorAll('.search-panel').length, sheets: Array.from(document.querySelectorAll('style')).filter(el => el.textContent.includes('.search-')).length }));

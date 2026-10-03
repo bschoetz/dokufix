@@ -362,8 +362,10 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.ok(panel && panel.hidden && panel.hasAttribute('data-dokufix-transient') && !document.querySelector('main .search-panel'));
   assert.ok(await slashAndType(document, window, 'Tabelle'), '"/" is taken by the search');
   assert.ok(!panel.hidden, 'open');
-  assert.equal(summaryOf(panel), '3 Treffer an 2 Stellen');
-  assert.equal(panel.querySelectorAll('.search-results > li').length, 2);
+  assert.equal(summaryOf(panel), '3 Treffer an 2 Stellen in 1 Abschnitt');
+  assert.equal(panel.querySelectorAll('.search-results .search-result').length, 2);
+  // Without a heading the results stand in one group, "Am Anfang", with their numbers.
+  assert.deepEqual(Array.from(panel.querySelectorAll('.search-group-head')).map(h => h.textContent), ['Am Anfang3 Treffer an 2 Stellen']);
   panel.querySelector('.search-close').click();
   assert.ok(panel.hidden && panel.querySelector('.search-input').value === '', '"×" closes it and forgets the term');
 });
@@ -373,14 +375,14 @@ test('the reader bundle: a search over a packed diagram waits for the decoder\'s
   const { document, window, panel } = runReader(code, content);
   await slashAndType(document, window, 'Tabelle');
   assert.equal(summaryOf(panel), '', 'nothing is searched while a diagram is packed');
-  assert.equal(panel.querySelectorAll('.search-results > li').length, 0);
+  assert.equal(panel.querySelectorAll('.search-results .search-result').length, 0);
   // The decoder failed on the diagram: the attribute stays, the event comes.
   document.dispatchEvent(new window.Event('dokufix-diagrams-unpacked'));
-  assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen', 'the waiting search runs on the event');
+  assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen in 1 Abschnitt', 'the waiting search runs on the event');
   // Without a packed diagram nothing waits.
   const plain = runReader(code, '<p>Eine Tabelle.</p>');
   await slashAndType(plain.document, plain.window, 'Tabelle');
-  assert.equal(summaryOf(plain.panel), '1 Treffer an 1 Stelle');
+  assert.equal(summaryOf(plain.panel), '1 Treffer an 1 Stelle in 1 Abschnitt');
 });
 // The decoder of a `schlank` file as src/app/downloads/readonly-slim.js writes
 // it, with the name of its event filled in.
@@ -414,13 +416,13 @@ test('the reader bundle with the real decoder of schlank: one diagram unpacks, o
   assert.ok(!boxes[0].hasAttribute('data-gz') && boxes[0].innerHTML === svg, 'the first diagram is unpacked');
   assert.ok(boxes[1].hasAttribute('data-gz') && failures.length === 1 && /SVG decode failed/.test(failures[0]), 'the second stays packed, its failure on the console');
   assert.equal(events, 1, 'the event comes once');
-  assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen', 'the waiting search ran on the event');
+  assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen in 1 Abschnitt', 'the waiting search ran on the event');
 });
 test('the reader bundle: an attribute data-gz the author wrote outside a diagram is no reason to wait', async () => {
   const code = readerBlock(fs.readFileSync(committed, 'utf8'));
   const { document, window, panel } = runReader(code, '<p>Eine Tabelle.</p><div data-gz="x"><p>Noch eine Tabelle.</p></div>');
   await slashAndType(document, window, 'Tabelle');
-  assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen');
+  assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen in 1 Abschnitt');
 });
 test('the reader bundle is the same with --dev: minified, so the readable file carries what an export carries', () => {
   const r = build({}, ['--dev']);
