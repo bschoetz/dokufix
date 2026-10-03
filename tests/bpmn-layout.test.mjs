@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
-  flowLabel, flowLabelPlaces, labelSize, exitSide, dedupe, orthogonal, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -525,10 +525,11 @@ test('flow labels keep off other labels, flows and symbols, the own gateway incl
   const stub = ptsOf([[100, 125], [100, 135], [300, 135]]);
   const placed = flowLabel(stub, 'nein', true, [gw]);
   assert.ok(!(placed[0] < gw[0] + gw[2] && gw[0] < placed[0] + placed[2] && placed[1] < gw[1] + gw[3] && gw[1] < placed[1] + placed[3]), JSON.stringify(placed));
-  // Everything covered: the place covered least.
+  // Every place covered, one of them only by a 2 px square: that one.
   const all = flowLabelPlaces(pts, 'ja', true);
-  const cover = [[0, 0, 400, 300]];
-  assert.deepEqual(flowLabel(pts, 'ja', true, cover), all[0]);
+  const cover = all.map((p, i) => i === 2 ? [p[0] + 4, p[1] + 4, 2, 2] : p);
+  assert.notDeepEqual(all[2], all[0]);
+  assert.deepEqual(flowLabel(pts, 'ja', true, cover), all[2]);
 });
 
 test('a long flow label is as wide as bpmn-js wraps it, 90 px at most, and as high as its lines', () => {
@@ -539,7 +540,22 @@ test('a long flow label is as wide as bpmn-js wraps it, 90 px at most, and as hi
   assert.ok(h >= 60);
 });
 
-test('an event label with every near place taken goes farther out, and else to the place covered least', () => {
+test('an event label with its four near places taken goes to a farther one; with every place covered, to the one covered least', () => {
+  const c = node(100, 100, 36, 36), size = labelSize('Erledigt');
+  const places = labelPlaces(c, size, false);
+  assert.equal(places.length, 12);
+  // The four near places blocked: below, farther out, is free.
+  assert.deepEqual(bestPlace(places, places.slice(0, 4)), places[4]);
+  assert.ok(places[4][1] > places[0][1] + places[0][3], 'farther below than the near place below');
+  // A gateway tries above first, near and far.
+  const gw = labelPlaces(node(100, 100, 50, 50), size, true);
+  assert.ok(gw[0][1] < 75 && gw[4][1] < gw[0][1]);
+  // Every place covered, the last corner least: that one.
+  const cover = places.map((p, i) => i === 11 ? [p[0] + 3, p[1] + 3, 2, 2] : p);
+  assert.deepEqual(bestPlace(places, cover), places[11]);
+});
+
+test('the event and gateway labels of the sample lie on no flow', () => {
   const { model, raw } = sample();
   const di = layoutGeometry(model, raw);
   for (const id of ['S', 'G', 'E']){
