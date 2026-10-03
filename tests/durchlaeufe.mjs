@@ -65,6 +65,16 @@
 //                                third filter stands in a footnote: its table
 //                                gets a field in the list of footnotes, and the
 //                                preview of that footnote holds none
+//  10. a BPMN block that cannot  a block of broken XML beside a valid one: it is
+//      be drawn                  a warning naming its title and the reason, the
+//                                valid one is drawn with its credit, nothing of
+//                                the drawing is left in <body>; then all four
+//                                downloads, reopened: the same in each, and no
+//                                read-only file carries anything of bpmn-js
+//  11. bpmn-js cannot be loaded  the page's request for the library fails: each
+//                                BPMN diagram is the warning that says so, and
+//                                the rest of the document renders, Mermaid
+//                                included; the three read-only downloads too
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -106,6 +116,9 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { prepareLibraries, librariesLine } from './cdn.mjs';
+// What the warning of a BPMN diagram says, and the reason of a page without
+// the library, are asked where the product decides them.
+import { bpmnWarningText, BPMN_NO_LIBRARY, BPMN_CREDIT } from '../src/app/bpmn.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
@@ -169,6 +182,46 @@ const overlapDoc = name => [
   '## ' + name + ' drei', 'Text.',
   '## ' + name + ' vier', 'Text.',
 ].join('\n\n') + '\n';
+// A BPMN diagram with coordinates, and one block that is no XML.
+const BPMN_GOOD = FENCE + 'bpmn\n' + [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitionen" targetNamespace="http://example.org/dokufix">',
+  '  <bpmn:process id="Prozess" isExecutable="false">',
+  '    <bpmn:startEvent id="Start" name="Los"/>',
+  '    <bpmn:task id="Tun" name="Etwas tun"/>',
+  '    <bpmn:endEvent id="Ende" name="Fertig"/>',
+  '    <bpmn:sequenceFlow id="F1" sourceRef="Start" targetRef="Tun"/>',
+  '    <bpmn:sequenceFlow id="F2" sourceRef="Tun" targetRef="Ende"/>',
+  '  </bpmn:process>',
+  '  <bpmndi:BPMNDiagram id="Diagramm">',
+  '    <bpmndi:BPMNPlane id="Ebene" bpmnElement="Prozess">',
+  '      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="32" y="32" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="5" y="73" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>',
+  '      <bpmndi:BPMNShape id="Tun_di" bpmnElement="Tun"><dc:Bounds x="120" y="10" width="100" height="80"/></bpmndi:BPMNShape>',
+  '      <bpmndi:BPMNShape id="Ende_di" bpmnElement="Ende"><dc:Bounds x="272" y="32" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="245" y="73" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>',
+  '      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="68" y="50"/><di:waypoint x="120" y="50"/></bpmndi:BPMNEdge>',
+  '      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="220" y="50"/><di:waypoint x="272" y="50"/></bpmndi:BPMNEdge>',
+  '    </bpmndi:BPMNPlane>',
+  '  </bpmndi:BPMNDiagram>',
+  '</bpmn:definitions>',
+].join('\n') + '\n' + FENCE;
+const BPMN_BROKEN = FENCE + 'bpmn\n<bpmn:definitions>kein BPMN\n' + FENCE;
+// Two BPMN blocks, the second broken, and a valid one after it.
+const DOC_BPMN = [
+  '# Prozesse', '[[toc]]',
+  '## Gut', BPMN_GOOD,
+  '## Kaputt', BPMN_BROKEN,
+  '## Noch eins', BPMN_GOOD,
+  '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  '[^a]: Die Fußnote.',
+].join('\n\n') + '\n';
+// A page without bpmn-js: a Mermaid diagram and a BPMN diagram.
+const DOC_NO_LIBRARY = [
+  '# Ohne Bibliothek', '[[toc]]',
+  '## Mermaid', GOOD_FLOW,
+  '## BPMN', BPMN_GOOD,
+  '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  '[^a]: Die Fußnote.',
+].join('\n\n') + '\n';
 const MARKED_MESSAGE = 'Absicht: marked.parse wirft (durchlaeufe)';
 // Three block markers, the one in the middle with a misspelt name.
 const DOC_MARKERS = [
@@ -210,6 +263,8 @@ const FILTER_WARNING = 'Die Markierung „dokufix: filter "Suchen …"“ erwart
 const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, false];
 
 // ---------- the copy of src/ with two passes more ----------
+// The diagrams of the demo text: two of Mermaid, two of BPMN.
+const DEMO_DIAGRAMS = 4;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';
@@ -267,10 +322,13 @@ const READONLY = [
 ];
 // Opens a file in a context of its own, with what the console and the page
 // report as errors collected. ready: what to wait for.
-async function open(browser, file, ready){
+// options.withoutBpmn: the page's request for bpmn-js fails.
+async function open(browser, file, ready, options = {}){
   const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
   await libraries.serve(context);
   const page = await context.newPage();
+  // A route of the page goes before the one of the context.
+  if (options.withoutBpmn) await page.route(url => /\/npm\/bpmn-js@/.test(String(url)), route => route.abort('failed'));
   const consoleErrors = [], pageErrors = [], dialogs = [], downloads = [];
   page.on('pageerror', e => pageErrors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
@@ -385,6 +443,11 @@ const facts = page => page.evaluate(() => {
     diagrams: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg > svg').length,
     // The figures, by their title.
     figures: Array.from(container.querySelectorAll('figure.dokufix-diagram')).map(f => f.getAttribute('aria-label')),
+    // The BPMN diagrams: title, whether the SVG is there, and the text of the credit below it.
+    bpmn: Array.from(container.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => f.getAttribute('aria-label') + ' ' + !!f.querySelector(':scope > .dokufix-diagram-svg > svg[role="img"]') + ' ' +
+      (f.querySelector(':scope > figcaption > a[href="https://bpmn.io"]') || { textContent: '' }).textContent),
+    // An element of the drawing left in <body>: the host is transient and fixed.
+    hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]')).filter(el => getComputedStyle(el).position === 'fixed').length,
     // Mermaid's error picture: an SVG with this role and this sentence in it.
     errorPictures: document.querySelectorAll('svg[aria-roledescription="error"], .error-icon, .error-text').length +
       (document.body.textContent.includes('Syntax error in text') ? 1 : 0),
@@ -771,16 +834,73 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await o.context.close();
     });
 
+    // ----- 10. a BPMN block that cannot be drawn, beside valid ones
+    await attempt(name + ' a BPMN block that cannot be drawn', async () => {
+      const scope = name + ' a BPMN block that cannot be drawn';
+      let o = await open(browser, opts.file, editorReady);
+      const bodyBefore = await o.page.evaluate(() => Array.from(document.body.children).map(el => el.tagName + '.' + el.className).join(' '));
+      await typeAndRender(o.page, DOC_BPMN);
+      const drawnPage = (s, x, text) => {
+        checkWarning(s, x, [bpmnWarningText('Kaputt'), 'unparsable content'], 'naming the diagram and the reason');
+        check(s, 'the warning stands where the diagram would be', x.warnings.length === 1 && x.warnings[0].before === 'H2#kaputt', x.warnings.map(w => w.before));
+        check(s, 'the other two are drawn, each with "' + BPMN_CREDIT.text + '" below it', x.bpmn.join('|') === 'Gut true ' + BPMN_CREDIT.text + '|Noch eins true ' + BPMN_CREDIT.text, x.bpmn);
+        check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
+        if (text){
+          const outside = text.replace(/<details class="dokufix-licences">[\s\S]*?<\/details>/, '');
+          check(s, 'the file carries nothing of bpmn-js, its name only in the licence information', !/bpmn-js|BpmnJS/.test(outside), (outside.match(/.{0,40}(bpmn-js|BpmnJS).{0,40}/) || [''])[0]);
+        }
+        if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
+      };
+      const f = await facts(o.page);
+      drawnPage(scope, f, '');
+      const bodyAfter = await o.page.evaluate(() => Array.from(document.body.children).map(el => el.tagName + '.' + el.className).join(' '));
+      check(scope, 'nothing of the drawing is left in <body>: no host, the children it had', f.hosts === 0 && bodyAfter === bodyBefore, { hosts: f.hosts, before: bodyBefore, after: bodyAfter });
+      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 4, { railHasItems: f.railHasItems, railLinks: f.railLinks });
+      checkErrors(scope, o, ['BPMN error']);
+      await checkExports(scope, browser, o.page, dir, 'bpmn', READONLY, drawnPage);
+      // "Mit Editor": the saved file renders its document again when it is opened.
+      const saved = path.join(dir, 'bpmn-mit-editor.html');
+      await download(o.page, 'full', saved);
+      await o.context.close();
+      o = await open(browser, saved, editorReady);
+      const g = await facts(o.page);
+      drawnPage(scope + ', mit-editor', g, '');
+      check(scope + ', mit-editor', 'no host of the drawing in the page', g.hosts === 0, g.hosts);
+      checkErrors(scope + ', mit-editor', o, ['BPMN error']);
+      await o.context.close();
+    });
+
+    // ----- 11. bpmn-js cannot be loaded
+    await attempt(name + ' bpmn-js cannot be loaded', async () => {
+      const scope = name + ' bpmn-js cannot be loaded';
+      const o = await open(browser, opts.file, editorReady, { withoutBpmn: true });
+      await typeAndRender(o.page, DOC_NO_LIBRARY);
+      const withoutLibrary = (s, x, text) => {
+        checkWarning(s, x, [bpmnWarningText('BPMN'), BPMN_NO_LIBRARY], 'that the library was not loaded');
+        check(s, 'the warning stands in place of the BPMN diagram', x.warnings.length === 1 && x.warnings[0].before === 'H2#bpmn', x.warnings.map(w => w.before));
+        check(s, 'the rest renders: the Mermaid diagram in its figure, the passes around it', x.diagrams === 1 && x.figures.join('|') === 'Mermaid' && x.bpmn.length === 0 &&
+          x.headingsWithoutId === 0 && x.tocLinks >= 3 && x.previews === 1 && x.returnPaths === 1, x);
+        if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
+      };
+      const f = await facts(o.page);
+      withoutLibrary(scope, f, '');
+      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 3, { railHasItems: f.railHasItems, railLinks: f.railLinks });
+      check(scope, 'the library was asked for and not loaded', await o.page.evaluate(() => typeof BpmnJS === 'undefined'));
+      checkErrors(scope, o, ['BPMN error']);
+      await checkExports(scope, browser, o.page, dir, 'ohne-bpmn-js', READONLY, withoutLibrary);
+      await o.context.close();
+    });
+
     // ----- 5. a pass throws (the copy with two passes more)
     await attempt(name + ' a pass throws', async () => {
       const scope = name + ' a pass throws';
       const o = await open(browser, copyWithPasses, editorReady);
-      const f = await facts(o.page);   // the demo text: metadata, table of contents, footnotes, two diagrams
+      const f = await facts(o.page);   // the demo text: metadata, table of contents, footnotes, four diagrams
       checkWarning(scope, f, ['Der Schritt „' + THROWING_PASS + '“ ist fehlgeschlagen.', THROWING_MESSAGE], 'naming the pass');
       const firstContent = f.children.findIndex(c => c !== 'div.dokufix-warning');
       check(scope, 'the warnings stand at the top of the document', firstContent === f.warnings.length && f.children[firstContent] === 'details.dokufix-frontmatter', f.children.slice(0, 5));
       check(scope, 'every other document pass ran: metadata, heading ids, table of contents, footnote previews, return paths, diagrams',
-        f.panel && f.headingsWithoutId === 0 && f.tocLinks > 0 && f.markers > 0 && f.previews === f.markers && f.returnPaths > 0 && f.diagrams === 2 && f.errorPictures === 0, f);
+        f.panel && f.headingsWithoutId === 0 && f.tocLinks > 0 && f.markers > 0 && f.previews === f.markers && f.returnPaths > 0 && f.diagrams === DEMO_DIAGRAMS && f.errorPictures === 0, f);
       check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 4, { railHasItems: f.railHasItems, railLinks: f.railLinks });
       const live = f.warnings.filter(w => w.transient);
       check(scope, 'the run-time pass that threw has its warning in the page, marked transient',
@@ -790,7 +910,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       checkErrors(scope, o, ['Pass "' + THROWING_PASS + '" failed', 'Pass "' + RUNTIME_PASS + '" failed']);
       await checkExports(scope, browser, o.page, dir, 'schritt', READONLY, (s, x, text) => {
         checkWarning(s, x, ['Der Schritt „' + THROWING_PASS + '“ ist fehlgeschlagen.', THROWING_MESSAGE], 'naming the pass');
-        check(s, 'it is the first thing in the document, and the rest is there', x.children[0] === 'div.dokufix-warning' && x.children[1] === 'details.dokufix-frontmatter' && x.tocLinks > 0 && x.diagrams === 2, x.children.slice(0, 4));
+        check(s, 'it is the first thing in the document, and the rest is there', x.children[0] === 'div.dokufix-warning' && x.children[1] === 'details.dokufix-frontmatter' && x.tocLinks > 0 && x.diagrams === DEMO_DIAGRAMS, x.children.slice(0, 4));
         check(s, 'nothing transient: neither the run-time warning nor the element of the run-time pass',
           x.transient === x.filters.length && x.warnings.length === 1 && !text.includes(TRANSIENT_ID) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes(RUNTIME_PASS), x.warnings.map(w => w.text));
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));

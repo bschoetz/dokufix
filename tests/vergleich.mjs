@@ -18,8 +18,11 @@
 //
 // Exit code 1 when an assertion fails (epic 1 behaviour, callouts, status chips,
 // block markers with cards and step lists, tables with their wrapper, sub-lines
-// and facet filter, the free-text filter, the licence information, no <script>
-// in nur-lesen, no editor rules in a read-only export).
+// and facet filter, the free-text filter, the figure of every diagram with its
+// title, BPMN diagrams with their elements, colours and credit, the licence
+// information, no <script> in nur-lesen, nothing of bpmn-js and no editor rules
+// in a read-only export). The font check of the BPMN labels (Chromium,
+// nur-lesen) notes what does not fit, with a picture, and does not fail.
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -100,6 +103,9 @@ import { planFacets, FACET_ALL } from '../src/app/facets.js';
 // matches a term and what the counter says, is asked where the product decides
 // it, with the text of each row as this run read it from the Markdown.
 import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src/app/filter.js';
+// Whether a BPMN block holds coordinates, and what the warning of one that
+// cannot be drawn says, is asked where the product decides it.
+import { hasCoordinates, bpmnWarningText, BPMN_NO_COORDINATES, BPMN_CREDIT } from '../src/app/bpmn.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -458,8 +464,10 @@ function tableExpectations(body){
 // contents shows it, or "Diagramm". Read as far as the reference document needs
 // it: a heading written with "#" at the beginning of its line, with no inline
 // markup besides code spans. A heading in a quotation is not read, so one
-// that stands in a plain quotation before a diagram would be missed.
-const DIAGRAM_KINDS = ['mermaid'];
+// that stands in a plain quotation before a diagram would be missed. A BPMN
+// block keeps its XML: whether it is drawn is judged once the browser has
+// said whether the XML parses (judgeDiagrams()).
+const DIAGRAM_KINDS = ['mermaid', 'bpmn'];
 function diagramExpectations(body){
   const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
   const spanText = raw => /^ .* $/.test(raw) && raw.trim() ? raw.slice(1, -1) : raw;
@@ -468,15 +476,27 @@ function diagramExpectations(body){
   for (const line of body.split(/\r?\n/)){
     const f = line.match(/^(```|~~~)[ \t]*([\w-]*)/);
     if (f){
-      if (fence === null){ fence = f[2]; if (DIAGRAM_KINDS.includes(f[2])) out.push({ kind: f[2], title: title || 'Diagramm' }); }
-      else fence = null;
+      if (fence === null){ fence = f[2]; if (DIAGRAM_KINDS.includes(f[2])) out.push({ kind: f[2], title: title || 'Diagramm', source: [], drawn: true }); }
+      else { fence = null; if (out.length && Array.isArray(out[out.length - 1].source)) out[out.length - 1].source = out[out.length - 1].source.join('\n'); }
       continue;
     }
-    if (fence !== null) continue;
+    if (fence !== null){ if (DIAGRAM_KINDS.includes(fence)) out[out.length - 1].source.push(line); continue; }
     const h = line.match(/^#{1,6}[ \t]+(.+?)[ \t]*$/);
     if (h) title = h[1].replace(CODE_SPAN, (all, ticks, raw) => { const status = readChip(spanText(raw)); return status ? status.label : spanText(raw); }).replace(/\s+/g, ' ').trim();
   }
   return out;
+}
+
+// Which BPMN diagram is drawn: one whose XML parses (wellFormed, as the
+// browser's XML parser said, in the order of the blocks) and holds
+// coordinates. reason: what the warning of one that is not says as its
+// detail, null where that is the library's own message.
+function judgeDiagrams(exp, wellFormed){
+  exp.diagrams.filter(d => d.kind === 'bpmn').forEach((d, i) => {
+    d.drawn = !!wellFormed[i] && hasCoordinates(d.source);
+    d.reason = d.drawn ? '' : wellFormed[i] ? BPMN_NO_COORDINATES : null;
+  });
+  return exp;
 }
 
 function markerExpectations(body){
@@ -717,6 +737,9 @@ async function buildExports(browser, opts, md, dir){
   const source = await page.evaluate(() => document.getElementById('source').value);
   // The free-text filter typed while a file is written: the first that has a term.
   const planned = expectationsFor(source), typing = planned.filters;
+  // Whether each BPMN block parses as XML, by the browser's parser.
+  const wellFormed = await page.evaluate(xmls => xmls.map(x => new DOMParser().parseFromString(x, 'application/xml').getElementsByTagName('parsererror').length === 0),
+    planned.diagrams.filter(d => d.kind === 'bpmn').map(d => d.source));
   const typedFilter = typing.findIndex(f => f.term);
 
   await page.click('#edit-btn'); // the download menu lives in the editor toolbar
@@ -777,7 +800,7 @@ async function buildExports(browser, opts, md, dir){
   }
   await context.close();
   libs.sort((x, y) => x.url.localeCompare(y.url));
-  return { files, sizes, libs, errors, source, chosen, typed, rendered };
+  return { files, sizes, libs, errors, source, chosen, typed, rendered, wellFormed };
 }
 
 // ---------- reopen ----------
@@ -789,10 +812,13 @@ async function openVariant(browser, file, key, exp, width, scheme){
   await page.goto(pathToFileURL(file).href);
   if (key === 'mit-editor'){
     // A saved file has an empty preview; content in it means init has run.
+    // The render is through when every diagram is drawn in its figure, or
+    // when the rail is built, the last thing a render does: a file that draws
+    // diagrams otherwise, such as the PoC, is known by that.
     await page.waitForFunction(n =>
-      document.querySelectorAll('#preview .dokufix-diagram > .dokufix-diagram-svg > svg').length >= n &&
+      (document.querySelectorAll('#preview .dokufix-diagram > .dokufix-diagram-svg > svg').length >= n || !!document.querySelector('#dokufix-rail.has-items')) &&
       document.querySelector('#preview') && document.querySelector('#preview').children.length > 0,
-      exp.diagrams.length, { timeout: 90000 });
+      exp.diagrams.filter(d => d.drawn).length, { timeout: 90000 });
   } else if (key === 'schlank'){
     await page.waitForFunction(() => !document.querySelector('[data-gz]'), null, { timeout: 30000 });
   } else if (key === 'kompakt'){
@@ -1988,6 +2014,208 @@ async function assertFiltersWithoutScripts(browser, file, check, exp){
   }
 }
 
+// ---------- BPMN diagrams ----------
+// The elements a BPMN block places, from its XML: every bpmnElement of a
+// BPMNShape or BPMNEdge, with the tag of the element it names ("userTask").
+function bpmnPlaced(xml){
+  const tags = new Map();
+  for (const m of xml.matchAll(/<(?:[\w.-]+:)?(\w+)\b[^>]*?\sid="([^"]+)"/g)) tags.set(m[2], m[1]);
+  return [...xml.matchAll(/<(?:[\w.-]+:)?BPMN(?:Shape|Edge)\b[^>]*?\sbpmnElement="([^"]+)"/g)].map(m => ({ id: m[1], tag: tags.get(m[1]) || '' }));
+}
+// The class an element of that tag has to carry: the one the document styles
+// colour it by (src/doc.css).
+const BPMN_KIND_CLASS = tag => tag === 'participant' ? 'dokufix-bpmn-pool' : tag === 'lane' ? 'dokufix-bpmn-lane' : tag === 'callActivity' ? 'dokufix-bpmn-callactivity'
+  : /Task$|^task$/.test(tag) ? 'dokufix-bpmn-task' : /Gateway$/.test(tag) ? 'dokufix-bpmn-gateway' : /Event$/.test(tag) ? 'dokufix-bpmn-event'
+  : 'dokufix-bpmn-' + tag.toLowerCase();
+// The colours the document styles give, as a browser computes them.
+const BPMN_COLOURS = {
+  task: 'rgb(0, 102, 204)', taskFill: 'rgb(255, 255, 255)', gateway: 'rgb(0, 102, 204)', start: 'rgb(0, 102, 204)', end: 'rgb(28, 28, 30)',
+  pool: 'rgb(142, 142, 146) / rgb(250, 250, 250)', lane: 'rgb(142, 142, 146)',
+  sequence: 'rgb(58, 58, 63)', message: 'rgb(110, 110, 115)', label: 'rgb(28, 28, 30)',
+};
+const BPMN_CREDIT_HTML = '<figcaption class="dokufix-diagram-credit"><a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a></figcaption>';
+const bpmnFacts = page => page.evaluate(() => {
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+  const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
+  const ids = Array.from(document.querySelectorAll('[id]')).map(e => e.id);
+  return {
+    figures: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => {
+      const svg = f.querySelector(':scope > .dokufix-diagram-svg > svg');
+      const cap = f.querySelector(':scope > figcaption.dokufix-diagram-credit');
+      const link = cap && cap.querySelector(':scope > a');
+      const colour = (sel, prop) => { const el = svg && svg.querySelector(sel); return el ? getComputedStyle(el)[prop] : null; };
+      // Every fill and stroke the SVG writes, as an attribute or in a style.
+      const written = [];
+      if (svg) for (const el of svg.querySelectorAll('*')){
+        for (const prop of ['fill', 'stroke']){
+          const a = el.getAttribute(prop); if (a) written.push(a.trim());
+          const v = el.style ? el.style.getPropertyValue(prop) : ''; if (v) written.push(v.trim());
+        }
+      }
+      return {
+        title: f.getAttribute('aria-label'),
+        svg: !!svg, role: svg && svg.getAttribute('role'), name: svg && svg.getAttribute('aria-label'),
+        size: svg ? svg.getAttribute('width') + ' ' + (svg.hasAttribute('height') ? svg.getAttribute('height') : 'no height') + ' ' + svg.style.maxWidth : '',
+        foreign: svg ? svg.querySelectorAll('foreignObject').length : 0, hits: svg ? svg.querySelectorAll('.djs-hit').length : 0,
+        elements: svg ? Array.from(svg.querySelectorAll('[data-element-id]')).map(g => ({ id: g.getAttribute('data-element-id'), cls: g.getAttribute('class') || '' })) : [],
+        fixed: [...new Set(written.filter(v => v !== 'none' && !/^var\(--dokufix-bpmn-(fill|stroke|label)\)$/.test(v)))],
+        credit: link ? { text: link.textContent, href: link.getAttribute('href'), caption: cap.textContent,
+                         visible: link.checkVisibility({ visibilityProperty: true }) && box(link).width > 0, below: !!svg && box(cap).top >= box(svg).bottom - 0.5,
+                         look: getComputedStyle(link).fontSize + ' ' + getComputedStyle(link).color } : null,
+        colours: {
+          task: colour('.dokufix-bpmn-task > .djs-visual > rect', 'stroke'), taskFill: colour('.dokufix-bpmn-task > .djs-visual > rect', 'fill'),
+          gateway: colour('.dokufix-bpmn-gateway > .djs-visual > polygon', 'stroke'), start: colour('.dokufix-bpmn-startevent > .djs-visual > circle', 'stroke'),
+          end: colour('.dokufix-bpmn-endevent > .djs-visual > circle', 'stroke'),
+          pool: svg && svg.querySelector('.dokufix-bpmn-pool') ? colour('.dokufix-bpmn-pool > .djs-visual > rect', 'stroke') + ' / ' + colour('.dokufix-bpmn-pool > .djs-visual > rect', 'fill') : null,
+          lane: colour('.dokufix-bpmn-lane > .djs-visual > rect', 'stroke'),
+          sequence: colour('.dokufix-bpmn-sequenceflow > .djs-visual > path', 'stroke'), message: colour('.dokufix-bpmn-messageflow > .djs-visual > path', 'stroke'),
+          label: colour('.dokufix-bpmn-task > .djs-visual > text', 'fill'),
+        },
+      };
+    }),
+    duplicateIds: [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))],
+    // The host bpmn-js draws into, if one were left in the page.
+    hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]')).filter(el => getComputedStyle(el).position === 'fixed').length,
+    warnings: Array.from(root.querySelectorAll('.dokufix-warning')).map(w => ({
+      title: (w.querySelector('.dokufix-warning-title') || { textContent: '' }).textContent,
+      detail: (w.querySelector('.dokufix-warning-detail') || { textContent: '' }).textContent,
+      next: w.nextElementSibling ? w.nextElementSibling.tagName : '', before: w.previousElementSibling ? w.previousElementSibling.tagName + ':' + w.previousElementSibling.textContent : '' })),
+  };
+});
+async function assertBpmn(page, check, exp, key, text, label, dir){
+  const want = exp.diagrams.filter(d => d.kind === 'bpmn' && d.drawn), refused = exp.diagrams.filter(d => d.kind === 'bpmn' && !d.drawn);
+  const f = await bpmnFacts(page);
+  const json = JSON.stringify;
+  check('BPMN: every block with coordinates is drawn in its figure, an SVG of role img named by its title: ' + json(want.map(d => d.title)),
+    json(f.figures.map(x => [x.title, x.svg, x.role, x.name])) === json(want.map(d => [d.title, true, 'img', d.title])), json(f.figures.map(x => [x.title, x.svg, x.role, x.name])));
+  const unnamed = [];
+  for (const d of want) if (await page.getByRole('img', { name: d.title, exact: true }).count() !== 1) unnamed.push(d.title);
+  check('BPMN: the accessibility tree has each diagram as an image with its title', unnamed.length === 0, unnamed.join(', '));
+  // Every element the XML places, drawn with the class of its kind.
+  const missing = [];
+  want.forEach((d, i) => {
+    const drawn = f.figures[i] ? f.figures[i].elements : [];
+    for (const el of bpmnPlaced(d.source)){
+      const g = drawn.find(x => x.id === el.id);
+      if (!g) missing.push(d.title + ': ' + el.tag + ' ' + el.id + ' not drawn');
+      else if (!g.cls.split(' ').includes(BPMN_KIND_CLASS(el.tag))) missing.push(d.title + ': ' + el.tag + ' ' + el.id + ' has "' + g.cls + '"');
+    }
+  });
+  const placed = want.reduce((n, d) => n + bpmnPlaced(d.source).length, 0);
+  check('BPMN: every element the XML places is drawn, with the class of its kind (' + placed + ' elements)', want.length === f.figures.length && missing.length === 0, missing.slice(0, 8).join(' | '));
+  const shapes = f.figures.filter(x => x.foreign || x.hits || !/^100% no height \d+px$/.test(x.size)).map(x => x.title + ': ' + json([x.foreign, x.hits, x.size]));
+  check('BPMN: the SVG has no foreignObject and no hit areas, is 100 % wide with no height and no wider than drawn', shapes.length === 0, shapes.join(' | '));
+  const fixed = f.figures.filter(x => x.fixed.length).map(x => x.title + ': ' + x.fixed.join(', '));
+  check('BPMN: no colour is written into the SVG, only the three properties of the document styles', fixed.length === 0, fixed.join(' | '));
+  const colours = f.figures.flatMap(x => Object.entries(x.colours).filter(([k, v]) => v !== null && v !== BPMN_COLOURS[k]).map(([k, v]) => x.title + ' ' + k + ': ' + v + ', expected ' + BPMN_COLOURS[k]));
+  const seen = new Set(f.figures.flatMap(x => Object.entries(x.colours).filter(([, v]) => v !== null).map(([k]) => k)));
+  check('BPMN: the colours are the ones the document styles give: ' + [...seen].join(', '), colours.length === 0 && (!want.length || seen.size >= 8), colours.join(' | ') || 'seen only ' + [...seen].join(', '));
+  const credits = f.figures.filter(x => !x.credit || x.credit.text !== BPMN_CREDIT.text || x.credit.href !== BPMN_CREDIT.href || x.credit.caption !== BPMN_CREDIT.text || !x.credit.visible || !x.credit.below || x.credit.look !== '12px rgb(110, 110, 115)')
+    .map(x => x.title + ': ' + json(x.credit));
+  check('BPMN: "' + BPMN_CREDIT.text + '" below every BPMN diagram, a visible link to ' + BPMN_CREDIT.href, credits.length === 0 && f.figures.length === want.length, credits.join(' | '));
+  // A block that cannot be drawn: the warning in its place, naming its title, with the reason.
+  const wrong = refused.filter(d => !f.warnings.some(w => w.title === 'Warnung: ' + bpmnWarningText(d.title) && (d.reason === null ? w.detail.trim().length > 0 : w.detail === d.reason)))
+    .map(d => d.title);
+  check('BPMN: each block that cannot be drawn is a warning naming its title, with the reason: ' + json(refused.map(d => d.title + ' (' + (d.reason || 'the library\'s message') + ')')),
+    wrong.length === 0 && f.warnings.filter(w => /„.*“ konnte nicht gezeichnet werden/.test(w.title)).length === refused.length, wrong.join(', ') + ' ' + json(f.warnings.filter(w => /Diagramm/.test(w.title))));
+  check('no id stands twice in the page', f.duplicateIds.length === 0, f.duplicateIds.join(', '));
+  check('BPMN: no host of the drawing is left in the page', f.hosts === 0, f.hosts);
+  if (READONLY.has(key)){
+    // The library itself never goes into a read-only file: no tag, no code, no
+    // name of it but the entry of the licence information.
+    const outsideLicences = text.replace(/<details class="dokufix-licences">[\s\S]*?<\/details>/, '');
+    const hits = outsideLicences.match(/.{0,40}(bpmn-js|BpmnJS|bpmn-navigated-viewer).{0,40}/gi) || [];
+    check('BPMN: the file carries nothing of bpmn-js, its name only in the licence information', hits.length === 0, hits.slice(0, 3).join(' | '));
+  }
+  if (key === 'schlank'){
+    check('BPMN: in schlank the credit stands as readable text outside what is gzipped, once per diagram',
+      text.split(BPMN_CREDIT_HTML).length - 1 === want.length, (text.split(BPMN_CREDIT_HTML).length - 1) + ' of ' + want.length);
+  }
+  if (label === 'chromium' && key === 'nur-lesen' && want.length) await assertBpmnFonts(page, check, dir);
+}
+
+// AC7: a diagram is measured with the author's font when it is drawn; a reader
+// may see it in another. The finished SVG is shown with each of these system
+// fonts in turn, and every label is measured against what holds it: a label
+// inside a task, a call activity, a pool or a lane against that shape; a label
+// outside its symbol (an event, a gateway, a flow) against the picture, where
+// it would be cut off. What does not fit is noted with a picture, for the
+// product owner; it does not fail the run. The fonts are installed on the
+// machine of the run; one that is not is noted.
+const FONT_CHECK = ['DejaVu Sans', 'Noto Sans'];
+async function assertBpmnFonts(page, check, dir){
+  const results = [];
+  for (const font of [null, ...FONT_CHECK]){
+    const css = font ? '.dokufix-diagram-bpmn svg text{font-family:"' + font + '" !important}' : '';
+    const tag = css ? await page.addStyleTag({ content: css }) : null;
+    await frames(page);
+    const r = await page.evaluate(font => {
+      // Is the font there? A text in it is as wide as in the fallback only when it is not.
+      const c = document.createElement('canvas').getContext('2d');
+      const width = f => { c.font = '12px ' + f; return c.measureText('Medium von Hand prüfen').width; };
+      const installed = !font || (width('"' + font + '", monospace') !== width('monospace'));
+      const out = { font: font || '(as drawn)', installed, labels: 0, problems: [] };
+      for (const fig of document.querySelectorAll('figure.dokufix-diagram-bpmn')){
+        const svg = fig.querySelector('svg');
+        const pic = svg.getBoundingClientRect();
+        for (const text of svg.querySelectorAll('text')){
+          if (!text.textContent.trim()) continue;
+          out.labels++;
+          const t = text.getBoundingClientRect();
+          const visual = text.closest('.djs-visual');
+          const g = visual && visual.parentElement;
+          const id = g ? g.getAttribute('data-element-id') : '?';
+          // The shape that holds an inner label: the first rect of its visual.
+          const holder = g && /dokufix-bpmn-(task|callactivity|subprocess|pool|lane)\b/.test(g.getAttribute('class') || '') ? visual.querySelector(':scope > rect') : null;
+          const frame = holder ? holder.getBoundingClientRect() : pic;
+          const eps = 0.5;
+          if (t.left < frame.left - eps || t.right > frame.right + eps || t.top < frame.top - eps || t.bottom > frame.bottom + eps){
+            out.problems.push(fig.getAttribute('aria-label') + ' / ' + id + ' "' + text.textContent.trim() + '" ' + (holder ? 'runs out of its symbol' : 'is cut off by the picture') +
+              ' by ' + Math.round(Math.max(frame.left - t.left, t.right - frame.right, frame.top - t.top, t.bottom - frame.bottom) * 10) / 10 + ' px');
+          }
+        }
+      }
+      return out;
+    }, font);
+    if (r.problems.length){
+      r.picture = path.join(dir, 'schrift-' + (font || 'wie-gezeichnet').replace(/\s+/g, '-').toLowerCase() + '.png');
+      await page.locator('figure.dokufix-diagram-bpmn').first().screenshot({ path: r.picture }).catch(() => {});
+    }
+    if (tag) await tag.evaluate(el => el.remove());
+    results.push(r);
+  }
+  await frames(page);
+  const summary = results.map(r => r.font + (r.installed ? '' : ' (not installed)') + ': ' + (r.problems.length ? r.problems.length + ' of ' + r.labels + ' labels do not fit (' + r.problems.slice(0, 4).join('; ') + (r.picture ? '; picture ' + path.relative(process.cwd(), r.picture) : '') + ')' : 'all ' + r.labels + ' labels fit')).join(' | ');
+  fs.writeFileSync(path.join(dir, 'schrift.json'), JSON.stringify(results, null, 2) + '\n');
+  check('BPMN, the font check (AC7): every label measured with the font as drawn and with ' + FONT_CHECK.join(' and '),
+    results.every(r => r.labels > 0) && results[0].problems.length === 0, summary, summary);
+}
+// schlank with scripts off: each BPMN diagram is the notice that it needs
+// JavaScript, and its credit is there, readable.
+async function assertDiagramsWithoutScripts(browser, file, check, exp){
+  const drawn = exp.diagrams.filter(d => d.drawn);
+  if (!drawn.length) return;
+  const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(pathToFileURL(file).href);
+    const f = await page.evaluate(() => {
+      const root = document.querySelector('main.reader-body');
+      return {
+        notices: Array.from(root.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg[data-gz]')).map(h => getComputedStyle(h, '::before').content),
+        svgs: root.querySelectorAll('figure.dokufix-diagram svg').length,
+        credits: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn > figcaption > a')).map(a => { const r = a.getBoundingClientRect(); return a.textContent + ' ' + (r.width > 0 && r.height > 0); }),
+      };
+    });
+    const bpmn = drawn.filter(d => d.kind === 'bpmn').length;
+    check('diagrams with scripts off: each is the notice that it needs JavaScript, and every BPMN diagram keeps its credit, visible',
+      f.svgs === 0 && f.notices.length === drawn.length && f.notices.every(n => n === '"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"') &&
+      f.credits.length === bpmn && f.credits.every(c => c === BPMN_CREDIT.text + ' true'), JSON.stringify(f));
+  } finally {
+    await context.close();
+  }
+}
+
 // ---------- assertions ----------
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
@@ -2078,7 +2306,7 @@ async function assertVariant(browser, file, key, exp, results, label){
     check('document styles apply (h1 is 34px)', s.h1Size === '34px', s.h1Size);
     check('Mermaid diagrams rendered', s.mermaid === exp.mermaid, s.mermaid + ' of ' + exp.mermaid);
     // --- the one figure every diagram stands in (story 2.7)
-    const wantFigures = exp.diagrams.map(d => d.kind + ': ' + d.title);
+    const wantFigures = exp.diagrams.filter(d => d.drawn).map(d => d.kind + ': ' + d.title);
     check('every diagram stands in its figure, in the order of the document, its title the heading before it: ' + JSON.stringify(wantFigures),
       JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) === JSON.stringify(wantFigures) && s.diagramsOutside === 0,
       JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) + ', outside a figure: ' + s.diagramsOutside);
@@ -2087,11 +2315,13 @@ async function assertVariant(browser, file, key, exp, results, label){
     check('every figure holds its SVG in the SVG container, and stands with the margin a diagram had, centred', figureProblems.length === 0, figureProblems.join(' | '));
     // The accessible name, as the accessibility tree computes it.
     const unnamed = [];
-    for (const d of exp.diagrams){
+    for (const d of exp.diagrams.filter(x => x.drawn)){
       const n = await page.getByRole('figure', { name: d.title, exact: true }).count();
-      if (n !== exp.diagrams.filter(x => x.title === d.title).length) unnamed.push(d.title + ' (' + n + ')');
+      if (n !== exp.diagrams.filter(x => x.drawn && x.title === d.title).length) unnamed.push(d.title + ' (' + n + ')');
     }
     check('every figure has its title as its accessible name', unnamed.length === 0, [...new Set(unnamed)].join(', '));
+    // --- BPMN diagrams (story 2.7). With a document that has none, the counts are the check.
+    await assertBpmn(page, check, exp, key, text, label, path.dirname(file));
     if (exp.toc) check('inline table of contents', s.tocLinks > 0 && s.tocBorder === '1px', s.tocLinks + ' links, border ' + s.tocBorder);
     check('embedded images shown', s.images === exp.images, s.images + ' of ' + exp.images);
     check('missing-image placeholders', s.missing === exp.missing && (exp.missing === 0 || s.placeholderBorder === 'dashed'),
@@ -2493,6 +2723,7 @@ async function assertVariant(browser, file, key, exp, results, label){
       await assertLicenceWithoutScripts(browser, file, check);
       if (key !== 'kompakt') await assertFacetsWithoutScripts(browser, file, check, exp);
       if (key === 'schlank') await assertFiltersWithoutScripts(browser, file, check, exp);
+      if (key === 'schlank') await assertDiagramsWithoutScripts(browser, file, check, exp);
     }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {
@@ -2509,7 +2740,7 @@ async function runBrowser(name, opts, md){
   const results = [];
   try {
     const built = await buildExports(browser, opts, md, path.join(dir, 'exports'));
-    const exp = expectationsFor(built.source);
+    const exp = judgeDiagrams(expectationsFor(built.source), built.wellFormed);
     const check = makeChecker(results, name + ' build');
     check('no script errors while building', built.errors.length === 0, built.errors.join(' | '));
     if (exp.facets.length) check('a facet was chosen in the page while each of the four files was written', built.chosen.length === VARIANTS.length && built.chosen.every(c => c === true), JSON.stringify(built.chosen));

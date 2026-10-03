@@ -65,6 +65,18 @@
      The margin replaces the browser's 1em 40px of a figure. */
   .dokufix-doc .dokufix-diagram{margin:24px 0;text-align:center}
   .dokufix-doc .dokufix-diagram-svg svg{max-width:100%;height:auto}
+  /* The credit of a library below its diagram: "gerendert mit bpmn.io". */
+  .dokufix-doc .dokufix-diagram-credit{margin-top:4px;font-size:12px;line-height:1.4;color:#6e6e73}
+  .dokufix-doc .dokufix-diagram-credit a{color:inherit}
+  /* BPMN (src/app/bpmn.js). The SVG draws with these three properties instead
+     of colours; the class the renderer gives each element by its type sets
+     them for that element. The document's greys and its link colour. */
+  .dokufix-doc .dokufix-diagram-bpmn{--dokufix-bpmn-fill:#fff;--dokufix-bpmn-stroke:#3a3a3f;--dokufix-bpmn-label:#1c1c1e}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-pool{--dokufix-bpmn-fill:#fafafa;--dokufix-bpmn-stroke:#8e8e92}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-lane{--dokufix-bpmn-stroke:#8e8e92}
+  .dokufix-doc .dokufix-diagram-bpmn :is(.dokufix-bpmn-task,.dokufix-bpmn-callactivity,.dokufix-bpmn-subprocess,.dokufix-bpmn-gateway,.dokufix-bpmn-event){--dokufix-bpmn-stroke:#0066cc}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-endevent{--dokufix-bpmn-stroke:#1c1c1e}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-messageflow{--dokufix-bpmn-stroke:#6e6e73}
   .dokufix-doc hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 
   /* Inline Table of Contents — injected where the markdown contains [[toc]] */

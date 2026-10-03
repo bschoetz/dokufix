@@ -1,5 +1,6 @@
 import { documentHeadings, headingLabelText } from './toc.js';
 import { buildWarning, errorMessage } from './warning.js';
+import { renderBpmn, bpmnWarningText, BPMN_CREDIT } from './bpmn.js';
 
 // --- Diagrams --------------------------------------------------------------
 // Every diagram stands in one kind of figure, whatever draws it:
@@ -7,21 +8,28 @@ import { buildWarning, errorMessage } from './warning.js';
 //   <figure class="dokufix-diagram dokufix-diagram-mermaid" aria-label="Ablauf">
 //     <div class="dokufix-diagram-svg"><svg …></svg></div>
 //   </figure>
+//   <figure class="dokufix-diagram dokufix-diagram-bpmn" aria-label="Rückgabe">
+//     <div class="dokufix-diagram-svg"><svg role="img" aria-label="Rückgabe" …></svg></div>
+//     <figcaption class="dokufix-diagram-credit"><a href="https://bpmn.io">gerendert mit bpmn.io</a></figcaption>
+//   </figure>
 //
 // The figure carries the diagram's title as its accessible name: the heading
 // before the block, as the table of contents shows it, or "Diagramm" where no
 // heading of the document comes before it. The title is named, not shown.
 // Whatever handles diagrams goes by the figure and its SVG container: the
 // document styles, the `schlank` export, which packs the container, and the
-// checks. Nothing outside this module knows which library drew a diagram.
+// checks. Nothing outside this module knows which library drew a diagram. A
+// kind whose library asks for it gets a credit below the diagram, as a
+// figcaption that stays outside the SVG container.
 //
 // Pure logic, apart from the renderer of each kind: the figure is made by the
 // document it is handed, and diagramTitle() reads the root. The renderers use
-// the page's globals (mermaid, document) and run only in a page;
-// tests/diagrams.test.mjs hands renderDiagrams() renderers of its own.
+// the page's globals (mermaid, BpmnJS, document) and run only in a page;
+// tests/diagrams.test.mjs hands drawDiagrams() renderers of its own.
 
 export const DIAGRAM_CLASS = 'dokufix-diagram';
 export const DIAGRAM_SVG_CLASS = 'dokufix-diagram-svg';
+export const DIAGRAM_CREDIT_CLASS = 'dokufix-diagram-credit';
 export const DIAGRAM_TITLE_DEFAULT = 'Diagramm';
 
 // The title of the diagram at element: the label of the last heading of the
@@ -40,14 +48,23 @@ export function diagramTitle(element, root){
 }
 
 // The figure of one diagram, empty: { figure, holder }. The renderer draws
-// into holder, the SVG container.
-export function diagramFigure(doc, kind, title){
+// into holder, the SVG container. credit: { href, text }, a link below it.
+export function diagramFigure(doc, kind, title, credit){
   const figure = doc.createElement('figure');
   figure.className = DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-' + kind;
   figure.setAttribute('aria-label', title);
   const holder = doc.createElement('div');
   holder.className = DIAGRAM_SVG_CLASS;
   figure.appendChild(holder);
+  if (credit){
+    const caption = doc.createElement('figcaption');
+    caption.className = DIAGRAM_CREDIT_CLASS;
+    const link = doc.createElement('a');
+    link.setAttribute('href', credit.href);
+    link.textContent = credit.text;
+    caption.appendChild(link);
+    figure.appendChild(caption);
+  }
   return { figure, holder };
 }
 
@@ -69,12 +86,20 @@ async function renderMermaid({ holder }){
 
 // The kinds, by the language of their fenced block. Each: render(diagram),
 // which draws into diagram.holder or throws; warning(diagram), the text of the
-// warning that stands where a diagram that threw would have been.
-// diagram: { figure, holder, source, title }.
+// warning that stands where a diagram that threw would have been; credit, the
+// link below the diagram, if its library asks for one.
+// diagram: { kind, figure, holder, source, title, index }, index its place
+// among the diagrams of the document, from 1.
 export const DIAGRAM_KINDS = {
   mermaid: {
     render: renderMermaid,
     warning: () => 'Ein Diagramm konnte nicht gezeichnet werden.',
+  },
+  bpmn: {
+    render: renderBpmn,
+    warning: diagram => bpmnWarningText(diagram.title),
+    // "gerendert mit bpmn.io" under every BPMN diagram (Ben, 2026-10-01).
+    credit: BPMN_CREDIT,
   },
 };
 
@@ -95,10 +120,10 @@ export async function drawDiagrams(root, kinds){
   for (const code of root.querySelectorAll(selector)){
     const kind = Object.keys(kinds).find(k => code.classList.contains('language-' + k));
     const title = diagramTitle(code, root);
-    const { figure, holder } = diagramFigure(doc, kind, title);
+    const { figure, holder } = diagramFigure(doc, kind, title, kinds[kind].credit);
     holder.textContent = code.textContent;
     code.parentElement.replaceWith(figure);
-    diagrams.push({ kind, figure, holder, source: code.textContent, title });
+    diagrams.push({ kind, figure, holder, source: code.textContent, title, index: diagrams.length + 1 });
   }
   for (const diagram of diagrams){
     const kind = kinds[diagram.kind];

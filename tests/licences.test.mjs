@@ -7,14 +7,15 @@
 // what a dokufix file loads or carries, in which version, under which licence,
 // with which copyright lines. The cases:
 //
-//   - the list is complete: the four entries, each with every field, and the
+//   - the list is complete: the five entries, each with every field, and the
 //     copyright lines as their projects publish them;
 //   - the versions are the ones the file really uses: every jsDelivr npm URL
 //     in src/index.html, whatever tag it stands in, and the Octicons version
 //     named in src/doc.css. Raise one of those and leave the list alone, and
 //     the case fails and names the entry. Not covered: a library from another
 //     host, and one the script itself would import or load;
-//   - every licence an entry names has its text;
+//   - every licence an entry names has its text, the bpmn.io licence in the
+//     wording of the package;
 //   - the markup: a closed <details>, no <script>, every text escaped;
 //   - the built file holds every copyright line.
 //
@@ -53,13 +54,17 @@ const PUBLISHED = {
   'Mermaid': { package: 'mermaid', use: 'cdn', licence: 'MIT', copyright: [
     'Copyright (c) 2014 - 2022 Knut Sveidqvist',
   ] },
+  // The file LICENSE of the package, fetched 2026-10-03 from jsDelivr.
+  'bpmn-js': { package: 'bpmn-js', use: 'cdn', licence: 'bpmn.io', copyright: [
+    'Copyright (c) 2014-present Camunda Services GmbH',
+  ] },
   'Octicons': { package: '@primer/octicons', use: 'embedded', licence: 'MIT', copyright: [
     'Copyright (c) 2026 GitHub Inc.',
   ] },
 };
 
-test('the list has the four entries, in this order', () => {
-  assert.deepEqual(NOTICES.map(n => n.name), ['marked', 'marked-footnote', 'Mermaid', 'Octicons']);
+test('the list has the five entries, in this order', () => {
+  assert.deepEqual(NOTICES.map(n => n.name), ['marked', 'marked-footnote', 'Mermaid', 'bpmn-js', 'Octicons']);
 });
 
 test('every entry is complete: name, package, version, licence, copyright lines, how it gets into a file', () => {
@@ -120,9 +125,9 @@ function versionProblems(notices, indexHtml, docCss){
   return problems;
 }
 
-test('the sources pin three libraries on the CDN and the Octicons', () => {
+test('the sources pin four libraries on the CDN and the Octicons', () => {
   const pins = pinned(read('src/index.html'), read('src/doc.css'));
-  assert.deepEqual(pins.cdn.map(p => p.package), ['marked', 'marked-footnote', 'mermaid']);
+  assert.deepEqual(pins.cdn.map(p => p.package), ['marked', 'marked-footnote', 'mermaid', 'bpmn-js']);
   assert.deepEqual(pins.embedded.map(p => p.package), ['@primer/octicons']);
 });
 
@@ -142,9 +147,9 @@ test('a version raised in the sources and not in the list is reported with the e
 
 test('a library the page loads and the list does not name is reported, and so is an entry the sources do not know', () => {
   const indexHtml = read('src/index.html'), docCss = read('src/doc.css');
-  const more = indexHtml.replace('<script src="https://cdn.jsdelivr.net/npm/mermaid@', '<script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.6.2/dist/bpmn-viewer.production.min.js"></script>\n<script src="https://cdn.jsdelivr.net/npm/mermaid@');
+  const more = indexHtml.replace('<script src="https://cdn.jsdelivr.net/npm/mermaid@', '<script src="https://cdn.jsdelivr.net/npm/dmn-js@17.4.0/dist/dmn-viewer.production.min.js"></script>\n<script src="https://cdn.jsdelivr.net/npm/mermaid@');
   assert.notEqual(more, indexHtml, 'mutation target not found');
-  assert.deepEqual(versionProblems(NOTICES, more, docCss), ['src/index.html uses bpmn-js 18.6.2, and the list has no entry for it']);
+  assert.deepEqual(versionProblems(NOTICES, more, docCss), ['src/index.html uses dmn-js 17.4.0, and the list has no entry for it']);
   const less = indexHtml.replace(/<script src="https:\/\/cdn\.jsdelivr\.net\/npm\/marked-footnote@[^>]*><\/script>\n/, '');
   assert.notEqual(less, indexHtml, 'mutation target not found');
   assert.deepEqual(versionProblems(NOTICES, less, docCss), ['entry "marked-footnote": src/index.html does not name marked-footnote']);
@@ -157,8 +162,10 @@ test('a jsDelivr URL counts in whatever tag and attribute it stands: a styleshee
     assert.notEqual(changed, indexHtml, 'mutation target not found');
     return versionProblems(NOTICES, changed, docCss);
   };
-  assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.6.2/dist/assets/diagram-js.css">'),
-    ['src/index.html uses bpmn-js 18.6.2, and the list has no entry for it']);
+  assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diagram-js@15.4.0/assets/diagram-js.css">'),
+    ['src/index.html uses diagram-js 15.4.0, and the list has no entry for it']);
+  assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.6.2/dist/assets/bpmn-js.css">'),
+    ['entry "bpmn-js": the list says 18.31.0, src/index.html uses 18.6.2']);
   assert.deepEqual(withTag('<script defer src="https://cdn.jsdelivr.net/npm/@scope/some.lib@1.2.3/dist/index.min.js"></script>'),
     ['src/index.html uses @scope/some.lib 1.2.3, and the list has no entry for it']);
   assert.deepEqual(withTag("<link rel='stylesheet' href='//cdn.jsdelivr.net/npm/mermaid@12.0.1/dist/mermaid.css'>"),
@@ -192,6 +199,17 @@ test('the MIT text is the permission notice in its wording', () => {
   // globals under node_modules/.
   const notice = paragraphs.join(' ').replace(/\s+/g, ' ').trim();
   assert.equal(crypto.createHash('sha256').update(notice).digest('hex'), 'fe2a9817987f862eaced948f0468c7f51d2fedfc48c5c505b246a49a3870e9a5');
+});
+
+test('the bpmn.io text is the file LICENSE of bpmn-js 18.31.0, without its copyright line', () => {
+  const { title, paragraphs } = LICENCE_TEXTS['bpmn.io'];
+  assert.equal(title, 'bpmn.io License');
+  assert.equal(paragraphs.length, 4);
+  assert.ok(paragraphs[2].startsWith('The source code responsible for displaying the bpmn.io project watermark that links back to https://bpmn.io'));
+  // The hash of the file's text after its first line, white space as single
+  // blanks, taken on 2026-10-03 from the file as jsDelivr serves it.
+  const notice = paragraphs.join(' ').replace(/\s+/g, ' ').trim();
+  assert.equal(crypto.createHash('sha256').update(notice).digest('hex'), 'd133530f730832895cdd8652d1858a6fdadb61838ff75cae4c6c75047089ec13');
 });
 
 // ---------- the markup ----------
@@ -229,12 +247,15 @@ test('the view names every entry with version, licence and copyright lines, and 
     assert.ok(text.includes(LICENCE_TEXTS[n.licence].title), n.name + ': its licence');
     for (const line of n.copyright) assert.ok(text.includes(line), n.name + ': ' + line);
   });
-  assert.ok(items[3].textContent.includes('@primer/octicons'), 'the Octicons with the name of their package');
+  assert.ok(items[NOTICES.findIndex(n => n.name === 'Octicons')].textContent.includes('@primer/octicons'), 'the Octicons with the name of their package');
   const whole = view.textContent;
-  assert.ok(whole.includes('The dokufix editor loads marked, marked-footnote and Mermaid from a CDN; the file itself carries Octicons.'), whole.slice(0, 200));
-  assert.equal(whole.split('MIT License').length - 1, NOTICES.length + 1, 'the title of the licence: once per entry, once above its text');
-  assert.equal(whole.split('Permission is hereby granted').length - 1, 1, 'the permission notice once');
-  for (const p of LICENCE_TEXTS.MIT.paragraphs) assert.ok(whole.includes(p), p.slice(0, 40));
+  assert.ok(whole.includes('The dokufix editor loads marked, marked-footnote, Mermaid and bpmn-js from a CDN; the file itself carries Octicons.'), whole.slice(0, 200));
+  for (const key of ['MIT', 'bpmn.io']){
+    const title = LICENCE_TEXTS[key].title;
+    assert.equal(whole.split(title).length - 1, NOTICES.filter(n => n.licence === key).length + 1, title + ': once per entry, once above its text');
+    for (const p of LICENCE_TEXTS[key].paragraphs) assert.ok(whole.includes(p), key + ': ' + p.slice(0, 40));
+  }
+  assert.equal(whole.split('Permission is hereby granted').length - 1, 2, 'the permission notice once per licence text');
 });
 
 test('every text is escaped', () => {

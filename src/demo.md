@@ -34,7 +34,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Tabellen mit Unterzeile, Filter und Suchfeld
 - Bilder
 - Fußnoten mit Vorschau
-- **Mermaid-Diagramme**
+- **Mermaid- und BPMN-Diagramme**
 
 ## Wie das hier zusammenspielt
 
@@ -209,6 +209,82 @@ sequenceDiagram
     dokufix-->>-Nutzerin: Fertige Vorschau
 ```
 
+## Prozessmodell (BPMN)
+
+Ein Prozess, gezeichnet in einem BPMN-Werkzeug wie dem Camunda Modeler: Sie kopieren das XML samt Koordinaten in einen Block mit der Sprache `bpmn`. dokufix zeichnet ihn mit der Bibliothek von bpmn.io; ins Dokument kommt nur das fertige Bild, und unter jedem BPMN-Diagramm steht der Verweis darauf. Zwei Pools, Bahnen, Nachrichtenflüsse zwischen den Pools:
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Leser" name="Leser" processRef="Prozess_Leser"/>
+    <bpmn:participant id="Bib" name="Bibliothek" processRef="Prozess_Bib"/>
+    <bpmn:messageFlow id="N1" sourceRef="L_Bestellen" targetRef="T_Start"/>
+    <bpmn:messageFlow id="N2" sourceRef="F_Melden" targetRef="L_Bereit"/>
+    <bpmn:messageFlow id="N3" sourceRef="T_Absage" targetRef="Leser"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Leser" isExecutable="false">
+    <bpmn:startEvent id="L_Start" name="Buch fehlt"/>
+    <bpmn:sendTask id="L_Bestellen" name="Fernleihe bestellen"/>
+    <bpmn:intermediateCatchEvent id="L_Bereit" name="Abholbereit"><bpmn:messageEventDefinition id="L_Bereit_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="L_Ende" name="Buch da"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="L_Start" targetRef="L_Bestellen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="L_Bestellen" targetRef="L_Bereit"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="L_Bereit" targetRef="L_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Bib" isExecutable="false">
+    <bpmn:laneSet id="Prozess_Bib_Bahnen">
+      <bpmn:lane id="Theke" name="Theke"><bpmn:flowNodeRef>T_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Verbund</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Absage</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Fernleihe" name="Fernleihe"><bpmn:flowNodeRef>F_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Melden</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Ende</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="T_Start" name="Bestellung"><bpmn:messageEventDefinition id="T_Start_Def"/></bpmn:startEvent>
+    <bpmn:userTask id="T_Pruefen" name="Bestellung prüfen"/>
+    <bpmn:exclusiveGateway id="T_Verbund" name="Im Verbund?"/>
+    <bpmn:endEvent id="T_Absage" name="Absage"><bpmn:messageEventDefinition id="T_Absage_Def"/></bpmn:endEvent>
+    <bpmn:serviceTask id="F_Bestellen" name="Beim Partner bestellen"/>
+    <bpmn:sendTask id="F_Melden" name="Abholung melden"/>
+    <bpmn:endEvent id="F_Ende" name="Gemeldet"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="T_Start" targetRef="T_Pruefen"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="T_Pruefen" targetRef="T_Verbund"/>
+    <bpmn:sequenceFlow id="F6" name="nein" sourceRef="T_Verbund" targetRef="T_Absage"/>
+    <bpmn:sequenceFlow id="F7" name="ja" sourceRef="T_Verbund" targetRef="F_Bestellen"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="F_Bestellen" targetRef="F_Melden"/>
+    <bpmn:sequenceFlow id="F9" sourceRef="F_Melden" targetRef="F_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagramm">
+    <bpmndi:BPMNPlane id="Ebene" bpmnElement="Zusammenarbeit">
+      <bpmndi:BPMNShape id="Leser_di" bpmnElement="Leser" isHorizontal="true"><dc:Bounds x="0" y="0" width="906" height="110"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Bib_di" bpmnElement="Bib" isHorizontal="true"><dc:Bounds x="0" y="170" width="906" height="240"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Theke_di" bpmnElement="Theke" isHorizontal="true"><dc:Bounds x="30" y="170" width="876" height="120"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Fernleihe_di" bpmnElement="Fernleihe" isHorizontal="true"><dc:Bounds x="30" y="290" width="876" height="120"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Start_di" bpmnElement="L_Start"><dc:Bounds x="62" y="37" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="35" y="78" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Bestellen_di" bpmnElement="L_Bestellen"><dc:Bounds x="148" y="15" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Bereit_di" bpmnElement="L_Bereit"><dc:Bounds x="652" y="37" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="625" y="5" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Ende_di" bpmnElement="L_Ende"><dc:Bounds x="770" y="37" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="743" y="78" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Start_di" bpmnElement="T_Start"><dc:Bounds x="210" y="212" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="183" y="253" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Pruefen_di" bpmnElement="T_Pruefen"><dc:Bounds x="296" y="190" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Verbund_di" bpmnElement="T_Verbund" isMarkerVisible="true"><dc:Bounds x="439" y="205" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="419" y="173" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Absage_di" bpmnElement="T_Absage"><dc:Bounds x="564" y="212" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="537" y="253" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Bestellen_di" bpmnElement="F_Bestellen"><dc:Bounds x="532" y="310" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Melden_di" bpmnElement="F_Melden"><dc:Bounds x="650" y="310" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Ende_di" bpmnElement="F_Ende"><dc:Bounds x="800" y="332" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="773" y="373" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="98" y="55"/><di:waypoint x="148" y="55"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="248" y="55"/><di:waypoint x="652" y="55"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="688" y="55"/><di:waypoint x="770" y="55"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="246" y="230"/><di:waypoint x="296" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="396" y="230"/><di:waypoint x="439" y="230"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="489" y="230"/><di:waypoint x="564" y="230"/><bpmndi:BPMNLabel><dc:Bounds x="513" y="213" width="28" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="464" y="255"/><di:waypoint x="464" y="350"/><di:waypoint x="532" y="350"/><bpmndi:BPMNLabel><dc:Bounds x="470" y="296" width="20" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8"><di:waypoint x="632" y="350"/><di:waypoint x="650" y="350"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9"><di:waypoint x="750" y="350"/><di:waypoint x="800" y="350"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1"><di:waypoint x="198" y="95"/><di:waypoint x="198" y="154"/><di:waypoint x="228" y="154"/><di:waypoint x="228" y="212"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N2_di" bpmnElement="N2"><di:waypoint x="700" y="310"/><di:waypoint x="700" y="192"/><di:waypoint x="670" y="192"/><di:waypoint x="670" y="73"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N3_di" bpmnElement="N3"><di:waypoint x="582" y="212"/><di:waypoint x="582" y="110"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
+```
+
 ## Code-Block (kein Mermaid)
 
 ```javascript
@@ -297,6 +373,42 @@ Eine Markierung in einem Listeneintrag wirkt dort: Der Eintrag enthält Karten.
   - **Automat** ohne Wartezeit
 
 Dieselbe Fußnote wie in der Tabelle der Tasten, hier im Fließtext: Unten stehen bei ihr zwei Rückwärtspfeile.[^tasten]
+
+Ein BPMN-Prozess ohne Pool und ohne Bahnen, mit einem Zeit-Startereignis, Aufgabenarten, die im Prozessmodell oben fehlen, und einer Aufrufaktivität. Auch unter ihm steht „gerendert mit bpmn.io“.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Abend" isExecutable="false">
+    <bpmn:startEvent id="A_Start" name="Jeden Abend"><bpmn:timerEventDefinition id="A_Start_Def"/></bpmn:startEvent>
+    <bpmn:manualTask id="A_Kasse" name="Kasse zählen"/>
+    <bpmn:scriptTask id="A_Bericht" name="Bericht erzeugen"/>
+    <bpmn:businessRuleTask id="A_Regeln" name="Mahnstufe setzen"/>
+    <bpmn:callActivity id="A_Archiv" name="Archivieren"/>
+    <bpmn:endEvent id="A_Ende" name="Feierabend"/>
+    <bpmn:sequenceFlow id="A1" sourceRef="A_Start" targetRef="A_Kasse"/>
+    <bpmn:sequenceFlow id="A2" sourceRef="A_Kasse" targetRef="A_Bericht"/>
+    <bpmn:sequenceFlow id="A3" sourceRef="A_Bericht" targetRef="A_Regeln"/>
+    <bpmn:sequenceFlow id="A4" sourceRef="A_Regeln" targetRef="A_Archiv"/>
+    <bpmn:sequenceFlow id="A5" sourceRef="A_Archiv" targetRef="A_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="Diagramm">
+    <bpmndi:BPMNPlane id="Ebene" bpmnElement="Prozess_Abend">
+      <bpmndi:BPMNShape id="A_Start_di" bpmnElement="A_Start"><dc:Bounds x="32" y="42" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="5" y="83" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="A_Kasse_di" bpmnElement="A_Kasse"><dc:Bounds x="120" y="20" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="A_Bericht_di" bpmnElement="A_Bericht"><dc:Bounds x="240" y="20" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="A_Regeln_di" bpmnElement="A_Regeln"><dc:Bounds x="360" y="20" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="A_Archiv_di" bpmnElement="A_Archiv"><dc:Bounds x="480" y="20" width="100" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="A_Ende_di" bpmnElement="A_Ende"><dc:Bounds x="632" y="42" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="605" y="83" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="A1_di" bpmnElement="A1"><di:waypoint x="68" y="60"/><di:waypoint x="120" y="60"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A2_di" bpmnElement="A2"><di:waypoint x="220" y="60"/><di:waypoint x="240" y="60"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A3_di" bpmnElement="A3"><di:waypoint x="340" y="60"/><di:waypoint x="360" y="60"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A4_di" bpmnElement="A4"><di:waypoint x="460" y="60"/><di:waypoint x="480" y="60"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A5_di" bpmnElement="A5"><di:waypoint x="580" y="60"/><di:waypoint x="632" y="60"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
+```
 
 ---
 

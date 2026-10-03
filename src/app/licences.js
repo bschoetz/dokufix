@@ -45,6 +45,13 @@ export const NOTICES = [
     copyright: ['Copyright (c) 2014 - 2022 Knut Sveidqvist'],
   },
   {
+    // The navigated viewer of bpmn-js. Its licence is MIT with one more
+    // condition, about the bpmn.io watermark; the text is the file LICENSE of
+    // the package, bpmn-js@18.31.0.
+    name: 'bpmn-js', package: 'bpmn-js', version: '18.31.0', licence: 'bpmn.io', use: 'cdn',
+    copyright: ['Copyright (c) 2014-present Camunda Services GmbH'],
+  },
+  {
     // The path data of five icons, in the document styles (src/doc.css).
     name: 'Octicons', package: '@primer/octicons', version: '19.38.0', licence: 'MIT', use: 'embedded',
     copyright: ['Copyright (c) 2026 GitHub Inc.'],
@@ -59,6 +66,17 @@ export const LICENCE_TEXTS = {
     paragraphs: [
       'Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:',
       'The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.',
+      'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.',
+    ],
+  },
+  // The file LICENSE of bpmn-js@18.31.0, its lines joined into paragraphs; the
+  // copyright line stands with the entry. The file has no title.
+  'bpmn.io': {
+    title: 'bpmn.io License',
+    paragraphs: [
+      'Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:',
+      'The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.',
+      'The source code responsible for displaying the bpmn.io project watermark that links back to https://bpmn.io as part of rendered diagrams MUST NOT be removed or changed. When this software is being used in a website or application, the watermark must stay fully visible and not visually overlapped by other elements.',
       'THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.',
     ],
   },

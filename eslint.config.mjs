@@ -4,7 +4,7 @@
 //
 //   no-undef                    a name that is neither declared nor imported
 //                               and is no global of the browser or of the
-//                               three libraries the page loads from the CDN
+//                               four libraries the page loads from the CDN
 //   no-import-assign            an assignment to an imported name
 //   dokufix/no-unused-imports   an import nothing uses
 //   no-restricted-syntax        import * as x: with it, x.name for a name the
@@ -46,6 +46,7 @@ export default [
         marked: 'readonly',
         markedFootnote: 'readonly',
         mermaid: 'readonly',
+        BpmnJS: 'readonly',
       },
     },
     plugins: { dokufix: { rules: { 'no-unused-imports': noUnusedImports } } },

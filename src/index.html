@@ -116,6 +116,8 @@
 <script src="https://cdn.jsdelivr.net/npm/marked@18.0.14/lib/marked.umd.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/marked-footnote@1.4.0/dist/index.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@12.0.0/dist/mermaid.min.js"></script>
+<!-- bpmn-js, the viewer with zoom and pan (global BpmnJS). Loaded on every opening, whether the document holds BPMN or not; it draws BPMN diagrams off-screen, and the document keeps only their SVG. -->
+<script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/bpmn-navigated-viewer.production.min.js"></script>
 
 <script>
 {{slot:app.js}}
