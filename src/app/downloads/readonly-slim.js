@@ -1,7 +1,7 @@
 import { gzipB64 } from '../gzip.js';
 import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
-import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './export-body.js';
+import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml, filterScriptFor } from './export-body.js';
 
 // --- Download #2b — schlank: text plain, only Mermaid SVGs gzipped per-element ---
 export async function downloadReadonlySlim(){
@@ -26,6 +26,11 @@ export async function downloadReadonlySlim(){
     ? `<script>(async()=>{for(const el of document.querySelectorAll('[data-gz]')){try{const u=Uint8Array.from(atob(el.getAttribute('data-gz')),c=>c.charCodeAt(0));const r=new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip')));el.innerHTML=await r.text();el.removeAttribute('data-gz');}catch(e){console.error('SVG decode failed',e);}}})();<\/script>`
     : '';
 
+  // The free-text filter, when the document has a filter table: it runs behind
+  // the document and gives each such table its search field.
+  const filterCode = filterScriptFor(body);
+  const filterScript = filterCode ? '<script>' + filterCode + '<\/script>' : '';
+
   const noscript = svgCount > 0
     ? `<noscript><style>.mermaid[data-gz]{display:block;padding:24px;border:1px dashed #d8d8da;color:#8e8e92;text-align:center;font-size:14px;font-style:italic}.mermaid[data-gz]::before{content:"[Mermaid-Diagramm — JavaScript erforderlich, um es anzuzeigen]"}</style></noscript>`
     : '';
@@ -45,6 +50,7 @@ ${licencesHtml()}
 ${body}
 ${buildMetaFooterHtml()}
 ${decoder}
+${filterScript}
 </main>
 ${rail}
 </body>

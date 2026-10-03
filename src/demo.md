@@ -136,7 +136,7 @@ Eine Markierung, die nicht wirken kann, wird an ihrer Stelle zur Warnung, und di
 
 Eine Markierung über einer Tabelle nennt eine Spalte: `<!-- dokufix: facets Art -->`. Über der Tabelle steht dann für jeden Wert dieser Spalte ein Knopf. Wählen Sie einen, und die Tabelle zeigt nur die Zeilen mit diesem Wert; „Alle“ zeigt wieder alle. Das geht mit der Maus und mit den Pfeiltasten, und es braucht kein Skript: Der Filter arbeitet auch in der Nur-Lese-Fassung.
 
-Eine zweite Markierung gibt derselben Tabelle ein Suchfeld: `<!-- dokufix: filter "Baustein suchen …" -->`. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt; die Zahl daneben sagt, wie viele das sind. Suchfeld und Knöpfe wirken zusammen. Das Suchfeld braucht ein Skript: Es steht hier und in der Datei „Mit Editor“. Die Nur-Lese-Fassungen zeigen die ganze Tabelle ohne Suchfeld, und auf Papier steht immer die ganze Tabelle.
+Eine zweite Markierung gibt derselben Tabelle ein Suchfeld: `<!-- dokufix: filter "Baustein suchen …" -->`. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt; die Zahl daneben sagt, wie viele das sind. Suchfeld und Knöpfe wirken zusammen. Das Suchfeld braucht ein Skript: Es steht hier, in der Datei „Mit Editor“ und in den Fassungen „schlank“ und „kompakt“. Die offene Fassung ohne Skript (`-nur-lesen.html`) zeigt die ganze Tabelle ohne Suchfeld, ebenso „schlank“, wenn der Browser keine Skripte ausführt, und auf Papier steht immer die ganze Tabelle.
 
 <!-- dokufix: filter "Baustein suchen …" -->
 <!-- dokufix: facets Art -->
@@ -170,7 +170,7 @@ Eine Tabelle, die breiter ist als die Lesespalte, rollt für sich seitwärts. Di
 |---|---|---|---|---|---|---|---|
 | Mit Editor | `.html` | uneingeschränkt | vollständig | Bibliotheken aus dem Netz | beim Öffnen gezeichnet | am größten | Zusammenarbeit |
 | Offen | `-nur-lesen.html` | ausgeschlossen | letzter Stand | keine | eingebettet | groß | Veröffentlichung, Langzeitablage |
-| Schlank | `-schlank.html` | ausgeschlossen | letzter Stand | nur für Diagramme | gepackt | mittel | Versand |
+| Schlank | `-schlank.html` | ausgeschlossen | letzter Stand | für Diagramme und Suchfelder | gepackt | mittel | Versand |
 | Kompakt | `-kompakt.html` | ausgeschlossen | letzter Stand | für alles | gepackt | am kleinsten | Versand über schmale Leitungen |
 
 ## Bilder

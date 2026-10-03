@@ -16,6 +16,7 @@ import vm from 'node:vm';
 import crypto from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { parseHTML } from 'linkedom';
 import { assemble, BuildError, SLOTS } from '../build.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -70,9 +71,9 @@ test('--check passes on the committed file', () => {
 });
 // app/gzip.js stands for the modules under src/app/: the script is bundled from
 // app.js and everything it imports.
-for (const name of ['doc.css', 'app.css', 'app.js', 'app/gzip.js', 'demo.md', 'index.html']){
+for (const name of ['doc.css', 'app.css', 'app.js', 'app/gzip.js', 'filter.js', 'demo.md', 'index.html']){
   test('--check fails when ' + name + ' changed and dist/ was not rebuilt', () => {
-    const addition = { 'doc.css': '.dokufix-doc h6{color:red}\n', 'app.css': '.x{color:red}\n', 'app.js': 'console.log("x");\n', 'app/gzip.js': 'console.log("x");\n', 'demo.md': 'Ein Satz mehr.\n', 'index.html': '<!-- x -->\n' }[name];
+    const addition = { 'doc.css': '.dokufix-doc h6{color:red}\n', 'app.css': '.x{color:red}\n', 'app.js': 'console.log("x");\n', 'app/gzip.js': 'console.log("x");\n', 'filter.js': 'console.log("x");\n', 'demo.md': 'Ein Satz mehr.\n', 'index.html': '<!-- x -->\n' }[name];
     const before = fs.readFileSync(committed);
     const r = build({ [name]: original(name) + addition }, ['--check'], committed);
     assert.equal(r.status, 1, r.stdout);
@@ -294,8 +295,49 @@ test('"<!--" in the minified script: refused, with the reason', () => {
   assert.doesNotThrow(() => assemble(original('index.html'), { ...parts, 'app.js': 'x="\\x3c!--"' }));
 });
 
+test('"</script" or "<!--" in the bundle of the filter: refused, with the reason', () => {
+  const parts = { 'doc.css': 'a{}', 'app.css': 'b{}', 'app.js': 'x=1', 'filter.js': 'x="</script>"', 'demo.md': '{"text":""}', 'assets': '{}' };
+  assert.throws(() => assemble(original('index.html'), parts), e => e instanceof BuildError && /the bundle of the filter contains "<\/script"/.test(e.message));
+  assert.throws(() => assemble(original('index.html'), { ...parts, 'filter.js': 'x="<!--"' }), e => e instanceof BuildError && /the bundle of the filter contains "<!--"/.test(e.message));
+  assert.doesNotThrow(() => assemble(original('index.html'), { ...parts, 'filter.js': 'x="<\\/script>"' }));
+});
+
+// ---------- the bundle of the free-text filter ----------
+const filterBlock = html => {
+  const open = '<script type="text/plain" id="dokufix-filter-js">';
+  const from = html.indexOf(open) + open.length;
+  assert.ok(from >= open.length, 'block #dokufix-filter-js not found');
+  return html.slice(from, html.toLowerCase().indexOf('</script', from));
+};
+// src/filter.js with what it imports, one minified IIFE in the data block
+// #dokufix-filter-js, which `schlank` and `kompakt` copy into their file.
+test('the built file carries the filter bundle in a block that does not run, and the bundle gives a marked table its field', () => {
+  const html = fs.readFileSync(committed, 'utf8');
+  assert.equal(html.split('<script type="text/plain" id="dokufix-filter-js">').length, 2, 'one block, of a type that does not run');
+  const code = filterBlock(html);
+  assert.ok(code.length > 1000 && code.length < 6000, code.length + ' B');
+  assert.match(code, /^\(\(\)=>\{[\s\S]*\}\)\(\);$/, 'one minified IIFE');
+  assert.ok(!/<\/script/i.test(code) && !code.includes('<!--'));
+  // Run in a document as an export has it: the content container holds a marked table.
+  const { document, window } = parseHTML('<!DOCTYPE html><html><body><main class="reader-body dokufix-doc"><div class="dokufix-table"><table data-dokufix-filter="Ort suchen …"><thead><tr><th>Ort</th></tr></thead><tbody><tr><td>Nord</td></tr><tr><td>Süd</td></tr></tbody></table></div></main></body></html>');
+  vm.runInNewContext(code, { document, window });
+  const field = document.querySelector('main > .dokufix-filter[data-dokufix-transient]');
+  assert.ok(field, 'the field stands above the wrapper');
+  assert.equal(field.querySelector('input').getAttribute('placeholder'), 'Ort suchen …');
+  assert.equal(field.querySelector('.dokufix-filter-count').textContent, '2 Zeilen');
+  const input = field.querySelector('input');
+  input.value = 'nord';
+  input.dispatchEvent(new window.Event('input'));
+  assert.equal(field.querySelector('.dokufix-filter-count').textContent, '1 von 2 Zeilen');
+});
+test('the filter bundle is the same with --dev: minified, so the readable file carries what an export carries', () => {
+  const r = build({}, ['--dev']);
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(filterBlock(r.html), filterBlock(fs.readFileSync(committed, 'utf8')));
+});
+
 // ---------- a missing source, and the build started through a symlink ----------
-for (const name of ['index.html', 'doc.css', 'app.css', 'app.js', 'demo.md']){
+for (const name of ['index.html', 'doc.css', 'app.css', 'app.js', 'filter.js', 'demo.md']){
   test(name + ' missing: exit 1, "source not found", nothing written', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
     fs.cpSync(srcDir, path.join(dir, 'src'), { recursive: true });

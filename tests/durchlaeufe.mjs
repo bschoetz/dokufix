@@ -57,10 +57,11 @@
 //                                that can: the first is a warning at its place,
 //                                the second gives its table a field that
 //                                filters. A term is typed in the page while
-//                                each of the four files is written: every
-//                                read-only file shows all rows, no field and no
-//                                mark of the filter; "Mit Editor" opens with
-//                                all rows and an empty field that filters. A
+//                                each of the four files is written: every file
+//                                opens with all rows; nur-lesen has no field and
+//                                no mark of the filter; schlank, kompakt and
+//                                "Mit Editor" open with an empty field that
+//                                filters. A
 //                                third filter stands in a footnote: its table
 //                                gets a field in the list of footnotes, and the
 //                                preview of that footnote holds none
@@ -224,7 +225,7 @@ const PASS_EDITS = [
 ];
 const EXPORT_STEP_MESSAGE = 'Absicht: der Exportschritt wirft (durchlaeufe)';
 const EXPORT_EDITS = [
-  { after: "const EXPORT_STEPS = [removeTransientElements, removeFilterMarks, inlineImages];\n",
+  { after: "const EXPORT_STEPS = [removeTransientElements, showFilteredRows, inlineImages];\n",
     add: "EXPORT_STEPS.push(() => { throw new Error('" + EXPORT_STEP_MESSAGE + "'); });\n" },
 ];
 // Builds a copy of src/ in which one module got the given lines.
@@ -245,6 +246,10 @@ function buildCopy(outDir, module, edits, name){
   fs.rmSync(srcCopy, { recursive: true });
   return built;
 }
+
+// A file's text without its scripts: schlank and kompakt carry the code of the
+// free-text filter, which names the class and the attribute of its field.
+const withoutScripts = text => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
 
 // ---------- results ----------
 const results = [];
@@ -363,7 +368,8 @@ const facts = page => page.evaluate(() => {
       count: field.querySelector('.dokufix-filter-count').textContent, transient: field.hasAttribute('data-dokufix-transient'),
       shown: Array.from(field.nextElementSibling.querySelectorAll(':scope > table > tbody > tr')).map(tr => getComputedStyle(tr).display !== 'none'),
     })),
-    filterMarks: container.querySelectorAll('[data-dokufix-filter], .dokufix-filter-out').length,
+    filterMarks: container.querySelectorAll('[data-dokufix-filter]').length,
+    hiddenRows: container.querySelectorAll('.dokufix-filter-out').length,
     rowsShown: Array.from(container.querySelectorAll('tbody > tr')).map(tr => getComputedStyle(tr).display !== 'none'),
     // The previews of the footnotes: their text, and the controls in them.
     previewTexts: Array.from(container.querySelectorAll('.dokufix-fn-preview')).map(p => p.textContent.replace(/\s+/g, ' ').trim()),
@@ -555,7 +561,9 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         const written = text.match(/<details class="dokufix-licences"[^>]*>/g) || [];
         check(s, 'carries the licence element once, directly after <body>, closed, although the views were open',
           written.length === 1 && written[0] === '<details class="dokufix-licences">' && x.licences.length === 1 && !x.licences[0].open && x.licences[0].firstInBody, { written, licences: x.licences });
-        check(s, 'nothing transient: not the attribute, not an element of this run', x.transient === 0 && !text.includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), x.transient);
+        // The search fields that schlank and kompakt make themselves when they
+        // open are transient; the code that makes them names the attribute.
+        check(s, 'nothing transient: not the attribute, not an element of this run', x.transient === x.filters.length && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), x.transient);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       check(scope, 'both views are still open in the running page', JSON.stringify(await views()) === '[true,true]', await views());
@@ -704,7 +712,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await typeAndRender(o.page, DOC_FILTER);
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
       const all = FILTER_ROWS_TYPED.map(() => true);
-      const typeTerm = (page, term) => page.locator('#preview .dokufix-filter-input').first().fill(term, { timeout: 5000 });
+      const typeTerm = (page, term) => page.locator(':is(#preview, main.reader-body) .dokufix-filter-input').first().fill(term, { timeout: 5000 });
       // What every file shows, with or without a field.
       const common = (s, x, text) => {
         checkWarning(s, x, [FILTER_WARNING], 'naming the marker', STYLED_ONE_LINE);
@@ -713,7 +721,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         check(s, 'no marker is left, and the passes around it ran', x.markersLeft === 0 && x.headingsWithoutId === 0 && x.tocLinks >= 3 && x.previews === 1 && x.returnPaths === 1 && x.tables === '2 tables, 2 wrapped', x);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
-      // An editor: two fields, the one in the list of footnotes as well, all rows, and typing filters.
+      // An editor, schlank and kompakt: two fields, the one in the list of footnotes as well, all rows, and typing filters.
       const editorPage = async (s, x, page) => {
         common(s, x, '');
         check(s, 'two fields, each transient, empty, with its placeholder and the counter of all rows; all rows shown',
@@ -735,9 +743,17 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         const r = await open(browser, file, READY[v.key]);
         try {
           const x = await facts(r.page), text = fs.readFileSync(file, 'utf8');
-          common(scope + ', ' + v.key, x, text);
-          check(scope + ', ' + v.key, 'no field, no mark of the filter, every row shown', x.filters.length === 0 && x.filterMarks === 0 && same(x.rowsShown, [...all, true, true]), { filters: x.filters, marks: x.filterMarks, rows: x.rowsShown });
-          if (v.key !== 'kompakt') check(scope + ', ' + v.key, 'outside its stylesheet the file holds nothing of the filter', !/dokufix-filter/.test(text.replace(/<style>[\s\S]*?<\/style>/g, '')));
+          check(scope + ', ' + v.key, 'every row shown, none hidden', x.hiddenRows === 0 && same(x.rowsShown, [...all, true, true]), { hidden: x.hiddenRows, rows: x.rowsShown });
+          if (v.key === 'nur-lesen'){
+            // No script, so no field (Ben, 2026-10-03: the field in schlank and kompakt, not here).
+            common(scope + ', ' + v.key, x, text);
+            check(scope + ', ' + v.key, 'no field and no mark of the filter', x.filters.length === 0 && x.filterMarks === 0, { filters: x.filters, marks: x.filterMarks });
+            check(scope + ', ' + v.key, 'outside its stylesheet the file holds nothing of the filter', !/dokufix-filter/.test(text.replace(/<style>[\s\S]*?<\/style>/g, '')));
+          } else {
+            // The filter's code runs when the file opens: both tables keep their mark and get their field.
+            check(scope + ', ' + v.key, 'both filter tables keep their mark', x.filterMarks === 2, x.filterMarks);
+            await editorPage(scope + ', ' + v.key, x, r.page);
+          }
           check(scope + ', ' + v.key, 'opens without an error', r.pageErrors.length === 0 && r.consoleErrors.length === 0, r.pageErrors.concat(r.consoleErrors).join(' | '));
         } finally { await r.context.close(); }
       }
@@ -774,7 +790,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         checkWarning(s, x, ['Der Schritt „' + THROWING_PASS + '“ ist fehlgeschlagen.', THROWING_MESSAGE], 'naming the pass');
         check(s, 'it is the first thing in the document, and the rest is there', x.children[0] === 'div.dokufix-warning' && x.children[1] === 'details.dokufix-frontmatter' && x.tocLinks > 0 && x.diagrams === 2, x.children.slice(0, 4));
         check(s, 'nothing transient: neither the run-time warning nor the element of the run-time pass',
-          x.transient === 0 && x.warnings.length === 1 && !text.includes(TRANSIENT_ID) && !text.includes('data-dokufix-transient') && !text.includes(RUNTIME_PASS), x.warnings.map(w => w.text));
+          x.transient === x.filters.length && x.warnings.length === 1 && !text.includes(TRANSIENT_ID) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes(RUNTIME_PASS), x.warnings.map(w => w.text));
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       await o.context.close();

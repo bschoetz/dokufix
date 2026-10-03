@@ -1576,7 +1576,7 @@ async function assertTables(page, check, exp, key){
   check('as the file opens, every facet filter has the control for all rows chosen, by its attribute alone, and shows all rows', opened.length === 0, json(opened.map(x => [x.legend, x.controls.map(c => [c.checked, c.attribute]), x.shown])));
   // In an editor file a free-text filter on the same table puts its field
   // between the controls and the wrapper; a read-only export has none.
-  const children = g => 'fieldset.dokufix-facet-bar ' + (key === 'mit-editor' && exp.facets[g].filtered ? 'div.dokufix-filter ' : '') + 'div.dokufix-table';
+  const children = g => 'fieldset.dokufix-facet-bar ' + (FIELDED.has(key) && exp.facets[g].filtered ? 'div.dokufix-filter ' : '') + 'div.dokufix-table';
   const built = groups.filter((x, g) => !(x.children === children(g) && x.elements === 'div input label legend span' && x.inline === 0 &&
     x.controls.every((c, k) => c.type === 'radio' && c.key === String(k) && c.name === groups[g].controls[0].name) && groups.filter(y => y.controls[0].name === x.controls[0].name).length === 1));
   check('every facet filter is a group of radio buttons of its own, each in its label, above the wrapper of its table; the keys count from 0; nothing an author wrote became an element; no <style>, no inline style, no id',
@@ -1697,7 +1697,7 @@ const filterFacts = page => page.evaluate(() => {
 // The state of the field at this place: its value, its counter, the rows of
 // its table shown, and whether the field is.
 const filterState = (page, g) => page.evaluate(g => {
-  const field = document.querySelectorAll('#preview .dokufix-filter')[g];
+  const field = document.querySelectorAll(':is(#preview, main.reader-body) .dokufix-filter')[g];
   // Its table: in the wrapper after it, or, where it does not stand where it should, the next table.
   const next = field.nextElementSibling;
   const table = next && (next.tagName === 'TABLE' ? next : next.querySelector('table'));
@@ -1707,10 +1707,13 @@ const filterState = (page, g) => page.evaluate(g => {
   };
 }, g);
 const STATIC = 'static none none none none normal auto none';
+// The variants that run the free-text filter: the editor file, and the two
+// read-only exports that carry a script (Ben, 2026-10-03). nur-lesen has none.
+const FIELDED = new Set(['mit-editor', 'schlank', 'kompakt']);
 async function assertFilters(page, check, exp, key){
   const f = await filterFacts(page);
   const json = JSON.stringify;
-  if (READONLY.has(key)){
+  if (!FIELDED.has(key)){
     check('free-text filter: no field, no mark of a filter table and no hidden row (' + exp.filters.length + ' filter(s) in the document)',
       f.fields.length === 0 && f.marks === 0 && f.out === 0, json({ fields: f.fields.length, marks: f.marks, out: f.out }));
     return;
@@ -1732,7 +1735,7 @@ async function assertFilters(page, check, exp, key){
     json(f.fields.map(x => [x.display, x.visible, x.width, x.countLook, x.holds])));
 
   // --- typing, as a reader does
-  const input = g => page.locator('#preview .dokufix-filter-input').nth(g);
+  const input = g => page.locator(':is(#preview, main.reader-body) .dokufix-filter-input').nth(g);
   const fill = (g, term) => input(g).fill(term, { timeout: 5000 }).catch(() => {});
   const wrong = [], hiddenWrong = [];
   for (const [g, filter] of exp.filters.entries()){
@@ -1764,7 +1767,7 @@ async function assertFilters(page, check, exp, key){
     const facet = exp.facets[filter.facet], k = filter.combined.control;
     const group = exp.facets.indexOf(facet);
     const choose = c => page.evaluate(([group, c]) => {
-      document.querySelectorAll('#preview .dokufix-facets')[group].querySelectorAll(':scope > .dokufix-facet-bar > .dokufix-facet-controls > label')[c].click();
+      document.querySelectorAll(':is(#preview, main.reader-body) .dokufix-facets')[group].querySelectorAll(':scope > .dokufix-facet-bar > .dokufix-facet-controls > label')[c].click();
     }, [group, c]);
     await choose(k);
     await fill(g, filter.combined.term);
@@ -1802,6 +1805,14 @@ async function assertFilters(page, check, exp, key){
       // Back to read mode, which renders the document again.
       await page.click('#view-btn');
       await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+      await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+      await frames(page);
+    } else {
+      // A read-only export has no read mode: Escape empties the field.
+      await fill(g, exp.filters[g].term);
+      await input(g).press('Escape');
+      const once = await filterState(page, g);
+      check('Escape in a field with text empties it and shows all rows', once.value === '' && once.shown.every(Boolean), json(once));
       await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
       await frames(page);
     }
@@ -1874,7 +1885,7 @@ async function assertTableFootnote(page, check, exp, label, key){
   // In an editor file, a footnote cited in a cell of a table with a
   // free-text filter as well: the field above the wrapper changes nothing.
   const cases = [['cell', 'a table cell']];
-  if (key === 'mit-editor' && exp.filters.some(f => f.footnotes.labels.length)) cases.push(['filter', 'a cell of a table with a free-text filter']);
+  if (FIELDED.has(key) && exp.filters.some(f => f.footnotes.labels.length)) cases.push(['filter', 'a cell of a table with a free-text filter']);
   let fallbacksOff = false;
   for (const [where, what] of cases){
     const both = async () => ({ cell: await place(where), plain: await place('paragraph') });
@@ -1924,6 +1935,25 @@ async function assertFacetsWithoutScripts(browser, file, check, exp){
       f.facets.length === exp.facets.length && f.facets.every(x => x.bar === 'block' && x.barVisible && x.controls[0].checked && x.shown.every(Boolean)),
       JSON.stringify(f.facets.map(x => [x.legend, x.bar, x.barVisible, x.shown])));
     if (f.facets.length === exp.facets.length) await assertFacetChoosing(page, check, exp, 'with scripts off: ');
+  } finally {
+    await context.close();
+  }
+}
+// A read-only export with scripts switched off: no search field, and every row
+// of a filter table shown. Not kompakt, which shows nothing without scripts.
+async function assertFiltersWithoutScripts(browser, file, check, exp){
+  if (!exp.filters.length) return;
+  const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(pathToFileURL(file).href);
+    const f = await page.evaluate(() => {
+      const root = document.querySelector('main.reader-body');
+      return { fields: root.querySelectorAll('.dokufix-filter, input[type="search"]').length,
+               rows: Array.from(root.querySelectorAll('table')).flatMap(t => Array.from(t.tBodies).flatMap(b => Array.from(b.rows))).filter(tr => getComputedStyle(tr).display === 'none').length,
+ };
+    });
+    check('free-text filter with scripts off: no field, and every row of every table shown', f.fields === 0 && f.rows === 0, JSON.stringify(f));
   } finally {
     await context.close();
   }
@@ -2089,11 +2119,22 @@ async function assertVariant(browser, file, key, exp, results, label){
 
     // --- tables: wrapper, sub-lines, facet filter (story 2.5). With a document that has none, the counts are the check.
     await assertTables(page, check, exp, key);
-    // --- the free-text filter (story 2.6): a field in the editor file, nothing of it in a read-only export.
+    // --- the free-text filter (story 2.6): a field in the editor file, in schlank and in kompakt, nothing of it in nur-lesen.
     await assertFilters(page, check, exp, key);
-    // Outside its stylesheet, which carries the rules of every component.
-    const outsideStyle = text.replace(/<style>[\s\S]*?<\/style>/g, '');
-    if (READONLY.has(key) && key !== 'kompakt') check('free-text filter: outside its stylesheet the file holds nothing of it, no field, no mark, no hidden row', !/dokufix-filter/.test(outsideStyle), (outsideStyle.match(/.{0,60}dokufix-filter.{0,60}/) || [''])[0]);
+    // Outside its stylesheet, which carries the rules of every component, and
+    // outside its scripts, which carry the filter's code.
+    const outsideStyle = text.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
+    if (key === 'nur-lesen') check('free-text filter: outside its stylesheet the file holds nothing of it, no field, no mark, no hidden row', !/dokufix-filter/.test(outsideStyle), (outsideStyle.match(/.{0,60}dokufix-filter.{0,60}/) || [''])[0]);
+    if (key === 'schlank' || key === 'kompakt'){
+      // The filter's code, as the page's block holds it, runs in the file when it
+      // opens; a file of a document without a filter table carries none.
+      const block = (fs.readFileSync(opts.file, 'utf8').match(/<script type="text\/plain" id="dokufix-filter-js">([\s\S]*?)<\/script>/) || [, ''])[1];
+      const carried = !!block && text.includes(block);
+      check('free-text filter: the file carries the filter\'s code from the page\'s block ' + (exp.filters.length ? 'once' : 'not at all, the document has no filter table') + (key === 'schlank' ? '' : ', as a block the decoder runs after it has unpacked'),
+        exp.filters.length ? carried && text.split(block).length === 2 && (key === 'schlank' ? text.includes('<script>' + block + '</script>') : text.includes('<script type="text/plain" id="f">' + block + '</script>')) : !carried,
+        'block ' + block.length + ' B, in the file: ' + carried);
+      if (key === 'schlank') check('free-text filter: outside its stylesheet and scripts the file holds no field and no hidden row', !/dokufix-filter-out|class="dokufix-filter"/.test(outsideStyle), (outsideStyle.match(/.{0,60}dokufix-filter.{0,60}/) || [''])[0]);
+    }
 
     // --- metadata panel (story 1.1)
     if (exp.frontmatter){
@@ -2397,6 +2438,7 @@ async function assertVariant(browser, file, key, exp, results, label){
     } else {
       await assertLicenceWithoutScripts(browser, file, check);
       if (key !== 'kompakt') await assertFacetsWithoutScripts(browser, file, check, exp);
+      if (key === 'schlank') await assertFiltersWithoutScripts(browser, file, check, exp);
     }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {

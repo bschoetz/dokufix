@@ -445,7 +445,7 @@ Mehr verschiedene Werte, als sich filtern lassen:
 
 ### Freitextfilter
 
-Die Markierung `filter` gibt einer Tabelle ein Suchfeld, wo ein Skript läuft: im Editor und in der Datei mit Editor. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt. Die Fassungen ohne Editor zeigen die ganze Tabelle ohne Suchfeld. Neben `facets` wirken beide zusammen:
+Die Markierung `filter` gibt einer Tabelle ein Suchfeld, wo ein Skript läuft: im Editor, in der Datei mit Editor und in den Fassungen schlank und kompakt. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt. Die offene Fassung ohne Skript zeigt die ganze Tabelle ohne Suchfeld. Neben `facets` wirken beide zusammen:
 
 <!-- dokufix: filter "Feld oder Zweck suchen …" -->
 <!-- dokufix: facets Typ -->

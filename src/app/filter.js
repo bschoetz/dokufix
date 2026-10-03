@@ -31,11 +31,14 @@ import { TRANSIENT_ATTR } from './transient.js';
 //   </div>
 //
 // A row that does not match gets the class dokufix-filter-out, which the
-// document styles (src/doc.css) hide on screen and not in print. The three
-// read-only exports show the complete table without a field: an export step
-// takes the attribute and that class out of their copy. The field exists only
-// where JavaScript runs, the editor and "Mit Editor"; that is the documented
-// exception to NFR1 and NFR2 (see src/README.md, "Tables").
+// document styles (src/doc.css) hide on screen and not in print. The field
+// exists where JavaScript runs: the editor, "Mit Editor", and the read-only
+// exports `schlank` and `kompakt`, which carry this code as a bundle of its
+// own (src/filter.js) and run it when they open (Ben, 2026-10-03). `nur-lesen`
+// has no script and shows the complete table without a field; that is the
+// documented exception to NFR1 and NFR2 (see src/README.md, "Tables"). One
+// export step takes the class of a hidden row out of all three read-only
+// exports; another, which `nur-lesen` alone runs, takes the table's mark.
 //
 // Beside a facet filter on the same table a row is shown only when both hold:
 // it matches the text and has the value chosen there. Each hides by a class of
@@ -46,7 +49,8 @@ import { TRANSIENT_ATTR } from './transient.js';
 //
 // Pure logic: the component and the pass work on what they are handed and
 // make their elements with its document, so this loads and runs without a
-// page. The listeners the pass attaches use nothing but the elements.
+// page. The listeners the pass attaches use nothing but the elements. So the
+// pass runs unchanged in an exported file, on its content container.
 
 export const FILTER_ATTR = 'data-dokufix-filter';
 export const FILTER_CLASS = 'dokufix-filter';
@@ -203,14 +207,19 @@ export function attachTableFilters(root){
   }
 }
 
-// Export step: what the filter left in the copy of the preview a read-only
-// export is made from, taken out. The field is transient and gone by then; the
-// mark of the table and the class of a hidden row are not. An export renders
-// before it copies, so no row is hidden then, but the step does not count on it.
-export function removeFilterMarks(copy){
-  for (const el of Array.from(copy.querySelectorAll('[' + FILTER_ATTR + ']'))) el.removeAttribute(FILTER_ATTR);
+// Export step of all three read-only exports: no row is hidden in what leaves
+// the page. An export renders before it copies, so no row is hidden then, but
+// the step does not count on it. The field is transient and gone by then.
+export function showFilteredRows(copy){
   for (const el of Array.from(copy.querySelectorAll('.' + FILTER_OUT_CLASS))){
     el.classList.remove(FILTER_OUT_CLASS);
     if (!el.classList.length) el.removeAttribute('class');
   }
+}
+
+// Export step of `nur-lesen` alone, which has no script and so no field: the
+// mark of a filter table goes. `schlank` and `kompakt` keep it; the filter
+// they run when they open (src/filter.js) finds its tables by it.
+export function removeFilterMarks(copy){
+  for (const el of Array.from(copy.querySelectorAll('[' + FILTER_ATTR + ']'))) el.removeAttribute(FILTER_ATTR);
 }

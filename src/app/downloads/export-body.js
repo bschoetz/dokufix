@@ -7,7 +7,7 @@ import { formatVersionDate } from '../persistence.js';
 import { render } from '../render.js';
 import { state } from '../state.js';
 import { removeTransient } from '../transient.js';
-import { removeFilterMarks } from '../filter.js';
+import { showFilteredRows } from '../filter.js';
 
 // --- The one export path ----------------------------------------
 // What the three read-only exports share: where their content comes from,
@@ -39,10 +39,21 @@ async function inlineImages(copy){
   if (inlined !== html) copy.innerHTML = inlined;
 }
 
-// The free-text filter (filter.js) marks its table and hides rows by a class.
-// A read-only export shows the complete table without a field, so removeFilterMarks
-// takes both out, after the field itself has gone with the transient elements.
-const EXPORT_STEPS = [removeTransientElements, removeFilterMarks, inlineImages];
+// The free-text filter (filter.js) hides rows by a class: no read-only export
+// takes a hidden row along. The field itself has gone with the transient
+// elements; the mark of a filter table stays for `schlank` and `kompakt`, which
+// build their field from it, and `nur-lesen` hands in removeFilterMarks itself.
+const EXPORT_STEPS = [removeTransientElements, showFilteredRows, inlineImages];
+
+// The bundle of the free-text filter (src/filter.js), read from the page's
+// data block #dokufix-filter-js, for `schlank` and `kompakt`: the script they
+// run when they open, or '' when the document has no filter table, so a file
+// without one carries none. The build guarantees it holds no "</script".
+export function filterScriptFor(body){
+  if (!/\sdata-dokufix-filter="/.test(body)) return '';
+  const block = document.getElementById('dokufix-filter-js');
+  return block ? block.textContent.trim() : '';
+}
 
 // Returns { title, body, rail }: the document's title, its content as HTML and
 // the static rail, '' where the document has too few headings for one.

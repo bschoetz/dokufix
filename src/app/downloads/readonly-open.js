@@ -1,10 +1,12 @@
 import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
 import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './export-body.js';
+import { removeFilterMarks } from '../filter.js';
 
 // --- Download #2a — pure read-only, no JS, fully open HTML ---
 export async function downloadReadonlyOpen(){
-  const { title, body, rail } = await buildExportBody();
+  // No script, so no search field: the mark of a filter table goes as well.
+  const { title, body, rail } = await buildExportBody([removeFilterMarks]);
 
   const html = `<!DOCTYPE html>
 <html lang="de">

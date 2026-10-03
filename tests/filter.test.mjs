@@ -27,7 +27,7 @@ import { parseHTML } from 'linkedom';
 import { MARKERS, readMarker, judgeMarker, applyMarkers } from '../src/app/markers.js';
 import {
   FILTER, FILTER_ATTR, FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_COUNT_CLASS, FILTER_OUT_CLASS, FILTER_PLACEHOLDER, FILTER_LABEL,
-  markFilter, filterRowText, filterMatches, filterCountText, applyFilter, attachTableFilters, removeFilterMarks,
+  markFilter, filterRowText, filterMatches, filterCountText, applyFilter, attachTableFilters, showFilteredRows, removeFilterMarks,
 } from '../src/app/filter.js';
 import { FACETS_CLASS } from '../src/app/facets.js';
 import { buildChips } from '../src/app/chips.js';
@@ -347,30 +347,48 @@ test('Escape in a field with text empties it and goes no further; in an empty fi
   assert.equal(reached, 1, 'in an empty field Escape does what it does everywhere');
 });
 
-// ---------- the export step ----------
-test('the export step takes out the mark of the table and the class of a hidden row; with the transient elements gone, nothing of the filter is left', () => {
+// ---------- the export steps ----------
+// showFilteredRows: every read-only export; removeFilterMarks: `nur-lesen` alone.
+test('the export steps: the class of a hidden row goes from every read-only export, the mark of the table from nur-lesen alone; with the transient elements gone, nur-lesen has nothing of the filter', () => {
   const root = rendered(marker('filter "Suchen …"') + marker('facets Typ') + FIELDS_TABLE);
   type(root, 'tour');
   assert.equal(root.querySelectorAll('.' + FILTER_OUT_CLASS).length, 11);
-  const copy = root.cloneNode(true);
-  removeTransient(copy);
-  removeFilterMarks(copy);
-  assert.ok(!/dokufix-filter|data-dokufix-transient/.test(copy.outerHTML), 'no field, no mark, no hidden row');
+  // schlank and kompakt: the shared steps.
+  const shared = root.cloneNode(true);
+  removeTransient(shared);
+  showFilteredRows(shared);
+  assert.equal(shared.querySelectorAll('.' + FILTER_OUT_CLASS + ', .' + FILTER_CLASS).length, 0, 'no hidden row, no field');
+  assert.equal(shared.querySelector('table').getAttribute(FILTER_ATTR), 'Suchen …', 'the mark stays, for the filter the file runs');
   // A row that had no class of its own has none again; the facet keys stay.
-  assert.ok(Array.from(copy.querySelectorAll('tbody tr')).every(tr => /^dokufix-facet-row dokufix-facet-\d+$/.test(tr.getAttribute('class'))));
+  assert.ok(Array.from(shared.querySelectorAll('tbody tr')).every(tr => /^dokufix-facet-row dokufix-facet-\d+$/.test(tr.getAttribute('class'))));
+  // nur-lesen: its own step as well.
+  const open = shared.cloneNode(true);
+  removeFilterMarks(open);
+  assert.ok(!/dokufix-filter|data-dokufix-transient/.test(open.outerHTML), 'no field, no mark, no hidden row');
   const plain = rendered(marker('filter') + FIELDS_TABLE);
   type(plain, 'tour');
   const plainCopy = plain.cloneNode(true);
   removeTransient(plainCopy);
+  showFilteredRows(plainCopy);
   removeFilterMarks(plainCopy);
   assert.equal(plainCopy.querySelectorAll('tr[class]').length, 0, 'no row has a class');
   assert.equal(plainCopy.innerHTML, rendered(FIELDS_TABLE).innerHTML, 'the table as it is without the marker');
-  // The live page is not touched by the step.
+  // The live page is not touched by the steps.
   assert.equal(plain.querySelectorAll('.' + FILTER_OUT_CLASS).length, 11);
+  // The filter of an exported file finds the table that kept its mark, and builds its field anew.
+  attachTableFilters(shared);
+  assert.equal(shared.querySelectorAll('.' + FILTER_CLASS + '[' + TRANSIENT_ATTR + ']').length, 1);
+  assert.equal(shared.querySelector('.' + FILTER_COUNT_CLASS).textContent, '14 Zeilen');
 });
-test('the step sits in the export path, after the transient elements are gone and before the images', () => {
+test('the steps sit in the export path: the shared one after the transient elements are gone and before the images, the mark\'s in nur-lesen alone', () => {
   const src = fs.readFileSync(path.join(here, '../src/app/downloads/export-body.js'), 'utf8');
-  assert.match(src, /const EXPORT_STEPS = \[removeTransientElements, removeFilterMarks, inlineImages\];/);
+  assert.match(src, /const EXPORT_STEPS = \[removeTransientElements, showFilteredRows, inlineImages\];/);
+  const read = name => fs.readFileSync(path.join(here, '../src/app/downloads/' + name), 'utf8');
+  assert.match(read('readonly-open.js'), /buildExportBody\(\[removeFilterMarks\]\)/);
+  for (const name of ['readonly-slim.js', 'readonly-compact.js', 'with-editor.js']) assert.ok(!read(name).includes('removeFilterMarks'), name);
+  // schlank and kompakt carry the bundle of the filter when the document has a filter table; nur-lesen never.
+  for (const name of ['readonly-slim.js', 'readonly-compact.js']) assert.match(read(name), /filterScriptFor\(body\)/, name);
+  assert.ok(!/filterScriptFor|<script/.test(read('readonly-open.js')), 'nur-lesen carries no script');
 });
 test('applyFilter works on the table it is handed and returns how many rows are shown', () => {
   const root = rootWith(FIELDS_TABLE);
