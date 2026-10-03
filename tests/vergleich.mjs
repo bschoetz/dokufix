@@ -991,6 +991,9 @@ const licenceFacts = (page, options = {}) => page.evaluate(opts => {
   };
   facts.rail = rail && rail.getClientRects().length ? box(rail) : null;
   facts.button = box(document.getElementById('edit-btn'));
+  // The search's magnifier (story 5.10), where it is shown.
+  const magnifier = document.querySelector('body > .search-magnifier');
+  facts.magnifier = magnifier && magnifier.getClientRects().length ? box(magnifier) : null;
   facts.window = { width: document.documentElement.clientWidth, height: innerHeight, scrollY };
   if (opts.without) places.forEach(([x, parent, next]) => parent.insertBefore(x, next));
   return facts;
@@ -1000,9 +1003,12 @@ const overlap = (a, b) => !!a && !!b && a.left < b.right && b.left < a.right && 
 // What is wrong with the place of the link in read mode or in an export, as a
 // list; empty when it stands where it should. In the empty top margin, above
 // the first line, inside the window; its right edge on the right edge of the
-// text column, so never above the rail. One exception, the editor file in a
-// narrow window: there "Editor ↩" stands in that corner, and the link stands
-// left of it.
+// text column, so never above the rail. One exception, a narrow window: there
+// "Editor ↩" and the magnifier of the search left of it stand in that corner
+// of the editor file, and the link stands left of both; in an export the
+// magnifier stands in it, 16 to 51 px from the right, and the link left of
+// that corner, in `nur-lesen`, which has no magnifier, as well (story 5.10).
+const MAGNIFIER_CORNER = 51;
 function licencePlaceProblems(f, key, width){
   const problems = [];
   const l = f.link, c = f.column, EPS = 0.6;
@@ -1013,14 +1019,17 @@ function licencePlaceProblems(f, key, width){
   if (l.top < 0 || l.bottom > c.top + EPS) problems.push('not in the top margin above the first line (link ' + round(l) + ', first line at ' + c.top + ')');
   if (l.left < 0 || l.right > f.window.width + EPS) problems.push('not inside the window (link ' + round(l) + ', window ' + f.window.width + ')');
   if (l.left < c.left - EPS || l.right > c.right + EPS) problems.push('not inside the text column (link ' + round(l) + ', column ' + c.left + '–' + c.right + ')');
-  const besideButton = key === 'mit-editor' && width <= NARROW;
-  if (besideButton){
+  if (width <= NARROW && key === 'mit-editor'){
     if (!f.button || l.right > f.button.left) problems.push('not left of "Editor ↩" (link ' + round(l) + ', button ' + round(f.button) + ')');
+    if (!f.magnifier || l.right > f.magnifier.left) problems.push('not left of the magnifier (link ' + round(l) + ', magnifier ' + round(f.magnifier) + ')');
+  } else if (width <= NARROW){
+    if (l.right > f.window.width - MAGNIFIER_CORNER) problems.push('not left of the magnifier\'s corner (link ' + round(l) + ', window ' + f.window.width + ')');
   } else if (Math.abs(l.right - c.right) > EPS){
     problems.push('its right edge is not the text column\'s (link ' + round(l) + ', column ends at ' + c.right + ')');
   }
   if (f.rail && l.right > f.rail.left) problems.push('it stands above the rail (link ' + round(l) + ', rail ' + round(f.rail) + ')');
   if (key === 'mit-editor' && overlap(l, f.button)) problems.push('it overlaps "Editor ↩" (link ' + round(l) + ', button ' + round(f.button) + ')');
+  if (overlap(l, f.magnifier)) problems.push('it overlaps the magnifier of the search (link ' + round(l) + ', magnifier ' + round(f.magnifier) + ')');
   return problems;
 }
 // What the open view has to show, as a list of what is missing or wrong.
@@ -2377,6 +2386,8 @@ async function assertSearch(page, check, key){
     hidden && bare.summary === wantSummary && bare.results.length === want.length && consoleErrors.length === 0,
     json({ hidden, summary: bare.summary, results: bare.results.length, errors: consoleErrors }));
   await page.click('body > .search-panel .search-close');
+  // --- story 10: the magnifier
+  await assertMagnifier(page, check, key);
 
   // Story 7, inside assertSearch for its helpers. In the demo text the terms
   // its special cases name: "Abholbereit" in a BPMN diagram, "nachfordern" in
@@ -2850,6 +2861,113 @@ async function assertSearch(page, check, key){
   await frames(page);
 }
 
+// The magnifier (story 10): a button the search makes at load, in <body>,
+// transient, that opens the panel. At the top right at every width, with a
+// rail or without (Ben, 2026-10-04): in the editor file left of "Editor ↩",
+// in an export in the corner where that button stands in the editor; beside
+// a rail (1600 px) not over its entries. It stays where it is while the page
+// scrolls, a click opens the
+// panel, a second one on the open panel closes nothing. In the editor file it
+// is not shown in edit mode. Starts and ends at 1400 px with the panel closed.
+const MAGNIFIER_MIN = 32;
+async function assertMagnifier(page, check, key){
+  const json = JSON.stringify;
+  const editor = key === 'mit-editor';
+  const facts = () => page.evaluate(() => {
+    const box = el => { if (!el || !el.getClientRects().length) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
+    const all = document.querySelectorAll('.search-magnifier');
+    const m = all[0] || null, p = document.querySelector('body > .search-panel');
+    const r = box(m);
+    const atCentre = r ? document.elementFromPoint((r.left + r.right) / 2, (r.top + r.bottom) / 2) : null;
+    const licence = Array.from(document.querySelectorAll('details.dokufix-licences')).find(d => d.getClientRects().length);
+    return {
+      count: all.length, inBody: !!m && m.parentNode === document.body, transient: !!m && m.hasAttribute('data-dokufix-transient'),
+      visible: !!m && m.checkVisibility({ visibilityProperty: true }), title: m ? m.title : null, label: m ? m.getAttribute('aria-label') : null,
+      magnifier: r, onTop: !!atCentre && !!m && m.contains(atCentre),
+      button: box(document.getElementById('edit-btn')), rail: box(document.querySelector('aside.dokufix-rail.has-items')),
+      licence: box(licence && licence.querySelector(':scope > summary')),
+      panel: !!p && !p.hidden, focused: !!p && document.activeElement === p.querySelector('input'), term: p ? p.querySelector('input').value : null,
+      results: p ? p.querySelectorAll('.search-results .search-result').length : 0,
+      window: { width: document.documentElement.clientWidth, height: innerHeight }, scrollY: Math.round(scrollY),
+    };
+  });
+  const EPS = 1;
+  const big = f => !!f.magnifier && f.magnifier.right - f.magnifier.left >= MAGNIFIER_MIN && f.magnifier.bottom - f.magnifier.top >= MAGNIFIER_MIN;
+  const free = f => !overlap(f.magnifier, f.button) && !overlap(f.magnifier, f.licence);
+  // Where it stands at the size the page has, as a list of what is wrong.
+  const misplaced = f => {
+    const m = f.magnifier, problems = [];
+    if (!m || !f.visible) return ['not visible'];
+    if (!big(f)) problems.push('smaller than ' + MAGNIFIER_MIN + ' px (' + round(m) + ')');
+    if (!f.onTop) problems.push('not on top at its centre');
+    if (!free(f)) problems.push('overlaps "Editor ↩" or the licence link (' + round(m) + ', button ' + round(f.button) + ', link ' + round(f.licence) + ')');
+    if (overlap(m, f.rail)) problems.push('lies over the rail (' + round(m) + ', rail ' + round(f.rail) + ')');
+    if (editor){
+      if (!f.button || m.right > f.button.left || f.button.left - m.right > 12 || Math.abs(m.top - f.button.top) > 2)
+        problems.push('not left of "Editor ↩" (' + round(m) + ', button ' + round(f.button) + ')');
+    } else if (Math.abs(m.top - 16) > EPS || Math.abs(f.window.width - m.right - 16) > EPS){
+      problems.push('not in the top right corner, 16 px from the edges (' + round(m) + ', window ' + f.window.width + ')');
+    }
+    return problems;
+  };
+  await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+  await frames(page);
+  const first = await facts();
+  check('magnifier: one button in <body>, outside the ' + (editor ? 'preview' : 'content') + ', transient, visible, at least ' + MAGNIFIER_MIN + ' px square, with the tooltip "Suchen (/)"',
+    first.count === 1 && first.inBody && first.transient && first.visible && big(first) && first.title === 'Suchen (/)' && first.label === 'Suchen' && !first.panel,
+    json({ ...first, button: undefined, rail: undefined, licence: undefined }));
+  // --- its place at 1600, 1400 and 1200 px, at the top and scrolled down
+  const places = [];
+  for (const width of [1600, 1400, 1200]){
+    await page.setViewportSize({ width, height: 1000 });
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await frames(page);
+    const top = await facts();
+    await page.evaluate(() => window.scrollTo(0, Math.min(1500, (document.documentElement.scrollHeight - innerHeight) / 2)));
+    await frames(page);
+    const down = await facts();
+    const problems = [...misplaced(top), ...misplaced(down).map(p => 'scrolled: ' + p)];
+    if (!down.scrollY) problems.push('the page did not scroll');
+    if (round(top.magnifier) !== round(down.magnifier)) problems.push('it moved while the page scrolled (' + round(top.magnifier) + ' → ' + round(down.magnifier) + ')');
+    places.push({ width, rail: !!top.rail, problems });
+  }
+  check('magnifier: at 1600 px, ' + (places[0].rail ? 'beside the rail and not over it' : 'without a rail') + ', and at 1400 and 1200 px ' + (editor ? 'left of "Editor ↩"' : 'in the top right corner') +
+    '; on top, over neither "Editor ↩" nor the licence link, and where it is while the page scrolls',
+    places.every(p => !p.problems.length), json(places));
+  // --- a click opens the panel with the focus in its field; a second one on the open panel closes nothing
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+  await frames(page);
+  await page.click('body > .search-magnifier', { timeout: 5000 }).catch(() => {});
+  await frames(page);
+  const opened = await facts();
+  if (opened.panel){
+    await page.fill('body > .search-panel input', SEARCH_TERM);
+    await page.waitForFunction(() => document.querySelectorAll('body > .search-panel .search-results .search-result').length > 0, null, { timeout: 5000 }).catch(() => {});
+  }
+  const typed = await facts();
+  await page.click('body > .search-magnifier', { timeout: 5000 }).catch(() => {});
+  await frames(page);
+  const again = await facts();
+  check('magnifier: a click opens the panel with the focus in its field; a click on the open panel closes nothing, the term and its results stay',
+    opened.panel && opened.focused && opened.term === '' && typed.results > 0 && again.panel && again.focused && again.term === SEARCH_TERM && again.results === typed.results,
+    json({ opened: [opened.panel, opened.focused, opened.term], typed: typed.results, again: [again.panel, again.focused, again.term, again.results] }));
+  await page.evaluate(() => { const p = document.querySelector('body > .search-panel'); if (p && !p.hidden) p.querySelector('.search-close').click(); });
+  await frames(page);
+  // --- the editor file: not in edit mode
+  if (editor){
+    await page.click('#edit-btn');
+    await frames(page);
+    const inEdit = await facts();
+    await page.click('#view-btn');
+    await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+    await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+    await frames(page);
+    const back = await facts();
+    check('magnifier: not shown in edit mode, shown again in read mode', inEdit.count === 1 && !inEdit.visible && !inEdit.magnifier && back.visible, json({ edit: inEdit.visible, back: back.visible }));
+  }
+}
+
 // A footnote cited in a table cell. The wrapper of the table scrolls, so it
 // cuts off whatever is placed inside it; the preview is placed against the
 // page, by its marker, and has to reach out of the wrapper uncut. So it has
@@ -3180,8 +3298,9 @@ const bpmnFacts = page => page.evaluate(() => {
       };
     }),
     duplicateIds: [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))],
-    // The host bpmn-js draws into, if one were left in the page.
-    hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]')).filter(el => getComputedStyle(el).position === 'fixed').length,
+    // The host bpmn-js draws into, if one were left in the page. The search's
+    // magnifier (story 5.10) is transient and fixed as well, and no host.
+    hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]:not(.search-magnifier)')).filter(el => getComputedStyle(el).position === 'fixed').length,
     warnings: Array.from(root.querySelectorAll('.dokufix-warning')).map(w => ({
       title: (w.querySelector('.dokufix-warning-title') || { textContent: '' }).textContent,
       detail: (w.querySelector('.dokufix-warning-detail') || { textContent: '' }).textContent,
@@ -3594,7 +3713,9 @@ async function assertLargeView(page, check, exp, key){
       open: t.checked, openViews: Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(x => x.checked).length,
       zoom: (f.querySelector(':scope > .dokufix-diagram-zoom:checked') || {}).value || null,
       position: cs.position, zIndex: cs.zIndex, view: box(view), window: { width: innerWidth, height: innerHeight },
-      onTop: [[innerWidth / 2, innerHeight / 2], [innerWidth - 8, 8], [8, innerHeight - 8], [innerWidth - 8, innerHeight - 8]].every(([x, y]) => inView(x, y)),
+      // The middle and the corners of the window, and the middle of the search's magnifier where it is shown (story 5.10).
+      onTop: [[innerWidth / 2, innerHeight / 2], [innerWidth - 8, 8], [8, innerHeight - 8], [innerWidth - 8, innerHeight - 8],
+        ...Array.from(document.querySelectorAll('body > .search-magnifier')).filter(m => m.getClientRects().length).map(m => { const r = m.getBoundingClientRect(); return [(r.left + r.right) / 2, (r.top + r.bottom) / 2]; })].every(([x, y]) => inView(x, y)),
       bar: getComputedStyle(bar).display, name: (bar.querySelector('.dokufix-diagram-name') || {}).textContent, title: f.getAttribute('aria-label'),
       steps: steps.map(s => s.textContent), close: (bar.querySelector('.dokufix-diagram-close') || {}).textContent,
       chosen: steps.filter(s => getComputedStyle(s).backgroundColor === 'rgb(28, 28, 30)').map(s => s.textContent),
@@ -4396,8 +4517,8 @@ async function assertVariant(browser, file, key, exp, results, label){
     // --- the search of the reading view (epic 5, stories 1 to 4): the editor file, schlank and kompakt; nothing of it in nur-lesen.
     if (key === 'nur-lesen'){
       const style = (text.match(/<style>([\s\S]*?)<\/style>/) || [, ''])[1];
-      const live = await page.evaluate(() => ({ panels: document.querySelectorAll('.search-panel').length, sheets: Array.from(document.querySelectorAll('style')).filter(el => el.textContent.includes('.search-')).length }));
-      check('search: no panel and no rule of it, in the file or in the open page', !/\.search-/.test(style) && live.panels === 0 && live.sheets === 0, JSON.stringify(live));
+      const live = await page.evaluate(() => ({ panels: document.querySelectorAll('.search-panel').length, magnifiers: document.querySelectorAll('.search-magnifier').length, sheets: Array.from(document.querySelectorAll('style')).filter(el => el.textContent.includes('.search-')).length }));
+      check('search: no panel, no magnifier and no rule of them, in the file or in the open page', !/\.search-/.test(style) && !text.includes('search-magnifier') && live.panels === 0 && live.magnifiers === 0 && live.sheets === 0, JSON.stringify(live));
     } else await assertSearch(page, check, key);
     // Outside its stylesheet, which carries the rules of every component, and
     // outside its scripts, which carry the reader bundle's code.
@@ -4573,8 +4694,8 @@ async function assertVariant(browser, file, key, exp, results, label){
       const problems = licencePlaceProblems(await licenceFacts(page), key, width);
       if (problems.length) misplaced.push(width + ' px: ' + problems.join('; '));
     }
-    check('licence link from ' + LICENCE_WIDTHS[0] + ' to ' + LICENCE_WIDTHS[LICENCE_WIDTHS.length - 1] + ' px: in the top margin, inside the window, at the right edge of the text column' +
-      (key === 'mit-editor' ? ', never over "Editor ↩"' : ''), misplaced.length === 0, misplaced.join(' | '));
+    check('licence link from ' + LICENCE_WIDTHS[0] + ' to ' + LICENCE_WIDTHS[LICENCE_WIDTHS.length - 1] + ' px: in the top margin, inside the window, at the right edge of the text column, up to ' + NARROW + ' px left of the top right corner' +
+      (key === 'mit-editor' ? ', never over "Editor ↩"' : '') + (key === 'nur-lesen' ? '' : ', never over the magnifier of the search'), misplaced.length === 0, misplaced.join(' | '));
     // The view in a narrow window: inside it.
     await page.setViewportSize({ width: 600, height: 1000 });
     await frames(page);

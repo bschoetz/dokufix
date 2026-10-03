@@ -13,7 +13,9 @@ import { escapeHtml } from './html.js';
 // A story that adds a library adds one entry here, and its licence text below
 // if it is not there yet. tests/licences.test.mjs compares every version with
 // the place it is pinned at, src/index.html for what comes from the CDN and
-// src/doc.css for the Octicons, and fails on an entry that fell behind.
+// src/doc.css for the Octicons, and fails on an entry that fell behind. The
+// path of the magnifier in src/app/search.js names the Octicons version too;
+// the test does not read it, so it is kept alike with this entry by hand.
 //
 // Pure logic: this module imports html.js only, touches no page, and loads in
 // Node as it is.
@@ -52,8 +54,10 @@ export const NOTICES = [
     copyright: ['Copyright (c) 2014-present Camunda Services GmbH'],
   },
   {
-    // The path data of six icons, in the document styles (src/doc.css): the five
-    // symbols of the callouts and the download symbol below a diagram.
+    // The path data of seven icons: six in the document styles (src/doc.css),
+    // the five symbols of the callouts and the download symbol below a diagram,
+    // and the seventh, "search", the magnifier of the search, in src/app/search.js,
+    // whose version comment is kept alike with this one by hand.
     name: 'Octicons', package: '@primer/octicons', version: '19.38.0', licence: 'MIT', use: 'embedded',
     copyright: ['Copyright (c) 2026 GitHub Inc.'],
   },

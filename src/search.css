@@ -1,5 +1,6 @@
 /* ---------- search ----------
-   The panel "/" opens (src/app/search.js): in the editor in read mode, in a
+   The panel "/" opens (src/app/search.js), and the magnifier that opens it
+   too: in the editor in read mode, in a
    `schlank` or `kompakt` file always. This file is its one stylesheet: the
    build puts it, minified, behind the editor styles of the page and into the
    reader bundle (src/reader.js), which adds it to the head of the exported
@@ -12,8 +13,8 @@
    never over it; in an export the gap above it stays empty. 380 px wide, or
    the window less its margins where that is narrower, and as high as the
    window less its margins. It lies over the document, and from 1500 px over
-   the rail (z-index 40), below the editor's menus and "Editor ↩". The
-   results scroll inside the panel. */
+   the rail (z-index 40) and the magnifier (42), below the editor's menus
+   and "Editor ↩". The results scroll inside the panel. */
 .search-panel{display:none}
 .search-panel:not([hidden]){
   display:flex;flex-direction:column;
@@ -92,7 +93,30 @@
    whose light text would not read on the yellow. Not printed. */
 ::highlight(search-hit){background-color:#ffe066}
 @media screen{::highlight(search-hit){color:#1c1c1e}}
+/* The magnifier (src/app/search.js), a button that opens the panel, for a
+   reader who does not know "/". One element, placed by CSS alone, here and,
+   in the editor, in src/app.css, at the same place at every width, with a
+   rail or without (Ben, 2026-10-04): fixed at the top right, 16 px from the
+   top and from the right, where "Editor ↩" stands in the editor; in an
+   export in that corner, in the editor left of the button. 35 px square,
+   as high as "Editor ↩" (35 px in Chromium 153), its lower edge at 51 px,
+   above the rail, which starts at 80 px. White, with the border and shadow
+   of "Editor ↩", over the document. Above the rail and the link "license
+   information" (z-index 40), under the open panel (45) and the large view
+   of a diagram (100). */
+.search-magnifier{
+  position:fixed;top:16px;right:16px;z-index:42;
+  display:flex;align-items:center;justify-content:center;
+  width:35px;height:35px;padding:0;
+  background:#fff;color:#1c1c1e;
+  border:1px solid rgba(0,0,0,0.18);border-radius:4px;
+  box-shadow:0 2px 10px rgba(0,0,0,0.08);
+  cursor:pointer;
+}
+.search-magnifier:hover{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
+.search-magnifier:focus-visible{outline:2px solid #1c1c1e;outline-offset:2px}
+.search-magnifier svg{display:block}
 @media print{
-  .search-panel{display:none !important}
+  .search-panel,.search-magnifier{display:none !important}
   ::highlight(search-hit){background-color:transparent}
 }

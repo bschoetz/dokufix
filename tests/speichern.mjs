@@ -573,7 +573,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     // Without its scripts and styles: the page's script and the reader bundle in
     // its data block name the panel's classes, and so does the stylesheet.
     const withoutCode = file => fs.readFileSync(file, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '');
-    check(scope, 'the saved file holds no panel and no highlight', !/search-panel|search-input|search-hit/.test(withoutCode(withSearch)));
+    check(scope, 'the saved file holds no panel, no magnifier and no highlight', !/search-panel|search-input|search-magnifier|search-hit/.test(withoutCode(withSearch)));
     // The read-only exports, with the panel open, then with it closed. The
     // term is typed again before each, so its hits are highlighted when the
     // download starts; the download renders the preview anew before it clones
@@ -618,8 +618,8 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       JSON.stringify(READONLY.map(k => [k, whileOpen[k].state, afterClose[k].state])));
     for (const kind of READONLY){
       const a = fs.readFileSync(whileOpen[kind].file), b = fs.readFileSync(afterClose[kind].file);
-      check(scope, kind + ' written from the page with the panel open is the file written after it is closed, byte for byte, and holds no panel',
-        a.equals(b) && !/search-panel|search-input|search-hit/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
+      check(scope, kind + ' written from the page with the panel open is the file written after it is closed, byte for byte, and holds no panel and no magnifier',
+        a.equals(b) && !/search-panel|search-input|search-magnifier|search-hit/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
     }
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();

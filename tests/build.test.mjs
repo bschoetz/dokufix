@@ -333,7 +333,7 @@ async function slashAndType(document, window, term){
 const summaryOf = panel => panel.querySelector('.search-summary').textContent;
 // src/reader.js with what it imports, one minified IIFE in the data block
 // #dokufix-reader-js, which `schlank` and `kompakt` copy into their file.
-test('the built file carries the reader bundle in a block that does not run; it gives a marked table its field, adds the panel\'s styles and opens the search with "/"', async () => {
+test('the built file carries the reader bundle in a block that does not run; it gives a marked table its field, adds the panel\'s styles and opens the search with "/" and with its magnifier', async () => {
   const html = fs.readFileSync(committed, 'utf8');
   assert.equal(html.split('<script type="text/plain" id="dokufix-reader-js">').length, 2, 'one block, of a type that does not run');
   assert.ok(!html.includes('dokufix-filter-js'), 'the block of the filter alone is gone');
@@ -370,6 +370,24 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.deepEqual(Array.from(panel.querySelectorAll('.search-group-head')).map(h => h.textContent), ['Am Anfang3 Treffer an 2 Stellen']);
   panel.querySelector('.search-close').click();
   assert.ok(panel.hidden && panel.querySelector('.search-input').value === '', '"×" closes it and forgets the term');
+  // The magnifier (story 5.10): one button in <body>, outside the content, transient; a click opens the panel, a second one leaves it open with its term.
+  const magnifiers = document.querySelectorAll('.search-magnifier');
+  assert.equal(magnifiers.length, 1, 'one magnifier');
+  const magnifier = magnifiers[0];
+  assert.ok(magnifier.parentNode === document.body && magnifier.hasAttribute('data-dokufix-transient') && magnifier.tagName === 'BUTTON' && magnifier.getAttribute('type') === 'button');
+  assert.equal(magnifier.getAttribute('title'), 'Suchen (/)');
+  assert.equal(magnifier.getAttribute('aria-label'), 'Suchen');
+  assert.equal(magnifier.getAttribute('aria-keyshortcuts'), '/');
+  assert.ok(magnifier.querySelector('svg[aria-hidden="true"] > path[fill="currentColor"]'), 'the Octicon, hidden from assistive technology');
+  magnifier.click();
+  assert.ok(!panel.hidden, 'a click opens the panel');
+  const searchField = panel.querySelector('.search-input');
+  searchField.value = 'Tabelle';
+  searchField.dispatchEvent(new window.Event('input'));
+  await new Promise(resolve => setTimeout(resolve, 300));
+  magnifier.click();
+  assert.ok(!panel.hidden && searchField.value === 'Tabelle' && summaryOf(panel) === '3 Treffer an 2 Stellen in 1 Abschnitt', 'a click on the open panel closes nothing and keeps the term and its results');
+  panel.querySelector('.search-close').click();
 });
 test('the reader bundle: a search over a packed diagram waits for the decoder\'s event, and runs after it, whether the diagram came out or not', async () => {
   const code = readerBlock(fs.readFileSync(committed, 'utf8'));

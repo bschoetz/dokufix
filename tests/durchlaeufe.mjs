@@ -393,10 +393,12 @@ function buildCopy(outDir, module, edits, name){
 // bundle, whose code names the class and the attribute of the filter's field.
 const withoutScripts = text => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
 // What is transient in a read-only export once it has opened: the fields of the
-// filter, and in schlank and kompakt the panel of the search, once, and the
-// picture button below each diagram (story 2.10).
-const onlyOwnTransient = (s, x) => x.searchPanels === (s.endsWith('nur-lesen') ? 0 : 1) && x.svgButtons === (s.endsWith('nur-lesen') ? 0 : x.figures.length) &&
-  x.transient === x.filters.length + x.searchPanels + x.svgButtons;
+// filter, and in schlank and kompakt the panel of the search and its
+// magnifier (story 5.10), once each, and the picture button below each
+// diagram (story 2.10).
+const onlyOwnTransient = (s, x) => x.searchPanels === (s.endsWith('nur-lesen') ? 0 : 1) && x.magnifiers === x.searchPanels &&
+  x.svgButtons === (s.endsWith('nur-lesen') ? 0 : x.figures.length) &&
+  x.transient === x.filters.length + x.searchPanels + x.magnifiers + x.svgButtons;
 
 // ---------- results ----------
 const results = [];
@@ -549,7 +551,8 @@ const facts = page => page.evaluate(() => {
     bpmn: Array.from(container.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => f.getAttribute('aria-label') + ' ' + !!f.querySelector(':scope > .dokufix-diagram-view > .dokufix-diagram-stage > .dokufix-diagram-svg > svg[role="img"]') + ' ' +
       (f.querySelector(':scope > figcaption > a[href="https://bpmn.io"]') ? f.querySelector(':scope > figcaption').innerHTML : '')),
     // An element of the drawing left in <body>: the host is transient and fixed.
-    hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]')).filter(el => getComputedStyle(el).position === 'fixed').length,
+    // The search's magnifier is transient and fixed as well, and no host.
+    hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]:not(.search-magnifier)')).filter(el => getComputedStyle(el).position === 'fixed').length,
     // Mermaid's error picture: an SVG with this role and this sentence in it.
     errorPictures: document.querySelectorAll('svg[aria-roledescription="error"], .error-icon, .error-text').length +
       (document.body.textContent.includes('Syntax error in text') ? 1 : 0),
@@ -559,6 +562,8 @@ const facts = page => page.evaluate(() => {
     transient: document.querySelectorAll('[data-dokufix-transient]').length,
     // The panel of the search, which the reader bundle of schlank and kompakt makes when the file opens.
     searchPanels: document.querySelectorAll('body > .search-panel[data-dokufix-transient]').length,
+    // The magnifier that opens it (story 5.10).
+    magnifiers: document.querySelectorAll('body > .search-magnifier[data-dokufix-transient]').length,
     panel: !!container.querySelector('details.dokufix-frontmatter'),
     // A heading inside a callout gets no id, by design (see src/README.md, Callouts).
     headingsWithoutId: Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6')).filter(h => !h.id && !h.closest('.dokufix-callout')).length,
@@ -745,7 +750,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         // The search fields and the search panel that schlank and kompakt make
         // themselves when they open are transient; the code that makes them
         // names the attribute.
-        check(s, 'nothing transient but the fields, the search panel and the picture buttons the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels, svgButtons: x.svgButtons });
+        check(s, 'nothing transient but the fields, the search panel, its magnifier and the picture buttons the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels, magnifiers: x.magnifiers, svgButtons: x.svgButtons });
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       check(scope, 'both views are still open in the running page', JSON.stringify(await views()) === '[true,true]', await views());

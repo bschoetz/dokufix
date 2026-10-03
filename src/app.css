@@ -500,10 +500,11 @@
   }
   @media (max-width:820px){
     /* The top margin is 64 px here and "Editor ↩" reaches down to about 52:
-       the link stands left of the button, and the view reaches back to the
-       right edge of the text column. */
-    body.mode-view>.dokufix-licences{top:40px;right:120px}
-    body.mode-view>.dokufix-licences .dokufix-licences-view{right:-98px}
+       the link stands left of the button and of the search's magnifier,
+       whose left edge is 140 px from the right (below), and the view reaches
+       back to the right edge of the text column, 22 px from the window's. */
+    body.mode-view>.dokufix-licences{top:40px;right:148px}
+    body.mode-view>.dokufix-licences .dokufix-licences-view{right:-126px}
   }
   @media (min-width:1500px){
     /* Beside a rail the body is a grid of at most 1562 px, centred. From its
@@ -515,4 +516,11 @@
   /* ---------- search ----------
      The panel "/" opens in read mode has its own stylesheet, src/search.css,
      which the build puts behind this one and into the reader bundle of the
-     read-only exports. */
+     read-only exports. What only the editor knows is here, in selectors that
+     outweigh that file's: the magnifier is shown in read mode alone, and
+     it stands left of "Editor ↩", 8 px from it. The button is
+     about 81 px wide (80.8 in Chromium 153 and Firefox 153), its right edge
+     16 px from the window's: 105 px, at every width, with a rail or
+     without. */
+  body:not(.mode-view)>.search-magnifier{display:none}
+  body.mode-view>.search-magnifier{right:105px}

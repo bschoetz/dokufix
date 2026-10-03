@@ -37,7 +37,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten, jedes mit großer Ansicht und zum Herunterladen
 - eine Suche über das ganze Dokument
 
-Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Auch jede Zeile einer Tabelle ist eine Stelle; ihr Ergebnis beginnt mit „Tabelle:“, und eine Zeile, die ein Filter der Tabelle gerade ausblendet, ist mit „(ausgeblendet)“ markiert. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Das „×“ oder Escape schließt sie; im Editor und in einer Datei mit Editor verlässt erst das nächste Escape den Lesemodus. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnet `/` sie ebenso.
+Im Lesemodus öffnet die Taste `/` eine Suche, ebenso ein Klick auf die Lupe oben rechts; die Suche listet jede Stelle eines Begriffs mit einer Vorschau auf; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Auch jede Zeile einer Tabelle ist eine Stelle; ihr Ergebnis beginnt mit „Tabelle:“, und eine Zeile, die ein Filter der Tabelle gerade ausblendet, ist mit „(ausgeblendet)“ markiert. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Das „×“ oder Escape schließt sie; im Editor und in einer Datei mit Editor verlässt erst das nächste Escape den Lesemodus. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnen `/` und die Lupe sie ebenso.
 
 ## Wie das hier zusammenspielt
 
@@ -167,7 +167,7 @@ Ein Suchfeld steht auch allein über einer Tabelle. Ohne Angabe hinter `filter` 
 | Taste | Wirkung |
 |---|---|
 | Strg + Eingabe | im Editor neu rendern[^tasten] |
-| `/` | im Lesemodus die Suche öffnen |
+| `/` | im Lesemodus die Suche öffnen, wie die Lupe oben rechts |
 | Esc | eines nach dem anderen schließen: die große Ansicht, die Suche, den Text im Suchfeld einer Tabelle, zuletzt den Lesemodus |
 | `+` und `-` | in der großen Ansicht die nächste oder die vorige Stufe |
 | Pfeiltasten | im Filter den nächsten Wert wählen |
@@ -560,6 +560,7 @@ flowchart LR
 
 Öffnen Sie mit `/` die Suche und probieren Sie diese Fälle:
 
+- Die Lupe oben rechts öffnet die Suche ebenso, bei jeder Fensterbreite an derselben Stelle: im Editor und in der Fassung mit Editor links neben „Editor ↩“, in „schlank“ und „kompakt“ in der Ecke, auch wenn rechts das Inhaltsverzeichnis steht. Ein zweiter Klick bei offener Suche schließt sie nicht; Ihr Begriff bleibt stehen.
 - Ein Wort, das eine Hervorhebung teilt, ist ein Treffer: Leucht*turm*wärter. Suchen Sie danach; der Treffer ist am Stück gelb hinterlegt.
 - Mit dem Schalter „Leerzeichen, Bindestriche und Punkte ignorieren“ findet derselbe Begriff auch Leucht-Turm-Wärter in dieser Zeile. Ohne den Schalter findet er nur die Zeile davor.
 - Ein Begriff aus einer Fußnote ist ein Treffer bei der Fußnote unten, nicht bei ihrem Zeichen hier: Suchen Sie nach dem zweiten Wort der Fußnote.[^suche]

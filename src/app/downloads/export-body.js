@@ -84,9 +84,12 @@ export async function buildExportBody(extraSteps = []){
 // worked out from the page's width: the body is 950 px wide and centred with
 // 32 px of padding (50 % - 443 px, at least 32 px), 22 px of padding in a
 // narrow window, and beside a rail a grid of at most 1562 px whose padding,
-// rail and gap are 530 px. These rules are the second copy of the ones in
-// src/app.css, kept alike by hand; the editor's toolbar is the one place only
-// that file knows.
+// rail and gap are 530 px. In a narrow window the link stands left of the
+// corner where `schlank` and `kompakt` put the search's magnifier (16 to 51 px
+// from the right, src/search.css), and its view reaches back to 22 px from the
+// edge; `nur-lesen`, which has no magnifier, shares the rule. These rules are
+// the second copy of the ones in src/app.css, kept alike by hand; the editor's
+// toolbar and "Editor ↩" are what only that file knows.
 // Each export writes the element fresh from licencesHtml(), directly after
 // <body>: closed, whatever the editor shows, and outside what kompakt packs,
 // so it opens there without JavaScript too.
@@ -120,7 +123,7 @@ noscript p{margin-bottom:1em}
 .dokufix-licences-view ul{list-style:none;margin-bottom:.7em}
 .dokufix-licences-view li{margin-bottom:.5em}
 @media (min-width:1500px){body:has(aside.dokufix-rail.has-items) .dokufix-licences{right:calc(max(0px, 50% - 781px) + 530px)}}
-@media (max-width:820px){.dokufix-licences{top:40px;right:22px}}`;
+@media (max-width:820px){.dokufix-licences{top:40px;right:59px}.dokufix-licences-view{right:-37px}}`;
 
 // Comments out, whitespace down to what CSS needs. Quoted strings are left
 // alone: content:"Bild fehlt: " must keep its space.

@@ -77,6 +77,20 @@ import { TABLE_CLASS } from './tables.js';
 // createElement and textContent, so the document's text stays text. Its
 // styles are src/search.css.
 //
+// A magnifier opens the panel as well, for a reader who does not know the key
+// (FR48): a button with the 16 px Octicon "search" and the tooltip
+// "Suchen (/)", made once at load beside the panel, in <body>, transient like
+// it. A click opens the panel and puts the focus into its field; on an open
+// panel it does no more than that, it does not close it. One element, placed
+// by CSS alone, src/search.css and, in the editor, src/app.css, at the same
+// place at every width, with a rail or without: fixed at the top right, in the
+// editor left of "Editor ↩", hidden there outside read mode. It lies under an open
+// panel and under the large view of a diagram.
+//
+//   <button type="button" class="search-magnifier" aria-label="Suchen" aria-keyshortcuts="/" title="Suchen (/)" data-dokufix-transient>
+//   <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="…"/></svg>
+//   </button>
+//
 // "/" opens the panel in read mode only, without Ctrl, Alt or Meta, and not
 // while the focus is in a field, where it is typed, nor while the large view
 // of a diagram is open (large-view.js), which lies over the panel. It puts
@@ -110,6 +124,10 @@ import { TABLE_CLASS } from './tables.js';
 // has no CSS.highlights, the results are listed without highlight.
 
 const PANEL_CLASS = 'search-panel';
+const MAGNIFIER_CLASS = 'search-magnifier';
+// The Octicon "search", 16 px (@primer/octicons 19.38.0, build/svg/search-16.svg).
+const MAGNIFIER_PATH = 'M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z';
+const SVG_NS = 'http://www.w3.org/2000/svg';
 // What the decoder of a `schlank` file dispatches on the document when it has
 // gone through every packed diagram (src/app/downloads/readonly-slim.js).
 export const UNPACKED_EVENT = 'dokufix-diagrams-unpacked';
@@ -405,6 +423,29 @@ function buildPanel(){
   document.body.appendChild(panel);
 }
 
+// The magnifier: a button in <body>, transient, that opens the panel.
+function buildMagnifier(){
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = MAGNIFIER_CLASS;
+  button.setAttribute('aria-label', 'Suchen');
+  button.setAttribute('aria-keyshortcuts', '/');
+  button.title = 'Suchen (/)';
+  button.setAttribute(TRANSIENT_ATTR, '');
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('viewBox', '0 0 16 16');
+  svg.setAttribute('width', '16');
+  svg.setAttribute('height', '16');
+  svg.setAttribute('aria-hidden', 'true');
+  const path = document.createElementNS(SVG_NS, 'path');
+  path.setAttribute('fill', 'currentColor');
+  path.setAttribute('d', MAGNIFIER_PATH);
+  svg.append(path);
+  button.append(svg);
+  button.addEventListener('click', openSearch);
+  document.body.appendChild(button);
+}
+
 // Opens the panel, empty, and puts the focus into its field; an open panel
 // keeps its term and only gets the focus.
 export function openSearch(){
@@ -441,6 +482,7 @@ export function registerSearch({ root, inReadMode: readMode }){
   rootOf = typeof root === 'function' ? root : () => root;
   inReadMode = readMode;
   buildPanel();
+  buildMagnifier();
   // A change of a table filter in the root searches again while the panel is
   // open and holds a term, after the filter's own listeners, which sit on the
   // field and the facet group. See the README, "Keys and events".
