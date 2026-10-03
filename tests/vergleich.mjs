@@ -2210,12 +2210,12 @@ async function assertSearch(page, check, key){
     return result;
   }, GROUP_ROW);
   const stacked = !!stuck.target && stuck.heads.every((h, i) => Math.abs(h.top - (i ? stuck.heads[i - 1].bottom : 0)) <= 1 && Math.abs(h.bottom - h.top - GROUP_ROW) <= 1);
-  // The reference document has a group below a parent with results enough to
-  // scroll, and one that ends while its parent goes on; the demo text has
-  // neither, and its run scrolls a group of the top.
+  // Both documents have a group below a parent with results enough to scroll,
+  // and one that ends while its parent goes on; the demo text since its
+  // special cases of the large view and the search.
   const handedOver = !!stuck.handover && stuck.handover.overlaps && stuck.handover.parentOnTop && Math.abs(stuck.handover.parentTop - (stuck.handover.depth - 1) * GROUP_ROW) <= 1;
-  check('search: "' + LONG_TERM + '" lists more than the panel shows; scrolled into ' + (opts.demo ? 'the deepest group with results enough' : 'a group below a parent') + ', its heading and the headings of its parents stay at the top of the list, stacked by depth, the group\'s results under them' + (opts.demo ? '' : '; where a group below a parent ends and its heading leaves, the parent\'s heading lies over it in its band'),
-    long.summary === summaryOf(wantLong) && long.results.length === wantLong.length && stuck.long && (opts.demo || stuck.depth >= 1) && stuck.groupTop < 0 && stacked && stuck.resultShown && stuck.resultTop >= stuck.heads[stuck.heads.length - 1].bottom - 1 && (opts.demo || handedOver),
+  check('search: "' + LONG_TERM + '" lists more than the panel shows; scrolled into a group below a parent, its heading and the headings of its parents stay at the top of the list, stacked by depth, the group\'s results under them; where a group below a parent ends and its heading leaves, the parent\'s heading lies over it in its band',
+    long.summary === summaryOf(wantLong) && long.results.length === wantLong.length && stuck.long && stuck.depth >= 1 && stuck.groupTop < 0 && stacked && stuck.resultShown && stuck.resultTop >= stuck.heads[stuck.heads.length - 1].bottom - 1 && handedOver,
     json({ summary: long.summary, expected: summaryOf(wantLong), ...stuck }));
 
   // --- a click scrolls to the place, and the panel stays open
