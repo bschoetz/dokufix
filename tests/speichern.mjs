@@ -73,7 +73,18 @@
 //      so the saved file has neither; opened, it makes them again, closed
 //   8. the search panel open in read mode, with a term and its results. The
 //      panel is made by the script and marked transient, so the saved file
-//      has none; opened, it makes it again, closed and empty
+//      has none; opened, it makes it again, closed and empty. Its hits are
+//      highlighted in the preview (epic 5, story 5): the saved file is
+//      compared as every other. `nur-lesen`, `schlank` and `kompakt` written
+//      from the page with the panel open are byte for byte the files written
+//      after it is closed, the clock of the page standing still so that their
+//      export time is one. That shows the open panel changes nothing of what
+//      an export writes; it does not show that the highlight stays out of the
+//      document, because a read-only download renders the preview anew before
+//      it clones it, and the clone of the preview is emptied, so the ranges
+//      are over replaced nodes when the file is written. That the highlight
+//      leaves the document's DOM as it is, tests/vergleich.mjs checks, with
+//      the panel open ("DOM unchanged")
 //   9. the large view of a diagram open in read mode, at "150 %". Its controls
 //      are document content, and only their checked properties are set, never
 //      the attributes; opened, the saved file shows the diagram closed, at
@@ -500,7 +511,9 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     const withSearch = path.join(dir, 'suche-offen.html');
     const searchState = page => page.evaluate(() => {
       const p = document.querySelector('body > .search-panel');
-      return p ? { open: !p.hidden, term: p.querySelector('input').value, results: p.querySelectorAll('.search-results .search-result').length } : null;
+      const h = window.CSS && CSS.highlights && CSS.highlights.get('search-hit');
+      return p ? { open: !p.hidden, term: p.querySelector('input').value, results: p.querySelectorAll('.search-results .search-result').length,
+        highlighted: h ? Array.from(h).filter(r => r.startContainer.isConnected).length : 0 } : null;
     });
     o = await open(browser, opts.file);
     await o.page.evaluate(text => {
@@ -521,11 +534,59 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       o.page.evaluate(() => document.querySelector('button[data-download="full"]').click()),
     ]);
     await searchDownload.saveAs(withSearch);
-    check(scope, 'the panel was open with a term and its results when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0, JSON.stringify(searchOpen));
+    check(scope, 'the panel was open with a term, its results and its hits highlighted in the preview when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0 && searchOpen.highlighted >= searchOpen.results, JSON.stringify(searchOpen));
     check(scope, 'and is still open in the running page', JSON.stringify(await searchState(o.page)) === JSON.stringify(searchOpen), JSON.stringify(await searchState(o.page)));
     // Without its scripts and styles: the page's script and the reader bundle in
     // its data block name the panel's classes, and so does the stylesheet.
-    check(scope, 'the saved file holds no panel', !/search-panel|search-input/.test(fs.readFileSync(withSearch, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '')));
+    const withoutCode = file => fs.readFileSync(file, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '');
+    check(scope, 'the saved file holds no panel and no highlight', !/search-panel|search-input|search-hit/.test(withoutCode(withSearch)));
+    // The read-only exports, with the panel open, then with it closed. The
+    // term is typed again before each, so its hits are highlighted when the
+    // download starts; the download renders the preview anew before it clones
+    // it, so the ranges are over replaced nodes by the time the file is
+    // written. What this shows: the open panel changes nothing of the files.
+    // That the highlight never reaches the document is vergleich.mjs's check
+    // of the DOM with the panel open.
+    await o.page.clock.setFixedTime(new Date('2026-10-03T12:00:00+02:00'));
+    const READONLY = ['readonly-open', 'readonly-slim', 'readonly-compact'];
+    const exportAll = async (suffix, open) => {
+      const out = {};
+      for (const kind of READONLY){
+        if (open){
+          if (!(await searchState(o.page)).open){
+            await o.page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+            await o.page.keyboard.press('/');
+          }
+          await o.page.fill('body > .search-panel input', '');
+          await o.page.fill('body > .search-panel input', 'Abschnitt');
+          await o.page.waitForFunction(() => {
+            const h = window.CSS && CSS.highlights && CSS.highlights.get('search-hit');
+            return !!h && Array.from(h).some(r => r.startContainer.isConnected);
+          }, null, { timeout: 5000 }).catch(() => {});
+        }
+        const at = await searchState(o.page);
+        const [download] = await Promise.all([
+          o.page.waitForEvent('download', { timeout: 60000 }),
+          o.page.evaluate(k => document.querySelector('button[data-download="' + k + '"]').click(), kind),
+        ]);
+        const file = path.join(dir, kind + '-' + suffix + '.html');
+        await download.saveAs(file);
+        await o.page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+        out[kind] = { file, state: at };
+      }
+      return out;
+    };
+    const whileOpen = await exportAll('suche-offen', true);
+    await o.page.click('body > .search-panel .search-close');
+    const afterClose = await exportAll('suche-zu', false);
+    check(scope, 'nur-lesen, schlank and kompakt were started with the panel open and its hits highlighted, and the second time with it closed and nothing highlighted',
+      READONLY.every(k => whileOpen[k].state.open && whileOpen[k].state.highlighted > 0 && !afterClose[k].state.open && afterClose[k].state.highlighted === 0),
+      JSON.stringify(READONLY.map(k => [k, whileOpen[k].state, afterClose[k].state])));
+    for (const kind of READONLY){
+      const a = fs.readFileSync(whileOpen[kind].file), b = fs.readFileSync(afterClose[kind].file);
+      check(scope, kind + ' written from the page with the panel open is the file written after it is closed, byte for byte, and holds no panel',
+        a.equals(b) && !/search-panel|search-input|search-hit/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
+    }
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     await checkAgainstBuiltFile(scope, browser, withSearch, built, 1);

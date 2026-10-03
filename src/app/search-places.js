@@ -2,7 +2,7 @@ import { ELEMENT, TEXT } from './nodes.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACET_BAR_CLASS, isFootnoteMarker } from './facets.js';
 import { STEP_NUMBER_CLASS } from './steps.js';
-import { documentHeadings, headingLabelText } from './toc.js';
+import { documentHeadings } from './toc.js';
 import { TRANSIENT_ATTR } from './transient.js';
 
 // --- Search: the places --------------------------------------------------------
@@ -10,7 +10,8 @@ import { TRANSIENT_ATTR } from './transient.js';
 // in: every paragraph, list item and heading of the preview, in the order of
 // the document.
 //
-//   collectPlaces(root) → [{ el, text }, …]
+//   collectPlaces(root) → [{ el, text, map }, …]
+//   nodeRanges(map, { start, end }) → [{ startNode, startOffset, endNode, endOffset }, …]
 //
 // A place's text is read as the free-text filter reads a row (filter.js): a
 // line break as a blank, without anything transient, without a footnote
@@ -20,6 +21,12 @@ import { TRANSIENT_ATTR } from './transient.js';
 // text of the footnote; so is the number tile of a step (steps.js), which the
 // list's numbering says. A heading's text is the one its entries show
 // (headingLabelText() in toc.js), with the same things left out.
+//
+// Beside its text a place carries the map of it: for every unit of the text
+// the text node and offset it came from. It is made in the same walk that
+// reads the text, so the two cannot drift. nodeRanges() turns the range of a
+// hit in the text (search-match.js) into ranges of the document, which the
+// panel draws (search.js); what the text leaves out, it leaves out as well.
 //
 // What is no place, nor holds one: a warning, a table with its cells, a code
 // block, a diagram and its credit, the metadata panel, the inline table of
@@ -53,7 +60,6 @@ const EXCLUDED_CLASSES = [
 ];
 
 const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
-const tidy = text => String(text).replace(/\s+/g, ' ').trim();
 
 function excluded(el){
   return el.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(el) || EXCLUDED_TAGS.has(tagOf(el)) ||
@@ -63,34 +69,103 @@ function excluded(el){
     EXCLUDED_CLASSES.some(cls => el.classList.contains(cls));
 }
 
+// A place's text is read unit by unit, and each unit remembers where it came
+// from: the text node and the offset in it, or null for a blank the reading
+// puts in itself (a line break, the word of a status chip in a heading). A
+// part is counted up wherever the reading leaves something out (a footnote
+// marker, a chip's word, a step's tile, a place or list inside the place):
+// two units of one part have nothing left out between them in the document.
+function reading(){
+  return { raw: '', nodes: [], offsets: [], parts: [], part: 0 };
+}
+function readText(r, node){
+  const data = node.data;
+  for (let i = 0; i < data.length; i++){ r.nodes.push(node); r.offsets.push(i); r.parts.push(r.part); }
+  r.raw += data;
+}
+function readBlank(r, ch){
+  r.raw += ch;
+  r.nodes.push(null); r.offsets.push(0); r.parts.push(r.part);
+}
+
+const SPACE = /\s/;
+
+// The text of a reading, white space collapsed to one blank and none at its
+// ends, as the free-text filter tidies a row's text, with the map of each of
+// its units: a blank that stands for a run of white space maps to the first
+// unit of the run that came from a node.
+function finish(r){
+  const { raw } = r;
+  let text = '';
+  const nodes = [], offsets = [], parts = [];
+  const take = (ch, i) => { text += ch; nodes.push(r.nodes[i]); offsets.push(r.offsets[i]); parts.push(r.parts[i]); };
+  let i = 0;
+  while (i < raw.length && SPACE.test(raw[i])) i++;
+  while (i < raw.length){
+    if (!SPACE.test(raw[i])){ take(raw[i], i); i++; continue; }
+    let from = i;
+    while (i < raw.length && SPACE.test(raw[i])){ if (!r.nodes[from] && r.nodes[i]) from = i; i++; }
+    if (i < raw.length) take(' ', from);
+  }
+  return { text, map: { nodes, offsets, parts } };
+}
+
 // The text of a paragraph or list item, without the places and lists inside it.
 function blockText(block){
-  let text = '';
+  const r = reading();
   const read = node => {
     for (let child = node.firstChild; child; child = child.nextSibling){
-      if (child.nodeType === TEXT){ text += child.data; continue; }
+      if (child.nodeType === TEXT){ readText(r, child); continue; }
       if (child.nodeType !== ELEMENT) continue;
       const tag = tagOf(child);
-      if (tag === 'BR'){ text += ' '; continue; }
-      if (excluded(child) || OWN_TAGS.has(tag)) continue;
+      if (tag === 'BR'){ readBlank(r, ' '); continue; }
+      if (excluded(child) || OWN_TAGS.has(tag)){ r.part++; continue; }
       read(child);
     }
   };
   read(block);
-  return tidy(text);
+  return finish(r);
 }
 
-// The text of a heading: its label, from a copy without what is left out.
-function headingText(h){
-  const copy = h.cloneNode(true);
-  for (const el of Array.from(copy.querySelectorAll('*'))){
-    if (tagOf(el) === 'BR') el.replaceWith(copy.ownerDocument.createTextNode(' '));
-    else if (excluded(el) && !el.classList.contains(CHIP_STATUS_CLASS)) el.remove();
+// U+0000 marks where a chip's word stood; a parsed document never holds one.
+const CHIP_MARK = '\0';
+
+// The text of a heading: its label as headingLabelText() in toc.js reads it,
+// without what is left out. A chip's word gives a blank where it touches the
+// text before it, and none where a blank stands before it or it opens the
+// heading: "## Bestellung:`🟢 Live`" reads "Bestellung: Live".
+function headingReading(h){
+  const r = reading();
+  const read = node => {
+    for (let child = node.firstChild; child; child = child.nextSibling){
+      if (child.nodeType === TEXT){ readText(r, child); continue; }
+      if (child.nodeType !== ELEMENT) continue;
+      if (tagOf(child) === 'BR'){ readBlank(r, ' '); continue; }
+      if (child.classList.contains(CHIP_STATUS_CLASS)){ r.part++; readBlank(r, CHIP_MARK); r.part++; continue; }
+      if (excluded(child)){ r.part++; continue; }
+      read(child);
+    }
+  };
+  read(h);
+  // Each mark by the unit before it as it was read, as the replacement in
+  // headingLabelText() goes: /(^|\s)\0/ to nothing, every other one to a blank.
+  const out = reading();
+  for (let i = 0; i < r.raw.length; i++){
+    if (r.raw[i] !== CHIP_MARK){
+      out.raw += r.raw[i]; out.nodes.push(r.nodes[i]); out.offsets.push(r.offsets[i]); out.parts.push(r.parts[i]);
+    } else if (i > 0 && !SPACE.test(r.raw[i - 1])){
+      out.raw += ' '; out.nodes.push(null); out.offsets.push(0); out.parts.push(r.parts[i]);
+    }
   }
-  return tidy(headingLabelText(copy));
+  return finish(out);
 }
 
-// The places under root, in the order of the document.
+const headingText = h => headingReading(h).text;
+
+// The places under root, in the order of the document. Beside its text each
+// carries its map: for every unit of the text the node and offset it came
+// from, and its part (see reading() above); nodeRanges() makes node ranges
+// of it.
 export function collectPlaces(root){
   const places = [];
   const visit = node => {
@@ -98,14 +173,43 @@ export function collectPlaces(root){
       if (excluded(child)) continue;
       const tag = tagOf(child);
       if (PLACE_TAGS.has(tag)){
-        const text = HEADING_TAGS.has(tag) ? headingText(child) : blockText(child);
-        if (text) places.push({ el: child, text });
+        const { text, map } = HEADING_TAGS.has(tag) ? headingReading(child) : blockText(child);
+        if (text) places.push({ el: child, text, map });
       }
       visit(child);
     }
   };
   visit(root);
   return places;
+}
+
+// The ranges of the document that a hit of a place's text covers, as
+//
+//   nodeRanges(map, { start, end }) → [{ startNode, startOffset, endNode, endOffset }, …]
+//
+// one range for a hit with nothing left out inside it, however many text
+// nodes it runs over (emphasis, a link, a line break), and one range per
+// stretch between what is left out otherwise, so that no range covers a
+// footnote marker, a chip's word or a step's tile. A range begins at the
+// first character of its stretch that came from a node and is no white
+// space, and ends behind the last such one: white space the text collapsed
+// lies inside a range, never at its ends, and a blank the reading put in
+// itself is none. Pure: no Range is made, the caller makes its own.
+export function nodeRanges(map, { start, end }){
+  const ranges = [];
+  let current = null;
+  for (let i = start; i < end; i++){
+    const node = map.nodes[i];
+    if (!node || SPACE.test(node.data[map.offsets[i]])) continue;
+    if (current && map.parts[i] === current.part){
+      current.endNode = node;
+      current.endOffset = map.offsets[i] + 1;
+      continue;
+    }
+    current = { part: map.parts[i], startNode: node, startOffset: map.offsets[i], endNode: node, endOffset: map.offsets[i] + 1 };
+    ranges.push(current);
+  }
+  return ranges.map(({ startNode, startOffset, endNode, endOffset }) => ({ startNode, startOffset, endNode, endOffset }));
 }
 
 // --- Search: the results under their headings ---------------------------------

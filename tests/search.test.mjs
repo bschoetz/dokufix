@@ -13,10 +13,14 @@
 // ranges, a text whose length changes when it is lowered, the part a result
 // shows, and which places there are with which text; and, of story 2, case,
 // light fuzzy and the minimum length; of story 4, the results grouped under
-// the headings, with the numbers of each branch. That "/" opens the panel, the
+// the headings, with the numbers of each branch; of story 5, the map of a
+// place's text onto the text nodes it came from and the node ranges of its
+// hits, across nodes, without what the text leaves out, over collapsed white
+// space. That "/" opens the panel, the
 // summary, the marks and the switches in a browser, the group headings that
-// stay at the top while the list scrolls, a click that scrolls and a saved
-// file without the panel are for the browser runs (tests/vergleich.mjs,
+// stay at the top while the list scrolls, a click that scrolls, the
+// highlight drawn in the document and a saved file without the panel are for
+// the browser runs (tests/vergleich.mjs,
 // tests/speichern.mjs).
 
 import test from 'node:test';
@@ -26,7 +30,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
-import { collectPlaces, groupResults, FIRST_GROUP_LABEL } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL } from '../src/app/search-places.js';
+import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
 import { TRANSIENT_ATTR } from '../src/app/transient.js';
@@ -328,6 +333,144 @@ test('collectPlaces changes nothing in the document', () => {
   assert.equal(root.outerHTML, before);
 });
 
+// ---------- the hits in the document (story 5) ----------
+// The text nodes under root, in the order of the document.
+function textNodes(node, out = []){
+  for (let child = node.firstChild; child; child = child.nextSibling){
+    if (child.nodeType === 3) out.push(child);
+    else textNodes(child, out);
+  }
+  return out;
+}
+// What a node range covers in the document, every text node between its ends
+// included: what a Range over it would read.
+function rangeText(root, r){
+  const nodes = textNodes(root);
+  const from = nodes.indexOf(r.startNode), to = nodes.indexOf(r.endNode);
+  assert.ok(from >= 0 && to >= from, 'the range runs forward over text nodes of the root');
+  if (from === to) return r.startNode.data.slice(r.startOffset, r.endOffset);
+  return r.startNode.data.slice(r.startOffset) + nodes.slice(from + 1, to).map(n => n.data).join('') + r.endNode.data.slice(0, r.endOffset);
+}
+// The hits of a term in the places of a root, each as the texts of its node ranges.
+function hitTexts(root, term, options){
+  return collectPlaces(root).flatMap(p => findHits(term, p.text, options).map(hit => nodeRanges(p.map, hit).map(r => rangeText(root, r))));
+}
+// The old reading of a heading's text, on a copy (story 4): the walk must read the same.
+function headingTextOfCopy(h){
+  const copy = h.cloneNode(true);
+  for (const el of Array.from(copy.querySelectorAll('*'))){
+    if (el.tagName === 'BR') el.replaceWith(copy.ownerDocument.createTextNode(' '));
+    else if ((el.matches('.dokufix-fn-host, .dokufix-fn-preview, [data-footnote-ref]') || el.hasAttribute(TRANSIENT_ATTR))) el.remove();
+  }
+  return headingLabelText(copy).replace(/\s+/g, ' ').trim();
+}
+
+test('collectPlaces, the map: every unit of a place\'s text maps to the character of a text node it came from, a blank to white space or to none', () => {
+  const root = rootWith('<h2>Bestellung:<code>🟢 Live</code> und<br>mehr</h2>\n<p>  Erste\n  <em>Zeile</em><br>zweite   <a href="#x">Zeile</a> 😀 İ<sup class="dokufix-fn-host"><a href="#f" data-footnote-ref="">1</a><span class="dokufix-fn-preview">P</span></sup>. </p>\n<ul>\n<li>Außen<ul>\n<li>Innen</li>\n</ul>\n danach</li>\n</ul>\n');
+  buildChips(root);
+  const found = collectPlaces(root);
+  assert.deepEqual(found.map(p => p.text), ['Bestellung: Live und mehr', 'Erste Zeile zweite Zeile 😀 İ.', 'Außen danach', 'Innen']);
+  for (const { text, map } of found){
+    assert.equal(map.nodes.length, text.length, text);
+    assert.equal(map.offsets.length, text.length, text);
+    assert.equal(map.parts.length, text.length, text);
+    for (let i = 0; i < text.length; i++){
+      const node = map.nodes[i];
+      if (text[i] === ' '){
+        assert.ok(!node || /\s/.test(node.data[map.offsets[i]]), text + ' at ' + i);
+      } else {
+        assert.ok(node && node.nodeType === 3 && root.contains(node), text + ' at ' + i);
+        assert.equal(node.data[map.offsets[i]], text[i], text + ' at ' + i);
+      }
+    }
+  }
+});
+
+test('collectPlaces: a heading reads as headingLabelText() reads its copy without what is left out, chip, footnote and line break in every order', () => {
+  const html = ['Bestellung:<code>🟢 Live</code>', 'Bestellung <code>🟢 Live</code>', '<code>🟢 Live</code> vorn', 'a<code>🟢 Eins</code><code>🔴 Zwei</code>b',
+    'Frist<sup class="dokufix-fn-host"><a href="#f" data-footnote-ref="">1</a><span class="dokufix-fn-preview">Fußnote</span></sup> und<br>Ende',
+    'Zeile<br><code>🟡 Prüfung</code> danach', '  <em>Weit</em>   gefasst\n  '].map(h => '<h3>' + h + '</h3>').join('\n');
+  const root = rootWith(html);
+  buildChips(root);
+  const headings = Array.from(root.querySelectorAll('h3'));
+  assert.deepEqual(collectPlaces(root).map(p => p.text), headings.map(headingTextOfCopy));
+});
+
+test('nodeRanges: a hit over several text nodes is one range over exactly its characters: "statuschip" with light fuzzy in Sta<em>tus</em>-Chip', () => {
+  const root = rootWith('<p>ein Sta<em>tus</em>-Chip.</p>');
+  const [place] = collectPlaces(root);
+  const [hit] = findHits('statuschip', place.text, { fuzzy: true });
+  const ranges = nodeRanges(place.map, hit);
+  assert.equal(ranges.length, 1);
+  const [first, , last] = textNodes(root);
+  assert.deepEqual(ranges[0], { startNode: first, startOffset: 4, endNode: last, endOffset: 5 });
+  assert.equal(rangeText(root, ranges[0]), 'Status-Chip');
+});
+
+test('nodeRanges: every hit of a place, each with its ranges; a link and emphasis inside a hit keep it one range', () => {
+  const root = rootWith('<p>Eine Tab<a href="#t">el</a>le, noch eine <strong>Tabelle</strong> und <em>Tab</em>elle.</p>');
+  assert.deepEqual(hitTexts(root, 'tabelle'), [['Tabelle'], ['Tabelle'], ['Tabelle']]);
+});
+
+test('nodeRanges: a footnote marker inside a hit is left out, the hit is two ranges around it; a hit next to it has the marker in none', () => {
+  const root = rootWith('<p>Die Frist<sup class="dokufix-fn-host"><a href="#footnote-back-a" data-footnote-ref="" aria-describedby="footnote-label">1</a>' +
+    '<span class="dokufix-fn-preview" aria-hidden="true">Laut Tabelle drei.</span></sup> läuft.</p>');
+  assert.deepEqual(hitTexts(root, 'Frist läuft'), [['Frist', 'läuft']]);
+  assert.deepEqual(hitTexts(root, 'Frist'), [['Frist']]);
+  assert.deepEqual(hitTexts(root, 'läuft'), [['läuft']]);
+  assert.deepEqual(hitTexts(root, 'Tabelle'), []);
+});
+
+test('nodeRanges: in a heading with a status chip the chip\'s word is in no range, its label is', () => {
+  const root = rootWith('<h2>Bestellung:<code>🟢 Live</code></h2>\n<h2>Status <code>🔴 Aus</code> seit gestern</h2>\n');
+  buildChips(root);
+  const word = root.querySelector('.dokufix-chip-status').textContent;
+  assert.deepEqual(hitTexts(root, 'Bestellung: Live'), [['Bestellung:', 'Live']]);
+  assert.deepEqual(hitTexts(root, 'Live'), [['Live']]);
+  assert.deepEqual(hitTexts(root, 'Status Aus seit'), [['Status', 'Aus seit']]);
+  assert.ok(!hitTexts(root, 'Bestellung: Live').flat().some(t => t.includes(word.trim())), word);
+});
+
+test('nodeRanges: the number tile of a step is in no range, and neither is a nested list', () => {
+  const root = rootWith('<ol>\n<li><em>Autorin:</em> Den Text schreiben.</li>\n</ol>\n<ul>\n<li>Außen<ul>\n<li>Innen</li>\n</ul>\n danach</li>\n</ul>\n');
+  buildSteps(root.querySelector('ol'));
+  // The tile stands before the actor: a hit from the actor on begins behind it.
+  assert.deepEqual(hitTexts(root, 'Autorin Den'), [['Autorin Den']]);
+  const step = collectPlaces(root)[0];
+  const [r] = nodeRanges(step.map, findHits('Autorin', step.text)[0]);
+  assert.equal(r.startNode.parentNode.className, 'dokufix-step-actor');
+  assert.equal(step.map.nodes.filter(n => n && n.parentNode.classList.contains('dokufix-step-number')).length, 0);
+  assert.deepEqual(hitTexts(root, 'Außen danach'), [['Außen', 'danach']]);
+});
+
+test('nodeRanges: over collapsed white space and a line break a range ends on the right characters, with no blank at its ends', () => {
+  const root = rootWith('<p>  Erste\n  Zeile<br>zweite   Zeile </p>');
+  const [place] = collectPlaces(root);
+  assert.equal(place.text, 'Erste Zeile zweite Zeile');
+  assert.deepEqual(hitTexts(root, 'Erste Zeile'), [['Erste\n  Zeile']]);
+  assert.deepEqual(hitTexts(root, 'Zeile zweite'), [['Zeilezweite']]);
+  assert.deepEqual(hitTexts(root, 'zweite Zeile'), [['zweite   Zeile']]);
+  const [, last] = findHits('Zeile', place.text);
+  const [r] = nodeRanges(place.map, last);
+  assert.equal(r.endOffset, 'zweite   Zeile'.length);
+  assert.deepEqual(hitTexts(root, 'erste', { fuzzy: true }), [['Erste']]);
+});
+
+test('nodeRanges: where lowering changes the length, a range still covers whole characters of the node', () => {
+  const root = rootWith('<p>😀 <em>İ</em>stanbul und STRAẞE</p>');
+  assert.deepEqual(hitTexts(root, 'i̇stanbul'), [['İstanbul']]);
+  assert.deepEqual(hitTexts(root, 'straße'), [['STRAẞE']]);
+});
+
+test('nodeRanges changes nothing in the document and needs no Range: plain objects of nodes and offsets', () => {
+  const root = rootWith('<p>Eine <em>Tabelle</em> hier.</p>');
+  const before = root.outerHTML;
+  const [place] = collectPlaces(root);
+  const ranges = nodeRanges(place.map, findHits('Tabelle', place.text)[0]);
+  assert.deepEqual(Object.keys(ranges[0]), ['startNode', 'startOffset', 'endNode', 'endOffset']);
+  assert.equal(root.outerHTML, before);
+});
+
 test('a search over the places: one result per place that holds the term, every hit counted', () => {
   const root = rootWith('<h2>Tabellen</h2>\n<p>Eine Tabelle und noch eine tabelle.</p>\n<p>Keine hier.</p>\n<ul>\n<li>TABELLE</li>\n</ul>\n<table><tbody><tr><td>Tabelle</td></tr></tbody></table>\n');
   const found = collectPlaces(root).map(p => ({ tag: p.el.tagName, hits: findHits('tabelle', p.text).length })).filter(r => r.hits);
@@ -458,4 +601,16 @@ test('the panel is transient, and the script calls registerSearch() after regist
   assert.match(app, /new MutationObserver\(\(\) => \{ if \(!inReadMode\(\)\) closeSearch\(\); \}\)/);
   assert.match(read('reader.js'), /registerSearch\(\{ root, inReadMode: \(\) => true \}\)/);
   assert.doesNotMatch(read('app/render.js'), /search(-match|-places)?\.js|collectPlaces|findHits|Search/);
+});
+
+test('the hits are highlighted through the CSS Custom Highlight API, where the browser has it, in the colour of the marks and not in print', () => {
+  const js = read('app/search.js'), css = read('search.css');
+  assert.match(js, /export const HIGHLIGHT = 'search-hit';/);
+  assert.match(js, /typeof CSS !== 'undefined' && !!CSS\.highlights && typeof Highlight === 'function' && typeof StaticRange === 'function'/);
+  assert.match(js, /new StaticRange\(/);
+  // Nothing of the document is touched: no element made or changed for a hit.
+  assert.doesNotMatch(js, /surroundContents|splitText|normalize\(/);
+  const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
+  assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
+  assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
 });

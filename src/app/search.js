@@ -1,5 +1,5 @@
 import { findHits, excerpt, tooShort } from './search-match.js';
-import { collectPlaces, groupResults } from './search-places.js';
+import { collectPlaces, groupResults, nodeRanges } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { DIAGRAM_SVG_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
@@ -70,6 +70,18 @@ import { largeViewOpen } from './large-view.js';
 // space, hyphens and dots. Both start off; flipping one searches again at
 // once. They keep their state when the panel closes, the term does not. A
 // term too short is not searched: the summary says so and nothing is listed.
+//
+// While the panel is open, every hit of every listed place is highlighted in
+// the document, all of them, with the CSS Custom Highlight API: one Highlight
+// under the name HIGHLIGHT in CSS.highlights, of StaticRanges over the text
+// nodes the hits came from (nodeRanges() in search-places.js), drawn by
+// ::highlight() in src/search.css. Nothing is added to the root or changed in
+// it, so a file saved or exported while the panel is open is the file it
+// would be without it. Every search replaces the highlight; a term too short,
+// an empty field and closing the panel take it away. A render that replaces
+// the root's nodes leaves ranges over nodes no longer in the document, which
+// draw nothing; a click on a result then searches again. Where the browser
+// has no CSS.highlights, the results are listed without highlight.
 
 const PANEL_CLASS = 'search-panel';
 // What the decoder of a `schlank` file dispatches on the document when it has
@@ -82,6 +94,8 @@ const PACKED_SEL = '.' + DIAGRAM_SVG_CLASS + '[data-gz]';
 const PAUSE = 150;
 // How many characters of a place's text a result shows at most.
 const EXCERPT_MAX = 160;
+// The name of the highlight of the hits in the document (src/search.css).
+export const HIGHLIGHT = 'search-hit';
 
 let panel = null;
 let input = null;
@@ -175,6 +189,36 @@ function groupItem(group){
 function clearResults(){
   summary.textContent = '';
   list.replaceChildren();
+  clearHighlight();
+}
+
+// Whether the browser draws highlights.
+const canHighlight = () => typeof CSS !== 'undefined' && !!CSS.highlights && typeof Highlight === 'function' && typeof StaticRange === 'function';
+
+function clearHighlight(){
+  if (canHighlight()) CSS.highlights.delete(HIGHLIGHT);
+}
+
+// Highlights every hit of the places found, in place of what was highlighted.
+// found: [{ place, at }], at the hits of the place's text. A failure here
+// takes the highlight away and leaves the results listed.
+function drawHighlight(found){
+  if (!canHighlight()) return;
+  try {
+    const highlight = new Highlight();
+    for (const { place, at } of found){
+      for (const hit of at){
+        for (const r of nodeRanges(place.map, hit)){
+          highlight.add(new StaticRange({ startContainer: r.startNode, startOffset: r.startOffset, endContainer: r.endNode, endOffset: r.endOffset }));
+        }
+      }
+    }
+    if (highlight.size) CSS.highlights.set(HIGHLIGHT, highlight);
+    else CSS.highlights.delete(HIGHLIGHT);
+  } catch (err){
+    console.error('Markieren der Treffer fehlgeschlagen:', err);
+    clearHighlight();
+  }
 }
 
 // Runs the search for what the field holds, over the root as it is now; over
@@ -201,8 +245,10 @@ function search(){
     const { groups, sections } = found.length ? groupResults(root, found) : { groups: [], sections: 0 };
     list.replaceChildren(...groups.map(groupItem));
     summary.textContent = summaryText(term, hits, found.length, sections, short);
+    drawHighlight(found);
   } catch (err){
     console.error('Suche fehlgeschlagen:', err);
+    clearHighlight();
     list.replaceChildren();
     summary.textContent = 'Die Suche ist fehlgeschlagen.';
   }

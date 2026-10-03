@@ -120,7 +120,7 @@ import { readProcess } from '../src/app/bpmn-layout.js';
 // under which group headings they stand is asked where the product decides it,
 // over the preview read back into linkedom.
 import { parseHTML, DOMParser as XmlParser } from 'linkedom';
-import { collectPlaces, groupResults } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, nodeRanges } from '../src/app/search-places.js';
 import { findHits } from '../src/app/search-match.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
 
@@ -1930,23 +1930,30 @@ async function assertFilters(page, check, exp, key){
   }
 }
 
-// The search of the reading view (epic 5, stories 1 to 4), in the editor file
+// The search of the reading view (epic 5, stories 1 to 5), in the editor file
 // and in `schlank` and `kompakt`: "/" opens the panel, typed terms list one
 // result per place of the content that holds them, grouped under the headings
 // H2 to H4 with the numbers of each branch, the group headings stay at the
 // top while the list scrolls, a click scrolls to its place, the panel stays
 // open; the close button closes it and forgets the term, and in the editor
-// file so does leaving read mode; a "/" in a field is typed. Which places
-// there are, how many hits each holds and under which group headings they
-// stand the run asks collectPlaces(), findHits() and groupResults() of the
-// product, over the content container as the page shows it (the preview, or
-// main.reader-body in an export), read back into linkedom; that the two read
-// the same elements is checked first.
+// file so does leaving read mode; a "/" in a field is typed. While it is open
+// every hit is highlighted in the document (story 5), through the CSS Custom
+// Highlight API: the run reads the ranges of CSS.highlights, their count and
+// what each covers, and that the content's DOM is the same with the panel
+// open; without the API the results are listed all the same. Which places
+// there are, how many hits each holds, under which group headings they stand
+// and what the ranges of their hits cover the run asks collectPlaces(),
+// findHits(), groupResults() and nodeRanges() of the product, over the content
+// container as the page shows it (the preview, or main.reader-body in an
+// export), read back into linkedom; that the two read the same elements is
+// checked first.
 const SEARCH_TERM = 'Tabelle';
 // A term that occurs often in both documents: its list is longer than the panel.
 const LONG_TERM = 'die';
 // The height of a group heading in the panel (src/search.css).
 const GROUP_ROW = 28;
+// The name of the highlight of the hits (src/app/search.js, src/search.css).
+const HIGHLIGHT = 'search-hit';
 async function assertSearch(page, check, key){
   const json = JSON.stringify;
   const editor = key === 'mit-editor';
@@ -1978,6 +1985,22 @@ async function assertSearch(page, check, key){
     };
   }, ROOT_SEL);
   const press = async k => { await page.keyboard.press(k); await frames(page); };
+  // The highlight of the hits: whether the browser has the API, and each range
+  // with the text it covers, as a Range over it reads, and whether it lies in
+  // the content.
+  const highlightFacts = () => page.evaluate(([rootSel, name]) => {
+    if (!(window.CSS && CSS.highlights)) return { api: false, ranges: [] };
+    const root = document.querySelector(rootSel);
+    const h = CSS.highlights.get(name);
+    return { api: true, ranges: h ? Array.from(h).map(s => {
+      const r = document.createRange();
+      r.setStart(s.startContainer, s.startOffset);
+      r.setEnd(s.endContainer, s.endOffset);
+      return { text: r.toString(), inRoot: root.contains(s.startContainer) && root.contains(s.endContainer) };
+    }) : [] };
+  }, [ROOT_SEL, HIGHLIGHT]);
+  const rootHtml = () => page.evaluate(sel => document.querySelector(sel).outerHTML, ROOT_SEL);
+  const untouched = await rootHtml();
   // Types a term into the panel's field and waits until the search has run:
   // the run puts a text of its own into the summary first, which every search
   // replaces.
@@ -2005,7 +2028,7 @@ async function assertSearch(page, check, key){
   check('search: the panel stands on the right ' + where + ', at most 380 px wide and about as high as the window (1400 px)', placed(opened), round(opened.panel) + ', button ' + round(opened.button));
 
   // --- the term: one result per place that holds it, the summary in numbers that match
-  const html = await page.evaluate(sel => document.querySelector(sel).outerHTML, ROOT_SEL);
+  const html = await rootHtml();
   const { document: doc } = parseHTML('<!DOCTYPE html><html><body>' + html + '</body></html>');
   const root = doc.querySelector(ROOT_SEL);
   const browserTags = await page.evaluate(([rootSel, sel]) => Array.from(document.querySelectorAll(rootSel + ' :is(' + sel + ')')).map(el => el.tagName), [ROOT_SEL, PLACE_SEL]);
@@ -2024,9 +2047,30 @@ async function assertSearch(page, check, key){
     const k = groupsOf(places).sections;
     return countOf(n, places.length) + ' in ' + k + (k === 1 ? ' Abschnitt' : ' Abschnitten');
   };
+  // What the ranges of every hit of a term cover, in the order of the
+  // document: the text of the text nodes between their ends.
+  const textNodes = (node, out = []) => { for (let c = node.firstChild; c; c = c.nextSibling){ if (c.nodeType === 3) out.push(c); else textNodes(c, out); } return out; };
+  const allText = textNodes(root);
+  const coveredBy = r => {
+    const from = allText.indexOf(r.startNode), to = allText.indexOf(r.endNode);
+    if (from === to) return r.startNode.data.slice(r.startOffset, r.endOffset);
+    return r.startNode.data.slice(r.startOffset) + allText.slice(from + 1, to).map(n => n.data).join('') + r.endNode.data.slice(0, r.endOffset);
+  };
+  const rangeTexts = (term, options = {}) => collectPlaces(root).flatMap(p => findHits(term, p.text, options).flatMap(hit => nodeRanges(p.map, hit).map(coveredBy)));
+  const hitCount = places => places.reduce((n, p) => n + p.hits, 0);
+  // The highlight of a term as the product makes it over the content read
+  // back: one range per hit where nothing left out lies inside a hit.
+  const litAs = (facts, term, options, places, alike) => {
+    const want = rangeTexts(term, options);
+    return facts.api && facts.ranges.length === hitCount(places) && sameList(facts.ranges.map(r => r.text), want) &&
+      facts.ranges.every(r => r.inRoot && alike(r.text));
+  };
+  const litLine = (facts, term, options, places) => json({ api: facts.api, ranges: facts.ranges.length, hits: hitCount(places), texts: facts.ranges.slice(0, 6).map(r => r.text), expected: rangeTexts(term, options).slice(0, 6), outside: facts.ranges.filter(r => !r.inRoot).length });
   const want = expected(SEARCH_TERM);
   const wantSummary = summaryOf(want);
   const typed = await search(SEARCH_TERM);
+  const lit = await highlightFacts();
+  const searched = await rootHtml();
   const strip = t => t.replace(/^… /, '').replace(/ …$/, '');
   const mismatched = typed.results.map((r, i) => (want[i] && want[i].text.includes(strip(r.text)) && r.marks.length >= 1 && r.marks.length <= want[i].hits && r.marks.every(m => m.toLowerCase() === SEARCH_TERM.toLowerCase())) ? null : i + ': ' + json(r)).filter(Boolean);
   check('search: "' + SEARCH_TERM + '" lists one result per place of the ' + (editor ? 'preview' : 'content') + ' that holds it, in order, each a part of its text with the term marked; the summary says "' + wantSummary + '"',
@@ -2041,12 +2085,18 @@ async function assertSearch(page, check, key){
   check('search: "' + SEARCH_TERM + '" occurs in two sections of different depth: a top group with results of its own, and one below a parent',
     typed.groups.some(g => g.depth === 0 && g.own) && typed.groups.some(g => g.depth > 0 && g.own),
     typed.groups.map(groupLine).join(' | '));
+  // --- story 5: every hit highlighted in the document, the document's DOM unchanged
+  check('search: every hit of "' + SEARCH_TERM + '" is highlighted in the ' + (editor ? 'preview' : 'content') + ', one range per hit over exactly the hit, ' + hitCount(want) + ' in all; the DOM of the ' + (editor ? 'preview' : 'content') + ' is the one it had before the panel opened',
+    litAs(lit, SEARCH_TERM, {}, want, t => t.toLowerCase() === SEARCH_TERM.toLowerCase()) && searched === untouched && html === untouched,
+    litLine(lit, SEARCH_TERM, {}, want) + ', DOM unchanged after opening ' + (html === untouched) + ', after the search ' + (searched === untouched));
   const lower = await search(SEARCH_TERM.toLowerCase());
   check('search: "' + SEARCH_TERM.toLowerCase() + '" finds the same as "' + SEARCH_TERM + '"', lower.summary === typed.summary && sameList(lower.results.map(r => r.text), typed.results.map(r => r.text)), json(lower.summary));
   const none = await search('xyzzy');
-  check('search: a term that does not occur says "Keine Treffer" and lists nothing', none.summary === 'Keine Treffer' && none.results.length === 0, json(none.summary) + ', ' + none.results.length);
+  const litNone = await highlightFacts();
+  check('search: a term that does not occur says "Keine Treffer", lists nothing and highlights nothing: the highlight of the term before is gone', none.summary === 'Keine Treffer' && none.results.length === 0 && litNone.api && litNone.ranges.length === 0, json(none.summary) + ', ' + none.results.length + ', ' + litNone.ranges.length + ' ranges');
   const empty = await search('');
-  check('search: an emptied field says nothing and lists nothing', empty.summary === '' && empty.results.length === 0, json(empty.summary) + ', ' + empty.results.length);
+  const litEmpty = await highlightFacts();
+  check('search: an emptied field says nothing, lists nothing and highlights nothing', empty.summary === '' && empty.results.length === 0 && litEmpty.ranges.length === 0, json(empty.summary) + ', ' + empty.results.length + ', ' + litEmpty.ranges.length + ' ranges');
 
   // --- the switches and the minimum length (story 2): a flipped switch searches again at once
   const SWITCH_SEL = 'body > .search-panel .search-switch input[type="checkbox"]';
@@ -2063,6 +2113,7 @@ async function assertSearch(page, check, key){
   check('search: two switches below the field, case-sensitive and light fuzzy, both off', sameList(startStates, [false, false]), json(startStates));
   const plainChip = await search('statuschip');
   const fuzzyChip = await flip(1);
+  const litChip = await highlightFacts();
   const wantChip = expectedWith('statuschip', { fuzzy: true });
   const wantPlainChip = expectedWith('statuschip', {});
   const fuzzyStrip = t => t.replace(/[\s\-\u2010\u2011\u00AD.]/gu, '').toLowerCase();
@@ -2070,9 +2121,13 @@ async function assertSearch(page, check, key){
     plainChip.summary === summaryOf(wantPlainChip) && wantChip.length > wantPlainChip.length && fuzzyChip.summary === summaryOf(wantChip) && fuzzyChip.results.length === wantChip.length &&
       fuzzyChip.results.some(r => r.marks.includes('Status-Chip')) && fuzzyChip.results.every(r => r.marks.length >= 1 && r.marks.every(m => fuzzyStrip(m) === 'statuschip')),
     json({ plain: plainChip.summary, fuzzy: fuzzyChip.summary, expected: summaryOf(wantChip), marks: fuzzyChip.results.map(r => r.marks) }));
+  check('search: light fuzzy flipped on, the highlight follows: every hit of "statuschip" highlighted, "Status-Chip" over its text nodes as one range',
+    litAs(litChip, 'statuschip', { fuzzy: true }, wantChip, t => fuzzyStrip(t) === 'statuschip') && litChip.ranges.some(r => r.text === 'Status-Chip'),
+    litLine(litChip, 'statuschip', { fuzzy: true }, wantChip));
   await flip(1);
   const short = await search('Ta');
-  check('search: "Ta" lists nothing and the summary says it is too short', short.summary === TOO_SHORT && short.results.length === 0, json(short.summary) + ', ' + short.results.length);
+  const litShort = await highlightFacts();
+  check('search: "Ta" lists nothing, highlights nothing and the summary says it is too short', short.summary === TOO_SHORT && short.results.length === 0 && litShort.ranges.length === 0, json(short.summary) + ', ' + short.results.length + ', ' + litShort.ranges.length + ' ranges');
   const oe = await search('oe');
   const wantOe = expectedWith('oe', {});
   check('search: "oe" is searched although it has two letters' + (opts.demo ? ', and lists the one place of the demo text that holds it' : ''),
@@ -2080,8 +2135,13 @@ async function assertSearch(page, check, key){
     json(oe.summary) + ', ' + json(oe.results.map(r => r.text)));
   await search('tabelle');
   const caseOn = await flip(0);
+  const litCaseOn = await highlightFacts();
   const caseTyped = await search(SEARCH_TERM);
+  const litCase = await highlightFacts();
   const wantCase = expectedWith(SEARCH_TERM, { caseSensitive: true });
+  check('search: case-sensitive flipped on, the highlight follows: none for "tabelle", every hit of "' + SEARCH_TERM + '" so written for "' + SEARCH_TERM + '"',
+    litCaseOn.ranges.length === 0 && litAs(litCase, SEARCH_TERM, { caseSensitive: true }, wantCase, t => t === SEARCH_TERM),
+    litCaseOn.ranges.length + ' ranges for "tabelle"; ' + litLine(litCase, SEARCH_TERM, { caseSensitive: true }, wantCase));
   check('search: case-sensitive flipped on, "tabelle" finds nothing; "' + SEARCH_TERM + '" lists the places that hold it so written',
     expectedWith('tabelle', { caseSensitive: true }).length === 0 && caseOn.summary === 'Keine Treffer' && caseOn.results.length === 0 &&
       caseTyped.summary === summaryOf(wantCase) && caseTyped.results.length === wantCase.length && caseTyped.results.every(r => r.marks.every(m => m === SEARCH_TERM)),
@@ -2181,14 +2241,18 @@ async function assertSearch(page, check, key){
   await page.setViewportSize({ width: 1400, height: 1000 });
   await frames(page);
 
-  // --- the close button closes it; "/" opens it again, empty
+  // --- the close button closes it and takes the highlight away; "/" opens it again, empty
+  const litBefore = await highlightFacts();
   await page.click('body > .search-panel .search-close');
   await frames(page);
   const closed = await panelFacts();
+  const litClosed = await highlightFacts();
   await press('/');
   const again = await panelFacts();
-  check('search: the close button closes the panel; "/" opens it again with the field, the summary and the list empty',
-    !closed.shown && again.shown && again.focused && again.value === '' && again.summary === '' && again.results.length === 0, json({ closed: closed.shown, again: { ...again, panel: undefined, button: undefined, rail: undefined } }));
+  const litAgain = await highlightFacts();
+  check('search: the close button closes the panel and no hit stays highlighted; "/" opens it again with the field, the summary and the list empty, nothing highlighted',
+    !closed.shown && again.shown && again.focused && again.value === '' && again.summary === '' && again.results.length === 0 && litBefore.ranges.length > 0 && litClosed.ranges.length === 0 && litAgain.ranges.length === 0,
+    json({ closed: closed.shown, ranges: [litBefore.ranges.length, litClosed.ranges.length, litAgain.ranges.length], again: { ...again, panel: undefined, button: undefined, rail: undefined } }));
 
   // --- Escape closes the panel and nothing else: read mode stays, with the
   // focus in the field and with the focus outside the panel; in the editor the
@@ -2196,7 +2260,7 @@ async function assertSearch(page, check, key){
   const readMode = () => page.evaluate(() => document.body.classList.contains('mode-view'));
   await search(SEARCH_TERM);
   await press('Escape');
-  const escField = { shown: (await panelFacts()).shown, read: await readMode() };
+  const escField = { shown: (await panelFacts()).shown, read: await readMode(), ranges: (await highlightFacts()).ranges.length };
   // Back to read mode, should the Escape have left it, so the run goes on.
   if (editor && !escField.read){
     await page.click('#view-btn');
@@ -2218,16 +2282,18 @@ async function assertSearch(page, check, key){
     await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
     await frames(page);
   }
-  check('search: Escape closes the panel, with the focus in its field and outside it, and ' + (editor ? 'read mode stays; the next Escape leaves read mode' : 'nothing else'),
-    !escField.shown && !escOutside.shown && (!editor || (escField.read && escOutside.read && !escNext.read)), json({ escField, escOutside, escNext }));
+  check('search: Escape closes the panel, with the focus in its field and outside it, no hit stays highlighted, and ' + (editor ? 'read mode stays; the next Escape leaves read mode' : 'nothing else'),
+    !escField.shown && !escOutside.shown && escField.ranges === 0 && (!editor || (escField.read && escOutside.read && !escNext.read)), json({ escField, escOutside, escNext }));
   await press('/');
 
   // --- leaving read mode closes it; in edit mode "/" opens nothing. An export has no edit mode.
   if (editor){
     await search(SEARCH_TERM);
+    const litRead = (await highlightFacts()).ranges.length;
     await page.click('#edit-btn');
     await frames(page);
     const left = await panelFacts();
+    const litLeft = (await highlightFacts()).ranges.length;
     await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
     await press('/');
     const inEdit = await panelFacts();
@@ -2237,9 +2303,29 @@ async function assertSearch(page, check, key){
     await frames(page);
     await press('/');
     const back = await panelFacts();
-    check('search: leaving read mode closes the panel, "/" in edit mode opens nothing, and back in read mode "/" opens it empty',
-      !left.shown && !inEdit.shown && back.shown && back.value === '' && back.results.length === 0, json({ left: left.shown, inEdit: inEdit.shown, back: back.shown, value: back.value, results: back.results.length }));
+    check('search: leaving read mode closes the panel and no hit stays highlighted, "/" in edit mode opens nothing, and back in read mode "/" opens it empty',
+      !left.shown && litRead > 0 && litLeft === 0 && !inEdit.shown && back.shown && back.value === '' && back.results.length === 0, json({ left: left.shown, ranges: [litRead, litLeft], inEdit: inEdit.shown, back: back.shown, value: back.value, results: back.results.length }));
   }
+  // --- without the Highlight API the results are listed all the same, and nothing fails
+  const hidden = await page.evaluate(() => {
+    if (!window.CSS) return false;
+    window.vergleichHighlights = Object.getOwnPropertyDescriptor(CSS, 'highlights');
+    Object.defineProperty(CSS, 'highlights', { value: undefined, configurable: true });
+    return CSS.highlights === undefined;
+  });
+  const consoleErrors = [];
+  const onConsole = m => { if (m.type() === 'error') consoleErrors.push(m.text()); };
+  page.on('console', onConsole);
+  const bare = await search(SEARCH_TERM);
+  page.off('console', onConsole);
+  await page.evaluate(() => {
+    if (window.vergleichHighlights) Object.defineProperty(CSS, 'highlights', window.vergleichHighlights);
+    else delete CSS.highlights;
+    delete window.vergleichHighlights;
+  });
+  check('search: without CSS.highlights "' + SEARCH_TERM + '" lists its results as with it, and nothing fails',
+    hidden && bare.summary === wantSummary && bare.results.length === want.length && consoleErrors.length === 0,
+    json({ hidden, summary: bare.summary, results: bare.results.length, errors: consoleErrors }));
   await page.click('body > .search-panel .search-close');
 
   // --- a "/" in the field of a table filter is typed, and opens nothing
