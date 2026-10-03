@@ -516,7 +516,7 @@ function covered(box, avoid, gap = 2){
   return sum;
 }
 // The first place nothing covers, or the one covered least.
-export function bestPlace(places, avoid){
+function bestPlace(places, avoid){
   let best = places[0], least = Infinity;
   for (const p of places){
     const c = covered(p, avoid);
@@ -567,7 +567,7 @@ export function flowLabel(pts, text, atGateway, avoid = []){
 // are tried; c: the symbol, size: labelSize(). Below, above, right, left
 // (a gateway: above first), then the same farther out, then the four
 // corners. Each [x, y, w, h], centred.
-export function labelPlaces(c, size, gateway){
+function labelPlaces(c, size, gateway){
   const places = [];
   for (const far of [0, 20]){
     const below = [c.cx - size.w / 2, c.cy + c.h / 2 + 4 + far, size.w, size.h];
