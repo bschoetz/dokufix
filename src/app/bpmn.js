@@ -197,6 +197,7 @@ async function drawBpmn(diagram){
 async function layoutBpmn(xml, doc, index){
   const parsed = new globalThis.DOMParser().parseFromString(xml, 'application/xml');
   if (parsed.getElementsByTagName('parsererror').length) return { xml };
+  // readProcess() checks this too; here it puts "no definitions: bpmn-js words it" before "Mermaid missing".
   if (!parsed.documentElement || String(parsed.documentElement.localName).replace(/^.*:/, '') !== 'definitions') return { xml };
   if (typeof mermaid === 'undefined' || !mermaid || typeof mermaid.render !== 'function') throw new Error(BPMN_NO_MERMAID);
   const read = readProcess(parsed);

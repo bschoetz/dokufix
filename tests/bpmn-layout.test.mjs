@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
-  flowLabel, flowLabelPlaces, labelSize, exitSide, dedupe, orthogonal, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -480,6 +480,13 @@ test('the last safeguard: a slanted piece gets a corner in the direction of the 
   const two = ptsOf([[0, 0], [0, 0]]);
   dedupe(two);
   assert.equal(two.length, 2, 'a flow keeps its two ends');
+  // Before docking the inner point of a pair at an end stays; after, the end.
+  const before = ptsOf([[0, 0], [0.7, 0], [0.7, 50], [40, 50], [40.4, 50.6]]);
+  dedupe(before, true);
+  assert.deepEqual(before, ptsOf([[0.7, 0], [0.7, 50], [40, 50]]));
+  const after = ptsOf([[0, 0], [0.7, 0], [0.7, 50], [40, 50], [40.4, 50.6]]);
+  dedupe(after);
+  assert.deepEqual(after, ptsOf([[0, 0], [0.7, 50], [40.4, 50.6]]));
 });
 
 test('a point Mermaid gives twice does not turn the flow through its own source', () => {
@@ -518,10 +525,11 @@ test('flow labels keep off other labels, flows and symbols, the own gateway incl
   const stub = ptsOf([[100, 125], [100, 135], [300, 135]]);
   const placed = flowLabel(stub, 'nein', true, [gw]);
   assert.ok(!(placed[0] < gw[0] + gw[2] && gw[0] < placed[0] + placed[2] && placed[1] < gw[1] + gw[3] && gw[1] < placed[1] + placed[3]), JSON.stringify(placed));
-  // Everything covered: the place covered least.
+  // Every place covered, one of them only by a 2 px square: that one.
   const all = flowLabelPlaces(pts, 'ja', true);
-  const cover = [[0, 0, 400, 300]];
-  assert.deepEqual(flowLabel(pts, 'ja', true, cover), all[0]);
+  const cover = all.map((p, i) => i === 2 ? [p[0] + 4, p[1] + 4, 2, 2] : p);
+  assert.notDeepEqual(all[2], all[0]);
+  assert.deepEqual(flowLabel(pts, 'ja', true, cover), all[2]);
 });
 
 test('a long flow label is as wide as bpmn-js wraps it, 90 px at most, and as high as its lines', () => {
@@ -532,7 +540,22 @@ test('a long flow label is as wide as bpmn-js wraps it, 90 px at most, and as hi
   assert.ok(h >= 60);
 });
 
-test('an event label with every near place taken goes farther out, and else to the place covered least', () => {
+test('an event label with its four near places taken goes to a farther one; with every place covered, to the one covered least', () => {
+  const c = node(100, 100, 36, 36), size = labelSize('Erledigt');
+  const places = labelPlaces(c, size, false);
+  assert.equal(places.length, 12);
+  // The four near places blocked: below, farther out, is free.
+  assert.deepEqual(bestPlace(places, places.slice(0, 4)), places[4]);
+  assert.ok(places[4][1] > places[0][1] + places[0][3], 'farther below than the near place below');
+  // A gateway tries above first, near and far.
+  const gw = labelPlaces(node(100, 100, 50, 50), size, true);
+  assert.ok(gw[0][1] < 75 && gw[4][1] < gw[0][1]);
+  // Every place covered, the last corner least: that one.
+  const cover = places.map((p, i) => i === 11 ? [p[0] + 3, p[1] + 3, 2, 2] : p);
+  assert.deepEqual(bestPlace(places, cover), places[11]);
+});
+
+test('the event and gateway labels of the sample lie on no flow', () => {
   const { model, raw } = sample();
   const di = layoutGeometry(model, raw);
   for (const id of ['S', 'G', 'E']){
@@ -543,4 +566,38 @@ test('an event label with every near place taken goes farther out, and else to t
       assert.ok(!(box[0] < seg[0] + seg[2] && seg[0] < box[0] + box[2] && box[1] < seg[1] + seg[3] && seg[1] < box[1] + box[3]), id + ' on a flow');
     }
   }
+});
+
+// ---------- the findings of review pass 2 ----------
+test('a lane without an id above a drawn lane in a pool: the drawn lane keeps its row, the pool is the lanes\' extent, every node in its lane\'s row', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="Pool" processRef="P"/></bpmn:collaboration><bpmn:process id="P"><bpmn:laneSet id="LS">' +
+    '<bpmn:lane name="X"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Y" name="Y"><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' + LINE + '</bpmn:process>');
+  const { model } = read(xml);
+  // F2 runs above the top row, so the lanes have to grow.
+  const raw = { nodes: { n1: { cx: 50, cy: 75, w: 60, h: 60 }, n2: { cx: 200, cy: 75, w: 120, h: 50 }, n3: { cx: 350, cy: 225, w: 60, h: 60 } },
+                lanes: { l1: { x1: 0, y1: 0, x2: 400, y2: 150 }, l2: { x1: 0, y1: 150, x2: 400, y2: 300 } },
+                edges: [[P(80, 75), P(140, 75)], [P(200, 50), P(200, -40), P(350, -40), P(350, 195)]] };
+  const di = layoutGeometry(model, raw);
+  const y = di.lanes.Y, [px, py, pw, ph] = di.pool, t = di.nodes.T, e = di.nodes.E;
+  assert.ok(y[1] >= t[1] + t[3], 'lane Y starts below the task of lane X: ' + JSON.stringify({ y, t }));
+  assert.ok(e[1] >= y[1] && e[1] + e[3] <= y[1] + y[3], 'E in lane Y');
+  assert.equal(py + ph, y[1] + y[3], 'the pool ends with the bottom lane');
+  assert.ok(py <= -40 - 12 && py > -40 - 30, 'the pool grew above the flow by the margin, once: ' + py);
+  assert.equal(px + pw, y[0] + y[2]);
+});
+
+test('a stub of 0.7 px at a task is no vertical end: the flow does not run inside its own source', () => {
+  const task = node(100, 100, 120, 80, true);
+  const pts = ptsOf([[160, 100], [160.7, 100], [160.7, 300], [400, 300]]);
+  dedupe(pts, true);
+  attach(pts, true, task);
+  assert.ok(pts.every((p, i) => !i || Math.abs(p.x - pts[i - 1].x) < 0.01 || Math.abs(p.y - pts[i - 1].y) < 0.01), 'right angles: ' + JSON.stringify(pts));
+  assert.ok(pts.every(p => !(p.x > 41 && p.x < 159 && p.y > 61 && p.y < 139)), 'no point inside the task: ' + JSON.stringify(pts));
+  // It ran beside the task in Mermaid's positions: it leaves by the side and keeps 12 px from it.
+  assert.deepEqual(pts.slice(0, 3), ptsOf([[160, 100], [172, 100], [172, 300]]));
+});
+
+test('a flow from a node to itself whose node is not laid out names it once', () => {
+  const { leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="Z" attachedToRef="T"/><bpmn:sequenceFlow id="ZZ" sourceRef="Z" targetRef="Z"/></bpmn:process>'));
+  assert.equal(leftOutLine(leftOut.find(x => x.id === 'ZZ')), 'sequenceFlow ZZ: touches Z, which is not laid out');
 });

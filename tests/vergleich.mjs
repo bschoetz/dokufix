@@ -2197,7 +2197,7 @@ function bpmnPlaced(xml){
 // what bpmnLayoutProblems() reports.
 const BPMN_AC2 = [
   ['outline', 'every flow starts and ends on the outline of its symbols'],
-  ['through', 'no flow runs through a symbol it does not belong to'],
+  ['through', 'no flow runs through a symbol, its own source and target included'],
   ['labels', 'no two flow labels lie on top of each other'],
   ['corner', 'flows that leave a gateway at one point are told apart, by route or by label'],
 ];
@@ -2221,8 +2221,11 @@ function bpmnLayoutProblems(model, g){
     if (!pts || pts.length < 2 || !a || !b){ out.push('outline: ' + fl.id + ' is not drawn'); continue; }
     if (!onOutline(pts[0], a, type.get(fl.from))) out.push('outline: ' + fl.id + ' starts at ' + fmt(pts[0]) + ', off ' + fl.from);
     if (!onOutline(pts[pts.length - 1], b, type.get(fl.to))) out.push('outline: ' + fl.id + ' ends at ' + fmt(pts[pts.length - 1]) + ', off ' + fl.to);
+    // Its own source and target too: a piece that leaves or reaches a symbol
+    // on its outline does not enter the box shrunk by a pixel; one that runs
+    // inside it does.
     for (const n of model.nodes){
-      if (n.id === fl.from || n.id === fl.to || !g.shapes[n.id]) continue;
+      if (!g.shapes[n.id]) continue;
       const [x, y, w, h] = g.shapes[n.id];
       for (let i = 1; i < pts.length; i++){
         const [p, q] = [pts[i - 1], pts[i]];

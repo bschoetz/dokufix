@@ -166,7 +166,7 @@ export function readProcess(doc){
     // Mermaid's swimlane layout fails on a flow from a node to itself.
     if (from === to && byId.has(from) && attr(el, 'id')) leave(el, 'a flow from a node to itself');
     else if (byId.has(from) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
-    else leave(el, !attr(el, 'id') ? 'has no id' : 'touches ' + [from, to].filter(id => !byId.has(id)).join(' and ') + ', which is not laid out');
+    else leave(el, !attr(el, 'id') ? 'has no id' : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id)))].join(' and ') + ', which is not laid out');
   }
   // A participant without an id gets no pool shape.
   if (participant && !attr(participant, 'id')) leave(participant, 'has no id; it is not drawn as a pool');
@@ -267,8 +267,15 @@ export function attach(pts, atStart, c, side){
   }
   if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + 12); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
   if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + 12); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
-  if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5){ p.y = c.cy; dock({ x: c.cx + Math.sign(p.x - c.cx) * c.w / 2, y: c.cy }); return; }
-  if (Math.abs(p.y - q.y) < 1 && Math.abs(p.y - c.cy) > c.h / 2 + 0.5){ p.x = c.cx; dock({ x: c.cx, y: c.cy + Math.sign(p.y - c.cy) * c.h / 2 }); return; }
+  // An end piece beside the symbol keeps 12 px from its side, as one docked by side does: Mermaid runs it a pixel off.
+  if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5){
+    const sign = Math.sign(p.x - c.cx);
+    p.x = q.x = c.cx + sign * Math.max(Math.abs(p.x - c.cx), c.w / 2 + 12); p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy }); return;
+  }
+  if (Math.abs(p.y - q.y) < 1 && Math.abs(p.y - c.cy) > c.h / 2 + 0.5){
+    const sign = Math.sign(p.y - c.cy);
+    p.y = q.y = c.cy + sign * Math.max(Math.abs(p.y - c.cy), c.h / 2 + 12); p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 }); return;
+  }
   if (Math.abs(p.x - q.x) < 1){                                   // a vertical end
     const dir = Math.sign(q.y - c.cy) || 1, tx = aim(p.x, c.cx, c.w / 2);
     if (Math.abs(p.x - tx) > 1){
@@ -347,11 +354,16 @@ export function tidy(pts){
   }
 }
 
-// Consecutive points closer than half a pixel become one; a flow keeps at
-// least its two ends.
-export function dedupe(pts){
+// Consecutive points closer than a pixel on both axes become one, the
+// threshold attach() reads an end's axis by: a stub Mermaid draws 1.2 px long
+// is 0.7 px once scaled, and would be read as a vertical end. A flow keeps
+// at least its two ends. inner: of a pair at an end the inner point stays,
+// which carries the direction of the piece after it (before docking, when
+// the end is placed anew); otherwise the end stays.
+export function dedupe(pts, inner = false){
   for (let i = pts.length - 1; i > 0 && pts.length > 2; i--){
-    if (Math.abs(pts[i].x - pts[i - 1].x) < 0.5 && Math.abs(pts[i].y - pts[i - 1].y) < 0.5) pts.splice(i === pts.length - 1 ? i - 1 : i, 1);
+    if (Math.abs(pts[i].x - pts[i - 1].x) >= 1 || Math.abs(pts[i].y - pts[i - 1].y) >= 1) continue;
+    pts.splice(i === pts.length - 1 ? (inner ? i : i - 1) : (i === 1 && inner ? 0 : i), 1);
   }
 }
 
@@ -504,7 +516,7 @@ function covered(box, avoid, gap = 2){
   return sum;
 }
 // The first place nothing covers, or the one covered least.
-function bestPlace(places, avoid){
+export function bestPlace(places, avoid){
   let best = places[0], least = Infinity;
   for (const p of places){
     const c = covered(p, avoid);
@@ -555,7 +567,7 @@ export function flowLabel(pts, text, atGateway, avoid = []){
 // are tried; c: the symbol, size: labelSize(). Below, above, right, left
 // (a gateway: above first), then the same farther out, then the four
 // corners. Each [x, y, w, h], centred.
-function labelPlaces(c, size, gateway){
+export function labelPlaces(c, size, gateway){
   const places = [];
   for (const far of [0, 20]){
     const below = [c.cx - size.w / 2, c.cy + c.h / 2 + 4 + far, size.w, size.h];
@@ -597,11 +609,14 @@ export function layoutGeometry(model, raw){
 
   const di = { pool: null, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {} };
   let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  // Every lane's box, the synthetic ones too, which are not written.
+  const laneBox = {};
   for (const l of model.lanes){
     const r = raw.lanes[l.key];
     if (!r) throw new Error('Mermaid hat die Bahn „' + (l.name || l.id) + '“ nicht angeordnet.');
     const a = mapX(r.x1), b = mapY(r.y1), c = mapX(r.x2), d = mapY(r.y2);
-    if (!l.synthetic) di.lanes[l.id] = [R(a), R(b), R(c - a), R(d - b)];
+    laneBox[l.key] = [R(a), R(b), R(c - a), R(d - b)];
+    if (!l.synthetic) di.lanes[l.id] = laneBox[l.key];
     x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d);
   }
   if (model.pool) di.pool = [R(x1 - HEAD), R(y1), R(x2 - x1 + HEAD), R(y2 - y1)];
@@ -623,8 +638,9 @@ export function layoutGeometry(model, raw){
       Math.abs(o.y - o2.y) < 1 && Math.abs(o.y - r.cy) > r.h / 2 + 0.5 ? { axis: 'y', sign: Math.sign(o.y - r.cy) } : null;
     const sideFrom = beside(orig[0], orig[1], rawOf[f.from]), sideTo = beside(orig[orig.length - 1], orig[orig.length - 2], rawOf[f.to]);
     const pts = orig.map(p => ({ x: mapX(p.x), y: mapY(p.y) }));
-    // A point Mermaid gives twice would read as an end of no direction.
-    dedupe(pts);
+    // A point Mermaid gives twice, or a stub under a pixel, would read as an
+    // end of no direction or of the wrong one.
+    dedupe(pts, true);
     attach(pts, true, box[f.from], sideFrom);
     attach(pts, false, box[f.to], sideTo);
     const obstacles = model.nodes.filter(n => n.id !== f.from && n.id !== f.to).map(n => rect(box[n.id]));
@@ -668,18 +684,19 @@ export function layoutGeometry(model, raw){
   // Flows routed around a row, and labels, can lie beyond Mermaid's lanes:
   // the outer lanes and the pool grow until every waypoint and every label
   // lies inside, 12 px from the edge (the top lane up, the bottom lane down,
-  // every lane and the pool left and right).
+  // every lane and the pool left and right). The frame is every lane, the
+  // synthetic ones included: a lane without an id keeps its row.
   const drawn = model.lanes.filter(l => !l.synthetic).map(l => di.lanes[l.id]);
   if (di.pool || drawn.length){
     const M = 12, xs = [], ys = [];
     for (const way of Object.values(di.flows)) for (const [x, y] of way){ xs.push(x); ys.push(y); }
     for (const [x, y, w, h] of taken){ xs.push(x, x + w); ys.push(y, y + h); }
-    const frame = drawn.length ? drawn : [[di.pool[0] + HEAD, di.pool[1], di.pool[2] - HEAD, di.pool[3]]];
+    const frame = model.lanes.map(l => laneBox[l.key]);
     const top = Math.min(...frame.map(b => b[1])), bottom = Math.max(...frame.map(b => b[1] + b[3]));
     const left = Math.min(...frame.map(b => b[0])), right = Math.max(...frame.map(b => b[0] + b[2]));
     const up = Math.max(0, R(top - (Math.min(...ys) - M))), down = Math.max(0, R(Math.max(...ys) + M - bottom));
     const west = Math.max(0, R(left - (Math.min(...xs) - M))), east = Math.max(0, R(Math.max(...xs) + M - right));
-    for (const b of drawn){
+    for (const b of frame){
       const atBottom = b[1] + b[3] === bottom;
       if (b[1] === top){ b[1] -= up; b[3] += up; }
       if (atBottom) b[3] += down;
