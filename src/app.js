@@ -16,6 +16,7 @@ import { render } from './app/render.js';
 import { registerRailClicks } from './app/rail.js';
 import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle, registerLicences } from './app/editor.js';
 import { registerDownloadMenu } from './app/downloads/menu.js';
+import { registerSearch } from './app/search.js';
 
 mermaid.initialize({
   startOnLoad: false,
@@ -51,6 +52,7 @@ registerHamburger();
 registerViewToggle();
 registerStorageBanner();
 registerLicences();
+registerSearch();
 
 // Async init — reads the demo text and this file's document from their data
 // blocks (decompressing them if they are gzipped), opens IDB, migrates legacy

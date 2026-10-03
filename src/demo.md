@@ -36,6 +36,8 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Fußnoten mit Vorschau
 - **Mermaid- und BPMN-Diagramme**
 
+Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin.
+
 ## Wie das hier zusammenspielt
 
 ```mermaid

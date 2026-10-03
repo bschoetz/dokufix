@@ -106,6 +106,11 @@ import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src
 // Whether a BPMN block holds coordinates, and what the warning of one that
 // cannot be drawn says, is asked where the product decides it.
 import { hasCoordinates, bpmnWarningText, BPMN_NO_COORDINATES, BPMN_CREDIT } from '../src/app/bpmn.js';
+// Which places of the preview a search lists and how many hits each holds is
+// asked where the product decides it, over the preview read back into linkedom.
+import { parseHTML } from 'linkedom';
+import { collectPlaces } from '../src/app/search-places.js';
+import { findHits } from '../src/app/search-match.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -1874,6 +1879,148 @@ async function assertFilters(page, check, exp, key){
   }
 }
 
+// The search of the reading view (epic 5, story 1), in the editor file only:
+// "/" opens the panel, typed terms list one result per place of the preview
+// that holds them, a click scrolls to its place, the panel stays open; the
+// close button and leaving read mode close it and forget the term; a "/" in a
+// field is typed. Which places there are and how many hits each holds the run
+// asks collectPlaces() and findHits() of the product, over the preview as the
+// page shows it, read back into linkedom; that the two read the same elements
+// is checked first.
+const SEARCH_TERM = 'Tabelle';
+async function assertSearch(page, check){
+  const json = JSON.stringify;
+  await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+  await frames(page);
+  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6';
+  const panelFacts = () => page.evaluate(() => {
+    const p = document.querySelector('body > .search-panel');
+    const box = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
+    const input = p && p.querySelector('input');
+    return {
+      exists: !!p, transient: !!p && p.hasAttribute('data-dokufix-transient'), inPreview: !!document.querySelector('#preview .search-panel'),
+      shown: !!p && !p.hidden && getComputedStyle(p).display !== 'none', focused: !!input && document.activeElement === input,
+      value: input ? input.value : null, summary: p ? p.querySelector('[role="status"]').textContent : null,
+      results: p ? Array.from(p.querySelectorAll('.search-results > li > button')).map(b => ({ text: b.textContent, marks: Array.from(b.querySelectorAll('mark')).map(m => m.textContent) })) : [],
+      label: p ? (p.querySelector('label') || {}).textContent : null,
+      panel: box(p), button: box(document.getElementById('edit-btn')), rail: box(document.querySelector('aside.dokufix-rail.has-items')),
+      onTop: (() => { if (!p || p.hidden) return false; const r = p.getBoundingClientRect(); const t = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !!t && p.contains(t); })(),
+      window: { width: innerWidth, height: innerHeight },
+    };
+  });
+  const press = async key => { await page.keyboard.press(key); await frames(page); };
+  // Types a term into the panel's field and waits until the search has run:
+  // the run puts a text of its own into the summary first, which every search
+  // replaces.
+  const PENDING = 'vergleich: search pending';
+  const search = async term => {
+    await page.evaluate(t => { document.querySelector('body > .search-panel [role="status"]').textContent = t; }, PENDING);
+    await page.fill('body > .search-panel input', term);
+    await page.waitForFunction(t => document.querySelector('body > .search-panel [role="status"]').textContent !== t, PENDING, { timeout: 5000 }).catch(() => {});
+    return panelFacts();
+  };
+
+  // --- "/" opens the panel, in <body>, outside the preview, transient, the focus in its field
+  await press('/');
+  const opened = await panelFacts();
+  check('search: "/" in read mode opens the panel, in <body> outside the preview, transient, empty, with the focus in its field',
+    opened.exists && opened.transient && !opened.inPreview && opened.shown && opened.focused && opened.value === '' && opened.summary === '' && opened.results.length === 0 && opened.label === 'Im Dokument suchen',
+    json({ ...opened, panel: undefined, button: undefined, rail: undefined }));
+  if (!opened.shown) return;
+  // --- where it stands: on the right below "Editor ↩", never over it, at most 380 px wide, as high as the window less margins
+  const placed = f => !!f.panel && f.panel.top >= f.button.bottom && !overlap(f.panel, f.button) && f.panel.right <= f.window.width - 8 && f.panel.right >= f.window.width - 40 &&
+    f.panel.right - f.panel.left <= 380.5 && f.panel.bottom <= f.window.height && f.panel.bottom - f.panel.top >= f.window.height - 120;
+  check('search: the panel stands on the right below "Editor ↩", not over it, at most 380 px wide and about as high as the window (1400 px)', placed(opened), round(opened.panel) + ', button ' + round(opened.button));
+
+  // --- the term: one result per place that holds it, the summary in numbers that match
+  const html = await page.evaluate(() => document.getElementById('preview').outerHTML);
+  const { document: doc } = parseHTML('<!DOCTYPE html><html><body>' + html + '</body></html>');
+  const root = doc.getElementById('preview');
+  const browserTags = await page.evaluate(sel => Array.from(document.querySelectorAll('#preview :is(' + sel + ')')).map(el => el.tagName), PLACE_SEL);
+  const nodeTags = Array.from(root.querySelectorAll(PLACE_SEL)).map(el => el.tagName.toUpperCase());
+  check('search: the preview read back in Node has the paragraphs, items and headings the page has', sameList(browserTags, nodeTags), browserTags.length + ' in the page, ' + nodeTags.length + ' in Node');
+  const all = Array.from(root.querySelectorAll(PLACE_SEL));
+  const expected = term => collectPlaces(root).map(p => ({ text: p.text, hits: findHits(term, p.text).length, at: all.indexOf(p.el) })).filter(p => p.hits);
+  const want = expected(SEARCH_TERM);
+  const wantHits = want.reduce((n, p) => n + p.hits, 0);
+  const wantSummary = wantHits + ' Treffer an ' + want.length + (want.length === 1 ? ' Stelle' : ' Stellen');
+  const typed = await search(SEARCH_TERM);
+  const strip = t => t.replace(/^… /, '').replace(/ …$/, '');
+  const mismatched = typed.results.map((r, i) => (want[i] && want[i].text.includes(strip(r.text)) && r.marks.length >= 1 && r.marks.length <= want[i].hits && r.marks.every(m => m.toLowerCase() === SEARCH_TERM.toLowerCase())) ? null : i + ': ' + json(r)).filter(Boolean);
+  check('search: "' + SEARCH_TERM + '" lists one result per place of the preview that holds it, in order, each a part of its text with the term marked; the summary says "' + wantSummary + '"',
+    want.length > 1 && typed.results.length === want.length && typed.summary === wantSummary && mismatched.length === 0,
+    'summary ' + json(typed.summary) + ', ' + typed.results.length + ' results, expected ' + want.length + '; ' + mismatched.slice(0, 3).join(' | '));
+  const lower = await search(SEARCH_TERM.toLowerCase());
+  check('search: "' + SEARCH_TERM.toLowerCase() + '" finds the same as "' + SEARCH_TERM + '"', lower.summary === typed.summary && sameList(lower.results.map(r => r.text), typed.results.map(r => r.text)), json(lower.summary));
+  const none = await search('xyzzy');
+  check('search: a term that does not occur says "Keine Treffer" and lists nothing', none.summary === 'Keine Treffer' && none.results.length === 0, json(none.summary) + ', ' + none.results.length);
+  const empty = await search('');
+  check('search: an emptied field says nothing and lists nothing', empty.summary === '' && empty.results.length === 0, json(empty.summary) + ', ' + empty.results.length);
+
+  // --- a click scrolls to the place, and the panel stays open
+  await search(SEARCH_TERM);
+  const target = want[want.length - 1];
+  await page.locator('body > .search-panel .search-results > li > button').last().click();
+  await frames(page);
+  const landed = await page.evaluate(([sel, at]) => {
+    const el = document.querySelectorAll('#preview :is(' + sel + ')')[at];
+    const r = el.getBoundingClientRect();
+    const p = document.querySelector('body > .search-panel');
+    return { top: r.top, bottom: r.bottom, height: innerHeight, scrolled: Math.round(scrollY), open: !p.hidden, results: p.querySelectorAll('.search-results > li').length };
+  }, [PLACE_SEL, target.at]);
+  check('search: a click on the last result scrolls the document to its place, and the panel stays open with its results',
+    landed.scrolled > 0 && landed.top >= 0 && landed.bottom <= landed.height && landed.open && landed.results === want.length, json(landed));
+
+  // --- from 1500 px it lies over the rail, and still not over "Editor ↩"
+  await page.setViewportSize({ width: 1600, height: 1000 });
+  await frames(page);
+  const wide = await panelFacts();
+  check('search: at 1600 px the panel lies over the rail and stands right below "Editor ↩", not over it',
+    placed(wide) && (!wide.rail || (overlap(wide.panel, wide.rail) && wide.onTop)), round(wide.panel) + ', rail ' + round(wide.rail) + ', on top ' + wide.onTop);
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await frames(page);
+
+  // --- the close button closes it; "/" opens it again, empty
+  await page.click('body > .search-panel .search-close');
+  await frames(page);
+  const closed = await panelFacts();
+  await press('/');
+  const again = await panelFacts();
+  check('search: the close button closes the panel; "/" opens it again with the field, the summary and the list empty',
+    !closed.shown && again.shown && again.focused && again.value === '' && again.summary === '' && again.results.length === 0, json({ closed: closed.shown, again: { ...again, panel: undefined, button: undefined, rail: undefined } }));
+
+  // --- leaving read mode closes it; in edit mode "/" opens nothing
+  await search(SEARCH_TERM);
+  await page.click('#edit-btn');
+  await frames(page);
+  const left = await panelFacts();
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await press('/');
+  const inEdit = await panelFacts();
+  await page.click('#view-btn');
+  await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+  await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+  await frames(page);
+  await press('/');
+  const back = await panelFacts();
+  check('search: leaving read mode closes the panel, "/" in edit mode opens nothing, and back in read mode "/" opens it empty',
+    !left.shown && !inEdit.shown && back.shown && back.value === '' && back.results.length === 0, json({ left: left.shown, inEdit: inEdit.shown, back: back.shown, value: back.value, results: back.results.length }));
+  await page.click('body > .search-panel .search-close');
+
+  // --- a "/" in the field of a table filter is typed, and opens nothing
+  const field = page.locator('#preview .dokufix-filter-input').first();
+  if (await field.count()){
+    await field.fill('');
+    await field.focus();
+    await press('/');
+    const slash = { value: await field.inputValue(), panel: (await panelFacts()).shown };
+    await field.fill('');
+    check('search: a "/" typed into the field of a table filter is a slash in the field, and the panel stays closed', slash.value === '/' && !slash.panel, json(slash));
+  }
+  await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+  await frames(page);
+}
+
 // A footnote cited in a table cell. The wrapper of the table scrolls, so it
 // cuts off whatever is placed inside it; the preview is placed against the
 // page, by its marker, and has to reach out of the wrapper uncut. So it has
@@ -2410,6 +2557,8 @@ async function assertVariant(browser, file, key, exp, results, label){
     await assertTables(page, check, exp, key);
     // --- the free-text filter (story 2.6): a field in the editor file, in schlank and in kompakt, nothing of it in nur-lesen.
     await assertFilters(page, check, exp, key);
+    // --- the search of the reading view (epic 5, story 1): the editor file only.
+    if (key === 'mit-editor') await assertSearch(page, check);
     // Outside its stylesheet, which carries the rules of every component, and
     // outside its scripts, which carry the filter's code.
     const outsideStyle = text.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');

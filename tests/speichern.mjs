@@ -57,7 +57,7 @@
 // with a saved file, which is one of the allowed differences, and the second
 // generation has to open numbered.
 //
-// Three more saves visit states of the page that leave marks on its own
+// Four more saves visit states of the page that leave marks on its own
 // elements, and each saved file is compared with the built file the same way:
 //
 //   5. a narrow window, saved with the hamburger panel open (the download menu
@@ -71,6 +71,9 @@
 //   7. the view of the link "license information" open, in read mode and in
 //      the toolbar. Both elements are made by the script and marked transient,
 //      so the saved file has neither; opened, it makes them again, closed
+//   8. the search panel open in read mode, with a term and its results. The
+//      panel is made by the script and marked transient, so the saved file
+//      has none; opened, it makes it again, closed and empty
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -485,6 +488,46 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     s = await state(o.page);
     same(scope, 'the saved file holds document A', s.source, DOC_A);
     check(scope, 'opened, it has the link twice again, both closed', JSON.stringify(await licences(o.page)) === '[false,false]', JSON.stringify(await licences(o.page)));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+
+    // 8. saved with the search panel open and a term typed into it
+    scope = name + ' search open';
+    const withSearch = path.join(dir, 'suche-offen.html');
+    const searchState = page => page.evaluate(() => {
+      const p = document.querySelector('body > .search-panel');
+      return p ? { open: !p.hidden, term: p.querySelector('input').value, results: p.querySelectorAll('.search-results > li').length } : null;
+    });
+    o = await open(browser, opts.file);
+    await o.page.evaluate(text => {
+      const source = document.getElementById('source');
+      source.value = text;
+      source.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('render-btn').click();
+    }, DOC_A);
+    await o.page.waitForFunction(() => /Dokument A/.test(document.querySelector('#preview h1')?.textContent || ''), null, { timeout: 30000 });
+    await o.page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+    await o.page.keyboard.press('/');
+    await o.page.keyboard.type('Abschnitt');
+    await o.page.waitForFunction(() => document.querySelectorAll('body > .search-panel .search-results > li').length > 0, null, { timeout: 5000 }).catch(() => {});
+    const searchOpen = await searchState(o.page);
+    // Through the DOM: in read mode the toolbar is hidden, and leaving read mode closes the panel.
+    const [searchDownload] = await Promise.all([
+      o.page.waitForEvent('download', { timeout: 60000 }),
+      o.page.evaluate(() => document.querySelector('button[data-download="full"]').click()),
+    ]);
+    await searchDownload.saveAs(withSearch);
+    check(scope, 'the panel was open with a term and its results when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0, JSON.stringify(searchOpen));
+    check(scope, 'and is still open in the running page', JSON.stringify(await searchState(o.page)) === JSON.stringify(searchOpen), JSON.stringify(await searchState(o.page)));
+    check(scope, 'the saved file holds no panel', !/search-panel|search-input/.test(fs.readFileSync(withSearch, 'utf8').replace(/<script>[\s\S]*?<\/script>|<style>[\s\S]*?<\/style>/g, '')));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    await checkAgainstBuiltFile(scope, browser, withSearch, built, 1);
+    o = await open(browser, withSearch);
+    s = await state(o.page);
+    same(scope, 'the saved file holds document A', s.source, DOC_A);
+    const reopened = await searchState(o.page);
+    check(scope, 'opened, its panel is closed and empty', !!reopened && !reopened.open && reopened.term === '' && reopened.results === 0, JSON.stringify(reopened));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 
