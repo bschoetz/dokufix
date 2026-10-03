@@ -269,6 +269,164 @@ Ein anderer Kommentar bleibt, was er ist, und die Liste hinter ihm eine Liste:
 <!-- Notiz der Redaktion: vor der Freigabe prüfen -->
 - ein gewöhnlicher Eintrag
 
+## Tabellen
+
+Jede Tabelle steht in einer Hülle, die für sich seitwärts rollt. Eine Tabelle, die breiter ist als die Lesespalte, rollt dort, und die Seite bleibt so breit wie das Fenster:
+
+| signatur_des_mediums | zeitpunkt_der_rueckgabe | zustand_bei_rueckgabe | standort_des_automaten | kennung_des_lesekontos | entgelt_je_woche_verzug | bearbeitungsvermerk |
+|---|---|---|---|---|---|---|
+| Gb 412/7 | 2026-10-02T09:30:00+02:00 | in Ordnung | Eingang | 0004711 | 1,00 € | keiner |
+| Zs 88/3 | 2026-10-02T09:41:00+02:00 | Einband lose | Lesesaal | 0004712 | 0,50 € | an die Buchbinderei |
+
+Auch in einem Hinweis und in einer Aufzählung steht eine Tabelle in ihrer Hülle:
+
+> [!TIP]
+> | Tag | Öffnung |
+> |---|---|
+> | Sonntag | geschlossen |
+
+- an Feiertagen:
+
+  | Tag | Öffnung |
+  |---|---|
+  | Neujahr | geschlossen |
+
+### Unterzeile
+
+Kursiver Text direkt nach einem Zeilenumbruch in einer Zelle wird zur Unterzeile. Kursiver Text an anderer Stelle bleibt, was er ist.
+
+| Medium | Frist |
+|---|---|
+| **Buch**<br>*auch als Hörbuch* | 28 Tage |
+| Zeitschrift  <br>  *nur das aktuelle Heft* | 14 Tage |
+| Spiel<br>vollständig *und unbeschädigt* | 14 Tage |
+| *Gerät* | 7 Tage |
+
+Außerhalb einer Tabelle gibt es keine Unterzeile: ein Absatz mit Umbruch<br>*und kursivem Text danach.*
+
+### Fußnote in einer Zelle
+
+| Medium | Signatur |
+|---|---|
+| Buch[^zelle] | Gb 412/7 |
+| Spiel | Sp 17/2 |
+
+Zum Vergleich dieselbe Fußnote in einem Absatz direkt unter der Tabelle.[^zelle]
+
+### Facetten
+
+Die Markierung `facets` nennt eine Spalte. Über der Tabelle steht dann je Wert dieser Spalte ein Knopf, und wer einen wählt, sieht nur die Zeilen mit diesem Wert. Der Wert einer Zelle ist ihre erste Zeile.
+
+<!-- dokufix: facets Typ -->
+| Merkmal | Typ | Wer füllt es |
+|---|---|---|
+| `signatur` | Text | Katalog |
+| `standort` | Kategorie | Katalog |
+| `ausgeliehen_am` | Datum | Automat |
+| `verlaengert`<br>`vorgemerkt` | Ja/Nein<br>*je eines* | Automat |
+| `mahnstufe` | Zahl | Katalog |
+| `zustand` | Kategorie | Theke |
+| `rueckgabe_am` | Datum | Automat |
+| `gesperrt` | Ja/Nein | Theke |
+| `vermerk` | Text | Theke |
+
+Über einer Spalte mit Status-Chips ist der Wert der Text des Chips:
+
+<!-- dokufix: facets Status -->
+| Gerät | Status |
+|---|---|
+| Automat 1 | `🟢 in Betrieb` |
+| Automat 2 | `🔴 außer Betrieb`<br>*seit Montag* |
+| Klappe | `🟢 in Betrieb` |
+| Automat 3 | `⚪ geplant` |
+
+Werte bleiben getrennt, auch wenn sie sich ähneln, in einer anderen Schrift stehen oder fehlen:
+
+<!-- dokufix: facets Sprache -->
+| Titel | Sprache |
+|---|---|
+| Handbuch A | C |
+| Handbuch B | C++ |
+| Handbuch C | C# |
+| Handbuch D | 日本語 |
+| Handbuch E | 中文 |
+| Handbuch F | |
+
+Was in einer Überschrift oder in einer Zelle wie HTML aussieht, bleibt Text, auch im Knopf:
+
+<!-- dokufix: facets Zustand <img src=x onerror=window.dokufixAlarm=1> -->
+| Zustand \<img src=x onerror=window.dokufixAlarm=1\> | Zahl |
+|---|---|
+| \<b\>neu\</b\> | 3 |
+| gebraucht | 5 |
+
+Eine Tabelle, die als HTML geschrieben ist, mit einer verbundenen Zelle:
+
+<!-- dokufix: facets Plätze -->
+<table>
+<thead><tr><th>Raum</th><th>Plätze</th></tr></thead>
+<tbody>
+<tr><td colspan="2">Magazin, kein Zutritt</td></tr>
+<tr><td>Lesesaal</td><td>40</td></tr>
+<tr><td>Gruppenraum</td><td>6</td></tr>
+</tbody>
+</table>
+
+Zwei Markierungen vor einer Tabelle: `facets` wirkt, `cards` wird zur Warnung.
+
+<!-- dokufix: cards -->
+<!-- dokufix: facets Öffnung -->
+| Tag | Öffnung |
+|---|---|
+| Montag | 10 bis 18 Uhr |
+| Dienstag | 10 bis 18 Uhr |
+| Samstag | 10 bis 14 Uhr |
+
+### Facetten ohne Wirkung
+
+Eine Spalte, die es in der Tabelle nicht gibt, und eine Markierung, die keine Spalte nennt:
+
+<!-- dokufix: facets Tpy -->
+| Merkmal | Typ |
+|---|---|
+| `signatur` | Text |
+
+<!-- dokufix: facets -->
+| Merkmal | Typ |
+|---|---|
+| `standort` | Kategorie |
+
+Der falsche Block, einmal eine Aufzählung und einmal ein Absatz:
+
+<!-- dokufix: facets Typ -->
+- eine Aufzählung, keine Tabelle
+
+<!-- dokufix: facets Typ -->
+Ein Absatz, keine Tabelle.
+
+Mehr verschiedene Werte, als sich filtern lassen:
+
+<!-- dokufix: facets Regal -->
+| Regal | Sachgruppe |
+|---|---|
+| Regal 1 | Belletristik |
+| Regal 2 | Biografien |
+| Regal 3 | Erdkunde |
+| Regal 4 | Geschichte |
+| Regal 5 | Recht |
+| Regal 6 | Wirtschaft |
+| Regal 7 | Sprache |
+| Regal 8 | Naturwissenschaft |
+| Regal 9 | Medizin |
+| Regal 10 | Technik |
+| Regal 11 | Landwirtschaft |
+| Regal 12 | Kunst |
+| Regal 13 | Musik |
+| Regal 14 | Sport |
+| Regal 15 | Religion |
+| Regal 16 | Philosophie |
+| Regal 17 | Kinderbuch |
+
 ---
 
 ## Schluss
@@ -280,6 +438,8 @@ Mehr steht hier nicht. Das Dokument endet mit den Fußnoten und, in den Ausliefe
 [^lang]: Eine längere Fußnote mit `Code`, *Hervorhebung* und genug Text, dass die Vorschau umbrechen muss: Die Bibliothek führt für jedes Medium eine Signatur, einen Standort und einen Zustand; alle drei Angaben erscheinen auf dem Beleg, den der Automat bei Ausleihe und Rückgabe druckt.
 
 [^automat]: Der Automat liest die Signatur vom Etikett des Mediums. Die Fußnote wird in einem Schritt und gleich darunter in einer gewöhnlichen nummerierten Liste zitiert.
+
+[^zelle]: Die Signatur steht auf dem Etikett am Buchrücken. Diese Fußnote wird in einer Tabellenzelle und gleich darunter in einem Absatz zitiert; ihre Vorschau reicht über den Rand der Tabelle hinaus und darf dort nicht abgeschnitten sein.
 
 [^status]: Auch in einer Fußnote steht ein Status: `🟡 gestört` heißt, dass die Theke aushilft.
 

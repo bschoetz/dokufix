@@ -8,7 +8,7 @@
 //
 // The modules imported here are the ones that load without a page:
 // passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js,
-// chips.js, markers.js.
+// chips.js, markers.js, tables.js.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,6 +21,7 @@ import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter
 import { buildCallouts } from '../src/app/callouts.js';
 import { buildChips } from '../src/app/chips.js';
 import { applyMarkers } from '../src/app/markers.js';
+import { buildTables } from '../src/app/tables.js';
 
 // A root like the preview, holding the given markup.
 function rootWith(html){
@@ -366,6 +367,7 @@ const MARKER_PASSES = [
   { name: 'Hinweise', run: buildCallouts },
   { name: 'Status-Chips', run: buildChips },
   { name: 'Markierungen', run: applyMarkers },
+  { name: 'Tabellen', run: buildTables },
   { name: 'Überschriften', run: assignHeadingIds },
   { name: 'Inhaltsverzeichnis', run: processInlineToc },
 ];
@@ -384,8 +386,8 @@ test('broken markers among working ones: no pass fails, each warning stands at i
   assert.equal(root.firstElementChild.tagName, 'H1');
   const warnings = Array.from(root.querySelectorAll('.dokufix-warning'));
   assert.deepEqual(warnings.map(w => w.textContent), [
-    'Warnung: Unbekannte Markierung „dokufix: crads“. Bekannt sind: cards, steps.',
-    'Warnung: Unbekannte Markierung „dokufix: side-note wichtig“. Bekannt sind: cards, steps.',
+    'Warnung: Unbekannte Markierung „dokufix: crads“. Bekannt sind: cards, steps, facets.',
+    'Warnung: Unbekannte Markierung „dokufix: side-note wichtig“. Bekannt sind: cards, steps, facets.',
   ]);
   assert.equal(warnings[0].nextElementSibling.outerHTML, '<ul>\n<li>bleibt</li>\n</ul>');
   assert.equal(warnings[1].previousElementSibling.id, 'ablauf');
@@ -409,4 +411,82 @@ test('a document without a marker comes through the marker pass as it went in', 
   const failed = await runPasses(root, [{ name: 'Markierungen', run: applyMarkers }], { frontmatter: { kind: null } });
   assert.deepEqual(failed, []);
   assert.equal(root.innerHTML, markup);
+});
+
+// ---------- tables and the facet filter ----------
+// The same passes. The markup is what marked emits for
+//
+//   # Handbuch
+//   [[toc]]
+//   ## Merkmale
+//   <!-- dokufix: cards -->
+//   <!-- dokufix: facets Status -->
+//   | Merkmal | Status |
+//   |---|---|
+//   | ORT<br>*Pflichtfeld* | `🟢 Live` |
+//   | TELEFON | `🔴 Aus` |
+//   | ANREDE | `🟢 Live` |
+//
+//   <!-- dokufix: facets Tpy -->
+//   | A | Typ |
+//   |---|---|
+//   | 1 | x |
+//
+//   ## Danach
+//   > [!NOTE]
+//   > | a | b |
+//   > |---|---|
+//   > | 1 | 2 |
+const cell = (tag, html) => '<' + tag + '>' + html + '</' + tag + '>\n';
+const mdTable = (head, rows) => '<table>\n<thead>\n<tr>\n' + head.map(h => cell('th', h)).join('') + '</tr>\n</thead>\n<tbody>' +
+  rows.map(r => '<tr>\n' + r.map(c => cell('td', c)).join('') + '</tr>\n').join('') + '</tbody></table>\n';
+const WITH_TABLES =
+  '<h1>Handbuch</h1>\n<p>[[toc]]</p>\n<h2>Merkmale</h2>\n' +
+  '<!-- dokufix: cards -->\n<!-- dokufix: facets Status -->\n' +
+  mdTable(['Merkmal', 'Status'], [['ORT<br><em>Pflichtfeld</em>', '<code>🟢 Live</code>'], ['TELEFON', '<code>🔴 Aus</code>'], ['ANREDE', '<code>🟢 Live</code>']]) +
+  '<!-- dokufix: facets Tpy -->\n' + mdTable(['A', 'Typ'], [['1', 'x']]) +
+  '<h2>Danach</h2>\n<blockquote>\n<p>[!NOTE]</p>\n' + mdTable(['a', 'b'], [['1', '2']]) + '</blockquote>\n';
+test('tables through the passes of render.js: every table wrapped once, the facet filter built over chips, its warnings at their markers, no pass failed', async t => {
+  const root = rootWith(WITH_TABLES);
+  const { result: failed, logged } = await quiet(t, () => runPasses(root, MARKER_PASSES, { frontmatter: { kind: null } }));
+  assert.deepEqual(failed, [], 'no pass failed');
+  assert.deepEqual(logged, [], 'nothing on the console');
+  // Every table has its wrapper, the one in the callout as well; none has two.
+  assert.equal(root.querySelectorAll('table').length, 3);
+  assert.equal(root.querySelectorAll('.dokufix-table > table').length, 3);
+  assert.equal(root.querySelectorAll('.dokufix-table .dokufix-table').length, 0);
+  assert.equal(root.querySelectorAll('.dokufix-callout-note > .dokufix-table').length, 1);
+  // The facet filter: the group holds the controls and, below them, the wrapper with the table.
+  const groups = root.querySelectorAll('.dokufix-facets');
+  assert.equal(groups.length, 1);
+  assert.deepEqual(Array.from(groups[0].children).map(c => c.className), ['dokufix-facet-bar', 'dokufix-table']);
+  // The chips were chips when the marker read the column: the values are their labels.
+  assert.deepEqual(Array.from(groups[0].querySelectorAll('label')).map(l => l.textContent), ['Alle 3', 'Live 2', 'Aus 1']);
+  assert.deepEqual(Array.from(groups[0].querySelectorAll('tbody tr')).map(tr => tr.className),
+    ['dokufix-facet-row dokufix-facet-1', 'dokufix-facet-row dokufix-facet-2', 'dokufix-facet-row dokufix-facet-1']);
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-cell-sub')).map(e => e.textContent), ['Pflichtfeld']);
+  // The warnings stand at their markers: "cards" before the group, the refused "facets" before its table, which is wrapped all the same.
+  const warnings = Array.from(root.querySelectorAll('.dokufix-warning'));
+  assert.deepEqual(warnings.map(w => w.textContent), [
+    'Warnung: Die Markierung „dokufix: cards“ erwartet direkt danach eine Aufzählung.',
+    'Warnung: Die Markierung „dokufix: facets Tpy“ nennt eine Spalte, die die Tabelle nicht hat.',
+  ]);
+  assert.equal(warnings[0].nextElementSibling.className, 'dokufix-facets');
+  assert.equal(warnings[1].nextElementSibling.className, 'dokufix-table');
+  assert.equal(root.firstElementChild.tagName, 'H1', 'no warning at the top');
+  // The passes after them ran on the document as it stands then.
+  assert.deepEqual(documentHeadings(root).map(h => h.id), ['handbuch', 'merkmale', 'danach']);
+  assert.deepEqual(Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.textContent), ['Merkmale', 'Danach']);
+  assert.ok(!root.innerHTML.includes('<!--'));
+});
+test('with the tables wrapped before the markers are applied, a marker no longer finds its table: that is the order in render.js', async () => {
+  const root = rootWith(WITH_TABLES);
+  await runPasses(root, [
+    { name: 'Status-Chips', run: buildChips },
+    { name: 'Tabellen', run: buildTables },
+    { name: 'Markierungen', run: applyMarkers },
+  ], { frontmatter: { kind: null } });
+  // Wrong order: the element directly behind the marker is the wrapper, a <div>.
+  assert.equal(root.querySelectorAll('.dokufix-facets').length, 0);
+  assert.ok(Array.from(root.querySelectorAll('.dokufix-warning')).some(w => w.textContent === 'Warnung: Die Markierung „dokufix: facets Status“ erwartet direkt danach eine Tabelle.'));
 });

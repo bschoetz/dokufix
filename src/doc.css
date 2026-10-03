@@ -312,6 +312,95 @@
     .dokufix-doc .dokufix-chip-grey::before{background:transparent;border-color:CanvasText}
   }
 
+  /* Tables — every table stands in a wrapper that scrolls sideways on its own
+     (buildTables() in src/app/tables.js): a table wider than the reading column
+     scrolls there, and the page stays as wide as the window. The table's bottom
+     margin stands on the wrapper, as 14px, which is what 1em was at the
+     table's font size, so it still collapses with what follows.
+     The wrapper is not positioned, and it carries nothing else that would make
+     it a containing block (transform, filter, contain, container-type,
+     will-change): the preview of a footnote cited in a cell is placed against
+     the page (see the footnote preview below), and a wrapper that held it
+     would cut it off at its edges. The same goes for the group of a facet
+     filter.
+     A sub-line is the emphasis directly after a line break in a cell: a second
+     line, subdued and upright. Which element that is the pass decides, by the
+     class; nothing here asks where an <em> stands. */
+  .dokufix-doc .dokufix-table{overflow-x:auto;margin-bottom:14px}
+  .dokufix-doc .dokufix-table > table{margin-bottom:0}
+  .dokufix-doc .dokufix-cell-sub{font-style:normal;font-size:12px;color:#6e6e73}
+
+  /* Facet filter — a table with the marker "facets Spalte" before it
+     (buildFacets() in src/app/facets.js): one control per distinct value of
+     that column above the table, and choosing one hides the other rows, with
+     no script. The controls are radio buttons in their labels, shown as pills.
+     The pass gave the control of a value and the rows with that value one key,
+     the class dokufix-facet-<key>; key 0 is the control for all rows.
+     The rules that hide are fixed: one selector per key from 1 to FACET_MAX
+     (src/app/facets.js; tests/facets.test.mjs holds the two together). Nothing
+     is generated per table and no selector names a table: "in a group where
+     the control with key 7 is chosen, a data row without key 7 is not shown".
+     They need :has(). Without it the controls would do nothing, so the bar is
+     shown only where the browser knows the selector, and elsewhere every row
+     stays. In print the same: all rows and no controls, so that nobody prints
+     a filtered table without noticing.
+     The radio button is hidden from the eye and stays operable: focus goes to
+     it, and the arrow keys choose. It is placed against its label, which is
+     positioned for that alone, as the chip is for its hidden word; a label
+     holds text only, never a footnote marker. Which control is chosen and
+     which has the focus is shown on the label, the first not by a colour
+     alone: the ring before its text is filled.
+     No colour of its own: the greys are those of the document styles. */
+  .dokufix-doc .dokufix-facet-bar{
+    display:none;min-width:0;
+    margin:0 0 4px;padding:0;border:0;
+    font-size:13px;line-height:1.4;color:#3a3a3f;
+  }
+  .dokufix-doc .dokufix-facet-bar legend{
+    float:left;margin:0 10px 6px 0;padding:3px 0;
+    font-weight:600;color:#6e6e73;
+  }
+  .dokufix-doc .dokufix-facet-bar label{
+    position:relative;display:inline-block;
+    margin:0 6px 6px 0;padding:2px 10px 2px 8px;
+    border:1px solid #e5e5ea;border-radius:13px;
+    background:#fafafa;cursor:pointer;
+  }
+  .dokufix-doc .dokufix-facet-bar label::before{
+    content:"";display:inline-block;box-sizing:border-box;
+    width:10px;height:10px;margin-right:6px;
+    border:2px solid #8e8e92;border-radius:50%;
+  }
+  .dokufix-doc .dokufix-facet-bar input{
+    position:absolute;left:0;top:0;width:1px;height:1px;
+    margin:0;opacity:0;pointer-events:none;
+  }
+  .dokufix-doc .dokufix-facet-count{margin-left:2px;font:400 11px/1 ui-monospace,monospace;color:#57606a}
+  .dokufix-doc .dokufix-facet-bar label:has(input:checked){border-color:#1c1c1e;background:#f0f0f3;color:#1c1c1e}
+  .dokufix-doc .dokufix-facet-bar label:has(input:checked)::before{border-width:5px;border-color:#1c1c1e}
+  .dokufix-doc .dokufix-facet-bar label:has(input:focus-visible){outline:2px solid #0066cc;outline-offset:2px}
+  @media not print{
+    @supports selector(:has(a)){
+      .dokufix-doc .dokufix-facet-bar{display:block}
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-1:checked) .dokufix-facet-row:not(.dokufix-facet-1),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-2:checked) .dokufix-facet-row:not(.dokufix-facet-2),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-3:checked) .dokufix-facet-row:not(.dokufix-facet-3),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-4:checked) .dokufix-facet-row:not(.dokufix-facet-4),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-5:checked) .dokufix-facet-row:not(.dokufix-facet-5),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-6:checked) .dokufix-facet-row:not(.dokufix-facet-6),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-7:checked) .dokufix-facet-row:not(.dokufix-facet-7),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-8:checked) .dokufix-facet-row:not(.dokufix-facet-8),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-9:checked) .dokufix-facet-row:not(.dokufix-facet-9),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-10:checked) .dokufix-facet-row:not(.dokufix-facet-10),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-11:checked) .dokufix-facet-row:not(.dokufix-facet-11),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-12:checked) .dokufix-facet-row:not(.dokufix-facet-12),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-13:checked) .dokufix-facet-row:not(.dokufix-facet-13),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-14:checked) .dokufix-facet-row:not(.dokufix-facet-14),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-15:checked) .dokufix-facet-row:not(.dokufix-facet-15),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-16:checked) .dokufix-facet-row:not(.dokufix-facet-16){display:none}
+    }
+  }
+
   /* Cards — a bullet list with the marker "cards" before it (src/app/markers.js,
      buildCards() in src/app/cards.js). Each item is a card with a thin border.
      The grid puts as many beside each other as fit at 210 px or more and wraps

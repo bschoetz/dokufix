@@ -12,6 +12,10 @@
 // their list, which marker becomes a warning and with which words, and what is
 // no marker at all.
 //
+// The third marker, "facets", has its cases in tests/facets.test.mjs. Here it
+// stands in the list, and the cases on what a component may answer, a refusal
+// with its reason, are driven with a list of their own.
+//
 // The last cases read src/doc.css, src/app/render.js and the built file: both
 // components have their rules in the document styles, and the pass has its
 // place in the list.
@@ -22,9 +26,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
-import { MARKERS, BLOCKS, readMarker, judgeMarker, applyMarkerList, applyMarkers } from '../src/app/markers.js';
+import { MARKERS, BLOCKS, readMarker, judgeMarker, refusedMarker, applyMarkerList, applyMarkers } from '../src/app/markers.js';
 import { CARDS, CARDS_CLASS, CARD_TITLE_CLASS, buildCards } from '../src/app/cards.js';
 import { STEPS, STEPS_CLASS, STEP_NUMBER_CLASS, STEP_ACTOR_CLASS, buildSteps } from '../src/app/steps.js';
+import { FACETS, buildFacets } from '../src/app/facets.js';
 import { buildWarning } from '../src/app/warning.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -60,7 +65,7 @@ function comments(root){
 
 // The words of the warnings, written out here a second time on purpose: a
 // reader sees them, so a change to them is a change this file has to be told.
-const KNOWN = 'Bekannt sind: cards, steps.';
+const KNOWN = 'Bekannt sind: cards, steps, facets.';
 const W = {
   unknown: written => 'Unbekannte Markierung „' + written + '“. ' + KNOWN,
   noName: written => 'Die Markierung „' + written + '“ nennt keine Komponente. ' + KNOWN,
@@ -120,10 +125,11 @@ test('readMarker: a long marker is named with its first 80 characters', () => {
 });
 
 // ---------- the list ----------
-test('the list of markers: cards before a bullet list, steps before a numbered list, neither takes an argument', () => {
-  assert.deepEqual(MARKERS.map(m => [m.name, m.block, m.argument]), [['cards', 'UL', 'none'], ['steps', 'OL', 'none']]);
-  assert.ok(MARKERS[0] === CARDS && MARKERS[1] === STEPS, 'the entries are the ones the components export');
-  assert.ok(MARKERS[0].apply === buildCards && MARKERS[1].apply === buildSteps);
+test('the list of markers: cards before a bullet list, steps before a numbered list, neither takes an argument; facets before a table, with the column as its argument', () => {
+  assert.deepEqual(MARKERS.map(m => [m.name, m.block, m.argument]), [['cards', 'UL', 'none'], ['steps', 'OL', 'none'], ['facets', 'TABLE', 'text']]);
+  assert.ok(MARKERS[0] === CARDS && MARKERS[1] === STEPS && MARKERS[2] === FACETS, 'the entries are the ones the components export');
+  assert.ok(MARKERS[0].apply === buildCards && MARKERS[1].apply === buildSteps && MARKERS[2].apply === buildFacets);
+  assert.deepEqual(BLOCKS, { UL: 'eine Aufzählung', OL: 'eine nummerierte Liste', TABLE: 'eine Tabelle' });
 });
 test('every entry of the list is complete: a name in small letters, a block a warning has a word for, how its argument is read, what it does', () => {
   const names = new Set();
@@ -402,6 +408,41 @@ test('two markers that both act on one block, driven with a list of two', () => 
   assert.deepEqual(seen, ['eins TABLE', 'zwei TABLE "Spalte A"']);
   assert.equal(root.innerHTML, '<table class="a b"><tbody><tr><td>x</td></tr></tbody></table>\n');
 });
+test('a component may refuse its block with a reason: the marker becomes a warning that names it as written, the block stays, nothing is logged', t => {
+  const calls = [];
+  const list = [
+    { name: 'waehlerisch', block: 'UL', argument: 'text', apply(block, argument){ calls.push(argument); return argument === 'ja' ? undefined : { warning: 'kann mit „' + argument + '“ nichts anfangen.' }; } },
+    CARDS,
+  ];
+  const root = rootWith('<!-- dokufix: waehlerisch nein -->\n<ul>\n<li>a</li>\n</ul>\n<!-- dokufix: cards -->\n<ul>\n<li>b</li>\n</ul>\n');
+  const { logged } = quiet(t, () => applyMarkerList(root, list));
+  assert.equal(root.innerHTML, warningHtml('Die Markierung „dokufix: waehlerisch nein“ kann mit „nein“ nichts anfangen.') + '\n<ul>\n<li>a</li>\n</ul>\n<ul class="dokufix-cards">\n<li>b</li>\n</ul>\n');
+  assert.deepEqual(calls, ['nein']);
+  assert.deepEqual(logged, [], 'a refusal is no failure');
+  assert.equal(root.querySelector('.dokufix-warning-detail'), null, 'one line, no detail');
+  assert.equal(refusedMarker(readMarker('dokufix: waehlerisch nein'), 'kann nichts.'), 'Die Markierung „dokufix: waehlerisch nein“ kann nichts.');
+  // The reason is text: a component cannot write markup into the warning.
+  const marked = rootWith('<!-- dokufix: waehlerisch <b>x</b> -->\n<ul>\n<li>a</li>\n</ul>\n');
+  applyMarkerList(marked, list);
+  assert.equal(marked.querySelectorAll('.dokufix-warning b').length, 0);
+});
+test('a marker that was refused did not act: the same marker behind it is the first that does, and no repetition', () => {
+  const list = [{ name: 'waehlerisch', block: 'UL', argument: 'text', apply(block, argument){ if (argument !== 'ja') return { warning: 'will nicht.' }; block.classList.add('gewaehlt'); return undefined; } }];
+  const root = rootWith('<!-- dokufix: waehlerisch nein -->\n<!-- dokufix: waehlerisch ja -->\n<!-- dokufix: waehlerisch ja -->\n<ul>\n<li>a</li>\n</ul>\n');
+  applyMarkerList(root, list);
+  assert.deepEqual(warnings(root), ['Warnung: Die Markierung „dokufix: waehlerisch nein“ will nicht.', 'Warnung: ' + W.twice('dokufix: waehlerisch ja')]);
+  assert.equal(root.querySelector('ul').className, 'gewaehlt');
+});
+test('a component may move its block into a new parent: the markers behind it still act on that block', () => {
+  // As "facets" does with its table, and as story 2.6 will find it.
+  const list = [
+    { name: 'huelle', block: 'UL', argument: 'none', apply(block){ const box = block.ownerDocument.createElement('div'); block.replaceWith(box); box.appendChild(block); } },
+    CARDS,
+  ];
+  const root = rootWith('<!-- dokufix: huelle -->\n<!-- dokufix: cards -->\n<ul>\n<li>a</li>\n</ul>\n');
+  applyMarkerList(root, list);
+  assert.equal(root.innerHTML, '<div><ul class="dokufix-cards">\n<li>a</li>\n</ul></div>\n');
+});
 test('the same marker twice before one block: the component is applied once, every further one is a warning that says so', () => {
   // <!-- dokufix: steps -->
   // <!-- dokufix: steps -->
@@ -607,7 +648,7 @@ test('a second pass changes nothing', () => {
 });
 
 // ---------- the pass has its place in the list ----------
-test('render.js runs the pass "Markierungen" after "Status-Chips" and before "Überschriften"', () => {
+test('render.js runs the pass "Markierungen" after "Status-Chips" and before "Tabellen" and "Überschriften"', () => {
   // render.js looks up elements of the page when it loads, so it is read, not imported.
   const src = fs.readFileSync(path.join(here, '../src/app/render.js'), 'utf8');
   const list = src.slice(src.indexOf('export const DOCUMENT_PASSES = ['), src.indexOf('];', src.indexOf('export const DOCUMENT_PASSES = [')));
@@ -615,7 +656,10 @@ test('render.js runs the pass "Markierungen" after "Status-Chips" and before "Ü
   const at = names.indexOf('Markierungen');
   assert.ok(at > 0, 'the pass is in the list: ' + names.join(', '));
   assert.equal(names[at - 1], 'Status-Chips');
-  assert.equal(names[at + 1], 'Überschriften');
+  // The tables come directly behind: a marker finds its table as the element
+  // directly after it, before the table gets its wrapper.
+  assert.equal(names[at + 1], 'Tabellen');
+  assert.equal(names[at + 2], 'Überschriften');
   assert.match(list, /\{ name: 'Markierungen', run: applyMarkers \}/);
 });
 test('the pass takes the root alone: the runner\'s context is not mistaken for a list of markers', () => {
@@ -701,7 +745,7 @@ test('the styles go by the classes the pass sets, never by where a <strong> or a
   assert.ok(colours.size > 0);
   for (const colour of colours) assert.ok(before.includes(colour), colour + ' is a colour of the document styles');
 });
-test('the built file carries the rules of both components and the names of both markers', () => {
+test('the built file carries the rules of both components and the name of every marker', () => {
   const built = fs.readFileSync(path.join(here, '../dist/dokufix.html'), 'utf8');
   const block = built.match(/<style id="dokufix-doc-css">([\s\S]*?)<\/style>/);
   assert.ok(block, 'the block of the document styles');

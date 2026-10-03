@@ -31,6 +31,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Blockzitate und Hinweise
 - Status-Chips
 - Karten und Schrittlisten
+- Tabellen mit Unterzeile und Filter
 - **Mermaid-Diagramme**
 
 ## Wie das hier zusammenspielt
@@ -113,6 +114,33 @@ Dieselbe Art Markierung macht aus einer nummerierten Liste eine Schrittliste: `<
 4. Lesen, oder weiterschreiben, wenn der Editor mitgeliefert wurde.
 
 Eine Markierung, die nicht wirken kann, wird an ihrer Stelle zur Warnung, und die Liste bleibt eine Liste. Probieren Sie es im Editor: Schreiben Sie `crads` statt `cards`.
+
+## Tabellen mit Filter
+
+Eine Markierung über einer Tabelle nennt eine Spalte: `<!-- dokufix: facets Art -->`. Über der Tabelle steht dann für jeden Wert dieser Spalte ein Knopf. Wählen Sie einen, und die Tabelle zeigt nur die Zeilen mit diesem Wert; „Alle“ zeigt wieder alle. Das geht mit der Maus und mit den Pfeiltasten, und es braucht kein Skript: Der Filter arbeitet auch in der Nur-Lese-Fassung.
+
+<!-- dokufix: facets Art -->
+| Baustein | Art | Geschrieben als |
+|---|---|---|
+| Hinweis<br>*fünf Marken* | Block | Zitat mit einer Marke in der ersten Zeile |
+| Status-Chip<br>*fünf Farben* | Text | Code-Span mit Farbpunkt |
+| Karten | Block | Markierung über einer Aufzählung |
+| Schrittliste | Block | Markierung über einer nummerierten Liste |
+| Fußnote<br>*mit Vorschau* | Text | Marke im Text, Erklärung am Ende |
+| Unterzeile | Tabelle | kursiver Text nach einem Zeilenumbruch |
+| Filter | Tabelle | Markierung über einer Tabelle |
+| Diagramm | Block | Code-Block mit Mermaid-Text |
+
+Die kleine zweite Zeile in der ersten Spalte ist eine **Unterzeile**: kursiver Text direkt nach einem Zeilenumbruch in der Zelle, geschrieben als `Hinweis<br>*fünf Marken*`.
+
+Eine Tabelle, die breiter ist als die Lesespalte, rollt für sich seitwärts. Die Seite bleibt so breit wie das Fenster:
+
+| Auslieferung | Dateiendung | Weiterbearbeitung | Versionsgeschichte | Skriptabhängigkeit | Diagrammdarstellung | Größenordnung | Verwendungszweck |
+|---|---|---|---|---|---|---|---|
+| Mit Editor | `.html` | uneingeschränkt | vollständig | Bibliotheken aus dem Netz | beim Öffnen gezeichnet | am größten | Zusammenarbeit |
+| Offen | `-nur-lesen.html` | ausgeschlossen | letzter Stand | keine | eingebettet | groß | Veröffentlichung, Langzeitablage |
+| Schlank | `-schlank.html` | ausgeschlossen | letzter Stand | nur für Diagramme | gepackt | mittel | Versand |
+| Kompakt | `-kompakt.html` | ausgeschlossen | letzter Stand | für alles | gepackt | am kleinsten | Versand über schmale Leitungen |
 
 ## Der Metadaten-Kopf
 

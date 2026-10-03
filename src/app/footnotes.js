@@ -1,6 +1,7 @@
 import { escapeHtml } from './html.js';
 import { documentHeadings, headingLabelText } from './toc.js';
 import { RAIL_MIN_HEADINGS } from './rail.js';
+import { FACET_BAR_CLASS } from './facets.js';
 
 // --- Footnote previews -------------------------------------------------
 // Hovering (or focusing) a footnote marker shows its text in place, so the
@@ -64,6 +65,10 @@ function buildFootnotePreview(li){
     const sup = a.parentElement;
     (sup && sup.tagName === 'SUP' ? sup : a).remove();
   });
+  // Drop the controls of a facet filter (facets.js): a table in a footnote
+  // is flattened to its text here, and the controls filter nothing in a
+  // preview. Their labels would stand in it as words, "Alle 3 Text 2".
+  clone.querySelectorAll('.' + FACET_BAR_CLASS).forEach(bar => bar.remove());
   const span = document.createElement('span');
   span.className = 'dokufix-fn-preview';
   span.setAttribute('aria-hidden', 'true');

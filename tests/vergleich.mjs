@@ -17,8 +17,9 @@
 //   --strict           exit 1 when --compare finds any differing pixel
 //
 // Exit code 1 when an assertion fails (epic 1 behaviour, callouts, status chips,
-// block markers with cards and step lists, the licence information, no <script>
-// in nur-lesen, no editor rules in a read-only export).
+// block markers with cards and step lists, tables with their wrapper, sub-lines
+// and facet filter, the licence information, no <script> in nur-lesen, no
+// editor rules in a read-only export).
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -80,7 +81,11 @@ import { slugify } from '../src/app/toc.js';
 // of a given kind, its component or the text of its warning, is asked where
 // the product decides it. What the run reads itself is the Markdown: which
 // markers stand in it, and which block follows each.
-import { readMarker, judgeMarker } from '../src/app/markers.js';
+import { readMarker, judgeMarker, refusedMarker } from '../src/app/markers.js';
+// What a facet marker comes to on a table, its controls or the reason it
+// refuses, is asked where the product decides it, with the table as this run
+// read it from the Markdown.
+import { planFacets, FACET_ALL } from '../src/app/facets.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -205,6 +210,19 @@ const WARNING_LOOK = { edge: '6px solid', background: 'rgb(255, 248, 225)' };
 // 210 px with their gap do not fit into the text column of any variant.
 const CARDS_NARROW = 400;
 
+// Tables (story 2.5): the look of a sub-line and of the controls of a facet
+// filter (src/doc.css), and the width at which the page is measured a second
+// time: narrower than every table of the reference document.
+const SUB_LINE = 'normal 12px rgb(110, 110, 115)';
+const FACET_PILL = { border: '1px solid rgb(229, 229, 234)', chosen: '1px solid rgb(28, 28, 30)', radius: '13px', ring: '2px', ringChosen: '5px' };
+const TABLES_NARROW = 600;
+// A Markdown table with this many columns or more is taken for one that is
+// wider than the text column: that is how the reference document and the demo
+// text write theirs, with headings that cannot break.
+const WIDE_COLUMNS = 7;
+const FOOTNOTE_WIDTH = 900;
+const PREVIEWS_OUT = '.dokufix-fn-preview{display:none !important}';
+
 // The link "license information" (story 2.18). Every text its view has to show:
 // per entry its name, version, the title of its licence and its copyright
 // lines, and each licence text.
@@ -224,7 +242,8 @@ function expectationsFor(md){
   const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
                 callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0,
                 tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [], linkedChips: 0,
-                cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0 };
+                cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0,
+                facets: [], tables: 0, wideTables: [], subLines: [], tableFootnotes: 0 };
   let body = md;
   const fm = md.match(/^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/);
   if (fm){
@@ -302,7 +321,96 @@ function expectationsFor(md){
     if (h[1].length >= 2 && h[1].length <= 4) exp.calloutHeadingsNumbered++;
   }
   Object.assign(exp, markerExpectations(body));
+  Object.assign(exp, tableExpectations(body));
   return exp;
+}
+
+// ---------- tables, read from the Markdown ----------
+// As far as the reference document needs it: a Markdown table whose rows
+// start with "|", at the beginning of the line, in a quotation ("> |") or
+// indented in a list item, cells separated by "|" (a masked "\|" is none, a
+// "|" in a code span is not read); and a table written as HTML that starts
+// with "<table" at the beginning of a line and ends with "</table>", one
+// <tr> with its cells per line, the header row in <thead>.
+const stripPrefix = line => line.replace(/^[ \t]*(?:>[ \t]?)*[ \t]*/, '');
+const isTableRow = line => /^\|.*\|[ \t]*$/.test(stripPrefix(line));
+const isDelimiterRow = line => /^\|[ \t]*:?-+:?[ \t]*(\|[ \t]*:?-+:?[ \t]*)*\|[ \t]*$/.test(stripPrefix(line));
+const splitRow = line => stripPrefix(line).trim().replace(/^\|/, '').replace(/\|$/, '').split(/(?<!\\)\|/).map(cell => cell.trim());
+// The table that starts at line i, or null: { end, the first line behind it;
+// header, the raw header cells, null when it has none; rows, the raw cells of
+// each data row; html, whether it is written as HTML }. A cell of a table
+// written as HTML is { text, span }.
+function tableAt(lines, i){
+  if (isTableRow(lines[i]) && i + 1 < lines.length && isDelimiterRow(lines[i + 1])){
+    let end = i + 2;
+    while (end < lines.length && isTableRow(lines[end])) end++;
+    return { end, html: false, header: splitRow(lines[i]), rows: lines.slice(i + 2, end).map(splitRow) };
+  }
+  if (/^<table\b/i.test(lines[i])){
+    let end = i;
+    while (end < lines.length && !/<\/table>/i.test(lines[end])) end++;
+    const text = lines.slice(i, end + 1).join('\n');
+    const cellsOf = tr => Array.from(tr.matchAll(/<(td|th)\b([^>]*)>([\s\S]*?)<\/\1>/gi)).map(m => ({ text: m[3], span: Number((m[2].match(/colspan="(\d+)"/i) || [0, 1])[1]) || 1 }));
+    const rowsIn = part => Array.from(part.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)).map(m => cellsOf(m[1]));
+    const head = text.match(/<thead\b[^>]*>([\s\S]*?)<\/thead>/i);
+    const headRows = head ? rowsIn(head[1]) : [];
+    return { end: end + 1, html: true, header: headRows[0] || null, rows: rowsIn(head ? text.replace(head[0], '') : text) };
+  }
+  return null;
+}
+// The value of a cell as the facet filter reads it: its first line as text.
+// A status code span is its label, other code its content; emphasis, a link,
+// a footnote marker and a masking backslash leave their text.
+function cellValue(raw){
+  const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
+  const spanText = text => /^ .* $/.test(text) && text.trim() ? text.slice(1, -1) : text;
+  const code = [];
+  return raw.split(/<br\s*\/?>/i)[0]
+    .replace(CODE_SPAN, (all, ticks, text) => { const status = readChip(spanText(text)); code.push(status ? status.label : spanText(text)); return '\0'; })
+    .replace(/\[\^[^\]\s]+\]/g, '')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(/(\*{1,3}|~~)(?=\S)(.+?)(?<=\S)\1/g, '$2')
+    .replace(/\\([!-\/:-@[-`{-~])/g, '$1')
+    .replace(/\0/g, () => code.shift())
+    .replace(/\s+/g, ' ').trim();
+}
+// The value of a cell of a table written as HTML: its text up to the first <br>.
+const htmlCellValue = text => text.split(/<br\s*\/?>/i)[0].replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+// What the marker "facets" comes to on a table: planFacets() of the product
+// decides, with the headings and the values of the table as read here.
+function facetPlan(argument, table){
+  if (!table.html){
+    return planFacets(argument, table.header.map(cellValue), index => table.rows.map(row => cellValue(row[index] || '')));
+  }
+  const at = (row, index) => { let from = 0; for (const cell of row){ if (index < from + cell.span) return htmlCellValue(cell.text); from += cell.span; } return ''; };
+  const headings = table.header && table.header.flatMap(cell => [htmlCellValue(cell.text), ...Array(cell.span - 1).fill('')]);
+  return planFacets(argument, headings, index => table.rows.map(row => at(row, index)));
+}
+// Every table of the document, in its order: how many there are, which of
+// them are wider than the text column, the sub-lines of their cells, the
+// emphasised text directly after a "<br>", and how many cells cite a footnote.
+// Not read: a sub-line in a table written as HTML, one written with "_" or
+// around bold text, a table inside a footnote definition.
+function tableExpectations(body){
+  const out = { tables: 0, wideTables: [], subLines: [], tableFootnotes: 0 };
+  const lines = body.split(/\r?\n/);
+  let fenced = false;
+  for (let i = 0; i < lines.length; i++){
+    if (/^[ \t]*(```|~~~)/.test(lines[i])){ fenced = !fenced; continue; }
+    if (fenced) continue;
+    const table = tableAt(lines, i);
+    if (!table) continue;
+    if (!table.html){
+      if (table.header.length >= WIDE_COLUMNS) out.wideTables.push(out.tables);
+      for (const cell of [table.header, ...table.rows].flat()){
+        for (const m of cell.matchAll(/<br\s*\/?>\s*\*(?![*\s])([^*]+?)\*(?!\*)/gi)) out.subLines.push(m[1]);
+        if (/\[\^[^\]\s]+\]/.test(cell)) out.tableFootnotes++;
+      }
+    }
+    out.tables++;
+    i = table.end - 1;
+  }
+  return out;
 }
 
 // Block markers: every comment that markers.js reads as a marker, in the order
@@ -310,12 +418,15 @@ function expectationsFor(md){
 // it comes to: cards, a step list, or a warning with its text. For cards the
 // title of each item, the bold text it starts with; for a step list the number
 // of each item and its actor, the emphasised text with a colon it starts with.
+// For a facet filter the legend, the controls with their counts and the key of
+// every data row, or the warning of a marker its component refuses; both from
+// planFacets() of the product, on the table as tableAt() reads it.
 // Read as far as the reference document needs it: a comment on one line; a
 // marker on a line of its own at the beginning of the line, alone or with
 // other comments, has the block behind it, any other has none; a list whose
 // items start at the beginning of a line with "-" or "1.", each item on one
 // line, with blank lines between items or indented lines behind them; a table
-// that starts with "|". Not read: a comment across several lines, a marker in
+// that starts with "|" or with "<table". Not read: a comment across several lines, a marker in
 // a quotation or in a list item, an item that goes on in a line that is not
 // indented, the same marker twice before one block. A document with one of
 // these fails the counts although the build is right.
@@ -323,7 +434,7 @@ function expectationsFor(md){
 // Counted beside them: the comments that are no markers, which have to stay,
 // and the places where a marker stands as code, a code span or a fenced block.
 function markerExpectations(body){
-  const out = { cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0 };
+  const out = { cards: [], steps: [], facets: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0 };
   const COMMENT = /<!--([\s\S]*?)-->/g;
   const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
   const AS_CODE = /<!--\s*dokufix:/i;
@@ -345,7 +456,10 @@ function markerExpectations(body){
     while (i < lines.length && !inFence[i] && (!lines[i].trim() || onlyComments(lines[i]))) i++;
     if (i >= lines.length || inFence[i]) return { tag: i < lines.length ? 'PRE' : '' };
     const start = BULLET.test(lines[i]) ? BULLET : NUMBERED.test(lines[i]) ? NUMBERED : null;
-    if (!start) return { tag: lines[i].startsWith('|') ? 'TABLE' : 'P' };
+    if (!start){
+      const table = tableAt(lines, i);
+      return table ? { tag: 'TABLE', table } : { tag: 'P' };
+    }
     const items = [];
     for (; i < lines.length && !inFence[i]; i++){
       const m = lines[i].match(start);
@@ -376,6 +490,13 @@ function markerExpectations(body){
       else if (verdict.entry.name === 'steps'){
         out.steps.push(block.items.map((item, n) => ({ number: String(block.items[0].written + n), actor: actorOf(item.text) })));
         out.stepFootnotes += block.items.filter(item => /\[\^[^\]\s]+\]/.test(item.text)).length;
+      }
+      else if (verdict.entry.name === 'facets'){
+        // The component may still refuse the table; a facet filter is applied
+        // to a table once, as every component is to its block.
+        const plan = facetPlan(marker.argument, block.table);
+        if (plan.warning) out.markerWarnings.push(refusedMarker(marker, plan.warning));
+        else out.facets.push({ legend: plan.legend, controls: [[FACET_ALL, block.table.rows.length], ...plan.groups.map(g => [g.label, g.count])], keys: plan.keys });
       }
       else throw new Error('the run has no expectation for the marker "' + verdict.entry.name + '"');
     }
@@ -443,7 +564,17 @@ async function buildExports(browser, opts, md, dir){
   await page.click('#edit-btn'); // the download menu lives in the editor toolbar
   const sizes = {};
   const files = {};
+  // A facet that is chosen while a file is written: the file has to open with
+  // all rows all the same (assertTables()). Chosen anew before every download,
+  // because a read-only download renders, and a render starts with all rows.
+  const chosen = [];
   for (const v of VARIANTS){
+    chosen.push(await page.evaluate(() => {
+      const input = document.querySelector('#preview .dokufix-facets .dokufix-facet-bar label:nth-of-type(2) input');
+      if (!input) return null;
+      input.closest('label').click();
+      return input.checked;
+    }));
     await page.click('#download-btn');
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 60000 }),
@@ -457,7 +588,7 @@ async function buildExports(browser, opts, md, dir){
   }
   await context.close();
   libs.sort((x, y) => x.url.localeCompare(y.url));
-  return { files, sizes, libs, errors, source };
+  return { files, sizes, libs, errors, source, chosen };
 }
 
 // ---------- reopen ----------
@@ -1076,6 +1207,357 @@ async function assertStepFootnote(page, check, exp, label){
     judged ? '' : 'not judged: the preview of the plain list does not stand above its marker here either, preview ' + JSON.stringify(plain.preview) + ' for the marker ' + JSON.stringify(plain.marker) + ' (known deviation of the Playwright Firefox build)');
 }
 
+// ---------- tables: wrapper, sub-lines, facet filter ----------
+// What a page shows of its tables: the wrapper of each, the sub-lines of the
+// cells, and the groups of the facet filters with their controls and rows.
+const tableFacts = page => page.evaluate(() => {
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+  const round = n => Math.round(n * 10) / 10;
+  const visible = el => { const r = el.getBoundingClientRect(); return el.checkVisibility({ visibilityProperty: true }) && r.width > 0 && r.height > 0; };
+  // Whatever would make an element the containing block of something placed
+  // inside it. All of it at its initial value: "static none none none …".
+  const holds = el => { const cs = getComputedStyle(el); return [cs.position, cs.transform, cs.filter, cs.perspective, cs.contain, cs.containerType, cs.willChange, cs.backdropFilter || 'none'].join(' '); };
+  const border = cs => cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor;
+  const tables = Array.from(root.querySelectorAll('table')).filter(t => !t.closest('.mermaid'));
+  return {
+    window: document.documentElement.clientWidth, page: document.documentElement.scrollWidth,
+    wrappers: root.querySelectorAll('.dokufix-table').length,
+    tables: tables.map(table => {
+      const w = table.parentElement, cs = getComputedStyle(w), r = w.getBoundingClientRect(), outer = w.parentElement.getBoundingClientRect();
+      return {
+        wrapped: w.tagName === 'DIV' && w.classList.contains('dokufix-table'), alone: w.children.length === 1,
+        twice: !!w.parentElement && w.parentElement.classList.contains('dokufix-table'),
+        overflow: cs.overflowX, holds: holds(w), inline: w.hasAttribute('style') || w.hasAttribute('id'),
+        scrolls: w.scrollWidth > w.clientWidth + 1, tall: w.scrollHeight > w.clientHeight + 1,
+        width: w.scrollWidth + ' in ' + w.clientWidth, inside: r.left >= outer.left - 0.6 && r.right <= outer.right + 0.6,
+        margins: cs.marginBottom + ' ' + getComputedStyle(table).marginBottom,
+      };
+    }),
+    subs: Array.from(root.querySelectorAll('.dokufix-cell-sub')).filter(el => !el.closest('.dokufix-fn-preview')).map(el => {
+      const cell = el.parentElement, cs = getComputedStyle(el);
+      const range = document.createRange();
+      range.selectNodeContents(cell);
+      const first = Array.from(range.getClientRects()).find(r => r.width > 0 && r.height > 0);
+      return {
+        text: el.textContent, tag: el.tagName, inCell: /^T[DH]$/.test(cell.tagName), visible: visible(el),
+        look: cs.fontStyle + ' ' + cs.fontSize + ' ' + cs.color, cellSize: getComputedStyle(cell).fontSize,
+        // A second line: it starts below the top of the cell's first line.
+        below: !!first && el.getBoundingClientRect().top > first.top + 5,
+      };
+    }),
+    facets: Array.from(root.querySelectorAll('.dokufix-facets')).map(group => {
+      const bar = group.querySelector(':scope > fieldset.dokufix-facet-bar');
+      const labels = bar ? Array.from(bar.querySelectorAll(':scope > label')) : [];
+      const rows = Array.from(group.querySelectorAll('tr.dokufix-facet-row'));
+      const controls = labels.map(label => {
+        const input = label.querySelector(':scope > input'), count = label.querySelector(':scope > .dokufix-facet-count');
+        const ls = getComputedStyle(label), ms = getComputedStyle(label, '::before'), is = input && getComputedStyle(input), ir = input && input.getBoundingClientRect();
+        return {
+          text: Array.from(label.childNodes).filter(n => n.nodeType === 3).map(n => n.data).join('').trim(), count: count ? Number(count.textContent) : null,
+          type: input ? input.type : '', name: input ? input.name : '', key: input ? (input.className.match(/^dokufix-facet-(\d+)$/) || [0, ''])[1] : '',
+          checked: !!input && input.checked, attribute: !!input && input.hasAttribute('checked'),
+          visible: visible(label), pill: ls.display + ' ' + ls.position + ' ' + ls.borderTopLeftRadius, border: border(ls), ring: ms.borderTopWidth,
+          countFont: count ? getComputedStyle(count).fontFamily : '',
+          // The radio button: rendered, operable, not seen, placed against its label.
+          hidden: !!input && is.display !== 'none' && is.visibility === 'visible' && is.position === 'absolute' && is.opacity === '0' && ir.width <= 1 && ir.height <= 1 && input.offsetParent === label,
+        };
+      });
+      return {
+        legend: bar && bar.querySelector(':scope > legend') ? bar.querySelector(':scope > legend').textContent : null,
+        children: Array.from(group.children).map(c => c.tagName.toLowerCase() + '.' + c.className).join(' '),
+        bar: bar ? getComputedStyle(bar).display : '', barVisible: !!bar && visible(bar), holds: holds(group),
+        // Only text in the bar: nothing an author wrote became an element.
+        elements: bar ? [...new Set(Array.from(bar.querySelectorAll('*')).map(el => el.tagName.toLowerCase()))].sort().join(' ') : '',
+        // Nothing made for this one table: no <style> element in the group, and
+        // on the group, its controls and its rows no id and no inline style.
+        // (An empty style attribute is the harness's: Playwright leaves one on
+        // an input it has looked at. An id inside a cell is the author's.)
+        inline: group.querySelectorAll('style').length + [group, ...(bar ? bar.querySelectorAll('*') : []), ...rows].filter(el => el.hasAttribute('id') || (el.getAttribute('style') || '').trim()).length,
+        controls, keys: rows.map(tr => Number((tr.className.match(/dokufix-facet-(\d+)/) || [0, -1])[1])),
+        shown: rows.map(tr => getComputedStyle(tr).display !== 'none'),
+        // The table is below the controls, and as wide as it would be without them.
+        below: !!bar && !!group.querySelector(':scope > .dokufix-table') && group.querySelector(':scope > .dokufix-table').getBoundingClientRect().top >= bar.getBoundingClientRect().bottom - 1,
+      };
+    }),
+    alarm: typeof window.dokufixAlarm,
+  };
+});
+// Chooses every control of every group in turn, through its label, and says
+// which rows are shown each time; ends with the control for all rows.
+const walkFacets = page => page.evaluate(() => {
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+  return Array.from(root.querySelectorAll('.dokufix-facets')).map(group => {
+    const labels = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > label'));
+    const rows = Array.from(group.querySelectorAll('tr.dokufix-facet-row'));
+    const state = () => ({ chosen: labels.map((l, i) => l.querySelector('input').checked ? i : -1).filter(i => i >= 0), shown: rows.map(tr => getComputedStyle(tr).display !== 'none') });
+    const steps = labels.map(label => { label.click(); return state(); });
+    if (labels.length) labels[0].click();
+    return { steps, back: state() };
+  });
+});
+// The state of one group: which control is chosen, which rows are shown,
+// whether the bar is shown.
+const facetState = (page, g) => page.evaluate(g => {
+  const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+  const group = root.querySelectorAll('.dokufix-facets')[g];
+  const inputs = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > label > input'));
+  return {
+    chosen: inputs.findIndex(i => i.checked), focused: inputs.indexOf(document.activeElement),
+    shown: Array.from(group.querySelectorAll('tr.dokufix-facet-row')).map(tr => getComputedStyle(tr).display !== 'none'),
+    bar: getComputedStyle(group.querySelector(':scope > .dokufix-facet-bar')).display,
+    outline: inputs.map(i => getComputedStyle(i.parentElement).outlineStyle),
+  };
+}, g);
+// Which rows a group has to show with the control at this place chosen.
+const rowsFor = (facet, control) => facet.keys.map(key => control === 0 || key === control);
+const sameList = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+// Choosing by mouse and by the arrow keys, in the first group that has more
+// than one value: a click on the label of the first value, then the arrow
+// keys forward and back. what: a word for the name of the check.
+async function assertFacetChoosing(page, check, exp, what){
+  const g = exp.facets.findIndex(f => f.controls.length > 2);
+  if (g < 0) return;
+  const facet = exp.facets[g], n = facet.controls.length;
+  const label = k => page.locator('.dokufix-facets').nth(g).locator('.dokufix-facet-bar > label').nth(k);
+  await label(1).click({ timeout: 5000 }).catch(() => {});
+  const clicked = await facetState(page, g);
+  check(what + 'a click on the control of a value chooses it, and only the rows with that value are shown',
+    clicked.chosen === 1 && sameList(clicked.shown, rowsFor(facet, 1)), JSON.stringify(clicked) + ', expected the rows ' + JSON.stringify(rowsFor(facet, 1)));
+  // The keyboard: the focus is on the chosen radio button, and an arrow key
+  // moves the choice to the next one of the group.
+  await page.evaluate(g => {
+    const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+    root.querySelectorAll('.dokufix-facets')[g].querySelector('.dokufix-facet-bar input:checked').focus();
+  }, g);
+  await page.keyboard.press('ArrowRight');
+  const forward = await facetState(page, g);
+  await page.keyboard.press('ArrowLeft');
+  await page.keyboard.press('ArrowLeft');
+  const back = await facetState(page, g);
+  check(what + 'the arrow keys choose: forward to the next value, back to the control for all rows, which shows them all; the focused control is marked',
+    forward.chosen === 2 % n && forward.focused === forward.chosen && sameList(forward.shown, rowsFor(facet, 2 % n)) && forward.outline[forward.chosen] !== 'none' &&
+    back.chosen === 0 && back.focused === 0 && back.shown.every(Boolean),
+    'forward ' + JSON.stringify(forward) + ', back ' + JSON.stringify(back));
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+}
+async function assertTables(page, check, exp, key){
+  const f = await tableFacts(page);
+  const json = JSON.stringify;
+  // --- the wrapper. With a document that has no table, the count is the check.
+  const unwrapped = f.tables.filter(t => !t.wrapped || !t.alone || t.twice || t.overflow !== 'auto' || t.inline);
+  check('tables: every table stands in one wrapper of its own, ' + exp.tables + ' in the document',
+    f.tables.length === exp.tables && f.wrappers === exp.tables && unwrapped.length === 0, f.tables.length + ' tables, ' + f.wrappers + ' wrappers; ' + json(unwrapped));
+  if (exp.tables){
+    const held = f.tables.filter(t => t.holds !== 'static none none none none normal auto none');
+    check('the wrapper of a table is not positioned and holds nothing that is placed in it', held.length === 0, json(held.map(t => t.holds)));
+    const margins = f.tables.filter(t => !/ 0px$/.test(t.margins));
+    check('the bottom margin of a table stands on its wrapper', margins.length === 0, json(f.tables.map(t => t.margins)));
+    const wide = f.tables.filter((t, i) => exp.wideTables.includes(i)), others = f.tables.filter((t, i) => !exp.wideTables.includes(i));
+    check('a table wider than the text column scrolls inside its wrapper (' + exp.wideTables.length + ' in the document), no other wrapper scrolls, none scrolls up and down, and the page is not wider than the window (' + f.window + ' px)',
+      wide.every(t => t.scrolls) && others.every(t => !t.scrolls) && f.tables.every(t => !t.tall && t.inside) && f.page <= f.window,
+      'page ' + f.page + ' in ' + f.window + '; tables ' + json(f.tables.map(t => [t.width, t.scrolls, t.tall, t.inside])));
+    // The same in a narrow window. There the hidden previews of the footnotes
+    // are taken out of the page for the measurement: at this width they reach
+    // past the window's right edge and make the page wider, with a table in
+    // the document or without, and before this story as after it (measured on
+    // the built file before it: 663 px in a window of 600).
+    await page.setViewportSize({ width: TABLES_NARROW, height: 1000 });
+    const tag = await page.addStyleTag({ content: PREVIEWS_OUT });
+    await page.waitForTimeout(100);
+    const narrow = await tableFacts(page);
+    await tag.evaluate(el => el.remove());
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.waitForTimeout(100);
+    check('at ' + TABLES_NARROW + ' px as well: the wide table scrolls, every wrapper stays inside its place, the page is not wider than the window (the footnote previews set aside)',
+      narrow.tables.length === f.tables.length && narrow.tables.every((t, i) => t.inside && !t.tall && (!exp.wideTables.includes(i) || t.scrolls)) && narrow.page <= narrow.window,
+      'page ' + narrow.page + ' in ' + narrow.window + '; tables ' + json(narrow.tables.map(t => [t.width, t.scrolls, t.tall, t.inside])));
+  }
+
+  // --- sub-lines
+  check('sub-lines: the emphasis directly after a line break in a cell, ' + exp.subLines.length + ' in the document, and no other emphasis',
+    json(f.subs.map(s => s.text)) === json(exp.subLines), json(f.subs.map(s => s.text)) + ', expected ' + json(exp.subLines));
+  if (exp.subLines.length){
+    const bad = f.subs.filter(s => !(s.tag === 'EM' && s.inCell && s.visible && s.look === SUB_LINE && s.cellSize === '14px' && s.below));
+    check('every sub-line is a second line of its cell: subdued, smaller, upright', bad.length === 0, json(bad));
+  }
+
+  // --- the facet filter
+  const shape = facets => facets.map(x => ({ legend: x.legend, controls: x.controls.map(c => [c.text === undefined ? c[0] : c.text, c.count === undefined ? c[1] : c.count]), keys: x.keys }));
+  check('facet filters: one per marker "facets" that can act, in the order of the document; the legend the column\'s heading, one control per distinct value with its row count in the order of first appearance, before them the control for all rows; every data row with the key of its value',
+    json(shape(f.facets)) === json(shape(exp.facets)), json(shape(f.facets)) + ', expected ' + json(shape(exp.facets)));
+  if (!exp.facets.length || f.facets.length !== exp.facets.length) return;
+
+  const groups = f.facets;
+  // As the file opens: a facet was chosen in the page while it was written.
+  const opened = groups.filter(x => !(x.controls[0].checked && x.controls.filter(c => c.checked).length === 1 && x.controls.filter(c => c.attribute).length === 1 && x.controls[0].attribute && x.shown.every(Boolean)));
+  check('as the file opens, every facet filter has the control for all rows chosen, by its attribute alone, and shows all rows', opened.length === 0, json(opened.map(x => [x.legend, x.controls.map(c => [c.checked, c.attribute]), x.shown])));
+  const built = groups.filter((x, g) => !(x.children === 'fieldset.dokufix-facet-bar div.dokufix-table' && x.elements === 'input label legend span' && x.inline === 0 &&
+    x.controls.every((c, k) => c.type === 'radio' && c.key === String(k) && c.name === groups[g].controls[0].name) && groups.filter(y => y.controls[0].name === x.controls[0].name).length === 1));
+  check('every facet filter is a group of radio buttons of its own, each in its label, above the wrapper of its table; the keys count from 0; nothing an author wrote became an element; no <style>, no inline style, no id',
+    built.length === 0 && f.alarm === 'undefined', json(built.map(x => [x.children, x.elements, x.inline, x.controls.map(c => [c.type, c.key, c.name])])) + '; a handler ran: ' + (f.alarm !== 'undefined'));
+  const controls = groups.flatMap(x => x.controls);
+  const look = controls.filter(c => !(c.visible && c.pill === 'inline-block relative ' + FACET_PILL.radius && c.hidden && /monospace/.test(c.countFont) &&
+    (c.checked ? c.border === FACET_PILL.chosen && c.ring === FACET_PILL.ringChosen : c.border === FACET_PILL.border && c.ring === FACET_PILL.ring)));
+  const bars = groups.filter(x => !(x.bar === 'block' && x.barVisible && x.below && x.holds === 'static none none none none normal auto none'));
+  check('the controls are styled: the bar shown above the table, each control a pill, the radio button not seen and placed against its label, the chosen one with a dark border and a filled ring; the group not positioned',
+    look.length === 0 && bars.length === 0, json(look.map(c => [c.text, c.visible, c.pill, c.border, c.ring, c.hidden, c.countFont])) + ' ' + json(bars.map(x => [x.legend, x.bar, x.barVisible, x.below, x.holds])));
+
+  // --- choosing: every control of every group in turn
+  const walk = await walkFacets(page);
+  const wrong = [];
+  walk.forEach((group, g) => {
+    group.steps.forEach((step, k) => {
+      if (!(sameList(step.chosen, [k]) && sameList(step.shown, rowsFor(exp.facets[g], k)))) wrong.push(exp.facets[g].legend + ', control ' + k + ': chosen ' + json(step.chosen) + ', rows ' + json(step.shown));
+    });
+    if (!(sameList(group.back.chosen, [0]) && group.back.shown.every(Boolean))) wrong.push(exp.facets[g].legend + ', back to all rows: ' + json(group.back));
+  });
+  check('choosing a control shows only the rows with its value, in every facet filter and for every value; the control for all rows shows all (' + controls.length + ' controls)', wrong.length === 0, wrong.join(' | '));
+  await assertFacetChoosing(page, check, exp, '');
+
+  // --- print: all rows, no controls, whatever is chosen
+  const g = exp.facets.findIndex(x => x.controls.length > 2);
+  if (g >= 0){
+    const choose = k => page.evaluate(([g, k]) => {
+      const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+      root.querySelectorAll('.dokufix-facets')[g].querySelectorAll('.dokufix-facet-bar > label')[k].click();
+    }, [g, k]);
+    await choose(1);
+    const screen = await facetState(page, g);
+    await page.emulateMedia({ media: 'print' });
+    const print = await facetState(page, g);
+    await page.emulateMedia({ media: null });
+    check('in print, with a value chosen: all rows are shown and the controls are not printed',
+      screen.chosen === 1 && sameList(screen.shown, rowsFor(exp.facets[g], 1)) && print.chosen === 1 && print.shown.every(Boolean) && print.bar === 'none', 'on screen ' + json(screen) + ', in print ' + json(print));
+    // --- a browser without :has(). No such browser is run; what it does not
+    // apply is the block "@supports selector(:has(a))" of the document
+    // styles, so that block is taken out of the page for the measurement and
+    // put back: the controls have to be gone and every row shown.
+    const without = await page.evaluate(g => {
+      const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+      const group = root.querySelectorAll('.dokufix-facets')[g], bar = group.querySelector('.dokufix-facet-bar');
+      const state = () => ({ bar: getComputedStyle(bar).display, shown: Array.from(group.querySelectorAll('tr.dokufix-facet-row')).map(tr => getComputedStyle(tr).display !== 'none') });
+      const found = [];
+      const visit = parent => {
+        Array.from(parent.cssRules).forEach((rule, index) => {
+          if (rule instanceof CSSSupportsRule && /:has\(/.test(rule.conditionText)) found.push({ parent, index, text: rule.cssText, condition: rule.conditionText });
+          else if (rule instanceof CSSMediaRule || rule instanceof CSSSupportsRule) visit(rule);
+        });
+      };
+      for (const sheet of Array.from(document.styleSheets)){ try { visit(sheet); } catch (e){ /* a sheet of another origin */ } }
+      const before = state();
+      for (const x of found.slice().reverse()) x.parent.deleteRule(x.index);
+      const gone = state();
+      for (const x of found) x.parent.insertRule(x.text, x.index);
+      return { blocks: found.map(x => x.condition), before, gone, after: state() };
+    }, g);
+    check('without the block that asks for :has(), as in a browser that does not know it: the controls are not shown and every row is',
+      without.blocks.length === 1 && without.before.bar === 'block' && sameList(without.before.shown, rowsFor(exp.facets[g], 1)) && without.gone.bar === 'none' && without.gone.shown.every(Boolean) && sameList(without.after, without.before),
+      json(without));
+    await choose(0);
+  }
+}
+
+// A footnote cited in a table cell. The wrapper of the table scrolls, so it
+// cuts off whatever is placed inside it; the preview is placed against the
+// page, by its marker, and has to reach out of the wrapper uncut. So it has
+// to stand where the preview of the same footnote stands for a marker in a
+// paragraph: above its marker and over it, inside the window; it has to reach
+// above the wrapper's upper edge, which the reference document sees to with a
+// marker in the first row and a long footnote; and that part has to be
+// painted: the page is photographed there with the preview revealed and
+// without, and the two pictures have to differ. Measured at 900 px, the two
+// markers at one scroll position: the reference document puts the paragraph
+// directly below the table.
+// Not judged in the Playwright Firefox build where it cannot place the
+// preview of the paragraph either, with a note; see assertStepFootnote().
+async function assertTableFootnote(page, check, exp, label){
+  if (!exp.tableFootnotes) return;
+  await page.setViewportSize({ width: FOOTNOTE_WIDTH, height: 1000 });
+  await page.waitForTimeout(100);
+  // Focuses a footnote marker, in a table cell or in a paragraph outside
+  // every table and list, and says where marker, preview and wrapper stand.
+  const place = async inCell => {
+    const found = await page.evaluate(inCell => {
+      const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+      if (document.activeElement) document.activeElement.blur();
+      const inWindow = x => { const r = x.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; };
+      const a = Array.from(root.querySelectorAll('a[data-footnote-ref]')).find(x => !x.closest('.footnotes, .dokufix-fn-preview, nav') &&
+        (inCell ? !!x.closest('td, th') : !x.closest('table, li') && x.parentElement.parentElement.tagName === 'P' && inWindow(x)));
+      if (!a) return false;
+      a.setAttribute('data-vergleich-marker', '');
+      if (inCell) a.scrollIntoView({ block: 'center' });
+      a.focus({ preventScroll: true });
+      return true;
+    }, inCell);
+    if (!found) return null;
+    const shown = await settles(page, () => {
+      const cs = getComputedStyle(document.querySelector('[data-vergleich-marker]').parentElement.querySelector(':scope > .dokufix-fn-preview'));
+      return cs.visibility === 'visible' && Number(cs.opacity) === 1;
+    });
+    const where = await page.evaluate(() => {
+      const a = document.querySelector('[data-vergleich-marker]');
+      const box = el => { const r = el.getBoundingClientRect(); return { left: Math.round(r.left * 10) / 10, top: Math.round(r.top * 10) / 10, right: Math.round(r.right * 10) / 10, bottom: Math.round(r.bottom * 10) / 10 }; };
+      const preview = a.parentElement.querySelector(':scope > .dokufix-fn-preview'), wrapper = a.closest('.dokufix-table');
+      return { marker: box(a), preview: box(preview), wrapper: wrapper ? box(wrapper) : null,
+               // The element the preview is placed against stands inside the wrapper.
+               held: !!wrapper && !!preview.offsetParent && wrapper.contains(preview.offsetParent),
+               window: { width: document.documentElement.clientWidth, height: innerHeight } };
+    });
+    // The part of the preview above the wrapper, photographed with the preview revealed and without.
+    let painted = null;
+    if (inCell && shown && where.wrapper && where.preview.top < where.wrapper.top - 4 && where.preview.top >= 0){
+      const clip = { x: Math.max(0, Math.floor(where.preview.left)), y: Math.floor(where.preview.top), width: Math.floor(where.preview.right - where.preview.left), height: Math.floor(Math.min(where.preview.bottom, where.wrapper.top) - where.preview.top) };
+      const revealed = await page.screenshot({ clip, animations: 'disabled', caret: 'hide' });
+      await page.evaluate(() => document.querySelector('[data-vergleich-marker]').blur());
+      await settles(page, () => getComputedStyle(document.querySelector('[data-vergleich-marker]').parentElement.querySelector(':scope > .dokufix-fn-preview')).visibility === 'hidden');
+      const hidden = await page.screenshot({ clip, animations: 'disabled', caret: 'hide' });
+      painted = comparePng(hidden, revealed, null).differing;
+    }
+    await page.evaluate(() => { const a = document.querySelector('[data-vergleich-marker]'); a.removeAttribute('data-vergleich-marker'); a.blur(); });
+    return { shown, painted, ...where };
+  };
+  const both = async () => ({ cell: await place(true), plain: await place(false) });
+  let { cell, plain } = await both();
+  if (label === 'firefox' && cell && plain && !(cell.shown && plain.shown)){
+    await page.addStyleTag({ content: NO_FALLBACKS }); // known deviation, see header
+    ({ cell, plain } = await both());
+  }
+  await page.evaluate(() => window.scrollTo(0, 0));
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.waitForTimeout(100);
+  if (!cell || !plain){
+    check('a footnote cited in a table cell, and one in a paragraph in the same window, to compare it with', false, 'in a cell: ' + !!cell + ', in a paragraph: ' + !!plain);
+    return;
+  }
+  const stands = x => x.shown && x.preview.bottom <= x.marker.top + 1 && x.preview.left <= x.marker.left + 1 && x.preview.right >= x.marker.right - 1 &&
+    x.preview.left >= 0 && x.preview.right <= x.window.width + 0.6 && x.preview.top >= 0 && x.preview.bottom <= x.window.height && x.preview.right - x.preview.left > 50;
+  const above = x => x.marker.top - x.preview.bottom;
+  const judged = !(label === 'firefox' && !stands(plain));
+  check('the preview of a footnote cited in a table cell stands where it stands for a paragraph: above its marker, inside the window; it reaches above the wrapper of its table and is not cut off there (' + FOOTNOTE_WIDTH + ' px)',
+    !judged || (stands(cell) && stands(plain) && Math.abs(above(cell) - above(plain)) <= 1 && !cell.held && cell.painted > 100),
+    'in a cell: ' + JSON.stringify(cell) + '; in a paragraph: ' + JSON.stringify(plain),
+    judged ? '' : 'not judged: the preview of the paragraph does not stand above its marker here either, preview ' + JSON.stringify(plain.preview) + ' for the marker ' + JSON.stringify(plain.marker) + ' (known deviation of the Playwright Firefox build)');
+}
+// A read-only export with scripts switched off: the facet filter is there and
+// filters, by mouse and by keyboard. Not kompakt: its document is packed, and
+// without scripts there is no table to filter.
+async function assertFacetsWithoutScripts(launch, file, check, exp){
+  if (!exp.facets.length) return;
+  const browser = await launch();
+  try {
+    const context = await browser.newContext({ ...CONTEXT, viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
+    const page = await context.newPage();
+    await page.goto(pathToFileURL(file).href);
+    const f = await tableFacts(page);
+    check('facet filters with scripts off: there, shown, all rows at first',
+      f.facets.length === exp.facets.length && f.facets.every(x => x.bar === 'block' && x.barVisible && x.controls[0].checked && x.shown.every(Boolean)),
+      JSON.stringify(f.facets.map(x => [x.legend, x.bar, x.barVisible, x.shown])));
+    if (f.facets.length === exp.facets.length) await assertFacetChoosing(page, check, exp, 'with scripts off: ');
+  } finally {
+    await browser.close();
+  }
+}
+
 // ---------- assertions ----------
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
@@ -1234,6 +1716,9 @@ async function assertVariant(launch, file, key, exp, results, label){
     // --- block markers, cards and step lists (story 2.4). With a document that has none, the counts are the check.
     await assertMarkers(page, check, exp);
 
+    // --- tables: wrapper, sub-lines, facet filter (story 2.5). With a document that has none, the counts are the check.
+    await assertTables(page, check, exp, key);
+
     // --- metadata panel (story 1.1)
     if (exp.frontmatter){
       check('metadata panel present and collapsed', s.fm && s.fmOpen === false, 'present ' + s.fm + ', open ' + s.fmOpen);
@@ -1289,6 +1774,8 @@ async function assertVariant(launch, file, key, exp, results, label){
       await page.evaluate(() => document.activeElement && document.activeElement.blur());
       // --- and of a footnote cited inside a step (story 2.4)
       await assertStepFootnote(page, check, exp, label);
+      // --- and of a footnote cited in a table cell (story 2.5)
+      await assertTableFootnote(page, check, exp, label);
     }
 
     // --- landing highlight and marked return arrow (story 1.3)
@@ -1527,6 +2014,7 @@ async function assertVariant(launch, file, key, exp, results, label){
       await page.click('#hamburger');
     } else {
       await assertLicenceWithoutScripts(launch, file, check);
+      if (key !== 'kompakt') await assertFacetsWithoutScripts(launch, file, check, exp);
     }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {
@@ -1547,6 +2035,7 @@ async function runBrowser(name, opts, md){
     const exp = expectationsFor(built.source);
     const check = makeChecker(results, name + ' build');
     check('no script errors while building', built.errors.length === 0, built.errors.join(' | '));
+    if (exp.facets.length) check('a facet was chosen in the page while each of the four files was written', built.chosen.length === VARIANTS.length && built.chosen.every(c => c === true), JSON.stringify(built.chosen));
 
     for (const v of VARIANTS){
       for (const width of WIDTHS){

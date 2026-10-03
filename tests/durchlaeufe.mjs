@@ -44,6 +44,15 @@
 //                                list around it are built, no pass failed and
 //                                nothing is on the console; then all four
 //                                downloads, reopened: the same in each
+//   8. a facet filter            a facet marker that cannot act beside one that
+//                                can: the first is a warning at its place and
+//                                its table stays a table in its wrapper, the
+//                                second filters. A value is chosen in the page
+//                                while each of the four files is written: every
+//                                file opens with all rows and the control for
+//                                all rows chosen, and filters there. A third
+//                                filter stands in a footnote: the preview of
+//                                that footnote holds none of its controls
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -153,6 +162,21 @@ const DOC_MARKERS = [
   '[^a]: Die Fußnote.',
 ].join('\n\n') + '\n';
 const MARKER_WARNING = 'Unbekannte Markierung „dokufix: crads“.';
+// Three facet markers: the first names a column its table has, the second one
+// its table does not have, the third stands in the definition of a footnote.
+const DOC_FACETS = [
+  '# Facetten', '[[toc]]',
+  '## Wirkt', '<!-- dokufix: facets Typ -->\n| Merkmal | Typ |\n|---|---|\n| ORT | Text |\n| STATUS | Kategorie |\n| TELEFON | Text |\n| ANREDE | Kategorie |\n| ANLASS | Datum |',
+  '## Wirkt nicht', '<!-- dokufix: facets Tpy -->\n| Merkmal | Typ |\n|---|---|\n| ORT | Text |',
+  '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  '[^a]: Die Fußnote mit einer Tabelle.',
+  '    <!-- dokufix: facets Art -->\n    | Name | Art |\n    |---|---|\n    | a | eins |\n    | b | zwei |',
+].join('\n\n') + '\n';
+const FACET_WARNING = 'Die Markierung „dokufix: facets Tpy“ nennt eine Spalte, die die Tabelle nicht hat.';
+const FACET_CONTROLS = 'Alle 5|Text 2|Kategorie 2|Datum 1';
+const FACET_CONTROLS_IN_FOOTNOTE = 'Alle 2|eins 1|zwei 1';
+// The rows the working filter shows with "Kategorie", its third control, chosen.
+const FACET_CHOICE = 2, FACET_ROWS_CHOSEN = [false, true, false, true, false];
 
 // ---------- the copy of src/ with two passes more ----------
 const THROWING_PASS = 'Prüfschritt';
@@ -283,6 +307,23 @@ const facts = page => page.evaluate(() => {
       const list = container.querySelector('ul.dokufix-cards'), card = list && list.querySelector(':scope > li'), tile = container.querySelector('.dokufix-step-number');
       return [list ? getComputedStyle(list).display : '', card ? getComputedStyle(card).borderTopWidth : '', tile ? getComputedStyle(tile).backgroundColor : ''].join(' ');
     })(),
+    // Tables and facet filters: how many tables stand in a wrapper of their
+    // own, and per filter its controls, which of them is chosen, which carry
+    // the attribute "checked", which rows are shown, whether the bar is.
+    tables: container.querySelectorAll('table').length + ' tables, ' + container.querySelectorAll('.dokufix-table > table').length + ' wrapped',
+    facets: Array.from(container.querySelectorAll('.dokufix-facets')).map(group => {
+      const inputs = Array.from(group.querySelectorAll('.dokufix-facet-bar > label > input'));
+      return {
+        controls: Array.from(group.querySelectorAll('.dokufix-facet-bar > label')).map(l => l.textContent).join('|'),
+        chosen: inputs.map((x, k) => x.checked ? k : -1).filter(k => k >= 0), attribute: inputs.map((x, k) => x.hasAttribute('checked') ? k : -1).filter(k => k >= 0),
+        shown: Array.from(group.querySelectorAll('tr.dokufix-facet-row')).map(tr => getComputedStyle(tr).display !== 'none'),
+        bar: getComputedStyle(group.querySelector('.dokufix-facet-bar')).display,
+        next: group.nextElementSibling ? group.nextElementSibling.tagName + '#' + group.nextElementSibling.id : '',
+      };
+    }),
+    // The previews of the footnotes: their text, and the controls in them.
+    previewTexts: Array.from(container.querySelectorAll('.dokufix-fn-preview')).map(p => p.textContent.replace(/\s+/g, ' ').trim()),
+    previewControls: container.querySelectorAll('.dokufix-fn-preview :is(fieldset, legend, label, input)').length,
     // A block marker that is still a comment.
     markersLeft: (() => {
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_COMMENT);
@@ -535,6 +576,77 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await o.context.close();
       o = await open(browser, saved, editorReady);
       markerPage(scope + ', mit-editor', await facts(o.page), '');
+      check(scope + ', mit-editor', 'opens without an error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
+      await o.context.close();
+    });
+
+    // ----- 8. a facet filter: a marker that cannot act beside one that can; a value chosen while the files are written
+    await attempt(name + ' a facet filter', async () => {
+      const scope = name + ' a facet filter';
+      let o = await open(browser, opts.file, editorReady);
+      await typeAndRender(o.page, DOC_FACETS);
+      // Chooses the control at this place in the first filter of the page, through its label.
+      const choose = (page, k) => page.evaluate(k => {
+        const container = document.querySelector('#preview') || document.querySelector('main.reader-body #d') || document.querySelector('main.reader-body');
+        container.querySelectorAll('.dokufix-facets .dokufix-facet-bar > label')[k].click();
+      }, k);
+      const all = FACET_ROWS_CHOSEN.map(() => true);
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      // What a file has to show when it opens, and that it filters there.
+      const facetPage = async (s, x, text, page) => {
+        checkWarning(s, x, [FACET_WARNING], 'naming the marker and what is wrong with it', STYLED_ONE_LINE);
+        check(s, 'the warning stands at the marker\'s place, and its table stays a table, in its wrapper', x.warnings.length === 1 && x.warnings[0].before === 'H2#wirkt-nicht' && x.warnings[0].after === 'DIV.dokufix-table' && x.tables === '3 tables, 3 wrapped',
+          { warnings: x.warnings.map(w => [w.before, w.after]), tables: x.tables });
+        const group = x.facets[0];
+        check(s, 'the working markers took effect: a facet filter with a control per value and its row count, shown, and a second one in the footnote; no marker is left',
+          x.facets.length === 2 && group.controls === FACET_CONTROLS && group.bar === 'block' && group.next === 'H2#wirkt-nicht' && x.facets[1].controls === FACET_CONTROLS_IN_FOOTNOTE && x.markersLeft === 0, { facets: x.facets, markersLeft: x.markersLeft });
+        check(s, 'the preview of the footnote holds the text of its table and none of the controls of its filter',
+          x.previewTexts.length === 1 && /^Die Fußnote mit einer Tabelle\. Name Art a eins b zwei$/.test(x.previewTexts[0]) && x.previewControls === 0, { previewTexts: x.previewTexts, previewControls: x.previewControls });
+        check(s, 'all rows are shown and the control for all rows is chosen, which alone carries "checked"',
+          !!group && x.facets.every(y => same(y.chosen, [0]) && same(y.attribute, [0]) && y.shown.every(Boolean)) && same(group.shown, all), x.facets);
+        check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 3 && x.previews === 1 && x.returnPaths === 1, x);
+        if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
+        if (!group) return;
+        await choose(page, FACET_CHOICE);
+        const chosen = (await facts(page)).facets[0];
+        check(s, 'choosing a value shows only its rows', same(chosen.chosen, [FACET_CHOICE]) && same(chosen.shown, FACET_ROWS_CHOSEN), chosen);
+      };
+      await facetPage(scope, await facts(o.page), '', o.page);
+      const f = await facts(o.page);
+      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 3, { railHasItems: f.railHasItems, railLinks: f.railLinks });
+      // A marker its component refuses is no failure of a pass: nothing is logged.
+      check(scope, 'no pass failed: nothing on the console, no page error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
+      // What a download serialises is the markup. A copy of the preview, taken
+      // with the value still chosen, carries "checked" on the control for all
+      // rows and nowhere else.
+      const copied = await o.page.evaluate(() => {
+        const copy = document.getElementById('preview').cloneNode(true);
+        return { chosenInThePage: Array.from(document.querySelectorAll('#preview .dokufix-facet-bar input')).findIndex(x => x.checked), written: copy.innerHTML.match(/<input[^>]*>/g) };
+      });
+      check(scope, 'with a value chosen, a copy of the preview as a download writes it carries "checked" on the control for all rows alone',
+        copied.chosenInThePage === FACET_CHOICE && copied.written.length === 7 && copied.written.filter(t => /\bchecked\b/.test(t)).length === 2 && copied.written.filter(t => /\bchecked\b/.test(t)).every(t => /dokufix-facet-0/.test(t)), copied);
+      // The four files, each written while the value is chosen. It is chosen
+      // anew before every download: a read-only download renders, and a render
+      // starts with all rows.
+      for (const v of READONLY){
+        await choose(o.page, FACET_CHOICE);
+        check(scope + ', ' + v.key, 'the value is chosen in the page when the file is written', same((await facts(o.page)).facets[0].chosen, [FACET_CHOICE]));
+        const file = path.join(dir, 'facetten-' + v.key + '.html');
+        await download(o.page, v.download, file);
+        const r = await open(browser, file, READY[v.key]);
+        try {
+          await facetPage(scope + ', ' + v.key, await facts(r.page), fs.readFileSync(file, 'utf8'), r.page);
+          check(scope + ', ' + v.key, 'opens without an error', r.pageErrors.length === 0 && r.consoleErrors.length === 0, r.pageErrors.concat(r.consoleErrors).join(' | '));
+        } finally { await r.context.close(); }
+      }
+      // "Mit Editor": the saved file renders its document again when it is opened.
+      await choose(o.page, FACET_CHOICE);
+      check(scope + ', mit-editor', 'the value is chosen in the page when the file is written', same((await facts(o.page)).facets[0].chosen, [FACET_CHOICE]));
+      const saved = path.join(dir, 'facetten-mit-editor.html');
+      await download(o.page, 'full', saved);
+      await o.context.close();
+      o = await open(browser, saved, editorReady);
+      await facetPage(scope + ', mit-editor', await facts(o.page), '', o.page);
       check(scope + ', mit-editor', 'opens without an error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
       await o.context.close();
     });

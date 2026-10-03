@@ -2,6 +2,7 @@ import { buildWarning, errorMessage } from './warning.js';
 import { ELEMENT, COMMENT, isBlank } from './nodes.js';
 import { CARDS } from './cards.js';
 import { STEPS } from './steps.js';
+import { FACETS } from './facets.js';
 
 // --- Block markers -----------------------------------------------------------
 // A comment that starts with "dokufix:" applies a named component to the block
@@ -10,6 +11,11 @@ import { STEPS } from './steps.js';
 //   <!-- dokufix: cards -->
 //   - **Selbstabholung** Am Schalter, sofort.
 //   - **Versand** Per Post.
+//
+// A marker may take an argument, what follows its name:
+//
+//   <!-- dokufix: facets Typ -->
+//   | Merkmal | Typ |
 //
 // dokufix adds no syntax and leaves the tokens of marked alone: marked lets raw
 // HTML through, so the comment arrives as a comment node in front of its
@@ -42,7 +48,8 @@ import { STEPS } from './steps.js';
 // that cannot becomes the product's warning (warning.js) at its place, and the
 // block stays what it was: an unknown name, a block of another kind, no block
 // directly after it, something after the name that the marker does not take,
-// the same marker a second time before one block.
+// the same marker a second time before one block, a component that refuses
+// its block.
 // Nothing fails silently, and nothing fails loudly either: no marker stops the
 // ones after it, and none reaches the containment of the pass runner.
 //
@@ -60,17 +67,21 @@ import { STEPS } from './steps.js';
 //   argument  how what follows the name is read: 'none', the marker takes
 //             nothing and warns when something stands there; 'text', it is
 //             handed to apply as readMarker() read it
-//   apply     (block, argument): what the component does to its block
+//   apply     (block, argument): what the component does to its block. A
+//             component that cannot act on this block changes nothing and
+//             returns { warning: reason }; the reason ends the sentence
+//             "Die Markierung „…“ …" and becomes the marker's warning
 //
 // A story that brings a component with a marker adds its entry here and, if
 // the block is of a kind no marker expected so far, its word to BLOCKS.
-export const MARKERS = [CARDS, STEPS];
+export const MARKERS = [CARDS, STEPS, FACETS];
 
 // The blocks a marker can expect, by tag, as a warning names them: "… erwartet
 // direkt danach eine Aufzählung".
 export const BLOCKS = {
   UL: 'eine Aufzählung',
   OL: 'eine nummerierte Liste',
+  TABLE: 'eine Tabelle',
 };
 
 // A warning names its marker as written, on one line and not without end.
@@ -109,7 +120,14 @@ const WARNINGS = {
   block: (marker, entry) => 'Die Markierung „' + marker.written + '“ erwartet direkt danach ' + BLOCKS[entry.block] + '.',
   twice: marker => 'Die Markierung „' + marker.written + '“ steht mehr als einmal vor demselben Block.',
   failed: marker => 'Die Markierung „' + marker.written + '“ konnte nicht angewendet werden.',
+  refused: (marker, reason) => 'Die Markierung „' + marker.written + '“ ' + reason,
 };
+
+// The warning of a marker whose component refused its block, with the reason
+// the component gave. The comparison run asks here as well.
+export function refusedMarker(marker, reason){
+  return WARNINGS.refused(marker, reason);
+}
 
 // What a marker comes to, before anything is changed: { entry }, its entry of
 // the list, when it can act on a block with that tag, or { warning }, the text
@@ -182,7 +200,9 @@ function removeMarker(comment){
 // its warning. So what one marker does to the document does not change what
 // the next one finds: two markers before one block both get that block. A
 // component is applied to a block once: the same marker a second time before
-// that block becomes a warning.
+// that block becomes a warning. A component may move its block into a new
+// parent, as the facet filter does with its table: the markers after it hold
+// the block itself, not its place.
 export function applyMarkerList(root, markers){
   const doc = root.ownerDocument;
   const found = [];
@@ -204,13 +224,20 @@ export function applyMarkerList(root, markers){
       replaceWithWarning(root, comment, buildWarning(doc, WARNINGS.twice(marker)), placed);
       continue;
     }
+    let outcome;
     try {
-      verdict.entry.apply(block, marker.argument);
+      outcome = verdict.entry.apply(block, marker.argument);
     } catch (error){
       // A component that throws on its block: this marker becomes a warning
       // with the message, and the markers after it are applied all the same.
       console.error('Marker "' + marker.written + '" failed:', error);
       replaceWithWarning(root, comment, buildWarning(doc, WARNINGS.failed(marker), errorMessage(error)), placed);
+      continue;
+    }
+    // A component that refuses its block: it changed nothing and said why.
+    // That is no failure and nothing for the console.
+    if (outcome && outcome.warning){
+      replaceWithWarning(root, comment, buildWarning(doc, WARNINGS.refused(marker, String(outcome.warning))), placed);
       continue;
     }
     applied.set(block, names.add(verdict.entry.name));
