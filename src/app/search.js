@@ -1,7 +1,7 @@
 import { findHits, excerpt, tooShort } from './search-match.js';
 import { collectPlaces, groupResults, nodeRanges } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
-import { DIAGRAM_SVG_CLASS } from './diagrams.js';
+import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
 import { FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_OUT_CLASS } from './filter.js';
 import { FACETS_CLASS, FACET_BAR_CLASS } from './facets.js';
@@ -18,9 +18,12 @@ import { TABLE_CLASS } from './tables.js';
 // stays at the top of the list while its results scroll under it. A click on
 // a result scrolls the document to its place; the panel stays open.
 //
-// A place with a kind, a table row (search-places.js), says it before its
-// text: "Tabelle: " in a span of its own, which is no text of the place, so
-// nothing in it is marked. A row a table's filter hides, the free-text filter
+// A place with a kind, a table row or a diagram (search-places.js), says it
+// before its text: "Tabelle: ", "BPMN-Diagramm: " or "Mermaid-Diagramm: " in
+// a span of its own, which is no text of the place, so nothing in it is
+// marked. A diagram's text is its labels; a click on its result scrolls the
+// start of its figure to the top of the window, and nothing in it is
+// highlighted. A row a table's filter hides, the free-text filter
 // by its class or a facet filter by CSS alone (a row of a facet table without
 // a box), is
 // listed like any row, marked " (ausgeblendet)" after its text; a click on it
@@ -191,8 +194,8 @@ function controlsOf(row){
 }
 
 // A result: a button with the kind of its place, if it has one, and the part
-// of its text, which scrolls the document to the place; a hidden row says so
-// and scrolls to its table's filter controls.
+// of its text, which scrolls the document to the place, a diagram to its
+// start; a hidden row says so and scrolls to its table's filter controls.
 function resultItem({ place, at }){
   const li = document.createElement('li');
   const button = document.createElement('button');
@@ -215,6 +218,7 @@ function resultItem({ place, at }){
   button.addEventListener('click', () => {
     // The root was rendered anew since: search it again.
     if (!place.el.isConnected){ search(); return; }
+    if (hasClass(place.el, DIAGRAM_CLASS)){ place.el.scrollIntoView({ block: 'start' }); return; }
     (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });
   });
   li.append(button);

@@ -452,7 +452,7 @@ Ein BPMN-Prozess ohne Pool und ohne Bahnen, mit einem Zeit-Startereignis, Aufgab
   <bpmn:process id="Prozess_Abend" isExecutable="false">
     <bpmn:startEvent id="A_Start" name="Jeden Abend"><bpmn:timerEventDefinition id="A_Start_Def"/></bpmn:startEvent>
     <bpmn:manualTask id="A_Kasse" name="Kasse zählen"/>
-    <bpmn:scriptTask id="A_Bericht" name="Bericht erzeugen"/>
+    <bpmn:scriptTask id="A_Bericht" name="Ausleih-Statistik erzeugen"/>
     <bpmn:businessRuleTask id="A_Regeln" name="Mahnstufe setzen"/>
     <bpmn:callActivity id="A_Archiv" name="Archivieren"/>
     <bpmn:endEvent id="A_Ende" name="Feierabend"/>
@@ -487,7 +487,7 @@ Ein Diagramm, das in der Spalte höher ist als das Fenster. Klicken Sie weit unt
 
 ```mermaid
 flowchart TD
-    A[Antrag geht ein] --> B[Eingang bestätigen]
+    A[Antrag geht ein] --> B[Eingang bestätigen<br>am selben Tag]
     B --> C[Unterlagen prüfen]
     C --> D{Vollständig?}
     D -- nein --> E[Unterlagen nachfordern]
@@ -540,7 +540,15 @@ flowchart LR
 - In einer Zelle ist das Wort eines Status-Chips ebenso kein Treffer: Die Suche nach grün findet nur diese Zeile, nicht den Chip `🟢 gesehen` in der zweiten Tabelle. Eine Fußnote zählt bei ihrer Erklärung unten, nicht bei ihrem Zeichen in der Zelle: Die Suche nach Alpen findet die Fußnote und diese Zeile, nicht die Tabelle.
 - Eine Zeile, die ein Filter ausblendet, steht in der Liste mit „(ausgeblendet)“: Wählen Sie oben in „Tabellen mit Filter“ den Knopf „Text“ und suchen Sie nach Karten. Ein Klick auf die Zeile der Tabelle rollt zu den Knöpfen, und der Filter bleibt, wie er ist. Wählen Sie dort „Alle“, während die Suche offen ist: Die Marke verschwindet, und ein Klick rollt zur Zeile.
 - Ebenso beim Suchfeld der Tabelle mit den Tasten: Tippen Sie dort Pfeiltasten und suchen Sie nach rendern. Die Zeile mit Strg + Eingabe ist ausgeblendet, ein Klick auf sie rollt zum Suchfeld, und sein Text bleibt.
-- Was nur in einem Diagramm, einem Code-Block oder im Metadaten-Kopf steht, findet die Suche noch nicht.
+- Ein Diagramm ist eine Stelle, sein Text die Beschriftungen, die Sie sehen: Die Suche nach Abholbereit findet diese Zeile und das BPMN-Diagramm unter „Prozessmodell (BPMN)“. Das Ergebnis lautet „BPMN-Diagramm:“ und die Beschriftungen um den Treffer; ein Klick rollt zum oberen Rand des Diagramms, und darin ist nichts gelb hinterlegt.
+- Ebenso ein Mermaid-Diagramm: Die Suche nach nachfordern findet diese Zeile und das hohe Diagramm unter „Große Ansicht“, als „Mermaid-Diagramm:“.
+- Eine Beschriftung, die über zwei Zeilen gezeichnet ist, ist ein Treffer am Stück: Die Suche nach „Fernleihe bestellen“ findet auch ohne den Schalter „Leerzeichen, Bindestriche und Punkte ignorieren“ beide BPMN-Diagramme oben; im ersten steht die Aufgabe über zwei Zeilen.
+- Bricht das BPMN-Diagramm eine Beschriftung nach einem Bindestrich um, findet die Suche das ganze Wort: Unter „Sonderfälle“ steht im Diagramm mit „Feierabend“ die Aufgabe Ausleih-Statistik über zwei Zeilen, „Ausleih-“ oben, und die Suche nach Ausleih-Statistik findet sie ohne den Schalter.
+- Ein Zeilenumbruch in einer Mermaid-Beschriftung ist ein Leerzeichen: Im hohen Diagramm unter „Große Ansicht“ steht „Eingang bestätigen“ über „am selben Tag“, und die Suche nach „bestätigen am selben“ findet beide Zeilen als eine Wendung.
+- Ein Treffer zählt, was Sie sehen: Das Sequenzdiagramm zeichnet jede Beteiligte oben und unten, die Suche nach Nutzerin findet es deshalb mit zwei Treffern, dazu diese Zeile.
+- Was nur in der Quelle eines Diagramms steht, ist kein Treffer: Der Teilprozess „Einarbeiten“ im letzten Diagramm enthält eine Aufgabe Stempeln, die nicht gezeichnet ist; die Suche nach ihr findet nur diese Zeile, ebenso die Suche nach dem Namen des Prozesses, Prozess_Neu.
+- Der Rahmen eines Diagramms gehört nicht zu ihm: Die Suche nach Einpassen oder Gezeichnet findet kein Diagramm, obwohl die große Ansicht und die Zeile unter einem BPMN-Diagramm diese Wörter zeigen.
+- Was nur in einem Code-Block oder im Metadaten-Kopf steht, findet die Suche noch nicht.
 
 | Nur in dieser Tabelle |
 |---|

@@ -17,11 +17,14 @@
 // place's text onto the text nodes it came from and the node ranges of its
 // hits, across nodes, without what the text leaves out, over collapsed white
 // space; of story 6, table rows as places, their text that of the free-text
-// filter, their hits one range per cell. That "/" opens the panel, the
+// filter, their hits one range per cell; of story 7, a diagram as one place,
+// its text the labels of its SVG, its lines joined, nothing of its frame or
+// source, no range of its hits. That "/" opens the panel, the
 // summary, the marks and the switches in a browser, the group headings that
 // stay at the top while the list scrolls, a click that scrolls, the
 // highlight drawn in the document, a row's result with "Tabelle: ", a hidden
-// row and a saved file without the panel are for
+// row, a diagram's result with its prefix and the click to its start, and a
+// saved file without the panel are for
 // the browser runs (tests/vergleich.mjs,
 // tests/speichern.mjs).
 
@@ -32,7 +35,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
-import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_BPMN, KIND_MERMAID } from '../src/app/search-places.js';
+import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
+import { buildWarning } from '../src/app/warning.js';
 import { filterRowText } from '../src/app/filter.js';
 import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
@@ -288,7 +293,7 @@ test('collectPlaces: an item with a nested list is read without it, and each nes
     [['li', 'Außen'], ['li', 'Innen eins'], ['li', 'Innen zwei'], ['li', 'Tief'], ['li', 'Danach']]);
 });
 
-test('collectPlaces: warnings, facet bars, code blocks, diagrams with their credit, the metadata panel and transient elements are no places, nor a table inside a warning or the metadata panel', () => {
+test('collectPlaces: warnings, facet bars, code blocks, an SVG outside a diagram\'s figure, the metadata panel and transient elements are no places, nor a table inside a warning or the metadata panel', () => {
   const html =
     '<div class="dokufix-warning" role="note"><p class="dokufix-warning-title"><strong>Warnung:</strong> Tabelle kaputt.</p><pre class="dokufix-warning-detail">Tabelle</pre>' +
     '<table><tbody><tr><td>Tabelle</td></tr></tbody></table></div>\n' +
@@ -296,8 +301,6 @@ test('collectPlaces: warnings, facet bars, code blocks, diagrams with their cred
     '<div class="dokufix-table"><table><thead><tr><th>Art</th></tr></thead><tbody><tr><td><p>Wert</p><ul><li>Eins</li></ul></td></tr></tbody></table></div></div>\n' +
     '<pre><code>Tabelle</code></pre>\n' +
     '<div class="mermaid"><svg><foreignObject><div><p>Tabelle</p></div></foreignObject></svg></div>\n' +
-    '<figure class="dokufix-diagram dokufix-diagram-bpmn" aria-label="Tabelle"><div class="dokufix-diagram-svg"><svg><text>Tabelle</text></svg></div>' +
-    '<figcaption class="dokufix-diagram-credit"><p>Gezeichnet mit Tabelle</p></figcaption></figure>\n' +
     '<details class="dokufix-frontmatter"><summary><span class="dokufix-fm-label">Metadaten</span></summary><div class="dokufix-fm-body"><dl class="dokufix-fm-rows"><dt>titel</dt><dd><ul class="dokufix-fm-list"><li>Tabelle</li></ul>' +
     '<table><tbody><tr><td>Tabelle</td></tr></tbody></table></dd></dl></div></details>\n' +
     '<div class="dokufix-meta"><p>Tabelle</p><table><tbody><tr><td>Tabelle</td></tr></tbody></table></div>\n' +
@@ -589,6 +592,118 @@ test('the kind of a row is no text of it: "Tabelle" finds no row that does not h
   const found = collectPlaces(root).filter(p => findHits('Tabelle', p.text).length);
   assert.deepEqual(found.map(p => [p.text, findHits('Tabelle', p.text)]), [['Tabelle und Tabelle', [{ start: 0, end: 7 }, { start: 12, end: 19 }]]]);
   assert.deepEqual(excerpt(found[0].text, findHits('Tabelle', found[0].text), 160).text, 'Tabelle und Tabelle');
+});
+
+// ---------- hits in diagrams (story 7) ----------
+// A diagram as the page shows it: its figure with the controls of its large
+// view and, for BPMN, the credit (diagrams.js), the SVG drawn into its holder.
+// The SVGs are cut down from what bpmn-js 18 and Mermaid 12 draw: a BPMN
+// label a text.djs-label with a tspan per line, a Mermaid flowchart label a
+// foreignObject > div > span > p, a sequence diagram's actor a text drawn at
+// the top and at the bottom, Mermaid's styles in a <style> of the SVG.
+const credit = { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' };
+function diagramRoot(diagrams, before = '<h2>Abläufe</h2>\n', after = '<p>Danach.</p>\n'){
+  const root = rootWith(before + '<div id="here"></div>' + after);
+  const here = root.querySelector('#here');
+  diagrams.forEach(([kind, svg], i) => {
+    const { figure, holder } = diagramFigure(root.ownerDocument, kind, 'Rückgabe', kind === 'bpmn' ? credit : null, i + 1);
+    if (svg !== null) holder.innerHTML = svg;
+    here.before(figure);
+  });
+  here.remove();
+  return root;
+}
+const label = (...lines) => '<g class="djs-element"><g class="djs-visual"><rect width="100" height="80"></rect><text class="djs-label" style="font-family: Arial">' +
+  lines.map((l, i) => '<tspan x="10" y="' + (20 + 14 * i) + '">' + l + '</tspan>').join('') + '</text></g></g>';
+const bpmnSvg = (...labels) => '<svg xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Rückgabe" viewBox="0 0 400 200"><defs><marker id="pfeil"><path d="M 1 5 L 11 10 L 1 15 Z"></path></marker></defs>' +
+  labels.join('') + '</svg>';
+const mermaidSvg = (...labels) => '<svg id="mermaid-1" class="flowchart" role="graphics-document document" aria-roledescription="flowchart-v2">' +
+  '<style>#mermaid-1{font-family:"trebuchet ms";fill:#333;}#mermaid-1 .node rect{fill:#ECECFF;stroke:#9370DB;}</style>' +
+  '<title>Titel der Quelle</title><desc>Beschreibung der Quelle</desc><g class="root"><g class="nodes">' +
+  labels.map(l => '<g class="node default"><rect class="basic label-container"></rect><g class="label"><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap;"><span class="nodeLabel"><p>' + l + '</p></span></div></foreignObject></g></g>').join('') +
+  '</g></g></svg>';
+const diagramPlaces = root => collectPlaces(root).filter(p => p.kind === KIND_BPMN || p.kind === KIND_MERMAID);
+
+test('collectPlaces: a diagram is one place, its figure, of the kind "' + KIND_BPMN + '" or "' + KIND_MERMAID + '"; its text is the labels of its SVG, never the frame around it', () => {
+  assert.equal(KIND_BPMN, 'BPMN-Diagramm');
+  assert.equal(KIND_MERMAID, 'Mermaid-Diagramm');
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Medium zurück'), label('Etikett ', 'scannen'))], ['mermaid', mermaidSvg('Antrag', 'Prüfen')]]);
+  const found = collectPlaces(root);
+  assert.deepEqual(found.map(p => [p.el.tagName, p.el.className, p.text, p.kind]), [
+    ['H2', '', 'Abläufe', undefined],
+    ['FIGURE', 'dokufix-diagram dokufix-diagram-bpmn', 'Medium zurück Etikett scannen', KIND_BPMN],
+    ['FIGURE', 'dokufix-diagram dokufix-diagram-mermaid', 'Antrag Prüfen', KIND_MERMAID],
+    ['P', '', 'Danach.', undefined],
+  ]);
+  // The bar of the large view, its title, steps and "Schließen", the credit and the figure's name are no text of it.
+  for (const word of ['Rückgabe', ...DIAGRAM_ZOOM_STEPS.map(s => s.label), DIAGRAM_CLOSE_TEXT, 'Gezeichnet', 'bpmn-js', 'groß anzeigen']){
+    assert.deepEqual(found.filter(p => findHits(word, p.text).length), [], word);
+  }
+});
+
+test('collectPlaces: a BPMN label\'s lines are joined, with nothing after a blank or a hyphen at the end of a line and one blank otherwise', () => {
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Fernleihe ', 'bestellen'), label('Rückgabe-', 'Automatenbedienung'), label('Vormerkung', 'gemeldet'),
+    label('Persönlich ', 'antworten am ', 'selben Tag'), label('Hin-', 'und Rückweg'), label('Kurz‐', 'weg'), label('Lang‑', 'weg'), label('  Viel   ', '  Raum  '))]]);
+  const [place] = diagramPlaces(root);
+  assert.equal(place.text, 'Fernleihe bestellen Rückgabe-Automatenbedienung Vormerkung gemeldet Persönlich antworten am selben Tag Hin-und Rückweg Kurz‐weg Lang‑weg Viel Raum');
+  // Both found with light fuzzy off; a word split at a hyphen with light fuzzy, as "Hin- und Rückweg" is.
+  for (const term of ['Vormerkung gemeldet', 'Rückgabe-Automatenbedienung', 'Fernleihe bestellen', 'antworten am selben']){
+    assert.equal(findHits(term, place.text).length, 1, term);
+  }
+  assert.equal(findHits('Hin- und Rückweg', place.text).length, 0);
+  assert.equal(findHits('Hin- und Rückweg', place.text, { fuzzy: true }).length, 1);
+});
+
+test('collectPlaces: in a Mermaid diagram a line break is a blank, and neither its styles nor its title and description are text', () => {
+  const root = diagramRoot([['mermaid', mermaidSvg('Zeile eins<br>Zeile zwei', 'Ende')]]);
+  const [place] = diagramPlaces(root);
+  assert.equal(place.text, 'Zeile eins Zeile zwei Ende');
+  for (const word of ['fill', 'ECECFF', 'trebuchet', 'Titel', 'Beschreibung', 'flowchart']) assert.equal(findHits(word, place.text).length, 0, word);
+});
+
+test('collectPlaces: what a hit counts is what the reader sees: several labels with the term are one place with every hit, a sequence diagram\'s actor drawn twice holds it twice', () => {
+  const several = diagramPlaces(diagramRoot([['bpmn', bpmnSvg(label('Medium ', 'einlegen'), label('Medium ', 'annehmen'), label('Beleg'), label('Medium'))]]));
+  assert.equal(several.length, 1);
+  assert.equal(findHits('Medium', several[0].text).length, 3);
+  const actor = y => '<g><rect class="actor"></rect><text x="75" y="' + y + '" dominant-baseline="central" alignment-baseline="central" class="actor actor-box"><tspan x="75" dy="0">Automat</tspan></text></g>';
+  const sequence = '<svg id="mermaid-2" aria-roledescription="sequence"><style>#mermaid-2 .actor{stroke:#ccc;}</style>' + actor(32) +
+    '<text x="200" y="80" class="messageText" dy="1em">Signatur melden</text>' + actor(300) + '</svg>';
+  const [place] = diagramPlaces(diagramRoot([['mermaid', sequence]]));
+  assert.equal(place.text, 'Automat Signatur melden Automat');
+  assert.equal(findHits('Automat', place.text).length, 2);
+});
+
+test('collectPlaces: a diagram whose SVG is not drawn, still its source while it is drawn or packed in a `schlank` file, is no place; nor is a diagram that failed, which is a warning', () => {
+  const source = '<bpmn:process id="Prozess_Neu" isExecutable="false"><bpmn:task id="N_E_Stempeln" name="Stempeln"/></bpmn:process>';
+  const root = diagramRoot([['bpmn', null], ['mermaid', null]]);
+  root.querySelectorAll('.dokufix-diagram-svg')[0].textContent = source;
+  root.querySelectorAll('.dokufix-diagram-svg')[1].setAttribute('data-gz', 'H4sIAAAAAAAA');
+  root.append(buildWarning(root.ownerDocument, 'Das BPMN-Diagramm konnte nicht gezeichnet werden.', 'Stempeln: Prozess_Neu'));
+  assert.deepEqual(diagramPlaces(root), []);
+  for (const word of ['Stempeln', 'Prozess_Neu', 'isExecutable']) assert.deepEqual(collectPlaces(root).filter(p => findHits(word, p.text).length), [], word);
+});
+
+test('collectPlaces: a diagram in a list item is no text of the item, and a place of its own; a transient diagram is none', () => {
+  const root = diagramRoot([['mermaid', mermaidSvg('Abholbereit')], ['bpmn', bpmnSvg(label('Abholbereit'))]], '<ul>\n<li>Davor <span id="in"></span></li>\n</ul>\n', '');
+  root.querySelector('#in').replaceWith(root.querySelector('figure'));
+  root.querySelectorAll('figure')[1].setAttribute(TRANSIENT_ATTR, '');
+  assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]), [['LI', 'Davor', undefined], ['FIGURE', 'Abholbereit', KIND_MERMAID]]);
+});
+
+test('nodeRanges: a hit in a diagram is no range of the document, so nothing in it is highlighted; the diagram stands under its heading', () => {
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Abholbereit'), label('Buch ', 'abholbereit'))]], '<h2>Fernleihe</h2>\n<p>Abholbereit ist das Buch.</p>\n');
+  const found = collectPlaces(root).map(p => ({ el: p.el, text: p.text, kind: p.kind, map: p.map, hits: findHits('abholbereit', p.text).length })).filter(p => p.hits);
+  assert.deepEqual(found.map(p => [p.el.tagName, p.hits]), [['P', 1], ['FIGURE', 2]]);
+  assert.deepEqual(findHits('abholbereit', found[1].text).flatMap(hit => nodeRanges(found[1].map, hit)), []);
+  assert.deepEqual(findHits('abholbereit', found[0].text).flatMap(hit => nodeRanges(found[0].map, hit)).map(r => rangeText(root, r)), ['Abholbereit']);
+  const { groups } = groupResults(root, found);
+  assert.deepEqual(groups.map(g => [g.label, g.hits, g.places]), [['Fernleihe', 3, 2]]);
+});
+
+test('a diagram\'s result scrolls the start of its figure into view; the panel goes by the figure\'s class, and diagrams.js knows nothing of the search', () => {
+  const js = read('app/search.js');
+  assert.match(js, /if \(hasClass\(place\.el, DIAGRAM_CLASS\)\)\{ place\.el\.scrollIntoView\(\{ block: 'start' \}\); return; \}/);
+  assert.doesNotMatch(read('app/diagrams.js'), /search(-places)?\.js|collectPlaces/);
 });
 
 // ---------- the results under their headings (story 4) ----------

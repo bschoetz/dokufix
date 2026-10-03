@@ -1940,7 +1940,7 @@ async function assertFilters(page, check, exp, key){
   }
 }
 
-// The search of the reading view (epic 5, stories 1 to 5), in the editor file
+// The search of the reading view (epic 5, stories 1 to 7), in the editor file
 // and in `schlank` and `kompakt`: "/" opens the panel, typed terms list one
 // result per place of the content that holds them, grouped under the headings
 // H2 to H4 with the numbers of each branch, the group headings stay at the
@@ -1956,10 +1956,16 @@ async function assertFilters(page, check, exp, key){
 // findHits(), groupResults() and nodeRanges() of the product, over the content
 // container as the page shows it (the preview, or main.reader-body in an
 // export), read back into linkedom; that the two read the same elements is
-// checked first.
+// checked first. Since story 7 a diagram is a place, its figure: its result
+// says "BPMN-Diagramm: " or "Mermaid-Diagramm: ", a click brings the start of
+// the figure into the window, and none of its hits is highlighted.
 const SEARCH_TERM = 'Tabelle';
-// A term that occurs often in both documents: its list is longer than the panel.
+// A term that occurs often in both documents: its list is longer than the
+// panel. In the reference document it stands in a BPMN diagram as well.
 const LONG_TERM = 'die';
+// The kinds of a diagram's place (src/app/search-places.js).
+const SEARCH_KINDS = { 'dokufix-diagram-bpmn': 'BPMN-Diagramm', 'dokufix-diagram-mermaid': 'Mermaid-Diagramm' };
+const isDiagramKind = kind => Object.values(SEARCH_KINDS).includes(kind);
 // The height of a group heading in the panel (src/search.css).
 const GROUP_ROW = 28;
 // The name of the highlight of the hits (src/app/search.js, src/search.css).
@@ -1970,8 +1976,8 @@ async function assertSearch(page, check, key){
   const ROOT_SEL = editor ? '#preview' : 'main.reader-body';
   await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
   await frames(page);
-  // Since story 6 every table row is a place as well.
-  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6, tr';
+  // Since story 6 every table row is a place as well, since story 7 every diagram's figure.
+  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6, tr, figure.dokufix-diagram';
   const panelFacts = () => page.evaluate(rootSel => {
     const p = document.querySelector('body > .search-panel');
     const box = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
@@ -2008,7 +2014,8 @@ async function assertSearch(page, check, key){
       const r = document.createRange();
       r.setStart(s.startContainer, s.startOffset);
       r.setEnd(s.endContainer, s.endOffset);
-      return { text: r.toString(), inRoot: root.contains(s.startContainer) && root.contains(s.endContainer) };
+      const inSvg = n => !!(n.nodeType === 1 ? n : n.parentElement).closest('svg');
+      return { text: r.toString(), inRoot: root.contains(s.startContainer) && root.contains(s.endContainer), inSvg: inSvg(s.startContainer) || inSvg(s.endContainer) };
     }) : [] };
   }, [ROOT_SEL, HIGHLIGHT]);
   const rootHtml = () => page.evaluate(sel => document.querySelector(sel).outerHTML, ROOT_SEL);
@@ -2071,13 +2078,15 @@ async function assertSearch(page, check, key){
   const rangeTexts = (term, options = {}) => collectPlaces(root).flatMap(p => findHits(term, p.text, options).flatMap(hit => nodeRanges(p.map, hit).map(coveredBy)));
   const hitCount = places => places.reduce((n, p) => n + p.hits, 0);
   // The highlight of a term as the product makes it over the content read
-  // back: one range per hit where nothing left out lies inside a hit.
+  // back: one range per hit where nothing left out lies inside a hit, none in
+  // a diagram.
+  const litHits = places => hitCount(places.filter(p => !isDiagramKind(p.kind)));
   const litAs = (facts, term, options, places, alike) => {
     const want = rangeTexts(term, options);
-    return facts.api && facts.ranges.length === hitCount(places) && sameList(facts.ranges.map(r => r.text), want) &&
-      facts.ranges.every(r => r.inRoot && alike(r.text));
+    return facts.api && facts.ranges.length === litHits(places) && sameList(facts.ranges.map(r => r.text), want) &&
+      facts.ranges.every(r => r.inRoot && !r.inSvg && alike(r.text));
   };
-  const litLine = (facts, term, options, places) => json({ api: facts.api, ranges: facts.ranges.length, hits: hitCount(places), texts: facts.ranges.slice(0, 6).map(r => r.text), expected: rangeTexts(term, options).slice(0, 6), outside: facts.ranges.filter(r => !r.inRoot).length });
+  const litLine = (facts, term, options, places) => json({ api: facts.api, ranges: facts.ranges.length, hits: litHits(places), texts: facts.ranges.slice(0, 6).map(r => r.text), expected: rangeTexts(term, options).slice(0, 6), outside: facts.ranges.filter(r => !r.inRoot).length, inSvg: facts.ranges.filter(r => r.inSvg).length });
   const want = expected(SEARCH_TERM);
   const wantSummary = summaryOf(want);
   const typed = await search(SEARCH_TERM);
@@ -2257,6 +2266,10 @@ async function assertSearch(page, check, key){
   // "Tabelle: " before the row's text, a click centres the row, and the
   // highlight lies in the row's cells, one range per cell a hit touches.
   await assertSearchTables();
+  // --- story 7: hits in diagrams. A diagram is one place, its figure; its
+  // result says its kind, a click brings the figure's top into the window,
+  // nothing in it is highlighted; its source and its frame are no text.
+  await assertSearchDiagrams();
 
   // --- from 1500 px it lies over the rail, and still not over "Editor ↩"
   await page.setViewportSize({ width: 1600, height: 1000 });
@@ -2354,6 +2367,99 @@ async function assertSearch(page, check, key){
     json({ hidden, summary: bare.summary, results: bare.results.length, errors: consoleErrors }));
   await page.click('body > .search-panel .search-close');
 
+  // Story 7, inside assertSearch for its helpers. In the demo text the terms
+  // its special cases name: "Abholbereit" in a BPMN diagram, "nachfordern" in
+  // a Mermaid diagram, "Stempeln" only in the source of one. In another
+  // document a word of a diagram of each kind, the fewest places first.
+  async function assertSearchDiagrams(){
+    const placesOf = collectPlaces(root);
+    const index = new Map(all.map((el, n) => [el, n]));
+    const expected = (term, options = {}) => placesOf.map(p => ({ el: p.el, text: p.text, kind: p.kind, hits: findHits(term, p.text, options).length, at: index.get(p.el) })).filter(p => p.hits);
+    const figures = Array.from(root.querySelectorAll('figure.dokufix-diagram'));
+    const kindOf = el => SEARCH_KINDS[Object.keys(SEARCH_KINDS).find(c => el.classList.contains(c))];
+    const diagrams = placesOf.filter(p => isDiagramKind(p.kind));
+    if (!figures.length){
+      // As the tables: the term it leaves searched for the checks after this one.
+      const none = await search(SEARCH_TERM);
+      check('search: a document without a drawn diagram lists no result as a diagram', diagrams.length === 0 && none.results.every(r => !r.kind || !isDiagramKind(r.kind.slice(0, -2))),
+        json(none.results.map(r => r.kind)));
+      return;
+    }
+    check('search: every diagram drawn is one place, its figure, of the kind its class names',
+      diagrams.length === figures.length && diagrams.every((p, i) => p.el === figures[i] && p.kind === kindOf(p.el)),
+      json({ figures: figures.length, places: diagrams.map(p => [p.kind, p.text.slice(0, 40)]) }));
+    const words = text => text.match(/\p{L}{6,}/gu) || [];
+    // A word of a diagram of the kind, the fewest places first.
+    const labelWord = kind => {
+      let best = null;
+      for (const p of diagrams.filter(d => d.kind === kind)){
+        for (const w of words(p.text)){
+          const at = expected(w);
+          if (!best || at.length < best.at.length) best = { term: w, at };
+        }
+      }
+      return best;
+    };
+    const picks = (opts.demo ? [{ term: 'Abholbereit', at: expected('Abholbereit') }, { term: 'nachfordern', at: expected('nachfordern') }]
+      : Object.values(SEARCH_KINDS).map(labelWord)).filter(Boolean);
+    for (const { term, at: wantAt } of picks){
+      const listed = await search(term);
+      const n = wantAt.findIndex(p => isDiagramKind(p.kind));
+      const lit = await highlightFacts();
+      const ok = n >= 0 && listed.results.length === wantAt.length && listed.summary === summaryOf(wantAt) &&
+        listed.results.every((r, i) => kindAs(r, wantAt[i]) && wantAt[i].text.includes(bodyOf(r)) && r.marks.length >= 1 && r.marks.every(m => m.toLowerCase() === term.toLowerCase())) &&
+        (!opts.demo || wantAt.filter(p => isDiagramKind(p.kind)).length === 1);
+      check('search: "' + term + '", a label of a ' + (n >= 0 ? wantAt[n].kind : 'diagram') + ', lists the diagram once, "' + (n >= 0 ? wantAt[n].kind : '?') + ': " and the labels around the hit; none of its hits is highlighted, the hits elsewhere are',
+        ok && litAs(lit, term, {}, wantAt, t => t.toLowerCase() === term.toLowerCase()),
+        json({ summary: listed.summary, results: listed.results.map(r => r.text.slice(0, 80)), expected: wantAt.map(p => [p.kind, p.hits]), lit: litLine(lit, term, {}, wantAt) }));
+      if (n < 0) continue;
+      await page.evaluate(() => window.scrollTo(0, 0));
+      await frames(page);
+      await page.locator('body > .search-panel .search-results .search-result').nth(n).click();
+      await frames(page);
+      const at = await page.evaluate(([rootSel, sel, at]) => {
+        const el = document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at];
+        const r = el.getBoundingClientRect();
+        return { tag: el.tagName, top: r.top, height: innerHeight, scrolled: scrollY, max: document.documentElement.scrollHeight - innerHeight,
+          open: !document.querySelector('body > .search-panel').hidden };
+      }, [ROOT_SEL, PLACE_SEL, wantAt[n].at]);
+      check('search: a click on the result of the diagram with "' + term + '" brings the top of its figure to the top of the window; the panel stays open',
+        at.tag === 'FIGURE' && at.open && at.top >= -1 && at.top < at.height && (Math.abs(at.top) <= 1 || at.scrolled >= at.max - 1), json(at));
+    }
+    // A label bpmn-js draws over two lines: one ending in a blank, one glued
+    // ("Vormerkung" over "gemeldet"), one at a hyphen; found with light fuzzy off.
+    const lines = Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn svg text'))
+      .map(t => Array.from(t.children).filter(c => c.tagName.toUpperCase() === 'TSPAN').map(c => c.textContent)).filter(l => l.length >= 2);
+    const broken = [
+      ['ending in a blank', lines.find(l => /\s$/.test(l[0])), l => l[0] + l[1]],
+      ['glued', lines.find(l => /\p{L}$/u.test(l[0]) && /^\p{L}/u.test(l[1])), l => l[0] + ' ' + l[1]],
+      ['at a hyphen', lines.find(l => /[-\u2010\u2011]$/.test(l[0])), l => l[0] + l[1]],
+    ].filter(([, l]) => l);
+    for (const [how, l, joined] of broken){
+      const term = joined(l).replace(/\s+/g, ' ').trim();
+      const listed = await search(term);
+      check('search: "' + term + '", a BPMN label drawn over two lines ' + how + ', is found with light fuzzy off',
+        listed.results.some(r => r.kind === 'BPMN-Diagramm: ' && r.marks.length >= 1), json({ lines: l, results: listed.results.map(r => r.text.slice(0, 80)) }));
+    }
+    // What is no label: the source of a diagram and its frame. A diagram is
+    // listed for such a word only where one of its labels, the text and
+    // foreignObject elements of its SVG, holds it as well ("Akte schließen").
+    const labelsOf = el => Array.from(el.querySelectorAll('*')).filter(e => /^(text|foreignobject)$/i.test(e.tagName)).map(e => e.textContent).join(' ').toLowerCase();
+    const noLabels = [...(opts.demo ? ['Stempeln', 'Prozess_Neu'] : []), 'isExecutable', 'Einpassen', 'Schließen', 'Gezeichnet'];
+    const strays = [];
+    for (const term of noLabels){
+      const listed = await search(term);
+      const wantNo = expected(term);
+      const inLabels = wantNo.filter(p => isDiagramKind(p.kind));
+      if (listed.results.length !== wantNo.length || !listed.results.every((r, i) => kindAs(r, wantNo[i])) || !inLabels.every(p => labelsOf(p.el).includes(term.toLowerCase())))
+        strays.push({ term, results: listed.results.map(r => r.text.slice(0, 60)), expected: wantNo.map(p => p.kind || p.el.tagName) });
+    }
+    check('search: a word only in a diagram\'s source (' + noLabels.slice(0, -3).join(', ') + ') or in its frame (the large view\'s "Einpassen" and "Schließen", the credit\'s "Gezeichnet") lists no diagram for it, only one whose labels hold it',
+      strays.length === 0, json(strays));
+    // A term with hits for the checks after this one, as the tables leave one.
+    await search(SEARCH_TERM);
+  }
+
   // Story 6, inside assertSearch for its helpers. In the demo text the terms
   // its special cases name: "Zitronenfalter" in a table of the section
   // "Suche", the hidden row "Karten" under the facet "Text". In another
@@ -2363,10 +2469,11 @@ async function assertSearch(page, check, key){
     const placesOf = collectPlaces(root);
     const index = new Map(all.map((el, n) => [el, n]));
     const expected = term => placesOf.map(p => ({ el: p.el, text: p.text, kind: p.kind, hits: findHits(term, p.text).length, at: index.get(p.el) })).filter(p => p.hits);
-    const rows = placesOf.filter(p => p.kind);
+    // A row's kind; a diagram has one of its own since story 7.
+    const rows = placesOf.filter(p => p.kind === 'Tabelle');
     if (!rows.length){
       const none = await search(SEARCH_TERM);
-      check('search: a document without a table row lists no result as "Tabelle: "', none.results.every(r => !r.kind), json(none.results.map(r => r.kind)));
+      check('search: a document without a table row lists no result as "Tabelle: "', none.results.every(r => r.kind !== 'Tabelle: '), json(none.results.map(r => r.kind)));
       return;
     }
     const words = text => text.match(/\p{L}{6,}/gu) || [];
@@ -2376,7 +2483,7 @@ async function assertSearch(page, check, key){
       for (const p of places){
         for (const w of words(p.text)){
           const at = expected(w);
-          if (!at.length || !at.every(x => x.kind) || !ok(w, at)) continue;
+          if (!at.length || !at.every(x => x.kind === 'Tabelle') || !ok(w, at)) continue;
           if (!best || at.length < best.at.length) best = { term: w, at };
         }
       }

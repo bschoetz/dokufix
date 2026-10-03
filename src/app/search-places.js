@@ -3,12 +3,13 @@ import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACET_BAR_CLASS, isFootnoteMarker } from './facets.js';
 import { STEP_NUMBER_CLASS } from './steps.js';
 import { documentHeadings } from './toc.js';
+import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from './diagrams.js';
 import { TRANSIENT_ATTR } from './transient.js';
 
 // --- Search: the places --------------------------------------------------------
 // The places of a document a search lists, each with the text it is searched
-// in: every paragraph, list item, heading and table row of the preview, in the
-// order of the document.
+// in: every paragraph, list item, heading, table row and diagram of the
+// preview, in the order of the document.
 //
 //   collectPlaces(root) → [{ el, text, map, kind }, …]
 //   nodeRanges(map, { start, end }) → [{ startNode, startOffset, endNode, endOffset }, …]
@@ -30,17 +31,36 @@ import { TRANSIENT_ATTR } from './transient.js';
 // the place, so the hits, their count and the part a result shows see the
 // row's text alone. A paragraph, list item or heading has no kind.
 //
+// A diagram is one place: its figure (diagrams.js), whatever it shows. Its
+// text is the labels the reader sees in its SVG, never its source: of the
+// figure only the SVG in its SVG container is read, not the bar of its large
+// view, not its credit, not its controls; in the SVG only what a `text` or a
+// `foreignObject` holds, and not a `style`, `title` or `desc`. A blank stands
+// around every `text` and `foreignObject`, and around a paragraph or `div` in
+// a `foreignObject`; a line break is a blank. The lines of a `text`, its
+// `tspan`s, are joined in their order: at the end of a line nothing is added
+// after a blank or a hyphen (-, U+2010, U+2011), one blank otherwise; bpmn-js
+// breaks a label so, "Rückgabe-" over "Automatenbedienung", "Vormerkung"
+// over "gemeldet". White space collapsed. A figure whose SVG is not drawn
+// (its container holds the source while the diagram is drawn, or the packed
+// SVG of a `schlank` file before the decoder) has no text and is no place; a
+// diagram that failed is a warning, no figure. Its kind, KIND_BPMN or
+// KIND_MERMAID, "BPMN-Diagramm" or "Mermaid-Diagramm", comes from the
+// figure's class. Nothing inside a diagram is highlighted: its map holds no
+// node, so nodeRanges() makes no range of a hit in it.
+//
 // Beside its text a place carries the map of it: for every unit of the text
 // the text node and offset it came from. It is made in the same walk that
 // reads the text, so the two cannot drift. nodeRanges() turns the range of a
 // hit in the text (search-match.js) into ranges of the document, which the
 // panel draws (search.js); what the text leaves out, it leaves out as well.
 //
-// What is no place, nor holds one: a warning, a code block, a diagram and its
-// credit, the metadata panel, the inline table of contents (its entries are
-// the headings, which are places of their own), the heading of the list of
-// footnotes, which the document styles hide, and whatever is transient. A
-// table inside a warning or the metadata panel is no place either.
+// What is no place, nor holds one: a warning, a code block, the metadata
+// panel, the inline table of contents (its entries are the headings, which
+// are places of their own), the heading of the list of footnotes, which the
+// document styles hide, and whatever is transient. A table inside a warning
+// or the metadata panel is no place either. A diagram holds no place: its
+// labels are its own text.
 //
 // A place inside a place is a place of its own and no text of the outer one: a
 // list item of a loose list holds its text in a paragraph, which is the place,
@@ -61,6 +81,10 @@ const OWN_TAGS = new Set([...PLACE_TAGS, 'UL', 'OL', 'TABLE']);
 const EXCLUDED_TAGS = new Set(['PRE', 'SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
 // What a table row is to the panel: the word before its result.
 export const KIND_ROW = 'Tabelle';
+// What a diagram is to the panel, by the class of its figure.
+export const KIND_BPMN = 'BPMN-Diagramm';
+export const KIND_MERMAID = 'Mermaid-Diagramm';
+const DIAGRAM_KINDS = [[DIAGRAM_CLASS + '-bpmn', KIND_BPMN], [DIAGRAM_CLASS + '-mermaid', KIND_MERMAID]];
 const EXCLUDED_CLASSES = [
   CHIP_STATUS_CLASS, FACET_BAR_CLASS, STEP_NUMBER_CLASS,
   'dokufix-warning',        // warning.js
@@ -68,8 +92,7 @@ const EXCLUDED_CLASSES = [
   'dokufix-frontmatter',    // the metadata panel, frontmatter.js
   'dokufix-meta',           // the metadata of a read-only export
   'dokufix-toc',            // the inline table of contents, toc.js
-  'mermaid',                // a Mermaid diagram
-  'dokufix-diagram',        // a diagram's figure with its credit
+  DIAGRAM_CLASS,            // a diagram's figure: a place of its own, read by diagramReading()
 ];
 
 const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
@@ -204,14 +227,63 @@ function rowReading(row){
   return finish(r);
 }
 
+// What is no label in a diagram's SVG, nor holds one.
+const SVG_SKIPPED = new Set(['STYLE', 'TITLE', 'DESC', 'SCRIPT']);
+// In a foreignObject: what stands apart from the text around it.
+const LABEL_BLOCKS = new Set(['P', 'DIV']);
+// The end of a line of a label, after which the next line follows directly.
+const LINE_JOINED = /[\s\-\u2010\u2011]$/u;
+
+const isDiagram = el => tagOf(el) === 'FIGURE' && el.classList.contains(DIAGRAM_CLASS);
+
+// The text of a diagram: the labels of its SVG, as above. Every unit maps to
+// no node, so no hit in it is a range of the document.
+function diagramReading(figure){
+  const r = reading();
+  const put = s => { for (const ch of s) readBlank(r, ch); };
+  // label: whether node lies in a text or a foreignObject, whose text is read.
+  const read = (node, label) => {
+    for (let child = node.firstChild; child; child = child.nextSibling){
+      if (child.nodeType === TEXT){ if (label) put(child.data); continue; }
+      if (child.nodeType !== ELEMENT) continue;
+      const tag = tagOf(child);
+      if (SVG_SKIPPED.has(tag)) continue;
+      if (tag === 'BR'){ put(' '); continue; }
+      const apart = tag === 'TEXT' || tag === 'FOREIGNOBJECT' || (label && LABEL_BLOCKS.has(tag));
+      if (apart) put(' ');
+      read(child, label || apart);
+      // The end of a line of a text.
+      if (tag === 'TSPAN' && tagOf(node) === 'TEXT' && !LINE_JOINED.test(r.raw)) put(' ');
+      if (apart) put(' ');
+    }
+  };
+  const holder = figure.querySelector('.' + DIAGRAM_SVG_CLASS);
+  const svg = holder && holder.querySelector('svg');
+  if (svg) read(svg, false);
+  return finish(r);
+}
+
+function diagramPlace(figure){
+  const { text, map } = diagramReading(figure);
+  if (!text) return null;
+  const kind = DIAGRAM_KINDS.find(([cls]) => figure.classList.contains(cls));
+  return { el: figure, text, map, kind: kind ? kind[1] : 'Diagramm' };
+}
+
 // The places under root, in the order of the document. Beside its text each
 // carries its map: for every unit of the text the node and offset it came
 // from, and its part (see reading() above); nodeRanges() makes node ranges
-// of it. A row carries its kind as well.
+// of it. A row and a diagram carry their kind as well.
 export function collectPlaces(root){
   const places = [];
   const visit = node => {
     for (let child = node.firstElementChild; child; child = child.nextElementSibling){
+      // A diagram is read whole, by its SVG, and not walked into.
+      if (isDiagram(child) && !child.hasAttribute(TRANSIENT_ATTR)){
+        const place = diagramPlace(child);
+        if (place) places.push(place);
+        continue;
+      }
       if (excluded(child)) continue;
       const tag = tagOf(child);
       // A row is read whole, a table in one of its cells with it.
