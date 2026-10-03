@@ -25,6 +25,9 @@
 // them so a human can attribute each one. An image that only one side has counts
 // as differing. A --compare folder that holds no run for a browser, or that is
 // the --out folder itself, stops the run with exit 1 before anything is built.
+// So does a library that is neither in tests/.cdn/ nor can be fetched. A
+// library the page asks for that the file under test does not pin is refused
+// and fails the run.
 //
 // Date and Math.random are replaced by deterministic stand-ins, because the
 // read-only exports print their export time, Mermaid derives its SVG ids from
@@ -33,8 +36,15 @@
 // could not be compared. The clock must still tick: with a frozen Date.now() every
 // diagram gets the same id and Mermaid draws the second one into the first.
 //
-// Every reopened file gets its own browser process, so no page inherits state
-// from the one before it.
+// One browser process per browser and run; every opening gets a browser
+// context of its own, with fresh storage and the clock frozen anew, so no page
+// inherits state from the one before it. The libraries the page loads from
+// jsDelivr are served to every context from tests/.cdn/ (tests/cdn.mjs).
+//
+// The run waits on conditions, not on fixed times: after a change of the
+// window's size, a style or a scroll position, two animation frames; after
+// focusing a footnote marker, until its preview is fully shown; after a
+// smooth scroll, until the browser fires "scrollend".
 //
 // The run knows the page by its DOM only, never by a name of its script: the
 // built file carries the script as one minified bundle, which has no global
@@ -86,6 +96,7 @@ import { readMarker, judgeMarker, refusedMarker } from '../src/app/markers.js';
 // refuses, is asked where the product decides it, with the table as this run
 // read it from the Markdown.
 import { planFacets, FACET_ALL } from '../src/app/facets.js';
+import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -524,15 +535,31 @@ async function freeze(context){
   }, FIXED_NOW.getTime());
 }
 
+// The libraries of the file under test, served from tests/.cdn/; set in main.
+let libraries = null;
+// A browser context of its own for one opening: fresh storage, the libraries
+// served locally, and Date and Math.random frozen unless scripts are off.
+async function openContext(browser, options){
+  const context = await browser.newContext({ ...CONTEXT, ...options });
+  await libraries.serve(context);
+  if (options.javaScriptEnabled !== false) await freeze(context);
+  return context;
+}
+
+// Two animation frames: whatever a change of size, style or scroll position
+// sets off, layout and the handlers the page runs on the next frame, is done.
+const frames = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+
 // ---------- build: one document, four exports ----------
 async function buildExports(browser, opts, md, dir){
-  const context = await browser.newContext({ ...CONTEXT, viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
-  await freeze(context);
+  const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
   const page = await context.newPage();
+  // The libraries the page loaded, with the version their URL names: they are
+  // served from tests/.cdn/, a file per URL of an exact version.
   const libs = [];
   page.on('response', r => {
     if (!r.url().includes('cdn.jsdelivr.net')) return;
-    libs.push({ url: r.url(), status: r.status(), version: r.headers()['x-jsd-version'] || '' });
+    libs.push({ url: r.url(), status: r.status(), version: versionOf(r.url()) || '' });
   });
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -592,10 +619,8 @@ async function buildExports(browser, opts, md, dir){
 }
 
 // ---------- reopen ----------
-async function openVariant(launch, file, key, exp, width, scheme){
-  const browser = await launch();
-  const context = await browser.newContext({ ...CONTEXT, viewport: { width, height: 1000 }, colorScheme: scheme });
-  await freeze(context);
+async function openVariant(browser, file, key, exp, width, scheme){
+  const context = await openContext(browser, { viewport: { width, height: 1000 }, colorScheme: scheme });
   const page = await context.newPage();
   const errors = [];
   page.on('pageerror', e => errors.push(String(e)));
@@ -618,8 +643,8 @@ async function openVariant(launch, file, key, exp, width, scheme){
     await document.fonts.ready;
     await Promise.all(Array.from(document.images).map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; })));
   });
-  await page.waitForTimeout(250);
-  return { close: () => browser.close(), page, errors };
+  await frames(page);
+  return { close: () => context.close(), page, errors };
 }
 
 const NO_FALLBACKS = '.dokufix-fn-preview{position-try-fallbacks:none !important}';
@@ -645,7 +670,15 @@ async function enterStates(page, browserName){
     const marker = document.querySelector('a[data-footnote-ref]');
     if (marker) marker.focus({ preventScroll: true });
   });
-  await page.waitForTimeout(500);
+  // The preview fades in (a transition of .12 s): wait until it is fully shown.
+  // A page without one, or one whose preview does not appear, is photographed
+  // as it is after the wait, as before.
+  await settles(page, () => {
+    const marker = document.querySelector('a[data-footnote-ref]');
+    const preview = marker && marker.parentElement.querySelector(':scope > .dokufix-fn-preview');
+    return !preview || Number(getComputedStyle(preview).opacity) === 1;
+  });
+  await frames(page);
 }
 
 // ---------- the link "license information" ----------
@@ -774,10 +807,9 @@ async function assertLicenceOpens(page, check, selector, what){
   return { closed, open };
 }
 // A read-only export with scripts switched off: the link is there, opens and closes.
-async function assertLicenceWithoutScripts(launch, file, check){
-  const browser = await launch();
+async function assertLicenceWithoutScripts(browser, file, check){
+  const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
   try {
-    const context = await browser.newContext({ ...CONTEXT, viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
     const page = await context.newPage();
     await page.goto(pathToFileURL(file).href);
     const f = await licenceFacts(page);
@@ -786,7 +818,7 @@ async function assertLicenceWithoutScripts(launch, file, check){
       JSON.stringify({ visible: f.linkVisible, text: f.linkText, link: round(f.link), firstLine: f.column.top }));
     await assertLicenceOpens(page, check, 'details.dokufix-licences > summary', 'licence link with scripts off');
   } finally {
-    await browser.close();
+    await context.close();
   }
 }
 
@@ -1092,10 +1124,10 @@ async function assertMarkers(page, check, exp){
     const inside = (c, l) => c.left >= l.left - 0.6 && c.right <= l.right + 0.6;
     const notBeside = several.filter(list => !(list.items[1].box.top === list.items[0].box.top && list.items[1].box.left > list.items[0].box.right) || !list.items.every(c => inside(c.box, list.box)));
     await page.setViewportSize({ width: CARDS_NARROW, height: 1000 });
-    await page.waitForTimeout(100);
+    await frames(page);
     const narrow = await markerFacts(page);
     await page.setViewportSize({ width: 1400, height: 1000 });
-    await page.waitForTimeout(100);
+    await frames(page);
     const notBelow = narrow.cards.filter(list => list.items.length > 1).filter(list =>
       !list.items.every((c, i) => inside(c.box, list.box) && c.box.left === list.items[0].box.left && Math.abs(c.box.width - list.box.width) <= 1 && (i === 0 || c.box.top >= list.items[i - 1].box.bottom)));
     check('cards stand in a grid that wraps: beside each other at ' + f.window + ' px, below each other at ' + CARDS_NARROW + ' px, always inside their list (' + several.length + ' lists with more than one card)',
@@ -1148,7 +1180,7 @@ const STEP_FOOTNOTE_WIDTH = 900;
 async function assertStepFootnote(page, check, exp, label){
   if (!exp.stepFootnotes) return;
   await page.setViewportSize({ width: STEP_FOOTNOTE_WIDTH, height: 1000 });
-  await page.waitForTimeout(100);
+  await frames(page);
   // Focuses a footnote marker in a list of that kind and says where marker
   // and preview stand; null when there is none. scroll: the first such marker
   // is scrolled to the middle of the window; otherwise the first one that is
@@ -1188,7 +1220,7 @@ async function assertStepFootnote(page, check, exp, label){
   }
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.setViewportSize({ width: 1400, height: 1000 });
-  await page.waitForTimeout(100);
+  await frames(page);
   if (!step || !plain){
     check('a footnote cited inside a step, and one in a numbered list without the component in the same window, to compare it with', false, 'in a step: ' + !!step + ', in a plain list: ' + !!plain);
     return;
@@ -1370,11 +1402,11 @@ async function assertTables(page, check, exp, key){
     // the built file before it: 663 px in a window of 600).
     await page.setViewportSize({ width: TABLES_NARROW, height: 1000 });
     const tag = await page.addStyleTag({ content: PREVIEWS_OUT });
-    await page.waitForTimeout(100);
+    await frames(page);
     const narrow = await tableFacts(page);
     await tag.evaluate(el => el.remove());
     await page.setViewportSize({ width: 1400, height: 1000 });
-    await page.waitForTimeout(100);
+    await frames(page);
     check('at ' + TABLES_NARROW + ' px as well: the wide table scrolls, every wrapper stays inside its place, the page is not wider than the window (the footnote previews set aside)',
       narrow.tables.length === f.tables.length && narrow.tables.every((t, i) => t.inside && !t.tall && (!exp.wideTables.includes(i) || t.scrolls)) && narrow.page <= narrow.window,
       'page ' + narrow.page + ' in ' + narrow.window + '; tables ' + json(narrow.tables.map(t => [t.width, t.scrolls, t.tall, t.inside])));
@@ -1414,10 +1446,10 @@ async function assertTables(page, check, exp, key){
   // document's do at 600 px.
   const misaligned = facets => facets.filter(x => !(x.lines.length > 0 && x.lines.every(left => left === x.lines[0]) && x.legendRight !== null && x.lines[0] >= x.legendRight));
   await page.setViewportSize({ width: TABLES_NARROW, height: 1000 });
-  await page.waitForTimeout(100);
+  await frames(page);
   const narrowFacets = (await tableFacts(page)).facets;
   await page.setViewportSize({ width: 1400, height: 1000 });
-  await page.waitForTimeout(100);
+  await frames(page);
   check('every line of controls starts at the same place, beside the legend, at 1400 px and at ' + TABLES_NARROW + ' px (' + narrowFacets.filter(x => x.lines.length > 1).length + ' filter(s) take more than one line there)',
     misaligned(groups).length === 0 && misaligned(narrowFacets).length === 0,
     JSON.stringify([...groups, ...narrowFacets].map(x => [x.legend, x.legendRight, x.lines])));
@@ -1495,7 +1527,7 @@ async function assertTables(page, check, exp, key){
 async function assertTableFootnote(page, check, exp, label){
   if (!exp.tableFootnotes) return;
   await page.setViewportSize({ width: FOOTNOTE_WIDTH, height: 1000 });
-  await page.waitForTimeout(100);
+  await frames(page);
   // Focuses a footnote marker, in a table cell or in a paragraph outside
   // every table and list, and says where marker, preview and wrapper stand.
   const place = async inCell => {
@@ -1546,7 +1578,7 @@ async function assertTableFootnote(page, check, exp, label){
   }
   await page.evaluate(() => window.scrollTo(0, 0));
   await page.setViewportSize({ width: 1400, height: 1000 });
-  await page.waitForTimeout(100);
+  await frames(page);
   if (!cell || !plain){
     check('a footnote cited in a table cell, and one in a paragraph in the same window, to compare it with', false, 'in a cell: ' + !!cell + ', in a paragraph: ' + !!plain);
     return;
@@ -1563,11 +1595,10 @@ async function assertTableFootnote(page, check, exp, label){
 // A read-only export with scripts switched off: the facet filter is there and
 // filters, by mouse and by keyboard. Not kompakt: its document is packed, and
 // without scripts there is no table to filter.
-async function assertFacetsWithoutScripts(launch, file, check, exp){
+async function assertFacetsWithoutScripts(browser, file, check, exp){
   if (!exp.facets.length) return;
-  const browser = await launch();
+  const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
   try {
-    const context = await browser.newContext({ ...CONTEXT, viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
     const page = await context.newPage();
     await page.goto(pathToFileURL(file).href);
     const f = await tableFacts(page);
@@ -1576,7 +1607,7 @@ async function assertFacetsWithoutScripts(launch, file, check, exp){
       JSON.stringify(f.facets.map(x => [x.legend, x.bar, x.barVisible, x.shown])));
     if (f.facets.length === exp.facets.length) await assertFacetChoosing(page, check, exp, 'with scripts off: ');
   } finally {
-    await browser.close();
+    await context.close();
   }
 }
 
@@ -1592,7 +1623,7 @@ async function settles(page, fn, arg){
   catch (e){ return false; }
 }
 
-async function assertVariant(launch, file, key, exp, results, label){
+async function assertVariant(browser, file, key, exp, results, label){
   const check = makeChecker(results, label + ' ' + key);
   const text = fs.readFileSync(file, 'utf8');
 
@@ -1610,7 +1641,7 @@ async function assertVariant(launch, file, key, exp, results, label){
       JSON.stringify(elements));
   }
 
-  const { close, page, errors } = await openVariant(launch, file, key, exp, 1400, 'light');
+  const { close, page, errors } = await openVariant(browser, file, key, exp, 1400, 'light');
   try {
     const s = await page.evaluate(() => {
       // The content container: the preview in the editor file, <main> in a read-only export.
@@ -1894,7 +1925,7 @@ async function assertVariant(launch, file, key, exp, results, label){
     const misplaced = [];
     for (const width of LICENCE_WIDTHS){
       await page.setViewportSize({ width, height: 1000 });
-      await page.waitForTimeout(100);
+      await frames(page);
       const problems = licencePlaceProblems(await licenceFacts(page), key, width);
       if (problems.length) misplaced.push(width + ' px: ' + problems.join('; '));
     }
@@ -1902,10 +1933,10 @@ async function assertVariant(launch, file, key, exp, results, label){
       (key === 'mit-editor' ? ', never over "Editor ↩"' : ''), misplaced.length === 0, misplaced.join(' | '));
     // The view in a narrow window: inside it.
     await page.setViewportSize({ width: 600, height: 1000 });
-    await page.waitForTimeout(100);
+    await frames(page);
     await assertLicenceOpens(page, check, 'body > details.dokufix-licences > summary', 'licence link at 600 px');
     await page.setViewportSize({ width: 1400, height: 1000 });
-    await page.waitForTimeout(100);
+    await frames(page);
 
     if (key === 'mit-editor'){
       // --- edit mode: the link is one of the toolbar's actions
@@ -1948,16 +1979,22 @@ async function assertVariant(launch, file, key, exp, results, label){
                    layoutScrolledBy: document.querySelector('.layout').scrollTop, previewScrolledBy: Math.round(document.getElementById('preview').scrollTop) };
         });
         const before = await place();
-        await page.evaluate(() => { const links = document.querySelectorAll('#preview nav.dokufix-toc a'); links[Math.floor(links.length / 2)].click(); });
-        // The scroll is smooth: wait until the preview has moved and stands still.
-        await page.waitForFunction(() => document.getElementById('preview').scrollTop > 0, null, { timeout: 5000 }).catch(() => {});
-        let after = await place();
-        for (let i = 0; i < 20; i++){
-          await page.waitForTimeout(200);
-          const now = await place();
-          if (now.previewScrolledBy === after.previewScrolledBy){ after = now; break; }
-          after = now;
-        }
+        // The scroll is smooth: wait until the preview has moved and stands
+        // still, which the browser says with "scrollend". The position alone
+        // does not say it: Firefox holds it for two and three frames in the
+        // middle of a smooth scroll and a pixel before its end. The two frames
+        // first let the "scrollend" of the preview's instant scrolls above go
+        // by, which the browser fires on the next frame.
+        await frames(page);
+        await page.evaluate(() => {
+          const preview = document.getElementById('preview');
+          window.vergleichScrolled = false;
+          preview.addEventListener('scrollend', () => { window.vergleichScrolled = true; }, { once: true });
+          const links = preview.querySelectorAll('nav.dokufix-toc a');
+          links[Math.floor(links.length / 2)].click();
+        });
+        await page.waitForFunction(() => window.vergleichScrolled, null, { timeout: 5000 }).catch(() => {});
+        const after = await place();
         check('edit mode, a click on an entry of the table of contents in the preview: the preview scrolls to the heading, and toolbar and pane header stay where they are',
           after.previewScrolledBy > 0 && after.toolbar === before.toolbar && after.paneHeader === before.paneHeader && after.pageScrolledBy === 0 && after.layoutScrolledBy === 0,
           'before ' + JSON.stringify(before) + ', after ' + JSON.stringify(after));
@@ -1978,7 +2015,7 @@ async function assertVariant(launch, file, key, exp, results, label){
       check('edit mode: the open view hangs below the toolbar', toolbar.open.viewVisible && toolbar.open.view.top >= header.bottom - 1, round(toolbar.open.view) + ', toolbar ' + round(header));
       // --- a narrow window: the actions are a panel behind the hamburger
       await page.setViewportSize({ width: 600, height: 900 });
-      await page.waitForTimeout(100);
+      await frames(page);
       const hidden = await licenceFacts(page);
       await page.click('#hamburger');
       const panel = await page.evaluate(() => { const r = document.getElementById('header-actions').getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; });
@@ -2035,8 +2072,8 @@ async function assertVariant(launch, file, key, exp, results, label){
       }
       await page.click('#hamburger');
     } else {
-      await assertLicenceWithoutScripts(launch, file, check);
-      if (key !== 'kompakt') await assertFacetsWithoutScripts(launch, file, check, exp);
+      await assertLicenceWithoutScripts(browser, file, check);
+      if (key !== 'kompakt') await assertFacetsWithoutScripts(browser, file, check, exp);
     }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {
@@ -2049,8 +2086,7 @@ async function runBrowser(name, opts, md){
   const dir = path.join(opts.out, name);
   fs.rmSync(dir, { recursive: true, force: true });
   fs.mkdirSync(path.join(dir, 'exports'), { recursive: true });
-  const launch = BROWSERS[name];
-  const browser = await launch();
+  const browser = await BROWSERS[name]();
   const results = [];
   try {
     const built = await buildExports(browser, opts, md, path.join(dir, 'exports'));
@@ -2063,7 +2099,7 @@ async function runBrowser(name, opts, md){
       for (const width of WIDTHS){
         for (const [schemeName, scheme] of SCHEMES){
           const base = v.key + '-' + width + '-' + schemeName;
-          const { close, page } = await openVariant(launch, built.files[v.key], v.key, exp, width, scheme);
+          const { close, page } = await openVariant(browser, built.files[v.key], v.key, exp, width, scheme);
           try {
             if (scheme === 'light'){
               const rail = await page.evaluate(() => {
@@ -2084,12 +2120,12 @@ async function runBrowser(name, opts, md){
           } finally { await close(); }
         }
       }
-      await assertVariant(launch, built.files[v.key], v.key, exp, results, name);
+      await assertVariant(browser, built.files[v.key], v.key, exp, results, name);
     }
 
     // The preview pane inside the editor: same document rules, the editor's frame.
     for (const [schemeName, scheme] of SCHEMES){
-      const { close, page } = await openVariant(launch, built.files['mit-editor'], 'mit-editor', exp, 1400, scheme);
+      const { close, page } = await openVariant(browser, built.files['mit-editor'], 'mit-editor', exp, 1400, scheme);
       try {
         await page.click('#edit-btn');
         const h = await page.evaluate(() => {
@@ -2098,7 +2134,7 @@ async function runBrowser(name, opts, md){
           return Math.ceil(p.getBoundingClientRect().top + p.scrollHeight) + 2;
         });
         await page.setViewportSize({ width: 1400, height: Math.min(h, 15000) });
-        await page.waitForTimeout(300);
+        await frames(page);
         await page.screenshot({ path: path.join(dir, 'mit-editor-bearbeiten-1400-' + schemeName + '.png'), animations: 'disabled', caret: 'hide' });
       } finally { await close(); }
     }
@@ -2274,9 +2310,13 @@ if (opts.compare){
     process.exit(1);
   }
 }
+// The libraries, from tests/.cdn/; a missing one is fetched once, before anything is built.
+try { libraries = await prepareLibraries(opts.file); }
+catch (e){ console.error(e.message); process.exit(1); }
+console.log(librariesLine(libraries));
 let failed = 0, differing = 0;
 // The browsers run side by side: each has its own folder and its own browser
-// processes, and nothing in a run is shared with the other. The report comes
+// process, and nothing in a run is shared with the other. The report comes
 // afterwards, one browser after the other, in the order of the names.
 const runs = await Promise.all(names.map(name => runBrowser(name, opts, md)));
 for (const run of runs){
@@ -2287,4 +2327,7 @@ for (const run of runs){
 console.log('\nexports and screenshots: ' + opts.out);
 if (failed) console.log(failed + ' assertion(s) failed');
 if (opts.compare && differing) console.log(differing + ' screenshot(s) differ from the baseline; red-on-white masks are in <browser>/diff/');
-process.exit(failed || (opts.strict && differing) ? 1 : 0);
+// A library the page asked for that is not pinned in the file under test was
+// not fetched; the page went on without it.
+if (libraries.refused.length) console.log('refused, not pinned in the file under test: ' + libraries.refused.join(', '));
+process.exit(failed || libraries.refused.length || (opts.strict && differing) ? 1 : 0);

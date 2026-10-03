@@ -19,7 +19,9 @@
 //
 // What it does, per browser, every opening in a browser context of its own, so
 // with fresh storage — the saved file must work from what is in it, not from
-// what IndexedDB remembers:
+// what IndexedDB remembers. One browser process per browser; the libraries
+// the page loads from jsDelivr are served to every context from tests/.cdn/
+// (tests/cdn.mjs):
 //
 //   1. open the file under test          the editor holds the demo text
 //      type document A, save             → generation 1
@@ -70,7 +72,8 @@
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
 // The version description contains "<!-- <script>" and "</script>".
 //
-// Exit code 1 when anything fails. The page is used the way an author uses it,
+// Exit code 1 when anything fails, and when the page asked for a library the
+// file under test does not pin. The page is used the way an author uses it,
 // through its buttons; the run waits on the DOM as tests/vergleich.mjs does.
 
 import { chromium, firefox } from 'playwright-core';
@@ -80,6 +83,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { prepareLibraries, librariesLine } from './cdn.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
@@ -171,6 +175,7 @@ function differenceInContext(got, want){
 // options: { viewport, initScript }, for the states of steps 5 and 6.
 async function open(browser, file, options = {}){
   const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: options.viewport || { width: 1400, height: 1000 }, acceptDownloads: true });
+  await libraries.serve(context);
   if (options.initScript) await context.addInitScript(options.initScript);
   const page = await context.newPage();
   const errors = [];
@@ -261,6 +266,7 @@ const ALLOWED = [
 // taken out; and what the version mark said before that.
 async function serialised(browser, file){
   const context = await browser.newContext({ javaScriptEnabled: false });
+  await libraries.serve(context);
   try {
     const page = await context.newPage();
     await page.goto(pathToFileURL(file).href);
@@ -475,6 +481,12 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
 
 // ---------- main ----------
 const opts = parseArgs(process.argv.slice(2));
+// The libraries, served to every context from tests/.cdn/ (tests/cdn.mjs); a
+// missing one is fetched once, before anything is built.
+let libraries;
+try { libraries = await prepareLibraries(opts.file); }
+catch (e){ console.error(e.message); process.exit(1); }
+console.log(librariesLine(libraries));
 fs.rmSync(opts.out, { recursive: true, force: true });
 fs.mkdirSync(opts.out, { recursive: true });
 
@@ -501,4 +513,6 @@ results.sort((a, b) => byBrowser(a) - byBrowser(b));
 const failed = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'ok    ' : 'FAIL  ') + r.scope + ': ' + r.name + (r.detail ? ' — ' + r.detail : ''));
 console.log('\n' + (results.length - failed.length) + ' of ' + results.length + ' green; saved files: ' + opts.out);
-process.exit(failed.length ? 1 : 0);
+// A library the page asked for that is not pinned in the file under test was not fetched.
+if (libraries.refused.length) console.log('refused, not pinned in the file under test: ' + libraries.refused.join(', '));
+process.exit(failed.length || libraries.refused.length ? 1 : 0);

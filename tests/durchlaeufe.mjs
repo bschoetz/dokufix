@@ -80,7 +80,12 @@
 // page loads, a global of the page and not a name of its script; case 4 gives
 // it, from outside and through its own marked.use(), a hook that throws.
 //
-// Exit code 1 when anything fails.
+// Every opening gets a browser context of its own, in one browser process per
+// browser; the libraries the page loads from jsDelivr are served to every
+// context from tests/.cdn/ (tests/cdn.mjs).
+//
+// Exit code 1 when anything fails, and when the page asked for a library the
+// file under test does not pin.
 
 import { chromium, firefox } from 'playwright-core';
 import fs from 'node:fs';
@@ -88,6 +93,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { prepareLibraries, librariesLine } from './cdn.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
@@ -221,6 +227,10 @@ const results = [];
 const check = (scope, name, ok, detail) => results.push({ scope, name, ok: !!ok, detail: ok || detail === undefined ? '' : (typeof detail === 'string' ? detail : JSON.stringify(detail)) });
 
 // ---------- the page, through its DOM ----------
+// A time window, and the only fixed wait of the run: where a check proves that
+// something does NOT happen (a second render, a late download), there is no
+// condition to wait on, only the time it would have taken to show.
+const QUIET_WINDOW = 500;
 const READONLY = [
   { key: 'nur-lesen', download: 'readonly-open' },
   { key: 'schlank',   download: 'readonly-slim' },
@@ -230,6 +240,7 @@ const READONLY = [
 // report as errors collected. ready: what to wait for.
 async function open(browser, file, ready){
   const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
+  await libraries.serve(context);
   const page = await context.newPage();
   const consoleErrors = [], pageErrors = [], dialogs = [], downloads = [];
   page.on('pageerror', e => pageErrors.push(String(e)));
@@ -457,7 +468,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         button.click();
       }, [overlapDoc('A'), overlapDoc('B')]);
       await o.page.waitForFunction(() => window.durchlaeufe.rails.some(r => r.rail === 'B eins'), null, { timeout: 90000 });
-      await o.page.waitForTimeout(500);   // a render still running would show up as one more rail
+      await o.page.waitForTimeout(QUIET_WINDOW);   // a render still running would show up as one more rail
       const log = await o.page.evaluate(() => ({ ...window.durchlaeufe, h1: document.querySelector('#preview h1').textContent,
         diagrams: document.querySelectorAll('#preview .mermaid svg').length }));
       check(scope, 'the second render was requested while the first ran', log.railsWhenSecondWasRequested === 0, log);
@@ -518,6 +529,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       // The saved file, read with scripts off: its script names the attribute, so
       // the text of the file cannot be searched for it.
       const off = await browser.newContext({ javaScriptEnabled: false });
+      await libraries.serve(off);
       const offPage = await off.newPage();
       await offPage.goto(pathToFileURL(withTransient).href);
       const left = await offPage.evaluate(() => ({
@@ -691,7 +703,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
           o.page.click('button[data-download="' + v.download + '"]'),
         ]);
         await o.page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
-        await o.page.waitForTimeout(500);   // a download that started after all would show up by now
+        await o.page.waitForTimeout(QUIET_WINDOW);   // a download that started after all would show up by now
         const said = o.dialogs.slice(before);
         check(scope, 'one dialog says that the download failed, and why',
           said.length === 1 && said[0].type === 'alert' && said[0].message.includes('Der Download ist fehlgeschlagen') && said[0].message.includes(EXPORT_STEP_MESSAGE), said);
@@ -711,6 +723,12 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
 
 // ---------- main ----------
 const opts = parseArgs(process.argv.slice(2));
+// The libraries, served to every context from tests/.cdn/ (tests/cdn.mjs); a
+// missing one is fetched once, before anything is built.
+let libraries;
+try { libraries = await prepareLibraries(opts.file); }
+catch (e){ console.error(e.message); process.exit(1); }
+console.log(librariesLine(libraries));
 fs.rmSync(opts.out, { recursive: true, force: true });
 fs.mkdirSync(opts.out, { recursive: true });
 const copyWithPasses = buildCopy(opts.out, 'app/render.js', PASS_EDITS, 'mit-werfenden-schritten.html');
@@ -726,4 +744,6 @@ results.sort((a, b) => byBrowser(a) - byBrowser(b));
 const failed = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'ok    ' : 'FAIL  ') + r.scope + ': ' + r.name + (r.detail ? ' — ' + r.detail : ''));
 console.log('\n' + (results.length - failed.length) + ' of ' + results.length + ' green; exports and saved files: ' + opts.out);
-process.exit(failed.length ? 1 : 0);
+// A library the page asked for that is not pinned in the file under test was not fetched.
+if (libraries.refused.length) console.log('refused, not pinned in the file under test: ' + libraries.refused.join(', '));
+process.exit(failed.length || libraries.refused.length ? 1 : 0);

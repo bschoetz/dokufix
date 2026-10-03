@@ -1,2 +1,4 @@
 # Exports, screenshots and size tables of the comparison runs; rebuilt on every run
 out/
+# The libraries the browser runs serve in place of the CDN, one file per URL (tests/cdn.mjs)
+.cdn/
