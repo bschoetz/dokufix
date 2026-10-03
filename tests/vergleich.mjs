@@ -3188,7 +3188,8 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
   // With the view open the line lies under it, not in it.
   if (drawn.length){
     const covered = await page.evaluate(() => {
-      const fig = document.querySelector('figure.dokufix-diagram'), line = fig.querySelector(':scope > .dokufix-diagram-downloads');
+      const fig = document.querySelector('figure.dokufix-diagram'), line = fig && fig.querySelector(':scope > .dokufix-diagram-downloads');
+      if (!line || !fig.querySelector('.dokufix-diagram-toggle')) return { line: false };
       fig.querySelector('.dokufix-diagram-toggle').checked = true;
       const r = line.getBoundingClientRect(), view = fig.querySelector('.dokufix-diagram-view');
       const x = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1), y = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);

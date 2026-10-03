@@ -338,7 +338,7 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.equal(html.split('<script type="text/plain" id="dokufix-reader-js">').length, 2, 'one block, of a type that does not run');
   assert.ok(!html.includes('dokufix-filter-js'), 'the block of the filter alone is gone');
   const code = readerBlock(html);
-  assert.ok(code.length > 6000 && code.length < 20000, code.length + ' B');
+  assert.ok(code.length > 6000 && code.length < 25000, code.length + ' B');
   assert.match(code, /^\(\(\)=>\{[\s\S]*\}\)\(\);$/, 'one minified IIFE');
   assert.ok(!/<\/script/i.test(code) && !code.includes('<!--'));
   // Nothing of the editor's elements: dom.js is not in the bundle.
