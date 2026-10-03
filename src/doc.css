@@ -426,6 +426,35 @@
     }
   }
 
+  /* Free-text filter — a table with the marker "filter" before it
+     (src/app/filter.js). Where a script runs, a run-time pass puts a search
+     field with a row counter directly above the table's wrapper, outside it,
+     so that it does not scroll sideways with a wide table; in a facet filter
+     it stands between the controls and the wrapper. The field is transient: no
+     download takes it along. Typing gives the rows that do not contain the
+     text the class dokufix-filter-out.
+     In print the field is not shown and no row is hidden, whatever is typed,
+     as with the facet filter. Nothing here is positioned: the preview of a
+     footnote cited in a cell is placed against the page.
+     No colour of its own: the greys are those of the facet filter, the focus
+     outline the document's link colour. */
+  .dokufix-doc .dokufix-filter{
+    display:none;flex-wrap:wrap;align-items:center;gap:4px 10px;
+    margin:0 0 6px;font-size:13px;line-height:1.4;
+  }
+  .dokufix-doc .dokufix-filter-input{
+    box-sizing:border-box;width:320px;max-width:100%;margin:0;padding:3px 10px;
+    border:1px solid #8e8e92;border-radius:13px;background:#fafafa;
+    font:inherit;color:#1c1c1e;
+  }
+  .dokufix-doc .dokufix-filter-input::placeholder{color:#6e6e73;opacity:1}
+  .dokufix-doc .dokufix-filter-input:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+  .dokufix-doc .dokufix-filter-count{font-size:12px;color:#6e6e73}
+  @media not print{
+    .dokufix-doc .dokufix-filter{display:flex}
+    .dokufix-doc .dokufix-filter-out{display:none}
+  }
+
   /* Cards — a bullet list with the marker "cards" before it (src/app/markers.js,
      buildCards() in src/app/cards.js). Each item is a card with a thin border.
      The grid puts as many beside each other as fit at 210 px or more and wraps

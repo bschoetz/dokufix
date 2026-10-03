@@ -8,7 +8,7 @@
 //
 // The modules imported here are the ones that load without a page:
 // passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js,
-// chips.js, markers.js, tables.js.
+// chips.js, markers.js, tables.js, filter.js.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -22,6 +22,7 @@ import { buildCallouts } from '../src/app/callouts.js';
 import { buildChips } from '../src/app/chips.js';
 import { applyMarkers } from '../src/app/markers.js';
 import { buildTables } from '../src/app/tables.js';
+import { attachTableFilters } from '../src/app/filter.js';
 
 // A root like the preview, holding the given markup.
 function rootWith(html){
@@ -386,8 +387,8 @@ test('broken markers among working ones: no pass fails, each warning stands at i
   assert.equal(root.firstElementChild.tagName, 'H1');
   const warnings = Array.from(root.querySelectorAll('.dokufix-warning'));
   assert.deepEqual(warnings.map(w => w.textContent), [
-    'Warnung: Unbekannte Markierung „dokufix: crads“. Bekannt sind: cards, steps, facets.',
-    'Warnung: Unbekannte Markierung „dokufix: side-note wichtig“. Bekannt sind: cards, steps, facets.',
+    'Warnung: Unbekannte Markierung „dokufix: crads“. Bekannt sind: cards, steps, facets, filter.',
+    'Warnung: Unbekannte Markierung „dokufix: side-note wichtig“. Bekannt sind: cards, steps, facets, filter.',
   ]);
   assert.equal(warnings[0].nextElementSibling.outerHTML, '<ul>\n<li>bleibt</li>\n</ul>');
   assert.equal(warnings[1].previousElementSibling.id, 'ablauf');
@@ -489,4 +490,37 @@ test('with the tables wrapped before the markers are applied, a marker no longer
   // Wrong order: the element directly behind the marker is the wrapper, a <div>.
   assert.equal(root.querySelectorAll('.dokufix-facets').length, 0);
   assert.ok(Array.from(root.querySelectorAll('.dokufix-warning')).some(w => w.textContent === 'Warnung: Die Markierung „dokufix: facets Status“ erwartet direkt danach eine Tabelle.'));
+});
+
+// ---------- the free-text filter: a document pass marks, a run-time pass attaches ----------
+const WITH_FILTER =
+  '<h1>Handbuch</h1>\n<h2>Merkmale</h2>\n' +
+  '<!-- dokufix: filter "Merkmal suchen …" -->\n<!-- dokufix: facets Status -->\n' +
+  mdTable(['Merkmal', 'Status'], [['ORT<sup class="dokufix-fn-host"><a href="#footnote-back-a" data-footnote-ref="">1</a><span class="dokufix-fn-preview" aria-hidden="true">Rückruf erwünscht.</span></sup>', '<code>🟢 Live</code>'], ['TELEFON', '<code>🔴 Aus</code>']]) +
+  '<!-- dokufix: filter -->\n<p>Kein Block für einen Filter.</p>\n';
+test('the free-text filter through the runner: the document passes mark the table and leave no field, the run-time pass attaches it; no pass failed', async t => {
+  const root = rootWith(WITH_FILTER);
+  const { result: failed, logged } = await quiet(t, async () => [
+    ...await runPasses(root, MARKER_PASSES, { frontmatter: { kind: null } }),
+    ...await runPasses(root, [{ name: 'Tabellenfilter', run: attachTableFilters }], { frontmatter: { kind: null } }),
+  ]);
+  assert.deepEqual(failed, [], 'no pass failed');
+  assert.deepEqual(logged, [], 'nothing on the console');
+  const group = root.querySelector('.dokufix-facets');
+  assert.deepEqual(Array.from(group.children).map(c => c.className), ['dokufix-facet-bar', 'dokufix-filter', 'dokufix-table']);
+  assert.ok(group.querySelector('.dokufix-filter').hasAttribute(TRANSIENT_ATTR));
+  assert.equal(group.querySelector('.dokufix-filter-count').textContent, '2 Zeilen');
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-warning')).map(w => w.textContent),
+    ['Warnung: Die Markierung „dokufix: filter“ erwartet direkt danach eine Tabelle.']);
+  // The row's text: the label of the chip, without its word, without the footnote's preview.
+  const input = group.querySelector('input[type="search"]');
+  for (const [term, count] of [['ort live', '1 von 2 Zeilen'], ['grün', '0 von 2 Zeilen'], ['Rückruf', '0 von 2 Zeilen'], ['', '2 Zeilen']]){
+    input.value = term;
+    input.dispatchEvent(new (root.ownerDocument.defaultView.Event)('input'));
+    assert.equal(group.querySelector('.dokufix-filter-count').textContent, count, term);
+  }
+  // What an export copies: without the transient elements, nothing of the field.
+  const copy = root.cloneNode(true);
+  removeTransient(copy);
+  assert.equal(copy.querySelectorAll('.dokufix-filter, input[type="search"]').length, 0);
 });

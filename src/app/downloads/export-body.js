@@ -7,6 +7,7 @@ import { formatVersionDate } from '../persistence.js';
 import { render } from '../render.js';
 import { state } from '../state.js';
 import { removeTransient } from '../transient.js';
+import { removeFilterMarks } from '../filter.js';
 
 // --- The one export path ----------------------------------------
 // What the three read-only exports share: where their content comes from,
@@ -38,7 +39,10 @@ async function inlineImages(copy){
   if (inlined !== html) copy.innerHTML = inlined;
 }
 
-const EXPORT_STEPS = [removeTransientElements, inlineImages];
+// The free-text filter (filter.js) marks its table and hides rows by a class.
+// A read-only export shows the complete table without a field, so removeFilterMarks
+// takes both out, after the field itself has gone with the transient elements.
+const EXPORT_STEPS = [removeTransientElements, removeFilterMarks, inlineImages];
 
 // Returns { title, body, rail }: the document's title, its content as HTML and
 // the static rail, '' where the document has too few headings for one.

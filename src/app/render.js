@@ -5,6 +5,7 @@ import { buildCallouts } from './callouts.js';
 import { buildChips } from './chips.js';
 import { applyMarkers } from './markers.js';
 import { buildTables } from './tables.js';
+import { attachTableFilters } from './filter.js';
 import { assignHeadingIds, processInlineToc, attachTocClicks } from './toc.js';
 import { attachFootnotePreviews, linkFootnoteReturnPaths } from './footnotes.js';
 import { buildRail } from './rail.js';
@@ -60,12 +61,16 @@ export const DOCUMENT_PASSES = [
   { name: 'Diagramme', run: renderDiagrams },
 ];
 
-// Run-time passes attach what exists only while the page runs: a listener
-// today, later a filter field or a live viewer. Nothing they do is part of the
+// Run-time passes attach what exists only while the page runs: a listener, the
+// search field of a table, later a live viewer. Nothing they do is part of the
 // document. An element such a pass adds carries data-dokufix-transient (see
-// transient.js), so that no download takes it along.
+// transient.js), so that no download takes it along. They run after every
+// document pass: the free-text filter finds each table in its wrapper, and the
+// preview of a footnote cited in a cell already in the cell, which it leaves
+// out of the row's text.
 export const RUNTIME_PASSES = [
   { name: 'Sprungmarken im Inhaltsverzeichnis', run: attachTocClicks },
+  { name: 'Tabellenfilter', run: attachTableFilters },
 ];
 
 // One render at a time. A render requested while another runs starts when

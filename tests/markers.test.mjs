@@ -12,9 +12,10 @@
 // their list, which marker becomes a warning and with which words, and what is
 // no marker at all.
 //
-// The third marker, "facets", has its cases in tests/facets.test.mjs. Here it
-// stands in the list, and the cases on what a component may answer, a refusal
-// with its reason, are driven with a list of their own.
+// The third marker, "facets", has its cases in tests/facets.test.mjs, the
+// fourth, "filter", in tests/filter.test.mjs. Here they stand in the list,
+// and the cases on what a component may answer, a refusal with its reason,
+// are driven with a list of their own.
 //
 // The last cases read src/doc.css, src/app/render.js and the built file: both
 // components have their rules in the document styles, and the pass has its
@@ -30,6 +31,7 @@ import { MARKERS, BLOCKS, readMarker, judgeMarker, refusedMarker, applyMarkerLis
 import { CARDS, CARDS_CLASS, CARD_TITLE_CLASS, buildCards } from '../src/app/cards.js';
 import { STEPS, STEPS_CLASS, STEP_NUMBER_CLASS, STEP_ACTOR_CLASS, buildSteps } from '../src/app/steps.js';
 import { FACETS, buildFacets } from '../src/app/facets.js';
+import { FILTER, markFilter } from '../src/app/filter.js';
 import { buildWarning } from '../src/app/warning.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -65,7 +67,7 @@ function comments(root){
 
 // The words of the warnings, written out here a second time on purpose: a
 // reader sees them, so a change to them is a change this file has to be told.
-const KNOWN = 'Bekannt sind: cards, steps, facets.';
+const KNOWN = 'Bekannt sind: cards, steps, facets, filter.';
 const W = {
   unknown: written => 'Unbekannte Markierung „' + written + '“. ' + KNOWN,
   noName: written => 'Die Markierung „' + written + '“ nennt keine Komponente. ' + KNOWN,
@@ -125,10 +127,10 @@ test('readMarker: a long marker is named with its first 80 characters', () => {
 });
 
 // ---------- the list ----------
-test('the list of markers: cards before a bullet list, steps before a numbered list, neither takes an argument; facets before a table, with the column as its argument', () => {
-  assert.deepEqual(MARKERS.map(m => [m.name, m.block, m.argument]), [['cards', 'UL', 'none'], ['steps', 'OL', 'none'], ['facets', 'TABLE', 'text']]);
-  assert.ok(MARKERS[0] === CARDS && MARKERS[1] === STEPS && MARKERS[2] === FACETS, 'the entries are the ones the components export');
-  assert.ok(MARKERS[0].apply === buildCards && MARKERS[1].apply === buildSteps && MARKERS[2].apply === buildFacets);
+test('the list of markers: cards before a bullet list, steps before a numbered list, neither takes an argument; facets and filter before a table, with the column and the placeholder as their argument', () => {
+  assert.deepEqual(MARKERS.map(m => [m.name, m.block, m.argument]), [['cards', 'UL', 'none'], ['steps', 'OL', 'none'], ['facets', 'TABLE', 'text'], ['filter', 'TABLE', 'text']]);
+  assert.ok(MARKERS[0] === CARDS && MARKERS[1] === STEPS && MARKERS[2] === FACETS && MARKERS[3] === FILTER, 'the entries are the ones the components export');
+  assert.ok(MARKERS[0].apply === buildCards && MARKERS[1].apply === buildSteps && MARKERS[2].apply === buildFacets && MARKERS[3].apply === markFilter);
   assert.deepEqual(BLOCKS, { UL: 'eine Aufzählung', OL: 'eine nummerierte Liste', TABLE: 'eine Tabelle' });
 });
 test('every entry of the list is complete: a name in small letters, a block a warning has a word for, how its argument is read, what it does', () => {

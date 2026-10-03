@@ -3,6 +3,7 @@ import { ELEMENT, COMMENT, isBlank } from './nodes.js';
 import { CARDS } from './cards.js';
 import { STEPS } from './steps.js';
 import { FACETS } from './facets.js';
+import { FILTER } from './filter.js';
 
 // --- Block markers -----------------------------------------------------------
 // A comment that starts with "dokufix:" applies a named component to the block
@@ -74,7 +75,7 @@ import { FACETS } from './facets.js';
 //
 // A story that brings a component with a marker adds its entry here and, if
 // the block is of a kind no marker expected so far, its word to BLOCKS.
-export const MARKERS = [CARDS, STEPS, FACETS];
+export const MARKERS = [CARDS, STEPS, FACETS, FILTER];
 
 // The blocks a marker can expect, by tag, as a warning names them: "… erwartet
 // direkt danach eine Aufzählung".
@@ -127,6 +128,11 @@ const WARNINGS = {
 // the component gave. The comparison run asks here as well.
 export function refusedMarker(marker, reason){
   return WARNINGS.refused(marker, reason);
+}
+// The warning of a marker that stands before a block a second time. The
+// comparison run asks here as well.
+export function repeatedMarker(marker){
+  return WARNINGS.twice(marker);
 }
 
 // What a marker comes to, before anything is changed: { entry }, its entry of
@@ -221,7 +227,7 @@ export function applyMarkerList(root, markers){
     }
     const names = applied.get(block) || new Set();
     if (names.has(verdict.entry.name)){
-      replaceWithWarning(root, comment, buildWarning(doc, WARNINGS.twice(marker)), placed);
+      replaceWithWarning(root, comment, buildWarning(doc, repeatedMarker(marker)), placed);
       continue;
     }
     let outcome;

@@ -443,6 +443,67 @@ Mehr verschiedene Werte, als sich filtern lassen:
 | Regal 32 | Politik |
 | Regal 33 | Lyrik |
 
+### Freitextfilter
+
+Die Markierung `filter` gibt einer Tabelle ein Suchfeld, wo ein Skript läuft: im Editor und in der Datei mit Editor. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt. Die Fassungen ohne Editor zeigen die ganze Tabelle ohne Suchfeld. Neben `facets` wirken beide zusammen:
+
+<!-- dokufix: filter "Feld oder Zweck suchen …" -->
+<!-- dokufix: facets Typ -->
+| Feld | Typ | Wofür |
+|---|---|---|
+| `kennung` | Text | Eindeutige Nummer des Lesekontos, steht auf dem Ausweis |
+| `name` | Text | Anrede auf dem Beleg und in Mahnungen |
+| `geburtsjahr` | Zahl | Prüft, ob ein Medium mit Altersfreigabe ausgeliehen werden darf |
+| `ausweis_bis`<br>`gebuehr_bis` | Datum<br>*je eines* | Ablauf von Ausweis und Jahresgebühr |
+| `sperre` | Ja/Nein | Gesetzt nach der dritten Mahnung; die Theke hebt die Sperre auf |
+| `mahnstufe` | Zahl | Wie oft gemahnt wurde |
+| `vormerkungen` | Zahl | Offene Vormerkungen, höchstens fünf |
+| `ort` | Text | Zweigstelle, in der Vormerkungen bereitliegen |
+| `benachrichtigung` | Kategorie | Wie das Konto Nachricht bekommt: Post, E-Mail oder keine |
+| `status` | Kategorie | `🟢 aktiv` oder ruhend |
+| `newsletter` | Ja/Nein | Ob die Bibliothek Veranstaltungen ankündigen darf |
+| `angelegt_am` | Datum | Wann das Konto eröffnet wurde |
+| `notiz` | Text | Freier Vermerk der Theke, nie auf dem Beleg |
+| `tarif` | Kategorie | Erwachsene, Ermäßigt oder Familie |
+
+Ein Suchfeld allein, mit einer Fußnote in einer Zelle:
+
+<!-- dokufix: filter "Zweigstelle suchen …" -->
+| Zweigstelle | Öffnung | Rückgabe |
+|---|---|---|
+| Mitte[^suche] | Montag bis Samstag | Automat im Eingang |
+| Nord | Dienstag bis Freitag | Theke |
+| Süd | Montag, Mittwoch, Freitag | Klappe |
+| Hafen | Samstag | Theke |
+
+Zum Vergleich dieselbe Fußnote in einem Absatz direkt unter der Tabelle.[^suche]
+
+Ohne Angabe hinter dem Namen hat das Suchfeld seinen gewöhnlichen Platzhalter:
+
+<!-- dokufix: filter -->
+| Ausweis | Jahresgebühr |
+|---|---|
+| Erwachsene | 20 € |
+| Ermäßigt | 10 € |
+| Familie | 30 € |
+
+### Freitextfilter ohne Wirkung
+
+Vor einer Aufzählung, vor einem Absatz und zweimal vor derselben Tabelle:
+
+<!-- dokufix: filter "Suchen …" -->
+- eine Aufzählung, keine Tabelle
+
+<!-- dokufix: filter -->
+Ein Absatz, keine Tabelle.
+
+<!-- dokufix: filter "Erste Suche …" -->
+<!-- dokufix: filter "Zweite Suche …" -->
+| Raum | Plätze |
+|---|---|
+| Lesesaal | 40 |
+| Gruppenraum | 6 |
+
 ---
 
 ## Schluss
@@ -456,6 +517,8 @@ Mehr steht hier nicht. Das Dokument endet mit den Fußnoten und, in den Ausliefe
 [^automat]: Der Automat liest die Signatur vom Etikett des Mediums. Die Fußnote wird in einem Schritt und gleich darunter in einer gewöhnlichen nummerierten Liste zitiert.
 
 [^zelle]: Die Signatur steht auf dem Etikett am Buchrücken. Diese Fußnote wird in einer Tabellenzelle und gleich darunter in einem Absatz zitiert; ihre Vorschau reicht über den Rand der Tabelle hinaus und darf dort nicht abgeschnitten sein.
+
+[^suche]: Die Zweigstelle Mitte ist die Zentrale; dort liegen die Vormerkungen aller Zweigstellen zuerst. Diese Fußnote wird in einer Zelle einer Tabelle mit Suchfeld und gleich darunter in einem Absatz zitiert; ihre Vorschau steht dort, wo sie ohne Suchfeld stünde.
 
 [^status]: Auch in einer Fußnote steht ein Status: `🟡 gestört` heißt, dass die Theke aushilft.
 

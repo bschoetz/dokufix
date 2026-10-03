@@ -53,6 +53,17 @@
 //                                all rows chosen, and filters there. A third
 //                                filter stands in a footnote: the preview of
 //                                that footnote holds none of its controls
+//   9. a free-text filter        a "filter" marker that cannot act beside one
+//                                that can: the first is a warning at its place,
+//                                the second gives its table a field that
+//                                filters. A term is typed in the page while
+//                                each of the four files is written: every
+//                                read-only file shows all rows, no field and no
+//                                mark of the filter; "Mit Editor" opens with
+//                                all rows and an empty field that filters. A
+//                                third filter stands in a footnote: its table
+//                                gets a field in the list of footnotes, and the
+//                                preview of that footnote holds none
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -183,6 +194,19 @@ const FACET_CONTROLS = 'Alle 5|Text 2|Kategorie 2|Datum 1';
 const FACET_CONTROLS_IN_FOOTNOTE = 'Alle 2|eins 1|zwei 1';
 // The rows the working filter shows with "Kategorie", its third control, chosen.
 const FACET_CHOICE = 2, FACET_ROWS_CHOSEN = [false, true, false, true, false];
+// Three free-text filters: the first before a table, the second before a
+// paragraph, the third in the definition of a footnote.
+const DOC_FILTER = [
+  '# Suchfeld', '[[toc]]',
+  '## Wirkt', '<!-- dokufix: filter "Merkmal suchen …" -->\n| Merkmal | Typ |\n|---|---|\n| ORT | Text |\n| STATUS | Kategorie |\n| TELEFON | Text |\n| ANREDE | Kategorie |\n| ANLASS | Datum |',
+  '## Wirkt nicht', '<!-- dokufix: filter "Suchen …" -->\nEin Absatz, keine Tabelle.',
+  '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  '[^a]: Die Fußnote mit einer Tabelle.',
+  '    <!-- dokufix: filter -->\n    | Name | Art |\n    |---|---|\n    | a | eins |\n    | b | zwei |',
+].join('\n\n') + '\n';
+const FILTER_WARNING = 'Die Markierung „dokufix: filter "Suchen …"“ erwartet direkt danach eine Tabelle.';
+// What is typed while the files are written, and the rows of the first table it shows.
+const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, false];
 
 // ---------- the copy of src/ with two passes more ----------
 const THROWING_PASS = 'Prüfschritt';
@@ -200,7 +224,7 @@ const PASS_EDITS = [
 ];
 const EXPORT_STEP_MESSAGE = 'Absicht: der Exportschritt wirft (durchlaeufe)';
 const EXPORT_EDITS = [
-  { after: "const EXPORT_STEPS = [removeTransientElements, inlineImages];\n",
+  { after: "const EXPORT_STEPS = [removeTransientElements, removeFilterMarks, inlineImages];\n",
     add: "EXPORT_STEPS.push(() => { throw new Error('" + EXPORT_STEP_MESSAGE + "'); });\n" },
 ];
 // Builds a copy of src/ in which one module got the given lines.
@@ -332,9 +356,18 @@ const facts = page => page.evaluate(() => {
         next: group.nextElementSibling ? group.nextElementSibling.tagName + '#' + group.nextElementSibling.id : '',
       };
     }),
+    // Free-text filters: per field its placeholder, value and counter, and the
+    // rows of its table shown; the marks of a filter table and the hidden rows.
+    filters: Array.from(container.querySelectorAll('.dokufix-filter')).map(field => ({
+      placeholder: field.querySelector('input').getAttribute('placeholder'), value: field.querySelector('input').value,
+      count: field.querySelector('.dokufix-filter-count').textContent, transient: field.hasAttribute('data-dokufix-transient'),
+      shown: Array.from(field.nextElementSibling.querySelectorAll(':scope > table > tbody > tr')).map(tr => getComputedStyle(tr).display !== 'none'),
+    })),
+    filterMarks: container.querySelectorAll('[data-dokufix-filter], .dokufix-filter-out').length,
+    rowsShown: Array.from(container.querySelectorAll('tbody > tr')).map(tr => getComputedStyle(tr).display !== 'none'),
     // The previews of the footnotes: their text, and the controls in them.
     previewTexts: Array.from(container.querySelectorAll('.dokufix-fn-preview')).map(p => p.textContent.replace(/\s+/g, ' ').trim()),
-    previewControls: container.querySelectorAll('.dokufix-fn-preview :is(fieldset, legend, label, input)').length,
+    previewControls: container.querySelectorAll('.dokufix-fn-preview :is(fieldset, legend, label, input, .dokufix-filter)').length,
     // A block marker that is still a comment.
     markersLeft: (() => {
       const walker = document.createTreeWalker(container, NodeFilter.SHOW_COMMENT);
@@ -659,6 +692,62 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await o.context.close();
       o = await open(browser, saved, editorReady);
       await facetPage(scope + ', mit-editor', await facts(o.page), '', o.page);
+      check(scope + ', mit-editor', 'opens without an error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
+      await o.context.close();
+    });
+
+    // ----- 9. a free-text filter: a marker that cannot act beside one that can; a term typed while the files are written
+    await attempt(name + ' a free-text filter', async () => {
+      const scope = name + ' a free-text filter';
+      let o = await open(browser, opts.file, editorReady);
+      await typeAndRender(o.page, DOC_FILTER);
+      const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+      const all = FILTER_ROWS_TYPED.map(() => true);
+      const typeTerm = (page, term) => page.locator('#preview .dokufix-filter-input').first().fill(term, { timeout: 5000 });
+      // What every file shows, with or without a field.
+      const common = (s, x, text) => {
+        checkWarning(s, x, [FILTER_WARNING], 'naming the marker', STYLED_ONE_LINE);
+        check(s, 'the warning stands at the marker\'s place, and its paragraph stays a paragraph', x.warnings.length === 1 && x.warnings[0].before === 'H2#wirkt-nicht' && x.warnings[0].after === 'P.', x.warnings.map(w => [w.before, w.after]));
+        check(s, 'the preview of the footnote holds the text of its table and no field', x.previewTexts.length === 1 && /^Die Fußnote mit einer Tabelle\. Name Art a eins b zwei$/.test(x.previewTexts[0]) && x.previewControls === 0, { previewTexts: x.previewTexts, previewControls: x.previewControls });
+        check(s, 'no marker is left, and the passes around it ran', x.markersLeft === 0 && x.headingsWithoutId === 0 && x.tocLinks >= 3 && x.previews === 1 && x.returnPaths === 1 && x.tables === '2 tables, 2 wrapped', x);
+        if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
+      };
+      // An editor: two fields, the one in the list of footnotes as well, all rows, and typing filters.
+      const editorPage = async (s, x, page) => {
+        common(s, x, '');
+        check(s, 'two fields, each transient, empty, with its placeholder and the counter of all rows; all rows shown',
+          same(x.filters.map(f => [f.placeholder, f.value, f.count, f.transient]), [['Merkmal suchen …', '', '5 Zeilen', true], ['Suchen …', '', '2 Zeilen', true]]) && x.filters.every(f => f.shown.every(Boolean)), x.filters);
+        await typeTerm(page, FILTER_TERM);
+        const typed = (await facts(page)).filters[0];
+        check(s, 'typing shows only the rows with the term, and the counter says so', same(typed.shown, FILTER_ROWS_TYPED) && typed.count === '2 von 5 Zeilen', typed);
+      };
+      await editorPage(scope, await facts(o.page), o.page);
+      // A marker that cannot act is no failure of a pass: nothing is logged.
+      check(scope, 'no pass failed: nothing on the console, no page error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
+      // The three read-only files, each written while the term is typed.
+      for (const v of READONLY){
+        await typeTerm(o.page, FILTER_TERM);
+        const before = (await facts(o.page)).filters[0];
+        check(scope + ', ' + v.key, 'the term is typed in the page when the file is written', before.value === FILTER_TERM && same(before.shown, FILTER_ROWS_TYPED), before);
+        const file = path.join(dir, 'suchfeld-' + v.key + '.html');
+        await download(o.page, v.download, file);
+        const r = await open(browser, file, READY[v.key]);
+        try {
+          const x = await facts(r.page), text = fs.readFileSync(file, 'utf8');
+          common(scope + ', ' + v.key, x, text);
+          check(scope + ', ' + v.key, 'no field, no mark of the filter, every row shown', x.filters.length === 0 && x.filterMarks === 0 && same(x.rowsShown, [...all, true, true]), { filters: x.filters, marks: x.filterMarks, rows: x.rowsShown });
+          if (v.key !== 'kompakt') check(scope + ', ' + v.key, 'outside its stylesheet the file holds nothing of the filter', !/dokufix-filter/.test(text.replace(/<style>[\s\S]*?<\/style>/g, '')));
+          check(scope + ', ' + v.key, 'opens without an error', r.pageErrors.length === 0 && r.consoleErrors.length === 0, r.pageErrors.concat(r.consoleErrors).join(' | '));
+        } finally { await r.context.close(); }
+      }
+      // "Mit Editor": written while the term is typed; it opens with all rows and a field that filters.
+      await typeTerm(o.page, FILTER_TERM);
+      check(scope + ', mit-editor', 'the term is typed in the page when the file is written', (await facts(o.page)).filters[0].value === FILTER_TERM);
+      const saved = path.join(dir, 'suchfeld-mit-editor.html');
+      await download(o.page, 'full', saved);
+      await o.context.close();
+      o = await open(browser, saved, editorReady);
+      await editorPage(scope + ', mit-editor', await facts(o.page), o.page);
       check(scope + ', mit-editor', 'opens without an error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
       await o.context.close();
     });

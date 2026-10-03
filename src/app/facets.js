@@ -151,7 +151,8 @@ function cellAt(row, index){
 }
 
 // A footnote marker, as marked-footnote emits one: <sup><a data-footnote-ref>.
-const isFootnoteMarker = el => (tagOf(el) === 'A' && el.hasAttribute('data-footnote-ref')) ||
+// The free-text filter (filter.js) leaves it out of a row's text as well.
+export const isFootnoteMarker = el => (tagOf(el) === 'A' && el.hasAttribute('data-footnote-ref')) ||
   (tagOf(el) === 'SUP' && Array.from(el.children).some(child => tagOf(child) === 'A' && child.hasAttribute('data-footnote-ref')));
 
 // The value of a cell: its text up to the first line break, without the word
@@ -178,7 +179,8 @@ export function facetValue(cell){
 // row of <thead>, or else the table's first row when all its cells are <th>.
 // Data rows are the rows of the table's own <tbody>s and rows directly in the
 // table: never a row of a table nested in a cell, and never one of <tfoot>.
-function rowsOf(table){
+// The free-text filter (filter.js) reads its rows here as well.
+export function rowsOf(table){
   const head = childrenOf(table, 'THEAD')[0];
   let header = head ? childrenOf(head, 'TR')[0] || null : null;
   const body = [];
