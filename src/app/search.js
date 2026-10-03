@@ -29,7 +29,7 @@ import { DIAGRAM_SVG_CLASS } from './diagrams.js';
 // Two callers run it, each with its root and its read mode (registerSearch()):
 // the page, over the preview, in read mode, which src/app.js closes the panel
 // on leaving; and the reader bundle of `schlank` and `kompakt` (src/reader.js),
-// over main.reader-body, always in read mode, where "×" alone closes it. This
+// over main.reader-body, always in read mode, where "×" and Escape close it. This
 // module reads no element of the page itself.
 //
 // The panel is frame, not document: it is made once, at load, in <body>
@@ -42,7 +42,8 @@ import { DIAGRAM_SVG_CLASS } from './diagrams.js';
 //
 // "/" opens the panel in read mode only, without Ctrl, Alt or Meta, and not
 // while the focus is in a field, where it is typed. It puts the focus into the
-// panel's field. The close button closes it. A closed panel forgets its term;
+// panel's field. The close button closes it, and so does Escape, which then
+// does nothing else (registerSearch()). A closed panel forgets its term;
 // opened again, it reads the root afresh. The search runs on typing, after a
 // short pause, outside the render, so a failure in it breaks no render.
 //
@@ -275,4 +276,15 @@ export function registerSearch({ root, inReadMode: readMode }){
     e.preventDefault();
     openSearch();
   });
+  // Escape closes an open panel and nothing else. It listens in the capture
+  // phase of the document, before every other listener of Escape (a table
+  // filter's field, the download menu, leaving read mode in editor.js), and
+  // stops the event there: one Escape, one thing closed. See the README,
+  // "Keys and events".
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape' || e.isComposing || !isSearchOpen()) return;
+    e.preventDefault();
+    e.stopPropagation();
+    closeSearch();
+  }, true);
 }

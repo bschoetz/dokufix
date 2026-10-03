@@ -2061,6 +2061,38 @@ async function assertSearch(page, check, key){
   check('search: the close button closes the panel; "/" opens it again with the field, the summary and the list empty',
     !closed.shown && again.shown && again.focused && again.value === '' && again.summary === '' && again.results.length === 0, json({ closed: closed.shown, again: { ...again, panel: undefined, button: undefined, rail: undefined } }));
 
+  // --- Escape closes the panel and nothing else: read mode stays, with the
+  // focus in the field and with the focus outside the panel; in the editor the
+  // next Escape leaves read mode
+  const readMode = () => page.evaluate(() => document.body.classList.contains('mode-view'));
+  await search(SEARCH_TERM);
+  await press('Escape');
+  const escField = { shown: (await panelFacts()).shown, read: await readMode() };
+  // Back to read mode, should the Escape have left it, so the run goes on.
+  if (editor && !escField.read){
+    await page.click('#view-btn');
+    await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+    await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+    await frames(page);
+  }
+  await press('/');
+  await search(SEARCH_TERM);
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await press('Escape');
+  const escOutside = { shown: (await panelFacts()).shown, read: await readMode() };
+  let escNext = null;
+  if (editor){
+    await press('Escape');
+    escNext = { read: await readMode() };
+    await page.click('#view-btn');
+    await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+    await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+    await frames(page);
+  }
+  check('search: Escape closes the panel, with the focus in its field and outside it, and ' + (editor ? 'read mode stays; the next Escape leaves read mode' : 'nothing else'),
+    !escField.shown && !escOutside.shown && (!editor || (escField.read && escOutside.read && !escNext.read)), json({ escField, escOutside, escNext }));
+  await press('/');
+
   // --- leaving read mode closes it; in edit mode "/" opens nothing. An export has no edit mode.
   if (editor){
     await search(SEARCH_TERM);

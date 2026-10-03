@@ -14,7 +14,7 @@
 //     page: every table marked data-dokufix-filter in the content container
 //     gets its search field. Without scripts the table stays complete.
 //   - the search (src/app/search.js) over the content container, always in
-//     read mode: "/" opens the panel, "×" closes it. Its styles, src/search.css
+//     read mode: "/" opens the panel, "×" and Escape close it. Its styles, src/search.css
 //     minified, come in as SEARCH_CSS from the build and go into the head of
 //     the file here, behind its stylesheet; the file's own <style> does not
 //     carry them, so `nur-lesen`, which shares it, has none.
