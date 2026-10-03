@@ -152,7 +152,8 @@ function saveFile(doc, name, text, mime){
 // `kompakt`: every line of a drawn diagram gets its picture button, once,
 // behind the source link. A click makes the picture of the SVG that stands
 // in the figure then; where there is none, as in `schlank` when a diagram
-// could not be unpacked, nothing is saved and the console says so.
+// could not be unpacked, nothing is saved and the console says so. Only the
+// SVG in the figure's SVG container counts, never one of a live viewer.
 export function attachSvgDownloads(root){
   for (const line of Array.from(root.querySelectorAll('.' + DOWNLOADS_CLASS))){
     const source = line.querySelector('a[download]');
@@ -166,7 +167,9 @@ export function attachSvgDownloads(root){
     button.setAttribute('title', 'Bild herunterladen: ' + name);
     button.textContent = PICTURE_EXT;
     button.addEventListener('click', () => {
-      const svg = figure && figure.querySelector('svg');
+      // The picture in the SVG container: the live viewer of the large view
+      // (src/app/live-viewer.js) stands beside it with SVGs of its own.
+      const svg = figure && figure.querySelector('.dokufix-diagram-svg svg');
       if (!svg){ console.error('SVG download: no SVG in the figure', name); return; }
       saveFile(doc, name, pictureOf(svg), PICTURE_MIME);
     });

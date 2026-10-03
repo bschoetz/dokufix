@@ -85,12 +85,16 @@
 //      are over replaced nodes when the file is written. That the highlight
 //      leaves the document's DOM as it is, tests/vergleich.mjs checks, with
 //      the panel open ("DOM unchanged")
-//   9. the large view of a diagram open in read mode, at "150 %". Its controls
-//      are document content, and only their checked properties are set, never
-//      the attributes; opened, the saved file shows the diagram closed, at
-//      "Einpassen", and the page scrolls. The diagram has the line of its
-//      downloads (story 2.10) with the picture button, which is transient;
-//      opened, the saved file shows one again below the diagram
+//   9. the large view of a BPMN diagram open in read mode, at "150 %", its
+//      live viewer running (story 2.11), the lightbox of the bpmn.io logo open
+//      in <body> and a drag going on, so the cursor class of bpmn-js is on
+//      <body>: the saved file is the built file apart from the listed
+//      differences, as every saved file is. The controls are document
+//      content, and only their checked properties are set, never the
+//      attributes; opened, the saved file shows the diagram closed, at
+//      "Einpassen", no viewer, and the page scrolls. Each diagram has the
+//      line of its downloads (story 2.10) with the picture button, which is
+//      transient; opened, the saved file shows one again below each
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -170,6 +174,28 @@ const DOC_B = '---\ntitle: Dokument B\nversion: 2\n---\n\n# Dokument B\n\nEin Ab
 // past its "</script>": written unescaped, the history block would swallow the
 // demo block behind it, and the file would open as v0 with no demo text.
 const DESCRIPTION = 'Stand aus speichern.mjs <!-- <script> und </script>';
+// A BPMN diagram with coordinates, for step 9: its large view starts the live viewer (story 2.11).
+const BPMN_XML = [
+  '<?xml version="1.0" encoding="UTF-8"?>',
+  '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitionen" targetNamespace="http://example.org/dokufix">',
+  '  <bpmn:process id="Prozess" isExecutable="false">',
+  '    <bpmn:startEvent id="Start" name="Los"/>',
+  '    <bpmn:task id="Tun" name="Etwas tun"/>',
+  '    <bpmn:endEvent id="Ende" name="Fertig"/>',
+  '    <bpmn:sequenceFlow id="F1" sourceRef="Start" targetRef="Tun"/>',
+  '    <bpmn:sequenceFlow id="F2" sourceRef="Tun" targetRef="Ende"/>',
+  '  </bpmn:process>',
+  '  <bpmndi:BPMNDiagram id="Diagramm">',
+  '    <bpmndi:BPMNPlane id="Ebene" bpmnElement="Prozess">',
+  '      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="32" y="32" width="36" height="36"/></bpmndi:BPMNShape>',
+  '      <bpmndi:BPMNShape id="Tun_di" bpmnElement="Tun"><dc:Bounds x="120" y="10" width="100" height="80"/></bpmndi:BPMNShape>',
+  '      <bpmndi:BPMNShape id="Ende_di" bpmnElement="Ende"><dc:Bounds x="272" y="32" width="36" height="36"/></bpmndi:BPMNShape>',
+  '      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="68" y="50"/><di:waypoint x="120" y="50"/></bpmndi:BPMNEdge>',
+  '      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="220" y="50"/><di:waypoint x="272" y="50"/></bpmndi:BPMNEdge>',
+  '    </bpmndi:BPMNPlane>',
+  '  </bpmndi:BPMNDiagram>',
+  '</bpmn:definitions>',
+].join('\n');
 const DEMO_EXTRA ='\n## Demo-Text mit Markup\n\nEin </script> ohne Rückstriche, ein <!-- und ein <script>, dazu $& und {{slot:app.js}}.\n';
 
 // ---------- results ----------
@@ -600,17 +626,25 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 
-    // 9. saved with the large view of a diagram open, at "150 %"
+    // 9. saved with the large view of a BPMN diagram open, at "150 %", its live viewer running
     scope = name + ' large view open';
     const withView9 = path.join(dir, 'grossansicht-offen.html');
-    const DOC_D = DOC_A + '\n## Fünf\n\n```mermaid\nflowchart LR\n  a[Anfang] --> b[Ende]\n```\n';
-    const viewState = page => page.evaluate(() => {
-      const f = document.querySelector('#preview figure.dokufix-diagram');
+    const DOC_D = DOC_A + '\n## Fünf\n\n```mermaid\nflowchart LR\n  a[Anfang] --> b[Ende]\n```\n\n## Sechs\n\n```bpmn\n' + BPMN_XML + '\n```\n';
+    const FIG9 = '#preview figure.dokufix-diagram-bpmn';
+    const viewState = (page, sel) => page.evaluate(sel => {
+      const f = document.querySelector(sel);
       if (!f) return null;
       const zoom = f.querySelector('.dokufix-diagram-zoom:checked');
       return { open: f.querySelector('.dokufix-diagram-toggle').checked, zoom: zoom ? zoom.value : null,
                fixed: getComputedStyle(f.querySelector('.dokufix-diagram-view')).position === 'fixed',
                page: getComputedStyle(document.documentElement).overflow };
+    }, sel);
+    // The live viewer of the large view (story 2.11) and what bpmn-js leaves in <body>.
+    const viewerState = page => page.evaluate(() => {
+      const g = document.querySelector('.dokufix-diagram-live .djs-container > svg > g.viewport');
+      const m = g ? (g.getAttribute('transform') || '').match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [] : [];
+      return { viewer: !!g, scale: m.length >= 6 ? Number(m[0]) : null, lightbox: document.querySelectorAll('body > .bjs-powered-by-lightbox').length,
+               cursor: Array.from(document.body.classList).filter(c => /^djs-cursor-/.test(c)).length > 0 };
     });
     o = await open(browser, opts.file);
     await o.page.evaluate(text => {
@@ -619,10 +653,23 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       source.dispatchEvent(new Event('input', { bubbles: true }));
       document.getElementById('render-btn').click();
     }, DOC_D);
-    await o.page.waitForFunction(() => !!document.querySelector('#preview figure.dokufix-diagram svg'), null, { timeout: 30000 });
-    await o.page.click('#preview figure.dokufix-diagram .dokufix-diagram-stage');
-    await o.page.click('#preview figure.dokufix-diagram .dokufix-diagram-step:nth-child(3)');
-    const viewOpen = await viewState(o.page);
+    await o.page.waitForFunction(() => document.querySelectorAll('#preview figure.dokufix-diagram .dokufix-diagram-svg svg').length === 2, null, { timeout: 30000 });
+    await o.page.click(FIG9 + ' .dokufix-diagram-stage');
+    await o.page.waitForFunction(sel => !!document.querySelector(sel + ' .dokufix-diagram-hint'), FIG9, { timeout: 20000 }).catch(() => {});
+    await o.page.click(FIG9 + ' .dokufix-diagram-step:nth-child(3)');
+    // A drag that goes on while the file is saved, and the lightbox of the
+    // logo open, by events, so the mouse stays free.
+    await o.page.evaluate(sel => {
+      const live = document.querySelector(sel + ' .dokufix-diagram-live');
+      if (!live) return;
+      const r = live.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const at = dx => ({ bubbles: true, cancelable: true, button: 0, buttons: 1, clientX: x + dx, clientY: y, view: window });
+      document.elementFromPoint(x, y).dispatchEvent(new MouseEvent('mousedown', at(0)));
+      for (let dx = -5; dx >= -60; dx -= 5) document.dispatchEvent(new MouseEvent('mousemove', at(dx)));
+      live.querySelector('.bjs-powered-by').click();
+    }, FIG9);
+    const viewOpen = await viewState(o.page, FIG9);
+    const viewerOpen = await viewerState(o.page);
     // Through the DOM: the view lies over the page, and in read mode the toolbar is hidden.
     const [viewDownload9] = await Promise.all([
       o.page.waitForEvent('download', { timeout: 60000 }),
@@ -630,20 +677,27 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     ]);
     await viewDownload9.saveAs(withView9);
     check(scope, 'the view was open at "150 %" when the file was saved, over the window, the page not scrolling', JSON.stringify(viewOpen) === JSON.stringify({ open: true, zoom: '150', fixed: true, page: 'hidden' }), JSON.stringify(viewOpen));
-    check(scope, 'and is still open in the running page', JSON.stringify(await viewState(o.page)) === JSON.stringify(viewOpen), JSON.stringify(await viewState(o.page)));
+    check(scope, 'its live viewer ran at scale 1.5, the lightbox of the logo open in <body> and a drag going on, the cursor class of bpmn-js on <body>',
+      JSON.stringify(viewerOpen) === JSON.stringify({ viewer: true, scale: 1.5, lightbox: 1, cursor: true }), JSON.stringify(viewerOpen));
+    check(scope, 'and all of it is still there in the running page', JSON.stringify(await viewState(o.page, FIG9)) === JSON.stringify(viewOpen) && JSON.stringify(await viewerState(o.page)) === JSON.stringify(viewerOpen),
+      JSON.stringify([await viewState(o.page, FIG9), await viewerState(o.page)]));
+    await o.page.evaluate(() => document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 })));
     const pictureButtons = page => page.evaluate(() => Array.from(document.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads > button'))
       .map(b => b.textContent + ' ' + b.hasAttribute('data-dokufix-transient')));
-    check(scope, 'the running page has the picture button below its diagram, transient', JSON.stringify(await pictureButtons(o.page)) === '[".svg true"]', JSON.stringify(await pictureButtons(o.page)));
+    check(scope, 'the running page has the picture button below each diagram, transient', JSON.stringify(await pictureButtons(o.page)) === '[".svg true",".svg true"]', JSON.stringify(await pictureButtons(o.page)));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
+    // The file saved with the viewer open is the built file, apart from the listed differences, as every saved file is.
     await checkAgainstBuiltFile(scope, browser, withView9, built, 1);
     o = await open(browser, withView9);
     s = await state(o.page);
-    same(scope, 'the saved file holds the document with its diagram', s.source, DOC_D);
-    await o.page.waitForFunction(() => !!document.querySelector('#preview figure.dokufix-diagram svg'), null, { timeout: 30000 }).catch(() => {});
-    const closed9 = await viewState(o.page);
-    check(scope, 'opened, its diagram is closed, at "Einpassen", and the page scrolls', JSON.stringify(closed9) === JSON.stringify({ open: false, zoom: 'fit', fixed: false, page: 'visible' }), JSON.stringify(closed9));
-    check(scope, 'opened, it shows the picture button below its diagram again', JSON.stringify(await pictureButtons(o.page)) === '[".svg true"]', JSON.stringify(await pictureButtons(o.page)));
+    same(scope, 'the saved file holds the document with its diagrams', s.source, DOC_D);
+    await o.page.waitForFunction(() => document.querySelectorAll('#preview figure.dokufix-diagram .dokufix-diagram-svg svg').length === 2, null, { timeout: 30000 }).catch(() => {});
+    const closed9 = await viewState(o.page, FIG9);
+    check(scope, 'opened, its BPMN diagram is closed, at "Einpassen", and the page scrolls', JSON.stringify(closed9) === JSON.stringify({ open: false, zoom: 'fit', fixed: false, page: 'visible' }), JSON.stringify(closed9));
+    const viewerClosed = await viewerState(o.page);
+    check(scope, 'opened, no viewer runs, and nothing of bpmn-js is in <body>', JSON.stringify(viewerClosed) === JSON.stringify({ viewer: false, scale: null, lightbox: 0, cursor: false }), JSON.stringify(viewerClosed));
+    check(scope, 'opened, it shows the picture button below each diagram again', JSON.stringify(await pictureButtons(o.page)) === '[".svg true",".svg true"]', JSON.stringify(await pictureButtons(o.page)));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 

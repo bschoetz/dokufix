@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
-import { diagramTitle, diagramFigure, drawDiagrams, drawnWidth, removeRendererLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT, DIAGRAM_KINDS, DIAGRAM_ZOOM_STEPS, MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
+import { diagramTitle, diagramFigure, drawDiagrams, drawnWidth, removeRendererLeftovers, removeViewerLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT, DIAGRAM_KINDS, DIAGRAM_ZOOM_STEPS, MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
 import { buildChips } from '../src/app/chips.js';
 
 function rootWith(html){
@@ -175,6 +175,18 @@ test('removeRendererLeftovers() takes Mermaid\'s tooltip out of a copy of the pa
   const { document } = parseHTML('<!DOCTYPE html><html><body><div class="mermaidTooltip"></div><div class="dokufix-diagram"></div></body></html>');
   removeRendererLeftovers(document.documentElement);
   assert.equal(document.body.innerHTML, '<div class="dokufix-diagram"></div>');
+});
+
+test('removeRendererLeftovers() takes what the live viewer of bpmn-js leaves out: the lightbox of its logo, its cursor classes on <body>', () => {
+  const { document } = parseHTML('<!DOCTYPE html><html><body class="mode-view djs-cursor-grab djs-cursor-grabbing numbered"><div class="bjs-powered-by-lightbox"><div class="backdrop"></div></div><div class="dokufix-diagram"></div></body></html>');
+  removeRendererLeftovers(document.documentElement);
+  assert.equal(document.body.innerHTML, '<div class="dokufix-diagram"></div>');
+  assert.equal(document.body.className, 'mode-view numbered');
+  // The live page itself, by its document, on closing (src/app/live-viewer.js).
+  const live = parseHTML('<!DOCTYPE html><html><body class="djs-cursor-grab"><div class="bjs-powered-by-lightbox"></div><p>x</p></body></html>').document;
+  removeViewerLeftovers(live);
+  assert.equal(live.body.innerHTML, '<p>x</p>');
+  assert.equal(live.body.classList.length, 0);
 });
 
 test('without Mermaid in the page a Mermaid block is the warning that says so, on the console as well', async t => {

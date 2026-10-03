@@ -14,6 +14,7 @@ import { buildWarning, errorMessage } from './warning.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { renderDiagrams } from './diagrams.js';
 import { attachSvgDownloads } from './diagram-downloads.js';
+import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
 
 // --- From source to preview ------------------------------------------------
 // One render is four steps:
@@ -64,8 +65,8 @@ export const DOCUMENT_PASSES = [
 ];
 
 // Run-time passes attach what exists only while the page runs: a listener, the
-// search field of a table, the picture button below a diagram, later a live
-// viewer. Nothing they do is part of the
+// search field of a table, the picture button below a diagram, the live viewer
+// in the large view of a BPMN diagram. Nothing they do is part of the
 // document. An element such a pass adds carries data-dokufix-transient (see
 // transient.js), so that no download takes it along. They run after every
 // document pass: the free-text filter finds each table in its wrapper, and the
@@ -75,6 +76,7 @@ export const RUNTIME_PASSES = [
   { name: 'Sprungmarken im Inhaltsverzeichnis', run: attachTocClicks },
   { name: 'Tabellenfilter', run: attachTableFilters },
   { name: 'Diagramm-Bilder', run: attachSvgDownloads },
+  { name: 'BPMN-Ansicht', run: attachLiveViewers },
 ];
 
 // One render at a time. A render requested while another runs starts when
@@ -92,6 +94,9 @@ export function render() {
 
 async function renderOnce() {
   try {
+    // A live viewer still running goes first: whatever this render does, the
+    // figure it stands in is replaced (src/app/live-viewer.js).
+    stopLiveViewers();
     const fm = splitFrontmatter(sourceEl.value);
     let html;
     try {

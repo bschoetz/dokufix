@@ -1,0 +1,209 @@
+import { TRANSIENT_ATTR } from './transient.js';
+import { BPMN_VIEWER_CONFIG, BPMN_NO_LIBRARY, addBpmnTypeClasses } from './bpmn.js';
+import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_VIEW_CLASS, removeViewerLeftovers } from './diagrams.js';
+
+// --- The live viewer in the large view of a BPMN diagram (story 2.11) -------
+// Where the app script runs, the editor and a `Mit Editor` file, opening the
+// large view of a BPMN diagram starts the navigated viewer of bpmn-js (global
+// BpmnJS) in place of the picture: Ctrl+wheel zooms at the pointer, the wheel
+// and a drag move the diagram, Ctrl+arrow keys too, and the library shows its
+// logo, bottom right, as its licence asks. The zoom steps of the view set its
+// scale. The read-only exports never start it: the reader bundle does not
+// carry this module, and a Mermaid diagram keeps the static view everywhere.
+//
+//   <div class="dokufix-diagram-view">
+//     <div class="dokufix-diagram-bar">
+//       … the steps
+//       <span class="dokufix-diagram-hint" data-dokufix-transient>Strg + Mausrad: zoomen · Ziehen: verschieben</span>
+//       <label class="dokufix-diagram-close" …>Schließen</label>
+//     </div>
+//     <div class="dokufix-diagram-live" data-dokufix-transient> … what bpmn-js puts into its container </div>
+//     <label class="dokufix-diagram-stage" …> … the picture, hidden while the viewer stands before it </label>
+//   </div>
+//
+// The container stands outside the stage, which is a label of the checkbox:
+// a click or a drag in the viewer moves the diagram and closes nothing.
+// "Schließen", Escape and Space on the checkbox close it. The document styles
+// hide the stage behind the container (src/doc.css).
+//
+// The viewer draws the XML of the figure's source link (story 2.10), which is
+// the XML the picture was drawn from, with the colours of the picture: the
+// same configuration (BPMN_VIEWER_CONFIG) and the same classes by type. Where
+// the author's XML had no coordinates, the link holds the laid-out XML, and
+// the viewer opens the first diagram of it that places anything: the one
+// dokufix laid out, not an empty one of the author's.
+//
+// Everything the viewer puts into the page is transient, and goes when the
+// view closes, in whatever way, and with every render (render() destroys a
+// viewer still running before it parses, stopLiveViewers()). What the
+// library puts elsewhere, the lightbox of its logo in <body> and a cursor
+// class on <body>, goes by name, here on closing and in a save
+// (removeViewerLeftovers() in src/app/diagrams.js). A viewer that cannot start
+// (no BpmnJS, an import that fails) leaves the static view of story 2.9, and
+// says so in one line on the console; the reader gets no warning.
+//
+// The pure part, sourceXml(), diagramToOpen() and stepViewbox(), works on the
+// strings and numbers it is handed (tests/live-viewer.test.mjs). The rest
+// needs a page and the library.
+
+export const LIVE_CLASS = 'dokufix-diagram-live';
+export const HINT_CLASS = 'dokufix-diagram-hint';
+// Decided by Ben, 2026-10-03.
+export const LIVE_HINT = 'Strg + Mausrad: zoomen · Ziehen: verschieben';
+// "Einpassen": the margin around the diagram on every side, and the largest scale.
+export const FIT_MARGIN = 24;
+export const FIT_MOST = 1.5;
+// Where a diagram is larger than the viewer, it starts at its top left, with this margin.
+export const START_MARGIN = 20;
+
+// The text of a source link's data: URL, as sourceDataUrl() wrote it: the
+// XML the picture was drawn from.
+export function sourceXml(href){
+  const s = String(href);
+  return decodeURIComponent(s.slice(s.indexOf(',') + 1));
+}
+
+// The id of the first BPMNDiagram of the XML that holds a BPMNShape, whatever
+// their prefix, outside comments and CDATA sections; null where none does, or
+// where that diagram has no id: bpmn-js then opens the first.
+export function diagramToOpen(xml){
+  const text = String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, '');
+  // Each start tag; a self-closing one (<bpmndi:BPMNDiagram id="x"/>) holds nothing.
+  const START = /<((?:[\w.-]+:)?BPMNDiagram)\b((?:[^>"'/]|"[^"]*"|'[^']*'|\/(?!>))*)(\/?)>/g;
+  for (let m; (m = START.exec(text));){
+    if (m[3]) continue;
+    const end = new RegExp('<\\/' + m[1].replace(/\./g, '\\.') + '\\s*>', 'g');
+    end.lastIndex = START.lastIndex;
+    const close = end.exec(text);
+    const body = text.slice(START.lastIndex, close ? close.index : text.length);
+    if (close) START.lastIndex = end.lastIndex;
+    if (!/<(?:[\w.-]+:)?BPMNShape\b/.test(body)) continue;
+    const id = /(?:^|\s)id\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(m[2]);
+    return id ? (id[1] !== undefined ? id[1] : id[2]) : null;
+  }
+  return null;
+}
+
+// The viewbox of the canvas for a zoom step: step, the value of its radio
+// button ("fit", "100", "150", "200"); inner, the box of the diagram, and
+// outer, the size of the viewer, as canvas.viewbox() gives them. "Einpassen"
+// shows the whole diagram with 24 px around it, at most at 150 %; the others
+// draw it at 1, 1.5 and 2. Where the diagram fits, it stands in the middle;
+// where it does not, it starts at its top left, where a process begins.
+export function stepViewbox(step, inner, outer){
+  let scale = step === 'fit'
+    ? Math.min((outer.width - 2 * FIT_MARGIN) / inner.width, (outer.height - 2 * FIT_MARGIN) / inner.height, FIT_MOST)
+    : Number(step) / 100;
+  if (!(scale > 0) || !Number.isFinite(scale)) scale = 1;
+  const width = outer.width / scale, height = outer.height / scale;
+  return {
+    x: width >= inner.width ? inner.x - (width - inner.width) / 2 : inner.x - START_MARGIN,
+    y: height >= inner.height ? inner.y - (height - inner.height) / 2 : inner.y - START_MARGIN,
+    width, height,
+  };
+}
+
+// --- in the page ---
+// The viewers that run, by their figure: { viewer, box, hint, closed, importing }.
+const running = new Map();
+
+// Every running viewer destroyed, with what it left in <body>. render() calls
+// it first, before it parses: a render that ends early (Markdown that cannot
+// be parsed) replaces the preview all the same.
+export function stopLiveViewers(){
+  for (const figure of Array.from(running.keys())) stopViewer(figure);
+}
+
+// Run-time pass "BPMN-Ansicht": a viewer still running from before the render
+// is destroyed; every BPMN figure follows its view: the checkbox opens and
+// closes the viewer, a step (chosen again too) sets its scale. Every way of
+// changing a control fires `change`: a click, Space and the arrows through
+// the browser, Escape and + and - through src/app/large-view.js.
+export function attachLiveViewers(root){
+  stopLiveViewers();
+  for (const figure of root.querySelectorAll('figure.' + DIAGRAM_CLASS + '-bpmn')){
+    const toggle = figure.querySelector(':scope > .' + DIAGRAM_TOGGLE_CLASS);
+    if (!toggle) continue;
+    toggle.addEventListener('change', () => { if (toggle.checked) startViewer(figure); else stopViewer(figure); });
+    for (const radio of figure.querySelectorAll(':scope > .' + DIAGRAM_ZOOM_CLASS)){
+      const apply = () => { if (radio.checked) applyStep(figure); };
+      radio.addEventListener('change', apply);
+      radio.addEventListener('click', apply);
+    }
+  }
+}
+
+// The step chosen in the figure, set on its viewer, if one is ready.
+function applyStep(figure){
+  const state = running.get(figure);
+  if (!state || state.importing || state.closed) return;
+  const radio = figure.querySelector(':scope > .' + DIAGRAM_ZOOM_CLASS + ':checked');
+  const canvas = state.viewer.get('canvas');
+  const { inner, outer } = canvas.viewbox();
+  if (!(inner.width > 0) || !(inner.height > 0)) return;
+  canvas.viewbox(stepViewbox(radio ? radio.value : 'fit', inner, outer));
+}
+
+async function startViewer(figure){
+  if (running.has(figure)){ applyStep(figure); return; }
+  const doc = figure.ownerDocument;
+  const view = figure.querySelector(':scope > .' + DIAGRAM_VIEW_CLASS);
+  const stage = view && view.querySelector(':scope > .' + DIAGRAM_CLASS + '-stage');
+  const bar = view && view.querySelector(':scope > .' + DIAGRAM_CLASS + '-bar');
+  const link = figure.querySelector(':scope > .' + DIAGRAM_CLASS + '-downloads > a[download]');
+  // Without its source the figure keeps the static view.
+  if (!stage || !bar || !link || !stage.querySelector('.' + DIAGRAM_SVG_CLASS + ' svg')) return;
+  const state = { viewer: null, box: null, hint: null, closed: false, importing: true };
+  running.set(figure, state);
+  try {
+    // A page whose script tag of bpmn-js failed, or one the library was taken from.
+    if (typeof BpmnJS !== 'function') throw new Error(BPMN_NO_LIBRARY);
+    const xml = sourceXml(link.getAttribute('href'));
+    const box = doc.createElement('div');
+    box.className = LIVE_CLASS;
+    box.setAttribute(TRANSIENT_ATTR, '');
+    view.insertBefore(box, stage);
+    state.box = box;
+    state.viewer = new BpmnJS({ container: box, ...BPMN_VIEWER_CONFIG });
+    const id = diagramToOpen(xml);
+    const result = await (id ? state.viewer.importXML(xml, id) : state.viewer.importXML(xml));
+    state.importing = false;
+    // Closed while it was importing: stopViewer() has taken the rest out.
+    if (state.closed){ destroy(state); return; }
+    for (const w of (result && result.warnings) || []) console.warn('BPMN viewer, import warning:', w && w.message ? w.message : w);
+    addBpmnTypeClasses(state.viewer);
+    const hint = doc.createElement('span');
+    hint.className = HINT_CLASS;
+    hint.setAttribute(TRANSIENT_ATTR, '');
+    hint.textContent = LIVE_HINT;
+    bar.insertBefore(hint, bar.querySelector(':scope > .' + DIAGRAM_CLASS + '-close'));
+    state.hint = hint;
+    state.viewer.get('canvas').resized();
+    applyStep(figure);
+  } catch (err){
+    console.error('BPMN viewer failed, the large view shows the picture:', err);
+    state.importing = false;
+    if (running.get(figure) === state) stopViewer(figure);
+    else destroy(state);
+  }
+}
+
+// The viewer of the figure destroyed, its container and hint out, and what
+// the library left in <body>. One that is still importing is destroyed when
+// its import ends (startViewer()).
+function stopViewer(figure){
+  const state = running.get(figure);
+  if (!state) return;
+  running.delete(figure);
+  state.closed = true;
+  if (!state.importing) destroy(state);
+  if (state.box) state.box.remove();
+  if (state.hint) state.hint.remove();
+  removeViewerLeftovers(figure.ownerDocument);
+}
+
+function destroy(state){
+  try { if (state.viewer) state.viewer.destroy(); }
+  catch (err){ console.error('BPMN viewer could not be destroyed:', err); }
+  state.viewer = null;
+}

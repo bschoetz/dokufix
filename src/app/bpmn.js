@@ -88,6 +88,18 @@ export function bpmnTypeClasses(type){
   return [];
 }
 
+// Every element a viewer drew gets the classes of its type (bpmnTypeClasses()),
+// on its graphics: before the export of a diagram, and in the live viewer of
+// the large view (src/app/live-viewer.js), so both draw in the same colours.
+export function addBpmnTypeClasses(viewer){
+  const registry = viewer.get('elementRegistry');
+  registry.forEach(element => {
+    const gfx = registry.getGraphics(element);
+    const classes = element.type === 'label' ? [] : bpmnTypeClasses(element.type);
+    if (gfx && classes.length) gfx.classList.add(...classes);
+  });
+}
+
 // The SVG as saveSVG() made it, parsed, made ready for the document:
 //   - the hit areas go, which only the running viewer uses
 //   - role img and the title as its accessible name
@@ -171,12 +183,7 @@ async function drawBpmn(diagram){
     const result = await (open ? viewer.importXML(xml, open) : viewer.importXML(xml));
     // Elements bpmn-js does not know are drawn without them; that goes to the console only.
     for (const w of (result && result.warnings) || []) console.warn('BPMN import warning:', w && w.message ? w.message : w);
-    const registry = viewer.get('elementRegistry');
-    registry.forEach(element => {
-      const gfx = registry.getGraphics(element);
-      const classes = element.type === 'label' ? [] : bpmnTypeClasses(element.type);
-      if (gfx && classes.length) gfx.classList.add(...classes);
-    });
+    addBpmnTypeClasses(viewer);
     const { svg } = await viewer.saveSVG();
     const parsed = new globalThis.DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
     if (!parsed || parsed.nodeName.toLowerCase() !== 'svg') throw new Error('bpmn-js hat kein SVG geliefert.');

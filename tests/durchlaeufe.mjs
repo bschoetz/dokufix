@@ -89,6 +89,14 @@
 //                                with coordinates is drawn, the one without and
 //                                the Mermaid diagram are each the warning that
 //                                says so; the three read-only downloads too
+//  14. the live viewer cannot    bpmn-js is taken from the page after the
+//      start                     render, then replaced by one whose constructor
+//                                throws, then by one whose import fails: the
+//                                large view of the BPMN diagram opens in the
+//                                static view of story 2.9 each time, with one
+//                                line on the console, no warning and no page
+//                                error; with the library put back the same
+//                                click starts the viewer (story 2.11)
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -297,6 +305,8 @@ const DOC_NO_MERMAID = [
   '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
   '[^a]: Die Fußnote.',
 ].join('\n\n') + '\n';
+// One BPMN diagram with coordinates, for the live viewer of its large view.
+const DOC_LIVE = ['# Ansicht', '## Gut', BPMN_GOOD, '## Schluss', 'Text.'].join('\n\n') + '\n';
 const MARKED_MESSAGE = 'Absicht: marked.parse wirft (durchlaeufe)';
 // Three block markers, the one in the middle with a misspelt name.
 const DOC_MARKERS = [
@@ -1073,6 +1083,49 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       check(scope, 'no host left in the page', f.hosts === 0, f.hosts);
       checkErrors(scope, o, ['Mermaid error', 'BPMN error']);
       await checkExports(scope, browser, o.page, dir, 'ohne-mermaid', READONLY, withoutMermaid);
+      await o.context.close();
+    });
+
+    // ----- 14. the live viewer of a BPMN diagram cannot start
+    await attempt(name + ' the live viewer cannot start', async () => {
+      const scope = name + ' the live viewer cannot start';
+      const o = await open(browser, opts.file, editorReady);
+      await typeAndRender(o.page, DOC_LIVE);
+      // The library as the page loaded it, kept to put it back at the end.
+      await o.page.evaluate(() => { window.durchlaeufeBpmnJS = window.BpmnJS; });
+      const FIG = '#preview figure.dokufix-diagram-bpmn';
+      const view = () => o.page.evaluate(sel => {
+        const f = document.querySelector(sel), stage = f.querySelector('.dokufix-diagram-stage'), svg = stage.querySelector('.dokufix-diagram-svg svg');
+        return { open: f.querySelector('.dokufix-diagram-toggle').checked, stage: getComputedStyle(stage).display, picture: !!svg && svg.getBoundingClientRect().width > 0,
+                 viewer: document.querySelectorAll('.dokufix-diagram-live, .djs-container, .dokufix-diagram-hint, .bjs-powered-by-lightbox').length,
+                 warnings: document.querySelectorAll('#preview .dokufix-warning').length };
+      }, FIG);
+      const cases = [
+        ['BpmnJS missing', () => { window.BpmnJS = undefined; }],
+        ['its constructor throws', () => { window.BpmnJS = function(){ throw new Error('Absicht: BpmnJS wirft (durchlaeufe)'); }; }],
+        ['its import throws', () => { window.BpmnJS = class { importXML(){ return Promise.reject(new Error('Absicht: importXML wirft (durchlaeufe)')); } destroy(){} }; }],
+      ];
+      for (const [what, replace] of cases){
+        await o.page.evaluate(replace);
+        const before = o.consoleErrors.length;
+        await o.page.click(FIG + ' .dokufix-diagram-stage');
+        await o.page.waitForTimeout(QUIET_WINDOW);
+        const opened = await view();
+        await o.page.click(FIG + ' .dokufix-diagram-close');
+        const closed = await view();
+        const lines = o.consoleErrors.slice(before);
+        check(scope, what + ': opening shows the static view of story 2.9, the picture, no viewer and no warning; one line on the console; "Schließen" closes it',
+          opened.open && opened.stage === 'block' && opened.picture && opened.viewer === 0 && opened.warnings === 0 && !closed.open && closed.viewer === 0 &&
+            lines.length === 1 && lines[0].includes('BPMN viewer failed'), { opened, closed, lines });
+      }
+      // The library put back: the same click starts the viewer, so the case can tell the two apart.
+      await o.page.evaluate(() => { window.BpmnJS = window.durchlaeufeBpmnJS; });
+      await o.page.click(FIG + ' .dokufix-diagram-stage');
+      await o.page.waitForFunction(sel => !!document.querySelector(sel + ' .dokufix-diagram-hint'), FIG, { timeout: 20000 }).catch(() => {});
+      const running = await view();
+      await o.page.click(FIG + ' .dokufix-diagram-close');
+      check(scope, 'with the library as loaded the same click starts the viewer, and the picture is hidden behind it', running.open && running.stage === 'none' && running.viewer >= 2, running);
+      check(scope, 'no page error and no rejected promise', o.pageErrors.length === 0, o.pageErrors.join(' | '));
       await o.context.close();
     });
 

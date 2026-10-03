@@ -181,19 +181,40 @@
        inline style, hence !important. "Einpassen": the whole diagram in the
        stage, in width and height, at most at 150 %. The others: 1, 1.5 and 2
        times its width as drawn (--dokufix-diagram-width, set by
-       diagrams.js), the height after it. */
+       diagrams.js), the height after it. The rules name the SVG container:
+       the live viewer beside it has SVGs of its own (below). */
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view .dokufix-diagram-svg{height:100%}
-    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view svg{
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view .dokufix-diagram-svg svg{
       display:block;width:100%;height:100%;margin:0 auto;
       max-width:calc(var(--dokufix-diagram-width, 100%) * 1.5) !important;
     }
-    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom:not([value="fit"]):checked ~ .dokufix-diagram-view svg{
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom:not([value="fit"]):checked ~ .dokufix-diagram-view .dokufix-diagram-svg svg{
       display:block;height:auto;margin:0 auto;max-width:none !important;
     }
-    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="100"]:checked ~ .dokufix-diagram-view svg{width:var(--dokufix-diagram-width, 100%)}
-    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="150"]:checked ~ .dokufix-diagram-view svg{width:calc(var(--dokufix-diagram-width, 100%) * 1.5)}
-    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="200"]:checked ~ .dokufix-diagram-view svg{width:calc(var(--dokufix-diagram-width, 100%) * 2)}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="100"]:checked ~ .dokufix-diagram-view .dokufix-diagram-svg svg{width:var(--dokufix-diagram-width, 100%)}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="150"]:checked ~ .dokufix-diagram-view .dokufix-diagram-svg svg{width:calc(var(--dokufix-diagram-width, 100%) * 1.5)}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="200"]:checked ~ .dokufix-diagram-view .dokufix-diagram-svg svg{width:calc(var(--dokufix-diagram-width, 100%) * 2)}
+    /* The live viewer of a BPMN diagram (story 2.11, src/app/live-viewer.js),
+       where the app script runs: its container stands before the stage and
+       takes the stage's place, the rest of the window below the bar, a
+       definite height for bpmn-js to fill; the stage is hidden behind it.
+       The container is not positioned (bpmn-js positions what it puts into
+       it, inside the fixed view only). Its canvas takes the focus at a click,
+       without a ring. The hint stands in the bar, before "Schließen"; in a
+       narrow window it shrinks and is cut off first, and below 520 px it is
+       not shown, so "Schließen" stays in the window. */
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-live{display:block;flex:1;min-height:0;overflow:hidden}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-live + .dokufix-diagram-stage{display:none}
+    .dokufix-doc .dokufix-diagram-live svg:focus{outline:none}
+    .dokufix-doc .dokufix-diagram-hint{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#6e6e73;white-space:nowrap}
   }
+  /* Below 520 px the bar has no room for the hint: it goes, its gap with it,
+     so "Schließen" stays in the window. */
+  @media (max-width:520px){
+    .dokufix-doc .dokufix-diagram-hint{display:none}
+  }
+  /* The container of a live viewer, outside an open view and in print: not shown. */
+  .dokufix-doc .dokufix-diagram-live{display:none}
   /* BPMN (src/app/bpmn.js). The SVG draws with these three properties instead
      of colours; the class the renderer gives each element by its type sets
      them for that element. The document's greys and its link colour. */

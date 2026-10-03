@@ -21,7 +21,9 @@
 // and facet filter, the free-text filter, the figure of every diagram with its
 // title, BPMN diagrams with their elements, colours and credit, a BPMN diagram
 // laid out without coordinates with its counts and a clean drawing, the large
-// view of a diagram in every variant and with scripts off, the licence
+// view of a diagram in every variant and with scripts off, the live viewer of
+// a BPMN diagram in the editor and in Mit Editor and none in a read-only file,
+// the licence
 // information, the search in Mit Editor, schlank and kompakt, no <script> and
 // nothing of the search in nur-lesen, nothing of bpmn-js and no editor rules
 // in a read-only export). The font check of the BPMN labels (Chromium,
@@ -737,7 +739,7 @@ async function openContext(browser, options){
 const frames = page => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
 
 // ---------- build: one document, four exports ----------
-async function buildExports(browser, opts, md, dir){
+async function buildExports(browser, opts, md, dir, check){
   const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
   const page = await context.newPage();
   // The libraries the page loaded, with the version their URL names: they are
@@ -858,6 +860,9 @@ async function buildExports(browser, opts, md, dir){
     await page.waitForFunction(() => !document.getElementById('vergleich-render-pending'), null, { timeout: 90000 });
     rendered.push(await page.evaluate(() => document.querySelectorAll('#preview .dokufix-filter').length));
   }
+  // The live viewer of a BPMN diagram in the editor, in edit mode, and two
+  // files written while it is open (story 2.11).
+  await assertLiveViewer(page, check, judgeDiagrams(expectationsFor(source), wellFormed), 'editor', { dir });
   await context.close();
   libs.sort((x, y) => x.url.localeCompare(y.url));
   return { files, sizes, libs, errors, source, chosen, typed, views, rendered, wellFormed };
@@ -3312,7 +3317,9 @@ async function assertLargeView(page, check, exp, key){
     await page.setViewportSize({ width: 1400, height: 400 });
     await frames(page);
     const at = await page.evaluate(([sel, inPane]) => {
-      const figures = Array.from(document.querySelectorAll(sel));
+      // Where the live viewer runs, a click on a BPMN diagram does not close
+      // its view (story 2.11): the tallest of the others.
+      const figures = Array.from(document.querySelectorAll(sel)).filter(f => !(document.getElementById('preview') && f.classList.contains('dokufix-diagram-bpmn')));
       const heights = figures.map(f => f.querySelector('.dokufix-diagram-stage').getBoundingClientRect().height);
       const k = heights.indexOf(Math.max(...heights));
       const stage = figures[k].querySelector('.dokufix-diagram-stage');
@@ -3588,6 +3595,281 @@ async function assertLargeViewWithoutScripts(browser, file, check, exp, key){
   }
 }
 
+// The live viewer in the large view of a BPMN diagram (story 2.11). In the
+// editor (key "editor": the page that wrote the files, in edit mode) and in
+// a `Mit Editor` file (read mode): opening a BPMN diagram starts bpmn-js in a
+// transient container before the stage, which it hides; the logo of the
+// library is visible and on top; the hint stands in the bar; the viewer draws
+// the elements of the picture, with its classes and colours, the laid-out
+// diagram where the author wrote no coordinates. "150 %" gives scale 1.5,
+// "+" the next step, the same step chosen again applies again; Ctrl+wheel
+// raises the scale, a drag moves the diagram, and neither closes the view.
+// "Schließen", Escape and Space on the checkbox close it and leave nothing of
+// it: no container, no hint, no lightbox of the logo, no cursor class on
+// <body>; so does a render while it is open. A Mermaid diagram keeps the
+// static view. In the editor, files written with the viewer open carry
+// nothing of it. In a read-only file nothing of a viewer starts.
+const LIVE_HINT_TEXT = 'Strg + Mausrad: zoomen · Ziehen: verschieben';
+// Text of a file without its scripts and styles, which name these classes as code.
+const markup = text => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '');
+const VIEWER_TRACES = /dokufix-diagram-live|dokufix-diagram-hint|djs-container|bjs-container|bjs-powered-by|djs-cursor-/;
+async function assertLiveViewer(page, check, exp, key, opts = {}){
+  const json = JSON.stringify;
+  const scripted = key === 'editor' || key === 'mit-editor';
+  const ROOT_SEL = scripted ? '#preview' : 'main.reader-body';
+  const drawn = exp.diagrams.filter(d => d.drawn);
+  const bpmnAt = drawn.map((d, i) => d.kind === 'bpmn' ? i : -1).filter(i => i >= 0);
+  const mermaidAt = drawn.findIndex(d => d.kind === 'mermaid');
+  const FIG = ROOT_SEL + ' figure.dokufix-diagram';
+  const fig = i => page.locator(FIG).nth(i);
+  // What is left of any viewer in the whole page.
+  const leftovers = () => page.evaluate(() => ({
+    live: document.querySelectorAll('.dokufix-diagram-live').length, hint: document.querySelectorAll('.dokufix-diagram-hint').length,
+    containers: document.querySelectorAll('.djs-container, .bjs-container').length, lightbox: document.querySelectorAll('.bjs-powered-by-lightbox').length,
+    cursor: Array.from(document.body.classList).filter(c => /^djs-cursor-/.test(c)),
+    open: Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(t => t.checked).length,
+  }));
+  const clean = l => l.live === 0 && l.hint === 0 && l.containers === 0 && l.lightbox === 0 && l.cursor.length === 0 && l.open === 0;
+  const openStage = async i => {
+    await fig(i).locator('.dokufix-diagram-stage').scrollIntoViewIfNeeded();
+    await fig(i).locator('.dokufix-diagram-stage').click();
+    await frames(page);
+  };
+  const closeByButton = async i => { await fig(i).locator('.dokufix-diagram-close').click(); await frames(page); };
+  // The static view of the i-th figure: open, its picture shown, no viewer.
+  const staticView = i => page.evaluate(([sel, i]) => {
+    const f = document.querySelectorAll(sel)[i], stage = f.querySelector('.dokufix-diagram-stage');
+    return { open: f.querySelector('.dokufix-diagram-toggle').checked, stage: getComputedStyle(stage).display, picture: stage.querySelector('svg').getBoundingClientRect().width > 0,
+             live: document.querySelectorAll('.dokufix-diagram-live, .djs-container').length, hint: document.querySelectorAll('.dokufix-diagram-hint').length };
+  }, [FIG, i]);
+  const isStatic = s => s.open && s.stage === 'block' && s.picture && s.live === 0 && s.hint === 0;
+
+  if (!scripted){
+    if (!bpmnAt.length) return;
+    await openStage(bpmnAt[0]);
+    await page.waitForTimeout(300);
+    const s = await staticView(bpmnAt[0]);
+    await closeByButton(bpmnAt[0]);
+    check('live viewer: none in a read-only file; a BPMN diagram opens in the static view of story 2.9', isStatic(s), json(s));
+    return;
+  }
+
+  // --- a Mermaid diagram keeps the static view
+  if (mermaidAt >= 0){
+    await openStage(mermaidAt);
+    await page.waitForTimeout(300);
+    const s = await staticView(mermaidAt);
+    await closeByButton(mermaidAt);
+    check('live viewer: a Mermaid diagram opens in the static view, without a viewer', isStatic(s) && clean(await leftovers()), json(s));
+  }
+  if (!bpmnAt.length) return;
+
+  // The viewer of the i-th figure once it is ready: the hint is put into the bar last.
+  const ready = i => page.waitForFunction(([sel, i]) => !!document.querySelectorAll(sel)[i].querySelector('.dokufix-diagram-hint'), [FIG, i], { timeout: 20000 });
+  const viewer = i => page.evaluate(([sel, i]) => {
+    const f = document.querySelectorAll(sel)[i];
+    const live = f.querySelector('.dokufix-diagram-live'), stage = f.querySelector('.dokufix-diagram-stage');
+    const g = live && live.querySelector('.djs-container > svg > g.viewport');
+    const m = g ? (g.getAttribute('transform') || '').match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [] : [];
+    const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
+    return { open: f.querySelector('.dokufix-diagram-toggle').checked, zoom: f.querySelector('.dokufix-diagram-zoom:checked').value,
+             scale: m.length >= 6 ? Math.round(Number(m[0]) * 1000) / 1000 : null, x: m.length >= 6 ? Number(m[4]) : null, y: m.length >= 6 ? Number(m[5]) : null,
+             live: live ? box(live) : null, drawing: g ? box(g) : null, centre: live ? [box(live).left + box(live).width / 2, box(live).top + box(live).height / 2] : null,
+             stage: getComputedStyle(stage).display };
+  }, [FIG, i]);
+  // Everything about a viewer just opened, against the picture beside it.
+  const opened = i => page.evaluate(([sel, i]) => {
+    const f = document.querySelectorAll(sel)[i];
+    const live = f.querySelector('.dokufix-diagram-live'), stage = f.querySelector('.dokufix-diagram-stage'), picture = stage.querySelector('.dokufix-diagram-svg svg');
+    const hint = f.querySelector('.dokufix-diagram-hint');
+    const logo = live && live.querySelector('.bjs-powered-by'), r = logo && logo.getBoundingClientRect();
+    const top = r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    const ids = root => Array.from(root.querySelectorAll('g.djs-element[data-element-id]')).map(g => g.getAttribute('data-element-id')).sort();
+    const classes = root => Array.from(root.querySelectorAll('[class*="dokufix-bpmn-"]')).map(e => e.getAttribute('data-element-id') + ':' + Array.from(e.classList).filter(c => c.startsWith('dokufix-bpmn-')).join('+')).sort();
+    // Every fill and stroke as computed, per element and part, in both.
+    const paints = root => Array.from(root.querySelectorAll('g.djs-element[data-element-id] > .djs-visual > *')).map(e => {
+      const c = getComputedStyle(e);
+      return e.closest('[data-element-id]').getAttribute('data-element-id') + ' ' + e.tagName + ' ' + c.fill + ' ' + c.stroke;
+    }).sort();
+    const liveIds = live ? ids(live) : [], pictureIds = ids(picture);
+    const livePaints = live ? paints(live) : [], picturePaints = paints(picture);
+    return {
+      container: !!live && live.hasAttribute('data-dokufix-transient') && live.nextElementSibling === stage && live.parentElement === f.querySelector('.dokufix-diagram-view'),
+      viewer: !!live && !!live.querySelector('.djs-container svg g.viewport'), stage: getComputedStyle(stage).display,
+      logo: !!r && r.width > 10 && r.height > 5 && r.bottom <= innerHeight && r.right <= innerWidth && !!top && logo.contains(top) && getComputedStyle(logo).visibility === 'visible' && getComputedStyle(logo).opacity === '1',
+      hint: hint ? [hint.textContent, hint.hasAttribute('data-dokufix-transient'), hint.parentElement.classList.contains('dokufix-diagram-bar'), hint.getBoundingClientRect().width > 0] : null,
+      elements: [liveIds.length, pictureIds.length], sameElements: liveIds.join() === pictureIds.join(),
+      sameClasses: live ? classes(live).join() === classes(picture).join() : false,
+      paints: livePaints.length, otherPaints: livePaints.filter((p, k) => p !== picturePaints[k]).slice(0, 3).concat(picturePaints.length !== livePaints.length ? ['counts ' + livePaints.length + ' / ' + picturePaints.length] : []),
+    };
+  }, [FIG, i]);
+
+  // --- every BPMN diagram opens in the viewer, the one in it the picture's
+  const problems = [];
+  for (const i of bpmnAt){
+    await openStage(i);
+    try { await ready(i); } catch { problems.push(drawn[i].title + ': no viewer'); await closeByButton(i); continue; }
+    const o = await opened(i), v = await viewer(i);
+    const inside = !!v.drawing && v.drawing.left >= v.live.left - 1 && v.drawing.top >= v.live.top - 1 && v.drawing.right <= v.live.right + 1 && v.drawing.bottom <= v.live.bottom + 1;
+    if (!(o.container && o.viewer && o.stage === 'none' && o.logo && json(o.hint) === json([LIVE_HINT_TEXT, true, true, true]) && o.sameElements && o.elements[0] > 0 && o.sameClasses && o.paints > 0 && !o.otherPaints.length
+          && v.zoom === 'fit' && v.scale > 0 && v.scale <= 1.5 && inside))
+      problems.push(drawn[i].title + (drawn[i].laidOut ? ' (laid out)' : '') + ': ' + json({ ...o, zoom: v.zoom, scale: v.scale, inside }));
+    await closeByButton(i);
+    const l = await leftovers();
+    if (!clean(l)) problems.push(drawn[i].title + ', after "Schließen": ' + json(l));
+  }
+  check('live viewer: every BPMN diagram opens in bpmn-js, in a transient container before the stage, which it hides; the logo visible and on top; the hint "' + LIVE_HINT_TEXT + '" in the bar; '
+    + 'the elements, classes and colours of the picture (the laid-out diagram where there were no coordinates); at "Einpassen" the whole diagram, at most at 150 %; "Schließen" leaves nothing of it (' + bpmnAt.length + ' diagrams)',
+    problems.length === 0, problems.join(' | '));
+
+  // A file without the viewer (one from before story 2.11) has failed here, and nothing below can run.
+  if (problems.some(p => p.endsWith(': no viewer'))) return;
+  // --- a narrow window: "Schließen" stays fully inside it, the hint gives way
+  await openStage(bpmnAt[0]);
+  await ready(bpmnAt[0]);
+  await page.setViewportSize({ width: 420, height: 800 });
+  await frames(page);
+  const narrow = await page.evaluate(([sel, i]) => {
+    const f = document.querySelectorAll(sel)[i], r = f.querySelector('.dokufix-diagram-close').getBoundingClientRect();
+    const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+    return { close: [Math.round(r.left), Math.round(r.right), Math.round(r.top), Math.round(r.bottom)], window: [innerWidth, innerHeight],
+             inside: r.left >= 0 && r.right <= innerWidth && r.top >= 0 && r.bottom <= innerHeight && r.width > 0, onTop: !!top && f.querySelector('.dokufix-diagram-close').contains(top) };
+  }, [FIG, bpmnAt[0]]);
+  await closeByButton(bpmnAt[0]).catch(() => {});
+  const narrowClosed = await leftovers();
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await frames(page);
+  check('live viewer in a window 420 px wide: "Schließen" stands fully inside the window, on top, and closes the view by mouse',
+    narrow.inside && narrow.onTop && clean(narrowClosed), json({ narrow, narrowClosed }));
+  try {
+    await liveViewerUse(page, check, key, opts, { FIG, fig, n: bpmnAt[0], openStage, ready, viewer, leftovers, clean });
+  } catch (e){
+    check('live viewer: the checks of its use ran to their end', false, String(e && e.message || e).split('\n')[0]);
+  }
+}
+
+// The use of the live viewer of the first BPMN diagram: steps, wheel, drag,
+// click, keys, the logo, a render, and in the editor two files written while
+// it is open. See assertLiveViewer().
+async function liveViewerUse(page, check, key, opts, { FIG, fig, n, openStage, ready, viewer, leftovers, clean }){
+  const json = JSON.stringify;
+  const step = async k => { await fig(n).locator('.dokufix-diagram-step').nth(k).click(); await frames(page); return viewer(n); };
+  await openStage(n);
+  await ready(n);
+  const atFit = await viewer(n);
+  const s150 = await step(2), s100 = await step(1), s200 = await step(3), sFit = await step(0);
+  check('live viewer: "150 %", "100 %", "200 %" and "Einpassen" set the scale of the viewer: 1.5, 1, 2 and that of the opening (to 0.005: the box of the drawing is measured anew each time)',
+    s150.scale === 1.5 && s100.scale === 1 && s200.scale === 2 && Math.abs(sFit.scale - atFit.scale) <= 0.005 && sFit.zoom === 'fit', json([atFit, s150, s100, s200, sFit].map(v => [v.zoom, v.scale])));
+  const [cx, cy] = sFit.centre;
+  await page.mouse.move(cx, cy);
+  await page.keyboard.down('Control');
+  await page.mouse.wheel(0, -300);
+  await page.keyboard.up('Control');
+  await page.waitForTimeout(150);
+  const wheeled = await viewer(n);
+  const again = await step(0);
+  check('live viewer: Ctrl+wheel raises the scale and the view stays open, the step marked as it was; "Einpassen" chosen again fits it again',
+    wheeled.open && wheeled.scale > sFit.scale && wheeled.zoom === 'fit' && Math.abs(again.scale - sFit.scale) <= 0.005, json({ fit: sFit.scale, wheeled: [wheeled.open, wheeled.scale, wheeled.zoom], again: again.scale }));
+  await page.mouse.move(cx, cy);
+  await page.mouse.down();
+  await page.mouse.move(cx - 140, cy, { steps: 8 });
+  const during = await page.evaluate(() => Array.from(document.body.classList).filter(c => /^djs-cursor-/.test(c)));
+  await page.mouse.up();
+  await frames(page);
+  const dragged = await viewer(n);
+  const after = await page.evaluate(() => Array.from(document.body.classList).filter(c => /^djs-cursor-/.test(c)));
+  await page.mouse.click(cx, cy);
+  await frames(page);
+  const clicked = await viewer(n);
+  check('live viewer: a drag moves the diagram, a click on it moves nothing, and the view stays open after both; the cursor class bpmn-js sets on <body> while dragging is gone after it',
+    dragged.open && Math.abs(dragged.x - (again.x - 140)) <= 2 && Math.abs(dragged.y - again.y) <= 0.5 && Math.abs(dragged.scale - again.scale) <= 0.005 && clicked.open && Math.abs(clicked.x - dragged.x) <= 0.5 && during.length > 0 && after.length === 0,
+    json({ before: [again.x, again.y], dragged: [dragged.open, dragged.x, dragged.y], clicked: [clicked.open, clicked.x], during, after }));
+  await step(2);
+  await page.keyboard.press('+');
+  await frames(page);
+  const plus = await viewer(n);
+  await page.keyboard.press('Escape');
+  await frames(page);
+  const byEscape = await leftovers();
+  check('live viewer: at "150 %", "+" takes it to "200 %", scale 2; Escape closes it and leaves nothing of it', plus.zoom === '200' && plus.scale === 2 && clean(byEscape), json({ plus: [plus.zoom, plus.scale], byEscape }));
+
+  // --- Space on the checkbox
+  await openStage(n);
+  await ready(n);
+  await fig(n).locator('.dokufix-diagram-toggle').focus();
+  await page.keyboard.press(' ');
+  await frames(page);
+  const bySpace = await leftovers();
+  check('live viewer: Space on the checkbox closes it and leaves nothing of it', clean(bySpace), json(bySpace));
+
+  // --- the logo: its lightbox, then Escape
+  await openStage(n);
+  await ready(n);
+  await fig(n).locator('.bjs-powered-by').click();
+  await frames(page);
+  const box = await page.evaluate(() => document.querySelectorAll('body > .bjs-powered-by-lightbox').length);
+  await page.keyboard.press('Escape');
+  await frames(page);
+  const byLogo = await leftovers();
+  check('live viewer: a click on the logo opens the lightbox of bpmn-js; Escape then closes the view, and the lightbox is gone too', box === 1 && clean(byLogo), json({ box, byLogo }));
+
+  // --- a render while it is open, the lightbox open as well
+  await openStage(n);
+  await ready(n);
+  await fig(n).locator('.bjs-powered-by').click();
+  const beforeRender = await leftovers();
+  await page.evaluate(() => {
+    const marker = document.createElement('i');
+    marker.id = 'vergleich-render-pending';
+    document.getElementById('dokufix-rail').appendChild(marker);
+    document.getElementById('render-btn').click();
+  });
+  await page.waitForFunction(() => !document.getElementById('vergleich-render-pending'), null, { timeout: 90000 });
+  await frames(page);
+  const rendered = await leftovers();
+  check('live viewer: a render while it is open destroys it, the lightbox with it', beforeRender.live === 1 && beforeRender.lightbox === 1 && clean(rendered), json({ beforeRender, rendered }));
+
+  // --- in the editor, files written while it is open, a drag going on and the lightbox open
+  if (key === 'editor' && opts.dir){
+    for (const v of [{ key: 'nur-lesen', download: 'readonly-open' }, { key: 'mit-editor', download: 'full' }]){
+      await openStage(n);
+      await ready(n);
+      const c = (await viewer(n)).centre;
+      // A drag that goes on while the file is written, and the lightbox of the
+      // logo open over it, by events: the mouse of the run has to stay free.
+      await page.evaluate(([sel, n, x, y]) => {
+        const target = document.elementFromPoint(x, y);
+        const at = dx => ({ bubbles: true, cancelable: true, button: 0, buttons: 1, clientX: x + dx, clientY: y, view: window });
+        target.dispatchEvent(new MouseEvent('mousedown', at(0)));
+        for (let dx = -5; dx >= -60; dx -= 5) document.dispatchEvent(new MouseEvent('mousemove', at(dx)));
+        document.querySelectorAll(sel)[n].querySelector('.dokufix-diagram-live .bjs-powered-by').click();
+      }, [FIG, n, c[0], c[1]]);
+      const before = await leftovers();
+      const [download] = await Promise.all([
+        page.waitForEvent('download', { timeout: 60000 }),
+        page.evaluate(d => { document.getElementById('download-btn').click(); document.querySelector('button[data-download="' + d + '"]').click(); }, v.download),
+      ]);
+      const file = path.join(opts.dir, 'mit-viewer-' + v.key + '.html');
+      await download.saveAs(file);
+      await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+      const afterSave = await leftovers();
+      await page.evaluate(() => document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 })));
+      const text = markup(fs.readFileSync(file, 'utf8'));
+      const trace = (text.match(new RegExp('.{0,60}(' + VIEWER_TRACES.source + ').{0,60}')) || [''])[0];
+      const read = v.key !== 'mit-editor';
+      check('live viewer: "' + v.key + '" written while it is open, the lightbox open and a drag going on, carries nothing of it' + (read ? '; the render of the download destroys the viewer' : '; the viewer runs on'),
+        before.live === 1 && before.lightbox === 1 && before.cursor.length > 0 && !trace && (read ? clean(afterSave) : afterSave.live === 1),
+        json({ before, afterSave, trace }));
+      if (!read){
+        await page.keyboard.press('Escape');
+        await frames(page);
+        const closed = await leftovers();
+        check('live viewer: closed after the save, nothing of it is left', clean(closed), json(closed));
+      }
+    }
+  }
+}
+
 // ---------- assertions ----------
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
@@ -3699,6 +3981,8 @@ async function assertVariant(browser, file, key, exp, results, label){
     await assertLargeView(page, check, exp, key);
     // --- the downloads below a diagram (story 2.10)
     await assertDiagramDownloads(page, check, exp, key, text, label, path.dirname(file));
+    // --- the live viewer of a BPMN diagram (story 2.11): in Mit Editor, and in no read-only file
+    await assertLiveViewer(page, check, exp, key);
     if (exp.toc) check('inline table of contents', s.tocLinks > 0 && s.tocBorder === '1px', s.tocLinks + ' links, border ' + s.tocBorder);
     check('embedded images shown', s.images === exp.images, s.images + ' of ' + exp.images);
     check('missing-image placeholders', s.missing === exp.missing && (exp.missing === 0 || s.placeholderBorder === 'dashed'),
@@ -4125,7 +4409,7 @@ async function runBrowser(name, opts, md){
   const browser = await BROWSERS[name]();
   const results = [];
   try {
-    const built = await buildExports(browser, opts, md, path.join(dir, 'exports'));
+    const built = await buildExports(browser, opts, md, path.join(dir, 'exports'), makeChecker(results, name + ' editor'));
     const exp = judgeDiagrams(expectationsFor(built.source), built.wellFormed);
     const check = makeChecker(results, name + ' build');
     check('no script errors while building', built.errors.length === 0, built.errors.join(' | '));

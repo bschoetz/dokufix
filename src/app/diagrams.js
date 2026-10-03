@@ -42,7 +42,9 @@ import { diagramFileNames, downloadsLine } from './diagram-downloads.js';
 // buttons choose its zoom step. The ids carry the diagram's place in the
 // document, n. "checked" is an attribute of "Einpassen" alone, so a file
 // written while a view is open opens closed, at "Einpassen"; a script sets
-// the property only (src/app/large-view.js). After a diagram is drawn its
+// the property only (src/app/large-view.js). Where the app script runs, the
+// large view of a BPMN diagram shows the live viewer of bpmn-js in place of
+// the picture, outside the stage (src/app/live-viewer.js). After a diagram is drawn its
 // width as drawn goes onto the figure as --dokufix-diagram-width, which the
 // zoom steps multiply.
 //
@@ -268,7 +270,22 @@ export async function drawDiagrams(root, kinds){
 
 // What a library leaves in the page outside the document, for a save to leave
 // behind: Mermaid appends its tooltip to <body> with the first diagram it
-// draws. It is not ours to mark transient, so it is named here.
+// draws; the live viewer of a BPMN diagram (bpmn-js, src/app/live-viewer.js)
+// leaves what removeViewerLeftovers() names. None of it is ours to mark
+// transient, so it is named here.
 export function removeRendererLeftovers(root){
   root.querySelectorAll('.mermaidTooltip').forEach(el => el.remove());
+  removeViewerLeftovers(root);
+}
+
+// What bpmn-js puts outside the container it draws in, which its destroy()
+// leaves: the lightbox its logo opens, appended to <body>, and the cursor
+// class it sets on <body> while the diagram is dragged (djs-cursor-grab and
+// the like). root: a document, or the root element of a copy of one.
+export const VIEWER_LIGHTBOX_CLASS = 'bjs-powered-by-lightbox';
+export function removeViewerLeftovers(root){
+  root.querySelectorAll('.' + VIEWER_LIGHTBOX_CLASS).forEach(el => el.remove());
+  const body = root.querySelector('body');
+  if (!body) return;
+  for (const name of Array.from(body.classList)) if (/^djs-cursor-/.test(name)) body.classList.remove(name);
 }

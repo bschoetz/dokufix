@@ -14,7 +14,11 @@ import { DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_CLASS } from './diagr
 // listener on the document, the Escape of the search included, so an open
 // view is the first thing Escape closes (see the README, "Keys and events").
 // It sets the checked property of the controls, never their attribute: a file
-// written while a view is open opens closed, at "Einpassen".
+// written while a view is open opens closed, at "Einpassen". Each key then
+// dispatches a bubbling `change` on the control it set, as a click, Space or
+// an arrow does through the browser: whoever follows the view (the live viewer
+// of a BPMN diagram, src/app/live-viewer.js) listens in one place and misses
+// no way of closing it or choosing a step.
 //
 // Pure logic apart from the listener: largeViewOpen() and the steps read the
 // document they are handed.
@@ -40,6 +44,12 @@ export function closeLargeView(toggle){
   const active = doc.activeElement;
   toggle.checked = false;
   if (active && active !== toggle && figure && figure.contains(active)) toggle.focus();
+  changed(toggle);
+}
+
+// The event the browser fires when a click or a key changes a control.
+function changed(control){
+  control.dispatchEvent(new control.ownerDocument.defaultView.Event('change', { bubbles: true }));
 }
 
 // Moves the zoom of the view of toggle by delta steps, held at the ends.
@@ -54,6 +64,7 @@ export function stepLargeView(toggle, delta){
   const next = radios[Math.min(radios.length - 1, Math.max(0, at + delta))];
   next.checked = true;
   if (radios.includes(toggle.ownerDocument.activeElement) && toggle.ownerDocument.activeElement !== next) next.focus();
+  changed(next);
 }
 
 const STEP_KEYS = { '+': 1, '-': -1 };
