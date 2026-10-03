@@ -664,9 +664,84 @@ Ein Prozess ohne Pool, mit Zeitereignissen und inklusiven Gateways.
 </bpmn:definitions>
 ```
 
+### Übergabe an die Tourenplanung
+
+BPMN-XML ohne Koordinaten, wie es ein Sprachmodell schreibt: ein Pool, vier Bahnen, 16 Symbole, 17 Flüsse. dokufix ordnet es selbst an; das XML bleibt, wie es ist, und bekommt nur den Koordinatenteil dazu.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_1" name="Übergabe an die Tourenplanung" processRef="Process_1"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Kunde" name="Kunde"><bpmn:flowNodeRef>Start</bpmn:flowNodeRef><bpmn:flowNodeRef>Weg</bpmn:flowNodeRef><bpmn:flowNodeRef>Antworten</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Hofbuero" name="Hofbüro"><bpmn:flowNodeRef>Postfach</bpmn:flowNodeRef><bpmn:flowNodeRef>Art</bpmn:flowNodeRef><bpmn:flowNodeRef>Abwesenheit</bpmn:flowNodeRef><bpmn:flowNodeRef>Teilen</bpmn:flowNodeRef><bpmn:flowNodeRef>PersoenlichAntworten</bpmn:flowNodeRef><bpmn:flowNodeRef>Zusammen</bpmn:flowNodeRef><bpmn:flowNodeRef>AnTouren</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Kundenkartei" name="Kundenkartei"><bpmn:flowNodeRef>Abmelden</bpmn:flowNodeRef><bpmn:flowNodeRef>Abgemeldet</bpmn:flowNodeRef><bpmn:flowNodeRef>Status</bpmn:flowNodeRef><bpmn:flowNodeRef>MailsEnden</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Tourenplanung" name="Tourenplanung"><bpmn:flowNodeRef>AboAnfrage</bpmn:flowNodeRef><bpmn:flowNodeRef>BeiTouren</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Reagiert auf eine Erinnerung"/>
+    <bpmn:exclusiveGateway id="Weg" name="Wie meldet er sich?"/>
+    <bpmn:sendTask id="Antworten" name="Auf die Mail antworten"/>
+    <bpmn:intermediateCatchEvent id="Postfach" name="Antwort im Postfach"><bpmn:messageEventDefinition id="Postfach_def"/></bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Art" name="Art der Antwort?"/>
+    <bpmn:endEvent id="Abwesenheit" name="Abwesenheit, nichts zu tun"/>
+    <bpmn:parallelGateway id="Teilen"/>
+    <bpmn:sendTask id="PersoenlichAntworten" name="Persönlich antworten am selben Tag"/>
+    <bpmn:parallelGateway id="Zusammen"/>
+    <bpmn:sendTask id="AnTouren" name="An die Tourenplanung geben"/>
+    <bpmn:userTask id="Abmelden" name="Abmeldung sofort eintragen"/>
+    <bpmn:endEvent id="Abgemeldet" name="Abgemeldet"/>
+    <bpmn:userTask id="Status" name="Status auf ABO_ANFRAGE setzen"/>
+    <bpmn:serviceTask id="MailsEnden" name="Erinnerungen enden automatisch"/>
+    <bpmn:callActivity id="AboAnfrage" name="Abo-Anfrage Prozess 2"/>
+    <bpmn:endEvent id="BeiTouren" name="Bei der Tourenplanung"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start" targetRef="Weg"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Weg" targetRef="Antworten" name="Antwort"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Weg" targetRef="AboAnfrage" name="Formular"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Antworten" targetRef="Postfach"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Postfach" targetRef="Art"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Art" targetRef="Abwesenheit" name="Abwesenheit"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Art" targetRef="Abmelden" name="Abmeldung"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Abmelden" targetRef="Abgemeldet"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Art" targetRef="Teilen" name="Anfrage"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Teilen" targetRef="PersoenlichAntworten"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Teilen" targetRef="Status"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Status" targetRef="MailsEnden"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="PersoenlichAntworten" targetRef="Zusammen"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="MailsEnden" targetRef="Zusammen"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Zusammen" targetRef="AnTouren"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="AnTouren" targetRef="BeiTouren"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="AboAnfrage" targetRef="BeiTouren"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Ohne Bahnen
+
+Ein Prozess ohne Pool und ohne Bahnen, ohne Koordinaten: alles in einer Reihe.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess" isExecutable="false">
+    <bpmn:startEvent id="Los" name="Medium zurück"/>
+    <bpmn:task id="Aufgabe" name="Etikett scannen"/>
+    <bpmn:intermediateCatchEvent id="Warten" name="Zwei Tage"><bpmn:timerEventDefinition id="Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="Regal" name="Zurück ins Regal"/>
+    <bpmn:endEvent id="Fertig" name="Wieder ausleihbar"/>
+    <bpmn:sequenceFlow id="O1" sourceRef="Los" targetRef="Aufgabe"/>
+    <bpmn:sequenceFlow id="O2" sourceRef="Aufgabe" targetRef="Warten"/>
+    <bpmn:sequenceFlow id="O3" sourceRef="Warten" targetRef="Regal"/>
+    <bpmn:sequenceFlow id="O4" sourceRef="Regal" targetRef="Fertig"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
 ### BPMN ohne Wirkung
 
-Die beiden Blöcke werden zu je einer Warnung, die Diagramme davor bleiben gezeichnet.
+Die drei Blöcke werden zu je einer Warnung mit dem Grund, die Diagramme davor bleiben gezeichnet.
 
 #### Kaputtes XML
 
@@ -674,13 +749,36 @@ Die beiden Blöcke werden zu je einer Warnung, die Diagramme davor bleiben gezei
 <bpmn:definitions>kein BPMN
 ```
 
-#### XML ohne Koordinaten
+#### Mehrere Pools
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Leser" name="Leser" processRef="Prozess_Leser"/>
+    <bpmn:participant id="Bib" name="Bibliothek" processRef="Prozess_Bib"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Leser" isExecutable="false">
+    <bpmn:task id="Bestellen" name="Buch bestellen"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Bib" isExecutable="false">
+    <bpmn:task id="Liefern" name="Buch bereitlegen"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+#### Element ohne Bahn
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
   <bpmn:process id="Prozess" isExecutable="false">
-    <bpmn:task id="Aufgabe" name="Ohne Platz im Bild"/>
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="Theke" name="Theke"><bpmn:flowNodeRef>Annehmen</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:task id="Annehmen" name="Medium annehmen"/>
+    <bpmn:task id="Verbuchen" name="Rückgabe verbuchen"/>
+    <bpmn:sequenceFlow id="E1" sourceRef="Annehmen" targetRef="Verbuchen"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

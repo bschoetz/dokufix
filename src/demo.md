@@ -34,7 +34,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Tabellen mit Unterzeile, Filter und Suchfeld
 - Bilder
 - Fußnoten mit Vorschau
-- **Mermaid- und BPMN-Diagramme**
+- **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten
 
 Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin.
 
@@ -287,6 +287,67 @@ Ein Prozess, gezeichnet in einem BPMN-Werkzeug wie dem Camunda Modeler: Sie kopi
 </bpmn:definitions>
 ```
 
+## Prozessmodell ohne Koordinaten
+
+BPMN-XML muss keine Koordinaten haben. Fehlt der Koordinatenteil, ordnet dokufix den Prozess selbst an: jede Bahn wird eine Reihe, Pfeile docken an den Symbolen an, Beschriftungen bekommen ihren Platz. Das XML bleibt, wie Sie es geschrieben haben; es bekommt nur die Koordinaten dazu. So genügt es, Bahnen, Schritte und Flüsse aufzuschreiben, und kein Pfeil endet im Leeren, weil jemand Koordinaten geraten hat.
+
+Ein Pool mit drei Bahnen; die beiden Zweige hinter dem Gateway liegen in verschiedenen Bahnen:
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Bibliothek" name="Vormerkung" processRef="Prozess_Vormerkung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Vormerkung" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="Leserin" name="Leserin"><bpmn:flowNodeRef>V_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>V_Abholen</bpmn:flowNodeRef><bpmn:flowNodeRef>V_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Theke" name="Theke"><bpmn:flowNodeRef>V_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>V_Frage</bpmn:flowNodeRef><bpmn:flowNodeRef>V_Fernleihe</bpmn:flowNodeRef><bpmn:flowNodeRef>V_Benachrichtigen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Magazin" name="Magazin"><bpmn:flowNodeRef>V_Holen</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="V_Start" name="Buch gewünscht"/>
+    <bpmn:userTask id="V_Aufnehmen" name="Vormerkung aufnehmen"/>
+    <bpmn:exclusiveGateway id="V_Frage" name="Im Bestand?"/>
+    <bpmn:task id="V_Holen" name="Buch aus dem Magazin holen"/>
+    <bpmn:sendTask id="V_Fernleihe" name="Fernleihe bestellen"/>
+    <bpmn:sendTask id="V_Benachrichtigen" name="Leserin benachrichtigen"/>
+    <bpmn:manualTask id="V_Abholen" name="Buch abholen"/>
+    <bpmn:endEvent id="V_Ende" name="Ausgeliehen"/>
+    <bpmn:sequenceFlow id="V1" sourceRef="V_Start" targetRef="V_Aufnehmen"/>
+    <bpmn:sequenceFlow id="V2" sourceRef="V_Aufnehmen" targetRef="V_Frage"/>
+    <bpmn:sequenceFlow id="V3" sourceRef="V_Frage" targetRef="V_Holen" name="ja"/>
+    <bpmn:sequenceFlow id="V4" sourceRef="V_Frage" targetRef="V_Fernleihe" name="nein"/>
+    <bpmn:sequenceFlow id="V5" sourceRef="V_Holen" targetRef="V_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="V6" sourceRef="V_Fernleihe" targetRef="V_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="V7" sourceRef="V_Benachrichtigen" targetRef="V_Abholen"/>
+    <bpmn:sequenceFlow id="V8" sourceRef="V_Abholen" targetRef="V_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### Ohne Bahnen
+
+Ohne Bahnen und ohne Pool steht alles in einer Reihe:
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Rueckgabe" isExecutable="false">
+    <bpmn:startEvent id="R_Start" name="Medium zurück"/>
+    <bpmn:serviceTask id="R_Scannen" name="Etikett scannen"/>
+    <bpmn:intermediateCatchEvent id="R_Warten" name="Zwei Tage"><bpmn:timerEventDefinition id="R_Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="R_Regal" name="Zurück ins Regal"/>
+    <bpmn:endEvent id="R_Ende" name="Wieder ausleihbar"/>
+    <bpmn:sequenceFlow id="R1" sourceRef="R_Start" targetRef="R_Scannen"/>
+    <bpmn:sequenceFlow id="R2" sourceRef="R_Scannen" targetRef="R_Warten"/>
+    <bpmn:sequenceFlow id="R3" sourceRef="R_Warten" targetRef="R_Regal"/>
+    <bpmn:sequenceFlow id="R4" sourceRef="R_Regal" targetRef="R_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+Alle Knoten einer Bahn stehen in einer Reihe. Parallele Zweige gehören deshalb in verschiedene Bahnen, sonst laufen sie hintereinander und kreuzen sich.
+
 ## Code-Block (kein Mermaid)
 
 ```javascript
@@ -409,6 +470,65 @@ Ein BPMN-Prozess ohne Pool und ohne Bahnen, mit einem Zeit-Startereignis, Aufgab
       <bpmndi:BPMNEdge id="A5_di" bpmnElement="A5"><di:waypoint x="580" y="60"/><di:waypoint x="632" y="60"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
+</bpmn:definitions>
+```
+
+
+### BPMN ohne Koordinaten: Pool ohne Bahnen
+
+Ein BPMN-Prozess ohne Koordinaten mit Sonderfällen: ein Pool ohne Bahnen; XML ohne Präfix, mit einem Kommentar nach dem Schluss-Tag; ids, die wie Mermaids Schlüsselwörter heißen (`end`, `subgraph`, `graph`); zwei Flüsse zwischen denselben beiden Knoten, die zwei eigene Wege bekommen; eine Notiz mit ihrer Verbindung, die dokufix nicht anordnet und weglässt. Sie sollten einen Pool „Verlängerung“ sehen, darin fünf Symbole und fünf Pfeile, „ja“ und „nein“ auf getrennten Wegen, und keine Notiz.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <collaboration id="graph">
+    <participant id="subgraph" name="Verlängerung" processRef="Process_1"/>
+  </collaboration>
+  <process id="Process_1" isExecutable="false">
+    <startEvent id="start" name="Leserin fragt"/>
+    <exclusiveGateway id="Flow_1" name="Vorgemerkt?"/>
+    <task id="style" name="Frist verlängern"/>
+    <task id="click" name="Bescheid geben"/>
+    <endEvent id="end" name="Erledigt"/>
+    <textAnnotation id="Notiz"><text>Höchstens zweimal</text></textAnnotation>
+    <association id="Zur_Notiz" sourceRef="style" targetRef="Notiz"/>
+    <sequenceFlow id="S1" sourceRef="start" targetRef="Flow_1"/>
+    <sequenceFlow id="S2" sourceRef="Flow_1" targetRef="style" name="nein"/>
+    <sequenceFlow id="S3" sourceRef="Flow_1" targetRef="style" name="ja, aber kurz"/>
+    <sequenceFlow id="S4" sourceRef="style" targetRef="click"/>
+    <sequenceFlow id="S5" sourceRef="click" targetRef="end"/>
+  </process>
+</definitions>
+<!-- Ende des Modells -->
+```
+
+### BPMN ohne Koordinaten: leere Bahn
+
+Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Teilprozess, dessen Inhalt dokufix nicht anordnet: Sie sollten drei Bahnen „Theke“, „Magazin“ und „Werkstatt“ sehen, die dritte leer, darin vier Symbole und drei Pfeile; der Teilprozess „Einarbeiten“ steht als ein Symbol, das angeheftete Ereignis und sein Pfeil fehlen.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Neu" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="N_Theke" name="Theke"><bpmn:flowNodeRef>N_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Pruefen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Magazin" name="Magazin"><bpmn:flowNodeRef>N_Einarbeiten</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Ende</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Frist</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Werkstatt" name="Werkstatt"/>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="N_Start" name="Neues Buch"/>
+    <bpmn:task id="N_Pruefen" name="Lieferung prüfen"/>
+    <bpmn:boundaryEvent id="N_Frist" name="Eine Woche" attachedToRef="N_Pruefen"><bpmn:timerEventDefinition id="N_Frist_Def"/></bpmn:boundaryEvent>
+    <bpmn:subProcess id="N_Einarbeiten" name="Einarbeiten">
+      <bpmn:startEvent id="N_E_Start"/>
+      <bpmn:task id="N_E_Stempeln" name="Stempeln"/>
+      <bpmn:sequenceFlow id="N_E1" sourceRef="N_E_Start" targetRef="N_E_Stempeln"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="N_Ende" name="Im Regal"/>
+    <bpmn:sequenceFlow id="N1" sourceRef="N_Start" targetRef="N_Pruefen"/>
+    <bpmn:sequenceFlow id="N2" sourceRef="N_Pruefen" targetRef="N_Einarbeiten"/>
+    <bpmn:sequenceFlow id="N3" sourceRef="N_Einarbeiten" targetRef="N_Ende"/>
+    <bpmn:sequenceFlow id="N4" sourceRef="N_Frist" targetRef="N_Ende"/>
+  </bpmn:process>
 </bpmn:definitions>
 ```
 

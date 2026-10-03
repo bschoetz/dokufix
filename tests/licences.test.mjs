@@ -30,6 +30,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { NOTICES, LICENCE_TEXTS, LICENCES_CLASS, LICENCES_LINK_TEXT, licencesHtml } from '../src/app/licences.js';
+// The Mermaid version the layout of BPMN without coordinates is made with (AC6 of story 2.8).
+import { MERMAID_LAYOUT_VERSION } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = name => fs.readFileSync(path.join(here, '..', name), 'utf8');
@@ -107,10 +109,17 @@ function pinned(indexHtml, docCss){
   return { cdn, embedded: octicons ? [{ package: '@primer/octicons', version: octicons[1] }] : [] };
 }
 // Every way the list and the sources can disagree, each as one sentence that
-// names the entry.
-function versionProblems(notices, indexHtml, docCss){
+// names the entry. And the guard of story 2.8 (AC6): the Mermaid the page pins
+// is the one the layout of BPMN without coordinates is made with. Mermaid is
+// raised only together with that layout's regression check, the comparison
+// run on tests/referenz.md, and then MERMAID_LAYOUT_VERSION with it.
+function versionProblems(notices, indexHtml, docCss, layoutVersion = MERMAID_LAYOUT_VERSION){
   const pins = pinned(indexHtml, docCss);
   const problems = [];
+  for (const mermaid of pins.cdn.filter(pin => pin.package === 'mermaid' && pin.version !== layoutVersion)){
+    problems.push('src/index.html pins mermaid ' + mermaid.version + ', and the layout of BPMN without coordinates is made with ' + layoutVersion +
+      ' (MERMAID_LAYOUT_VERSION, src/app/bpmn-layout.js): raise both together, with the regression check of story 2.8');
+  }
   for (const [use, where] of [['cdn', 'src/index.html'], ['embedded', 'src/doc.css']]){
     for (const pin of pins[use]){
       const n = notices.find(x => x.package === pin.package);
@@ -139,10 +148,26 @@ test('a version raised in the sources and not in the list is reported with the e
   const indexHtml = read('src/index.html'), docCss = read('src/doc.css');
   const raisedCdn = indexHtml.replace('/npm/mermaid@12.0.0/', '/npm/mermaid@12.0.1/');
   assert.notEqual(raisedCdn, indexHtml, 'mutation target not found');
-  assert.deepEqual(versionProblems(NOTICES, raisedCdn, docCss), ['entry "Mermaid": the list says 12.0.0, src/index.html uses 12.0.1']);
+  assert.deepEqual(versionProblems(NOTICES, raisedCdn, docCss), [
+    'src/index.html pins mermaid 12.0.1, and the layout of BPMN without coordinates is made with 12.0.0 (MERMAID_LAYOUT_VERSION, src/app/bpmn-layout.js): raise both together, with the regression check of story 2.8',
+    'entry "Mermaid": the list says 12.0.0, src/index.html uses 12.0.1']);
   const raisedIcons = docCss.replace('@primer/octicons 19.38.0', '@primer/octicons 19.39.0');
   assert.notEqual(raisedIcons, docCss, 'mutation target not found');
   assert.deepEqual(versionProblems(NOTICES, indexHtml, raisedIcons), ['entry "Octicons": the list says 19.38.0, src/doc.css uses 19.39.0']);
+});
+
+test('the Mermaid pin and the version the BPMN layout is made with are one (story 2.8, AC6): raising either alone is reported', () => {
+  const indexHtml = read('src/index.html'), docCss = read('src/doc.css');
+  assert.equal(MERMAID_LAYOUT_VERSION, '12.0.0');
+  assert.deepEqual(versionProblems(NOTICES, indexHtml, docCss), []);
+  // The list raised with the page, the layout not: the guard alone speaks.
+  const raised = indexHtml.replace('/npm/mermaid@12.0.0/', '/npm/mermaid@12.1.0/');
+  assert.notEqual(raised, indexHtml, 'mutation target not found');
+  const list = NOTICES.map(n => n.package === 'mermaid' ? { ...n, version: '12.1.0' } : n);
+  assert.deepEqual(versionProblems(list, raised, docCss), [
+    'src/index.html pins mermaid 12.1.0, and the layout of BPMN without coordinates is made with 12.0.0 (MERMAID_LAYOUT_VERSION, src/app/bpmn-layout.js): raise both together, with the regression check of story 2.8']);
+  // All three raised together: agreed.
+  assert.deepEqual(versionProblems(list, raised, docCss, '12.1.0'), []);
 });
 
 test('a library the page loads and the list does not name is reported, and so is an entry the sources do not know', () => {
@@ -169,7 +194,8 @@ test('a jsDelivr URL counts in whatever tag and attribute it stands: a styleshee
   assert.deepEqual(withTag('<script defer src="https://cdn.jsdelivr.net/npm/@scope/some.lib@1.2.3/dist/index.min.js"></script>'),
     ['src/index.html uses @scope/some.lib 1.2.3, and the list has no entry for it']);
   assert.deepEqual(withTag("<link rel='stylesheet' href='//cdn.jsdelivr.net/npm/mermaid@12.0.1/dist/mermaid.css'>"),
-    ['entry "Mermaid": the list says 12.0.0, src/index.html uses 12.0.1']);
+    ['src/index.html pins mermaid 12.0.1, and the layout of BPMN without coordinates is made with 12.0.0 (MERMAID_LAYOUT_VERSION, src/app/bpmn-layout.js): raise both together, with the regression check of story 2.8',
+     'entry "Mermaid": the list says 12.0.0, src/index.html uses 12.0.1']);
   assert.deepEqual(withTag('<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>'),
     ['entry "marked": the list says 18.0.14, src/index.html uses none']);
 });

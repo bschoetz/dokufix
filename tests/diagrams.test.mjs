@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
-import { diagramTitle, diagramFigure, drawDiagrams, removeRendererLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT } from '../src/app/diagrams.js';
+import { diagramTitle, diagramFigure, drawDiagrams, removeRendererLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT, DIAGRAM_KINDS, MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
 import { buildChips } from '../src/app/chips.js';
 
 function rootWith(html){
@@ -119,4 +119,21 @@ test('removeRendererLeftovers() takes Mermaid\'s tooltip out of a copy of the pa
   const { document } = parseHTML('<!DOCTYPE html><html><body><div class="mermaidTooltip"></div><div class="dokufix-diagram"></div></body></html>');
   removeRendererLeftovers(document.documentElement);
   assert.equal(document.body.innerHTML, '<div class="dokufix-diagram"></div>');
+});
+
+test('without Mermaid in the page a Mermaid block is the warning that says so, on the console as well', async t => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const before = globalThis.mermaid;
+  delete globalThis.mermaid;
+  try {
+    const root = rootWith('<h2>Ablauf</h2>' + block('mermaid', 'flowchart LR\n  a --> b'));
+    await drawDiagrams(root, DIAGRAM_KINDS);
+    const w = root.querySelector('.dokufix-warning');
+    assert.equal(w.querySelector('.dokufix-warning-title').textContent, 'Warnung: Ein Diagramm konnte nicht gezeichnet werden.');
+    assert.equal(w.querySelector('.dokufix-warning-detail').textContent, MERMAID_NO_LIBRARY);
+    assert.equal(MERMAID_NO_LIBRARY, 'Die Bibliothek Mermaid wurde nicht geladen.');
+    assert.equal(logged.mock.calls[0].arguments[0], 'Mermaid error:');
+  } finally {
+    if (before !== undefined) globalThis.mermaid = before;
+  }
 });

@@ -72,12 +72,16 @@ export function diagramFigure(doc, kind, title, credit){
   return { figure, holder };
 }
 
+export const MERMAID_NO_LIBRARY = 'Die Bibliothek Mermaid wurde nicht geladen.';
+
 // Mermaid: the source goes into the holder as text, and mermaid.run() replaces
 // it with the SVG. Mermaid runs with suppressErrorRendering (src/app.js), so a
-// diagram with an error throws instead of drawing its error picture.
+// diagram with an error throws instead of drawing its error picture. A page
+// whose script tag of Mermaid failed has no mermaid: refused with that reason.
 async function renderMermaid({ holder }){
   const doc = holder.ownerDocument;
   try {
+    if (typeof mermaid === 'undefined' || !mermaid || typeof mermaid.run !== 'function') throw new Error(MERMAID_NO_LIBRARY);
     await mermaid.run({ nodes: [holder] });
   } catch (err){
     console.error('Mermaid error:', err);

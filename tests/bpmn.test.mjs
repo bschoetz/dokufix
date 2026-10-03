@@ -7,19 +7,24 @@
 // done to the SVG before it goes into the document. Those are checked here as
 // they are. The renderer itself, renderBpmn(), is run with a stand-in for the
 // library (the global BpmnJS): that is enough for its refusals, its host and
-// the order of what it does. That bpmn-js draws every element, with the
-// colours of the document styles, is checked by the browser runs
-// (tests/vergleich.mjs, tests/durchlaeufe.mjs).
+// the order of what it does. XML without coordinates goes through the layout
+// first, with a stand-in for Mermaid (the global mermaid) that answers with an
+// SVG of the shape Mermaid 12.0.0 writes; the layout itself is checked in
+// tests/bpmn-layout.test.mjs. That bpmn-js draws every element, with the
+// colours of the document styles, and that Mermaid lays out as expected, is
+// checked by the browser runs (tests/vergleich.mjs, tests/durchlaeufe.mjs).
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML, DOMParser } from 'linkedom';
-import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, BPMN_NO_LIBRARY, BPMN_NO_COORDINATES, BPMN_CREDIT, BPMN_VIEWER_CONFIG } from '../src/app/bpmn.js';
+import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT, BPMN_VIEWER_CONFIG } from '../src/app/bpmn.js';
+import { LAYOUT_SEVERAL_POOLS } from '../src/app/bpmn-layout.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 
 const WITH_DI = '<bpmn:definitions xmlns:bpmn="m" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
   '<bpmndi:BPMNDiagram><bpmndi:BPMNPlane bpmnElement="P"><bpmndi:BPMNShape bpmnElement="A"/></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>';
-const WITHOUT_DI = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process></bpmn:definitions>';
+const WITHOUT_DI = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P"><bpmn:startEvent id="S" name="Los"/><bpmn:task id="A" name="Tun"/>' +
+  '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="A"/></bpmn:process></bpmn:definitions>';
 
 // The SVG as saveSVG() writes it, in the parts that matter here.
 const SAVED = '<?xml version="1.0" encoding="utf-8"?>\n<!-- created with bpmn-js / http://bpmn.io -->\n' +
@@ -43,7 +48,7 @@ test('coordinates: an XML with a BPMNShape has them, whatever its prefix; one wi
 });
 
 test('the reasons and the warning say what the plan says', () => {
-  assert.equal(BPMN_NO_COORDINATES, 'Das BPMN-XML enthält keine Koordinaten (BPMN-DI).');
+  assert.equal(BPMN_NO_MERMAID, 'Die Bibliothek Mermaid wurde nicht geladen; sie ordnet BPMN ohne Koordinaten an.');
   assert.equal(BPMN_NO_LIBRARY, 'Die Bibliothek bpmn-js wurde nicht geladen.');
   assert.equal(bpmnWarningText('Rückgabe'), 'Das Diagramm „Rückgabe“ konnte nicht gezeichnet werden.');
   assert.deepEqual(BPMN_CREDIT, { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' });
@@ -136,14 +141,16 @@ function page(){
   const { document } = parseHTML('<!DOCTYPE html><html><body><article id="preview" class="dokufix-doc"></article></body></html>');
   return document;
 }
-async function withLibrary(Viewer, fn){
-  const before = { BpmnJS: globalThis.BpmnJS, DOMParser: globalThis.DOMParser };
+async function withLibrary(Viewer, fn, mermaid = null){
+  const before = { BpmnJS: globalThis.BpmnJS, DOMParser: globalThis.DOMParser, mermaid: globalThis.mermaid };
   if (Viewer) globalThis.BpmnJS = Viewer; else delete globalThis.BpmnJS;
+  if (mermaid) globalThis.mermaid = mermaid; else delete globalThis.mermaid;
   globalThis.DOMParser = DOMParser;
   try { return await fn(); }
   finally {
-    if (before.BpmnJS === undefined) delete globalThis.BpmnJS; else globalThis.BpmnJS = before.BpmnJS;
-    if (before.DOMParser === undefined) delete globalThis.DOMParser; else globalThis.DOMParser = before.DOMParser;
+    for (const name of ['BpmnJS', 'DOMParser', 'mermaid']){
+      if (before[name] === undefined) delete globalThis[name]; else globalThis[name] = before[name];
+    }
   }
 }
 function diagramIn(document, source){
@@ -189,27 +196,125 @@ test('without the library: refused with its reason, and no host is made', async 
   assert.equal(logged.mock.calls[0].arguments[0], 'BPMN error:');
 });
 
-test('XML that does not parse: refused with the library\'s message; the viewer destroyed, the host removed', async t => {
+// XML that does not parse and has no BPMNShape goes to bpmn-js unchanged as
+// well; linkedom reports no parser error for it, so that is the browser runs'.
+test('XML that bpmn-js cannot import: refused with the library\'s message; the viewer destroyed, the host removed', async t => {
   const logged = t.mock.method(console, 'error', () => {});
   const { Viewer, log } = standIn({ importError: new Error('unparsable content kein BPMN detected') });
   const document = page();
-  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, '<bpmn:definitions>kein BPMN')), { message: 'unparsable content kein BPMN detected' }));
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, '<bpmn:definitions><bpmndi:BPMNShape/>kein BPMN')), { message: 'unparsable content kein BPMN detected' }));
   assert.deepEqual(log.slice(1).map(x => Object.keys(x)[0]), ['imported', 'destroyed']);
   assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
 });
 
-test('XML without coordinates: refused with that reason, whether bpmn-js finds no diagram or draws nothing', async t => {
+// ---------- XML without coordinates, with a stand-in for Mermaid ----------
+// A stand-in for Mermaid: records what it is asked and answers with an SVG of
+// the shape Mermaid 12.0.0 writes for WITHOUT_DI: the synthetic lane l1, the
+// start n1 and the task n2, and the flow between them. Its boxes are in
+// data-bbox, which the stand-in's getBBox() reads: linkedom lays nothing out.
+const LAYOUT_SVG = id => '<svg xmlns="http://www.w3.org/2000/svg" id="' + id + '">' +
+  '<g class="cluster swimlane" data-id="l1"><rect class="swimlane-body" data-bbox="0 0 500 200"/><rect class="swimlane-title" data-bbox="0 0 40 200"/></g>' +
+  '<g class="node" id="' + id + '-flowchart-n1-0" transform="translate(100, 100)" data-bbox="-40 -40 80 80"/>' +
+  '<g class="node" id="' + id + '-flowchart-n2-1" transform="translate(300, 100)" data-bbox="-70 -30 140 60"/>' +
+  '<path data-edge="true" data-id="L_n1_n2_0" data-points="' + Buffer.from(JSON.stringify([{ x: 140, y: 100 }, { x: 230, y: 100 }])).toString('base64') + '"/></svg>';
+function mermaidStandIn({ error = null } = {}){
+  const log = [];
+  return { log, render: async (id, text, container) => {
+    log.push({ id, text, transient: container.hasAttribute('data-dokufix-transient'), inBody: container.parentNode === container.ownerDocument.body, style: container.getAttribute('style') });
+    if (error) throw error;
+    return { svg: LAYOUT_SVG(id) };
+  } };
+}
+// getBBox() for linkedom's elements, from data-bbox, while fn runs.
+async function withBoxes(document, fn){
+  let proto = Object.getPrototypeOf(document.createElement('div'));
+  while (proto && !Object.prototype.hasOwnProperty.call(proto, 'getAttribute')) proto = Object.getPrototypeOf(proto);
+  proto.getBBox = function(){ const [x, y, width, height] = (this.getAttribute('data-bbox') || '0 0 0 0').split(' ').map(Number); return { x, y, width, height }; };
+  try { return await fn(); } finally { delete proto.getBBox; }
+}
+
+test('XML without coordinates is laid out by Mermaid in a transient host, then drawn with a diagram part added to the author\'s XML', async t => {
+  const warned = t.mock.method(console, 'warn', () => {});
+  const { Viewer, log } = standIn();
+  const layout = mermaidStandIn();
+  const document = page();
+  const d = diagramIn(document, WITHOUT_DI);
+  await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), layout));
+  assert.equal(layout.log.length, 1);
+  const asked = layout.log[0];
+  assert.match(asked.id, /^dokufix-bpmn-layout-4-\d+$/, 'named by the diagram\'s place and the layout\'s number, without "-flowchart-"');
+  assert.equal(asked.text, 'swimlane-beta LR\n  subgraph l1[" "]\n    n1(("Los"))\n    n2["Tun"]\n  end\n  n1 --> n2\n');
+  assert.equal(asked.transient, true);
+  assert.equal(asked.inBody, true);
+  assert.match(asked.style, /position:\s*fixed/);
+  // bpmn-js got the author's XML with the diagram part before the closing tag.
+  const xml = log.find(x => x.imported).imported;
+  const close = WITHOUT_DI.lastIndexOf('</bpmn:definitions>');
+  assert.equal(xml.slice(0, close), WITHOUT_DI.slice(0, close));
+  assert.ok(xml.endsWith('</bpmn:definitions>'));
+  assert.deepEqual((xml.match(/bpmnElement="[^"]+"/g) || []).map(m => m.slice(13, -1)), ['P', 'S', 'A', 'F']);
+  assert.equal(d.xml, xml, 'the laid-out XML is kept on the diagram');
+  assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
+  // Both hosts are gone: Mermaid's and the viewer's.
+  assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
+  assert.deepEqual(Array.from(document.body.children).map(el => el.id), ['preview']);
+  assert.equal(warned.mock.calls.length, 0, 'nothing left out, nothing on the console');
+});
+
+test('XML with coordinates is drawn as written, and Mermaid is not asked', async () => {
+  const { Viewer, log } = standIn();
+  const layout = mermaidStandIn();
+  const d = diagramIn(page(), WITH_DI);
+  await withLibrary(Viewer, () => renderBpmn(d), layout);
+  assert.equal(layout.log.length, 0);
+  assert.equal(log.find(x => x.imported).imported, WITH_DI);
+  assert.equal(d.xml, WITH_DI);
+});
+
+test('what the layout leaves out is a line on the console each, and the rest is drawn', async t => {
+  const warned = t.mock.method(console, 'warn', () => {});
+  const { Viewer } = standIn();
+  const document = page();
+  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:boundaryEvent id="B" attachedToRef="A"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
+  const d = diagramIn(document, xml);
+  await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), mermaidStandIn()));
+  assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
+  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: boundaryEvent B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
+});
+
+test('XML without coordinates and without Mermaid: refused with that reason; no host is made', async t => {
+  t.mock.method(console, 'error', () => {});
+  const { Viewer, log } = standIn();
+  const document = page();
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, WITHOUT_DI)), { message: BPMN_NO_MERMAID }));
+  assert.equal(log.length, 0, 'bpmn-js is not asked');
+  assert.deepEqual(Array.from(document.body.children).map(el => el.id), ['preview']);
+});
+
+test('a refusal of the layout comes before Mermaid is asked; an error of Mermaid is the reason, and its host is removed', async t => {
   const logged = t.mock.method(console, 'error', () => {});
-  for (const importError of [new Error('no diagram to display'), null]){
-    const { Viewer, log } = standIn({ importError });
-    const document = page();
-    await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, WITHOUT_DI)), { message: BPMN_NO_COORDINATES }));
-    assert.equal(log.at(-1).destroyed, true);
-    assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
-  }
-  // XML with coordinates that bpmn-js cannot show keeps the library's message.
-  const { Viewer } = standIn({ importError: new Error('no diagram to display') });
-  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(page(), WITH_DI)), { message: 'no diagram to display' }));
+  const { Viewer } = standIn();
+  const layout = mermaidStandIn();
+  const two = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P1"><bpmn:task id="A"/></bpmn:process><bpmn:process id="P2"><bpmn:task id="B"/></bpmn:process></bpmn:definitions>';
+  let document = page();
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, two)), { message: LAYOUT_SEVERAL_POOLS }), layout);
+  assert.equal(layout.log.length, 0);
+  assert.equal(logged.mock.calls.at(-1).arguments[0], 'BPMN error:');
+  document = page();
+  const failing = mermaidStandIn({ error: new Error('Parse error on line 3') });
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, WITHOUT_DI)), { message: 'Parse error on line 3' }), failing);
+  assert.equal(failing.log.length, 1);
+  assert.deepEqual(Array.from(document.body.children).map(el => el.id), ['preview']);
+});
+
+test('XML that is no BPMN definitions goes to bpmn-js as it is, and its message is the reason', async t => {
+  t.mock.method(console, 'error', () => {});
+  const { Viewer, log } = standIn({ importError: new Error('unparsable content <process> detected') });
+  const layout = mermaidStandIn();
+  const xml = '<process id="P"><task id="A"/></process>';
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(page(), xml)), { message: 'unparsable content <process> detected' }), layout);
+  assert.equal(log.find(x => x.imported).imported, xml);
+  assert.equal(layout.log.length, 0);
 });
 
 test('import warnings go to the console, and the diagram is drawn', async t => {
@@ -241,7 +346,7 @@ test('a bpmn block becomes a figure with the credit below the SVG container; a r
   let got = null;
   await withLibrary(Viewer, async () => {
     // The kind as the product has it, its renderer watched. The second block
-    // has no coordinates: the stand-in "draws nothing".
+    // has no coordinates, and the page no Mermaid to lay it out.
     await drawDiagrams(root, { bpmn: { ...DIAGRAM_KINDS.bpmn, render: d => { got = got || d.source; return DIAGRAM_KINDS.bpmn.render(d); } } });
   });
   assert.equal(got, WITH_DI, 'the renderer got the XML as text');
@@ -257,6 +362,6 @@ test('a bpmn block becomes a figure with the credit below the SVG container; a r
   assert.equal(figure.querySelector('.dokufix-diagram-svg > svg').getAttribute('aria-label'), 'Rückgabe');
   const w = root.querySelector('.dokufix-warning');
   assert.equal(w.querySelector('.dokufix-warning-title').textContent, 'Warnung: Das Diagramm „Ohne“ konnte nicht gezeichnet werden.');
-  assert.equal(w.querySelector('.dokufix-warning-detail').textContent, BPMN_NO_COORDINATES);
+  assert.equal(w.querySelector('.dokufix-warning-detail').textContent, BPMN_NO_MERMAID);
   assert.equal(root.querySelectorAll('figure').length, 1);
 });

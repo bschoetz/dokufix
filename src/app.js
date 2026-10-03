@@ -18,7 +18,10 @@ import { registerEditorInput, registerReset, registerNumbering, registerHamburge
 import { registerDownloadMenu } from './app/downloads/menu.js';
 import { registerSearch } from './app/search.js';
 
-mermaid.initialize({
+// A page whose script tag of Mermaid failed has no mermaid; the script runs
+// on, and every diagram that needs it becomes a warning (app/diagrams.js,
+// app/bpmn.js).
+if (typeof mermaid !== 'undefined') mermaid.initialize({
   startOnLoad: false,
   theme: 'default',
   // strict: a diagram can no longer call JavaScript ("click X call fn()"), and

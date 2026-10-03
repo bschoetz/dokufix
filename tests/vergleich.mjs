@@ -19,10 +19,12 @@
 // Exit code 1 when an assertion fails (epic 1 behaviour, callouts, status chips,
 // block markers with cards and step lists, tables with their wrapper, sub-lines
 // and facet filter, the free-text filter, the figure of every diagram with its
-// title, BPMN diagrams with their elements, colours and credit, the licence
+// title, BPMN diagrams with their elements, colours and credit, a BPMN diagram
+// laid out without coordinates with its counts and a clean drawing, the licence
 // information, no <script> in nur-lesen, nothing of bpmn-js and no editor rules
 // in a read-only export). The font check of the BPMN labels (Chromium,
-// nur-lesen) notes what does not fit, with a picture, and does not fail.
+// nur-lesen) notes what does not fit or lies on a flow, with a picture, and
+// does not fail.
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -104,11 +106,13 @@ import { planFacets, FACET_ALL } from '../src/app/facets.js';
 // it, with the text of each row as this run read it from the Markdown.
 import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src/app/filter.js';
 // Whether a BPMN block holds coordinates, and what the warning of one that
-// cannot be drawn says, is asked where the product decides it.
-import { hasCoordinates, bpmnWarningText, BPMN_NO_COORDINATES, BPMN_CREDIT } from '../src/app/bpmn.js';
+// cannot be drawn says, is asked where the product decides it; for a block
+// without coordinates, whether it can be laid out and what it holds, too.
+import { hasCoordinates, bpmnWarningText, BPMN_CREDIT } from '../src/app/bpmn.js';
+import { readProcess } from '../src/app/bpmn-layout.js';
 // Which places of the preview a search lists and how many hits each holds is
 // asked where the product decides it, over the preview read back into linkedom.
-import { parseHTML } from 'linkedom';
+import { parseHTML, DOMParser as XmlParser } from 'linkedom';
 import { collectPlaces } from '../src/app/search-places.js';
 import { findHits } from '../src/app/search-match.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
@@ -494,12 +498,30 @@ function diagramExpectations(body){
 
 // Which BPMN diagram is drawn: one whose XML parses (wellFormed, as the
 // browser's XML parser said, in the order of the blocks) and holds
-// coordinates. reason: what the warning of one that is not says as its
-// detail, null where that is the library's own message.
+// coordinates, or one without coordinates that readProcess() of the product
+// can lay out (laidOut); its expected elements are then its flow nodes, flows
+// and lanes, a pool only where a participant exists, never the synthetic
+// lane, and model the process as read. reason: what the warning of one that
+// is not drawn says as its detail, the layout's refusal, or null where that is
+// the library's own message (XML that does not parse, no BPMN definitions).
+// The run assumes the page has Mermaid; without it no block without
+// coordinates is drawn.
 function judgeDiagrams(exp, wellFormed){
   exp.diagrams.filter(d => d.kind === 'bpmn').forEach((d, i) => {
-    d.drawn = !!wellFormed[i] && hasCoordinates(d.source);
-    d.reason = d.drawn ? '' : wellFormed[i] ? BPMN_NO_COORDINATES : null;
+    Object.assign(d, { drawn: false, reason: null, laidOut: false, expected: null, model: null });
+    if (!wellFormed[i]) return;
+    if (hasCoordinates(d.source)){ Object.assign(d, { drawn: true, reason: '' }); return; }
+    let read = null;
+    try { read = readProcess(new XmlParser().parseFromString(d.source, 'text/xml')); }
+    catch (e){ d.reason = e.message; return; }
+    if (!read) return;
+    const m = read.model;
+    Object.assign(d, { drawn: true, reason: '', laidOut: true, model: m, expected: [
+      ...(m.pool ? [{ id: m.pool.id, tag: 'participant' }] : []),
+      ...m.lanes.filter(l => !l.synthetic).map(l => ({ id: l.id, tag: 'lane' })),
+      ...m.nodes.map(n => ({ id: n.id, tag: n.tag })),
+      ...m.flows.map(f => ({ id: f.id, tag: 'sequenceFlow' })),
+    ] });
   });
   return exp;
 }
@@ -2162,12 +2184,72 @@ async function assertFiltersWithoutScripts(browser, file, check, exp){
 }
 
 // ---------- BPMN diagrams ----------
-// The elements a BPMN block places, from its XML: every bpmnElement of a
+// The elements a BPMN block places: for a block laid out by dokufix what
+// judgeDiagrams() expects; otherwise, from its XML, every bpmnElement of a
 // BPMNShape or BPMNEdge, with the tag of the element it names ("userTask").
+const placedOf = d => d.laidOut ? d.expected : bpmnPlaced(d.source);
 function bpmnPlaced(xml){
   const tags = new Map();
   for (const m of xml.matchAll(/<(?:[\w.-]+:)?(\w+)\b[^>]*?\sid="([^"]+)"/g)) tags.set(m[2], m[1]);
   return [...xml.matchAll(/<(?:[\w.-]+:)?BPMN(?:Shape|Edge)\b[^>]*?\sbpmnElement="([^"]+)"/g)].map(m => ({ id: m[1], tag: tags.get(m[1]) || '' }));
+}
+// The properties of a clean drawing (story 2.8, AC2), each with its key in
+// what bpmnLayoutProblems() reports.
+const BPMN_AC2 = [
+  ['outline', 'every flow starts and ends on the outline of its symbols'],
+  ['through', 'no flow runs through a symbol it does not belong to'],
+  ['labels', 'no two flow labels lie on top of each other'],
+  ['corner', 'flows that leave a gateway at one point are told apart, by route or by label'],
+];
+// What is not clean in a laid-out drawing, one sentence per finding, each
+// starting with the key of its property. model: the process as
+// readProcess() read it; g: the geometry bpmnFacts() measured.
+function bpmnLayoutProblems(model, g){
+  const out = [];
+  const type = new Map(model.nodes.map(n => [n.id, n.type]));
+  const eps = 1.5;
+  const onOutline = (p, box, kind) => {
+    const [x, y, w, h] = box, cx = x + w / 2, cy = y + h / 2;
+    if (kind === 'gateway') return Math.abs(Math.abs(p[0] - cx) / (w / 2) + Math.abs(p[1] - cy) / (h / 2) - 1) * Math.min(w, h) / 2 <= eps;
+    if (kind === 'task') return p[0] >= x - eps && p[0] <= x + w + eps && p[1] >= y - eps && p[1] <= y + h + eps &&
+      Math.min(Math.abs(p[0] - x), Math.abs(p[0] - x - w), Math.abs(p[1] - y), Math.abs(p[1] - y - h)) <= eps;
+    return Math.abs(Math.hypot(p[0] - cx, p[1] - cy) - w / 2) <= eps;
+  };
+  const fmt = p => p.map(v => Math.round(v)).join(',');
+  for (const fl of model.flows){
+    const pts = g.flows[fl.id], a = g.shapes[fl.from], b = g.shapes[fl.to];
+    if (!pts || pts.length < 2 || !a || !b){ out.push('outline: ' + fl.id + ' is not drawn'); continue; }
+    if (!onOutline(pts[0], a, type.get(fl.from))) out.push('outline: ' + fl.id + ' starts at ' + fmt(pts[0]) + ', off ' + fl.from);
+    if (!onOutline(pts[pts.length - 1], b, type.get(fl.to))) out.push('outline: ' + fl.id + ' ends at ' + fmt(pts[pts.length - 1]) + ', off ' + fl.to);
+    for (const n of model.nodes){
+      if (n.id === fl.from || n.id === fl.to || !g.shapes[n.id]) continue;
+      const [x, y, w, h] = g.shapes[n.id];
+      for (let i = 1; i < pts.length; i++){
+        const [p, q] = [pts[i - 1], pts[i]];
+        if (Math.max(p[0], q[0]) > x + 1 && Math.min(p[0], q[0]) < x + w - 1 && Math.max(p[1], q[1]) > y + 1 && Math.min(p[1], q[1]) < y + h - 1){
+          out.push('through: ' + fl.id + ' runs through ' + n.id + ' from ' + fmt(p) + ' to ' + fmt(q));
+          break;
+        }
+      }
+    }
+  }
+  const labels = model.flows.filter(fl => g.labels[fl.id + '_label']).map(fl => [fl.id, g.labels[fl.id + '_label']]);
+  for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++){
+    const [a, b] = [labels[i][1], labels[j][1]];
+    if (a[0] < b[0] + b[2] - 0.5 && b[0] < a[0] + a[2] - 0.5 && a[1] < b[1] + b[3] - 0.5 && b[1] < a[1] + a[3] - 0.5) out.push('labels: the labels of ' + labels[i][0] + ' and ' + labels[j][0] + ' overlap');
+  }
+  // Flows that leave a gateway at one point, in one direction: each needs a
+  // label of its own; that they do not overlap is checked above.
+  for (const n of model.nodes.filter(x => x.type === 'gateway')){
+    const outs = model.flows.filter(fl => fl.from === n.id && g.flows[fl.id] && g.flows[fl.id].length > 1);
+    const way = fl => { const [p, q] = g.flows[fl.id]; return Math.round(p[0]) + ',' + Math.round(p[1]) + ' ' + Math.sign(Math.round(q[0] - p[0])) + ',' + Math.sign(Math.round(q[1] - p[1])); };
+    const groups = new Map();
+    for (const fl of outs) groups.set(way(fl), (groups.get(way(fl)) || []).concat(fl));
+    for (const group of groups.values()){
+      if (group.length > 1 && group.some(fl => !g.labels[fl.id + '_label'])) out.push('corner: ' + group.map(fl => fl.id).join(' and ') + ' leave ' + n.id + ' at one point, and not each has a label');
+    }
+  }
+  return out;
 }
 // The class an element of that tag has to carry: the one the document styles
 // colour it by (src/doc.css).
@@ -2206,6 +2288,37 @@ const bpmnFacts = page => page.evaluate(() => {
         size: svg ? svg.getAttribute('width') + ' ' + (svg.hasAttribute('height') ? svg.getAttribute('height') : 'no height') + ' ' + svg.style.maxWidth : '',
         foreign: svg ? svg.querySelectorAll('foreignObject').length : 0, hits: svg ? svg.querySelectorAll('.djs-hit').length : 0,
         elements: svg ? Array.from(svg.querySelectorAll('[data-element-id]')).map(g => ({ id: g.getAttribute('data-element-id'), cls: g.getAttribute('class') || '' })) : [],
+        // What bpmn-js drew, in the SVG's own units, by data-element-id: the
+        // box of each shape's first visual element, the points of each flow,
+        // the box of each label's text.
+        geometry: svg ? (() => {
+          const offset = g => {
+            const t = g.getAttribute('transform') || '';
+            let m = t.match(/matrix\(([^)]+)\)/);
+            if (m){ const v = m[1].trim().split(/[\s,]+/).map(Number); return [v[4], v[5]]; }
+            m = t.match(/translate\(\s*([-\d.eE]+)[\s,]+([-\d.eE]+)/);
+            return m ? [Number(m[1]), Number(m[2])] : [0, 0];
+          };
+          const out = { shapes: {}, flows: {}, labels: {} };
+          for (const g of svg.querySelectorAll('g.djs-element[data-element-id]')){
+            const id = g.getAttribute('data-element-id'), visual = g.querySelector(':scope > .djs-visual');
+            if (!visual || !visual.firstElementChild) continue;
+            const [ox, oy] = offset(g);
+            if (g.classList.contains('djs-connection')){
+              const nums = ((visual.querySelector(':scope > path') || { getAttribute: () => '' }).getAttribute('d') || '').match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [];
+              const pts = [];
+              for (let i = 0; i + 1 < nums.length; i += 2) pts.push([Number(nums[i]), Number(nums[i + 1])]);
+              out.flows[id] = pts;
+            } else if (/_label$/.test(id)){
+              const text = visual.querySelector('text');
+              if (text && text.textContent.trim()){ const b = text.getBBox(); out.labels[id] = [b.x + ox, b.y + oy, b.width, b.height]; }
+            } else {
+              const b = visual.firstElementChild.getBBox();
+              out.shapes[id] = [b.x + ox, b.y + oy, b.width, b.height];
+            }
+          }
+          return out;
+        })() : null,
         fixed: [...new Set(written.filter(v => v !== 'none' && !/^var\(--dokufix-bpmn-(fill|stroke|label)\)$/.test(v)))],
         credit: link ? { text: link.textContent, href: link.getAttribute('href'), caption: cap.textContent,
                          visible: link.checkVisibility({ visibilityProperty: true }) && box(link).width > 0, below: !!svg && box(cap).top >= box(svg).bottom - 0.5,
@@ -2243,14 +2356,29 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
   const missing = [];
   want.forEach((d, i) => {
     const drawn = f.figures[i] ? f.figures[i].elements : [];
-    for (const el of bpmnPlaced(d.source)){
+    for (const el of placedOf(d)){
       const g = drawn.find(x => x.id === el.id);
       if (!g) missing.push(d.title + ': ' + el.tag + ' ' + el.id + ' not drawn');
       else if (!g.cls.split(' ').includes(BPMN_KIND_CLASS(el.tag))) missing.push(d.title + ': ' + el.tag + ' ' + el.id + ' has "' + g.cls + '"');
     }
   });
-  const placed = want.reduce((n, d) => n + bpmnPlaced(d.source).length, 0);
+  const placed = want.reduce((n, d) => n + placedOf(d).length, 0);
   check('BPMN: every element the XML places is drawn, with the class of its kind (' + placed + ' elements)', want.length === f.figures.length && missing.length === 0, missing.slice(0, 8).join(' | '));
+  // A diagram laid out by dokufix (story 2.8): its counts, and the drawing
+  // clean (AC2), measured on the SVG bpmn-js drew.
+  want.forEach((d, i) => {
+    if (!d.laidOut) return;
+    const g = f.figures[i] && f.figures[i].geometry;
+    const m = d.model, drawn = id => !!(g && (g.shapes[id] || g.flows[id]));
+    const counts = [m.pool ? 1 : 0, m.lanes.filter(l => !l.synthetic).length, m.nodes.length, m.flows.length];
+    const got = [m.pool && drawn(m.pool.id) ? 1 : 0, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, m.nodes.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length];
+    check('BPMN laid out, "' + d.title + '": pool, lanes, symbols and flows drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
+    const problems = g ? bpmnLayoutProblems(m, g) : ['no SVG'];
+    for (const [key, text] of BPMN_AC2){
+      const mine = problems.filter(p => p.startsWith(key + ':'));
+      check('BPMN laid out, "' + d.title + '": ' + text, mine.length === 0, mine.slice(0, 6).join(' | '));
+    }
+  });
   const shapes = f.figures.filter(x => x.foreign || x.hits || !/^100% no height \d+px$/.test(x.size)).map(x => x.title + ': ' + json([x.foreign, x.hits, x.size]));
   check('BPMN: the SVG has no foreignObject and no hit areas, is 100 % wide with no height and no wider than drawn', shapes.length === 0, shapes.join(' | '));
   const fixed = f.figures.filter(x => x.fixed.length).map(x => x.title + ': ' + x.fixed.join(', '));
@@ -2288,9 +2416,11 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
 // fonts in turn, and every label is measured against what holds it: a label
 // inside a task, a call activity, a pool or a lane against that shape; a label
 // outside its symbol (an event, a gateway, a flow) against the picture, where
-// it would be cut off. What does not fit is noted with a picture, for the
-// product owner; it does not fail the run. The fonts are installed on the
-// machine of the run; one that is not is noted.
+// it would be cut off, and against every flow but its own, which it must not
+// lie on (story 2.8, AC9). What does not fit is noted with a picture, for the
+// product owner; it does not fail the run, unless a label is cut off or runs
+// out of its symbol as drawn. The fonts are installed on the machine of the
+// run; one that is not is noted.
 const FONT_CHECK = ['DejaVu Sans', 'Noto Sans'];
 async function assertBpmnFonts(page, check, dir){
   const results = [];
@@ -2307,6 +2437,17 @@ async function assertBpmnFonts(page, check, dir){
       document.querySelectorAll('figure.dokufix-diagram-bpmn').forEach((fig, figure) => {
         const svg = fig.querySelector('svg');
         const pic = svg.getBoundingClientRect();
+        // Every piece of every flow, on the screen, with the flow's id.
+        const pieces = [];
+        for (const g of svg.querySelectorAll('g.djs-connection[data-element-id]')){
+          const path = g.querySelector(':scope > .djs-visual > path');
+          if (!path) continue;
+          const nums = (path.getAttribute('d') || '').match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [];
+          const ctm = path.getScreenCTM();
+          const pts = [];
+          for (let i = 0; i + 1 < nums.length; i += 2) pts.push(new DOMPoint(Number(nums[i]), Number(nums[i + 1])).matrixTransform(ctm));
+          for (let i = 1; i < pts.length; i++) pieces.push({ id: g.getAttribute('data-element-id'), a: pts[i - 1], b: pts[i] });
+        }
         for (const text of svg.querySelectorAll('text')){
           if (!text.textContent.trim()) continue;
           out.labels++;
@@ -2319,8 +2460,14 @@ async function assertBpmnFonts(page, check, dir){
           const frame = holder ? holder.getBoundingClientRect() : pic;
           const eps = 0.5;
           if (t.left < frame.left - eps || t.right > frame.right + eps || t.top < frame.top - eps || t.bottom > frame.bottom + eps){
-            out.problems.push({ figure, text: fig.getAttribute('aria-label') + ' / ' + id + ' "' + text.textContent.trim() + '" ' + (holder ? 'runs out of its symbol' : 'is cut off by the picture') +
+            out.problems.push({ figure, kind: holder ? 'symbol' : 'picture', text: fig.getAttribute('aria-label') + ' / ' + id + ' "' + text.textContent.trim() + '" ' + (holder ? 'runs out of its symbol' : 'is cut off by the picture') +
               ' by ' + Math.round(Math.max(frame.left - t.left, t.right - frame.right, frame.top - t.top, t.bottom - frame.bottom) * 10) / 10 + ' px' });
+          }
+          // A label outside its symbol on a flow other than its own.
+          if (!holder){
+            const own = id.replace(/_label$/, '');
+            const hit = pieces.find(p => p.id !== own && Math.max(p.a.x, p.b.x) > t.left + eps && Math.min(p.a.x, p.b.x) < t.right - eps && Math.max(p.a.y, p.b.y) > t.top + eps && Math.min(p.a.y, p.b.y) < t.bottom - eps);
+            if (hit) out.problems.push({ figure, kind: 'flow', text: fig.getAttribute('aria-label') + ' / ' + id + ' "' + text.textContent.trim() + '" lies on the flow ' + hit.id });
           }
         }
       });
@@ -2339,8 +2486,8 @@ async function assertBpmnFonts(page, check, dir){
   await frames(page);
   const summary = results.map(r => r.font + (r.installed ? '' : ' (not installed)') + ': ' + (r.problems.length ? r.problems.length + ' of ' + r.labels + ' labels do not fit (' + r.problems.map(x => x.text + ', picture ' + x.picture).join('; ') + ')' : 'all ' + r.labels + ' labels fit')).join(' | ');
   fs.writeFileSync(path.join(dir, 'schrift.json'), JSON.stringify(results, null, 2) + '\n');
-  check('BPMN, the font check (AC7): every label measured with the font as drawn and with ' + FONT_CHECK.join(' and '),
-    results.every(r => r.labels > 0) && results[0].problems.length === 0, summary, summary);
+  check('BPMN, the font check (AC7 of 2.7, AC9 of 2.8): every label measured with the font as drawn and with ' + FONT_CHECK.join(' and ') + ', and whether one lies on a flow',
+    results.every(r => r.labels > 0) && results[0].problems.filter(x => x.kind !== 'flow').length === 0, summary, summary);
 }
 // schlank with scripts off: each BPMN diagram is the notice that it needs
 // JavaScript, and its credit is there, readable.
