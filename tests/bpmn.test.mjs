@@ -374,7 +374,10 @@ test('a bpmn block becomes a figure with the credit below the SVG container; a r
   const figure = root.querySelector('figure');
   assert.equal(figure.getAttribute('class'), 'dokufix-diagram dokufix-diagram-bpmn');
   assert.equal(figure.getAttribute('aria-label'), 'Rückgabe');
-  assert.deepEqual(Array.from(figure.children).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')), ['div.dokufix-diagram-svg', 'figcaption.dokufix-diagram-credit']);
+  assert.deepEqual(Array.from(figure.children).slice(-2).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')), ['div.dokufix-diagram-view', 'figcaption.dokufix-diagram-credit']);
+  assert.ok(figure.querySelector('.dokufix-diagram-view > .dokufix-diagram-stage > .dokufix-diagram-svg > svg'));
+  // Its width as drawn, the SVG's max-width, is on the figure.
+  assert.equal(figure.getAttribute('style'), '--dokufix-diagram-width:' + figure.querySelector('svg').style.maxWidth);
   const link = figure.querySelector('figcaption > a');
   assert.equal(link.getAttribute('href'), 'https://bpmn.io');
   assert.equal(link.textContent, 'bpmn-js');

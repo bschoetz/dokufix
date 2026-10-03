@@ -32,7 +32,8 @@
 //
 //   1. the page has the block's element exactly once, holding the doc.css slot
 //   2. every selector in doc.css starts with .dokufix-doc (or .numbered
-//      .dokufix-doc), or with .dokufix-rail
+//      .dokufix-doc), or with .dokufix-rail; the one selector of
+//      BLOCK_EXCEPTIONS stands as it is
 //   3. no document rule outside doc.css. In the export frame: no selector
 //      but the ones listed in FRAME_SELECTORS. In every other stylesheet: no
 //      .dokufix-doc selector, no "#preview <descendant>", no dokufix- name and
@@ -93,6 +94,16 @@ const FRAME_SELECTORS = new Set([
   '.dokufix-licences-view ul', '.dokufix-licences-view li',
   'body:has(aside.dokufix-rail.has-items) .dokufix-licences',
 ]);
+
+// Selectors of the block that start with something else than the content
+// container, each listed with its reason, as written. Only these: another
+// selector that begins the same way fails like any other.
+//   html:has(.dokufix-diagram-toggle:checked)   while the large view of a
+//     diagram is open (story 2.9) the page behind it must not scroll. In read
+//     mode and in the exports the page is what scrolls, and its root is the
+//     only element that can stop that; the content container cannot.
+// Their names are not taken for the block's (check 3): they are the frame's.
+const BLOCK_EXCEPTIONS = new Set(['html:has(.dokufix-diagram-toggle:checked)']);
 
 // ---------- arguments and files ----------
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -231,14 +242,15 @@ const missing = [page, docCss, appCss, searchCss, entry].filter(s => s.missing).
 }
 
 // 2
-// ".dokufix-doc" or ".numbered .dokufix-doc", then a space or the end; or
+// ".dokufix-doc" or ".numbered .dokufix-doc", then a space, a pseudo-class
+// of the container itself (".dokufix-doc:has(…)") or the end; or
 // ".dokufix-rail" as a whole class name, so not ".dokufix-rail-pending".
-const IN_BLOCK = new RegExp('^(?:(?:\\.numbered )?\\.' + DOC_CLASS + '(?= |$)|\\.dokufix-rail(?![\\w-]))');
+const IN_BLOCK = new RegExp('^(?:(?:\\.numbered )?\\.' + DOC_CLASS + '(?=[ :]|$)|\\.dokufix-rail(?![\\w-]))');
 {
   const problems = [];
   for (const r of walk(block.css, block.base)){
     if (r.atRule) continue;
-    if (!IN_BLOCK.test(r.selector)){
+    if (!IN_BLOCK.test(r.selector) && !BLOCK_EXCEPTIONS.has(r.selector)){
       problems.push(at(block.src, r.offset) + ': "' + r.selector + '" does not start with .' + DOC_CLASS + ' or .dokufix-rail; in the block a selector starts with the content container and nothing in front of it');
     }
   }

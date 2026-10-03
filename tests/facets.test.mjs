@@ -440,8 +440,8 @@ test('the wrapper of the table stands inside the group, below the controls, and 
 const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
 const bare = docCss.replace(/\/\*[\s\S]*?\*\//g, '');
 // The text between the braces of the first block that starts with this head.
-function blockOf(css, head){
-  const at = css.indexOf(head);
+function blockOf(css, head, from = 0){
+  const at = css.indexOf(head, from);
   if (at < 0) return null;
   const open = css.indexOf('{', at);
   let depth = 0;
@@ -479,8 +479,11 @@ test('src/doc.css holds exactly one hiding rule per value from 1 to FACET_MAX, i
   assert.ok(!/#[A-Za-z_][\w-]*[^;{}]*\{/.test(block.replace(/#[0-9a-f]{3,8}\b/gi, '')), 'no id selector');
 });
 test('the hiding rule and the visible bar stand inside "@media not print" and "@supports selector(:has(a))": in print and without :has() every row is shown and no control', () => {
-  const media = blockOf(bare, '@media not print');
-  assert.ok(media, 'the media block');
+  // The block of the facets: doc.css has more than one "@media not print"
+  // (the large view of a diagram has one).
+  const facetsAt = bare.indexOf('.dokufix-doc .dokufix-facet-bar label:has(input:focus-visible)');
+  const media = blockOf(bare, '@media not print', facetsAt);
+  assert.ok(facetsAt > 0 && media, 'the media block');
   const supports = blockOf(media, '@supports selector(:has(a))');
   assert.ok(supports, 'the supports block inside it');
   assert.ok(supports.includes(hidingSelector(1)) && supports.includes(hidingSelector(FACET_MAX)));

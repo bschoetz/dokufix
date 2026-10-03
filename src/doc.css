@@ -68,6 +68,102 @@
   /* The credit of a library below its diagram: "Gezeichnet mit bpmn-js". */
   .dokufix-doc .dokufix-diagram-credit{margin-top:4px;font-size:12px;line-height:1.4;color:#6e6e73}
   .dokufix-doc .dokufix-diagram-credit a{color:inherit}
+  /* The large view of a diagram (story 2.9). Its controls are in the figure
+     (src/app/diagrams.js): a checkbox, four radio buttons for the zoom, then
+     the view with its bar and the stage, a label of the checkbox around the
+     SVG container. These rules alone open, zoom and close it, without a
+     script, by sibling selectors: the checkbox and the radio buttons stand
+     before the view. In the column the view is a plain box and its bar is not
+     shown; nothing of it is positioned, and neither is the figure, only the
+     controls below.
+     The controls take no room: the checkbox and the radio buttons are boxes
+     of no size, and the radio buttons are not shown until the view is open.
+     A click on a label focuses its control, and the browser scrolls a
+     focused control into view, the page behind an open view too. So the
+     checkbox is sticky in the middle of the window while its figure reaches
+     past it: a click anywhere on the diagram finds it in view, and nothing
+     scrolls (not at the top: Firefox scrolls to a box of no size that lies
+     on the very edge of the window); Tab, from a figure out of view, still scrolls the diagram in.
+     While the view is open the controls stand fixed in the window: a click
+     on a step or on "Schließen" scrolls nothing either. They have no
+     content, so nothing of the document stands in a positioned box. */
+  .dokufix-doc .dokufix-diagram-toggle,
+  .dokufix-doc .dokufix-diagram-zoom{
+    display:block;width:0;height:0;margin:0;padding:0;border:0;
+    opacity:0;appearance:none;
+  }
+  .dokufix-doc .dokufix-diagram-toggle{position:sticky;top:50%}
+  .dokufix-doc .dokufix-diagram-zoom{display:none}
+  .dokufix-doc .dokufix-diagram-bar{display:none}
+  .dokufix-doc .dokufix-diagram-stage{display:block;cursor:zoom-in}
+  /* The focus ring of the checkbox: on the diagram while it is closed, on
+     "Schließen" while it is open, because Space on the checkbox closes it. */
+  .dokufix-doc .dokufix-diagram-toggle:not(:checked):focus-visible ~ .dokufix-diagram-view .dokufix-diagram-stage{outline:2px solid #0066cc;outline-offset:4px}
+  @media not print{
+    /* The page behind does not scroll: in read mode and in the exports the
+       page scrolls, so the root does not (the one rule here that does not start
+       with .dokufix-doc, named in tests/check-doc-styles.mjs); in edit mode the
+       preview pane scrolls, which is the content container itself. Its
+       overflow is the editor's, by its id, hence !important. */
+    html:has(.dokufix-diagram-toggle:checked){overflow:hidden}
+    .dokufix-doc:has(.dokufix-diagram-toggle:checked){overflow:hidden !important}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom{display:block}
+    .dokufix-doc .dokufix-diagram-toggle:checked,
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom{position:fixed;top:0;left:0}
+    /* The view: the whole window, over the rail (z-index 40), the search
+       panel (45), "Editor ↩" (50) and the editor's toolbar and menus. */
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view{
+      position:fixed;inset:0;z-index:100;
+      display:flex;flex-direction:column;
+      background:#fff;color:#1c1c1e;text-align:left;
+    }
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-bar{
+      display:flex;align-items:center;gap:12px;flex-shrink:0;
+      padding:10px 16px;background:#fafafa;border-bottom:1px solid #e5e5ea;
+      font-size:14px;line-height:1.4;
+    }
+    .dokufix-doc .dokufix-diagram-name{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .dokufix-doc .dokufix-diagram-steps{display:flex;gap:6px}
+    .dokufix-doc .dokufix-diagram-step,
+    .dokufix-doc .dokufix-diagram-close{
+      padding:4px 10px;border:1px solid #d1d1d6;border-radius:4px;
+      background:#fff;cursor:pointer;white-space:nowrap;user-select:none;
+    }
+    .dokufix-doc .dokufix-diagram-step:hover,
+    .dokufix-doc .dokufix-diagram-close:hover{background:#f0f0f3}
+    .dokufix-doc .dokufix-diagram-close{margin-left:6px;font-weight:600}
+    /* The chosen step, and the focus ring of a radio button on its label. */
+    .dokufix-doc .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(1),
+    .dokufix-doc .dokufix-diagram-zoom[value="100"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(2),
+    .dokufix-doc .dokufix-diagram-zoom[value="150"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(3),
+    .dokufix-doc .dokufix-diagram-zoom[value="200"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(4){background:#1c1c1e;border-color:#1c1c1e;color:#fff}
+    .dokufix-doc .dokufix-diagram-zoom[value="fit"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(1),
+    .dokufix-doc .dokufix-diagram-zoom[value="100"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(2),
+    .dokufix-doc .dokufix-diagram-zoom[value="150"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(3),
+    .dokufix-doc .dokufix-diagram-zoom[value="200"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(4),
+    .dokufix-doc .dokufix-diagram-toggle:checked:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-close{outline:2px solid #0066cc;outline-offset:2px}
+    /* The stage: the rest of the window, scrolling where the diagram is
+       larger. A click on it closes the view, as on "Schließen". */
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-stage{
+      flex:1;min-height:0;overflow:auto;padding:24px;text-align:center;cursor:zoom-out;
+    }
+    /* The zoom steps. The SVG's own max-width, its width as drawn, is an
+       inline style, hence !important. "Einpassen": the whole diagram in the
+       stage, in width and height, at most at 150 %. The others: 1, 1.5 and 2
+       times its width as drawn (--dokufix-diagram-width, set by
+       diagrams.js), the height after it. */
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view .dokufix-diagram-svg{height:100%}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view svg{
+      display:block;width:100%;height:100%;margin:0 auto;
+      max-width:calc(var(--dokufix-diagram-width, 100%) * 1.5) !important;
+    }
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom:not([value="fit"]):checked ~ .dokufix-diagram-view svg{
+      display:block;height:auto;margin:0 auto;max-width:none !important;
+    }
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="100"]:checked ~ .dokufix-diagram-view svg{width:var(--dokufix-diagram-width, 100%)}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="150"]:checked ~ .dokufix-diagram-view svg{width:calc(var(--dokufix-diagram-width, 100%) * 1.5)}
+    .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-zoom[value="200"]:checked ~ .dokufix-diagram-view svg{width:calc(var(--dokufix-diagram-width, 100%) * 2)}
+  }
   /* BPMN (src/app/bpmn.js). The SVG draws with these three properties instead
      of colours; the class the renderer gives each element by its type sets
      them for that element. The document's greys and its link colour. */

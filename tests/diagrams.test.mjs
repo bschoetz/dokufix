@@ -12,7 +12,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
-import { diagramTitle, diagramFigure, drawDiagrams, removeRendererLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT, DIAGRAM_KINDS, MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
+import { diagramTitle, diagramFigure, drawDiagrams, drawnWidth, removeRendererLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT, DIAGRAM_KINDS, DIAGRAM_ZOOM_STEPS, MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
 import { buildChips } from '../src/app/chips.js';
 
 function rootWith(html){
@@ -63,19 +63,60 @@ test('a heading with no text gives "Diagramm"', () => {
 });
 
 // ---------- the figure ----------
-test('the figure: its classes, the title as its accessible name, the SVG container as its one child', () => {
+// An element as markup with its attributes in alphabetical order: linkedom
+// writes them in an order of its own.
+const canon = el => el.nodeType === 3 ? el.textContent
+  : '<' + el.tagName.toLowerCase() + Array.from(el.attributes).map(a => [a.name, a.value]).sort().map(([n, v]) => ' ' + n + (v === '' ? '' : '="' + v + '"')).join('') + '>' +
+    Array.from(el.childNodes).map(canon).join('') + (el.tagName === 'INPUT' ? '' : '</' + el.tagName.toLowerCase() + '>');
+// The figure of the n-th diagram as diagrams.js writes it, the SVG container empty.
+const FIGURE_INSIDE = n =>
+  '<input class="dokufix-diagram-toggle" type="checkbox" id="dokufix-diagram-' + n + '-open" aria-label="Ablauf groß anzeigen">' +
+  ['fit', '100', '150', '200'].map(v => '<input class="dokufix-diagram-zoom" type="radio" name="dokufix-diagram-' + n + '-zoom" value="' + v + '" id="dokufix-diagram-' + n + '-' + v + '"' + (v === 'fit' ? ' checked' : '') + '>').join('') +
+  '<div class="dokufix-diagram-view"><div class="dokufix-diagram-bar"><span class="dokufix-diagram-name">Ablauf</span>' +
+  '<span class="dokufix-diagram-steps" role="group" aria-label="Zoom">' +
+  [['fit', 'Einpassen'], ['100', '100 %'], ['150', '150 %'], ['200', '200 %']].map(([v, t]) => '<label class="dokufix-diagram-step" for="dokufix-diagram-' + n + '-' + v + '">' + t + '</label>').join('') +
+  '</span><label class="dokufix-diagram-close" for="dokufix-diagram-' + n + '-open">Schließen</label></div>' +
+  '<label class="dokufix-diagram-stage" for="dokufix-diagram-' + n + '-open"><div class="dokufix-diagram-svg"></div></label></div>';
+
+test('the figure: its classes, the title as its accessible name, the controls of the large view, the SVG container in the stage', () => {
   const root = rootWith('');
-  const { figure, holder } = diagramFigure(root.ownerDocument, 'mermaid', 'Ablauf');
+  const { figure, holder } = diagramFigure(root.ownerDocument, 'mermaid', 'Ablauf', undefined, 3);
   assert.equal(figure.tagName, 'FIGURE');
   assert.deepEqual(Array.from(figure.attributes).map(a => [a.name, a.value]).sort(), [['aria-label', 'Ablauf'], ['class', 'dokufix-diagram dokufix-diagram-mermaid']]);
-  assert.equal(figure.innerHTML, '<div class="dokufix-diagram-svg"></div>');
-  assert.equal(figure.firstElementChild, holder);
+  const inside = el => Array.from(el.childNodes).map(canon).join('');
+  assert.equal(inside(figure), inside(rootWith(FIGURE_INSIDE(3))));
+  assert.equal(figure.querySelector('.dokufix-diagram-stage > .dokufix-diagram-svg'), holder);
   assert.equal(DIAGRAM_CLASS, 'dokufix-diagram');
   assert.equal(DIAGRAM_SVG_CLASS, 'dokufix-diagram-svg');
-  // The title is set as an attribute, so markup in it stays text.
-  const odd = diagramFigure(root.ownerDocument, 'mermaid', 'A "<b>" & B').figure;
+  assert.deepEqual(DIAGRAM_ZOOM_STEPS.map(z => z.label), ['Einpassen', '100 %', '150 %', '200 %']);
+  // "checked" stands on "Einpassen" alone, as an attribute; nothing is open.
+  assert.deepEqual(Array.from(figure.querySelectorAll('input')).filter(i => i.hasAttribute('checked')).map(i => i.id), ['dokufix-diagram-3-fit']);
+  // Every label names a control of its own figure.
+  const ids = new Set(Array.from(figure.querySelectorAll('input')).map(i => i.id));
+  assert.ok(Array.from(figure.querySelectorAll('label')).every(l => ids.has(l.getAttribute('for'))));
+  // The title is set as an attribute and as text, so markup in it stays text.
+  const odd = diagramFigure(root.ownerDocument, 'mermaid', 'A "<b>" & B', undefined, 1).figure;
   assert.equal(odd.getAttribute('aria-label'), 'A "<b>" & B');
+  assert.equal(odd.querySelector('.dokufix-diagram-name').textContent, 'A "<b>" & B');
+  assert.equal(odd.querySelector('.dokufix-diagram-toggle').getAttribute('aria-label'), 'A "<b>" & B groß anzeigen');
   assert.equal(odd.querySelectorAll('b').length, 0);
+});
+
+test('a credit stands below the view, outside the SVG container', () => {
+  const root = rootWith('');
+  const { figure } = diagramFigure(root.ownerDocument, 'bpmn', 'Ablauf', { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' }, 1);
+  assert.deepEqual(Array.from(figure.children).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')),
+    ['input.dokufix-diagram-toggle', 'input.dokufix-diagram-zoom', 'input.dokufix-diagram-zoom', 'input.dokufix-diagram-zoom', 'input.dokufix-diagram-zoom', 'div.dokufix-diagram-view', 'figcaption.dokufix-diagram-credit']);
+  assert.equal(figure.lastElementChild.innerHTML, 'Gezeichnet mit <a href="https://bpmn.io">bpmn-js</a>');
+});
+
+test('the width as drawn: the SVG\'s max-width, else the width of its viewBox, else none', () => {
+  const holder = svg => rootWith('<div class="dokufix-diagram-svg">' + svg + '</div>').firstElementChild;
+  assert.equal(drawnWidth(holder('<svg width="100%" style="max-width: 812.25px;" viewBox="0 0 900 300"></svg>')), '812.25px');
+  assert.equal(drawnWidth(holder('<svg width="100%" viewBox="-8 -8 640.5 300"></svg>')), '640.5px');
+  assert.equal(drawnWidth(holder('<svg width="100%" style="max-width: 100%;" viewBox="0,0,500,300"></svg>')), '500px');
+  assert.equal(drawnWidth(holder('<svg width="100%"></svg>')), '');
+  assert.equal(drawnWidth(holder('')), '');
 });
 
 test('every block of a known kind becomes a figure in its place, drawn in the order of the document', async () => {
@@ -84,11 +125,15 @@ test('every block of a known kind becomes a figure in its place, drawn in the or
   await drawDiagrams(root, { mermaid: fake });
   const figures = Array.from(root.querySelectorAll('figure'));
   assert.deepEqual(figures.map(f => [f.className, f.getAttribute('aria-label')]), [['dokufix-diagram dokufix-diagram-mermaid', 'Eins'], ['dokufix-diagram dokufix-diagram-mermaid', 'Zwei']]);
+  // The ids of the controls carry the diagram's place in the document.
+  assert.deepEqual(figures.map(f => f.querySelector('.dokufix-diagram-toggle').id), ['dokufix-diagram-1-open', 'dokufix-diagram-2-open']);
   assert.deepEqual(drawn, ['Eins', 'Zwei']);
   assert.equal(figures[0].previousElementSibling.tagName, 'H2');
   assert.equal(figures[0].nextElementSibling.tagName, 'P');
   // The renderer got the source as text, with its markup unescaped.
   assert.equal(figures[0].querySelector('.dokufix-diagram-svg > svg > title').textContent, 'flowchart LR\n  A --> B');
+  // The SVG of the test's renderer says no width: the figure gets none.
+  assert.equal(figures[0].getAttribute('style'), null);
   // A block of another language stays a code block.
   assert.equal(root.querySelectorAll('pre code.language-js').length, 1);
   assert.equal(root.querySelectorAll('pre code.language-mermaid').length, 0);
@@ -106,6 +151,17 @@ test('a diagram whose renderer throws becomes the warning of its kind, with the 
   const w = root.querySelector('.dokufix-warning');
   assert.equal(w.querySelector('.dokufix-warning-title').textContent, 'Warnung: Das Diagramm „Zwei“ konnte nicht gezeichnet werden.');
   assert.equal(w.querySelector('.dokufix-warning-detail').textContent, 'Parse error on line 2');
+  // The warning has no control of a large view; the two figures have theirs, by their place.
+  assert.equal(w.querySelectorAll('input, label').length, 0);
+  assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-diagram-toggle')).map(t => t.id), ['dokufix-diagram-1-open', 'dokufix-diagram-3-open']);
+});
+
+test('a drawn diagram\'s figure gets its width as drawn, for the zoom steps of its large view', async () => {
+  const sized = { render(d){ d.holder.innerHTML = d.source; }, warning: () => '' };
+  const root = rootWith('<h2>Eins</h2>' + block('mermaid', '&lt;svg width="100%" style="max-width: 812.5px;" viewBox="0 0 812.5 200"&gt;&lt;/svg&gt;') +
+    '<h2>Zwei</h2>' + block('mermaid', '&lt;svg width="100%" viewBox="0 0 431 200"&gt;&lt;/svg&gt;'));
+  await drawDiagrams(root, { mermaid: sized });
+  assert.deepEqual(Array.from(root.querySelectorAll('figure')).map(f => f.getAttribute('style')), ['--dokufix-diagram-width:812.5px', '--dokufix-diagram-width:431px']);
 });
 
 test('a document without diagrams is left as it is', async () => {

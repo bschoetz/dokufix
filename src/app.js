@@ -17,6 +17,7 @@ import { registerRailClicks } from './app/rail.js';
 import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle, registerLicences } from './app/editor.js';
 import { registerDownloadMenu } from './app/downloads/menu.js';
 import { registerSearch, closeSearch } from './app/search.js';
+import { registerLargeViewKeys } from './app/large-view.js';
 
 // A page whose script tag of Mermaid failed has no mermaid; the script runs
 // on, and every diagram that needs it becomes a warning (app/diagrams.js,
@@ -55,6 +56,9 @@ registerHamburger();
 registerViewToggle();
 registerStorageBanner();
 registerLicences();
+// Escape, "+" and "-" of the large view of a diagram, before every other key
+// listener (window, capture): an open view is the first thing Escape closes.
+registerLargeViewKeys(document);
 // The search reads the preview and opens in read mode; leaving read mode, in
 // whatever way, closes it.
 const inReadMode = () => document.body.classList.contains('mode-view');

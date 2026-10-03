@@ -20,12 +20,17 @@
 // block markers with cards and step lists, tables with their wrapper, sub-lines
 // and facet filter, the free-text filter, the figure of every diagram with its
 // title, BPMN diagrams with their elements, colours and credit, a BPMN diagram
-// laid out without coordinates with its counts and a clean drawing, the licence
+// laid out without coordinates with its counts and a clean drawing, the large
+// view of a diagram in every variant and with scripts off, the licence
 // information, the search in Mit Editor, schlank and kompakt, no <script> and
 // nothing of the search in nur-lesen, nothing of bpmn-js and no editor rules
 // in a read-only export). The font check of the BPMN labels (Chromium,
 // nur-lesen) notes what does not fit or lies on a flow, with a picture, and
 // does not fail.
+// Besides the pictures of the page at rest and with every state switched on,
+// the run takes one of the large view of the first diagram open, per variant
+// at 1400 px in the light scheme, into <browser>/grossansicht/ (see
+// compareRun()).
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -781,6 +786,8 @@ async function buildExports(browser, opts, md, dir){
   // rows (assertFilters()). Typed anew before every download, because a
   // read-only download renders, and a render makes a new, empty field.
   const typed = [];
+  // The large view of a diagram, open while each file is written.
+  const views = [];
   const fieldState = () => page.evaluate(() => ({
     values: Array.from(document.querySelectorAll('#preview .dokufix-filter-input')).map(i => i.value),
     counts: Array.from(document.querySelectorAll('#preview .dokufix-filter-count')).map(c => c.textContent),
@@ -802,10 +809,28 @@ async function buildExports(browser, opts, md, dir){
       const keys = f.facet === 0 && chosen[chosen.length - 1] ? planned.facets[0].keys : null;
       term = { variant: v.key, filter: typedFilter, typed: await fieldState(), count: filterCountText(f.shown.filter((m, i) => m && (!keys || keys[i] === 1)).length, f.rows.length) };
     }
-    await page.click('#download-btn');
+    // And the large view of the first diagram, open at "150 %": every file has
+    // to open with every view closed, at "Einpassen" (assertLargeView()).
+    // Opened anew before every download: a read-only download renders, and a
+    // render closes it. The view lies over the toolbar, so the download is
+    // started through the DOM.
+    const viewState = () => page.evaluate(() => {
+      const f = document.querySelector('#preview figure.dokufix-diagram');
+      return f && f.querySelector('.dokufix-diagram-toggle') ? { open: f.querySelector('.dokufix-diagram-toggle').checked, zoom: f.querySelector('.dokufix-diagram-zoom:checked').value,
+                   views: Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(t => t.checked).length,
+                   page: getComputedStyle(document.documentElement).overflow } : null;
+    });
+    const view = { variant: v.key, before: await page.evaluate(() => {
+      const f = document.querySelector('#preview figure.dokufix-diagram');
+      if (!f || !f.querySelector('.dokufix-diagram-toggle')) return null;
+      if (!f.querySelector('.dokufix-diagram-toggle').checked) f.querySelector('.dokufix-diagram-stage').click();
+      f.querySelector('.dokufix-diagram-step:nth-child(3)').click();
+      return true;
+    }) && await viewState() };
+    await page.evaluate(() => document.getElementById('download-btn').click());
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 60000 }),
-      page.click('button[data-download="' + v.download + '"]'),
+      page.evaluate(sel => document.querySelector(sel).click(), 'button[data-download="' + v.download + '"]'),
     ]);
     const file = path.join(dir, v.key + '.html');
     await download.saveAs(file);
@@ -813,6 +838,8 @@ async function buildExports(browser, opts, md, dir){
     files[v.key] = file;
     sizes[v.key] = fs.statSync(file).size;
     if (term){ term.after = await fieldState(); typed.push(term); }
+    view.after = await viewState();
+    views.push(view);
   }
   // The document rendered again, twice: one field per table each time.
   const rendered = [];
@@ -828,7 +855,7 @@ async function buildExports(browser, opts, md, dir){
   }
   await context.close();
   libs.sort((x, y) => x.url.localeCompare(y.url));
-  return { files, sizes, libs, errors, source, chosen, typed, rendered, wellFormed };
+  return { files, sizes, libs, errors, source, chosen, typed, views, rendered, wellFormed };
 }
 
 // ---------- reopen ----------
@@ -844,7 +871,7 @@ async function openVariant(browser, file, key, exp, width, scheme){
     // when the rail is built, the last thing a render does: a file that draws
     // diagrams otherwise, such as the PoC, is known by that.
     await page.waitForFunction(n =>
-      (document.querySelectorAll('#preview .dokufix-diagram > .dokufix-diagram-svg > svg').length >= n || !!document.querySelector('#dokufix-rail.has-items')) &&
+      (document.querySelectorAll('#preview .dokufix-diagram .dokufix-diagram-svg > svg').length >= n || !!document.querySelector('#dokufix-rail.has-items')) &&
       document.querySelector('#preview') && document.querySelector('#preview').children.length > 0,
       exp.diagrams.filter(d => d.drawn).length, { timeout: 90000 });
   } else if (key === 'schlank'){
@@ -2357,7 +2384,7 @@ const bpmnFacts = page => page.evaluate(() => {
   const ids = Array.from(document.querySelectorAll('[id]')).map(e => e.id);
   return {
     figures: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => {
-      const svg = f.querySelector(':scope > .dokufix-diagram-svg > svg');
+      const svg = f.querySelector('.dokufix-diagram-svg > svg');
       const cap = f.querySelector(':scope > figcaption.dokufix-diagram-credit');
       const link = cap && cap.querySelector(':scope > a');
       const colour = (sel, prop) => { const el = svg && svg.querySelector(sel); return el ? getComputedStyle(el)[prop] : null; };
@@ -2588,7 +2615,7 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
     const f = await page.evaluate(() => {
       const root = document.querySelector('main.reader-body');
       return {
-        notices: Array.from(root.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg[data-gz]')).map(h => getComputedStyle(h, '::before').content),
+        notices: Array.from(root.querySelectorAll('figure.dokufix-diagram .dokufix-diagram-svg[data-gz]')).map(h => getComputedStyle(h, '::before').content),
         svgs: root.querySelectorAll('figure.dokufix-diagram svg').length,
         credits: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn > figcaption > a')).map(a => { const r = a.getBoundingClientRect(); return a.parentElement.textContent + ' | ' + a.textContent + ' ' + (r.width > 0 && r.height > 0); }),
       };
@@ -2597,6 +2624,392 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
     check('diagrams with scripts off: each is the notice that it needs JavaScript, and every BPMN diagram keeps its credit, visible',
       f.svgs === 0 && f.notices.length === drawn.length && f.notices.every(n => n === '"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"') &&
       f.credits.length === bpmn && f.credits.every(c => c === BPMN_CREDIT_LINE + ' | ' + BPMN_CREDIT.text + ' true'), JSON.stringify(f));
+  } finally {
+    await context.close();
+  }
+}
+
+// The large view of a diagram (story 2.9), in every variant: a click on a
+// diagram opens it over the whole window, with its title, the zoom steps and
+// "Schließen", at "Einpassen", and the page behind does not scroll; the steps
+// give 1, 1.5 and 2 times the width as drawn, "Einpassen" the whole diagram
+// at most at 150 %; "Schließen" and a second click close it. Tab reaches the
+// diagram with a focus ring, Space opens it, the arrows choose a step and
+// Space on its checkbox closes it. Where a script runs, Escape closes the view
+// and nothing else, also before an open search panel, "+" and "-" change the
+// step, held at the ends, and "/" opens no search over it; in nur-lesen
+// these keys do nothing. In the editor file: in edit mode the view lies over
+// the toolbar and the preview pane does not scroll behind it, and a render
+// closes it. In print there is no control and the diagram stands in the
+// column. Every file opens with every view closed, at "Einpassen", although
+// each was written with a view open at "150 %" (buildExports()).
+const STEP_TEXTS = ['Einpassen', '100 %', '150 %', '200 %'];
+async function assertLargeView(page, check, exp, key){
+  const drawn = exp.diagrams.filter(d => d.drawn);
+  const json = JSON.stringify;
+  const editor = key === 'mit-editor';
+  const scripted = key !== 'nur-lesen';
+  const ROOT_SEL = editor ? '#preview' : 'main.reader-body';
+  const FIG = ROOT_SEL + ' figure.dokufix-diagram';
+  const reset = async () => {
+    await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+    await frames(page);
+  };
+  await reset();
+  // --- as the file opens: every figure with its controls, every view closed, at "Einpassen"; a warning has none
+  const start = await page.evaluate(sel => {
+    const figures = Array.from(document.querySelectorAll(sel));
+    return {
+      figures: figures.length,
+      closed: figures.filter(f => { const t = f.querySelector(':scope > .dokufix-diagram-toggle'); return t && !t.checked; }).length,
+      fit: figures.filter(f => { const z = f.querySelector(':scope > .dokufix-diagram-zoom:checked'); return z && z.value === 'fit'; }).length,
+      inWarnings: document.querySelectorAll('.dokufix-warning :is(.dokufix-diagram-toggle, .dokufix-diagram-zoom, .dokufix-diagram-view)').length,
+      page: getComputedStyle(document.documentElement).overflow,
+    };
+  }, FIG);
+  check('large view: every figure has its controls, and the file opens with every view closed, at "Einpassen"; no warning carries a control of one',
+    start.figures === drawn.length && start.closed === drawn.length && start.fit === drawn.length && start.inWarnings === 0 && start.page === 'visible', json(start));
+  // A file without the controls (one from before story 2.9) has failed here, and nothing below can run.
+  if (!drawn.length || start.closed !== drawn.length) return;
+
+  // What the view of the n-th figure is like now.
+  const facts = n => page.evaluate(([sel, n]) => {
+    const f = document.querySelectorAll(sel)[n];
+    const t = f.querySelector(':scope > .dokufix-diagram-toggle'), view = f.querySelector(':scope > .dokufix-diagram-view');
+    const bar = view.querySelector('.dokufix-diagram-bar'), stage = view.querySelector('.dokufix-diagram-stage'), svg = stage.querySelector('svg');
+    const box = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
+    const cs = getComputedStyle(view), ss = getComputedStyle(stage);
+    const steps = Array.from(view.querySelectorAll('.dokufix-diagram-step'));
+    const ring = el => { const c = getComputedStyle(el); return c.outlineStyle !== 'none' && parseFloat(c.outlineWidth) >= 2; };
+    const inView = (x, y) => { const e = document.elementFromPoint(x, y); return !!e && view.contains(e); };
+    const vb = svg && svg.viewBox && svg.viewBox.baseVal;
+    const s = box(svg);
+    const pad = parseFloat(ss.paddingLeft);
+    return {
+      open: t.checked, openViews: Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(x => x.checked).length,
+      zoom: (f.querySelector(':scope > .dokufix-diagram-zoom:checked') || {}).value || null,
+      position: cs.position, zIndex: cs.zIndex, view: box(view), window: { width: innerWidth, height: innerHeight },
+      onTop: [[innerWidth / 2, innerHeight / 2], [innerWidth - 8, 8], [8, innerHeight - 8], [innerWidth - 8, innerHeight - 8]].every(([x, y]) => inView(x, y)),
+      bar: getComputedStyle(bar).display, name: (bar.querySelector('.dokufix-diagram-name') || {}).textContent, title: f.getAttribute('aria-label'),
+      steps: steps.map(s => s.textContent), close: (bar.querySelector('.dokufix-diagram-close') || {}).textContent,
+      chosen: steps.filter(s => getComputedStyle(s).backgroundColor === 'rgb(28, 28, 30)').map(s => s.textContent),
+      rings: { stage: ring(stage), close: ring(bar.querySelector('.dokufix-diagram-close')), steps: steps.map(ring) },
+      focus: document.activeElement === t ? 'toggle' : (document.activeElement && document.activeElement.classList.contains('dokufix-diagram-zoom') && f.contains(document.activeElement) ? 'zoom ' + document.activeElement.value : (document.activeElement || {}).tagName),
+      svg: s, inner: box(stage) && { left: box(stage).left + pad, top: box(stage).top + pad, right: box(stage).left + stage.clientWidth - pad, bottom: box(stage).top + stage.clientHeight - pad },
+      scrolls: { x: stage.scrollWidth > stage.clientWidth + 1, y: stage.scrollHeight > stage.clientHeight + 1 },
+      width: parseFloat(getComputedStyle(f).getPropertyValue('--dokufix-diagram-width')) || 0,
+      viewBox: vb ? [vb.width, vb.height] : null,
+      page: { overflow: getComputedStyle(document.documentElement).overflow, scrollY: Math.round(scrollY) },
+      preview: document.getElementById('preview') ? { overflow: getComputedStyle(document.getElementById('preview')).overflowY, scrollTop: Math.round(document.getElementById('preview').scrollTop) } : null,
+      search: !!document.querySelector('body > .search-panel:not([hidden])'),
+      read: document.body.classList.contains('mode-view'),
+      header: (() => { const h = document.querySelector('body > header'); if (!h || !h.getClientRects().length) return null; const r = h.getBoundingClientRect(); return inView(r.left + r.width / 2, r.top + r.height / 2); })(),
+    };
+  }, [FIG, n]);
+  const n = 0;
+  const STAGE = page.locator(FIG).nth(n).locator('.dokufix-diagram-stage');
+  const step = async k => { await page.locator(FIG).nth(n).locator('.dokufix-diagram-step').nth(k).click(); await frames(page); return facts(n); };
+  const press = async k => { await page.keyboard.press(k); await frames(page); return facts(n); };
+  const fullWindow = f => f.position === 'fixed' && f.zIndex === '100' && Math.abs(f.view.left) < 1 && Math.abs(f.view.top) < 1 && Math.abs(f.view.right - f.window.width) < 1 && Math.abs(f.view.bottom - f.window.height) < 1;
+  const inside = (a, b) => !!a && !!b && a.left >= b.left - 1 && a.top >= b.top - 1 && a.right <= b.right + 1 && a.bottom <= b.bottom + 1;
+  const near = (a, b) => Math.abs(a - b) <= 1;
+  // Every view closed and back at "Einpassen", by the properties, as a file opens.
+  const close = async () => {
+    await page.evaluate(sel => {
+      for (const f of document.querySelectorAll(sel)){
+        f.querySelector(':scope > .dokufix-diagram-toggle').checked = false;
+        f.querySelector(':scope > .dokufix-diagram-zoom[value="fit"]').checked = true;
+      }
+    }, FIG);
+    await frames(page);
+  };
+
+  // Whether "/" reached the end of its way prevented: Firefox opens its quick find on one that is not.
+  const slashPrevented = async () => {
+    await page.evaluate(() => { window.vergleichSlash = null; window.addEventListener('keydown', e => { if (e.key === '/') window.vergleichSlash = e.defaultPrevented; }, { once: true }); });
+    const f = await press('/');
+    return { ...f, prevented: await page.evaluate(() => window.vergleichSlash) };
+  };
+  // A click low on the tallest diagram while its top lies above the window
+  // (in a window 400 px high), opening it, and the same click closing it:
+  // the mouse alone, so nothing but the page scrolls the page. The scroller is
+  // the page, or the preview pane in edit mode. Returns its scroll position
+  // before, with the view open and closed again.
+  const lowClick = async inPane => {
+    await page.setViewportSize({ width: 1400, height: 400 });
+    await frames(page);
+    const at = await page.evaluate(([sel, inPane]) => {
+      const figures = Array.from(document.querySelectorAll(sel));
+      const heights = figures.map(f => f.querySelector('.dokufix-diagram-stage').getBoundingClientRect().height);
+      const k = heights.indexOf(Math.max(...heights));
+      const stage = figures[k].querySelector('.dokufix-diagram-stage');
+      const scroller = inPane ? document.getElementById('preview') : document.scrollingElement;
+      const edge = inPane ? scroller.getBoundingClientRect().top : 0;
+      // The top of the figure 120 px above the scroller's upper edge.
+      scroller.scrollTop += figures[k].getBoundingClientRect().top - edge + 120;
+      const r = stage.getBoundingClientRect();
+      return { k, x: r.left + r.width / 2, y: Math.min(r.bottom - 10, innerHeight - 10), height: Math.round(r.height), above: Math.round(edge - figures[k].getBoundingClientRect().top) };
+    }, [FIG, inPane]);
+    await frames(page);
+    const where = () => page.evaluate(inPane => Math.round(inPane ? document.getElementById('preview').scrollTop : scrollY), inPane);
+    const before = await where();
+    await page.mouse.click(at.x, at.y);
+    await frames(page);
+    const open = { at: await where(), views: await page.evaluate(() => Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(t => t.checked).length) };
+    await page.mouse.click(at.x, at.y);
+    await frames(page);
+    const closed = { at: await where(), views: await page.evaluate(() => Array.from(document.querySelectorAll('.dokufix-diagram-toggle')).filter(t => t.checked).length) };
+    await close();
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    await frames(page);
+    return { at, before, open, closed };
+  };
+  const unmoved = r => r.at.above === 120 && r.at.y > 0 && r.open.views === 1 && r.closed.views === 0 && r.open.at === r.before && r.closed.at === r.before;
+
+  // --- open by mouse
+  await STAGE.scrollIntoViewIfNeeded();
+  const before = await facts(n);
+  await STAGE.click();
+  await frames(page);
+  const opened = await facts(n);
+  check('large view: a click on the diagram opens it over the whole window, above everything else: its title in the bar, the steps ' + json(STEP_TEXTS) + ', "Schließen", at "Einpassen"',
+    !before.open && opened.open && opened.openViews === 1 && fullWindow(opened) && opened.onTop && opened.bar === 'flex' && opened.name === opened.title && opened.title === drawn[n].title &&
+      json(opened.steps) === json(STEP_TEXTS) && opened.close === 'Schließen' && opened.zoom === 'fit' && json(opened.chosen) === json(['Einpassen']),
+    json({ ...opened, svg: undefined, inner: undefined }));
+  // Fit: the whole diagram inside the stage, in width and height, never larger than 150 %.
+  const scale = f => f.viewBox && f.svg ? Math.min(f.svg.width / f.viewBox[0], f.svg.height / f.viewBox[1]) : 0;
+  const most = f => f.viewBox && f.width ? 1.5 * f.width / f.viewBox[0] : 0;
+  check('large view, "Einpassen": the whole diagram is visible in width and height, at most at 150 % of its width as drawn',
+    inside(opened.svg, opened.inner) && !opened.scrolls.x && !opened.scrolls.y && opened.width > 0 && scale(opened) > 0 && scale(opened) <= most(opened) + 0.005,
+    json({ svg: round(opened.svg), stage: round(opened.inner), scale: scale(opened), most: most(opened), width: opened.width, viewBox: opened.viewBox }));
+  // The page behind does not scroll.
+  await page.mouse.move(opened.window.width / 2, opened.window.height / 2);
+  await page.mouse.wheel(0, 800);
+  await frames(page);
+  const wheeled = await facts(n);
+  check('large view: the page behind it does not scroll, by the wheel either', opened.page.overflow === 'hidden' && wheeled.page.scrollY === before.page.scrollY && opened.page.scrollY === before.page.scrollY,
+    json({ before: before.page, opened: opened.page, wheeled: wheeled.page }));
+
+  // --- the zoom steps by mouse
+  const z100 = await step(1), z150 = await step(2), z200 = await step(3);
+  const zoomed = [[z100, 1], [z150, 1.5], [z200, 2]].map(([f, k]) => ({ zoom: f.zoom, chosen: f.chosen.join(), width: Math.round(f.svg.width * 10) / 10, want: Math.round(f.width * k * 10) / 10, scrolls: f.scrolls.x, wider: f.svg.width > f.inner.right - f.inner.left + 1 }));
+  check('large view: "100 %", "150 %" and "200 %" draw the diagram at 1, 1.5 and 2 times its width as drawn, and the view scrolls where it is larger',
+    json(zoomed.map(z => [z.zoom, z.chosen])) === json([['100', '100 %'], ['150', '150 %'], ['200', '200 %']]) && zoomed.every(z => near(z.width, z.want) && z.scrolls === z.wider) && zoomed[2].wider,
+    json(zoomed));
+  const fitAgain = await step(0);
+  check('large view: "Einpassen" again fits it', fitAgain.zoom === 'fit' && inside(fitAgain.svg, fitAgain.inner), json({ zoom: fitAgain.zoom, svg: round(fitAgain.svg) }));
+
+  // --- the keys
+  if (scripted){
+    const plus = [];
+    for (let i = 0; i < 4; i++) plus.push((await press('+')).zoom);
+    const minus = [];
+    for (let i = 0; i < 4; i++) minus.push((await press('-')).zoom);
+    const modified = [];
+    for (const mod of ['ctrlKey', 'altKey', 'metaKey']){
+      await page.evaluate(m => document.body.dispatchEvent(new KeyboardEvent('keydown', { key: '+', [m]: true, bubbles: true, cancelable: true })), mod);
+      modified.push((await facts(n)).zoom);
+    }
+    check('large view: "+" and "-" choose the next and the previous step, held at the ends; with Ctrl, Alt or Meta they do nothing',
+      json(plus) === json(['100', '150', '200', '200']) && json(minus) === json(['150', '100', 'fit', 'fit']) && json(modified) === json(['fit', 'fit', 'fit']), json({ plus, minus, modified }));
+    const slash = await slashPrevented();
+    check('large view: "/" opens no search over it, and the browser\'s own "/" is held back', slash.open && !slash.search && slash.prevented === true, json({ open: slash.open, search: slash.search, prevented: slash.prevented }));
+    // Should it have opened one, it is closed again, so the run goes on.
+    await page.evaluate(() => { const p = document.querySelector('body > .search-panel'); if (p && !p.hidden) p.querySelector('.search-close').click(); });
+    await press('+');
+    const esc = await press('Escape');
+    check('large view: Escape closes it and nothing else' + (editor ? ': read mode stays' : '') + '; the page scrolls again where it was',
+      !esc.open && esc.page.overflow === 'visible' && esc.page.scrollY === before.page.scrollY && (!editor || esc.read), json({ open: esc.open, page: esc.page, read: esc.read }));
+    if (editor){
+      const next = await press('Escape');
+      check('large view: the next Escape leaves read mode', !next.read, json({ read: next.read }));
+      await close();
+      if (!next.read){
+        await page.click('#view-btn');
+        await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+      }
+      await reset();
+    }
+    // An open search panel: the view closes first, then the panel.
+    await close();
+    await STAGE.scrollIntoViewIfNeeded();
+    await page.keyboard.press('/');
+    await frames(page);
+    await STAGE.click({ position: { x: 12, y: 12 } });
+    await frames(page);
+    const both = await facts(n);
+    const first = await press('Escape');
+    const second = await press('Escape');
+    check('large view: with the search panel open as well, the first Escape closes the view, the second the panel' + (editor ? ', and read mode stays' : ''),
+      both.open && both.search && !first.open && first.search && !second.search && (!editor || second.read), json({ both: [both.open, both.search], first: [first.open, first.search], second: [second.open, second.search, second.read] }));
+    // Whatever is left open is closed, and the editor is back in read mode, so the run goes on.
+    await page.evaluate(() => { const p = document.querySelector('body > .search-panel'); if (p && !p.hidden) p.querySelector('.search-close').click(); });
+    if (editor && !second.read){
+      await close();
+      await page.click('#view-btn');
+      await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+    }
+  } else {
+    const keys = [(await press('+')).zoom, (await press('Escape')).open];
+    check('large view in nur-lesen, without a script: "+" and Escape do nothing, the view stays open at its step', json(keys) === json(['fit', true]), json(keys));
+  }
+  await close();
+  await reset();
+
+  // --- closing by mouse: "Schließen", and a second click on the diagram
+  await STAGE.click();
+  await frames(page);
+  await page.locator(FIG).nth(n).locator('.dokufix-diagram-close').click();
+  await frames(page);
+  const byClose = await facts(n);
+  await STAGE.click();
+  await frames(page);
+  await STAGE.click();
+  await frames(page);
+  const byStage = await facts(n);
+  check('large view: "Schließen" closes it, and so does a second click on the diagram', !byClose.open && !byStage.open && byStage.page.overflow === 'visible', json({ byClose: byClose.open, byStage: byStage.open, page: byStage.page }));
+  // --- the click itself scrolls nothing: low on a diagram whose top is above the window
+  await reset();
+  const low = await lowClick(false);
+  check('large view: a click low on a diagram whose top lies above the window opens it, and a second click closes it, and the page stays where it was',
+    unmoved(low), json(low));
+  await reset();
+
+  // --- the keyboard: Tab to the diagram, Space, the arrows, Space on the checkbox
+  await close();
+  await reset();
+  await page.locator(FIG).nth(n).locator('.dokufix-diagram-toggle').focus();
+  await page.keyboard.press('Shift+Tab');
+  await page.keyboard.press('Tab');
+  await frames(page);
+  const tabbed = await facts(n);
+  const spaced = await press(' ');
+  const tabIn = await press('Tab');
+  const arrow = await press('ArrowRight');
+  // Where a script runs, "+" and "-" take the focus of a step along.
+  let keyed = null;
+  if (scripted){
+    const plus = await press('+'), right = await press('ArrowRight'), minus = await press('-');
+    keyed = [plus, right, minus].map(f => ({ zoom: f.zoom, focus: f.focus, rings: f.rings.steps }));
+    check('large view by keyboard: "+" and "-" move the focus of a step with the step chosen, so an arrow goes on from there, the ring on its label',
+      json(keyed) === json([{ zoom: '150', focus: 'zoom 150', rings: [false, false, true, false] }, { zoom: '200', focus: 'zoom 200', rings: [false, false, false, true] }, { zoom: '150', focus: 'zoom 150', rings: [false, false, true, false] }]),
+      json(keyed));
+  }
+  const back = await press('Shift+Tab');
+  const shut = await press(' ');
+  check('large view by keyboard: Tab reaches the diagram, with a focus ring on it; Space opens it, the ring on "Schließen"; Tab goes to the steps and an arrow chooses the next, the ring on its label; Space on the checkbox closes it',
+    tabbed.focus === 'toggle' && !tabbed.open && tabbed.rings.stage &&
+      spaced.open && spaced.focus === 'toggle' && spaced.rings.close && !spaced.rings.stage &&
+      tabIn.focus === 'zoom fit' && tabIn.rings.steps[0] &&
+      arrow.zoom === '100' && arrow.focus === 'zoom 100' && arrow.rings.steps[1] && !arrow.rings.steps[0] &&
+      back.focus === 'toggle' && back.open && !shut.open && shut.focus === 'toggle' && shut.rings.stage,
+    json([tabbed, spaced, tabIn, arrow, back, shut].map(f => ({ open: f.open, zoom: f.zoom, focus: f.focus, rings: f.rings }))));
+  await close();
+  await reset();
+
+  // --- print: no control, the diagram in the column
+  await STAGE.click();
+  await frames(page);
+  await page.emulateMedia({ media: 'print' });
+  await frames(page);
+  const printed = await page.evaluate(sel => {
+    const f = document.querySelector(sel);
+    const shown = el => el.getClientRects().length > 0 && getComputedStyle(el).display !== 'none' && el.getBoundingClientRect().width > 0;
+    const svg = f.querySelector('svg').getBoundingClientRect(), fig = f.getBoundingClientRect();
+    return { position: getComputedStyle(f.querySelector('.dokufix-diagram-view')).position, controls: Array.from(f.querySelectorAll('input, .dokufix-diagram-bar')).filter(shown).length,
+             inColumn: svg.width > 0 && svg.left >= fig.left - 1 && svg.right <= fig.right + 1, page: getComputedStyle(document.documentElement).overflow };
+  }, FIG);
+  await page.emulateMedia({ media: null });
+  await close();
+  check('large view in print, open: no control is printed, and the diagram stands in the column', printed.position === 'static' && printed.controls === 0 && printed.inColumn && printed.page === 'visible', json(printed));
+
+  // --- the editor file in edit mode: over the toolbar, the pane does not scroll; a render closes it
+  if (editor){
+    await page.click('#edit-btn');
+    await frames(page);
+    await STAGE.scrollIntoViewIfNeeded();
+    const paneBefore = await facts(n);
+    await STAGE.click();
+    await frames(page);
+    const edit = await facts(n);
+    await page.mouse.move(edit.window.width / 2, edit.window.height / 2);
+    await page.mouse.wheel(0, 800);
+    await frames(page);
+    const editWheeled = await facts(n);
+    check('large view in edit mode: over the whole window, the toolbar included; the preview pane does not scroll behind it',
+      edit.open && fullWindow(edit) && edit.onTop && edit.header === true && edit.preview.overflow === 'hidden' && editWheeled.preview.scrollTop === paneBefore.preview.scrollTop && editWheeled.page.scrollY === 0,
+      json({ header: edit.header, preview: [paneBefore.preview, edit.preview, editWheeled.preview], page: editWheeled.page }));
+    const editSlash = await slashPrevented();
+    check('large view in edit mode: "/" opens no search over it, and the browser\'s own "/" is held back', editSlash.open && !editSlash.search && editSlash.prevented === true,
+      json({ open: editSlash.open, search: editSlash.search, prevented: editSlash.prevented }));
+    const editEsc = await press('Escape');
+    check('large view in edit mode: Escape closes it, and edit mode stays', !editEsc.open && !editEsc.read && editEsc.preview.overflow === 'auto', json({ open: editEsc.open, read: editEsc.read, preview: editEsc.preview }));
+    // The click itself scrolls nothing in the pane either.
+    const paneLow = await lowClick(true);
+    check('large view in edit mode: a click low on a diagram whose top lies above the pane opens it, and a second click closes it, and the pane stays where it was',
+      unmoved(paneLow), json(paneLow));
+    // A render while it is open: Ctrl+Enter in the source.
+    await STAGE.click();
+    await frames(page);
+    const openForRender = await facts(n);
+    await page.evaluate(() => {
+      const marker = document.createElement('i');
+      marker.id = 'vergleich-render-pending';
+      document.getElementById('dokufix-rail').appendChild(marker);
+    });
+    await page.focus('#source');
+    await page.keyboard.press('Control+Enter');
+    await page.waitForFunction(() => !document.getElementById('vergleich-render-pending'), null, { timeout: 90000 });
+    await page.waitForFunction(n => document.querySelectorAll('#preview figure.dokufix-diagram .dokufix-diagram-svg > svg').length >= n, drawn.length, { timeout: 90000 }).catch(() => {});
+    await frames(page);
+    const rendered = await facts(n);
+    check('large view: a render while it is open (Ctrl+Enter) replaces the figure, and the view is closed and the pane scrolls again',
+      openForRender.open && !rendered.open && rendered.openViews === 0 && rendered.preview.overflow === 'auto' && rendered.page.overflow === 'visible',
+      json({ before: openForRender.open, after: rendered.open, views: rendered.openViews, preview: rendered.preview, page: rendered.page }));
+    await page.click('#view-btn');
+    await page.waitForFunction(() => document.body.classList.contains('mode-view'));
+  }
+  await reset();
+}
+
+// The large view with scripts off, in nur-lesen and schlank: a click opens it
+// over the window, a step label chooses its zoom, "Schließen" closes it. In
+// schlank the diagram stays packed: the view shows the notice in its place.
+async function assertLargeViewWithoutScripts(browser, file, check, exp, key){
+  const drawn = exp.diagrams.filter(d => d.drawn);
+  if (!drawn.length) return;
+  const context = await openContext(browser, { viewport: { width: 1400, height: 1000 }, javaScriptEnabled: false });
+  try {
+    const page = await context.newPage();
+    await page.goto(pathToFileURL(file).href);
+    const FIG = 'main.reader-body figure.dokufix-diagram';
+    if (!await page.locator(FIG + ' .dokufix-diagram-stage').count()){
+      check('large view with scripts off: the figure has the controls of its large view', false, 'none');
+      return;
+    }
+    const facts = () => page.evaluate(sel => {
+      const f = document.querySelector(sel), view = f.querySelector('.dokufix-diagram-view'), holder = view.querySelector('.dokufix-diagram-svg');
+      const r = view.getBoundingClientRect(), svg = holder.querySelector('svg');
+      const e = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      return { open: f.querySelector('.dokufix-diagram-toggle').checked, zoom: f.querySelector('.dokufix-diagram-zoom:checked').value,
+               full: getComputedStyle(view).position === 'fixed' && Math.abs(r.width - innerWidth) < 1 && Math.abs(r.height - innerHeight) < 1 && !!e && view.contains(e),
+               notice: holder.hasAttribute('data-gz') ? getComputedStyle(holder, '::before').content : null,
+               svg: svg ? Math.round(svg.getBoundingClientRect().width) : 0, width: parseFloat(getComputedStyle(f).getPropertyValue('--dokufix-diagram-width')) || 0,
+               page: getComputedStyle(document.documentElement).overflow };
+    }, FIG);
+    const stage = page.locator(FIG).first().locator('.dokufix-diagram-stage');
+    await stage.click();
+    const opened = await facts();
+    await page.locator(FIG).first().locator('.dokufix-diagram-step').nth(2).click();
+    const zoomed = await facts();
+    await page.locator(FIG).first().locator('.dokufix-diagram-close').click();
+    const closed = await facts();
+    const shows = key === 'schlank'
+      ? opened.notice === '"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"'
+      : opened.notice === null && Math.abs(zoomed.svg - 1.5 * zoomed.width) <= 1;
+    check('large view with scripts off: a click opens it over the window' + (key === 'schlank' ? ', with the notice in place of the packed diagram' : '') + '; "150 %" chooses its step; "Schließen" closes it',
+      opened.open && opened.full && opened.zoom === 'fit' && opened.page === 'hidden' && shows && zoomed.zoom === '150' && !closed.open && closed.page === 'visible',
+      JSON.stringify({ opened, zoomed, closed }));
   } finally {
     await context.close();
   }
@@ -2643,13 +3056,14 @@ async function assertVariant(browser, file, key, exp, results, label){
       const imgs = Array.from(document.images);
       const placeholder = document.querySelector('img[data-missing-asset]');
       return {
-        mermaid: document.querySelectorAll('figure.dokufix-diagram-mermaid > .dokufix-diagram-svg > svg').length,
+        mermaid: document.querySelectorAll('figure.dokufix-diagram-mermaid .dokufix-diagram-svg > svg').length,
         // Every diagram's figure, in the order of the document: its classes,
-        // its title, the elements it holds and whether its SVG is there.
+        // its title, the elements it holds and whether its SVG is there, in the
+        // SVG container in the stage of its large view.
         figures: Array.from(root.querySelectorAll('figure.dokufix-diagram')).map(f => ({
           kind: (f.className.match(/\bdokufix-diagram-(?!svg\b|credit\b)(\w+)/) || [0, ''])[1], title: f.getAttribute('aria-label'),
           children: Array.from(f.children).map(k => k.tagName.toLowerCase() + '.' + k.className).join(' '),
-          svg: !!f.querySelector(':scope > .dokufix-diagram-svg > svg'),
+          svg: !!f.querySelector(':scope > .dokufix-diagram-view > .dokufix-diagram-stage > .dokufix-diagram-svg > svg'),
           box: (() => { const cs = getComputedStyle(f); return cs.marginTop + ' ' + cs.marginRight + ' ' + cs.marginBottom + ' ' + cs.marginLeft + ' ' + cs.textAlign; })(),
         })),
         // A diagram of Mermaid's outside a figure: its own class, or an SVG it drew.
@@ -2696,9 +3110,9 @@ async function assertVariant(browser, file, key, exp, results, label){
     check('every diagram stands in its figure, in the order of the document, its title the heading before it: ' + JSON.stringify(wantFigures),
       JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) === JSON.stringify(wantFigures) && s.diagramsOutside === 0,
       JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) + ', outside a figure: ' + s.diagramsOutside);
-    const figureProblems = s.figures.filter(f => !f.svg || !/^div\.dokufix-diagram-svg( figcaption\.dokufix-diagram-credit)?$/.test(f.children) || f.box !== '24px 0px 24px 0px center')
+    const figureProblems = s.figures.filter(f => !f.svg || !/^input\.dokufix-diagram-toggle( input\.dokufix-diagram-zoom){4} div\.dokufix-diagram-view( figcaption\.dokufix-diagram-credit)?$/.test(f.children) || f.box !== '24px 0px 24px 0px center')
       .map(f => f.title + ': ' + JSON.stringify(f));
-    check('every figure holds its SVG in the SVG container, and stands with the margin a diagram had, centred', figureProblems.length === 0, figureProblems.join(' | '));
+    check('every figure holds the controls of its large view and its SVG in the SVG container, and stands with the margin a diagram had, centred', figureProblems.length === 0, figureProblems.join(' | '));
     // The accessible name, as the accessibility tree computes it.
     const unnamed = [];
     for (const d of exp.diagrams.filter(x => x.drawn)){
@@ -2708,6 +3122,8 @@ async function assertVariant(browser, file, key, exp, results, label){
     check('every figure has its title as its accessible name', unnamed.length === 0, [...new Set(unnamed)].join(', '));
     // --- BPMN diagrams (story 2.7). With a document that has none, the counts are the check.
     await assertBpmn(page, check, exp, key, text, label, path.dirname(file));
+    // --- the large view of a diagram (story 2.9)
+    await assertLargeView(page, check, exp, key);
     if (exp.toc) check('inline table of contents', s.tocLinks > 0 && s.tocBorder === '1px', s.tocLinks + ' links, border ' + s.tocBorder);
     check('embedded images shown', s.images === exp.images, s.images + ' of ' + exp.images);
     check('missing-image placeholders', s.missing === exp.missing && (exp.missing === 0 || s.placeholderBorder === 'dashed'),
@@ -3118,6 +3534,7 @@ async function assertVariant(browser, file, key, exp, results, label){
       if (key !== 'kompakt') await assertFacetsWithoutScripts(browser, file, check, exp);
       if (key === 'schlank') await assertFiltersWithoutScripts(browser, file, check, exp);
       if (key === 'schlank') await assertDiagramsWithoutScripts(browser, file, check, exp);
+      if (key !== 'kompakt') await assertLargeViewWithoutScripts(browser, file, check, exp, key);
     }
     check('no script errors', errors.length === 0, errors.join(' | '));
   } finally {
@@ -3146,6 +3563,12 @@ async function runBrowser(name, opts, md){
         built.typed.filter(t => READONLY.has(t.variant)).every(t => t.after.values.length === exp.filters.length && t.after.values.every(x => x === '') && t.after.out === 0), JSON.stringify(built.typed.map(t => [t.variant, t.after])));
     }
     if (exp.filters.length) check('in the editor, the document rendered again, twice: one field per free-text filter each time', built.rendered.every(n => n === exp.filters.length), JSON.stringify(built.rendered) + ', expected ' + exp.filters.length);
+    if (exp.diagrams.some(d => d.drawn)){
+      check('in the editor, the large view of the first diagram was open at "150 %" while each of the four files was written, the page not scrolling',
+        built.views.length === VARIANTS.length && built.views.every(w => w.before && w.before.open && w.before.zoom === '150' && w.before.views === 1 && w.before.page === 'hidden'), JSON.stringify(built.views.map(w => [w.variant, w.before])));
+      check('a read-only download renders first: the figure is replaced, its view is closed and the page scrolls again',
+        built.views.filter(w => READONLY.has(w.variant)).every(w => w.after && !w.after.open && w.after.zoom === 'fit' && w.after.views === 0 && w.after.page === 'visible'), JSON.stringify(built.views.map(w => [w.variant, w.after])));
+    }
 
     for (const v of VARIANTS){
       for (const width of WIDTHS){
@@ -3169,6 +3592,22 @@ async function runBrowser(name, opts, md){
             await shot(page, path.join(dir, base + '.png'));
             await enterStates(page, name);
             await shot(page, path.join(dir, base + '-zustand.png'));
+            // The large view of the first diagram, open, the window as it is
+            // (1400 px, light). In a folder of its own: see compareRun().
+            if (width === WIDTHS[0] && scheme === 'light' && exp.diagrams.some(d => d.drawn)){
+              const opened = await page.evaluate(() => {
+                const stage = document.querySelector('.dokufix-doc figure.dokufix-diagram .dokufix-diagram-stage');
+                // The click puts the focus on the view's checkbox; without a ring
+                // in the picture, as after a click of the mouse.
+                if (stage){ window.scrollTo(0, 0); stage.click(); if (document.activeElement) document.activeElement.blur(); }
+                return !!stage;
+              });
+              if (opened){
+                await frames(page);
+                fs.mkdirSync(path.join(dir, LARGE_VIEW_DIR), { recursive: true });
+                await page.screenshot({ path: path.join(dir, LARGE_VIEW_DIR, base + '.png'), animations: 'disabled', caret: 'hide' });
+              }
+            }
           } finally { await close(); }
         }
       }
@@ -3287,10 +3726,19 @@ function comparePng(beforeFile, afterFile, diffFile){
            box: differing ? { left, top, right, bottom } : null };
 }
 
+// The pictures of the open large view of a diagram (story 2.9) stand in a
+// folder of their own. They are compared where the baseline has that folder
+// too; against a baseline from before the story, which has none, they are
+// listed as new and not counted, so that the pictures of the closed page can
+// be compared with --strict.
+const LARGE_VIEW_DIR = 'grossansicht';
 function compareRun(run, baselineRoot){
   const baseDir = path.join(baselineRoot, run.name);
-  const out = { images: [], sizes: null, libraries: null };
-  const pngs = dir => fs.readdirSync(dir).filter(f => f.endsWith('.png'));
+  const out = { images: [], sizes: null, libraries: null, uncompared: [] };
+  const inFolder = (dir, sub) => fs.existsSync(path.join(dir, sub)) ? fs.readdirSync(path.join(dir, sub)).filter(f => f.endsWith('.png')).map(f => sub + '/' + f) : [];
+  const withView = fs.existsSync(path.join(baseDir, LARGE_VIEW_DIR));
+  if (!withView) out.uncompared = inFolder(run.dir, LARGE_VIEW_DIR);
+  const pngs = dir => [...fs.readdirSync(dir).filter(f => f.endsWith('.png')), ...(withView ? inFolder(dir, LARGE_VIEW_DIR) : [])];
   const names = pngs(run.dir);
   // An image only the baseline has is a difference too, not a smaller comparison.
   const all = [...new Set([...names, ...pngs(baseDir)])].sort();
@@ -3337,6 +3785,7 @@ function report(run, cmp){
   if (cmp){
     const same = cmp.images.filter(i => i.differing === 0).length;
     console.log('screenshots: ' + same + ' of ' + cmp.images.length + ' identical to the baseline');
+    if (cmp.uncompared.length) console.log('  not compared, the baseline has no ' + LARGE_VIEW_DIR + '/: ' + cmp.uncompared.join(', '));
     for (const i of cmp.images){
       if (i.missingBaseline){ console.log('  ' + i.image + ': no baseline image'); differing++; continue; }
       if (i.missingRun){ console.log('  ' + i.image + ': only in the baseline'); differing++; continue; }

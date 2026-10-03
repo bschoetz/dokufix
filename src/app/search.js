@@ -2,6 +2,7 @@ import { findHits, excerpt, tooShort } from './search-match.js';
 import { collectPlaces } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { DIAGRAM_SVG_CLASS } from './diagrams.js';
+import { largeViewOpen } from './large-view.js';
 
 // --- Search: the panel ---------------------------------------------------------
 // In read mode the key "/" opens a search panel on the right of the window. It
@@ -41,8 +42,9 @@ import { DIAGRAM_SVG_CLASS } from './diagrams.js';
 // styles are src/search.css.
 //
 // "/" opens the panel in read mode only, without Ctrl, Alt or Meta, and not
-// while the focus is in a field, where it is typed. It puts the focus into the
-// panel's field. The close button closes it, and so does Escape, which then
+// while the focus is in a field, where it is typed, nor while the large view
+// of a diagram is open (large-view.js), which lies over the panel. It puts
+// the focus into the panel's field. The close button closes it, and so does Escape, which then
 // does nothing else (registerSearch()). A closed panel forgets its term;
 // opened again, it reads the root afresh. The search runs on typing, after a
 // short pause, outside the render, so a failure in it breaks no render.
@@ -272,14 +274,19 @@ export function registerSearch({ root, inReadMode: readMode }){
   }, { once: true });
   document.addEventListener('keydown', e => {
     if (e.key !== '/' || e.ctrlKey || e.altKey || e.metaKey || e.isComposing || e.defaultPrevented) return;
-    if (!inReadMode() || typesText(e.target)) return;
+    if (typesText(e.target)) return;
+    // Over an open large view, in either mode, it opens nothing, and the
+    // browser's own use of "/" (Firefox's quick find) is held back too.
+    if (largeViewOpen(document)){ e.preventDefault(); return; }
+    if (!inReadMode()) return;
     e.preventDefault();
     openSearch();
   });
   // Escape closes an open panel and nothing else. It listens in the capture
   // phase of the document, before every other listener of Escape (a table
   // filter's field, the download menu, leaving read mode in editor.js), and
-  // stops the event there: one Escape, one thing closed. See the README,
+  // stops the event there: one Escape, one thing closed. Only the large view
+  // of a diagram comes before it, on window (large-view.js). See the README,
   // "Keys and events".
   document.addEventListener('keydown', e => {
     if (e.key !== 'Escape' || e.isComposing || !isSearchOpen()) return;

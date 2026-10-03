@@ -18,10 +18,14 @@
 //     minified, come in as SEARCH_CSS from the build and go into the head of
 //     the file here, behind its stylesheet; the file's own <style> does not
 //     carry them, so `nur-lesen`, which shares it, has none.
+//   - the keys of the large view of a diagram (src/app/large-view.js):
+//     Escape closes it, "+" and "-" change its zoom step. The view itself
+//     works without them, as in `nur-lesen`.
 //
 // It must not import src/app/dom.js, which looks up the editor's elements.
 import { attachTableFilters } from './app/filter.js';
 import { registerSearch } from './app/search.js';
+import { registerLargeViewKeys } from './app/large-view.js';
 
 /* global SEARCH_CSS */
 const root = document.querySelector('main.reader-body');
@@ -31,4 +35,5 @@ if (root){
   style.textContent = SEARCH_CSS;
   document.head.appendChild(style);
   registerSearch({ root, inReadMode: () => true });
+  registerLargeViewKeys(document);
 }

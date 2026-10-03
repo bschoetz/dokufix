@@ -57,7 +57,7 @@
 // with a saved file, which is one of the allowed differences, and the second
 // generation has to open numbered.
 //
-// Four more saves visit states of the page that leave marks on its own
+// Five more saves visit states of the page that leave marks on its own
 // elements, and each saved file is compared with the built file the same way:
 //
 //   5. a narrow window, saved with the hamburger panel open (the download menu
@@ -74,6 +74,10 @@
 //   8. the search panel open in read mode, with a term and its results. The
 //      panel is made by the script and marked transient, so the saved file
 //      has none; opened, it makes it again, closed and empty
+//   9. the large view of a diagram open in read mode, at "150 %". Its controls
+//      are document content, and only their checked properties are set, never
+//      the attributes; opened, the saved file shows the diagram closed, at
+//      "Einpassen", and the page scrolls
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -530,6 +534,49 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     same(scope, 'the saved file holds document A', s.source, DOC_A);
     const reopened = await searchState(o.page);
     check(scope, 'opened, its panel is closed and empty', !!reopened && !reopened.open && reopened.term === '' && reopened.results === 0, JSON.stringify(reopened));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+
+    // 9. saved with the large view of a diagram open, at "150 %"
+    scope = name + ' large view open';
+    const withView9 = path.join(dir, 'grossansicht-offen.html');
+    const DOC_D = DOC_A + '\n## Fünf\n\n```mermaid\nflowchart LR\n  a[Anfang] --> b[Ende]\n```\n';
+    const viewState = page => page.evaluate(() => {
+      const f = document.querySelector('#preview figure.dokufix-diagram');
+      if (!f) return null;
+      const zoom = f.querySelector('.dokufix-diagram-zoom:checked');
+      return { open: f.querySelector('.dokufix-diagram-toggle').checked, zoom: zoom ? zoom.value : null,
+               fixed: getComputedStyle(f.querySelector('.dokufix-diagram-view')).position === 'fixed',
+               page: getComputedStyle(document.documentElement).overflow };
+    });
+    o = await open(browser, opts.file);
+    await o.page.evaluate(text => {
+      const source = document.getElementById('source');
+      source.value = text;
+      source.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('render-btn').click();
+    }, DOC_D);
+    await o.page.waitForFunction(() => !!document.querySelector('#preview figure.dokufix-diagram svg'), null, { timeout: 30000 });
+    await o.page.click('#preview figure.dokufix-diagram .dokufix-diagram-stage');
+    await o.page.click('#preview figure.dokufix-diagram .dokufix-diagram-step:nth-child(3)');
+    const viewOpen = await viewState(o.page);
+    // Through the DOM: the view lies over the page, and in read mode the toolbar is hidden.
+    const [viewDownload9] = await Promise.all([
+      o.page.waitForEvent('download', { timeout: 60000 }),
+      o.page.evaluate(() => document.querySelector('button[data-download="full"]').click()),
+    ]);
+    await viewDownload9.saveAs(withView9);
+    check(scope, 'the view was open at "150 %" when the file was saved, over the window, the page not scrolling', JSON.stringify(viewOpen) === JSON.stringify({ open: true, zoom: '150', fixed: true, page: 'hidden' }), JSON.stringify(viewOpen));
+    check(scope, 'and is still open in the running page', JSON.stringify(await viewState(o.page)) === JSON.stringify(viewOpen), JSON.stringify(await viewState(o.page)));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    await checkAgainstBuiltFile(scope, browser, withView9, built, 1);
+    o = await open(browser, withView9);
+    s = await state(o.page);
+    same(scope, 'the saved file holds the document with its diagram', s.source, DOC_D);
+    await o.page.waitForFunction(() => !!document.querySelector('#preview figure.dokufix-diagram svg'), null, { timeout: 30000 }).catch(() => {});
+    const closed9 = await viewState(o.page);
+    check(scope, 'opened, its diagram is closed, at "Einpassen", and the page scrolls', JSON.stringify(closed9) === JSON.stringify({ open: false, zoom: 'fit', fixed: false, page: 'visible' }), JSON.stringify(closed9));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 

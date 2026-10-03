@@ -108,6 +108,10 @@
 //                                the step's message; no file is handed over,
 //                                and the download buttons are enabled again
 //
+// In the diagram cases (1, 10 to 13) every figure, in the page and in each
+// file, has the checkbox of its large view (story 2.9), and a diagram that
+// became a warning has none of its controls.
+//
 // In every case the error is on the console and no promise is rejected: the
 // run collects console errors and page errors and looks at both.
 //
@@ -515,11 +519,14 @@ const facts = page => page.evaluate(() => {
       return n;
     })(),
     children: kids.map(k => k.tagName.toLowerCase() + (k.className ? '.' + String(k.className).split(' ')[0] : '')),
-    diagrams: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg > svg').length,
+    diagrams: container.querySelectorAll('figure.dokufix-diagram .dokufix-diagram-svg > svg').length,
+    // The checkboxes of the large view (story 2.9), and the controls of one inside a warning.
+    toggles: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-toggle').length,
+    warningControls: container.querySelectorAll('.dokufix-warning :is(.dokufix-diagram-toggle, .dokufix-diagram-zoom, .dokufix-diagram-view)').length,
     // The figures, by their title.
     figures: Array.from(container.querySelectorAll('figure.dokufix-diagram')).map(f => f.getAttribute('aria-label')),
     // The BPMN diagrams: title, whether the SVG is there, and the markup of the credit below it.
-    bpmn: Array.from(container.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => f.getAttribute('aria-label') + ' ' + !!f.querySelector(':scope > .dokufix-diagram-svg > svg[role="img"]') + ' ' +
+    bpmn: Array.from(container.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => f.getAttribute('aria-label') + ' ' + !!f.querySelector(':scope > .dokufix-diagram-view > .dokufix-diagram-stage > .dokufix-diagram-svg > svg[role="img"]') + ' ' +
       (f.querySelector(':scope > figcaption > a[href="https://bpmn.io"]') ? f.querySelector(':scope > figcaption').innerHTML : '')),
     // An element of the drawing left in <body>: the host is transient and fixed.
     hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]')).filter(el => getComputedStyle(el).position === 'fixed').length,
@@ -553,6 +560,10 @@ const STYLED = { border: '6px solid', background: 'rgb(255, 248, 225)', padding:
 const isStyled = (w, look = STYLED) => Object.keys(look).every(k => w.style[k] === look[k]);
 // A warning that is one line: the warning of a marker has no detail below it.
 const STYLED_ONE_LINE = { ...STYLED, detail: 'none' };
+// The large view of a diagram (story 2.9): every figure has its checkbox, and
+// a diagram that became a warning has none, nor any other of its controls.
+const checkViewControls = (scope, x) => check(scope, 'every figure has the checkbox of its large view, and no warning carries a control of one',
+  x.toggles === x.figures.length && x.warningControls === 0, { toggles: x.toggles, figures: x.figures.length, warningControls: x.warningControls });
 // The one warning a case expects, by the texts it has to contain.
 function checkWarning(scope, f, texts, what, look = STYLED){
   const visible = f.warnings.filter(w => !w.transient);
@@ -610,6 +621,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       const diagramExport = (s, x, text) => {
         checkWarning(s, x, ['Ein Diagramm konnte nicht gezeichnet werden.', 'Parse error'], 'with Mermaid\'s message');
         check(s, 'two diagrams in their figures, no error picture', x.diagrams === 2 && x.figures.join('|') === 'Eins|Drei' && x.errorPictures === 0, { diagrams: x.diagrams, figures: x.figures, errorPictures: x.errorPictures });
+        checkViewControls(s, x);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
       await checkExports(scope, browser, o.page, dir, 'diagramm', READONLY, diagramExport);
@@ -652,7 +664,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await o.page.waitForFunction(() => window.durchlaeufe.rails.some(r => r.rail === 'B eins'), null, { timeout: 90000 });
       await o.page.waitForTimeout(QUIET_WINDOW);   // a render still running would show up as one more rail
       const log = await o.page.evaluate(() => ({ ...window.durchlaeufe, h1: document.querySelector('#preview h1').textContent,
-        diagrams: document.querySelectorAll('#preview figure.dokufix-diagram > .dokufix-diagram-svg > svg').length }));
+        diagrams: document.querySelectorAll('#preview figure.dokufix-diagram .dokufix-diagram-svg > svg').length }));
       check(scope, 'the second render was requested while the first ran', log.railsWhenSecondWasRequested === 0, log);
       check(scope, 'they ran one after the other: each rail was built from the document the preview showed',
         JSON.stringify(log.rails) === JSON.stringify([{ rail: 'A eins', preview: 'Dokument A' }, { rail: 'B eins', preview: 'Dokument B' }]), log.rails);
@@ -924,6 +936,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         const credit = BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a>';
         check(s, 'the other two are drawn, each with "' + BPMN_CREDIT.before + BPMN_CREDIT.text + '" below it, the name a link', x.bpmn.join('|') === 'Gut true ' + credit + '|Noch eins true ' + credit, x.bpmn);
         check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
+        checkViewControls(s, x);
         if (text){
           // Nothing of the library: no tag or URL, none of its code, not the comment of its export.
           const library = /BpmnJS|bpmn-navigated-viewer|npm\/bpmn-js|created with bpmn-js/;
@@ -960,6 +973,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         check(s, 'the warning stands in place of the BPMN diagram', x.warnings.length === 1 && x.warnings[0].before === 'H2#bpmn', x.warnings.map(w => w.before));
         check(s, 'the rest renders: the Mermaid diagram in its figure, the passes around it', x.diagrams === 1 && x.figures.join('|') === 'Mermaid' && x.bpmn.length === 0 &&
           x.headingsWithoutId === 0 && x.tocLinks >= 3 && x.previews === 1 && x.returnPaths === 1, x);
+        checkViewControls(s, x);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
       const f = await facts(o.page);
@@ -988,6 +1002,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         check(s, 'the block without coordinates is drawn, with "' + BPMN_CREDIT.before + BPMN_CREDIT.text + '" below it', x.bpmn.join('|') === 'Angeordnet true ' + credit, x.bpmn);
         check(s, 'no Mermaid error picture', x.errorPictures === 0, x.errorPictures);
         check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
+        checkViewControls(s, x);
         if (text){
           const library = /BpmnJS|bpmn-navigated-viewer|npm\/bpmn-js|created with bpmn-js/;
           check(s, 'the file carries nothing of bpmn-js: no tag, no URL, no code, not the comment of its export', !library.test(text), (text.match(new RegExp('.{0,40}(' + library.source + ').{0,40}')) || [''])[0]);
@@ -1030,6 +1045,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
           visible.map(w => [w.before, w.text]));
         check(s, 'the BPMN diagram with coordinates is drawn with its credit, and the passes around it ran',
           x.bpmn.join('|') === 'Mit Koordinaten true ' + credit && x.diagrams === 1 && x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
+        checkViewControls(s, x);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
       const f = await facts(o.page);

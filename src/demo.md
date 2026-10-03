@@ -50,6 +50,8 @@ flowchart LR
     E --> F{{Eine Datei}}
 ```
 
+Ein Klick auf ein Diagramm zeigt es groß über dem ganzen Fenster, eingepasst oder in 100, 150 und 200 %, und „Schließen“ oder ein zweiter Klick schließt es wieder, in jeder Fassung, auch in der offenen ohne Skript; wo ein Skript läuft, schließt es auch Escape, und `+` und `-` wechseln die Stufe.
+
 ## Eine Tabelle
 
 | Feature | Status |

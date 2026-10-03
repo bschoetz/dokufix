@@ -77,6 +77,19 @@ fails('unlisted licence name in the app stylesheet', prepend('app.css', '.dokufi
 fails('unlisted licence rule in the export frame', inFile(FRAME_FILE, FRAME, FRAME + '.dokufix-licences h5{color:red}\n'), /src\/app\/downloads\/export-body\.js line \d+, the export frame.*"\.dokufix-licences h5"/);
 fails('licence rule with an attribute the document styles use, in the app stylesheet', prepend('app.css', '.dokufix-licences[open] summary{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.dokufix-licences\[open\] summary" uses \[open\]/);
 fails('licence rule that names a document construct, in the app stylesheet', prepend('app.css', '.dokufix-licences .dokufix-callout{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "\.dokufix-licences \.dokufix-callout" uses \.dokufix-callout/);
+// The one selector of the block that does not start with the content container
+// (BLOCK_EXCEPTIONS): the root, while the large view of a diagram is open. The
+// sources hold it; written once more, it passes; another root rule fails, and
+// so does the listed one with a descendant.
+const LARGE_VIEW_ROOT = 'html:has(.dokufix-diagram-toggle:checked)';
+test('the root rule of the large view passes, in the block where it stands and written once more', () => {
+  assert.ok(original('doc.css').includes(LARGE_VIEW_ROOT + '{'));
+  const r = run(prepend('doc.css', LARGE_VIEW_ROOT + '{overflow:hidden}\n'));
+  assert.equal(r.status, 0, r.stdout);
+  assert.equal(r.stdout.trim().split('\n').length, 7);
+});
+fails('another root rule in the block', prepend('doc.css', 'html:has(.dokufix-callout){overflow:hidden}\n'), /src\/doc\.css line 1: "html:has\(\.dokufix-callout\)" does not start with \.dokufix-doc/);
+fails('the root rule of the large view with a descendant, in the block', prepend('doc.css', LARGE_VIEW_ROOT + ' p{color:red}\n'), /src\/doc\.css line 1: "html:has\(\.dokufix-diagram-toggle:checked\) p" does not start with \.dokufix-doc/);
 fails('editor selector in front of .dokufix-doc in the block', prepend('doc.css', 'body.mode-view .dokufix-doc h5{color:red}\n'), /src\/doc\.css line 1: "body\.mode-view \.dokufix-doc h5" does not start with \.dokufix-doc/);
 fails('export that no longer embeds the document styles', inFile(OPEN_FILE, '<style>${readonlyCss()}</style>', '<style>${READONLY_FRAME_CSS}</style>'), /src\/app\/downloads\/readonly-open\.js line \d+, downloadReadonlyOpen\(\).*does not embed/);
 fails('block missing from the page', inFile('index.html', BLOCK, ''), /src\/index\.html: found 0 blocks/);

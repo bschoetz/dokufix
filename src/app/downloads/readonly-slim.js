@@ -8,12 +8,12 @@ import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFo
 // --- Download #2b — schlank: text plain, only the diagrams' SVGs gzipped per-element ---
 export async function downloadReadonlySlim(){
   // This export's own step: the SVG container of each diagram's figure
-  // (diagrams.js) is emptied and carries its SVG as gzipped+base64 payload.
+  // (diagrams.js), wherever in the figure it stands, is emptied and carries its SVG as gzipped+base64 payload.
   // The text/HTML around it, the figure and whatever else it holds, stays
   // readable plaintext.
   let svgCount = 0;
   async function gzipDiagrams(copy){
-    for (const div of copy.querySelectorAll('.' + DIAGRAM_CLASS + ' > .' + DIAGRAM_SVG_CLASS)){
+    for (const div of copy.querySelectorAll('.' + DIAGRAM_CLASS + ' .' + DIAGRAM_SVG_CLASS)){
       const svg = div.querySelector('svg');
       if (!svg) continue;
       const gz = await gzipB64(svg.outerHTML);
