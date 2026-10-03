@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
-  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, loopBack, LEVEL_STEP, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -290,6 +290,81 @@ test('correction 6: the second flow between one pair runs below both nodes, the 
   const blocked = [1, 2].map(() => ({ f: { from: 'G', to: 'T' }, pts: same(), obstacles: [{ x1: 180, y1: 150, x2: 220, y2: 170 }] }));
   separateTwins(blocked, box);
   assert.deepEqual(blocked[1].pts, same());
+});
+
+// ---------- correction 7: flows back within a row (story 2.20) ----------
+test('correction 7: a flow back within a row runs around the row, four points, none in the row\'s band', () => {
+  const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true), G: node(450, 100, 50, 50) };
+  const routes = [
+    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 100], [240, 100]]), obstacles: [] },
+    { f: { from: 'B', to: 'G' }, pts: ptsOf([[360, 100], [425, 100]]), obstacles: [] },
+    // Mermaid's route, scaled: on the bottom edges of the tasks.
+    { f: { from: 'G', to: 'A' }, pts: ptsOf([[450, 125], [450, 141], [100, 141], [100, 140]]), obstacles: [], loopSide: 1 },
+  ];
+  assert.deepEqual(loopBack(routes, box), { up: 0, down: 0 });
+  assert.deepEqual(routes[2].pts, ptsOf([[450, 125], [450, 160], [100, 160], [100, 140]]), 'out of the diamond\'s bottom, 20 px under the tasks, into the task\'s bottom');
+  assert.ok(routes[2].pts.slice(1, 3).every(p => p.y > 140 || p.y < 60), 'no inner point in the row\'s band');
+  assert.deepEqual(routes[0].pts, ptsOf([[160, 100], [240, 100]]), 'a flow forward stays');
+});
+
+test('correction 7: nested flows back on one side take distinct levels, the shorter inside; disjoint spans share the innermost', () => {
+  const box = Object.fromEntries([1, 2, 3, 4, 5, 6].map(i => ['T' + i, node(i * 200 - 100, 100, 120, 80, true)]));
+  const back = (from, to) => ({ f: { from, to }, pts: ptsOf([[box[from].cx, 60], [box[from].cx, 50], [box[to].cx, 50], [box[to].cx, 60]]), obstacles: [], loopSide: -1 });
+  const routes = [back('T6', 'T1'), back('T4', 'T3'), back('T5', 'T2')];
+  loopBack(routes, box);
+  const level = r => r.pts[1].y;
+  assert.ok(routes.every(r => r.pts.length === 4 && level(r) < 60), 'all above the row: ' + JSON.stringify(routes.map(r => r.pts)));
+  assert.equal(level(routes[1]), 40, 'the shortest 20 px above the tasks');
+  assert.equal(level(routes[2]), 40 - LEVEL_STEP, 'around it: the next level');
+  assert.equal(level(routes[0]), 40 - 2 * LEVEL_STEP, 'the longest, around both, outermost');
+  assert.deepEqual(routes[0].pts, ptsOf([[1100, 60], [1100, 40 - 2 * LEVEL_STEP], [100, 40 - 2 * LEVEL_STEP], [100, 60]]));
+  const apart = [back('T2', 'T1'), back('T6', 'T5')];
+  loopBack(apart, box);
+  assert.deepEqual(apart.map(level), [40, 40], 'disjoint spans: one level');
+});
+
+test('correction 7: a flow back keeps off the ring of a twin, which separateTwins() routed before it and which it leaves alone', () => {
+  const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true) };
+  const routes = [
+    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 100], [240, 100]]), obstacles: [] },
+    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 104], [240, 104]]), obstacles: [], loopSide: 1 },
+    { f: { from: 'B', to: 'A' }, pts: ptsOf([[300, 140], [300, 150], [100, 150], [100, 140]]), obstacles: [], loopSide: 1 },
+  ];
+  separateTwins(routes, box);
+  assert.deepEqual(routes[1].pts, ptsOf([[100, 140], [100, 160], [300, 160], [300, 140]]), 'the twin 20 px below');
+  loopBack(routes, box);
+  assert.deepEqual(routes[1].pts, ptsOf([[100, 140], [100, 160], [300, 160], [300, 140]]), 'the twin as it was');
+  // The middle of both bottoms taken: the corners away from the other end, so
+  // the flow back crosses nothing, one level farther out.
+  assert.deepEqual(routes[2].pts, ptsOf([[340, 140], [340, 160 + LEVEL_STEP], [60, 160 + LEVEL_STEP], [60, 140]]));
+});
+
+test('correction 7: at an event the flow back docks on the top or bottom centre; a port another flow uses counts as a conflict', () => {
+  const box = { E1: node(100, 100, 36, 36), T: node(300, 100, 120, 80, true), E2: node(500, 100, 36, 36), X: node(100, -100, 120, 80, true) };
+  const routes = [
+    { f: { from: 'X', to: 'E1' }, pts: ptsOf([[100, -60], [100, 82]]), obstacles: [] },
+    { f: { from: 'E1', to: 'T' }, pts: ptsOf([[118, 100], [240, 100]]), obstacles: [] },
+    { f: { from: 'T', to: 'E2' }, pts: ptsOf([[360, 100], [482, 100]]), obstacles: [] },
+    { f: { from: 'E2', to: 'E1' }, pts: ptsOf([[500, 82], [500, 70], [100, 70], [100, 82]]), obstacles: [], loopSide: -1 },
+  ];
+  loopBack(routes, box);
+  assert.deepEqual(routes[3].pts, ptsOf([[500, 118], [500, 160], [100, 160], [100, 118]]), 'below: the top of E1 is taken');
+});
+
+test('correction 7: a flow back in a middle lane stays in its lane, 12 px from the border; the lane grows and what lies beyond moves', () => {
+  const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
+  const box = { T1: node(100, 200, 120, 80, true), T2: node(300, 200, 120, 80, true), B: node(300, 320, 120, 80, true) };
+  const routes = [
+    { f: { from: 'T1', to: 'T2' }, pts: ptsOf([[160, 200], [240, 200]]), obstacles: [] },
+    { f: { from: 'T2', to: 'B' }, pts: ptsOf([[300, 240], [300, 280]]), obstacles: [{ x1: 240, y1: 280, x2: 360, y2: 360 }] },
+    { f: { from: 'T2', to: 'T1' }, pts: ptsOf([[300, 240], [300, 250], [100, 250], [100, 240]]), obstacles: [], loopSide: 1 },
+  ];
+  assert.deepEqual(loopBack(routes, box, lanes), { up: 0, down: 12 });
+  assert.deepEqual(routes[2].pts, ptsOf([[260, 240], [260, 260], [100, 260], [100, 240]]), 'beside the flow down, 20 px under the tasks');
+  assert.deepEqual(lanes, [[0, 0, 1000, 140], [0, 140, 1000, 132], [0, 272, 1000, 100]], 'the middle lane grew by 12 px, the lane below moved');
+  assert.equal(box.B.cy, 332, 'the symbol below moved');
+  assert.deepEqual(routes[1].pts, ptsOf([[300, 240], [300, 292]]), 'the flow down: its end moved, its start stayed');
+  assert.deepEqual(routes[1].obstacles[0], { x1: 240, y1: 292, x2: 360, y2: 372 });
 });
 
 test('labels: estimated at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {

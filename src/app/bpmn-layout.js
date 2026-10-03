@@ -496,7 +496,137 @@ export function separateTwins(routes, box){
     const next = [at(s, edge(s)), at(s, out), at(t, out), at(t, edge(t))];
     if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
     r.pts.splice(0, r.pts.length, ...next);
+    r.twin = true;
   }
+}
+
+// Two pieces, each horizontal or vertical, that cross or lie on each other.
+function meets(a, b, c, d){
+  const flat = (p, q) => Math.abs(p.y - q.y) < 0.5;
+  const lo = (p, q, k) => Math.min(p[k], q[k]) - 0.5, hi = (p, q, k) => Math.max(p[k], q[k]) + 0.5;
+  if (flat(a, b) && flat(c, d)) return Math.abs(a.y - c.y) < 1 && lo(a, b, 'x') < hi(c, d, 'x') && lo(c, d, 'x') < hi(a, b, 'x');
+  if (!flat(a, b) && !flat(c, d)) return Math.abs(a.x - c.x) < 1 && lo(a, b, 'y') < hi(c, d, 'y') && lo(c, d, 'y') < hi(a, b, 'y');
+  const [h, v] = flat(a, b) ? [[a, b], [c, d]] : [[c, d], [a, b]];
+  return v[0].x > lo(h[0], h[1], 'x') && v[0].x < hi(h[0], h[1], 'x') && h[0].y > lo(v[0], v[1], 'y') && h[0].y < hi(v[0], v[1], 'y');
+}
+
+// Two parallel pieces that run less than 12 px apart and side by side.
+function near(a, b, c, d){
+  const flat = (p, q) => Math.abs(p.y - q.y) < 0.5;
+  if (flat(a, b) !== flat(c, d)) return false;
+  const [u, v] = flat(a, b) ? ['y', 'x'] : ['x', 'y'];
+  return Math.abs(a[u] - c[u]) < 12 && Math.min(a[v], b[v]) < Math.max(c[v], d[v]) && Math.min(c[v], d[v]) < Math.max(a[v], b[v]);
+}
+
+// The distance between two levels of flows back on one side of a row,
+// measured on a process with many (story 2.20): the smallest at which the
+// lines and their labels read apart.
+export const LEVEL_STEP = 16;
+
+// Correction 7, not the spike's (story 2.20). A flow back within one row, its
+// target left of its source at the same height: Mermaid routes it through
+// the row, and scaled it lies on the symbols' edges or ties a knot at its
+// gateway. It runs around the row instead: out of the top or the bottom of
+// its source, along a level beyond the row's symbols, into the top or the
+// bottom of its target.
+//   - The level: 20 px beyond the outermost edge of the row's symbols within
+//     the flow's span; a flow back on the same side whose span overlaps
+//     (12 px apart or less) takes the next level out, LEVEL_STEP farther.
+//     The flows back are taken shortest first, so a nested one lies inside;
+//     those with disjoint spans share the innermost level. Where a level
+//     out, up to three, has fewer conflicts, the ring takes that one.
+//   - The side: the one with fewer conflicts at its level (a piece of
+//     another flow crossed, shared or run beside closer than 12 px; a port
+//     of a gateway or an event another flow uses); at a tie, the side
+//     Mermaid's route kept to (r.loopSide: 1 below, -1 above). A way a
+//     foreign symbol blocks is not taken.
+//   - The ports: a circle and a diamond on their top or bottom; a task at
+//     the middle of the side, or, when another flow docks at the middle, 20
+//     px in from a corner: the one with fewer conflicts, at a tie the one
+//     facing the other end.
+//   - A twin separateTwins() routed (r.twin) is left as it is; it runs
+//     before, so its ring is one of the flows a flow back keeps off.
+//   - lanes: the boxes [x, y, w, h] of every lane. A ring that comes closer
+//     than 12 px to the border with another lane makes its lane grow there:
+//     everything beyond the border moves away by what the ring needs (the
+//     lanes, the symbols in box, the flows' points and obstacles). Beyond
+//     the outer lanes the growth at the end of layoutGeometry() makes room.
+// Returns { up, down }: by how much the lanes grew upwards and downwards.
+export function loopBack(routes, box, lanes = []){
+  const grown = { up: 0, down: 0 };
+  const isBack = r => {
+    const s = box[r.f.from], t = box[r.f.to];
+    return !r.twin && Math.abs(s.cy - t.cy) < 1 && t.cx + t.w / 2 < s.cx - s.w / 2;
+  };
+  const back = routes.filter(isBack).sort((p, q) => Math.abs(box[p.f.from].cx - box[p.f.to].cx) - Math.abs(box[q.f.from].cx - box[q.f.to].cx));
+  if (!back.length) return grown;
+  const fixed = routes.filter(r => !back.includes(r));
+  const placed = [];
+  const ends = r => [r.pts[0], r.pts[r.pts.length - 1]];
+  for (const r of back){
+    const s = box[r.f.from], t = box[r.f.to];
+    const others = fixed.concat(placed.map(p => p.r));
+    const used = others.flatMap(ends);
+    // The ports on one side: the middle, or, where another flow docks there,
+    // 20 px in from either corner, the one facing the other end first.
+    const ports = (c, dir, toward) => {
+      const y = c.cy + dir * c.h / 2;
+      if (!c.task || !used.some(p => Math.abs(p.y - y) < 1 && Math.abs(p.x - c.cx) < 14)) return [{ x: c.cx, y }];
+      const facing = Math.sign(toward - c.cx) || 1;
+      return [facing, -facing].map(sign => ({ x: c.cx + sign * (c.w / 2 - 20), y }));
+    };
+    let best = null;
+    const mermaid = r.loopSide || -1;
+    for (const dir of [mermaid, -mermaid]){
+      let side = null;
+      for (const a of ports(s, dir, t.cx)) for (const b of ports(t, dir, s.cx)){
+        const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
+        const row = Object.values(box).filter(c => Math.abs(c.cy - s.cy) < 1 && c.cx + c.w / 2 > lo && c.cx - c.w / 2 < hi);
+        let y = (dir > 0 ? Math.max(...row.map(c => c.cy + c.h / 2)) : Math.min(...row.map(c => c.cy - c.h / 2))) + dir * 20;
+        for (const p of placed){
+          if (p.dir !== dir || Math.abs(p.cy - s.cy) >= 1 || p.lo >= hi + 12 || lo >= p.hi + 12) continue;
+          y = dir > 0 ? Math.max(y, p.y + LEVEL_STEP) : Math.min(y, p.y - LEVEL_STEP);
+        }
+        // The level, or up to three farther out where that has fewer conflicts.
+        for (let k = 0; k < 4 && !(side && !side.conflicts); k++){
+          const out = y + dir * k * LEVEL_STEP, next = [a, { x: a.x, y: out }, { x: b.x, y: out }, b];
+          if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
+          let conflicts = 0;
+          for (const o of others) for (let i = 1; i < o.pts.length; i++) for (let j = 1; j < next.length; j++){
+            if (meets(next[j - 1], next[j], o.pts[i - 1], o.pts[i]) || near(next[j - 1], next[j], o.pts[i - 1], o.pts[i])) conflicts++;
+          }
+          for (const [c, p] of [[s, a], [t, b]]) if (!c.task && used.some(q => Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2)) conflicts++;
+          if (!side || conflicts < side.conflicts) side = { next, conflicts, dir, y: out, lo, hi };
+        }
+      }
+      if (side && (!best || side.conflicts < best.conflicts)) best = side;
+    }
+    if (!best) continue;
+    r.pts.splice(0, r.pts.length, ...best.next);
+    placed.push({ r, dir: best.dir, y: best.y, lo: best.lo, hi: best.hi, cy: s.cy });
+    // The lane grows where the ring comes closer than 12 px to another lane.
+    const { dir, y } = best;
+    const lane = lanes.find(b => b[1] <= s.cy && s.cy <= b[1] + b[3]);
+    if (!lane) continue;
+    const border = dir > 0 ? lane[1] + lane[3] : lane[1];
+    const beyond = lanes.some(b => b !== lane && Math.abs((dir > 0 ? b[1] : b[1] + b[3]) - border) < 1);
+    const need = Math.ceil((y + dir * 12 - border) * dir);
+    if (!beyond || need <= 0) continue;
+    const away = v => (v - border) * dir > 0;
+    for (const b of lanes){
+      if (b === lane){ b[3] += need; if (dir < 0) b[1] -= need; }
+      else if (away(b[1] + b[3] / 2)) b[1] += dir * need;
+    }
+    for (const c of Object.values(box)) if (away(c.cy)) c.cy += dir * need;
+    const moved = new Set(r.pts);                                      // the ring itself stays: the lane grows around it
+    for (const o of routes){
+      for (const p of o.pts) if (away(p.y) && !moved.has(p)){ moved.add(p); p.y += dir * need; }
+      for (const ob of o.obstacles || []) if (away((ob.y1 + ob.y2) / 2) && !moved.has(ob)){ moved.add(ob); ob.y1 += dir * need; ob.y2 += dir * need; }
+    }
+    for (const p of placed) if (p.r !== r && away(p.y)) p.y += dir * need;
+    if (dir > 0) grown.down += need; else grown.up += need;
+  }
+  return grown;
 }
 
 // A label as bpmn-js lays it out: at most 90 px wide, wrapped at blanks,
@@ -660,9 +790,19 @@ export function layoutGeometry(model, raw){
     detour(pts, false, box[f.to], obstacles);
     nudge(pts, obstacles);
     tidy(pts);
-    routes.push({ f, pts, obstacles });
+    // The side of the row Mermaid's route keeps to: where its farthest point lies.
+    const rc = rawOf[f.from].cy, far = orig.reduce((m, p) => Math.abs(p.y - rc) > Math.abs(m) ? p.y - rc : m, 0);
+    routes.push({ f, pts, obstacles, loopSide: far > 0 ? 1 : -1 });
   });
+  // The twins first, so that a flow back keeps off their rings; a twin
+  // routed there is no flow back of loopBack()'s. A middle lane a flow back
+  // needs room in grows, and what lies beyond it moves.
   separateTwins(routes, box);
+  const grown = loopBack(routes, box, model.lanes.map(l => laneBox[l.key]));
+  if (grown.up || grown.down){
+    for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
+    if (di.pool){ di.pool[1] -= grown.up; di.pool[3] += grown.up + grown.down; }
+  }
   const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
   fanOut(routes, box, gateways);
   spreadPorts(routes, box);
