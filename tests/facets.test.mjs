@@ -508,6 +508,13 @@ test('neither the wrapper of a table nor the group of a facet filter is position
   assert.equal(wrapper['margin-bottom'], '14px');
   assert.match(ruleOf(bare, '.dokufix-doc table')['font-size'], /^14px$/);
   assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-table > table')['margin-bottom'], '0');
+  // In a facet filter the group carries it, so that the rules that take the
+  // last child's margin away (callout, card, step) reach the margin itself.
+  assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-facets')['margin-bottom'], '14px');
+  assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-facets > .dokufix-table')['margin-bottom'], '0');
+  for (const host of ['.dokufix-doc .dokufix-callout > :last-child', '.dokufix-doc .dokufix-cards > li > :last-child:not(.dokufix-card-title)', '.dokufix-doc .dokufix-steps > li > :last-child']){
+    assert.equal(ruleOf(bare, host)['margin-bottom'], '0', host);
+  }
 });
 test('the controls are a flex container of their own beside the floating legend: every line of them starts beside the legend', () => {
   assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-facet-bar legend').float, 'left');

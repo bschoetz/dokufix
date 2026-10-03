@@ -351,6 +351,11 @@
      which has the focus is shown on the label, the first not by a colour
      alone: the ring before its text is filled.
      No colour of its own: the greys are those of the document styles. */
+  /* The group carries the bottom margin of its table: the wrapper's margin
+     would collapse through the group, which the rules that take the last
+     child's margin away (a callout, a card, a step) reach instead. */
+  .dokufix-doc .dokufix-facets{margin-bottom:14px}
+  .dokufix-doc .dokufix-facets > .dokufix-table{margin-bottom:0}
   .dokufix-doc .dokufix-facet-bar{
     display:none;min-width:0;
     margin:0 0 4px;padding:0;border:0;
