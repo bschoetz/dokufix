@@ -486,7 +486,6 @@ const opts = parseArgs(process.argv.slice(2));
 let libraries;
 try { libraries = await prepareLibraries(opts.file); }
 catch (e){ console.error(e.message); process.exit(1); }
-console.log(librariesLine(libraries));
 fs.rmSync(opts.out, { recursive: true, force: true });
 fs.mkdirSync(opts.out, { recursive: true });
 
@@ -513,6 +512,7 @@ results.sort((a, b) => byBrowser(a) - byBrowser(b));
 const failed = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'ok    ' : 'FAIL  ') + r.scope + ': ' + r.name + (r.detail ? ' — ' + r.detail : ''));
 console.log('\n' + (results.length - failed.length) + ' of ' + results.length + ' green; saved files: ' + opts.out);
+console.log(librariesLine(libraries));
 // A library the page asked for that is not pinned in the file under test was not fetched.
 if (libraries.refused.length) console.log('refused, not pinned in the file under test: ' + libraries.refused.join(', '));
 process.exit(failed.length || libraries.refused.length ? 1 : 0);

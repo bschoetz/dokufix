@@ -2313,7 +2313,6 @@ if (opts.compare){
 // The libraries, from tests/.cdn/; a missing one is fetched once, before anything is built.
 try { libraries = await prepareLibraries(opts.file); }
 catch (e){ console.error(e.message); process.exit(1); }
-console.log(librariesLine(libraries));
 let failed = 0, differing = 0;
 // The browsers run side by side: each has its own folder and its own browser
 // process, and nothing in a run is shared with the other. The report comes
@@ -2327,6 +2326,7 @@ for (const run of runs){
 console.log('\nexports and screenshots: ' + opts.out);
 if (failed) console.log(failed + ' assertion(s) failed');
 if (opts.compare && differing) console.log(differing + ' screenshot(s) differ from the baseline; red-on-white masks are in <browser>/diff/');
+console.log(librariesLine(libraries));
 // A library the page asked for that is not pinned in the file under test was
 // not fetched; the page went on without it.
 if (libraries.refused.length) console.log('refused, not pinned in the file under test: ' + libraries.refused.join(', '));
