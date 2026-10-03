@@ -17,8 +17,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML, DOMParser } from 'linkedom';
-import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT, BPMN_VIEWER_CONFIG } from '../src/app/bpmn.js';
-import { LAYOUT_SEVERAL_POOLS } from '../src/app/bpmn-layout.js';
+import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, labelMeasurer, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT, BPMN_VIEWER_CONFIG } from '../src/app/bpmn.js';
+import { LAYOUT_SEVERAL_POOLS, labelSize } from '../src/app/bpmn-layout.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 
 const WITH_DI = '<bpmn:definitions xmlns:bpmn="m" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
@@ -120,7 +120,8 @@ test('an SVG with a foreignObject is refused', () => {
 
 // ---------- the renderer, with a stand-in for the library ----------
 // A stand-in for bpmn-js: records what it is asked, and answers as told.
-function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpmn:Participant', 'bpmn:UserTask', 'label', 'bpmn:SequenceFlow'] } = {}){
+// text: a stand-in for its text renderer; without one, asking for it throws.
+function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpmn:Participant', 'bpmn:UserTask', 'label', 'bpmn:SequenceFlow'], text = null } = {}){
   const log = [];
   class Viewer {
     constructor(options){
@@ -133,6 +134,7 @@ function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpm
     }
     async importXML(xml, diagram){ log.push({ imported: xml, diagram }); if (importError) throw importError; return { warnings }; }
     get(name){
+      if (name === 'textRenderer'){ log.push({ measured: true }); if (!text) throw new Error('No provider for "textRenderer"'); return text; }
       assert.equal(name, 'elementRegistry');
       return { forEach: fn => this.gfx.forEach(g => fn({ type: g.type })), getGraphics: element => this.gfx.find(g => g.type === element.type).el };
     }
@@ -264,6 +266,44 @@ test('XML without coordinates is laid out by Mermaid in a transient host, then d
   assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
   assert.deepEqual(Array.from(document.body.children).map(el => el.id), ['preview']);
   assert.equal(warned.mock.calls.length, 0, 'nothing left out, nothing on the console');
+});
+
+// A stand-in for bpmn-js's text renderer: a line per 8 characters of the
+// text, each 14 px high, as wide as the box it is given; or one that throws.
+function textStandIn({ fails = false, width = 40 } = {}){
+  const lines = (text, w) => Math.max(1, Math.ceil(text.length * 6 / w));
+  return {
+    getExternalStyle: () => ({ fontSize: 12 }),
+    getExternalLabelBounds: (bounds, text) => { if (fails) throw new Error('kein Text'); return { width: width, height: 14 * lines(text, bounds.width) }; },
+    createText: (text, { box }) => ({ querySelectorAll: () => ({ length: lines(text, box.width) }) }),
+  };
+}
+const labelHeight = (xml, id) => Number(new RegExp('bpmnElement="' + id + '"><dc:Bounds[^>]*/><bpmndi:BPMNLabel><dc:Bounds [^>]*height="([\\d.]+)"').exec(xml)[1]);
+
+test('the labels of a layout are measured with the viewer\'s text renderer, in both of its passes; that viewer draws the diagram', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const { Viewer, log } = standIn({ text: textStandIn({ width: 25 }) });
+  const document = page();
+  const d = diagramIn(document, WITHOUT_DI);
+  await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), mermaidStandIn()));
+  // "Los": 18 px of text, one line in the import's 90 px, one line in 25 px: 14 px high.
+  assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), 14);
+  assert.deepEqual(log.map(x => Object.keys(x)[0]), ['made', 'measured', 'imported', 'saved', 'destroyed'], 'one viewer measures and draws');
+  assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
+});
+
+test('a label that cannot be measured keeps the estimate', async t => {
+  t.mock.method(console, 'warn', () => {});
+  for (const text of [null, textStandIn({ fails: true }), textStandIn({ width: NaN })]){
+    const { Viewer, log } = standIn({ text });
+    const document = page();
+    await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(diagramIn(document, WITHOUT_DI)), mermaidStandIn()));
+    assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), labelSize('Los').h);
+  }
+  // The measurer alone: a second line where the redraw in the measured width needs one; the estimate where measuring throws.
+  const measure = labelMeasurer({ get: () => textStandIn({ width: 50 }) });
+  assert.deepEqual(measure('Alle Zitzen gemolken?'), { w: 50, h: 42 }, '126 px of text: 2 lines in 90 px, 3 in 50 px');
+  assert.deepEqual(labelMeasurer({ get: () => { throw new Error('x'); } })('ja'), labelSize('ja'));
 });
 
 test('XML with coordinates is drawn as written, and Mermaid is not asked', async () => {

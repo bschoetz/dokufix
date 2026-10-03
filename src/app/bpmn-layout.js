@@ -11,7 +11,8 @@
 //      a page); only the positions are taken from its SVG
 //   4. layoutGeometry() scales those positions down to BPMN sizes, docks the
 //      flows on the smaller symbols, corrects what Mermaid routes untidily
-//      and gives the labels their places
+//      and gives the labels their places, in the size the page measures
+//      for them (bpmn-js's text renderer) or, without a page, as estimated
 //   5. appendDiagram() writes the result as a diagram part (BPMN-DI) into the
 //      author's XML, before its closing definitions tag; nothing else changes
 //
@@ -630,7 +631,9 @@ export function loopBack(routes, box, lanes = []){
 }
 
 // A label as bpmn-js lays it out: at most 90 px wide, wrapped at blanks,
-// 12 px text. Estimated, since no font is measured here: { w, h }.
+// 12 px text. Estimated, since no font is measured here: { w, h }. The page
+// measures each label as bpmn-js will draw it (src/app/bpmn.js) and keeps
+// this estimate for a label it cannot measure; Node keeps it for all.
 const CHAR = 6.6, LINE = 15, LABEL_WIDTH = 90;
 export function labelSize(text){
   const lines = [];
@@ -673,10 +676,10 @@ export function bestPlace(places, avoid){
 // is skipped), otherwise first in the middle of the longest piece; above a
 // horizontal piece, right of a vertical one, then on its other side; then
 // the middle of every other piece, longest first, both sides. Each [x, y, w,
-// h], the size labelSize() estimates; bpmn-js centres the text on x + w/2,
-// starts it at y and wraps it at 90 px.
-export function flowLabelPlaces(pts, text, atGateway){
-  const { w, h } = labelSize(text);
+// h], the size labelSize() estimates, or the size given; bpmn-js centres the
+// text on x + w/2, starts it at y and wraps it at 90 px.
+export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text)){
+  const { w, h } = size;
   const pieces = pts.slice(1).map((b, i) => ({ a: pts[i], b, len: Math.abs(pts[i].x - b.x) + Math.abs(pts[i].y - b.y) }));
   const places = [];
   const beside = (a, b, exit) => {
@@ -701,8 +704,8 @@ export function flowLabelPlaces(pts, text, atGateway){
 // The label of a flow: the first of flowLabelPlaces() that keeps off avoid
 // (boxes [x, y, w, h]: other labels, symbols, pieces of flows), or the one
 // covered least.
-export function flowLabel(pts, text, atGateway, avoid = []){
-  return bestPlace(flowLabelPlaces(pts, text, atGateway), avoid);
+export function flowLabel(pts, text, atGateway, avoid = [], size = labelSize(text)){
+  return bestPlace(flowLabelPlaces(pts, text, atGateway, size), avoid);
 }
 
 // The places a label of an event or a gateway may take, in the order they
@@ -734,7 +737,11 @@ export function labelPlaces(c, size, gateway){
 // null, and per element id its box [x, y, w, h], its label box, or the
 // waypoints of a flow [[x, y], …]. Throws where raw lacks a node, a lane or a
 // flow of the model.
-export function layoutGeometry(model, raw){
+// measure: the size { w, h } a label's text takes as bpmn-js draws it; the
+// page gives one that asks bpmn-js's text renderer in the document's font
+// (src/app/bpmn.js), the tests and anything without a page keep the estimate
+// labelSize().
+export function layoutGeometry(model, raw, measure = labelSize){
   const rawOf = {};
   for (const n of model.nodes){
     const r = raw.nodes[n.key];
@@ -820,13 +827,13 @@ export function layoutGeometry(model, raw){
     // Two flows leaving one corner of a gateway: their labels go to their
     // longest pieces, not both to that corner.
     const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
-    const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken]);
+    const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken], measure(f.name));
     di.flowLabels[f.id] = place;
     taken.push(place);
   }
   for (const n of model.nodes){
     if (n.type === 'task' || !n.name) continue;
-    const place = bestPlace(labelPlaces(box[n.id], labelSize(n.name), n.type === 'gateway'), [...symbols.filter(b => b !== di.nodes[n.id]), ...segments, ...taken]);
+    const place = bestPlace(labelPlaces(box[n.id], measure(n.name), n.type === 'gateway'), [...symbols.filter(b => b !== di.nodes[n.id]), ...segments, ...taken]);
     // bpmn-js centres the text on the box: the box is as wide as a label can be.
     const [x, y, w, h] = place;
     di.labels[n.id] = [R(x + w / 2 - LABEL_WIDTH / 2), R(y), LABEL_WIDTH, R(h)];

@@ -1,5 +1,5 @@
 import { TRANSIENT_ATTR } from './transient.js';
-import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
+import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine, labelSize } from './bpmn-layout.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
 // A fenced block of the language `bpmn` holds BPMN 2.0 XML, with its diagram
@@ -17,7 +17,9 @@ import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine 
 //      goes to bpmn-js as it is, which words the reason
 //   2. bpmn-js draws into a host of its own: transient, fixed off-screen,
 //      outside the document, in <body>; it is destroyed and the host removed
-//      after each diagram, whether it was drawn or not
+//      after each diagram, whether it was drawn or not. For XML without
+//      coordinates the same viewer measures the labels of the layout first
+//      (labelMeasurer())
 //   3. before the export each element gets a class by its type, which the
 //      document styles colour (src/doc.css): the viewer is told to draw with
 //      custom properties (var(--dokufix-bpmn-…)) instead of colours, so no
@@ -172,14 +174,19 @@ async function drawBpmn(diagram){
   // A page whose script tag of bpmn-js failed has no BpmnJS.
   if (typeof BpmnJS !== 'function') throw new Error(BPMN_NO_LIBRARY);
   const doc = diagram.holder.ownerDocument;
-  // The XML that is drawn, with coordinates where they could be made, and the
-  // diagram in it bpmn-js opens: the laid-out one, else its first.
-  const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : await layoutBpmn(diagram.source, doc, diagram.index);
-  diagram.xml = xml;
-  const host = offscreenHost(doc);
-  let viewer = null;
+  // The viewer is made once it is needed: to measure the labels of a layout,
+  // or to draw. A diagram refused before that makes no host.
+  let host = null, viewer = null;
+  const ready = () => {
+    if (!viewer){ host = offscreenHost(doc); viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG }); }
+    return viewer;
+  };
   try {
-    viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
+    // The XML that is drawn, with coordinates where they could be made, and the
+    // diagram in it bpmn-js opens: the laid-out one, else its first.
+    const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : await layoutBpmn(diagram.source, doc, diagram.index, () => labelMeasurer(ready()));
+    diagram.xml = xml;
+    ready();
     const result = await (open ? viewer.importXML(xml, open) : viewer.importXML(xml));
     // Elements bpmn-js does not know are drawn without them; that goes to the console only.
     for (const w of (result && result.warnings) || []) console.warn('BPMN import warning:', w && w.message ? w.message : w);
@@ -191,8 +198,31 @@ async function drawBpmn(diagram){
     diagram.holder.replaceChildren(doc.importNode(parsed, true));
   } finally {
     try { if (viewer) viewer.destroy(); }
-    finally { host.remove(); }
+    finally { if (host) host.remove(); }
   }
+}
+
+// The size { w, h } of an event's, a gateway's or a flow's label as bpmn-js
+// will draw it, for layoutGeometry(): the viewer's text renderer, in the
+// document's font (BPMN_VIEWER_CONFIG), repeats both passes bpmn-js makes.
+// On import it computes the label's box from the text in a box 90 px wide
+// (its width, and its height per line); when it draws, it wraps the text
+// again in that width, which can take a line more. A label that cannot be
+// measured, the renderer missing or throwing or a size that is no finite
+// number, keeps the layout's estimate, labelSize().
+export function labelMeasurer(viewer){
+  let renderer = null;
+  return text => {
+    try {
+      if (!renderer){ const tr = viewer.get('textRenderer'); renderer = { tr, style: tr.getExternalStyle() }; }
+      const { tr, style } = renderer;
+      const lines = width => tr.createText(text, { box: { width, height: 30 }, style }).querySelectorAll('tspan').length;
+      const imported = tr.getExternalLabelBounds({ x: 0, y: 0, width: 90, height: 30 }, text);
+      const size = { w: imported.width, h: Math.ceil(imported.height / Math.max(1, lines(90)) * lines(imported.width)) };
+      if (Number.isFinite(size.w) && Number.isFinite(size.h) && size.w >= 0 && size.h > 0) return size;
+    } catch { /* the estimate below */ }
+    return labelSize(text);
+  };
 }
 
 // XML without coordinates, laid out: { xml, open }, the author's XML with a
@@ -200,8 +230,9 @@ async function drawBpmn(diagram){
 // with the reason where it cannot be laid out. XML the browser's parser
 // cannot read, or that is no BPMN definitions, comes back as it is, without
 // open: bpmn-js then says what is wrong with it. What the layout leaves out
-// is a line on the console each.
-async function layoutBpmn(xml, doc, index){
+// is a line on the console each. measurer: gives the function that measures
+// the labels (labelMeasurer()), asked once the XML is read.
+async function layoutBpmn(xml, doc, index, measurer){
   const parsed = new globalThis.DOMParser().parseFromString(xml, 'application/xml');
   if (parsed.getElementsByTagName('parsererror').length) return { xml };
   // readProcess() checks this too; here it puts "no definitions: bpmn-js words it" before "Mermaid missing".
@@ -210,7 +241,7 @@ async function layoutBpmn(xml, doc, index){
   const read = readProcess(parsed);
   if (!read) return { xml };
   const raw = await mermaidPositions(read.model, doc, index);
-  const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw));
+  const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw, measurer()));
   for (const item of read.leftOut) console.warn('BPMN layout, left out:', leftOutLine(item));
   return { xml: laidOut.xml, open: laidOut.diagram };
 }

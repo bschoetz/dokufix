@@ -443,6 +443,17 @@ test('the geometry: BPMN sizes, the pool around the lanes, every flow on the out
   }
 });
 
+test('the geometry takes the label sizes from a given measure, the estimate without one', () => {
+  const { model, raw } = sample();
+  const asked = [];
+  const di = layoutGeometry(model, raw, text => { asked.push(text); return { w: 40, h: 44 }; });
+  assert.deepEqual(asked.sort(), ['Erledigt', 'Leserin fragt', 'Vorrätig?', 'ja', 'nein'].sort());
+  for (const id of ['S', 'G', 'E']) assert.equal(di.labels[id][3], 44, id);
+  for (const id of ['F2', 'F3']) assert.deepEqual(di.flowLabels[id].slice(2), [40, 44], id);
+  const estimated = layoutGeometry(model, raw);
+  assert.equal(estimated.labels.S[3], labelSize('Leserin fragt').h);
+});
+
 test('the geometry refuses positions that lack a node, a lane or a flow', () => {
   const { model, raw } = sample();
   assert.throws(() => layoutGeometry(model, { ...raw, nodes: { ...raw.nodes, n3: undefined } }), /„A“ nicht angeordnet/);
