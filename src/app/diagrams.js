@@ -197,7 +197,9 @@ async function renderMermaid({ holder }){
   }
 }
 
-// The kinds, by the language of their fenced block. Each: render(diagram),
+// The kinds, by the language of their fenced block: the languages of
+// diagram-kinds.js, the one source of their names, and no other (a test in
+// tests/diagrams.test.mjs holds the keys equal). Each: render(diagram),
 // which draws into diagram.holder or throws; warning(diagram), the text of the
 // warning that stands where a diagram that threw would have been; credit, the
 // link below the diagram, if its library asks for one.

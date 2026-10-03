@@ -4,6 +4,7 @@ import { FACET_BAR_CLASS, isFootnoteMarker } from './facets.js';
 import { STEP_NUMBER_CLASS } from './steps.js';
 import { documentHeadings } from './toc.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from './diagrams.js';
+import { DIAGRAM_LANGUAGES, DIAGRAM_LABEL } from './diagram-kinds.js';
 import { TRANSIENT_ATTR } from './transient.js';
 
 // --- Search: the places --------------------------------------------------------
@@ -44,10 +45,11 @@ import { TRANSIENT_ATTR } from './transient.js';
 // over "gemeldet". White space collapsed. A figure whose SVG is not drawn
 // (its container holds the source while the diagram is drawn, or the packed
 // SVG of a `schlank` file before the decoder) has no text and is no place; a
-// diagram that failed is a warning, no figure. Its kind, KIND_BPMN or
-// KIND_MERMAID, "BPMN-Diagramm" or "Mermaid-Diagramm", comes from the
-// figure's class. Nothing inside a diagram is highlighted: its map holds no
-// node, so nodeRanges() makes no range of a hit in it.
+// diagram that failed is a warning, no figure. Its kind, "BPMN-Diagramm" or
+// "Mermaid-Diagramm", is the label of its language (diagram-kinds.js), read
+// from the figure's class dokufix-diagram-<language>. Nothing inside a
+// diagram is highlighted: its map holds no node, so nodeRanges() makes no
+// range of a hit in it.
 //
 // The metadata panel (frontmatter.js), `details.dokufix-frontmatter`, is one
 // place, of the kind KIND_META, "Metadaten". Its text is the author's data:
@@ -62,8 +64,9 @@ import { TRANSIENT_ATTR } from './transient.js';
 // A code block is one place, of the kind KIND_CODE, "Code": every `pre`
 // outside the metadata panel, a warning and a table row, its text as it stands,
 // white space collapsed as everywhere. A fenced block of a diagram
-// (`pre > code.language-mermaid`, `language-bpmn`) is no code: it is the
-// source of a diagram, a figure once drawn (diagrams.js), and no place.
+// (`pre > code.language-<language>`, a language of diagram-kinds.js) is no
+// code: it is the source of a diagram, a figure once drawn (diagrams.js),
+// and no place.
 // Inline `code` is text of its paragraph. A code block in a list item is no
 // text of the item, and a place of its own; one in a table cell is text of
 // its row, as everything a row holds (rowReading()), and no place.
@@ -100,10 +103,10 @@ const OWN_TAGS = new Set([...PLACE_TAGS, 'UL', 'OL', 'TABLE', 'PRE']);
 const EXCLUDED_TAGS = new Set(['SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
 // What a table row is to the panel: the word before its result.
 export const KIND_ROW = 'Tabelle';
-// What a diagram is to the panel, by the class of its figure.
-export const KIND_BPMN = 'BPMN-Diagramm';
-export const KIND_MERMAID = 'Mermaid-Diagramm';
-const DIAGRAM_KINDS = [[DIAGRAM_CLASS + '-bpmn', KIND_BPMN], [DIAGRAM_CLASS + '-mermaid', KIND_MERMAID]];
+// The languages of the diagrams (diagram-kinds.js): what a figure of each is
+// to the panel, by its class dokufix-diagram-<language>, and what a fenced
+// block of each is, the source of a diagram, no code.
+const LANGUAGES = Object.keys(DIAGRAM_LANGUAGES);
 // What the metadata panel and a code block are to the panel.
 export const KIND_META = 'Metadaten';
 export const KIND_CODE = 'Code';
@@ -113,9 +116,6 @@ const META_CLASS = 'dokufix-frontmatter';
 const META_EMPTY_CLASS = 'dokufix-fm-empty';
 // Where a key, a value or a list item of the panel begins and ends.
 const META_APART = new Set(['DT', 'DD', 'LI']);
-// The languages of a fenced block that is a diagram's source (DIAGRAM_KINDS in
-// diagrams.js, which would bring the renderers into the reader bundle).
-const DIAGRAM_LANGUAGES = ['mermaid', 'bpmn'];
 const EXCLUDED_CLASSES = [
   CHIP_STATUS_CLASS, FACET_BAR_CLASS, STEP_NUMBER_CLASS,
   'dokufix-warning',        // warning.js
@@ -296,15 +296,15 @@ function diagramReading(figure){
 function diagramPlace(figure){
   const { text, map } = diagramReading(figure);
   if (!text) return null;
-  const kind = DIAGRAM_KINDS.find(([cls]) => figure.classList.contains(cls));
-  return { el: figure, text, map, kind: kind ? kind[1] : 'Diagramm' };
+  const lang = LANGUAGES.find(l => figure.classList.contains(DIAGRAM_CLASS + '-' + l));
+  return { el: figure, text, map, kind: lang ? DIAGRAM_LANGUAGES[lang].label : DIAGRAM_LABEL };
 }
 
 const isMetaPanel = el => tagOf(el) === 'DETAILS' && el.classList.contains(META_CLASS);
 
 // Whether a pre is the fenced block of a diagram, not yet its figure.
 const isDiagramSource = pre => Array.from(pre.children).some(code => tagOf(code) === 'CODE' &&
-  DIAGRAM_LANGUAGES.some(lang => code.classList.contains('language-' + lang)));
+  LANGUAGES.some(lang => code.classList.contains('language-' + lang)));
 
 // The text of a code block or of the metadata panel: every text node in it,
 // in order, a line break as a blank, without anything transient. In the panel

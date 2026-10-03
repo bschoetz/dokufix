@@ -343,6 +343,8 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.ok(!/<\/script/i.test(code) && !code.includes('<!--'));
   // Nothing of the editor's elements: dom.js is not in the bundle.
   assert.ok(!/getElementById\("(preview|source)"\)|mode-view/.test(code), 'the bundle looks up no element of the editor');
+  // Nothing of the renderers: the search takes the diagram languages from diagram-kinds.js, not from diagrams.js.
+  assert.ok(!code.includes('--dokufix-bpmn-fill') && !code.includes('konnte nicht gezeichnet werden'), 'the bundle carries no renderer');
   // Run in a document as an export has it: the content container holds a marked table.
   const { document, window, panel } = runReader(code, '<p>Eine Tabelle, noch eine Tabelle.</p><div class="dokufix-table"><table data-dokufix-filter="Ort suchen …"><thead><tr><th>Ort</th></tr></thead><tbody><tr><td>Nord</td></tr><tr><td>Süd</td></tr></tbody></table></div><ul><li>Tabelle</li></ul>');
   const field = document.querySelector('main > .dokufix-filter[data-dokufix-transient]');

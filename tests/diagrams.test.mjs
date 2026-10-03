@@ -14,6 +14,7 @@ import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { diagramTitle, diagramFigure, drawDiagrams, drawnWidth, removeRendererLeftovers, removeViewerLeftovers, DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TITLE_DEFAULT, DIAGRAM_KINDS, DIAGRAM_ZOOM_STEPS, MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
 import { buildChips } from '../src/app/chips.js';
+import { DIAGRAM_LANGUAGES } from '../src/app/diagram-kinds.js';
 
 function rootWith(html){
   const { document } = parseHTML('<!DOCTYPE html><html><body><article id="root" class="dokufix-doc">' + html + '</article></body></html>');
@@ -253,6 +254,10 @@ test('no heading before the diagram: its files are named "Diagramm"', async () =
   const root = rootWith(block('mermaid', 'a') + block('mermaid', 'b'));
   await drawDiagrams(root, { mermaid: { ...fake, download: DIAGRAM_KINDS.mermaid.download } });
   assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-diagram-downloads > a')).map(a => a.getAttribute('download')), ['Diagramm.mmd', 'Diagramm-2.mmd']);
+});
+
+test('the kinds drawn are the languages of diagram-kinds.js, the one source of their names', () => {
+  assert.deepEqual(Object.keys(DIAGRAM_KINDS).sort(), Object.keys(DIAGRAM_LANGUAGES).sort());
 });
 
 test('the kinds download their source: Mermaid the block\'s text as .mmd, BPMN the XML as drawn as .bpmn', () => {

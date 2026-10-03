@@ -39,7 +39,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
-import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_BPMN, KIND_MERMAID, KIND_META, KIND_CODE } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_META, KIND_CODE } from '../src/app/search-places.js';
+import { DIAGRAM_LANGUAGES } from '../src/app/diagram-kinds.js';
 import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
 import { buildWarning } from '../src/app/warning.js';
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
@@ -48,6 +49,10 @@ import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
 import { TRANSIENT_ATTR } from '../src/app/transient.js';
+
+// What the search calls a diagram of each language (src/app/diagram-kinds.js).
+const KIND_BPMN = DIAGRAM_LANGUAGES.bpmn.label;
+const KIND_MERMAID = DIAGRAM_LANGUAGES.mermaid.label;
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = name => fs.readFileSync(path.join(here, '../src', name), 'utf8');
@@ -628,6 +633,17 @@ const mermaidSvg = (...labels) => '<svg id="mermaid-1" class="flowchart" role="g
   '<title>Titel der Quelle</title><desc>Beschreibung der Quelle</desc><g class="root"><g class="nodes">' +
   labels.map(l => '<g class="node default"><rect class="basic label-container"></rect><g class="label"><foreignObject width="120" height="48"><div xmlns="http://www.w3.org/1999/xhtml" style="display: table-cell; white-space: nowrap;"><span class="nodeLabel"><p>' + l + '</p></span></div></foreignObject></g></g>').join('') +
   '</g></g></svg>';
+
+test('the diagram languages and their labels come from diagram-kinds.js alone: a figure of each language has its label, a fenced block of each is no code, and search-places.js names no language', () => {
+  for (const [lang, { label }] of Object.entries(DIAGRAM_LANGUAGES)){
+    const { document } = parseHTML('<html><body><main><figure class="dokufix-diagram dokufix-diagram-' + lang + '"><div class="dokufix-diagram-svg"><svg><text>Wort</text></svg></div></figure>' +
+      '<pre><code class="language-' + lang + '">Quelle</code></pre></main></body></html>');
+    assert.deepEqual(collectPlaces(document.querySelector('main')).map(p => [p.el.tagName, p.text, p.kind]), [['FIGURE', 'Wort', label]], lang);
+  }
+  const code = fs.readFileSync(new URL('../src/app/search-places.js', import.meta.url), 'utf8').split('\n').filter(line => !/^\s*\/\//.test(line)).join('\n');
+  assert.doesNotMatch(code, /mermaid|bpmn|Diagramm/i);
+});
+
 const diagramPlaces = root => collectPlaces(root).filter(p => p.kind === KIND_BPMN || p.kind === KIND_MERMAID);
 
 test('collectPlaces: a diagram is one place, its figure, of the kind "' + KIND_BPMN + '" or "' + KIND_MERMAID + '"; its text is the labels of its SVG, never the frame around it', () => {

@@ -122,6 +122,7 @@ import { readProcess } from '../src/app/bpmn-layout.js';
 // its link are asked where the product decides them (story 2.10).
 import { diagramFileNames, sourceDataUrl, DOWNLOADS_LABEL } from '../src/app/diagram-downloads.js';
 import { DIAGRAM_KINDS as KINDS } from '../src/app/diagrams.js';
+import { DIAGRAM_LANGUAGES } from '../src/app/diagram-kinds.js';
 // Which places of the preview a search lists, how many hits each holds and
 // under which group headings they stand is asked where the product decides it,
 // over the preview read back into linkedom.
@@ -489,7 +490,7 @@ function tableExpectations(body){
 // that stands in a plain quotation before a diagram would be missed. A BPMN
 // block keeps its XML: whether it is drawn is judged once the browser has
 // said whether the XML parses (judgeDiagrams()).
-const DIAGRAM_KINDS = ['mermaid', 'bpmn'];
+const DIAGRAM_KINDS = Object.keys(DIAGRAM_LANGUAGES);
 function diagramExpectations(body){
   const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
   const spanText = raw => /^ .* $/.test(raw) && raw.trim() ? raw.slice(1, -1) : raw;
@@ -1967,8 +1968,9 @@ const SEARCH_TERM = 'Tabelle';
 // A term that occurs often in both documents: its list is longer than the
 // panel. In the reference document it stands in a BPMN diagram as well.
 const LONG_TERM = 'die';
-// The kinds of a diagram's place (src/app/search-places.js).
-const SEARCH_KINDS = { 'dokufix-diagram-bpmn': 'BPMN-Diagramm', 'dokufix-diagram-mermaid': 'Mermaid-Diagramm' };
+// The kinds of a diagram's place (src/app/search-places.js), by the class of
+// its figure: the labels of the languages (src/app/diagram-kinds.js).
+const SEARCH_KINDS = Object.fromEntries(Object.entries(DIAGRAM_LANGUAGES).map(([lang, { label }]) => ['dokufix-diagram-' + lang, label]));
 const isDiagramKind = kind => Object.values(SEARCH_KINDS).includes(kind);
 // The height of a group heading in the panel (src/search.css).
 const GROUP_ROW = 28;
@@ -3430,7 +3432,7 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
     return { name: download.suggestedFilename(), file };
   };
   const results = [];
-  for (const kind of ['mermaid', 'bpmn']){
+  for (const kind of Object.keys(DIAGRAM_LANGUAGES)){
     const i = drawn.findIndex(d => d.kind === kind);
     if (i < 0) continue;
     try {
