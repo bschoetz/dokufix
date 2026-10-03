@@ -21,8 +21,10 @@ import { TRANSIENT_ATTR } from './transient.js';
 //      title as its accessible name, the width of a Mermaid diagram, ids made
 //      unique in the document
 //
-// Pure logic, apart from renderBpmn(), which needs a page and the library:
-// the rest works on the strings and elements it is handed.
+// Pure logic, apart from renderBpmn(), which needs a page: the library
+// (BpmnJS) and the page's DOMParser, the exception to the rule for such
+// modules (src/README.md). It draws in the holder's document. The rest works
+// on the strings and elements it is handed.
 // tests/bpmn.test.mjs runs all of it in Node, renderBpmn() with a stand-in
 // for the library.
 

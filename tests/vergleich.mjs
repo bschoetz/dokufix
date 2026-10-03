@@ -2157,7 +2157,7 @@ async function assertBpmnFonts(page, check, dir){
       const width = f => { c.font = '12px ' + f; return c.measureText('Medium von Hand prüfen').width; };
       const installed = !font || (width('"' + font + '", monospace') !== width('monospace'));
       const out = { font: font || '(as drawn)', installed, labels: 0, problems: [] };
-      for (const fig of document.querySelectorAll('figure.dokufix-diagram-bpmn')){
+      document.querySelectorAll('figure.dokufix-diagram-bpmn').forEach((fig, figure) => {
         const svg = fig.querySelector('svg');
         const pic = svg.getBoundingClientRect();
         for (const text of svg.querySelectorAll('text')){
@@ -2172,22 +2172,25 @@ async function assertBpmnFonts(page, check, dir){
           const frame = holder ? holder.getBoundingClientRect() : pic;
           const eps = 0.5;
           if (t.left < frame.left - eps || t.right > frame.right + eps || t.top < frame.top - eps || t.bottom > frame.bottom + eps){
-            out.problems.push(fig.getAttribute('aria-label') + ' / ' + id + ' "' + text.textContent.trim() + '" ' + (holder ? 'runs out of its symbol' : 'is cut off by the picture') +
-              ' by ' + Math.round(Math.max(frame.left - t.left, t.right - frame.right, frame.top - t.top, t.bottom - frame.bottom) * 10) / 10 + ' px');
+            out.problems.push({ figure, text: fig.getAttribute('aria-label') + ' / ' + id + ' "' + text.textContent.trim() + '" ' + (holder ? 'runs out of its symbol' : 'is cut off by the picture') +
+              ' by ' + Math.round(Math.max(frame.left - t.left, t.right - frame.right, frame.top - t.top, t.bottom - frame.bottom) * 10) / 10 + ' px' });
           }
         }
-      }
+      });
       return out;
     }, font);
-    if (r.problems.length){
-      r.picture = path.join(dir, 'schrift-' + (font || 'wie-gezeichnet').replace(/\s+/g, '-').toLowerCase() + '.png');
-      await page.locator('figure.dokufix-diagram-bpmn').first().screenshot({ path: r.picture }).catch(() => {});
+    // One picture per figure with a label that does not fit in this font,
+    // named by the font and the figure's place among the BPMN figures.
+    for (const figure of new Set(r.problems.map(x => x.figure))){
+      const picture = path.join(dir, 'schrift-' + (font || 'wie-gezeichnet').replace(/\s+/g, '-').toLowerCase() + '-' + (figure + 1) + '.png');
+      await page.locator('figure.dokufix-diagram-bpmn').nth(figure).screenshot({ path: picture }).catch(() => {});
+      r.problems.filter(x => x.figure === figure).forEach(x => { x.picture = path.relative(process.cwd(), picture); });
     }
     if (tag) await tag.evaluate(el => el.remove());
     results.push(r);
   }
   await frames(page);
-  const summary = results.map(r => r.font + (r.installed ? '' : ' (not installed)') + ': ' + (r.problems.length ? r.problems.length + ' of ' + r.labels + ' labels do not fit (' + r.problems.slice(0, 4).join('; ') + (r.picture ? '; picture ' + path.relative(process.cwd(), r.picture) : '') + ')' : 'all ' + r.labels + ' labels fit')).join(' | ');
+  const summary = results.map(r => r.font + (r.installed ? '' : ' (not installed)') + ': ' + (r.problems.length ? r.problems.length + ' of ' + r.labels + ' labels do not fit (' + r.problems.map(x => x.text + ', picture ' + x.picture).join('; ') + ')' : 'all ' + r.labels + ' labels fit')).join(' | ');
   fs.writeFileSync(path.join(dir, 'schrift.json'), JSON.stringify(results, null, 2) + '\n');
   check('BPMN, the font check (AC7): every label measured with the font as drawn and with ' + FONT_CHECK.join(' and '),
     results.every(r => r.labels > 0) && results[0].problems.length === 0, summary, summary);

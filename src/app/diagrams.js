@@ -23,8 +23,10 @@ import { renderBpmn, bpmnWarningText, BPMN_CREDIT } from './bpmn.js';
 // figcaption that stays outside the SVG container.
 //
 // Pure logic, apart from the renderer of each kind: the figure is made by the
-// document it is handed, and diagramTitle() reads the root. The renderers use
-// the page's globals (mermaid, BpmnJS, document) and run only in a page;
+// document it is handed, and diagramTitle() reads the root. The renderers are
+// the exception to the rule for such modules (src/README.md): they need the
+// page's library, mermaid or BpmnJS, and run only in a page; whatever document
+// they work on is the holder's;
 // tests/diagrams.test.mjs hands drawDiagrams() renderers of its own.
 
 export const DIAGRAM_CLASS = 'dokufix-diagram';
@@ -74,6 +76,7 @@ export function diagramFigure(doc, kind, title, credit){
 // it with the SVG. Mermaid runs with suppressErrorRendering (src/app.js), so a
 // diagram with an error throws instead of drawing its error picture.
 async function renderMermaid({ holder }){
+  const doc = holder.ownerDocument;
   try {
     await mermaid.run({ nodes: [holder] });
   } catch (err){
@@ -81,7 +84,7 @@ async function renderMermaid({ holder }){
     // Mermaid draws into a temporary element named after the diagram's id.
     // Handed a node, it puts that element into the node, which is about to
     // go; one that a failed render left in <body> is removed here.
-    document.querySelectorAll('body > [id^="dmermaid-"], body > [id^="imermaid-"]').forEach(el => el.remove());
+    doc.querySelectorAll('body > [id^="dmermaid-"], body > [id^="imermaid-"]').forEach(el => el.remove());
     throw err;
   }
 }
