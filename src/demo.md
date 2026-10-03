@@ -34,9 +34,10 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - Tabellen mit Unterzeile, Filter und Suchfeld
 - Bilder
 - Fußnoten mit Vorschau
-- **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten
+- **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten, jedes mit großer Ansicht
+- eine Suche über das ganze Dokument
 
-Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnet `/` sie ebenso. Das „×“ oder Escape schließt sie; erst das nächste Escape verlässt den Lesemodus.
+Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Das „×“ oder Escape schließt sie; im Editor und in einer Datei mit Editor verlässt erst das nächste Escape den Lesemodus. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnet `/` sie ebenso.
 
 ## Wie das hier zusammenspielt
 
@@ -164,7 +165,9 @@ Ein Suchfeld steht auch allein über einer Tabelle. Ohne Angabe hinter `filter` 
 | Taste | Wirkung |
 |---|---|
 | Strg + Eingabe | im Editor neu rendern[^tasten] |
-| Esc | den Lesemodus verlassen; im Suchfeld zuerst den Suchtext leeren |
+| `/` | im Lesemodus die Suche öffnen |
+| Esc | eines nach dem anderen schließen: die große Ansicht, die Suche, den Text im Suchfeld einer Tabelle, zuletzt den Lesemodus |
+| `+` und `-` | in der großen Ansicht die nächste oder die vorige Stufe |
 | Pfeiltasten | im Filter den nächsten Wert wählen |
 | Tab | zum nächsten Knopf, Verweis oder Suchfeld |
 
@@ -174,7 +177,7 @@ Eine Tabelle, die breiter ist als die Lesespalte, rollt für sich seitwärts. Di
 |---|---|---|---|---|---|---|---|
 | Mit Editor | `.html` | uneingeschränkt | vollständig | Bibliotheken aus dem Netz | beim Öffnen gezeichnet | am größten | Zusammenarbeit |
 | Offen | `-nur-lesen.html` | ausgeschlossen | letzter Stand | keine | eingebettet | groß | Veröffentlichung, Langzeitablage |
-| Schlank | `-schlank.html` | ausgeschlossen | letzter Stand | für Diagramme und Suchfelder | gepackt | mittel | Versand |
+| Schlank | `-schlank.html` | ausgeschlossen | letzter Stand | für Diagramme, Suche und Suchfelder | gepackt | mittel | Versand |
 | Kompakt | `-kompakt.html` | ausgeschlossen | letzter Stand | für alles | gepackt | am kleinsten | Versand über schmale Leitungen |
 
 ## Bilder
@@ -476,6 +479,51 @@ Ein BPMN-Prozess ohne Pool und ohne Bahnen, mit einem Zeit-Startereignis, Aufgab
 ```
 
 
+### Große Ansicht
+
+Ein Diagramm, das in der Spalte höher ist als das Fenster. Klicken Sie weit unten darauf: Es öffnet sich groß, und die Seite dahinter springt nicht. „Einpassen“ zeigt es ganz. Nach „Schließen“ stehen Sie an derselben Stelle wie vor dem Klick.
+
+```mermaid
+flowchart TD
+    A[Antrag geht ein] --> B[Eingang bestätigen]
+    B --> C[Unterlagen prüfen]
+    C --> D{Vollständig?}
+    D -- nein --> E[Unterlagen nachfordern]
+    E --> C
+    D -- ja --> F[Fachlich bewerten]
+    F --> G[Zweite Meinung einholen]
+    G --> H[Entscheidung vorbereiten]
+    H --> I[Entscheidung treffen]
+    I --> J[Bescheid schreiben]
+    J --> K[Bescheid versenden]
+    K --> L[Akte schließen]
+```
+
+Ein kleines Diagramm: „Einpassen“ vergrößert es höchstens auf das Anderthalbfache, „100 %“ zeigt es so groß, wie es gezeichnet ist. Schließen Sie es bei „150 %“ und öffnen Sie es wieder: Es steht noch bei „150 %“, bis das Dokument neu gerendert wird.
+
+```mermaid
+flowchart LR
+    X[Klein] --> Y[Fertig]
+```
+
+Solange ein Diagramm groß offen ist, öffnet `/` keine Suche, und Escape schließt zuerst die große Ansicht. Ist die Suche schon offen, schließt das erste Escape die große Ansicht, das zweite die Suche.
+
+### Suche
+
+Öffnen Sie mit `/` die Suche und probieren Sie diese Fälle:
+
+- Ein Wort, das eine Hervorhebung teilt, ist ein Treffer: Leucht*turm*wärter. Suchen Sie danach; der Treffer ist am Stück gelb hinterlegt.
+- Mit dem Schalter „Leerzeichen, Bindestriche und Punkte ignorieren“ findet derselbe Begriff auch Leucht-Turm-Wärter in dieser Zeile. Ohne den Schalter findet er nur die Zeile davor.
+- Ein Begriff aus einer Fußnote ist ein Treffer bei der Fußnote unten, nicht bei ihrem Zeichen hier: Suchen Sie nach dem zweiten Wort der Fußnote.[^suche]
+- Das Wort, das ein Status-Chip für Screenreader trägt, ist kein Treffer: Die Suche nach blau findet nur diese Zeile, nicht den Chip `🔵 im Test` in ihr.
+- Was vor der ersten Überschrift der Ebene 2 steht, bildet eine eigene Gruppe mit dem Titel des Dokuments: Die Suche nach Lesemodus beginnt mit „Willkommen bei dokufix“.
+- Eine Überschrift in einem Hinweis zählt zur Gruppe, in der der Hinweis steht: „Überschrift im Hinweis“ erscheint unter „Sonderfälle“.
+- Was nur in einer Tabelle, einem Diagramm, einem Code-Block oder im Metadaten-Kopf steht, findet die Suche noch nicht. Das Wort in der Tabelle darunter steht in keinem Absatz; die Suche danach zeigt „Keine Treffer“.
+
+| Nur in dieser Tabelle |
+|---|
+| Zitronenfalter |
+
 ### BPMN ohne Koordinaten: Pool ohne Bahnen
 
 Ein BPMN-Prozess ohne Koordinaten mit Sonderfällen: ein Pool ohne Bahnen; XML ohne Präfix, mit einem Kommentar nach dem Schluss-Tag; ids, die wie Mermaids Schlüsselwörter heißen (`end`, `subgraph`, `graph`); zwei Flüsse zwischen denselben beiden Knoten, die zwei eigene Wege bekommen; eine Notiz mit ihrer Verbindung, die dokufix nicht anordnet und weglässt. Sie sollten einen Pool „Verlängerung“ sehen, darin fünf Symbole und fünf Pfeile, „ja“ und „nein“ auf getrennten Wegen, und keine Notiz.
@@ -547,6 +595,8 @@ Probieren Sie es aus: Klicken Sie oben rechts auf **„Editor ↩"**, ändern Si
 [^tasten]: Auf dem Mac ist es Cmd + Eingabe. Gerendert wird auch über den Knopf „Rendern“ in der Werkzeugleiste; erst danach zeigen Vorschau, Inhaltsverzeichnis und Schiene den neuen Stand.
 
 [^ort]: Dieselbe Fußnote steht in einer Karte und in einem Hinweis.
+
+[^suche]: Ein Morgenrot steht nur in dieser Fußnote.
 
 [^feld]: Diese Fußnote steht in einer Tabelle mit Suchfeld und Knöpfen.
 

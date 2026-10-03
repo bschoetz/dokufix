@@ -336,9 +336,9 @@ const FILTER_WARNING = 'Die Markierung „dokufix: filter "Suchen …"“ erwart
 const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, false];
 
 // ---------- the copy of src/ with two passes more ----------
-// The diagrams of the demo text: two of Mermaid, six of BPMN (two with
-// coordinates, four without).
-const DEMO_DIAGRAMS = 8;
+// The diagrams of the demo text: four of Mermaid (two of them the special
+// cases of the large view), six of BPMN (two with coordinates, four without).
+const DEMO_DIAGRAMS = 10;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';
@@ -1062,7 +1062,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
     await attempt(name + ' a pass throws', async () => {
       const scope = name + ' a pass throws';
       const o = await open(browser, copyWithPasses, editorReady);
-      const f = await facts(o.page);   // the demo text: metadata, table of contents, footnotes, four diagrams
+      const f = await facts(o.page);   // the demo text: metadata, table of contents, footnotes, its ten diagrams
       checkWarning(scope, f, ['Der Schritt „' + THROWING_PASS + '“ ist fehlgeschlagen.', THROWING_MESSAGE], 'naming the pass');
       const firstContent = f.children.findIndex(c => c !== 'div.dokufix-warning');
       check(scope, 'the warnings stand at the top of the document', firstContent === f.warnings.length && f.children[firstContent] === 'details.dokufix-frontmatter', f.children.slice(0, 5));
