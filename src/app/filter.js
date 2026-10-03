@@ -183,7 +183,9 @@ function buildField(table){
 export function attachTableFilters(root){
   for (const table of Array.from(root.querySelectorAll('table[' + FILTER_ATTR + ']'))){
     const anchor = anchorOf(table);
-    if (isElement(anchor.previousElementSibling, FILTER_CLASS)) continue;
+    // The pass's own field: the class alone could be an author's element.
+    const before = anchor.previousElementSibling;
+    if (isElement(before, FILTER_CLASS) && before.hasAttribute(TRANSIENT_ATTR)) continue;
     const { field, input, count } = buildField(table);
     anchor.parentNode.insertBefore(field, anchor);
     const update = () => applyFilter(table, input.value, count);

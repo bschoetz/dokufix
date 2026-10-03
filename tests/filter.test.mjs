@@ -307,6 +307,15 @@ test('a second run of the pass, and a second run of all passes, leave exactly on
   attachTableFilters(root);
   assert.equal(root.querySelectorAll('.' + FILTER_CLASS).length, 2);
 });
+test('an author\'s element with the class of the field directly above a marked table is no field: the table gets its own', () => {
+  const root = rendered('<div class="dokufix-filter">vom Autor</div>\n' + marker('filter') + FIELDS_TABLE);
+  const own = root.querySelectorAll('.' + FILTER_CLASS + '[' + TRANSIENT_ATTR + ']');
+  assert.equal(own.length, 1);
+  assert.ok(own[0].nextElementSibling.classList.contains(TABLE_CLASS));
+  assert.equal(own[0].previousElementSibling.textContent, 'vom Autor', 'the author\'s element stays');
+  attachTableFilters(root);
+  assert.equal(root.querySelectorAll('.' + FILTER_CLASS + '[' + TRANSIENT_ATTR + ']').length, 1, 'still one field after a second run');
+});
 test('without a wrapper (the pass "Tabellen" failed) the field stands directly above the table', () => {
   const root = rootWith(marker('filter') + FIELDS_TABLE);
   applyMarkers(root);
