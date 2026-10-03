@@ -1403,7 +1403,9 @@ async function assertTables(page, check, exp, key){
   check('every facet filter is a group of radio buttons of its own, each in its label, above the wrapper of its table; the keys count from 0; nothing an author wrote became an element; no <style>, no inline style, no id',
     built.length === 0 && f.alarm === 'undefined', json(built.map(x => [x.children, x.elements, x.inline, x.controls.map(c => [c.type, c.key, c.name])])) + '; a handler ran: ' + (f.alarm !== 'undefined'));
   const controls = groups.flatMap(x => x.controls);
-  const look = controls.filter(c => !(c.visible && c.pill === 'inline-block relative ' + FACET_PILL.radius && c.hidden && /monospace/.test(c.countFont) &&
+  // A control is an item of the flex container that holds the controls, so
+  // its display is computed as "block".
+  const look = controls.filter(c => !(c.visible && c.pill === 'block relative ' + FACET_PILL.radius && c.hidden && /monospace/.test(c.countFont) &&
     (c.checked ? c.border === FACET_PILL.chosen && c.ring === FACET_PILL.ringChosen : c.border === FACET_PILL.border && c.ring === FACET_PILL.ring)));
   const bars = groups.filter(x => !(x.bar === 'block' && x.barVisible && x.below && x.holds === 'static none none none none normal auto none'));
   // Every line of controls starts at the same place, right of the legend.
