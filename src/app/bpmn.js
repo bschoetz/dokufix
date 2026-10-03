@@ -46,9 +46,10 @@ export function bpmnWarningText(title){
   return 'Das Diagramm „' + title + '“ konnte nicht gezeichnet werden.';
 }
 
-// Whether the XML places anything: a BPMNShape, whatever its prefix.
+// Whether the XML places anything: a BPMNShape, whatever its prefix, outside
+// comments and CDATA sections.
 export function hasCoordinates(xml){
-  return /<(?:[\w.-]+:)?BPMNShape\b/.test(String(xml));
+  return /<(?:[\w.-]+:)?BPMNShape\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
 }
 
 // The document's system font stack (src/app.css, the export frame), at 12 px:
@@ -159,14 +160,15 @@ async function drawBpmn(diagram){
   // A page whose script tag of bpmn-js failed has no BpmnJS.
   if (typeof BpmnJS !== 'function') throw new Error(BPMN_NO_LIBRARY);
   const doc = diagram.holder.ownerDocument;
-  const xml = hasCoordinates(diagram.source) ? diagram.source : await layoutBpmn(diagram.source, doc, diagram.index);
-  // The XML that is drawn, with coordinates where they could be made.
+  // The XML that is drawn, with coordinates where they could be made, and the
+  // diagram in it bpmn-js opens: the laid-out one, else its first.
+  const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : await layoutBpmn(diagram.source, doc, diagram.index);
   diagram.xml = xml;
   const host = offscreenHost(doc);
   let viewer = null;
   try {
     viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
-    const result = await viewer.importXML(xml);
+    const result = await (open ? viewer.importXML(xml, open) : viewer.importXML(xml));
     // Elements bpmn-js does not know are drawn without them; that goes to the console only.
     for (const w of (result && result.warnings) || []) console.warn('BPMN import warning:', w && w.message ? w.message : w);
     const registry = viewer.get('elementRegistry');
@@ -186,22 +188,23 @@ async function drawBpmn(diagram){
   }
 }
 
-// XML without coordinates, laid out: the author's XML with a diagram part
-// added (src/app/bpmn-layout.js). Refused with the reason where it cannot be
-// laid out. XML the browser's parser cannot read, or that is no BPMN
-// definitions, comes back as it is: bpmn-js then says what is wrong with it.
-// What the layout leaves out is a line on the console each.
+// XML without coordinates, laid out: { xml, open }, the author's XML with a
+// diagram part added (src/app/bpmn-layout.js) and that diagram's id. Refused
+// with the reason where it cannot be laid out. XML the browser's parser
+// cannot read, or that is no BPMN definitions, comes back as it is, without
+// open: bpmn-js then says what is wrong with it. What the layout leaves out
+// is a line on the console each.
 async function layoutBpmn(xml, doc, index){
   const parsed = new globalThis.DOMParser().parseFromString(xml, 'application/xml');
-  if (parsed.getElementsByTagName('parsererror').length) return xml;
-  if (!parsed.documentElement || String(parsed.documentElement.localName).replace(/^.*:/, '') !== 'definitions') return xml;
+  if (parsed.getElementsByTagName('parsererror').length) return { xml };
+  if (!parsed.documentElement || String(parsed.documentElement.localName).replace(/^.*:/, '') !== 'definitions') return { xml };
   if (typeof mermaid === 'undefined' || !mermaid || typeof mermaid.render !== 'function') throw new Error(BPMN_NO_MERMAID);
   const read = readProcess(parsed);
-  if (!read) return xml;
+  if (!read) return { xml };
   const raw = await mermaidPositions(read.model, doc, index);
   const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw));
   for (const item of read.leftOut) console.warn('BPMN layout, left out:', leftOutLine(item));
-  return laidOut;
+  return { xml: laidOut.xml, open: laidOut.diagram };
 }
 
 // Mermaid lays the model out in the transient host; what its SVG says comes

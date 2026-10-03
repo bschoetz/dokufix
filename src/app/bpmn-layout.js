@@ -78,10 +78,11 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //   model: { pool, plane, lanes, nodes, flows }
 //     pool:  { id, name } of the participant, or null for a process without one
 //     plane: the id the diagram part refers to: the collaboration, or the process
-//     lanes: [{ id, name, nodes: [node ids], key, synthetic, hold }]; one
-//            synthetic lane holding every node where the process has no lanes,
-//            which Mermaid needs and the diagram part leaves out; hold, the
-//            Mermaid id of the stand-in an empty lane holds (h1…)
+//     lanes: [{ id, name, nodes: [node ids], key, synthetic, hold }]; a
+//            synthetic lane gives Mermaid its row and is left out of the
+//            diagram part: the one lane holding every node where the process
+//            has no lanes, and a lane without an id; hold, the Mermaid id of
+//            the stand-in an empty lane holds (h1…)
 //     nodes: [{ id, name, type, tag, key }], type one of start, end, inter,
 //            gateway, task
 //     flows: [{ id, from, to, name }]
@@ -126,15 +127,29 @@ export function readProcess(doc){
   const byId = new Map(nodes.map(n => [n.id, n]));
 
   // The lanes, nested ones included; only those without lanes inside are laid
-  // out, each node in the first that names it.
+  // out, each node in the first that names it. A node only an outer lane
+  // names stands in that lane's first inner one. A lane without an id keeps
+  // its row and is not drawn.
   const allLanes = kids(proc).filter(el => local(el) === 'laneSet').flatMap(set => descendants(set).filter(el => local(el) === 'lane'));
   const placed = new Set();
-  const lanes = [];
+  const lanes = [], laneOf = new Map();
+  const refsOf = el => kids(el).filter(k => local(k) === 'flowNodeRef').map(k => k.textContent.trim()).filter(id => byId.has(id) && !placed.has(id));
+  const outer = el => descendants(el).some(inner => local(inner) === 'lane');
   for (const el of allLanes){
-    if (descendants(el).some(inner => local(inner) === 'lane')){ leave(el, 'a lane with lanes inside'); continue; }
-    const refs = kids(el).filter(k => local(k) === 'flowNodeRef').map(k => k.textContent.trim()).filter(id => byId.has(id) && !placed.has(id));
+    if (outer(el)){ leave(el, 'a lane with lanes inside'); continue; }
+    const refs = refsOf(el);
     refs.forEach(id => placed.add(id));
-    lanes.push({ id: attr(el, 'id'), name: clean(attr(el, 'name')), nodes: refs, key: 'l' + (lanes.length + 1), synthetic: false });
+    if (!attr(el, 'id')) leave(el, 'has no id; its row is laid out, the lane is not drawn');
+    const lane = { id: attr(el, 'id'), name: clean(attr(el, 'name')), nodes: refs, key: 'l' + (lanes.length + 1), synthetic: !attr(el, 'id') };
+    lanes.push(lane);
+    laneOf.set(el, lane);
+  }
+  for (const el of allLanes){
+    const first = outer(el) && descendants(el).find(inner => laneOf.has(inner));
+    if (!first) continue;
+    const refs = refsOf(el);
+    refs.forEach(id => placed.add(id));
+    laneOf.get(first).nodes.push(...refs);
   }
   if (lanes.length){
     const stray = nodes.filter(n => !placed.has(n.id));
@@ -148,10 +163,14 @@ export function readProcess(doc){
   for (const el of kids(proc)){
     if (local(el) !== 'sequenceFlow') continue;
     const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef');
-    if (byId.has(from) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
+    // Mermaid's swimlane layout fails on a flow from a node to itself.
+    if (from === to && byId.has(from) && attr(el, 'id')) leave(el, 'a flow from a node to itself');
+    else if (byId.has(from) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
     else leave(el, !attr(el, 'id') ? 'has no id' : 'touches ' + [from, to].filter(id => !byId.has(id)).join(' and ') + ', which is not laid out');
   }
-  return { model: { pool: participant ? { id: attr(participant, 'id'), name: clean(attr(participant, 'name')) } : null, plane, lanes, nodes, flows }, leftOut };
+  // A participant without an id gets no pool shape.
+  if (participant && !attr(participant, 'id')) leave(participant, 'has no id; it is not drawn as a pool');
+  return { model: { pool: participant && attr(participant, 'id') ? { id: attr(participant, 'id'), name: clean(attr(participant, 'name')) } : null, plane, lanes, nodes, flows }, leftOut };
 }
 
 // One line per left-out element for the console.
@@ -217,13 +236,35 @@ export function axisMap(items, minGap, maxGap){
 // circle and a diamond are met on their axis, a task anywhere on its side.
 // side: where the end ran beside its node in Mermaid's unscaled positions;
 // then the flow docks from that side with a short stub, instead of being
-// pulled through the symbol and its neighbours in the same column.
+// pulled through the symbol and its neighbours in the same column. A slanted
+// end piece (Mermaid ends a flow on a diamond's slanted side, and draws a
+// flow back as a diagonal) docks on the side that faces the point before it,
+// with a corner put in, so that the piece is horizontal or vertical; a flow
+// of two points, a diagonal from end to end, gets two corners halfway, so
+// that neither lies in the symbol at the other end.
 export function attach(pts, atStart, c, side){
   const i = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2, k = atStart ? 2 : pts.length - 3;
   const p = pts[i], q = pts[j];
   const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
   const aim = (v, mid, half) => c.task ? Math.min(mid + half - 12, Math.max(mid - half + 12, v)) : mid;
   const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
+  if (!side && Math.abs(p.x - q.x) >= 1 && Math.abs(p.y - q.y) >= 1){
+    const dx = (q.x - c.cx) / (c.w / 2), dy = (q.y - c.cy) / (c.h / 2);
+    if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return;                // the point before lies in the symbol
+    const diagonal = pts.length === 2;
+    if (Math.abs(dx) > 1 && (Math.abs(dy) <= 1 || Math.abs(dx) >= Math.abs(dy))){
+      const y = aim(q.y, c.cy, c.h / 2);
+      p.x = c.cx + Math.sign(dx) * c.w / 2; p.y = y;
+      const mx = (p.x + q.x) / 2;
+      if (Math.abs(y - q.y) >= 1) ins(...(diagonal ? [{ x: mx, y }, { x: mx, y: q.y }] : [{ x: q.x, y }]));
+    } else {
+      const x = aim(q.x, c.cx, c.w / 2);
+      p.x = x; p.y = c.cy + Math.sign(dy) * c.h / 2;
+      const my = (p.y + q.y) / 2;
+      if (Math.abs(x - q.x) >= 1) ins(...(diagonal ? [{ x, y: my }, { x: q.x, y: my }] : [{ x, y: q.y }]));
+    }
+    return;
+  }
   if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + 12); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
   if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + 12); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
   if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5){ p.y = c.cy; dock({ x: c.cx + Math.sign(p.x - c.cx) * c.w / 2, y: c.cy }); return; }
@@ -304,6 +345,30 @@ export function tidy(pts){
     const a = pts[i - 1], b = pts[i], c = pts[i + 1];
     if ((same(a, b, 'x') && same(b, c, 'x')) || (same(a, b, 'y') && same(b, c, 'y'))) pts.splice(i, 1);
   }
+}
+
+// Consecutive points closer than half a pixel become one; a flow keeps at
+// least its two ends.
+export function dedupe(pts){
+  for (let i = pts.length - 1; i > 0 && pts.length > 2; i--){
+    if (Math.abs(pts[i].x - pts[i - 1].x) < 0.5 && Math.abs(pts[i].y - pts[i - 1].y) < 0.5) pts.splice(i === pts.length - 1 ? i - 1 : i, 1);
+  }
+}
+
+// The last safeguard for right angles: a slanted piece gets a corner, so
+// that it goes on in the direction of the piece before it (the first piece:
+// leaves its end as it would dock). Then doubled points and points between
+// two others on a line go.
+export function orthogonal(pts){
+  for (let i = 0; i < pts.length - 1; i++){
+    const a = pts[i], b = pts[i + 1];
+    if (Math.abs(a.x - b.x) < 0.5 || Math.abs(a.y - b.y) < 0.5) continue;
+    const before = pts[i - 1], horizontal = before ? Math.abs(before.y - a.y) < 0.5 : Math.abs(a.x - b.x) >= Math.abs(a.y - b.y);
+    pts.splice(i + 1, 0, horizontal ? { x: b.x, y: a.y } : { x: a.x, y: b.y });
+  }
+  dedupe(pts);
+  const line = (a, b, c) => (Math.abs(a.x - b.x) < 0.5 && Math.abs(b.x - c.x) < 0.5) || (Math.abs(a.y - b.y) < 0.5 && Math.abs(b.y - c.y) < 0.5);
+  for (let i = pts.length - 2; i > 0; i--) if (line(pts[i - 1], pts[i], pts[i + 1])) pts.splice(i, 1);
 }
 
 // The side a flow leaves by: 'x+', 'x-', 'y+', 'y-', or '' for a slanted start.
@@ -425,43 +490,85 @@ export function labelSize(text){
   return { w: Math.min(LABEL_WIDTH, Math.max(...lines.map(l => l.length * CHAR), 0)), h: Math.max(1, lines.length) * LINE };
 }
 
-// The label of a flow: behind a gateway right at the exit ("ja", "nein"),
-// otherwise in the middle of the longest piece; above a horizontal piece,
-// right of a vertical one. [x, y, w, h]; bpmn-js centres the text on x + w/2
-// and starts it at y.
-export function flowLabel(pts, text, atGateway){
-  const w = Math.max(24, Math.round(text.length * 6.2) + 8), h = labelSize(text).h;
-  let a = pts[0], b = pts[1];
-  // A stub too short to carry a label: the piece after it.
-  if (atGateway && pts.length > 2 && Math.abs(a.x - b.x) + Math.abs(a.y - b.y) < 20){ a = pts[1]; b = pts[2]; }
-  if (!atGateway){
-    let best = -1;
-    for (let i = 0; i < pts.length - 1; i++){
-      const len = Math.abs(pts[i].x - pts[i + 1].x) + Math.abs(pts[i].y - pts[i + 1].y);
-      if (len > best){ best = len; a = pts[i]; b = pts[i + 1]; }
+// How much a box [x, y, w, h] covers of what a label must keep off: the
+// summed area of its overlaps with boxes and with pieces of flows, each
+// grown by gap. 0: free.
+const segmentBox = (p, q) => [Math.min(p.x, q.x), Math.min(p.y, q.y), Math.abs(p.x - q.x), Math.abs(p.y - q.y)];
+function covered(box, avoid, gap = 2){
+  let sum = 0;
+  for (const b of avoid){
+    const w = Math.min(box[0] + box[2], b[0] + b[2] + gap) - Math.max(box[0], b[0] - gap);
+    const h = Math.min(box[1] + box[3], b[1] + b[3] + gap) - Math.max(box[1], b[1] - gap);
+    if (w > 0 && h > 0) sum += w * h;
+  }
+  return sum;
+}
+// The first place nothing covers, or the one covered least.
+function bestPlace(places, avoid){
+  let best = places[0], least = Infinity;
+  for (const p of places){
+    const c = covered(p, avoid);
+    if (c === 0) return p;
+    if (c < least){ least = c; best = p; }
+  }
+  return best;
+}
+
+// The places a label of a flow may take, in the order they are tried. Behind
+// a gateway first right at the exit ("ja", "nein"; a stub shorter than 20 px
+// is skipped), otherwise first in the middle of the longest piece; above a
+// horizontal piece, right of a vertical one, then on its other side; then
+// the middle of every other piece, longest first, both sides. Each [x, y, w,
+// h], the size labelSize() estimates; bpmn-js centres the text on x + w/2,
+// starts it at y and wraps it at 90 px.
+export function flowLabelPlaces(pts, text, atGateway){
+  const { w, h } = labelSize(text);
+  const pieces = pts.slice(1).map((b, i) => ({ a: pts[i], b, len: Math.abs(pts[i].x - b.x) + Math.abs(pts[i].y - b.y) }));
+  const places = [];
+  const beside = (a, b, exit) => {
+    if (Math.abs(a.y - b.y) < 1){
+      const dir = Math.sign(b.x - a.x) || 1;
+      const x = exit ? (dir > 0 ? a.x + 10 : a.x - 10 - w) : (a.x + b.x) / 2 - w / 2;
+      places.push([R(x), R(a.y - 4 - h), R(w), h], [R(x), R(a.y + 4), R(w), h]);
+    } else {
+      const dir = Math.sign(b.y - a.y) || 1;
+      const y = exit ? (dir > 0 ? a.y + 8 : a.y - 8 - h) : (a.y + b.y) / 2 - h / 2;
+      places.push([R(a.x + 6), R(y), R(w), h], [R(a.x - 6 - w), R(y), R(w), h]);
     }
+  };
+  if (atGateway){
+    const first = pieces.length > 1 && pieces[0].len < 20 ? pieces[1] : pieces[0];
+    beside(first.a, first.b, true);
   }
-  if (Math.abs(a.y - b.y) < 1){
-    const dir = Math.sign(b.x - a.x) || 1;
-    const x = atGateway ? (dir > 0 ? a.x + 10 : a.x - 10 - w) : (a.x + b.x) / 2 - w / 2;
-    return [R(x), R(a.y - 4 - h), w, h];
-  }
-  const dir = Math.sign(b.y - a.y) || 1;
-  const y = atGateway ? (dir > 0 ? a.y + 8 : a.y - 8 - h) : (a.y + b.y) / 2 - h / 2;
-  return [R(a.x + 6), R(y), w, h];
+  for (const piece of [...pieces].sort((x, y) => y.len - x.len)) beside(piece.a, piece.b, false);
+  return places;
+}
+
+// The label of a flow: the first of flowLabelPlaces() that keeps off avoid
+// (boxes [x, y, w, h]: other labels, symbols, pieces of flows), or the one
+// covered least.
+export function flowLabel(pts, text, atGateway, avoid = []){
+  return bestPlace(flowLabelPlaces(pts, text, atGateway), avoid);
 }
 
 // The places a label of an event or a gateway may take, in the order they
-// are tried; c: the symbol, size: labelSize(). Each [x, y, w, h], centred.
+// are tried; c: the symbol, size: labelSize(). Below, above, right, left
+// (a gateway: above first), then the same farther out, then the four
+// corners. Each [x, y, w, h], centred.
 function labelPlaces(c, size, gateway){
-  const below = [c.cx - size.w / 2, c.cy + c.h / 2 + 4, size.w, size.h];
-  const above = [c.cx - size.w / 2, c.cy - c.h / 2 - 4 - size.h, size.w, size.h];
-  const right = [c.cx + c.w / 2 + 6, c.cy - size.h / 2, size.w, size.h];
-  const left = [c.cx - c.w / 2 - 6 - size.w, c.cy - size.h / 2, size.w, size.h];
-  return gateway ? [above, below, right, left] : [below, above, right, left];
+  const places = [];
+  for (const far of [0, 20]){
+    const below = [c.cx - size.w / 2, c.cy + c.h / 2 + 4 + far, size.w, size.h];
+    const above = [c.cx - size.w / 2, c.cy - c.h / 2 - 4 - far - size.h, size.w, size.h];
+    const right = [c.cx + c.w / 2 + 6 + far, c.cy - size.h / 2, size.w, size.h];
+    const left = [c.cx - c.w / 2 - 6 - far - size.w, c.cy - size.h / 2, size.w, size.h];
+    places.push(...(gateway ? [above, below, right, left] : [below, above, right, left]));
+  }
+  for (const [sx, sy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]){
+    places.push([sx > 0 ? c.cx + c.w / 2 + 2 : c.cx - c.w / 2 - 2 - size.w, sy > 0 ? c.cy + c.h / 2 + 2 : c.cy - c.h / 2 - 2 - size.h, size.w, size.h]);
+  }
+  return places;
 }
-const overlaps = (a, b, gap = 0) => a[0] < b[0] + b[2] + gap && b[0] < a[0] + a[2] + gap && a[1] < b[1] + b[3] + gap && b[1] < a[1] + a[3] + gap;
-const segmentBox = (p, q) => [Math.min(p.x, q.x), Math.min(p.y, q.y), Math.abs(p.x - q.x), Math.abs(p.y - q.y)];
 
 // Mermaid's positions as the diagram part's coordinates.
 // raw: what Mermaid's SVG says, in its own units:
@@ -516,6 +623,8 @@ export function layoutGeometry(model, raw){
       Math.abs(o.y - o2.y) < 1 && Math.abs(o.y - r.cy) > r.h / 2 + 0.5 ? { axis: 'y', sign: Math.sign(o.y - r.cy) } : null;
     const sideFrom = beside(orig[0], orig[1], rawOf[f.from]), sideTo = beside(orig[orig.length - 1], orig[orig.length - 2], rawOf[f.to]);
     const pts = orig.map(p => ({ x: mapX(p.x), y: mapY(p.y) }));
+    // A point Mermaid gives twice would read as an end of no direction.
+    dedupe(pts);
     attach(pts, true, box[f.from], sideFrom);
     attach(pts, false, box[f.to], sideTo);
     const obstacles = model.nodes.filter(n => n.id !== f.from && n.id !== f.to).map(n => rect(box[n.id]));
@@ -529,28 +638,54 @@ export function layoutGeometry(model, raw){
   const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
   fanOut(routes, box, gateways);
   spreadPorts(routes, box);
-  for (const { f, pts } of routes){
-    di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
-    // Two flows leaving one corner of a gateway: their labels go to the
-    // middle of their longest pieces, not both to that corner.
-    const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
-    if (f.name) di.flowLabels[f.id] = flowLabel(pts, f.name, gateways.has(f.from) && alone);
-  }
+  for (const { pts } of routes) orthogonal(pts);
+  for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
 
-  // The labels of events and gateways, where no flow, symbol or other label
-  // is; tried below and above the symbol, then right and left of it. Where
-  // every place is taken, the first.
+  // The labels keep off every symbol, every piece of a flow and every label
+  // placed before them: first the flows' labels, then those of events and
+  // gateways; where every place is taken, the one covered least.
   const segments = routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
   const symbols = model.nodes.map(n => di.nodes[n.id]);
-  const taken = Object.values(di.flowLabels).slice();
+  const taken = [];
+  for (const { f, pts } of routes){
+    if (!f.name) continue;
+    // Two flows leaving one corner of a gateway: their labels go to their
+    // longest pieces, not both to that corner.
+    const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
+    const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken]);
+    di.flowLabels[f.id] = place;
+    taken.push(place);
+  }
   for (const n of model.nodes){
     if (n.type === 'task' || !n.name) continue;
-    const c = box[n.id], places = labelPlaces(c, labelSize(n.name), n.type === 'gateway');
-    const free = places.find(p => !segments.some(s => overlaps(p, s, 2)) && !symbols.some(s => s !== di.nodes[n.id] && overlaps(p, s, 2)) && !taken.some(t => overlaps(p, t, 2))) || places[0];
+    const place = bestPlace(labelPlaces(box[n.id], labelSize(n.name), n.type === 'gateway'), [...symbols.filter(b => b !== di.nodes[n.id]), ...segments, ...taken]);
     // bpmn-js centres the text on the box: the box is as wide as a label can be.
-    const [x, y, w, h] = free;
+    const [x, y, w, h] = place;
     di.labels[n.id] = [R(x + w / 2 - LABEL_WIDTH / 2), R(y), LABEL_WIDTH, R(h)];
-    taken.push(free);
+    taken.push(place);
+  }
+
+  // Flows routed around a row, and labels, can lie beyond Mermaid's lanes:
+  // the outer lanes and the pool grow until every waypoint and every label
+  // lies inside, 12 px from the edge (the top lane up, the bottom lane down,
+  // every lane and the pool left and right).
+  const drawn = model.lanes.filter(l => !l.synthetic).map(l => di.lanes[l.id]);
+  if (di.pool || drawn.length){
+    const M = 12, xs = [], ys = [];
+    for (const way of Object.values(di.flows)) for (const [x, y] of way){ xs.push(x); ys.push(y); }
+    for (const [x, y, w, h] of taken){ xs.push(x, x + w); ys.push(y, y + h); }
+    const frame = drawn.length ? drawn : [[di.pool[0] + HEAD, di.pool[1], di.pool[2] - HEAD, di.pool[3]]];
+    const top = Math.min(...frame.map(b => b[1])), bottom = Math.max(...frame.map(b => b[1] + b[3]));
+    const left = Math.min(...frame.map(b => b[0])), right = Math.max(...frame.map(b => b[0] + b[2]));
+    const up = Math.max(0, R(top - (Math.min(...ys) - M))), down = Math.max(0, R(Math.max(...ys) + M - bottom));
+    const west = Math.max(0, R(left - (Math.min(...xs) - M))), east = Math.max(0, R(Math.max(...xs) + M - right));
+    for (const b of drawn){
+      const atBottom = b[1] + b[3] === bottom;
+      if (b[1] === top){ b[1] -= up; b[3] += up; }
+      if (atBottom) b[3] += down;
+      b[0] -= west; b[2] += west + east;
+    }
+    if (di.pool){ di.pool[1] -= up; di.pool[3] += up + down; di.pool[0] -= west; di.pool[2] += west + east; }
   }
   return di;
 }
@@ -562,7 +697,9 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 // definitions tag, whatever its prefix; everything else, and whatever
 // follows that tag, stays as written. The BPMNDiagram declares the bpmndi, dc
 // and di namespaces itself. Its ids are made unique against every id of the
-// XML. di: what layoutGeometry() returned.
+// XML. di: what layoutGeometry() returned. Returns { xml, diagram }: the XML
+// and the id of the inserted BPMNDiagram, which bpmn-js is told to open, since
+// it opens the first diagram, and that may be an empty one of the author's.
 export function appendDiagram(xml, model, di){
   const text = String(xml);
   // Comments and CDATA sections are blanked out first: a closing tag or an id
@@ -576,7 +713,8 @@ export function appendDiagram(xml, model, di){
   const b = r => '<dc:Bounds x="' + r[0] + '" y="' + r[1] + '" width="' + r[2] + '" height="' + r[3] + '"/>';
   const label = r => r ? '<bpmndi:BPMNLabel>' + b(r) + '</bpmndi:BPMNLabel>' : '';
   const shape = (id, r, extra = '', lbl = null) => '      <bpmndi:BPMNShape id="' + esc(fresh(id + '_di')) + '" bpmnElement="' + esc(id) + '"' + extra + '>' + b(r) + label(lbl) + '</bpmndi:BPMNShape>\n';
-  let out = '  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="' + esc(fresh('dokufix_diagram')) + '">\n' +
+  const diagram = fresh('dokufix_diagram');
+  let out = '  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="' + esc(diagram) + '">\n' +
     '    <bpmndi:BPMNPlane id="' + esc(fresh('dokufix_plane')) + '" bpmnElement="' + esc(model.plane) + '">\n';
   if (model.pool && di.pool) out += shape(model.pool.id, di.pool, ' isHorizontal="true"');
   for (const l of model.lanes) if (!l.synthetic) out += shape(l.id, di.lanes[l.id], ' isHorizontal="true"');
@@ -586,5 +724,5 @@ export function appendDiagram(xml, model, di){
       di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + label(di.flowLabels[f.id]) + '</bpmndi:BPMNEdge>\n';
   }
   out += '    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n';
-  return text.slice(0, at) + out + text.slice(at);
+  return { xml: text.slice(0, at) + out + text.slice(at), diagram };
 }

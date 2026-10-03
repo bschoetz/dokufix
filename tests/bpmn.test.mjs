@@ -45,6 +45,10 @@ test('coordinates: an XML with a BPMNShape has them, whatever its prefix; one wi
   assert.equal(hasCoordinates(WITHOUT_DI), false);
   assert.equal(hasCoordinates('<bpmndi:BPMNShapeX/>'), false);
   assert.equal(hasCoordinates(''), false);
+  // A shape in a comment or a CDATA section places nothing.
+  assert.equal(hasCoordinates(WITHOUT_DI.replace('</bpmn:definitions>', '<!-- <bpmndi:BPMNShape bpmnElement="A"/> --></bpmn:definitions>')), false);
+  assert.equal(hasCoordinates(WITHOUT_DI.replace('</bpmn:definitions>', '<![CDATA[<bpmndi:BPMNShape/>]]></bpmn:definitions>')), false);
+  assert.equal(hasCoordinates('<!-- x --><bpmndi:BPMNShape/>'), true);
 });
 
 test('the reasons and the warning say what the plan says', () => {
@@ -127,7 +131,7 @@ function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpm
       this.gfx = types.map(type => ({ type, el: host.ownerDocument.createElement('g') }));
       Viewer.last = this;
     }
-    async importXML(xml){ log.push({ imported: xml }); if (importError) throw importError; return { warnings }; }
+    async importXML(xml, diagram){ log.push({ imported: xml, diagram }); if (importError) throw importError; return { warnings }; }
     get(name){
       assert.equal(name, 'elementRegistry');
       return { forEach: fn => this.gfx.forEach(g => fn({ type: g.type })), getGraphics: element => this.gfx.find(g => g.type === element.type).el };
@@ -254,6 +258,7 @@ test('XML without coordinates is laid out by Mermaid in a transient host, then d
   assert.ok(xml.endsWith('</bpmn:definitions>'));
   assert.deepEqual((xml.match(/bpmnElement="[^"]+"/g) || []).map(m => m.slice(13, -1)), ['P', 'S', 'A', 'F']);
   assert.equal(d.xml, xml, 'the laid-out XML is kept on the diagram');
+  assert.equal(log.find(x => x.imported).diagram, 'dokufix_diagram', 'bpmn-js opens the laid-out diagram');
   assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
   // Both hosts are gone: Mermaid's and the viewer's.
   assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
@@ -268,7 +273,23 @@ test('XML with coordinates is drawn as written, and Mermaid is not asked', async
   await withLibrary(Viewer, () => renderBpmn(d), layout);
   assert.equal(layout.log.length, 0);
   assert.equal(log.find(x => x.imported).imported, WITH_DI);
+  assert.equal(log.find(x => x.imported).diagram, undefined, 'bpmn-js opens the first diagram, as it always did');
   assert.equal(d.xml, WITH_DI);
+});
+
+test('an empty diagram part of the author\'s (a plane without shapes) stays as written, and bpmn-js opens the laid-out diagram after it', async t => {
+  t.mock.method(console, 'warn', () => {});
+  const { Viewer, log } = standIn();
+  const document = page();
+  const empty = WITHOUT_DI.replace('</bpmn:definitions>', '<bpmndi:BPMNDiagram id="BD"><bpmndi:BPMNPlane id="BP" bpmnElement="P"/></bpmndi:BPMNDiagram></bpmn:definitions>');
+  const d = diagramIn(document, empty);
+  await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), mermaidStandIn()));
+  const asked = log.find(x => x.imported);
+  const close = empty.lastIndexOf('</bpmn:definitions>');
+  assert.equal(asked.imported.slice(0, close), empty.slice(0, close), 'the author\'s empty diagram part as written');
+  assert.equal((asked.imported.match(/<bpmndi:BPMNDiagram\b/g) || []).length, 2);
+  assert.equal(asked.diagram, 'dokufix_diagram');
+  assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
 });
 
 test('what the layout leaves out is a line on the console each, and the rest is drawn', async t => {
