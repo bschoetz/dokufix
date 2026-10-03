@@ -492,8 +492,12 @@ if (built.status !== 0){
 fs.rmSync(srcCopy, { recursive: true });
 
 const names = opts.browser === 'all' ? ['chromium', 'firefox'] : [opts.browser];
-for (const name of names) await runBrowser(name, opts, demoFile, demoWithMarkup);
+// The browsers run side by side, each in its own folder. Their checks land in
+// one list in the order they happen; the report lists them per browser.
+await Promise.all(names.map(name => runBrowser(name, opts, demoFile, demoWithMarkup)));
 
+const byBrowser = r => names.findIndex(n => r.scope.startsWith(n));
+results.sort((a, b) => byBrowser(a) - byBrowser(b));
 const failed = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'ok    ' : 'FAIL  ') + r.scope + ': ' + r.name + (r.detail ? ' — ' + r.detail : ''));
 console.log('\n' + (results.length - failed.length) + ' of ' + results.length + ' green; saved files: ' + opts.out);

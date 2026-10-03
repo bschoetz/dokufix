@@ -2275,8 +2275,11 @@ if (opts.compare){
   }
 }
 let failed = 0, differing = 0;
-for (const name of names){
-  const run = await runBrowser(name, opts, md);
+// The browsers run side by side: each has its own folder and its own browser
+// processes, and nothing in a run is shared with the other. The report comes
+// afterwards, one browser after the other, in the order of the names.
+const runs = await Promise.all(names.map(name => runBrowser(name, opts, md)));
+for (const run of runs){
   const cmp = opts.compare ? compareRun(run, opts.compare) : null;
   const r = report(run, cmp);
   failed += r.failed; differing += r.differing;

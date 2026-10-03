@@ -717,8 +717,12 @@ const copyWithPasses = buildCopy(opts.out, 'app/render.js', PASS_EDITS, 'mit-wer
 const copyWithExportStep = buildCopy(opts.out, 'app/downloads/export-body.js', EXPORT_EDITS, 'mit-werfendem-exportschritt.html');
 
 const names = opts.browser === 'all' ? ['chromium', 'firefox'] : [opts.browser];
-for (const name of names) await runBrowser(name, opts, copyWithPasses, copyWithExportStep);
+// The browsers run side by side, each in its own folder. Their checks land in
+// one list in the order they happen; the report lists them per browser.
+await Promise.all(names.map(name => runBrowser(name, opts, copyWithPasses, copyWithExportStep)));
 
+const byBrowser = r => names.findIndex(n => r.scope.startsWith(n));
+results.sort((a, b) => byBrowser(a) - byBrowser(b));
 const failed = results.filter(r => !r.ok);
 for (const r of results) console.log((r.ok ? 'ok    ' : 'FAIL  ') + r.scope + ': ' + r.name + (r.detail ? ' — ' + r.detail : ''));
 console.log('\n' + (results.length - failed.length) + ' of ' + results.length + ' green; exports and saved files: ' + opts.out);
