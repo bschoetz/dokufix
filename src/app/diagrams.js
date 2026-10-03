@@ -10,7 +10,7 @@ import { renderBpmn, bpmnWarningText, BPMN_CREDIT } from './bpmn.js';
 //   </figure>
 //   <figure class="dokufix-diagram dokufix-diagram-bpmn" aria-label="Rückgabe">
 //     <div class="dokufix-diagram-svg"><svg role="img" aria-label="Rückgabe" …></svg></div>
-//     <figcaption class="dokufix-diagram-credit"><a href="https://bpmn.io">gerendert mit bpmn.io</a></figcaption>
+//     <figcaption class="dokufix-diagram-credit">Gezeichnet mit <a href="https://bpmn.io">bpmn-js</a></figcaption>
 //   </figure>
 //
 // The figure carries the diagram's title as its accessible name: the heading
@@ -48,7 +48,8 @@ export function diagramTitle(element, root){
 }
 
 // The figure of one diagram, empty: { figure, holder }. The renderer draws
-// into holder, the SVG container. credit: { href, text }, a link below it.
+// into holder, the SVG container. credit: { before, href, text }, a line
+// below it: the words before, then the link.
 export function diagramFigure(doc, kind, title, credit){
   const figure = doc.createElement('figure');
   figure.className = DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-' + kind;
@@ -59,6 +60,7 @@ export function diagramFigure(doc, kind, title, credit){
   if (credit){
     const caption = doc.createElement('figcaption');
     caption.className = DIAGRAM_CREDIT_CLASS;
+    if (credit.before) caption.appendChild(doc.createTextNode(credit.before));
     const link = doc.createElement('a');
     link.setAttribute('href', credit.href);
     link.textContent = credit.text;
@@ -98,7 +100,7 @@ export const DIAGRAM_KINDS = {
   bpmn: {
     render: renderBpmn,
     warning: diagram => bpmnWarningText(diagram.title),
-    // "gerendert mit bpmn.io" under every BPMN diagram (Ben, 2026-10-01).
+    // "Gezeichnet mit bpmn-js" under every BPMN diagram (Ben, 2026-10-01 and 2026-10-03).
     credit: BPMN_CREDIT,
   },
 };

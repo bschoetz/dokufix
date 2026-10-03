@@ -374,7 +374,7 @@ Eine Markierung in einem Listeneintrag wirkt dort: Der Eintrag enthält Karten.
 
 Dieselbe Fußnote wie in der Tabelle der Tasten, hier im Fließtext: Unten stehen bei ihr zwei Rückwärtspfeile.[^tasten]
 
-Ein BPMN-Prozess ohne Pool und ohne Bahnen, mit einem Zeit-Startereignis, Aufgabenarten, die im Prozessmodell oben fehlen, und einer Aufrufaktivität. Auch unter ihm steht „gerendert mit bpmn.io“.
+Ein BPMN-Prozess ohne Pool und ohne Bahnen, mit einem Zeit-Startereignis, Aufgabenarten, die im Prozessmodell oben fehlen, und einer Aufrufaktivität. Auch unter ihm steht „Gezeichnet mit bpmn-js“.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>

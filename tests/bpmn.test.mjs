@@ -46,7 +46,7 @@ test('the reasons and the warning say what the plan says', () => {
   assert.equal(BPMN_NO_COORDINATES, 'Das BPMN-XML enthält keine Koordinaten (BPMN-DI).');
   assert.equal(BPMN_NO_LIBRARY, 'Die Bibliothek bpmn-js wurde nicht geladen.');
   assert.equal(bpmnWarningText('Rückgabe'), 'Das Diagramm „Rückgabe“ konnte nicht gezeichnet werden.');
-  assert.deepEqual(BPMN_CREDIT, { href: 'https://bpmn.io', text: 'gerendert mit bpmn.io' });
+  assert.deepEqual(BPMN_CREDIT, { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' });
 });
 
 test('the viewer draws with the three custom properties and the document\'s font at 12 px', () => {
@@ -251,7 +251,9 @@ test('a bpmn block becomes a figure with the credit below the SVG container; a r
   assert.deepEqual(Array.from(figure.children).map(k => k.tagName.toLowerCase() + '.' + k.getAttribute('class')), ['div.dokufix-diagram-svg', 'figcaption.dokufix-diagram-credit']);
   const link = figure.querySelector('figcaption > a');
   assert.equal(link.getAttribute('href'), 'https://bpmn.io');
-  assert.equal(link.textContent, 'gerendert mit bpmn.io');
+  assert.equal(link.textContent, 'bpmn-js');
+  assert.equal(figure.querySelector('figcaption').textContent, 'Gezeichnet mit bpmn-js');
+  assert.equal(figure.querySelector('figcaption').innerHTML, 'Gezeichnet mit <a href="https://bpmn.io">bpmn-js</a>');
   assert.equal(figure.querySelector('.dokufix-diagram-svg > svg').getAttribute('aria-label'), 'Rückgabe');
   const w = root.querySelector('.dokufix-warning');
   assert.equal(w.querySelector('.dokufix-warning-title').textContent, 'Warnung: Das Diagramm „Ohne“ konnte nicht gezeichnet werden.');

@@ -65,7 +65,7 @@
      The margin replaces the browser's 1em 40px of a figure. */
   .dokufix-doc .dokufix-diagram{margin:24px 0;text-align:center}
   .dokufix-doc .dokufix-diagram-svg svg{max-width:100%;height:auto}
-  /* The credit of a library below its diagram: "gerendert mit bpmn.io". */
+  /* The credit of a library below its diagram: "Gezeichnet mit bpmn-js". */
   .dokufix-doc .dokufix-diagram-credit{margin-top:4px;font-size:12px;line-height:1.4;color:#6e6e73}
   .dokufix-doc .dokufix-diagram-credit a{color:inherit}
   /* BPMN (src/app/bpmn.js). The SVG draws with these three properties instead

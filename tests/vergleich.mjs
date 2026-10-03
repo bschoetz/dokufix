@@ -2033,7 +2033,8 @@ const BPMN_COLOURS = {
   pool: 'rgb(142, 142, 146) / rgb(250, 250, 250)', lane: 'rgb(142, 142, 146)',
   sequence: 'rgb(58, 58, 63)', message: 'rgb(110, 110, 115)', label: 'rgb(28, 28, 30)',
 };
-const BPMN_CREDIT_HTML = '<figcaption class="dokufix-diagram-credit"><a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a></figcaption>';
+const BPMN_CREDIT_HTML = '<figcaption class="dokufix-diagram-credit">' + BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a></figcaption>';
+const BPMN_CREDIT_LINE = BPMN_CREDIT.before + BPMN_CREDIT.text;
 const bpmnFacts = page => page.evaluate(() => {
   const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
   const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom, width: r.width, height: r.height }; };
@@ -2110,9 +2111,9 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
   const colours = f.figures.flatMap(x => Object.entries(x.colours).filter(([k, v]) => v !== null && v !== BPMN_COLOURS[k]).map(([k, v]) => x.title + ' ' + k + ': ' + v + ', expected ' + BPMN_COLOURS[k]));
   const seen = new Set(f.figures.flatMap(x => Object.entries(x.colours).filter(([, v]) => v !== null).map(([k]) => k)));
   check('BPMN: the colours are the ones the document styles give: ' + [...seen].join(', '), colours.length === 0 && (!want.length || seen.size >= 8), colours.join(' | ') || 'seen only ' + [...seen].join(', '));
-  const credits = f.figures.filter(x => !x.credit || x.credit.text !== BPMN_CREDIT.text || x.credit.href !== BPMN_CREDIT.href || x.credit.caption !== BPMN_CREDIT.text || !x.credit.visible || !x.credit.below || x.credit.look !== '12px rgb(110, 110, 115)')
+  const credits = f.figures.filter(x => !x.credit || x.credit.text !== BPMN_CREDIT.text || x.credit.href !== BPMN_CREDIT.href || x.credit.caption !== BPMN_CREDIT_LINE || !x.credit.visible || !x.credit.below || x.credit.look !== '12px rgb(110, 110, 115)')
     .map(x => x.title + ': ' + json(x.credit));
-  check('BPMN: "' + BPMN_CREDIT.text + '" below every BPMN diagram, a visible link to ' + BPMN_CREDIT.href, credits.length === 0 && f.figures.length === want.length, credits.join(' | '));
+  check('BPMN: "' + BPMN_CREDIT_LINE + '" below every BPMN diagram, "' + BPMN_CREDIT.text + '" a visible link to ' + BPMN_CREDIT.href, credits.length === 0 && f.figures.length === want.length, credits.join(' | '));
   // A block that cannot be drawn: the warning in its place, naming its title, with the reason.
   const wrong = refused.filter(d => !f.warnings.some(w => w.title === 'Warnung: ' + bpmnWarningText(d.title) && (d.reason === null ? w.detail.trim().length > 0 : w.detail === d.reason)))
     .map(d => d.title);
@@ -2121,11 +2122,12 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
   check('no id stands twice in the page', f.duplicateIds.length === 0, f.duplicateIds.join(', '));
   check('BPMN: no host of the drawing is left in the page', f.hosts === 0, f.hosts);
   if (READONLY.has(key)){
-    // The library itself never goes into a read-only file: no tag, no code, no
-    // name of it but the entry of the licence information.
-    const outsideLicences = text.replace(/<details class="dokufix-licences">[\s\S]*?<\/details>/, '');
-    const hits = outsideLicences.match(/.{0,40}(bpmn-js|BpmnJS|bpmn-navigated-viewer).{0,40}/gi) || [];
-    check('BPMN: the file carries nothing of bpmn-js, its name only in the licence information', hits.length === 0, hits.slice(0, 3).join(' | '));
+    // The library itself never goes into a read-only file: no script tag or
+    // URL of it, none of its code (its global, its bundle's name), not the
+    // comment its export function writes. Its name may stand as text: in the
+    // licence information, in the credit, in what the author wrote.
+    const hits = text.match(/.{0,40}(BpmnJS|bpmn-navigated-viewer|npm\/bpmn-js|created with bpmn-js).{0,40}/g) || [];
+    check('BPMN: the file carries nothing of bpmn-js: no tag, no URL, no code, not the comment of its export', hits.length === 0, hits.slice(0, 3).join(' | '));
   }
   if (key === 'schlank'){
     check('BPMN: in schlank the credit stands as readable text outside what is gzipped, once per diagram',
@@ -2204,13 +2206,13 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
       return {
         notices: Array.from(root.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg[data-gz]')).map(h => getComputedStyle(h, '::before').content),
         svgs: root.querySelectorAll('figure.dokufix-diagram svg').length,
-        credits: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn > figcaption > a')).map(a => { const r = a.getBoundingClientRect(); return a.textContent + ' ' + (r.width > 0 && r.height > 0); }),
+        credits: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn > figcaption > a')).map(a => { const r = a.getBoundingClientRect(); return a.parentElement.textContent + ' | ' + a.textContent + ' ' + (r.width > 0 && r.height > 0); }),
       };
     });
     const bpmn = drawn.filter(d => d.kind === 'bpmn').length;
     check('diagrams with scripts off: each is the notice that it needs JavaScript, and every BPMN diagram keeps its credit, visible',
       f.svgs === 0 && f.notices.length === drawn.length && f.notices.every(n => n === '"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"') &&
-      f.credits.length === bpmn && f.credits.every(c => c === BPMN_CREDIT.text + ' true'), JSON.stringify(f));
+      f.credits.length === bpmn && f.credits.every(c => c === BPMN_CREDIT_LINE + ' | ' + BPMN_CREDIT.text + ' true'), JSON.stringify(f));
   } finally {
     await context.close();
   }

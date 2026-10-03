@@ -443,9 +443,9 @@ const facts = page => page.evaluate(() => {
     diagrams: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg > svg').length,
     // The figures, by their title.
     figures: Array.from(container.querySelectorAll('figure.dokufix-diagram')).map(f => f.getAttribute('aria-label')),
-    // The BPMN diagrams: title, whether the SVG is there, and the text of the credit below it.
+    // The BPMN diagrams: title, whether the SVG is there, and the markup of the credit below it.
     bpmn: Array.from(container.querySelectorAll('figure.dokufix-diagram-bpmn')).map(f => f.getAttribute('aria-label') + ' ' + !!f.querySelector(':scope > .dokufix-diagram-svg > svg[role="img"]') + ' ' +
-      (f.querySelector(':scope > figcaption > a[href="https://bpmn.io"]') || { textContent: '' }).textContent),
+      (f.querySelector(':scope > figcaption > a[href="https://bpmn.io"]') ? f.querySelector(':scope > figcaption').innerHTML : '')),
     // An element of the drawing left in <body>: the host is transient and fixed.
     hosts: Array.from(document.querySelectorAll('body > [data-dokufix-transient]')).filter(el => getComputedStyle(el).position === 'fixed').length,
     // Mermaid's error picture: an SVG with this role and this sentence in it.
@@ -843,11 +843,13 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       const drawnPage = (s, x, text) => {
         checkWarning(s, x, [bpmnWarningText('Kaputt'), 'unparsable content'], 'naming the diagram and the reason');
         check(s, 'the warning stands where the diagram would be', x.warnings.length === 1 && x.warnings[0].before === 'H2#kaputt', x.warnings.map(w => w.before));
-        check(s, 'the other two are drawn, each with "' + BPMN_CREDIT.text + '" below it', x.bpmn.join('|') === 'Gut true ' + BPMN_CREDIT.text + '|Noch eins true ' + BPMN_CREDIT.text, x.bpmn);
+        const credit = BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a>';
+        check(s, 'the other two are drawn, each with "' + BPMN_CREDIT.before + BPMN_CREDIT.text + '" below it, the name a link', x.bpmn.join('|') === 'Gut true ' + credit + '|Noch eins true ' + credit, x.bpmn);
         check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
         if (text){
-          const outside = text.replace(/<details class="dokufix-licences">[\s\S]*?<\/details>/, '');
-          check(s, 'the file carries nothing of bpmn-js, its name only in the licence information', !/bpmn-js|BpmnJS/.test(outside), (outside.match(/.{0,40}(bpmn-js|BpmnJS).{0,40}/) || [''])[0]);
+          // Nothing of the library: no tag or URL, none of its code, not the comment of its export.
+          const library = /BpmnJS|bpmn-navigated-viewer|npm\/bpmn-js|created with bpmn-js/;
+          check(s, 'the file carries nothing of bpmn-js: no tag, no URL, no code, not the comment of its export', !library.test(text), (text.match(new RegExp('.{0,40}(' + library.source + ').{0,40}')) || [''])[0]);
         }
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };

@@ -28,7 +28,10 @@ import { TRANSIENT_ATTR } from './transient.js';
 
 export const BPMN_NO_LIBRARY = 'Die Bibliothek bpmn-js wurde nicht geladen.';
 export const BPMN_NO_COORDINATES = 'Das BPMN-XML enthält keine Koordinaten (BPMN-DI).';
-export const BPMN_CREDIT = { href: 'https://bpmn.io', text: 'gerendert mit bpmn.io' };
+// The attribution below every BPMN diagram: "Gezeichnet mit bpmn-js", the
+// name of the library a link to bpmn.io (Ben, 2026-10-03; it read "gerendert
+// mit bpmn.io" before, which sounded as if data went to an outside service).
+export const BPMN_CREDIT = { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' };
 
 // The warning that stands where a BPMN diagram could not be drawn; its detail
 // is the reason.
