@@ -42,7 +42,7 @@
 //
 // The allowlists are the frame: things that exist only around a document, not in it.
 // dokufix's own components are dokufix- prefixed (NFR5), but what marked,
-// marked-footnote and Mermaid produce is not (.footnotes, .mermaid,
+// marked-footnote and Mermaid produce is not (.footnotes,
 // [data-footnote-ref]). So the prefix alone is not the test: every class and
 // attribute name that a selector of the block uses counts as a document construct.
 //
@@ -73,9 +73,10 @@ const SLOT = name => '{{slot:' + name + '}}';
 const ALLOWED_ALWAYS = new Set(['.dokufix-meta', '.dokufix-rail-pending', '.dokufix-licences', '.dokufix-licences-view']);
 const railAllowed = sel => /\.has-items\b/.test(sel) || /\ba\.active\b/.test(sel);
 // Selectors outside the block that may use a class or attribute name the block
-// uses too, because they style something else: the editor's version dialog, and
-// the "diagram needs JavaScript" notice of the schlank export.
-const ALLOWED_OUTSIDE = new Set(['.version-modal[open]', '.mermaid[data-gz]', '.mermaid[data-gz]::before']);
+// uses too, or one of its dokufix- names, because they style something else:
+// the editor's version dialog, and the "diagram needs JavaScript" notice of the
+// schlank export, which stands only where scripts are off.
+const ALLOWED_OUTSIDE = new Set(['.version-modal[open]', '.dokufix-diagram-svg[data-gz]', '.dokufix-diagram-svg[data-gz]::before']);
 // The export frame, selector by selector. Anything else in READONLY_FRAME_CSS
 // fails: a rule for document content belongs into the block, and a new frame
 // rule is added here on purpose.
@@ -280,7 +281,7 @@ const namesIn = sel => [
       }
       const names = text.match(/(?:\.|--)dokufix-[\w-]+/g) || [];
       const bad = names.filter(n => !(ALLOWED_ALWAYS.has(n) || (n === '.dokufix-rail' && railAllowed(text))));
-      if (bad.length){
+      if (bad.length && !ALLOWED_OUTSIDE.has(text)){
         problems.push(where(sheet, r) + quoted + ' uses ' + [...new Set(bad)].join(', ') + ', a document construct; move it into doc.css');
         continue;
       }

@@ -6,6 +6,7 @@ import { sourceEl } from '../dom.js';
 import { state } from '../state.js';
 import { persistDoc, saveTimer, updateVersionBadge, baseTitle, updateDirtyState, CLEAN_BADGE_TEXT, VERSION_BADGE_TITLE } from '../persistence.js';
 import { removeTransient } from '../transient.js';
+import { removeRendererLeftovers } from '../diagrams.js';
 import { safeFilenameBase, triggerDownload, setDownloadInFlight } from './download.js';
 
 // --- Download #1 — full dokufix file (with editor baked in) ---
@@ -91,9 +92,9 @@ export async function downloadWithEditor(){
     // element a component added carries data-dokufix-transient and is removed
     // here, wherever it stands; nothing below has to know it.
     removeTransient(docClone);
-    // Mermaid appends this element to <body> with the first diagram it draws.
-    // It is not ours to mark, so it is named.
-    docClone.querySelectorAll('.mermaidTooltip').forEach(el => el.remove());
+    // What a diagram library leaves in <body> is not ours to mark; the module
+    // of the diagrams names it.
+    removeRendererLeftovers(docClone);
     // The rest is state on elements of the page itself, reset one by one.
     // tests/speichern.mjs compares the saved file with the built one and fails
     // on whatever is missing here.
@@ -116,7 +117,7 @@ export async function downloadWithEditor(){
     // Make sure the downloaded file opens in view mode by default (the receiver should see the document)
     docClone.querySelector('body')?.classList.add('mode-view');
     // Empty the rendered preview — receiver's render() runs on load and re-renders fresh.
-    // Without this, every Mermaid SVG (5-15 KB each) would ship inside the file as redundant bytes.
+    // Without this, every diagram's SVG (5-40 KB each) would ship inside the file as redundant bytes.
     const previewClone = docClone.querySelector('#preview');
     if (previewClone) previewClone.innerHTML = '';
     // Same for the scrollspy rail — receiver's buildRail() repopulates it on render.

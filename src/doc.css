@@ -61,8 +61,10 @@
     word-break:break-all;
   }
   .dokufix-doc a{color:#0066cc}
-  .dokufix-doc .mermaid{margin:24px 0;text-align:center}
-  .dokufix-doc .mermaid svg{max-width:100%;height:auto}
+  /* Diagrams: the one figure every diagram stands in (src/app/diagrams.js).
+     The margin replaces the browser's 1em 40px of a figure. */
+  .dokufix-doc .dokufix-diagram{margin:24px 0;text-align:center}
+  .dokufix-doc .dokufix-diagram-svg svg{max-width:100%;height:auto}
   .dokufix-doc hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
 
   /* Inline Table of Contents — injected where the markdown contains [[toc]] */

@@ -1,16 +1,18 @@
 import { gzipB64 } from '../gzip.js';
+import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from '../diagrams.js';
 import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
 import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml, filterScriptFor } from './export-body.js';
 
-// --- Download #2b — schlank: text plain, only Mermaid SVGs gzipped per-element ---
+// --- Download #2b — schlank: text plain, only the diagrams' SVGs gzipped per-element ---
 export async function downloadReadonlySlim(){
-  // This export's own step: replace each Mermaid SVG with a placeholder div
-  // that carries gzipped+base64 SVG payload. The text/HTML around it stays as
+  // This export's own step: the SVG container of each diagram's figure
+  // (diagrams.js) is emptied and carries its SVG as gzipped+base64 payload.
+  // The text/HTML around it, the figure and whatever else it holds, stays
   // readable plaintext.
   let svgCount = 0;
   async function gzipDiagrams(copy){
-    for (const div of copy.querySelectorAll('.mermaid')){
+    for (const div of copy.querySelectorAll('.' + DIAGRAM_CLASS + ' > .' + DIAGRAM_SVG_CLASS)){
       const svg = div.querySelector('svg');
       if (!svg) continue;
       const gz = await gzipB64(svg.outerHTML);
@@ -32,7 +34,7 @@ export async function downloadReadonlySlim(){
   const filterScript = filterCode ? '<script>' + filterCode + '<\/script>' : '';
 
   const noscript = svgCount > 0
-    ? `<noscript><style>.mermaid[data-gz]{display:block;padding:24px;border:1px dashed #d8d8da;color:#8e8e92;text-align:center;font-size:14px;font-style:italic}.mermaid[data-gz]::before{content:"[Mermaid-Diagramm — JavaScript erforderlich, um es anzuzeigen]"}</style></noscript>`
+    ? `<noscript><style>.dokufix-diagram-svg[data-gz]{display:block;padding:24px;border:1px dashed #d8d8da;color:#8e8e92;text-align:center;font-size:14px;font-style:italic}.dokufix-diagram-svg[data-gz]::before{content:"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"}</style></noscript>`
     : '';
 
   const html = `<!DOCTYPE html>

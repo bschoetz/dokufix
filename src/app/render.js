@@ -12,6 +12,7 @@ import { buildRail } from './rail.js';
 import { runPasses } from './passes.js';
 import { buildWarning, errorMessage } from './warning.js';
 import { TRANSIENT_ATTR } from './transient.js';
+import { renderDiagrams } from './diagrams.js';
 
 // --- From source to preview ------------------------------------------------
 // One render is four steps:
@@ -24,14 +25,12 @@ import { TRANSIENT_ATTR } from './transient.js';
 // A component plugs in by adding its pass to one of the two lists below, at
 // its place in the order. See src/README.md, "Render passes".
 
-let mermaidId = 0;
-
 // Document passes produce the document: what a reader sees, and what an export
 // takes along when it copies the preview. A pass gets the root that holds the
 // document and the context of this render, { frontmatter }: what was split off
 // the source before Markdown was parsed.
 //
-// The order matters in six places. Callouts come before the headings: which
+// The order matters in seven places. Callouts come before the headings: which
 // headings count depends on where a heading stands, and one inside a callout
 // does not. Status chips come before the headings as well: a heading's anchor
 // and its entry in the table of contents are made from the heading as it
@@ -47,7 +46,9 @@ let mermaidId = 0;
 // resolves each definition through the marker's href, while
 // linkFootnoteReturnPaths() rewrites that href to point at the return arrow:
 // retargeting first would build every preview out of the "↩" anchor instead
-// of the footnote.
+// of the footnote. Diagrams come after callouts and status chips: a diagram's
+// title is the label of the document heading before it, as the table of
+// contents shows it (diagrams.js).
 export const DOCUMENT_PASSES = [
   { name: 'Metadaten', run: (root, context) => injectFrontmatterPanel(root, context.frontmatter) },
   { name: 'Hinweise', run: buildCallouts },
@@ -122,34 +123,5 @@ async function renderOnce() {
     // and always: see buildRail().
     try { buildRail(previewEl); }
     catch (err) { console.error('Rail failed:', err); }
-  }
-}
-
-// Document pass: every ```mermaid block becomes its diagram.
-async function renderDiagrams(root) {
-  // Convert <pre><code class="language-mermaid">…</code></pre> into <div class="mermaid">…</div>
-  root.querySelectorAll('pre code.language-mermaid').forEach(block => {
-    const div = root.ownerDocument.createElement('div');
-    div.className = 'mermaid';
-    div.id = 'mermaid-' + (++mermaidId);
-    div.textContent = block.textContent;
-    block.parentElement.replaceWith(div);
-  });
-
-  // One diagram at a time, each in its own containment: a diagram with an
-  // error becomes a warning with Mermaid's message, and the others render.
-  // Mermaid runs with suppressErrorRendering (src/app.js), so it throws
-  // instead of drawing its error picture into the node.
-  for (const node of root.querySelectorAll('.mermaid')) {
-    try {
-      await mermaid.run({ nodes: [node] });
-    } catch (err) {
-      console.error('Mermaid error:', err);
-      node.replaceWith(buildWarning(root.ownerDocument, 'Ein Diagramm konnte nicht gezeichnet werden.', errorMessage(err)));
-      // Mermaid draws into a temporary element named after the diagram's id.
-      // Handed a node, it puts that element into the node, which is gone now;
-      // one that a failed render left in <body> is removed here.
-      document.querySelectorAll('body > [id^="dmermaid-"], body > [id^="imermaid-"]').forEach(el => el.remove());
-    }
   }
 }

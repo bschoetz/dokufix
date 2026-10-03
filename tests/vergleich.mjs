@@ -254,7 +254,7 @@ const NARROW = 820;
 
 // ---------- what the document should produce ----------
 function expectationsFor(md){
-  const exp = { frontmatter: false, digest: '', mermaid: 0, toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
+  const exp = { frontmatter: false, digest: '', mermaid: 0, diagrams: [], toc: false, images: 0, missing: 0, multiRef: null, footnotes: 0,
                 callouts: [], calloutHeadings: [], calloutHeadingsNumbered: 0,
                 tocDepth: 0, chips: [], footnoteChips: [], chipHeadings: [], linkedChips: 0,
                 cards: [], steps: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0,
@@ -269,6 +269,7 @@ function expectationsFor(md){
       .filter(Boolean).join(' · ');
   }
   exp.mermaid = (body.match(/^```mermaid[ \t]*$/gm) || []).length;
+  exp.diagrams = diagramExpectations(body);
   const toc = body.match(/^\[\[toc(?::([1-6]))?\]\][ \t]*$/m);
   exp.toc = !!toc;
   exp.tocDepth = toc ? Number(toc[1] || 3) : 0;
@@ -450,6 +451,34 @@ function tableExpectations(body){
 // Counted as well: the steps that cite a footnote; see assertStepFootnote().
 // Counted beside them: the comments that are no markers, which have to stay,
 // and the places where a marker stands as code, a code span or a fenced block.
+// ---------- diagrams, read from the Markdown ----------
+// Every fenced block of a diagram kind, in the order of the document: its
+// kind, and its title, the label of the last heading before it (diagrams.js):
+// the heading's text with every code span put as its label, as the table of
+// contents shows it, or "Diagramm". Read as far as the reference document needs
+// it: a heading written with "#" at the beginning of its line, with no inline
+// markup besides code spans. A heading in a quotation is not read, so one
+// that stands in a plain quotation before a diagram would be missed.
+const DIAGRAM_KINDS = ['mermaid'];
+function diagramExpectations(body){
+  const CODE_SPAN = /(`+)(.+?)\1(?!`)/g;
+  const spanText = raw => /^ .* $/.test(raw) && raw.trim() ? raw.slice(1, -1) : raw;
+  const out = [];
+  let fence = null, title = '';
+  for (const line of body.split(/\r?\n/)){
+    const f = line.match(/^(```|~~~)[ \t]*([\w-]*)/);
+    if (f){
+      if (fence === null){ fence = f[2]; if (DIAGRAM_KINDS.includes(f[2])) out.push({ kind: f[2], title: title || 'Diagramm' }); }
+      else fence = null;
+      continue;
+    }
+    if (fence !== null) continue;
+    const h = line.match(/^#{1,6}[ \t]+(.+?)[ \t]*$/);
+    if (h) title = h[1].replace(CODE_SPAN, (all, ticks, raw) => { const status = readChip(spanText(raw)); return status ? status.label : spanText(raw); }).replace(/\s+/g, ' ').trim();
+  }
+  return out;
+}
+
 function markerExpectations(body){
   const out = { cards: [], steps: [], facets: [], filters: [], markerWarnings: [], comments: 0, markersAsCode: 0, stepFootnotes: 0 };
   // Per block, by the line it starts at, the names of the markers applied to it.
@@ -761,9 +790,9 @@ async function openVariant(browser, file, key, exp, width, scheme){
   if (key === 'mit-editor'){
     // A saved file has an empty preview; content in it means init has run.
     await page.waitForFunction(n =>
-      document.querySelectorAll('#preview .mermaid svg').length >= n &&
+      document.querySelectorAll('#preview .dokufix-diagram > .dokufix-diagram-svg > svg').length >= n &&
       document.querySelector('#preview') && document.querySelector('#preview').children.length > 0,
-      exp.mermaid, { timeout: 90000 });
+      exp.diagrams.length, { timeout: 90000 });
   } else if (key === 'schlank'){
     await page.waitForFunction(() => !document.querySelector('[data-gz]'), null, { timeout: 30000 });
   } else if (key === 'kompakt'){
@@ -1151,7 +1180,7 @@ const markerFacts = page => page.evaluate(() => {
   };
   const comments = [];
   const walker = document.createTreeWalker(root, NodeFilter.SHOW_COMMENT);
-  while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('.mermaid')) comments.push(walker.currentNode.data);
+  while (walker.nextNode()) if (!walker.currentNode.parentElement.closest('.dokufix-diagram')) comments.push(walker.currentNode.data);
   return {
     window: document.documentElement.clientWidth,
     comments,
@@ -1394,7 +1423,7 @@ const tableFacts = page => page.evaluate(() => {
   // inside it. All of it at its initial value: "static none none none …".
   const holds = el => { const cs = getComputedStyle(el); return [cs.position, cs.transform, cs.filter, cs.perspective, cs.contain, cs.containerType, cs.willChange, cs.backdropFilter || 'none'].join(' '); };
   const border = cs => cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor;
-  const tables = Array.from(root.querySelectorAll('table')).filter(t => !t.closest('.mermaid'));
+  const tables = Array.from(root.querySelectorAll('table')).filter(t => !t.closest('.dokufix-diagram'));
   return {
     window: document.documentElement.clientWidth, page: document.documentElement.scrollWidth,
     wrappers: root.querySelectorAll('.dokufix-table').length,
@@ -2000,7 +2029,17 @@ async function assertVariant(browser, file, key, exp, results, label){
       const imgs = Array.from(document.images);
       const placeholder = document.querySelector('img[data-missing-asset]');
       return {
-        mermaid: document.querySelectorAll('.mermaid svg').length,
+        mermaid: document.querySelectorAll('figure.dokufix-diagram-mermaid > .dokufix-diagram-svg > svg').length,
+        // Every diagram's figure, in the order of the document: its classes,
+        // its title, the elements it holds and whether its SVG is there.
+        figures: Array.from(root.querySelectorAll('figure.dokufix-diagram')).map(f => ({
+          kind: (f.className.match(/\bdokufix-diagram-(?!svg\b|credit\b)(\w+)/) || [0, ''])[1], title: f.getAttribute('aria-label'),
+          children: Array.from(f.children).map(k => k.tagName.toLowerCase() + '.' + k.className).join(' '),
+          svg: !!f.querySelector(':scope > .dokufix-diagram-svg > svg'),
+          box: (() => { const cs = getComputedStyle(f); return cs.marginTop + ' ' + cs.marginRight + ' ' + cs.marginBottom + ' ' + cs.marginLeft + ' ' + cs.textAlign; })(),
+        })),
+        // A diagram of Mermaid's outside a figure: its own class, or an SVG it drew.
+        diagramsOutside: Array.from(root.querySelectorAll('.mermaid, svg[aria-roledescription]')).filter(el => !el.closest('figure.dokufix-diagram')).length,
         tocLinks: document.querySelectorAll('nav.dokufix-toc a').length,
         tocBorder: (() => { const n = document.querySelector('nav.dokufix-toc'); return n ? getComputedStyle(n).borderTopWidth : ''; })(),
         fm: !!fm, fmOpen: fm ? fm.open : null, digest: digest ? digest.textContent : '',
@@ -2038,6 +2077,21 @@ async function assertVariant(browser, file, key, exp, results, label){
     });
     check('document styles apply (h1 is 34px)', s.h1Size === '34px', s.h1Size);
     check('Mermaid diagrams rendered', s.mermaid === exp.mermaid, s.mermaid + ' of ' + exp.mermaid);
+    // --- the one figure every diagram stands in (story 2.7)
+    const wantFigures = exp.diagrams.map(d => d.kind + ': ' + d.title);
+    check('every diagram stands in its figure, in the order of the document, its title the heading before it: ' + JSON.stringify(wantFigures),
+      JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) === JSON.stringify(wantFigures) && s.diagramsOutside === 0,
+      JSON.stringify(s.figures.map(f => f.kind + ': ' + f.title)) + ', outside a figure: ' + s.diagramsOutside);
+    const figureProblems = s.figures.filter(f => !f.svg || !/^div\.dokufix-diagram-svg( figcaption\.dokufix-diagram-credit)?$/.test(f.children) || f.box !== '24px 0px 24px 0px center')
+      .map(f => f.title + ': ' + JSON.stringify(f));
+    check('every figure holds its SVG in the SVG container, and stands with the margin a diagram had, centred', figureProblems.length === 0, figureProblems.join(' | '));
+    // The accessible name, as the accessibility tree computes it.
+    const unnamed = [];
+    for (const d of exp.diagrams){
+      const n = await page.getByRole('figure', { name: d.title, exact: true }).count();
+      if (n !== exp.diagrams.filter(x => x.title === d.title).length) unnamed.push(d.title + ' (' + n + ')');
+    }
+    check('every figure has its title as its accessible name', unnamed.length === 0, [...new Set(unnamed)].join(', '));
     if (exp.toc) check('inline table of contents', s.tocLinks > 0 && s.tocBorder === '1px', s.tocLinks + ' links, border ' + s.tocBorder);
     check('embedded images shown', s.images === exp.images, s.images + ' of ' + exp.images);
     check('missing-image placeholders', s.missing === exp.missing && (exp.missing === 0 || s.placeholderBorder === 'dashed'),

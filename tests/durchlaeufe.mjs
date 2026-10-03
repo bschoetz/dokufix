@@ -382,7 +382,9 @@ const facts = page => page.evaluate(() => {
       return n;
     })(),
     children: kids.map(k => k.tagName.toLowerCase() + (k.className ? '.' + String(k.className).split(' ')[0] : '')),
-    diagrams: container.querySelectorAll('.mermaid svg').length,
+    diagrams: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-svg > svg').length,
+    // The figures, by their title.
+    figures: Array.from(container.querySelectorAll('figure.dokufix-diagram')).map(f => f.getAttribute('aria-label')),
     // Mermaid's error picture: an SVG with this role and this sentence in it.
     errorPictures: document.querySelectorAll('svg[aria-roledescription="error"], .error-icon, .error-text').length +
       (document.body.textContent.includes('Syntax error in text') ? 1 : 0),
@@ -459,7 +461,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       const f = await facts(o.page);
       checkWarning(scope, f, ['Ein Diagramm konnte nicht gezeichnet werden.', 'Parse error'], 'with Mermaid\'s message');
       check(scope, 'the warning stands where the diagram would be', f.warnings.length === 1 && f.warnings[0].before === 'H2#zwei', f.warnings.map(w => w.before));
-      check(scope, 'the other two diagrams are drawn', f.diagrams === 2, f.diagrams + ' of 2');
+      check(scope, 'the other two diagrams are drawn, each in its figure named after the heading before it', f.diagrams === 2 && f.figures.join('|') === 'Eins|Drei', { diagrams: f.diagrams, figures: f.figures });
       check(scope, 'no Mermaid error picture anywhere', f.errorPictures === 0, f.errorPictures);
       const bodyAfter = await o.page.evaluate(() => Array.from(document.body.children).length);
       check(scope, 'nothing of Mermaid\'s is left outside the preview', f.mermaidOutside.length === 0 && bodyAfter === bodyBefore, { outside: f.mermaidOutside, bodyChildren: [bodyBefore, bodyAfter] });
@@ -467,7 +469,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       checkErrors(scope, o, ['Mermaid error']);
       const diagramExport = (s, x, text) => {
         checkWarning(s, x, ['Ein Diagramm konnte nicht gezeichnet werden.', 'Parse error'], 'with Mermaid\'s message');
-        check(s, 'two diagrams, no error picture', x.diagrams === 2 && x.errorPictures === 0, { diagrams: x.diagrams, errorPictures: x.errorPictures });
+        check(s, 'two diagrams in their figures, no error picture', x.diagrams === 2 && x.figures.join('|') === 'Eins|Drei' && x.errorPictures === 0, { diagrams: x.diagrams, figures: x.figures, errorPictures: x.errorPictures });
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
       await checkExports(scope, browser, o.page, dir, 'diagramm', READONLY, diagramExport);
@@ -510,7 +512,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await o.page.waitForFunction(() => window.durchlaeufe.rails.some(r => r.rail === 'B eins'), null, { timeout: 90000 });
       await o.page.waitForTimeout(QUIET_WINDOW);   // a render still running would show up as one more rail
       const log = await o.page.evaluate(() => ({ ...window.durchlaeufe, h1: document.querySelector('#preview h1').textContent,
-        diagrams: document.querySelectorAll('#preview .mermaid svg').length }));
+        diagrams: document.querySelectorAll('#preview figure.dokufix-diagram > .dokufix-diagram-svg > svg').length }));
       check(scope, 'the second render was requested while the first ran', log.railsWhenSecondWasRequested === 0, log);
       check(scope, 'they ran one after the other: each rail was built from the document the preview showed',
         JSON.stringify(log.rails) === JSON.stringify([{ rail: 'A eins', preview: 'Dokument A' }, { rail: 'B eins', preview: 'Dokument B' }]), log.rails);
