@@ -2450,7 +2450,7 @@ async function assertSearch(page, check, key){
       const term = joined(l).replace(/\s+/g, ' ').trim();
       const listed = await search(term);
       check('search: "' + term + '", a BPMN label drawn over two lines ' + how + ', is found with light fuzzy off',
-        listed.results.some(r => r.kind === 'BPMN-Diagramm: ' && r.marks.length >= 1), json({ lines: l, results: listed.results.map(r => r.text.slice(0, 80)) }));
+        listed.results.some(r => r.kind === DIAGRAM_LANGUAGES.bpmn.label + ': ' && r.marks.length >= 1), json({ lines: l, results: listed.results.map(r => r.text.slice(0, 80)) }));
     }
     // What is no label: the source of a diagram and its frame. A diagram is
     // listed for such a word only where one of its labels, the text and
