@@ -241,13 +241,23 @@ export function axisMap(items, minGap, maxGap){
 // flow back as a diagonal) docks on the side that faces the point before it,
 // with a corner put in, so that the piece is horizontal or vertical; a flow
 // of two points, a diagonal from end to end, gets two corners halfway, so
-// that neither lies in the symbol at the other end.
+// that neither lies in the symbol at the other end. The piece that leaves
+// the symbol keeps 12 px before the flow turns: a run Mermaid laid just
+// beside its own, larger node lies on the edge of the BPMN symbol once
+// scaled, or inside it; the run moves 12 px off the side, the other end
+// left where it is.
 export function attach(pts, atStart, c, side){
   const i = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2, k = atStart ? 2 : pts.length - 3;
   const p = pts[i], q = pts[j];
   const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
   const aim = (v, mid, half) => c.task ? Math.min(mid + half - 12, Math.max(mid - half + 12, v)) : mid;
   const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
+  const clear = (axis, dir) => {
+    if (pts.length < 3) return;
+    const edge = pts[i][axis], need = edge + dir * 12, run = pts[j][axis];
+    if ((run - need) * dir >= 0) return;
+    for (let n = j; n > 0 && n < pts.length - 1 && Math.abs(pts[n][axis] - run) < 0.5; n += atStart ? 1 : -1) pts[n][axis] = need;
+  };
   if (!side && Math.abs(p.x - q.x) >= 1 && Math.abs(p.y - q.y) >= 1){
     const dx = (q.x - c.cx) / (c.w / 2), dy = (q.y - c.cy) / (c.h / 2);
     if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return;                // the point before lies in the symbol
@@ -283,6 +293,7 @@ export function attach(pts, atStart, c, side){
       else { const my = (p.y + q.y) / 2; ins({ x: tx, y: my }, { x: q.x, y: my }); }
     }
     p.x = tx; p.y = c.cy + dir * c.h / 2;
+    clear('y', dir);
   } else if (Math.abs(p.y - q.y) < 1){                            // a horizontal end
     const dir = Math.sign(q.x - c.cx) || 1, ty = aim(p.y, c.cy, c.h / 2);
     if (Math.abs(p.y - ty) > 1){
@@ -290,6 +301,7 @@ export function attach(pts, atStart, c, side){
       else { const mx = (p.x + q.x) / 2; ins({ x: mx, y: ty }, { x: mx, y: q.y }); }
     }
     p.y = ty; p.x = c.cx + dir * c.w / 2;
+    clear('x', dir);
   }
 }
 

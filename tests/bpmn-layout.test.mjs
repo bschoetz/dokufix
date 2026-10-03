@@ -213,6 +213,22 @@ test('a flow end is docked on the outline: a task anywhere on its side, a circle
   assert.deepEqual(pts.at(-1), P(160, 100));
 });
 
+test('a flow keeps 12 px to its own symbol before it turns: a run 1 px inside its task moves 12 px off it, the other end kept', () => {
+  const task = node(100, 100, 120, 80, true);
+  // Mermaid's run lies 1 px above the task's bottom once scaled (story 2.20, the dog's loop).
+  const pts = ptsOf([[130, 120], [130, 139], [300, 139], [300, 300]]);
+  attach(pts, true, task);
+  assert.deepEqual(pts, ptsOf([[130, 140], [130, 152], [300, 152], [300, 300]]));
+  // A run already 12 px or more off its side stays where it is.
+  const far = ptsOf([[130, 120], [130, 160], [300, 160], [300, 300]]);
+  attach(far, true, task);
+  assert.deepEqual(far, ptsOf([[130, 140], [130, 160], [300, 160], [300, 300]]));
+  // The same at the end of a flow, leaving by the side: the run moves, the start stays.
+  const end = ptsOf([[0, 300], [165, 300], [165, 90], [150, 90]]);
+  attach(end, false, task);
+  assert.deepEqual(end, ptsOf([[0, 300], [172, 300], [172, 90], [160, 90]]));
+});
+
 test('correction 1: an inner piece through a foreign symbol moves beside it', () => {
   const pts = ptsOf([[0, 0], [0, 45], [100, 45], [100, 120]]);
   nudge(pts, [{ x1: 40, y1: 30, x2: 80, y2: 70 }]);
