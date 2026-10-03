@@ -736,7 +736,8 @@ test('a row\'s result says its kind before its text, and a hidden row says so af
   // Hidden is what a filter hides: the free-text filter's class, or no box in a facet table; a row without a box elsewhere is not.
   assert.match(js, /row\.classList\.contains\(FILTER_OUT_CLASS\) \|\|\s*\(!!row\.closest\('\.' \+ FACETS_CLASS\) && !row\.getClientRects\(\)\.length\)/);
   assert.match(js, /document\.addEventListener\('input', onFilter\);\s*document\.addEventListener\('change', onFilter\);/);
-  assert.match(css, /^\.search-kind,\.search-hidden\{/m);
+  assert.match(css, /^\.search-kind\{color:#6e6e73\}$/m);
+  assert.match(css, /^\.search-hidden\{color:#a40e26;font-style:italic\}$/m);
   // filter.js is not changed for it: the search reads the filter's classes, the filter knows nothing of the search.
   assert.doesNotMatch(read('app/filter.js'), /search(-places)?\.js|collectPlaces|registerSearch/);
 });

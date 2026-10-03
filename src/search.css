@@ -79,11 +79,12 @@
 .search-result:hover,.search-result:focus-visible{background:#f2f2f7}
 .search-result:focus-visible{outline:2px solid #1c1c1e;outline-offset:-2px}
 .search-result mark{background:#ffe066;color:inherit;border-radius:2px}
-/* Before the text of a table row's result its kind, "Tabelle: ", and after
-   the text of a row a table's filter hides " (ausgeblendet)": both in the
-   grey of the numbers, set apart from the text the term is found in. */
-.search-kind,.search-hidden{color:#6e6e73}
-.search-hidden{font-style:italic}
+/* Before the text of a table row's result its kind, "Tabelle: ", in the grey
+   of the numbers, set apart from the text the term is found in; after the
+   text of a row a table's filter hides " (ausgeblendet)", in the dark red of
+   the red status chip's label, so it is not overlooked (Ben, 2026-10-03). */
+.search-kind{color:#6e6e73}
+.search-hidden{color:#a40e26;font-style:italic}
 /* The hits in the document while the panel is open (src/app/search.js): a
    highlight of the CSS Custom Highlight API, no element and no class in the
    document, in the colour of the marks in the results. Not printed. */
