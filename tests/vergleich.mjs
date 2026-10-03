@@ -1960,7 +1960,8 @@ async function assertSearch(page, check, key){
   const ROOT_SEL = editor ? '#preview' : 'main.reader-body';
   await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
   await frames(page);
-  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6';
+  // Since story 6 every table row is a place as well.
+  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6, tr';
   const panelFacts = () => page.evaluate(rootSel => {
     const p = document.querySelector('body > .search-panel');
     const box = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
@@ -1969,7 +1970,8 @@ async function assertSearch(page, check, key){
       exists: !!p, transient: !!p && p.hasAttribute('data-dokufix-transient'), inPreview: !!document.querySelector(rootSel + ' .search-panel'),
       shown: !!p && !p.hidden && getComputedStyle(p).display !== 'none', focused: !!input && document.activeElement === input,
       value: input ? input.value : null, summary: p ? p.querySelector('[role="status"]').textContent : null,
-      results: p ? Array.from(p.querySelectorAll('.search-results .search-result')).map(b => ({ text: b.textContent, marks: Array.from(b.querySelectorAll('mark')).map(m => m.textContent) })) : [],
+      results: p ? Array.from(p.querySelectorAll('.search-results .search-result')).map(b => ({ text: b.textContent, marks: Array.from(b.querySelectorAll('mark')).map(m => m.textContent),
+        kind: (b.querySelector('.search-kind') || {}).textContent || null, hidden: !!b.querySelector('.search-hidden') })) : [],
       groups: p ? Array.from(p.querySelectorAll('.search-results .search-group')).map(li => {
         let depth = 0;
         for (let a = li.parentElement.closest('.search-group'); a; a = a.parentElement.closest('.search-group')) depth++;
@@ -2035,7 +2037,7 @@ async function assertSearch(page, check, key){
   const nodeTags = Array.from(root.querySelectorAll(PLACE_SEL)).map(el => el.tagName.toUpperCase());
   check('search: the ' + (editor ? 'preview' : 'content') + ' read back in Node has the paragraphs, items and headings the page has', sameList(browserTags, nodeTags), browserTags.length + ' in the page, ' + nodeTags.length + ' in Node');
   const all = Array.from(root.querySelectorAll(PLACE_SEL));
-  const expected = term => collectPlaces(root).map(p => ({ el: p.el, text: p.text, hits: findHits(term, p.text).length, at: all.indexOf(p.el) })).filter(p => p.hits);
+  const expected = term => collectPlaces(root).map(p => ({ el: p.el, text: p.text, kind: p.kind, hits: findHits(term, p.text).length, at: all.indexOf(p.el) })).filter(p => p.hits);
   // The groups the product makes of these places, flat in the order of the
   // list, each with its depth, label, numbers and own results; the summary.
   const countOf = (hits, places) => hits + ' Treffer an ' + places + (places === 1 ? ' Stelle' : ' Stellen');
@@ -2071,9 +2073,18 @@ async function assertSearch(page, check, key){
   const typed = await search(SEARCH_TERM);
   const lit = await highlightFacts();
   const searched = await rootHtml();
-  const strip = t => t.replace(/^… /, '').replace(/ …$/, '');
-  const mismatched = typed.results.map((r, i) => (want[i] && want[i].text.includes(strip(r.text)) && r.marks.length >= 1 && r.marks.length <= want[i].hits && r.marks.every(m => m.toLowerCase() === SEARCH_TERM.toLowerCase())) ? null : i + ': ' + json(r)).filter(Boolean);
-  check('search: "' + SEARCH_TERM + '" lists one result per place of the ' + (editor ? 'preview' : 'content') + ' that holds it, in order, each a part of its text with the term marked; the summary says "' + wantSummary + '"',
+  // A result's text without its kind before it ("Tabelle: ", story 6), a
+  // hidden row's mark after it, and the "…" of a cut.
+  const KIND_SEP = ': ', HIDDEN_NOTE = ' (ausgeblendet)';
+  const bodyOf = r => {
+    let t = r.text;
+    if (r.kind && t.startsWith(r.kind)) t = t.slice(r.kind.length);
+    if (r.hidden && t.endsWith(HIDDEN_NOTE)) t = t.slice(0, -HIDDEN_NOTE.length);
+    return t.replace(/^… /, '').replace(/ …$/, '');
+  };
+  const kindAs = (r, p) => r.kind === (p.kind ? p.kind + KIND_SEP : null) && r.text.startsWith(r.kind || '');
+  const mismatched = typed.results.map((r, i) => (want[i] && kindAs(r, want[i]) && want[i].text.includes(bodyOf(r)) && r.marks.length >= 1 && r.marks.length <= want[i].hits && r.marks.every(m => m.toLowerCase() === SEARCH_TERM.toLowerCase())) ? null : i + ': ' + json(r)).filter(Boolean);
+  check('search: "' + SEARCH_TERM + '" lists one result per place of the ' + (editor ? 'preview' : 'content') + ' that holds it, in order, each a part of its text with the term marked, a table row\'s after "Tabelle: "; the summary says "' + wantSummary + '"',
     want.length > 1 && typed.results.length === want.length && typed.summary === wantSummary && mismatched.length === 0,
     'summary ' + json(typed.summary) + ', ' + typed.results.length + ' results, expected ' + want.length + '; ' + mismatched.slice(0, 3).join(' | '));
   // --- story 4: the results under their headings, each with the numbers of its branch
@@ -2232,6 +2243,11 @@ async function assertSearch(page, check, key){
   check('search: a click on the last result scrolls the document to its place, and the panel stays open with its results',
     landed.scrolled > 0 && landed.top >= 0 && landed.bottom <= landed.height && landed.open && landed.results === want.length, json(landed));
 
+  // --- story 6: hits in tables. A term from a table row: its result reads
+  // "Tabelle: " before the row's text, a click centres the row, and the
+  // highlight lies in the row's cells, one range per cell a hit touches.
+  await assertSearchTables();
+
   // --- from 1500 px it lies over the rail, and still not over "Editor ↩"
   await page.setViewportSize({ width: 1600, height: 1000 });
   await frames(page);
@@ -2327,6 +2343,196 @@ async function assertSearch(page, check, key){
     hidden && bare.summary === wantSummary && bare.results.length === want.length && consoleErrors.length === 0,
     json({ hidden, summary: bare.summary, results: bare.results.length, errors: consoleErrors }));
   await page.click('body > .search-panel .search-close');
+
+  // Story 6, inside assertSearch for its helpers. In the demo text the terms
+  // its special cases name: "Zitronenfalter" in a table of the section
+  // "Suche", the hidden row "Karten" under the facet "Text". In another
+  // document a term of a row that only rows hold, and the first row a facet
+  // value hides.
+  async function assertSearchTables(){
+    const placesOf = collectPlaces(root);
+    const index = new Map(all.map((el, n) => [el, n]));
+    const expected = term => placesOf.map(p => ({ el: p.el, text: p.text, kind: p.kind, hits: findHits(term, p.text).length, at: index.get(p.el) })).filter(p => p.hits);
+    const rows = placesOf.filter(p => p.kind);
+    if (!rows.length){
+      const none = await search(SEARCH_TERM);
+      check('search: a document without a table row lists no result as "Tabelle: "', none.results.every(r => !r.kind), json(none.results.map(r => r.kind)));
+      return;
+    }
+    const words = text => text.match(/\p{L}{6,}/gu) || [];
+    // A word of a row that only rows hold, the fewest places first.
+    const rowWord = (places, ok = () => true) => {
+      let best = null;
+      for (const p of places){
+        for (const w of words(p.text)){
+          const at = expected(w);
+          if (!at.length || !at.every(x => x.kind) || !ok(w, at)) continue;
+          if (!best || at.length < best.at.length) best = { term: w, at };
+        }
+      }
+      return best;
+    };
+    const pick = opts.demo ? { term: 'Zitronenfalter', at: expected('Zitronenfalter') } : rowWord(rows);
+    if (!pick){ check('search: a word of a table row that only table rows hold, to search for', false, rows.length + ' rows'); return; }
+    const term = pick.term, wantRows = pick.at;
+    const listed = await search(term);
+    const groupsRow = flatGroups(groupsOf(wantRows).groups);
+    const demoOk = !opts.demo || (wantRows.length === 1 && listed.results.length === 1 && listed.results[0].text === 'Tabelle: Zitronenfalter' &&
+      groupsRow.map(g => g.label).join(' > ') === 'Sonderfälle > Suche');
+    check('search: "' + term + '", which only table rows hold, lists one result per row, each "Tabelle: " and the row\'s text with the term marked, the "Tabelle" before it unmarked' + (opts.demo ? ', one row under "Sonderfälle" > "Suche"' : ''),
+      listed.results.length === wantRows.length && listed.results.every((r, i) => kindAs(r, wantRows[i]) && r.kind === 'Tabelle: ' && wantRows[i].text.includes(bodyOf(r)) && !r.hidden &&
+        r.marks.length >= 1 && r.marks.every(m => m.toLowerCase() === term.toLowerCase())) && listed.summary === summaryOf(wantRows) && demoOk,
+      json({ summary: listed.summary, results: listed.results, groups: groupsRow.map(g => g.label) }));
+    // Each range of the highlight inside the row lies in one cell of it; as many as the product makes of the row's hits.
+    const rowRanges = place => { const p = placesOf.find(x => x.el === place.el); return findHits(term, p.text).flatMap(hit => nodeRanges(p.map, hit).map(coveredBy)); };
+    const target = wantRows[0];
+    await page.locator('body > .search-panel .search-results .search-result').first().click();
+    await frames(page);
+    const at = await page.evaluate(([rootSel, sel, at, name]) => {
+      const row = document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at];
+      const r = row.getBoundingClientRect();
+      const max = document.documentElement.scrollHeight - innerHeight;
+      const h = window.CSS && CSS.highlights ? CSS.highlights.get(name) : null;
+      const cellOf = n => (n.nodeType === 1 ? n : n.parentNode).closest('td, th');
+      const ranges = h ? Array.from(h).filter(s => row.contains(s.startContainer) || row.contains(s.endContainer)).map(s => {
+        const range = document.createRange();
+        range.setStart(s.startContainer, s.startOffset);
+        range.setEnd(s.endContainer, s.endOffset);
+        const a = cellOf(s.startContainer), b = cellOf(s.endContainer);
+        return { text: range.toString(), oneCell: !!a && a === b && a.closest('tr') === row };
+      }) : null;
+      return { tag: row.tagName, top: r.top, bottom: r.bottom, middle: (r.top + r.bottom) / 2, height: innerHeight, scrolled: scrollY, max, ranges };
+    }, [ROOT_SEL, PLACE_SEL, target.at, HIGHLIGHT]);
+    const centred = at.top >= 0 && at.bottom <= at.height && (Math.abs(at.middle - at.height / 2) <= 2 || at.scrolled <= 0 || at.scrolled >= at.max - 1);
+    const wantRanges = rowRanges(target);
+    check('search: a click on the result of a table row scrolls the row to the middle of the window, and its hits are highlighted in its cells, each range inside one cell',
+      at.tag === 'TR' && centred && !!at.ranges && sameList(at.ranges.map(r => r.text), wantRanges) && at.ranges.every(r => r.oneCell),
+      json({ ...at, expected: wantRanges }));
+
+    // --- the demo text's table of keys, with a free-text filter and no facet
+    // filter: a row its field hides is marked, a click brings the field into
+    // the window and leaves its term. The search field emptied first, so that
+    // typing into the table's field runs no search of its own.
+    if (opts.demo && FIELDED.has(key)){
+      const KEYS_TERM = 'Pfeiltasten', KEYS_SEARCH = 'rendern';
+      await search('');
+      const n = await page.evaluate(rootSel => Array.from(document.querySelectorAll(rootSel + ' .dokufix-filter-input')).findIndex(f => {
+        const field = f.closest('.dokufix-filter'), th = field.nextElementSibling && field.nextElementSibling.querySelector('th');
+        return !field.closest('.dokufix-facets') && !!th && th.textContent.trim() === 'Taste';
+      }), ROOT_SEL);
+      const keysTable = Array.from(root.querySelectorAll('table')).find(t => { const th = t.querySelector('th'); return !!th && th.textContent.trim() === 'Taste'; });
+      if (n < 0 || !keysTable){ check('search: the demo text\'s table of keys, with its own field and no facet filter', false, json({ n, table: !!keysTable })); }
+      else {
+        const field = page.locator(ROOT_SEL + ' .dokufix-filter-input').nth(n);
+        await field.fill(KEYS_TERM);
+        const hiddenRows = new Set(Array.from(keysTable.querySelectorAll('tbody > tr')).filter(tr => !filterMatches(KEYS_TERM, collectPlaces(root).find(p => p.el === tr).text)));
+        const wantKeys = expected(KEYS_SEARCH);
+        const k = wantKeys.findIndex(x => hiddenRows.has(x.el));
+        const keyed = await search(KEYS_SEARCH);
+        await page.evaluate(() => window.scrollTo(0, 0));
+        await frames(page);
+        if (k >= 0) await page.locator('body > .search-panel .search-results .search-result').nth(k).click();
+        await frames(page);
+        const toField = await page.evaluate(([rootSel, n]) => {
+          const input = document.querySelectorAll(rootSel + ' .dokufix-filter-input')[n];
+          const r = input.closest('.dokufix-filter').getBoundingClientRect();
+          return { top: r.top, bottom: r.bottom, height: innerHeight, scrolled: scrollY, value: input.value };
+        }, [ROOT_SEL, n]);
+        check('search: in the table of keys, with "' + KEYS_TERM + '" typed into its own field, "' + KEYS_SEARCH + '" lists the row the field hides with " (ausgeblendet)", no other result marked; a click on it brings the field into the window, its term unchanged',
+          k >= 0 && keyed.results.length === wantKeys.length && sameList(keyed.results.map(r => r.hidden), wantKeys.map(x => hiddenRows.has(x.el))) &&
+            keyed.results[k].kind === 'Tabelle: ' && keyed.results[k].text.endsWith(HIDDEN_NOTE) &&
+            toField.scrolled > 0 && toField.top >= 0 && toField.bottom <= toField.height && toField.value === KEYS_TERM,
+          json({ n, k, results: keyed.results.map(r => [r.text.slice(0, 40), r.hidden]), toField }));
+        await search('');
+        await field.fill('');
+      }
+    }
+
+    // --- a row a facet filter hides: listed, marked "(ausgeblendet)"; a click
+    // goes to the facet buttons and the filter stays; the filter changed while
+    // the panel is open, the search runs again and the mark follows. The field
+    // emptied first: with no term a change of a filter searches nothing, so no
+    // search of its own runs into the ones the run waits for.
+    await search('');
+    const facet = await page.evaluate(([rootSel, sel, demo]) => {
+      const all = Array.from(document.querySelectorAll(rootSel + ' :is(' + sel + ')'));
+      for (const [g, group] of Array.from(document.querySelectorAll(rootSel + ' .dokufix-facets')).entries()){
+        const labels = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > .dokufix-facet-controls > label'));
+        for (let k = 1; k < labels.length; k++){
+          if (demo && !labels[k].textContent.startsWith('Text')) continue;
+          labels[k].click();
+          const hidden = Array.from(group.querySelectorAll('tr')).filter(tr => !tr.parentNode.closest('td, th') && !tr.getClientRects().length).map(tr => all.indexOf(tr));
+          labels[0].click();
+          if (hidden.length) return { g, k, hidden, control: labels[k].textContent };
+        }
+      }
+      return null;
+    }, [ROOT_SEL, PLACE_SEL, !!opts.demo]);
+    if (!facet) return;
+    const choose = c => page.evaluate(([rootSel, g, c]) => {
+      document.querySelectorAll(rootSel + ' .dokufix-facets')[g].querySelectorAll(':scope > .dokufix-facet-bar > .dokufix-facet-controls > label')[c].click();
+    }, [ROOT_SEL, facet.g, c]);
+    const hiddenPlaces = new Set(facet.hidden);
+    const hiddenPick = opts.demo ? { term: 'Karten', at: expected('Karten') }
+      : rowWord(rows.filter(p => hiddenPlaces.has(index.get(p.el))), (w, at) => at.some(x => hiddenPlaces.has(x.at)));
+    if (!hiddenPick){ check('search: a word of a row a facet filter hides, to search for', false, json(facet)); return; }
+    const hiddenTerm = hiddenPick.term, wantHidden = hiddenPick.at;
+    const i = wantHidden.findIndex(x => hiddenPlaces.has(x.at));
+    await choose(facet.k);
+    await frames(page);
+    const marked = await search(hiddenTerm);
+    const marks = marked.results.map(r => r.hidden);
+    check('search: with the facet value "' + facet.control.trim() + '" chosen, "' + hiddenTerm + '" lists the row the filter hides like any row, "Tabelle: " before it and " (ausgeblendet)" after it; no other result is marked',
+      marked.results.length === wantHidden.length && i >= 0 && sameList(marks, wantHidden.map(x => hiddenPlaces.has(x.at))) &&
+        marked.results[i].kind === 'Tabelle: ' && marked.results[i].text.endsWith(HIDDEN_NOTE) && wantHidden[i].text.includes(bodyOf(marked.results[i])),
+      json({ facet, results: marked.results, expected: wantHidden.map(x => x.text) }));
+    const filterFacts = () => page.evaluate(([rootSel, sel, g, at]) => {
+      const group = document.querySelectorAll(rootSel + ' .dokufix-facets')[g];
+      const bar = group.querySelector(':scope > .dokufix-facet-bar').getBoundingClientRect();
+      const row = document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at];
+      const r = row.getBoundingClientRect();
+      const inputs = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar input'));
+      return { bar: { top: bar.top, bottom: bar.bottom }, row: { top: r.top, bottom: r.bottom, shown: row.getClientRects().length > 0 }, height: innerHeight,
+        chosen: inputs.findIndex(x => x.checked), open: !document.querySelector('body > .search-panel').hidden };
+    }, [ROOT_SEL, PLACE_SEL, facet.g, wantHidden[i].at]);
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await frames(page);
+    await page.locator('body > .search-panel .search-results .search-result').nth(i).click();
+    await frames(page);
+    const toBar = await filterFacts();
+    check('search: a click on the hidden row scrolls to the facet buttons of its table, which stand in the window; the filter stays as it was, the row hidden, the panel open',
+      toBar.bar.top >= 0 && toBar.bar.bottom <= toBar.height && toBar.chosen === facet.k && !toBar.row.shown && toBar.open, json(toBar));
+    // "Alle" chosen while the panel is open: the search runs again by itself.
+    await page.evaluate(t => { document.querySelector('body > .search-panel [role="status"]').textContent = t; }, PENDING);
+    await choose(0);
+    await page.waitForFunction(t => document.querySelector('body > .search-panel [role="status"]').textContent !== t, PENDING, { timeout: 5000 }).catch(() => {});
+    const again = await panelFacts();
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await frames(page);
+    await page.locator('body > .search-panel .search-results .search-result').nth(i).click();
+    await frames(page);
+    const toRow = await filterFacts();
+    check('search: the facet set back to "Alle" while the panel is open, the search runs again by itself: no result is marked hidden, and a click on the row scrolls to the row',
+      again.summary === summaryOf(wantHidden) && again.results.length === wantHidden.length && again.results.every(r => !r.hidden) &&
+        toRow.row.shown && toRow.row.top >= 0 && toRow.row.bottom <= toRow.height && toRow.chosen === 0,
+      json({ summary: again.summary, marks: again.results.map(r => r.hidden), toRow }));
+    // Typing into the table's free-text field, where it has one, does the same: the row it hides is marked.
+    const field = page.locator(ROOT_SEL + ' .dokufix-facets').nth(facet.g).locator('.dokufix-filter-input');
+    if (FIELDED.has(key) && await field.count()){
+      await page.evaluate(t => { document.querySelector('body > .search-panel [role="status"]').textContent = t; }, PENDING);
+      await field.fill('vergleich: kein Treffer');
+      await page.waitForFunction(t => document.querySelector('body > .search-panel [role="status"]').textContent !== t, PENDING, { timeout: 5000 }).catch(() => {});
+      const typedOut = await panelFacts();
+      await page.evaluate(t => { document.querySelector('body > .search-panel [role="status"]').textContent = t; }, PENDING);
+      await field.fill('');
+      await page.waitForFunction(t => document.querySelector('body > .search-panel [role="status"]').textContent !== t, PENDING, { timeout: 5000 }).catch(() => {});
+      const cleared = await panelFacts();
+      const body = wantHidden.map(x => !!x.kind && x.el.parentNode && x.el.parentNode.tagName.toUpperCase() === 'TBODY' && x.el.closest('.dokufix-facets') === root.querySelectorAll('.dokufix-facets')[facet.g]);
+      check('search: a term typed into the table\'s own field while the panel is open hides its rows, and the search marks them; emptied, the marks go',
+        sameList(typedOut.results.map(r => r.hidden), body) && body.some(Boolean) && cleared.results.every(r => !r.hidden),
+        json({ marks: typedOut.results.map(r => r.hidden), expected: body, cleared: cleared.results.map(r => r.hidden) }));
+    }
+  }
 
   // --- a "/" in the field of a table filter is typed, and opens nothing
   const field = page.locator(ROOT_SEL + ' .dokufix-filter-input').first();

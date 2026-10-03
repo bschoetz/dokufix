@@ -37,7 +37,7 @@ Manchmal sollen Empfänger gar nichts ändern können — bei einer veröffentli
 - **Mermaid- und BPMN-Diagramme**, BPMN auch ohne Koordinaten, jedes mit großer Ansicht
 - eine Suche über das ganze Dokument
 
-Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Das „×“ oder Escape schließt sie; im Editor und in einer Datei mit Editor verlässt erst das nächste Escape den Lesemodus. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnet `/` sie ebenso.
+Im Lesemodus öffnet die Taste `/` eine Suche, die jede Stelle eines Begriffs mit einer Vorschau auflistet; ein Klick auf eine Stelle führt dorthin. Solange die Suche offen ist, steht jeder Treffer auch im Text gelb hinterlegt. Auch jede Zeile einer Tabelle ist eine Stelle; ihr Ergebnis beginnt mit „Tabelle:“, und eine Zeile, die ein Filter der Tabelle gerade ausblendet, ist mit „(ausgeblendet)“ markiert. Die Stellen stehen nach Abschnitten geordnet unter ihren Überschriften, und beim Blättern durch die Liste bleibt die Überschrift des Abschnitts oben stehen. Unter dem Suchfeld stehen zwei Schalter: „Groß- und Kleinschreibung beachten“ und „Leerzeichen, Bindestriche und Punkte ignorieren“; mit dem zweiten findet statuschip auch jeden Status-Chip. Ein Begriff braucht drei Buchstaben oder Ziffern; kürzer geht es mit einem anderen Zeichen wie # oder einem Emoji, und ae, oe, ue und ss werden immer gesucht, wie in Goethe. Das „×“ oder Escape schließt sie; im Editor und in einer Datei mit Editor verlässt erst das nächste Escape den Lesemodus. Die Suche gibt es auch in den Fassungen „schlank“ und „kompakt“; dort öffnet `/` sie ebenso.
 
 ## Wie das hier zusammenspielt
 
@@ -518,11 +518,23 @@ Solange ein Diagramm groß offen ist, öffnet `/` keine Suche, und Escape schlie
 - Das Wort, das ein Status-Chip für Screenreader trägt, ist kein Treffer: Die Suche nach blau findet nur diese Zeile, nicht den Chip `🔵 im Test` in ihr.
 - Was vor der ersten Überschrift der Ebene 2 steht, bildet eine eigene Gruppe mit dem Titel des Dokuments: Die Suche nach Lesemodus beginnt mit „Willkommen bei dokufix“.
 - Eine Überschrift in einem Hinweis zählt zur Gruppe, in der der Hinweis steht: „Überschrift im Hinweis“ erscheint unter „Sonderfälle“.
-- Was nur in einer Tabelle, einem Diagramm, einem Code-Block oder im Metadaten-Kopf steht, findet die Suche noch nicht. Das Wort in der Tabelle darunter steht in keinem Absatz; die Suche danach zeigt „Keine Treffer“.
+- Ein Wort, das nur in einer Tabelle steht, ist ein Treffer in seiner Zeile: Suchen Sie nach dem Falter in der ersten Tabelle darunter. Das Ergebnis lautet „Tabelle:“ und das Wort; ein Klick rollt zur Zeile, und das Wort ist dort gelb hinterlegt.
+- Auch die Kopfzeile ist eine Zeile: Die Suche nach dem Wort über der zweiten Spalte der zweiten Tabelle findet nur sie.
+- Der Name des ersten Falters der zweiten Tabelle steckt auch in seiner Futterpflanze: Die Suche nach seinen ersten sechs Buchstaben findet die Zeile einmal, mit zwei Treffern, beide gelb.
+- Mit dem Schalter „Leerzeichen, Bindestriche und Punkte ignorieren“ findet der zweite Falter der zweiten Tabelle, ohne Leerzeichen gefolgt von seiner Futterpflanze, seine Zeile; gelb sind beide Zellen, jede für sich.
+- In einer Zelle ist das Wort eines Status-Chips ebenso kein Treffer: Die Suche nach grün findet nur diese Zeile, nicht den Chip `🟢 gesehen` in der zweiten Tabelle. Eine Fußnote zählt bei ihrer Erklärung unten, nicht bei ihrem Zeichen in der Zelle: Die Suche nach Alpen findet die Fußnote und diese Zeile, nicht die Tabelle.
+- Eine Zeile, die ein Filter ausblendet, steht in der Liste mit „(ausgeblendet)“: Wählen Sie oben in „Tabellen mit Filter“ den Knopf „Text“ und suchen Sie nach Karten. Ein Klick auf die Zeile der Tabelle rollt zu den Knöpfen, und der Filter bleibt, wie er ist. Wählen Sie dort „Alle“, während die Suche offen ist: Die Marke verschwindet, und ein Klick rollt zur Zeile.
+- Ebenso beim Suchfeld der Tabelle mit den Tasten: Tippen Sie dort Pfeiltasten und suchen Sie nach rendern. Die Zeile mit Strg + Eingabe ist ausgeblendet, ein Klick auf sie rollt zum Suchfeld, und sein Text bleibt.
+- Was nur in einem Diagramm, einem Code-Block oder im Metadaten-Kopf steht, findet die Suche noch nicht.
 
 | Nur in dieser Tabelle |
 |---|
 | Zitronenfalter |
+
+| Wanderer | Raupenkost | Flugzeit | Beobachtet |
+|---|---|---|---|
+| Distelfalter | Disteln, Brennnesseln | Mai bis Oktober[^falter] | `🔵 im Test` |
+| Admiral | Brennnesseln | Juni bis Oktober | `🟢 gesehen` |
 
 ### BPMN ohne Koordinaten: Pool ohne Bahnen
 
@@ -597,6 +609,8 @@ Probieren Sie es aus: Klicken Sie oben rechts auf **„Editor ↩"**, ändern Si
 [^ort]: Dieselbe Fußnote steht in einer Karte und in einem Hinweis.
 
 [^suche]: Ein Morgenrot steht nur in dieser Fußnote.
+
+[^falter]: Er wandert jedes Jahr über die Alpen.
 
 [^feld]: Diese Fußnote steht in einer Tabelle mit Suchfeld und Knöpfen.
 

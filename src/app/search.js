@@ -3,6 +3,9 @@ import { collectPlaces, groupResults, nodeRanges } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { DIAGRAM_SVG_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
+import { FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_OUT_CLASS } from './filter.js';
+import { FACETS_CLASS, FACET_BAR_CLASS } from './facets.js';
+import { TABLE_CLASS } from './tables.js';
 
 // --- Search: the panel ---------------------------------------------------------
 // In read mode the key "/" opens a search panel on the right of the window. It
@@ -14,6 +17,19 @@ import { largeViewOpen } from './large-view.js';
 // hits and places of its branch; a group heading is text, not a button, and
 // stays at the top of the list while its results scroll under it. A click on
 // a result scrolls the document to its place; the panel stays open.
+//
+// A place with a kind, a table row (search-places.js), says it before its
+// text: "Tabelle: " in a span of its own, which is no text of the place, so
+// nothing in it is marked. A row a table's filter hides, the free-text filter
+// by its class or a facet filter by CSS alone (a row of a facet table without
+// a box), is
+// listed like any row, marked " (ausgeblendet)" after its text; a click on it
+// scrolls to the table's filter controls, the facet buttons, else the field of
+// the free-text filter, else the table, and the filter stays as it is.
+// Whether a row is hidden is read when the search runs and again on the click.
+// While the panel is open and holds a term, a change of a table filter in the
+// root (typing in its field, choosing a facet value) runs the search again
+// after the same pause as typing, so the marks follow.
 //
 //   <div class="search-panel" role="search" aria-label="Suche im Dokument" data-dokufix-transient hidden>
 //   <div class="search-head">
@@ -31,6 +47,7 @@ import { largeViewOpen } from './large-view.js';
 //   <div class="search-group-head"><span class="search-group-title">Eine Tabelle</span><span class="search-group-count">2 Treffer an 1 Stelle</span></div>
 //   <ol class="search-group-list">
 //   <li><button type="button" class="search-result">… eine <mark>Tabelle</mark> mit …</button></li>
+//   <li><button type="button" class="search-result"><span class="search-kind">Tabelle: </span>Karten Block …<span class="search-hidden"> (ausgeblendet)</span></button></li>
 //   <li class="search-group search-group-h3">…</li>
 //   </ol>
 //   </li>
@@ -147,18 +164,58 @@ function previewOf(text, hits){
   return frag;
 }
 
-// A result: a button with the part of its place's text, which scrolls the
-// document to the place.
+// What a hidden row says after its text.
+const HIDDEN_NOTE = ' (ausgeblendet)';
+
+const hasClass = (el, cls) => !!el && el.nodeType === 1 && el.classList.contains(cls);
+
+// Whether a table filter hides a row now: the free-text filter gives it a
+// class; a facet filter hides it by CSS alone, so a row of a facet table
+// without a box is hidden. A row without a box elsewhere, in a closed
+// <details> say, is not hidden by a filter, and counts as shown.
+const rowHidden = row => row.classList.contains(FILTER_OUT_CLASS) ||
+  (!!row.closest('.' + FACETS_CLASS) && !row.getClientRects().length);
+
+// The filter controls of a row's table: the facet buttons, else the field of
+// the free-text filter, else the table. As filter.js finds them: the field
+// stands directly above the table's wrapper, and the wrapper of a facet table
+// stands in the facet group beside the buttons.
+function controlsOf(row){
+  const table = row.closest('table');
+  const anchor = hasClass(table.parentNode, TABLE_CLASS) ? table.parentNode : table;
+  const group = anchor.parentNode;
+  const bar = hasClass(group, FACETS_CLASS) && group.querySelector(':scope > .' + FACET_BAR_CLASS);
+  if (bar) return bar;
+  const field = anchor.previousElementSibling;
+  return hasClass(field, FILTER_CLASS) ? field : table;
+}
+
+// A result: a button with the kind of its place, if it has one, and the part
+// of its text, which scrolls the document to the place; a hidden row says so
+// and scrolls to its table's filter controls.
 function resultItem({ place, at }){
   const li = document.createElement('li');
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'search-result';
+  const row = !!place.kind && place.el.tagName.toUpperCase() === 'TR';
+  if (place.kind){
+    const kind = document.createElement('span');
+    kind.className = 'search-kind';
+    kind.textContent = place.kind + ': ';
+    button.append(kind);
+  }
   button.append(previewOf(place.text, at));
+  if (row && rowHidden(place.el)){
+    const note = document.createElement('span');
+    note.className = 'search-hidden';
+    note.textContent = HIDDEN_NOTE;
+    button.append(note);
+  }
   button.addEventListener('click', () => {
     // The root was rendered anew since: search it again.
     if (!place.el.isConnected){ search(); return; }
-    place.el.scrollIntoView({ block: 'center' });
+    (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });
   });
   li.append(button);
   return li;
@@ -352,6 +409,20 @@ export function registerSearch({ root, inReadMode: readMode }){
   rootOf = typeof root === 'function' ? root : () => root;
   inReadMode = readMode;
   buildPanel();
+  // A change of a table filter in the root searches again while the panel is
+  // open and holds a term, after the filter's own listeners, which sit on the
+  // field and the facet group. See the README, "Keys and events".
+  const FILTER_CONTROL_SEL = '.' + FILTER_INPUT_CLASS + ', .' + FACET_BAR_CLASS + ' input';
+  const onFilter = e => {
+    if (!isSearchOpen() || !input.value.trim()) return;
+    const el = e.target;
+    const root = rootOf();
+    if (!el || el.nodeType !== 1 || !el.matches(FILTER_CONTROL_SEL) || !root || !root.contains(el)) return;
+    clearTimeout(timer);
+    timer = setTimeout(search, PAUSE);
+  };
+  document.addEventListener('input', onFilter);
+  document.addEventListener('change', onFilter);
   // A search that waits for a packed diagram runs when the decoder is done.
   document.addEventListener(UNPACKED_EVENT, () => {
     unpacked = true;

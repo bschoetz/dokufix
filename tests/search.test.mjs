@@ -16,10 +16,12 @@
 // the headings, with the numbers of each branch; of story 5, the map of a
 // place's text onto the text nodes it came from and the node ranges of its
 // hits, across nodes, without what the text leaves out, over collapsed white
-// space. That "/" opens the panel, the
+// space; of story 6, table rows as places, their text that of the free-text
+// filter, their hits one range per cell. That "/" opens the panel, the
 // summary, the marks and the switches in a browser, the group headings that
 // stay at the top while the list scrolls, a click that scrolls, the
-// highlight drawn in the document and a saved file without the panel are for
+// highlight drawn in the document, a row's result with "Tabelle: ", a hidden
+// row and a saved file without the panel are for
 // the browser runs (tests/vergleich.mjs,
 // tests/speichern.mjs).
 
@@ -30,7 +32,8 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
-import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW } from '../src/app/search-places.js';
+import { filterRowText } from '../src/app/filter.js';
 import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
@@ -285,20 +288,23 @@ test('collectPlaces: an item with a nested list is read without it, and each nes
     [['li', 'Außen'], ['li', 'Innen eins'], ['li', 'Innen zwei'], ['li', 'Tief'], ['li', 'Danach']]);
 });
 
-test('collectPlaces: warnings, facet bars, tables with their cells, code blocks, diagrams with their credit, the metadata panel and transient elements are no places', () => {
+test('collectPlaces: warnings, facet bars, code blocks, diagrams with their credit, the metadata panel and transient elements are no places, nor a table inside a warning or the metadata panel', () => {
   const html =
-    '<div class="dokufix-warning" role="note"><p class="dokufix-warning-title"><strong>Warnung:</strong> Tabelle kaputt.</p><pre class="dokufix-warning-detail">Tabelle</pre></div>\n' +
+    '<div class="dokufix-warning" role="note"><p class="dokufix-warning-title"><strong>Warnung:</strong> Tabelle kaputt.</p><pre class="dokufix-warning-detail">Tabelle</pre>' +
+    '<table><tbody><tr><td>Tabelle</td></tr></tbody></table></div>\n' +
     '<div class="dokufix-facets"><fieldset class="dokufix-facet-bar"><legend>Tabelle</legend><div class="dokufix-facet-controls"><label><input type="radio">Tabelle</label></div></fieldset>' +
-    '<div class="dokufix-table"><table><thead><tr><th>Tabelle</th></tr></thead><tbody><tr><td><p>Tabelle</p><ul><li>Tabelle</li></ul></td></tr></tbody></table></div></div>\n' +
+    '<div class="dokufix-table"><table><thead><tr><th>Art</th></tr></thead><tbody><tr><td><p>Wert</p><ul><li>Eins</li></ul></td></tr></tbody></table></div></div>\n' +
     '<pre><code>Tabelle</code></pre>\n' +
     '<div class="mermaid"><svg><foreignObject><div><p>Tabelle</p></div></foreignObject></svg></div>\n' +
     '<figure class="dokufix-diagram dokufix-diagram-bpmn" aria-label="Tabelle"><div class="dokufix-diagram-svg"><svg><text>Tabelle</text></svg></div>' +
     '<figcaption class="dokufix-diagram-credit"><p>Gezeichnet mit Tabelle</p></figcaption></figure>\n' +
-    '<details class="dokufix-frontmatter"><summary><span class="dokufix-fm-label">Metadaten</span></summary><div class="dokufix-fm-body"><dl class="dokufix-fm-rows"><dt>titel</dt><dd><ul class="dokufix-fm-list"><li>Tabelle</li></ul></dd></dl></div></details>\n' +
-    '<div class="dokufix-meta"><p>Tabelle</p></div>\n' +
+    '<details class="dokufix-frontmatter"><summary><span class="dokufix-fm-label">Metadaten</span></summary><div class="dokufix-fm-body"><dl class="dokufix-fm-rows"><dt>titel</dt><dd><ul class="dokufix-fm-list"><li>Tabelle</li></ul>' +
+    '<table><tbody><tr><td>Tabelle</td></tr></tbody></table></dd></dl></div></details>\n' +
+    '<div class="dokufix-meta"><p>Tabelle</p><table><tbody><tr><td>Tabelle</td></tr></tbody></table></div>\n' +
     '<div class="dokufix-filter" ' + TRANSIENT_ATTR + '><p>Tabelle</p></div>\n' +
     '<p>Die eine Tabelle.</p>\n';
-  assert.deepEqual(places(html), [['p', 'Die eine Tabelle.']]);
+  // The rows of the facet table are places, the cell's paragraph and list text of its row (story 6).
+  assert.deepEqual(places(html), [['tr', 'Art'], ['tr', 'WertEins'], ['p', 'Die eine Tabelle.']]);
 });
 
 test('collectPlaces: the word a status chip carries for assistive technology is no text, in a paragraph and in a heading', () => {
@@ -474,7 +480,115 @@ test('nodeRanges changes nothing in the document and needs no Range: plain objec
 test('a search over the places: one result per place that holds the term, every hit counted', () => {
   const root = rootWith('<h2>Tabellen</h2>\n<p>Eine Tabelle und noch eine tabelle.</p>\n<p>Keine hier.</p>\n<ul>\n<li>TABELLE</li>\n</ul>\n<table><tbody><tr><td>Tabelle</td></tr></tbody></table>\n');
   const found = collectPlaces(root).map(p => ({ tag: p.el.tagName, hits: findHits('tabelle', p.text).length })).filter(r => r.hits);
-  assert.deepEqual(found, [{ tag: 'H2', hits: 1 }, { tag: 'P', hits: 2 }, { tag: 'LI', hits: 1 }]);
+  assert.deepEqual(found, [{ tag: 'H2', hits: 1 }, { tag: 'P', hits: 2 }, { tag: 'LI', hits: 1 }, { tag: 'TR', hits: 1 }]);
+});
+
+// ---------- hits in tables (story 6) ----------
+// A table as marked emits it, in its wrapper (tables.js).
+const tableHtml = (head, rows) => '<div class="dokufix-table"><table>\n<thead>\n<tr>\n' + head.map(h => '<th>' + h + '</th>\n').join('') + '</tr>\n</thead>\n<tbody>' +
+  rows.map(r => '<tr>\n' + r.map(c => '<td>' + c + '</td>\n').join('') + '</tr>\n').join('') + '</tbody></table></div>\n';
+// The place of each hit of a term, with the texts of its node ranges.
+const rowHits = (root, term, options) => collectPlaces(root).flatMap(p => findHits(term, p.text, options).map(hit => ({ tag: p.el.tagName, kind: p.kind, ranges: nodeRanges(p.map, hit).map(r => rangeText(root, r)) })));
+
+test('collectPlaces: every table row is a place of the kind "' + KIND_ROW + '", the header row included, its text the cells joined by a blank', () => {
+  assert.equal(KIND_ROW, 'Tabelle');
+  const root = rootWith('<h2>Sonderfälle</h2>\n<p>Davor.</p>\n' + tableHtml(['Art', 'Name'], [['Falter', 'Zitronenfalter'], ['', ''], ['Käfer', 'Hirsch<br><em>käfer</em>']]));
+  const found = collectPlaces(root);
+  assert.deepEqual(found.map(p => [p.el.tagName, p.text, p.kind]),
+    [['H2', 'Sonderfälle', undefined], ['P', 'Davor.', undefined], ['TR', 'Art Name', 'Tabelle'], ['TR', 'Falter Zitronenfalter', 'Tabelle'], ['TR', 'Käfer Hirsch käfer', 'Tabelle']]);
+  // The term only in a cell: one result, the row; the hit highlighted in its cell.
+  assert.deepEqual(rowHits(root, 'Zitronenfalter'), [{ tag: 'TR', kind: 'Tabelle', ranges: ['Zitronenfalter'] }]);
+  // A term only in the header row.
+  assert.deepEqual(rowHits(root, 'Name'), [{ tag: 'TR', kind: 'Tabelle', ranges: ['Name'] }]);
+  // A row's results group as any place's do.
+  const results = found.filter(p => findHits('falter', p.text).length).map(p => ({ el: p.el, hits: findHits('falter', p.text).length }));
+  assert.deepEqual(groupResults(root, results).groups.map(g => [g.label, g.hits, g.places]), [['Sonderfälle', 2, 1]]);
+});
+
+test('collectPlaces: several hits in one row are one place, every hit counted, each highlighted in its cell', () => {
+  const root = rootWith(tableHtml(['Baustein', 'Art'], [['Karte', 'Karte im Block'], ['Liste', 'Block']]));
+  const found = collectPlaces(root).filter(p => findHits('Karte', p.text).length);
+  assert.equal(found.length, 1);
+  assert.equal(findHits('Karte', found[0].text).length, 2);
+  assert.deepEqual(rowHits(root, 'Karte').map(h => h.ranges), [['Karte'], ['Karte']]);
+  const [row] = found;
+  const cellsOfHits = findHits('Karte', row.text).flatMap(hit => nodeRanges(row.map, hit).map(r => r.startNode.parentNode));
+  assert.deepEqual(cellsOfHits, Array.from(row.el.querySelectorAll('td')));
+});
+
+test('nodeRanges: a hit across two cells is one hit with one range per cell, never one over the edge', () => {
+  const root = rootWith(tableHtml(['A', 'B', 'C'], [['Hinweis', 'Block', 'Zitat'], ['Ein <em>Hin</em>weis', 'Block', '']]));
+  const hits = rowHits(root, 'HinweisBlock', { fuzzy: true });
+  assert.deepEqual(hits.map(h => h.ranges), [['Hinweis', 'Block'], ['Hinweis', 'Block']]);
+  // Without light fuzzy the blank between the cells is text of the row, as the filter reads it.
+  assert.deepEqual(rowHits(root, 'Hinweis Block').map(h => h.ranges), [['Hinweis', 'Block'], ['Hinweis', 'Block']]);
+  for (const place of collectPlaces(root)){
+    for (const hit of findHits('weisblockzit', place.text, { fuzzy: true }).concat(findHits('HinweisBlock', place.text, { fuzzy: true }))){
+      for (const r of nodeRanges(place.map, hit)) assert.equal(r.startNode.parentNode.closest('td, th'), r.endNode.parentNode.closest('td, th'));
+    }
+  }
+  assert.deepEqual(rowHits(root, 'weisblockzit', { fuzzy: true }).map(h => h.ranges), [['weis', 'Block', 'Zit']]);
+});
+
+test('collectPlaces: a chip\'s word and a footnote marker in a cell are no text of the row, and in no range', () => {
+  const ref = '<sup class="dokufix-fn-host"><a href="#footnote-back-a" data-footnote-ref="">1</a><span class="dokufix-fn-preview" aria-hidden="true">Ein Morgenrot.</span></sup>';
+  const root = rootWith(tableHtml(['Stand', 'Text'], [['<code>🔵 im Test</code>', 'Frist' + ref + ' läuft']]));
+  buildChips(root);
+  const word = root.querySelector('.dokufix-chip-status').textContent.trim();
+  const row = collectPlaces(root)[1];
+  assert.equal(row.text, 'im Test Frist läuft');
+  assert.deepEqual(rowHits(root, word), []);
+  assert.deepEqual(rowHits(root, 'Morgenrot'), []);
+  assert.deepEqual(rowHits(root, '1'), []);
+  assert.deepEqual(rowHits(root, 'Frist läuft').map(h => h.ranges), [['Frist', 'läuft']]);
+  assert.deepEqual(rowHits(root, 'im Test').map(h => h.ranges), [['im Test']]);
+});
+
+test('collectPlaces: a table nested in a cell is text of the outer row, and its rows are no places', () => {
+  const root = rootWith('<table><tbody><tr><td>außen</td><td><table><tbody><tr><td>innen</td><td>zwei</td></tr><tr><td>drei</td></tr></tbody></table></td></tr></tbody></table>');
+  assert.deepEqual(collectPlaces(root).map(p => [p.el, p.text]), [[root.querySelector('tr'), 'außen innen zwei drei']]);
+  assert.deepEqual(rowHits(root, 'innen zwei').map(h => h.ranges), [['innen', 'zwei']]);
+});
+
+test('collectPlaces: a table in a list item is no text of the item; each of its rows is a place', () => {
+  const root = rootWith('<ul>\n<li>Ein Punkt mit Tabelle\n' + tableHtml(['Kopf'], [['Zeile eins'], ['Zeile zwei']]) + 'und danach</li>\n</ul>\n');
+  assert.deepEqual(places(root.innerHTML), [['li', 'Ein Punkt mit Tabelle und danach'], ['tr', 'Kopf'], ['tr', 'Zeile eins'], ['tr', 'Zeile zwei']]);
+  // The item's hit around the table is two ranges, the table in neither.
+  assert.deepEqual(rowHits(root, 'Tabelle und').map(h => h.ranges), [['Tabelle', 'und']]);
+});
+
+test('collectPlaces: the text of every row is filterRowText() of the row, over a varied table', () => {
+  const ref = n => '<sup class="dokufix-fn-host"><a href="#footnote-back-' + n + '" data-footnote-ref="">' + n + '</a><span class="dokufix-fn-preview" aria-hidden="true">Vorschau ' + n + '</span></sup>';
+  const html = '<div class="dokufix-facets"><fieldset class="dokufix-facet-bar"><legend>Art</legend><div class="dokufix-facet-controls"><label><input type="radio" class="dokufix-facet-0" checked>Alle <span class="dokufix-facet-count">5</span></label></div></fieldset>' +
+    '<div class="dokufix-filter" ' + TRANSIENT_ATTR + '><input type="search" class="dokufix-filter-input"><span class="dokufix-filter-count">5 Zeilen</span></div>' +
+    '<div class="dokufix-table"><table>\n<thead>\n<tr>\n<th>Baustein</th>\n<th align="left">Art</th>\n<th>  Geschrieben   als </th>\n</tr>\n</thead>\n<tbody>' +
+    '<tr class="dokufix-facet-row dokufix-facet-1">\n<td>Hinweis<br><em class="dokufix-cell-sub">fünf Marken</em></td>\n<td>Block</td>\n<td>Zitat mit <strong>Marke</strong>' + ref(1) + '</td>\n</tr>\n' +
+    '<tr>\n<td><code>🟢 Live</code> seit<br>gestern</td>\n<td><a href="#x">Text</a></td>\n<td></td>\n</tr>\n' +
+    '<tr>\n<td></td>\n<td></td>\n<td></td>\n</tr>\n' +
+    '<tr>\n<td>flüchtig<span ' + TRANSIENT_ATTR + '>weg</span>da</td>\n<td><p>Absatz</p>\n<ul>\n<li>Punkt</li>\n</ul></td>\n<td><table><tbody><tr><td>in</td><td>nen<code>🔴 Aus</code></td></tr></tbody></table></td>\n</tr>\n' +
+    '<tr>\n<td colspan="2"> 😀 İ <!-- Kommentar --> ẞ </td>\n<td><fieldset class="dokufix-facet-bar"><legend>X</legend>Alle 3</fieldset>Rest' + ref(2) + '.</td>\n</tr>\n' +
+    '</tbody><tfoot><tr><td>Summe</td><td>5</td><td></td></tr></tfoot></table></div></div>\n';
+  const root = rootWith(html);
+  buildChips(root);
+  const rows = Array.from(root.querySelectorAll('tr')).filter(tr => !tr.parentNode.closest('td, th'));
+  const places = collectPlaces(root);
+  assert.deepEqual(places.map(p => p.el), rows.filter(tr => filterRowText(tr)), 'every row with text is a place, a nested row none');
+  for (const place of places) assert.equal(place.text, filterRowText(place.el));
+  assert.equal(places.length, 6);
+  // The map holds as for every place: each unit from the character of a text node.
+  for (const { text, map } of places){
+    assert.equal(map.nodes.length, text.length);
+    for (let i = 0; i < text.length; i++){
+      if (text[i] !== ' ') assert.equal(map.nodes[i].data[map.offsets[i]], text[i], text + ' at ' + i);
+    }
+  }
+});
+
+test('the kind of a row is no text of it: "Tabelle" finds no row that does not hold it, and the hits count the row text alone', () => {
+  const root = rootWith(tableHtml(['Art'], [['Karten'], ['Tabelle und Tabelle']]));
+  const found = collectPlaces(root).filter(p => findHits('Tabelle', p.text).length);
+  assert.deepEqual(found.map(p => [p.text, findHits('Tabelle', p.text)]), [['Tabelle und Tabelle', [{ start: 0, end: 7 }, { start: 12, end: 19 }]]]);
+  assert.deepEqual(excerpt(found[0].text, findHits('Tabelle', found[0].text), 160).text, 'Tabelle und Tabelle');
 });
 
 // ---------- the results under their headings (story 4) ----------
@@ -613,4 +727,16 @@ test('the hits are highlighted through the CSS Custom Highlight API, where the b
   const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
   assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
   assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
+});
+
+test('a row\'s result says its kind before its text, and a hidden row says so after it, both no text of the place; a filter changed while the panel is open searches again', () => {
+  const js = read('app/search.js'), css = read('search.css');
+  assert.match(js, /kind\.className = 'search-kind';\s*kind\.textContent = place\.kind \+ ': ';/);
+  assert.match(js, /const HIDDEN_NOTE = ' \(ausgeblendet\)';/);
+  // Hidden is what a filter hides: the free-text filter's class, or no box in a facet table; a row without a box elsewhere is not.
+  assert.match(js, /row\.classList\.contains\(FILTER_OUT_CLASS\) \|\|\s*\(!!row\.closest\('\.' \+ FACETS_CLASS\) && !row\.getClientRects\(\)\.length\)/);
+  assert.match(js, /document\.addEventListener\('input', onFilter\);\s*document\.addEventListener\('change', onFilter\);/);
+  assert.match(css, /^\.search-kind,\.search-hidden\{/m);
+  // filter.js is not changed for it: the search reads the filter's classes, the filter knows nothing of the search.
+  assert.doesNotMatch(read('app/filter.js'), /search(-places)?\.js|collectPlaces|registerSearch/);
 });
