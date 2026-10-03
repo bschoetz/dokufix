@@ -26,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { MARKERS, BLOCKS, readMarker, judgeMarker, refusedMarker, applyMarkers } from '../src/app/markers.js';
 import {
-  FACETS, FACET_MAX, FACETS_CLASS, FACET_BAR_CLASS, FACET_COUNT_CLASS, FACET_ROW_CLASS, FACET_ALL, FACET_EMPTY, FACET_REFUSALS,
+  FACETS, FACET_MAX, FACETS_CLASS, FACET_BAR_CLASS, FACET_CONTROLS_CLASS, FACET_COUNT_CLASS, FACET_ROW_CLASS, FACET_ALL, FACET_EMPTY, FACET_REFUSALS,
   facetKeyClass, facetGroupName, findFacetColumn, groupFacetValues, planFacets, facetValue, buildFacets,
 } from '../src/app/facets.js';
 import { buildChips } from '../src/app/chips.js';
@@ -75,7 +75,7 @@ function describe(group){
   const bar = group.querySelector(':scope > fieldset.' + FACET_BAR_CLASS);
   return {
     legend: bar.querySelector(':scope > legend').textContent,
-    controls: Array.from(bar.querySelectorAll(':scope > label')).map(label => {
+    controls: Array.from(bar.querySelectorAll(':scope > .dokufix-facet-controls > label')).map(label => {
       const input = label.querySelector(':scope > input');
       const count = label.querySelector(':scope > .' + FACET_COUNT_CLASS);
       const text = Array.from(label.childNodes).filter(n => n.nodeType === 3).map(n => n.data).join('');
@@ -149,6 +149,9 @@ test('facets: one control per distinct value of the column with its row count, i
   assert.equal(root.lastChild.data, '\n', 'the line break behind the table stays behind the group');
   assert.equal(FACETS_CLASS, 'dokufix-facets');
   assert.equal(FACET_BAR_CLASS, 'dokufix-facet-bar');
+  assert.equal(FACET_CONTROLS_CLASS, 'dokufix-facet-controls');
+  // The bar holds the legend and one container with every control, in that order.
+  assert.deepEqual(Array.from(group.querySelector('fieldset').children).map(c => c.tagName + '.' + c.className), ['LEGEND.', 'DIV.dokufix-facet-controls']);
   assert.equal(FACET_ROW_CLASS, 'dokufix-facet-row');
   assert.equal(FACET_COUNT_CLASS, 'dokufix-facet-count');
   assert.equal(FACET_ALL, 'Alle');
@@ -244,7 +247,7 @@ test('markup in a heading or a cell is text in legend and control: no element is
   assert.deepEqual(pills(group), ['Alle 2', '<b>neu</b> 1', 'A & B 1']);
   const bar = group.querySelector('fieldset');
   assert.equal(bar.querySelectorAll('img, b, script').length, 0);
-  assert.deepEqual([...new Set(Array.from(bar.querySelectorAll('*')).map(el => el.tagName))].sort(), ['INPUT', 'LABEL', 'LEGEND', 'SPAN']);
+  assert.deepEqual([...new Set(Array.from(bar.querySelectorAll('*')).map(el => el.tagName))].sort(), ['DIV', 'INPUT', 'LABEL', 'LEGEND', 'SPAN']);
   assert.ok(bar.innerHTML.includes('&lt;img src=x onerror=alarm()&gt;'), bar.innerHTML);
   // Markup that is markup in the cell, written as HTML, is read as its text.
   const raw = passOver(marker('facets B') + '<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody><tr><td>1</td><td><a href="https://example.org" onclick="alarm()">Verweis</a></td></tr></tbody></table>');
@@ -506,6 +509,15 @@ test('neither the wrapper of a table nor the group of a facet filter is position
   assert.match(ruleOf(bare, '.dokufix-doc table')['font-size'], /^14px$/);
   assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-table > table')['margin-bottom'], '0');
 });
+test('the controls are a flex container of their own beside the floating legend: every line of them starts beside the legend', () => {
+  assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-facet-bar legend').float, 'left');
+  const controls = ruleOf(bare, '.dokufix-doc .dokufix-facet-controls');
+  assert.ok(controls, 'a rule for the container');
+  assert.equal(controls.display, 'flex');
+  assert.equal(controls['flex-wrap'], 'wrap');
+  assert.equal(controls.gap, '6px');
+  assert.equal(ruleOf(bare, '.dokufix-doc .dokufix-facet-bar label').margin, '0', 'the gap is the container\'s');
+});
 test('the radio button is hidden from the eye, not from the keyboard, and placed against its label', () => {
   const input = ruleOf(bare, '.dokufix-doc .dokufix-facet-bar input');
   assert.ok(input, 'a rule for the radio button');
@@ -534,7 +546,7 @@ test('the built file carries the rules: one hiding selector per value, the bar, 
   for (let key = 1; key <= FACET_MAX; key++) assert.equal(block[1].split(hidingSelector(key)).length - 1, 1, 'key ' + key);
   assert.ok(!block[1].includes('.dokufix-facet-' + (FACET_MAX + 1) + ':'));
   assert.ok(block[1].includes('@media not print{@supports selector(:has(a)){.dokufix-doc .dokufix-facet-bar{display:block}'));
-  for (const name of ['.dokufix-facet-bar{display:none', '.dokufix-facet-bar legend{', '.dokufix-facet-bar label{', '.dokufix-facet-bar input{', '.dokufix-facet-count{']){
+  for (const name of ['.dokufix-facet-bar{display:none', '.dokufix-facet-bar legend{', '.dokufix-facet-controls{display:flex;flex-wrap:wrap;gap:6px', '.dokufix-facet-bar label{', '.dokufix-facet-bar input{', '.dokufix-facet-count{']){
     assert.ok(block[1].includes(name), name);
   }
   assert.ok(built.includes('name:"facets"'), 'the entry of the marker');

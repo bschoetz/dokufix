@@ -1247,7 +1247,13 @@ const tableFacts = page => page.evaluate(() => {
     }),
     facets: Array.from(root.querySelectorAll('.dokufix-facets')).map(group => {
       const bar = group.querySelector(':scope > fieldset.dokufix-facet-bar');
-      const labels = bar ? Array.from(bar.querySelectorAll(':scope > label')) : [];
+      const labels = bar ? Array.from(bar.querySelectorAll(':scope > .dokufix-facet-controls > label')) : [];
+      // Where each line of controls starts: the left edge of the first label
+      // of every line. All lines start at one place, beside the legend.
+      const legendBox = bar && bar.querySelector(':scope > legend') ? bar.querySelector(':scope > legend').getBoundingClientRect() : null;
+      const starts = [];
+      let lineTop = null;
+      for (const label of labels){ const r = label.getBoundingClientRect(); if (lineTop === null || r.top > lineTop + 1){ starts.push(Math.round(r.left * 10) / 10); lineTop = r.top; } }
       const rows = Array.from(group.querySelectorAll('tr.dokufix-facet-row'));
       const controls = labels.map(label => {
         const input = label.querySelector(':scope > input'), count = label.querySelector(':scope > .dokufix-facet-count');
@@ -1273,6 +1279,7 @@ const tableFacts = page => page.evaluate(() => {
         // (An empty style attribute is the harness's: Playwright leaves one on
         // an input it has looked at. An id inside a cell is the author's.)
         inline: group.querySelectorAll('style').length + [group, ...(bar ? bar.querySelectorAll('*') : []), ...rows].filter(el => el.hasAttribute('id') || (el.getAttribute('style') || '').trim()).length,
+        lines: starts, legendRight: legendBox ? Math.round(legendBox.right * 10) / 10 : null,
         controls, keys: rows.map(tr => Number((tr.className.match(/dokufix-facet-(\d+)/) || [0, -1])[1])),
         shown: rows.map(tr => getComputedStyle(tr).display !== 'none'),
         // The table is below the controls, and as wide as it would be without them.
@@ -1287,7 +1294,7 @@ const tableFacts = page => page.evaluate(() => {
 const walkFacets = page => page.evaluate(() => {
   const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
   return Array.from(root.querySelectorAll('.dokufix-facets')).map(group => {
-    const labels = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > label'));
+    const labels = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > .dokufix-facet-controls > label'));
     const rows = Array.from(group.querySelectorAll('tr.dokufix-facet-row'));
     const state = () => ({ chosen: labels.map((l, i) => l.querySelector('input').checked ? i : -1).filter(i => i >= 0), shown: rows.map(tr => getComputedStyle(tr).display !== 'none') });
     const steps = labels.map(label => { label.click(); return state(); });
@@ -1300,7 +1307,7 @@ const walkFacets = page => page.evaluate(() => {
 const facetState = (page, g) => page.evaluate(g => {
   const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
   const group = root.querySelectorAll('.dokufix-facets')[g];
-  const inputs = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > label > input'));
+  const inputs = Array.from(group.querySelectorAll(':scope > .dokufix-facet-bar > .dokufix-facet-controls > label > input'));
   return {
     chosen: inputs.findIndex(i => i.checked), focused: inputs.indexOf(document.activeElement),
     shown: Array.from(group.querySelectorAll('tr.dokufix-facet-row')).map(tr => getComputedStyle(tr).display !== 'none'),
@@ -1318,7 +1325,7 @@ async function assertFacetChoosing(page, check, exp, what){
   const g = exp.facets.findIndex(f => f.controls.length > 2);
   if (g < 0) return;
   const facet = exp.facets[g], n = facet.controls.length;
-  const label = k => page.locator('.dokufix-facets').nth(g).locator('.dokufix-facet-bar > label').nth(k);
+  const label = k => page.locator('.dokufix-facets').nth(g).locator('.dokufix-facet-bar > .dokufix-facet-controls > label').nth(k);
   await label(1).click({ timeout: 5000 }).catch(() => {});
   const clicked = await facetState(page, g);
   check(what + 'a click on the control of a value chooses it, and only the rows with that value are shown',
@@ -1391,7 +1398,7 @@ async function assertTables(page, check, exp, key){
   // As the file opens: a facet was chosen in the page while it was written.
   const opened = groups.filter(x => !(x.controls[0].checked && x.controls.filter(c => c.checked).length === 1 && x.controls.filter(c => c.attribute).length === 1 && x.controls[0].attribute && x.shown.every(Boolean)));
   check('as the file opens, every facet filter has the control for all rows chosen, by its attribute alone, and shows all rows', opened.length === 0, json(opened.map(x => [x.legend, x.controls.map(c => [c.checked, c.attribute]), x.shown])));
-  const built = groups.filter((x, g) => !(x.children === 'fieldset.dokufix-facet-bar div.dokufix-table' && x.elements === 'input label legend span' && x.inline === 0 &&
+  const built = groups.filter((x, g) => !(x.children === 'fieldset.dokufix-facet-bar div.dokufix-table' && x.elements === 'div input label legend span' && x.inline === 0 &&
     x.controls.every((c, k) => c.type === 'radio' && c.key === String(k) && c.name === groups[g].controls[0].name) && groups.filter(y => y.controls[0].name === x.controls[0].name).length === 1));
   check('every facet filter is a group of radio buttons of its own, each in its label, above the wrapper of its table; the keys count from 0; nothing an author wrote became an element; no <style>, no inline style, no id',
     built.length === 0 && f.alarm === 'undefined', json(built.map(x => [x.children, x.elements, x.inline, x.controls.map(c => [c.type, c.key, c.name])])) + '; a handler ran: ' + (f.alarm !== 'undefined'));
@@ -1399,6 +1406,19 @@ async function assertTables(page, check, exp, key){
   const look = controls.filter(c => !(c.visible && c.pill === 'inline-block relative ' + FACET_PILL.radius && c.hidden && /monospace/.test(c.countFont) &&
     (c.checked ? c.border === FACET_PILL.chosen && c.ring === FACET_PILL.ringChosen : c.border === FACET_PILL.border && c.ring === FACET_PILL.ring)));
   const bars = groups.filter(x => !(x.bar === 'block' && x.barVisible && x.below && x.holds === 'static none none none none normal auto none'));
+  // Every line of controls starts at the same place, right of the legend.
+  // Measured here and in a narrow window, where the controls of a filter
+  // with many values take more than one line: two of the reference
+  // document's do at 600 px.
+  const misaligned = facets => facets.filter(x => !(x.lines.length > 0 && x.lines.every(left => left === x.lines[0]) && x.legendRight !== null && x.lines[0] >= x.legendRight));
+  await page.setViewportSize({ width: TABLES_NARROW, height: 1000 });
+  await page.waitForTimeout(100);
+  const narrowFacets = (await tableFacts(page)).facets;
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.waitForTimeout(100);
+  check('every line of controls starts at the same place, beside the legend, at 1400 px and at ' + TABLES_NARROW + ' px (' + narrowFacets.filter(x => x.lines.length > 1).length + ' filter(s) take more than one line there)',
+    misaligned(groups).length === 0 && misaligned(narrowFacets).length === 0,
+    JSON.stringify([...groups, ...narrowFacets].map(x => [x.legend, x.legendRight, x.lines])));
   check('the controls are styled: the bar shown above the table, each control a pill, the radio button not seen and placed against its label, the chosen one with a dark border and a filled ring; the group not positioned',
     look.length === 0 && bars.length === 0, json(look.map(c => [c.text, c.visible, c.pill, c.border, c.ring, c.hidden, c.countFont])) + ' ' + json(bars.map(x => [x.legend, x.bar, x.barVisible, x.below, x.holds])));
 
@@ -1419,7 +1439,7 @@ async function assertTables(page, check, exp, key){
   if (g >= 0){
     const choose = k => page.evaluate(([g, k]) => {
       const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
-      root.querySelectorAll('.dokufix-facets')[g].querySelectorAll('.dokufix-facet-bar > label')[k].click();
+      root.querySelectorAll('.dokufix-facets')[g].querySelectorAll('.dokufix-facet-bar > .dokufix-facet-controls > label')[k].click();
     }, [g, k]);
     await choose(1);
     const screen = await facetState(page, g);

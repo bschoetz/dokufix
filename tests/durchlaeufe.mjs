@@ -312,9 +312,9 @@ const facts = page => page.evaluate(() => {
     // the attribute "checked", which rows are shown, whether the bar is.
     tables: container.querySelectorAll('table').length + ' tables, ' + container.querySelectorAll('.dokufix-table > table').length + ' wrapped',
     facets: Array.from(container.querySelectorAll('.dokufix-facets')).map(group => {
-      const inputs = Array.from(group.querySelectorAll('.dokufix-facet-bar > label > input'));
+      const inputs = Array.from(group.querySelectorAll('.dokufix-facet-bar > .dokufix-facet-controls > label > input'));
       return {
-        controls: Array.from(group.querySelectorAll('.dokufix-facet-bar > label')).map(l => l.textContent).join('|'),
+        controls: Array.from(group.querySelectorAll('.dokufix-facet-bar > .dokufix-facet-controls > label')).map(l => l.textContent).join('|'),
         chosen: inputs.map((x, k) => x.checked ? k : -1).filter(k => k >= 0), attribute: inputs.map((x, k) => x.hasAttribute('checked') ? k : -1).filter(k => k >= 0),
         shown: Array.from(group.querySelectorAll('tr.dokufix-facet-row')).map(tr => getComputedStyle(tr).display !== 'none'),
         bar: getComputedStyle(group.querySelector('.dokufix-facet-bar')).display,
@@ -588,7 +588,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       // Chooses the control at this place in the first filter of the page, through its label.
       const choose = (page, k) => page.evaluate(k => {
         const container = document.querySelector('#preview') || document.querySelector('main.reader-body #d') || document.querySelector('main.reader-body');
-        container.querySelectorAll('.dokufix-facets .dokufix-facet-bar > label')[k].click();
+        container.querySelectorAll('.dokufix-facets .dokufix-facet-bar > .dokufix-facet-controls > label')[k].click();
       }, k);
       const all = FACET_ROWS_CHOSEN.map(() => true);
       const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);

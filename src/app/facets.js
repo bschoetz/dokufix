@@ -15,15 +15,22 @@ import { CHIP_STATUS_CLASS } from './chips.js';
 //   <div class="dokufix-facets">
 //   <fieldset class="dokufix-facet-bar">
 //   <legend>Typ</legend>
+//   <div class="dokufix-facet-controls">
 //   <label><input type="radio" name="dokufix-facet-1" class="dokufix-facet-0" checked>Alle <span class="dokufix-facet-count">3</span></label>
 //   <label><input type="radio" name="dokufix-facet-1" class="dokufix-facet-1">Text <span class="dokufix-facet-count">2</span></label>
 //   <label><input type="radio" name="dokufix-facet-1" class="dokufix-facet-2">Liste <span class="dokufix-facet-count">1</span></label>
+//   </div>
 //   </fieldset>
 //   <table> … <tr class="dokufix-facet-row dokufix-facet-1"> … </table>
 //   </div>
 //
 // The marker is read and applied in markers.js; this module is the entry for
 // its list and what the component does to its block.
+//
+// The controls stand in a container of their own beside the legend: the
+// legend floats, and a container that is a formatting context of its own
+// stands beside it as a whole, so that every line of controls starts at the
+// same place and not the second one at the left edge below the legend.
 //
 // It filters without JavaScript. The document styles (src/doc.css) hold one
 // fixed rule per key, "where the control with key 7 is chosen, a data row
@@ -48,6 +55,7 @@ export const FACET_MAX = 16;
 
 export const FACETS_CLASS = 'dokufix-facets';
 export const FACET_BAR_CLASS = 'dokufix-facet-bar';
+export const FACET_CONTROLS_CLASS = 'dokufix-facet-controls';
 export const FACET_COUNT_CLASS = 'dokufix-facet-count';
 export const FACET_ROW_CLASS = 'dokufix-facet-row';
 // The class a control and its rows share. Key 0 is the control for all rows.
@@ -230,8 +238,11 @@ export function buildFacets(table, argument){
   bar.className = FACET_BAR_CLASS;
   const legend = doc.createElement('legend');
   legend.textContent = plan.legend;
-  bar.append(legend, buildControl(doc, name, 0, FACET_ALL, body.length));
-  for (const group of plan.groups) bar.append(buildControl(doc, name, group.key, group.label, group.count));
+  const controls = doc.createElement('div');
+  controls.className = FACET_CONTROLS_CLASS;
+  controls.append(buildControl(doc, name, 0, FACET_ALL, body.length));
+  for (const group of plan.groups) controls.append(buildControl(doc, name, group.key, group.label, group.count));
+  bar.append(legend, controls);
 
   const group = doc.createElement('div');
   group.className = FACETS_CLASS;
