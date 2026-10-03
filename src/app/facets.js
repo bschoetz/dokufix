@@ -51,7 +51,7 @@ import { CHIP_STATUS_CLASS } from './chips.js';
 
 // How many distinct values a column may have. One rule per value stands in
 // src/doc.css, in every file; tests/facets.test.mjs holds the two together.
-export const FACET_MAX = 16;
+export const FACET_MAX = 32;
 
 export const FACETS_CLASS = 'dokufix-facets';
 export const FACET_BAR_CLASS = 'dokufix-facet-bar';

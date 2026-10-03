@@ -95,7 +95,7 @@ const W = {
   noColumn: written => 'Die Markierung „' + written + '“ nennt keine Spalte.',
   noHeader: written => 'Die Markierung „' + written + '“ braucht eine Tabelle mit Kopfzeile.',
   unknownColumn: written => 'Die Markierung „' + written + '“ nennt eine Spalte, die die Tabelle nicht hat.',
-  tooMany: (written, count) => 'Die Markierung „' + written + '“ trifft auf ' + count + ' verschiedene Werte in ihrer Spalte; mehr als 16 kann sie nicht filtern.',
+  tooMany: (written, count) => 'Die Markierung „' + written + '“ trifft auf ' + count + ' verschiedene Werte in ihrer Spalte; mehr als 32 kann sie nicht filtern.',
   nested: written => 'Die Markierung „' + written + '“ steht in einer Tabelle, die schon gefiltert wird.',
   list: written => 'Die Markierung „' + written + '“ erwartet direkt danach eine Aufzählung.',
   twice: written => 'Die Markierung „' + written + '“ steht mehr als einmal vor demselben Block.',
@@ -112,7 +112,7 @@ test('the entry: "facets" before a table, handed what follows its name', () => {
   // No column named is the component's to refuse, not the list's.
   assert.ok(judgeMarker(readMarker('dokufix: facets'), 'TABLE').entry === FACETS);
   assert.deepEqual(judgeMarker(readMarker('dokufix: facets Typ'), 'UL'), { warning: W.table('dokufix: facets Typ') });
-  assert.equal(FACET_MAX, 16);
+  assert.equal(FACET_MAX, 32);
 });
 
 // ---------- the controls ----------
@@ -326,7 +326,7 @@ const REFUSED = [
   ['a table without a header row', marker('facets Typ') + '<table><tbody><tr><td>A</td><td>Typ</td></tr><tr><td>1</td><td>x</td></tr></tbody></table>\n', W.noHeader('dokufix: facets Typ')],
   ['a table whose first row mixes <th> and <td>', marker('facets Typ') + '<table><tr><th>A</th><td>Typ</td></tr><tr><td>1</td><td>x</td></tr></table>\n', W.noHeader('dokufix: facets Typ')],
   ['a <thead> without a row', marker('facets Typ') + '<table><thead></thead><tbody><tr><th>A</th><th>Typ</th></tr></tbody></table>\n', W.noHeader('dokufix: facets Typ')],
-  ['more distinct values than there are rules: 17', marker('facets Nr') + table(['Nr', 'B'], Array.from({ length: 17 }, (x, i) => ['Regal ' + (i + 1), 'x'])), W.tooMany('dokufix: facets Nr', 17)],
+  ['more distinct values than there are rules: ' + (FACET_MAX + 1), marker('facets Nr') + table(['Nr', 'B'], Array.from({ length: FACET_MAX + 1 }, (x, i) => ['Regal ' + (i + 1), 'x'])), W.tooMany('dokufix: facets Nr', FACET_MAX + 1)],
 ];
 for (const [name, html, want] of REFUSED){
   test('a warning at the marker\'s place, the table as it was: ' + name, t => {
@@ -422,7 +422,7 @@ test('planFacets: what the marker comes to on a table given as texts', () => {
   assert.deepEqual(planFacets('  ', ['Name', 'Art'], valuesOf), { warning: FACET_REFUSALS.noColumn });
   assert.deepEqual(planFacets('Art', null, valuesOf), { warning: FACET_REFUSALS.noHeader });
   assert.deepEqual(planFacets('Tpy', ['Name', 'Art'], valuesOf), { warning: FACET_REFUSALS.unknownColumn });
-  assert.deepEqual(planFacets('n', ['n'], () => Array.from({ length: 20 }, (x, i) => String(i))), { warning: FACET_REFUSALS.tooMany(20) });
+  assert.deepEqual(planFacets('n', ['n'], () => Array.from({ length: 40 }, (x, i) => String(i))), { warning: FACET_REFUSALS.tooMany(40) });
 });
 
 // ---------- with the pass "Tabellen" behind it, as in render.js ----------

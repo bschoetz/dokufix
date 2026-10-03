@@ -406,7 +406,23 @@
       .dokufix-doc .dokufix-facets:has(.dokufix-facet-13:checked) .dokufix-facet-row:not(.dokufix-facet-13),
       .dokufix-doc .dokufix-facets:has(.dokufix-facet-14:checked) .dokufix-facet-row:not(.dokufix-facet-14),
       .dokufix-doc .dokufix-facets:has(.dokufix-facet-15:checked) .dokufix-facet-row:not(.dokufix-facet-15),
-      .dokufix-doc .dokufix-facets:has(.dokufix-facet-16:checked) .dokufix-facet-row:not(.dokufix-facet-16){display:none}
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-16:checked) .dokufix-facet-row:not(.dokufix-facet-16),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-17:checked) .dokufix-facet-row:not(.dokufix-facet-17),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-18:checked) .dokufix-facet-row:not(.dokufix-facet-18),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-19:checked) .dokufix-facet-row:not(.dokufix-facet-19),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-20:checked) .dokufix-facet-row:not(.dokufix-facet-20),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-21:checked) .dokufix-facet-row:not(.dokufix-facet-21),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-22:checked) .dokufix-facet-row:not(.dokufix-facet-22),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-23:checked) .dokufix-facet-row:not(.dokufix-facet-23),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-24:checked) .dokufix-facet-row:not(.dokufix-facet-24),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-25:checked) .dokufix-facet-row:not(.dokufix-facet-25),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-26:checked) .dokufix-facet-row:not(.dokufix-facet-26),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-27:checked) .dokufix-facet-row:not(.dokufix-facet-27),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-28:checked) .dokufix-facet-row:not(.dokufix-facet-28),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-29:checked) .dokufix-facet-row:not(.dokufix-facet-29),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-30:checked) .dokufix-facet-row:not(.dokufix-facet-30),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-31:checked) .dokufix-facet-row:not(.dokufix-facet-31),
+      .dokufix-doc .dokufix-facets:has(.dokufix-facet-32:checked) .dokufix-facet-row:not(.dokufix-facet-32){display:none}
     }
   }
 

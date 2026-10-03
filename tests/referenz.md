@@ -426,6 +426,22 @@ Mehr verschiedene Werte, als sich filtern lassen:
 | Regal 15 | Religion |
 | Regal 16 | Philosophie |
 | Regal 17 | Kinderbuch |
+| Regal 18 | Comic |
+| Regal 19 | Hörbuch |
+| Regal 20 | Reise |
+| Regal 21 | Kochen |
+| Regal 22 | Garten |
+| Regal 23 | Handwerk |
+| Regal 24 | Film |
+| Regal 25 | Spiele |
+| Regal 26 | Fotografie |
+| Regal 27 | Astronomie |
+| Regal 28 | Mathematik |
+| Regal 29 | Informatik |
+| Regal 30 | Pädagogik |
+| Regal 31 | Psychologie |
+| Regal 32 | Politik |
+| Regal 33 | Lyrik |
 
 ---
 
