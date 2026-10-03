@@ -427,7 +427,7 @@ const editorReady = () => !!document.querySelector('#dokufix-rail.has-items');
 const READY = {
   'mit-editor': editorReady,
   'nur-lesen': () => true,
-  'schlank': () => !document.querySelector('[data-gz]'),
+  'schlank': () => !document.querySelector('[data-gz], [data-gz-href]'),
   'kompakt': () => { const d = document.getElementById('d'); return !!d && d.children.length > 0 && !document.querySelector('.dokufix-rail-pending'); },
 };
 // Presses a button that ends in a render and waits for the render: a marker

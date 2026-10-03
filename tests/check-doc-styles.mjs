@@ -80,7 +80,9 @@ const railAllowed = sel => /\.has-items\b/.test(sel) || /\ba\.active\b/.test(sel
 // uses too, or one of its dokufix- names, because they style something else:
 // the editor's version dialog, and the "diagram needs JavaScript" notice of the
 // schlank export, which stands only where scripts are off.
-const ALLOWED_OUTSIDE = new Set(['.version-modal[open]', '.dokufix-diagram-svg[data-gz]', '.dokufix-diagram-svg[data-gz]::before']);
+const ALLOWED_OUTSIDE = new Set(['.version-modal[open]', '.dokufix-diagram-svg[data-gz]', '.dokufix-diagram-svg[data-gz]::before',
+  // the noscript style of schlank: no line of downloads, the credit alone (story 2.10)
+  '.dokufix-diagram-downloads', '.dokufix-diagram-downloads+.dokufix-diagram-credit']);
 // The export frame, selector by selector. Anything else in READONLY_FRAME_CSS
 // fails: a rule for document content belongs into the block, and a new frame
 // rule is added here on purpose.

@@ -880,7 +880,8 @@ async function openVariant(browser, file, key, exp, width, scheme){
       document.querySelector('#preview') && document.querySelector('#preview').children.length > 0,
       exp.diagrams.filter(d => d.drawn).length, { timeout: 90000 });
   } else if (key === 'schlank'){
-    await page.waitForFunction(() => !document.querySelector('[data-gz]'), null, { timeout: 30000 });
+    // The decoder unpacks the diagrams, then the source links (story 2.10).
+    await page.waitForFunction(() => !document.querySelector('[data-gz], [data-gz-href]'), null, { timeout: 30000 });
   } else if (key === 'kompakt'){
     await page.waitForFunction(() => {
       const d = document.getElementById('d');
@@ -3016,10 +3017,11 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
         notices: Array.from(root.querySelectorAll('figure.dokufix-diagram .dokufix-diagram-svg[data-gz]')).map(h => getComputedStyle(h, '::before').content),
         svgs: root.querySelectorAll('figure.dokufix-diagram svg').length,
         credits: Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn > figcaption > a')).map(a => { const r = a.getBoundingClientRect(); return a.parentElement.textContent + ' | ' + a.textContent + ' ' + (r.width > 0 && r.height > 0); }),
-        // The source link of each diagram, outside the packed container, and no picture button.
+        // The line of each diagram: its source link packed (no href, the packed
+        // one in data-gz-href), the line not shown, no picture button; the credit beside it shown.
         sources: Array.from(root.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads')).map(line => {
-          const a = line.querySelector(':scope > a[download]'), r = a ? a.getBoundingClientRect() : { width: 0, height: 0 };
-          return (a ? a.getAttribute('download') + ' ' + a.textContent : '-') + ' ' + (r.width > 0 && r.height > 0) + ' ' + !!line.closest('[data-gz]') + ' ' + line.querySelectorAll('button').length;
+          const a = line.querySelector(':scope > a[download]'), r = line.getBoundingClientRect();
+          return (a ? a.getAttribute('download') + ' ' + a.hasAttribute('href') + ' ' + a.hasAttribute('data-gz-href') : '-') + ' ' + (r.width > 0 && r.height > 0) + ' ' + line.querySelectorAll('button').length;
         }),
       };
     });
@@ -3027,8 +3029,9 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
     check('diagrams with scripts off: each is the notice that it needs JavaScript, and every BPMN diagram keeps its credit, visible',
       f.svgs === 0 && f.notices.length === drawn.length && f.notices.every(n => n === '"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"') &&
       f.credits.length === bpmn && f.credits.every(c => c === BPMN_CREDIT_LINE + ' | ' + BPMN_CREDIT.text + ' true'), JSON.stringify(f));
-    const want = downloadNames(exp).filter((n, i) => exp.diagrams[i].drawn).map((n, i) => n + KINDS[drawn[i].kind].download.ext + ' ' + KINDS[drawn[i].kind].download.ext + ' true false 0');
-    check('diagrams with scripts off (story 2.10): every diagram keeps its source link, visible, outside the packed container, and has no picture button',
+    // Ben, 2026-10-03: in schlank the source is packed like the diagram, so with scripts off no download is offered.
+    const want = downloadNames(exp).filter((n, i) => exp.diagrams[i].drawn).map((n, i) => n + KINDS[drawn[i].kind].download.ext + ' false true false 0');
+    check('diagrams with scripts off (story 2.10): no line of downloads is shown, every source link is packed (no href), no picture button; the credit stays visible (above)',
       JSON.stringify(f.sources) === JSON.stringify(want), JSON.stringify(f.sources) + ', expected ' + JSON.stringify(want));
   } finally {
     await context.close();
@@ -3092,10 +3095,22 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
   check('downloads: two diagrams never share a name, the same title gets -2', new Set(lower).size === lower.length, json(names));
   const wrong = lines.map((l, i) => l && l.content !== null ? sourceProblem(drawn[i], l.content) : 'no content').map((p, i) => p ? names[i] + ': ' + p : '').filter(Boolean);
   check('downloads: every source, read through its data: URL, is the block\'s text, byte for byte; BPMN laid out by dokufix its XML with the diagram part (BPMNShape)', wrong.length === 0, wrong.join(' | '));
-  if (key === 'nur-lesen' || key === 'schlank'){
+  if (key === 'nur-lesen'){
     // As the file writes it: the attribute holds the minimal encoding, nothing escaped.
     const verbatim = drawn.map((d, i) => d.laidOut ? '' : (text.includes('href="' + sourceDataUrl(d.source + '\n', KINDS[d.kind].download.mime) + '"') ? '' : names[i])).filter(Boolean);
     check('downloads: the file writes each source link as the minimal encoding of the block\'s text, nothing escaped', verbatim.length === 0, verbatim.join(', '));
+  }
+  if (key === 'schlank'){
+    // Packed (Ben, 2026-10-03): each link in the file has no href and its
+    // packed one in data-gz-href; no source stands in the file as text.
+    const esc = n => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const packed = names.map((n, i) => {
+      const m = text.match(new RegExp('<a download="' + esc(n + KINDS[drawn[i].kind].download.ext) + '"([^>]*)>'));
+      return m && / data-gz-href="[A-Za-z0-9+/=]+"/.test(m[1]) && !/ href=/.test(m[1]) ? '' : n + ': ' + (m ? m[0].slice(0, 120) : 'no link');
+    }).filter(Boolean);
+    const plain = drawn.filter(d => !d.laidOut && text.includes(sourceDataUrl(d.source + '\n', KINDS[d.kind].download.mime))).map(d => d.title);
+    check('downloads: schlank writes every source link packed, no href, its source gzipped in data-gz-href, and no source as text', packed.length === 0 && plain.length === 0 && !/<a download="[^"]*" href="data:/.test(text),
+      packed.concat(plain).join(' | '));
   }
   const buttons = lines.filter(l => l && l.button);
   if (PICTURED.has(key)){

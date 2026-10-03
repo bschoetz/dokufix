@@ -393,13 +393,17 @@ function slimDecoder(){
   assert.ok(m[1].includes('${UNPACKED_EVENT}'), 'the decoder names the event by the constant of search.js');
   return m[1].replace('${UNPACKED_EVENT}', UNPACKED_EVENT);
 }
-test('the reader bundle with the real decoder of schlank: one diagram unpacks, one does not; the event comes once, and the waiting search runs', async () => {
+test('the reader bundle with the real decoder of schlank: one diagram unpacks, one does not, and so do two source links; the event comes once, and the waiting search runs', async () => {
   const code = readerBlock(fs.readFileSync(committed, 'utf8'));
   const svg = '<svg xmlns="http://www.w3.org/2000/svg"><text>Diagramm</text></svg>';
   const good = zlib.gzipSync(svg).toString('base64');
+  const href = 'data:text/plain;charset=utf-8,flowchart LR%0A  A --%3E B%0A';
   const content = '<p>Eine Tabelle.</p>' +
     '<figure class="dokufix-diagram"><div class="dokufix-diagram-svg" data-gz="' + good + '"></div></figure>' +
     '<figure class="dokufix-diagram"><div class="dokufix-diagram-svg" data-gz="bm9jaCBrZWluIGd6aXA="></div></figure>' +
+    // The source links below diagrams, packed by schlank (story 2.10): one that unpacks, one that does not.
+    '<figure class="dokufix-diagram"><div class="dokufix-diagram-downloads"><a download="A.mmd" data-gz-href="' + zlib.gzipSync(href).toString('base64') + '">.mmd</a></div></figure>' +
+    '<figure class="dokufix-diagram"><div class="dokufix-diagram-downloads"><a download="B.mmd" data-gz-href="bm9jaCBrZWluIGd6aXA=">.mmd</a></div></figure>' +
     '<p>Noch eine Tabelle.</p>';
   // As in the file: the bundle first, then the decoder.
   const { document, window, panel } = runReader(code, content);
@@ -414,7 +418,10 @@ test('the reader bundle with the real decoder of schlank: one diagram unpacks, o
   await new Promise(resolve => setTimeout(resolve, 50));
   const boxes = document.querySelectorAll('.dokufix-diagram-svg');
   assert.ok(!boxes[0].hasAttribute('data-gz') && boxes[0].innerHTML === svg, 'the first diagram is unpacked');
-  assert.ok(boxes[1].hasAttribute('data-gz') && failures.length === 1 && /SVG decode failed/.test(failures[0]), 'the second stays packed, its failure on the console');
+  assert.ok(boxes[1].hasAttribute('data-gz') && /SVG decode failed/.test(failures[0]), 'the second stays packed, its failure on the console');
+  const links = document.querySelectorAll('.dokufix-diagram-downloads > a');
+  assert.ok(links[0].getAttribute('href') === href && !links[0].hasAttribute('data-gz-href'), 'the first source link has its href back');
+  assert.ok(!links[1].hasAttribute('href') && links[1].hasAttribute('data-gz-href') && failures.length === 2 && /Source link decode failed/.test(failures[1]), 'the second stays packed, its failure on the console');
   assert.equal(events, 1, 'the event comes once');
   assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen in 1 Abschnitt', 'the waiting search ran on the event');
 });
