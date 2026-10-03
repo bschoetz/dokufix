@@ -1,5 +1,5 @@
 import { findHits, excerpt, tooShort } from './search-match.js';
-import { collectPlaces, groupResults, nodeRanges } from './search-places.js';
+import { collectPlaces, groupResults, nodeRanges, KIND_META, KIND_CODE } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
@@ -18,12 +18,18 @@ import { TABLE_CLASS } from './tables.js';
 // stays at the top of the list while its results scroll under it. A click on
 // a result scrolls the document to its place; the panel stays open.
 //
-// A place with a kind, a table row or a diagram (search-places.js), says it
-// before its text: "Tabelle: ", "BPMN-Diagramm: " or "Mermaid-Diagramm: " in
-// a span of its own, which is no text of the place, so nothing in it is
+// A place with a kind, a table row, a diagram, the metadata panel or a code
+// block (search-places.js), says it before its text: "Tabelle: ",
+// "BPMN-Diagramm: ", "Mermaid-Diagramm: ", "Metadaten: " or "Code: " in a
+// span of its own, which is no text of the place, so nothing in it is
 // marked. A diagram's text is its labels; a click on its result scrolls the
 // start of its figure to the top of the window, and nothing in it is
-// highlighted. A row a table's filter hides, the free-text filter
+// highlighted. A click on the result of the metadata panel or of a code
+// block brings its first hit to the middle of the window, so a hit deep in a
+// tall block is in view, a code block scrolled sideways to it as well; the
+// metadata panel, a <details>, is opened first where it is closed, and stays
+// open, as if the reader had opened it. Its `open` is no part of a file: a
+// `Mit Editor` file is saved from the source, an export renders anew. A row a table's filter hides, the free-text filter
 // by its class or a facet filter by CSS alone (a row of a facet table without
 // a box), is
 // listed like any row, marked " (ausgeblendet)" after its text; a click on it
@@ -193,9 +199,30 @@ function controlsOf(row){
   return hasClass(field, FILTER_CLASS) ? field : table;
 }
 
+// Brings the first hit of a place to the middle of the window, opening the
+// place first if it is a closed <details>, the metadata panel. Where the hit
+// has no range of the document, or its range no box, the place itself.
+function centreHit(place, hit){
+  const el = place.el;
+  if (el.tagName.toUpperCase() === 'DETAILS' && !el.open) el.open = true;
+  const r = hit && nodeRanges(place.map, hit)[0];
+  if (!r){ el.scrollIntoView({ block: 'center' }); return; }
+  const range = document.createRange();
+  range.setStart(r.startNode, r.startOffset);
+  range.setEnd(r.endNode, r.endOffset);
+  // A hit with no box, inside an author's closed <details> say: the place.
+  const box = range.getBoundingClientRect(), frame = el.getBoundingClientRect();
+  if (!box.width && !box.height){ el.scrollIntoView({ block: 'center' }); return; }
+  // Sideways first: a long line of code scrolls inside its block.
+  if (box.left < frame.left || box.right > frame.right) el.scrollLeft += box.left - frame.left - (frame.width - box.width) / 2;
+  const at = range.getBoundingClientRect();
+  window.scrollBy(0, at.top + at.height / 2 - window.innerHeight / 2);
+}
+
 // A result: a button with the kind of its place, if it has one, and the part
 // of its text, which scrolls the document to the place, a diagram to its
-// start; a hidden row says so and scrolls to its table's filter controls.
+// start, the metadata panel and a code block to their first hit; a hidden
+// row says so and scrolls to its table's filter controls.
 function resultItem({ place, at }){
   const li = document.createElement('li');
   const button = document.createElement('button');
@@ -219,6 +246,7 @@ function resultItem({ place, at }){
     // The root was rendered anew since: search it again.
     if (!place.el.isConnected){ search(); return; }
     if (hasClass(place.el, DIAGRAM_CLASS)){ place.el.scrollIntoView({ block: 'start' }); return; }
+    if (place.kind === KIND_META || place.kind === KIND_CODE){ centreHit(place, at[0]); return; }
     (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });
   });
   li.append(button);

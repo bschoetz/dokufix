@@ -19,12 +19,16 @@
 // space; of story 6, table rows as places, their text that of the free-text
 // filter, their hits one range per cell; of story 7, a diagram as one place,
 // its text the labels of its SVG, its lines joined, nothing of its frame or
-// source, no range of its hits. That "/" opens the panel, the
+// source, no range of its hits; of story 8, the metadata panel and every code
+// block as one place each, the panel's keys and values apart and without its
+// summary, a diagram's source, a warning's detail and the footer of an export
+// no code. That "/" opens the panel, the
 // summary, the marks and the switches in a browser, the group headings that
 // stay at the top while the list scrolls, a click that scrolls, the
 // highlight drawn in the document, a row's result with "Tabelle: ", a hidden
-// row, a diagram's result with its prefix and the click to its start, and a
-// saved file without the panel are for
+// row, a diagram's result with its prefix and the click to its start, the
+// click that opens the metadata panel and centres a hit, and a saved file
+// without the panel are for
 // the browser runs (tests/vergleich.mjs,
 // tests/speichern.mjs).
 
@@ -35,9 +39,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
-import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_BPMN, KIND_MERMAID } from '../src/app/search-places.js';
+import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_BPMN, KIND_MERMAID, KIND_META, KIND_CODE } from '../src/app/search-places.js';
 import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
 import { buildWarning } from '../src/app/warning.js';
+import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
 import { filterRowText } from '../src/app/filter.js';
 import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
@@ -293,7 +298,7 @@ test('collectPlaces: an item with a nested list is read without it, and each nes
     [['li', 'Außen'], ['li', 'Innen eins'], ['li', 'Innen zwei'], ['li', 'Tief'], ['li', 'Danach']]);
 });
 
-test('collectPlaces: warnings, facet bars, code blocks, an SVG outside a diagram\'s figure, the metadata panel and transient elements are no places, nor a table inside a warning or the metadata panel', () => {
+test('collectPlaces: warnings, facet bars, an SVG outside a diagram\'s figure, the metadata of an export\'s footer and transient elements are no places, nor a table or code block inside a warning; the metadata panel and a code block are one place each, nothing inside them a place of its own', () => {
   const html =
     '<div class="dokufix-warning" role="note"><p class="dokufix-warning-title"><strong>Warnung:</strong> Tabelle kaputt.</p><pre class="dokufix-warning-detail">Tabelle</pre>' +
     '<table><tbody><tr><td>Tabelle</td></tr></tbody></table></div>\n' +
@@ -306,8 +311,9 @@ test('collectPlaces: warnings, facet bars, code blocks, an SVG outside a diagram
     '<div class="dokufix-meta"><p>Tabelle</p><table><tbody><tr><td>Tabelle</td></tr></tbody></table></div>\n' +
     '<div class="dokufix-filter" ' + TRANSIENT_ATTR + '><p>Tabelle</p></div>\n' +
     '<p>Die eine Tabelle.</p>\n';
-  // The rows of the facet table are places, the cell's paragraph and list text of its row (story 6).
-  assert.deepEqual(places(html), [['tr', 'Art'], ['tr', 'WertEins'], ['p', 'Die eine Tabelle.']]);
+  // The rows of the facet table are places, the cell's paragraph and list text of its row (story 6);
+  // the code block and the metadata panel are one place each, with what they hold (story 8).
+  assert.deepEqual(places(html), [['tr', 'Art'], ['tr', 'WertEins'], ['pre', 'Tabelle'], ['details', 'titel Tabelle Tabelle'], ['p', 'Die eine Tabelle.']]);
 });
 
 test('collectPlaces: the word a status chip carries for assistive technology is no text, in a paragraph and in a heading', () => {
@@ -706,6 +712,123 @@ test('a diagram\'s result scrolls the start of its figure into view; the panel g
   assert.doesNotMatch(read('app/diagrams.js'), /search(-places)?\.js|collectPlaces/);
 });
 
+// ---------- hits in the metadata panel and in code blocks (story 8) ----------
+// A root with the metadata panel frontmatter.js makes of source, before the
+// markup given, as the render pass puts it before the first heading.
+function metaRoot(source, html = '<h1>Willkommen</h1>\n<p>Davor.</p>\n<h2>Eins</h2>\n'){
+  const root = rootWith(html);
+  injectFrontmatterPanel(root, splitFrontmatter(source));
+  return root;
+}
+const FM = '---\ntitle: Willkommen bei dokufix\nauthor: Beispiel-Autorin\nleer:\ntags:\n  - markdown\n  - eine-datei\nfreigabe:\n  rolle: Informationssicherheit\n  gueltig_bis: 2027-06-30\n---\n\n# Willkommen\n';
+const metaPlaces = root => collectPlaces(root).filter(p => p.kind === KIND_META);
+const codePlaces = root => collectPlaces(root).filter(p => p.kind === KIND_CODE);
+
+test('collectPlaces: the metadata panel is one place of the kind "' + KIND_META + '", its text every key and value, a blank between each, never its summary or the mark of an empty value', () => {
+  assert.equal(KIND_META, 'Metadaten');
+  const root = metaRoot(FM);
+  const panel = root.querySelector('details.dokufix-frontmatter');
+  assert.ok(panel && panel.querySelector('.dokufix-fm-empty'), 'the panel holds an empty value');
+  const found = collectPlaces(root);
+  assert.deepEqual(found.map(p => [p.el.tagName, p.text, p.kind]), [
+    ['DETAILS', 'title Willkommen bei dokufix author Beispiel-Autorin leer tags markdown eine-datei freigabe rolle Informationssicherheit gueltig_bis 2027-06-30', KIND_META],
+    ['H1', 'Willkommen', undefined], ['P', 'Davor.', undefined], ['H2', 'Eins', undefined],
+  ]);
+  // The summary's label and digest are no text: "Metadaten" finds nothing, the title counts once.
+  assert.match(panel.querySelector('summary').textContent, /Metadaten.*Willkommen bei dokufix · Beispiel-Autorin/);
+  assert.deepEqual(metaPlaces(root).filter(p => findHits('Metadaten', p.text).length), []);
+  assert.equal(findHits('Willkommen bei dokufix', metaPlaces(root)[0].text).length, 1);
+  assert.equal(findHits('—', metaPlaces(root)[0].text).length, 0);
+  // Its keys, values and list items are no places of their own.
+  assert.deepEqual(found.filter(p => panel.contains(p.el) && p.el !== panel), []);
+  // A digest of the count, when no row names it, is no text either.
+  const counted = metaRoot('---\neins: a\nzwei: b\n---\n');
+  assert.match(counted.querySelector('summary').textContent, /2 Einträge/);
+  assert.deepEqual(collectPlaces(counted).filter(p => findHits('Einträge', p.text).length), []);
+});
+
+test('collectPlaces: in the metadata panel a key and its value are never glued, and no range of a hit runs over their edge', () => {
+  const root = rootWith('<details class="dokufix-frontmatter"><summary><span class="dokufix-fm-label">Metadaten</span><span class="dokufix-fm-digest">Willkommen</span></summary>' +
+    '<div class="dokufix-fm-body"><dl class="dokufix-fm-rows"><dt>title</dt><dd>Willkommen</dd><dt>tags</dt><dd><ul class="dokufix-fm-list"><li>eins</li><li>zwei</li></ul></dd></dl></div></details>');
+  const [place] = metaPlaces(root);
+  assert.equal(place.text, 'title Willkommen tags eins zwei');
+  assert.deepEqual(findHits('titleWillkommen', place.text), []);
+  assert.deepEqual(hitTexts(root, 'title Willkommen'), [['title', 'Willkommen']]);
+  assert.deepEqual(hitTexts(root, 'eins zwei'), [['eins', 'zwei']]);
+  assert.deepEqual(hitTexts(root, 'Willkommen'), [['Willkommen']]);
+});
+
+test('collectPlaces: a metadata block that could not be read is searched in its raw text', () => {
+  const root = metaRoot('---\ntitle: Kaputt\nliste: [a, b\n  zweite: Zeile\n---\n\n# Kaputt\n');
+  const panel = root.querySelector('details.dokufix-fm-unparsed');
+  assert.ok(panel && panel.querySelector('pre.dokufix-fm-raw'), 'the raw panel');
+  const [place, ...rest] = metaPlaces(root);
+  assert.equal(rest.length, 0);
+  assert.equal(place.el, panel);
+  assert.equal(place.text, 'title: Kaputt liste: [a, b zweite: Zeile');
+  // Not its digest, "nicht lesbar — Originaltext"; and its pre is no code block.
+  assert.deepEqual(collectPlaces(root).filter(p => findHits('Originaltext', p.text).length), []);
+  assert.deepEqual(codePlaces(root), []);
+  assert.deepEqual(hitTexts(root, 'zweite'), [['zweite']]);
+});
+
+test('the metadata panel stands in the first group, as everything before the first H2, labelled with the H1', () => {
+  const root = metaRoot(FM);
+  const found = collectPlaces(root).map(p => ({ el: p.el, text: p.text, hits: findHits('Beispiel-Autorin', p.text).length })).filter(p => p.hits);
+  assert.deepEqual(found.map(p => p.el.tagName), ['DETAILS']);
+  assert.deepEqual(groupResults(root, found).groups.map(g => [g.label, g.level, g.hits, g.places]), [['Willkommen', 2, 1, 1]]);
+});
+
+test('collectPlaces: a code block is one place of the kind "' + KIND_CODE + '", its text with white space collapsed, every hit a range in it; inline code is text of its paragraph', () => {
+  assert.equal(KIND_CODE, 'Code');
+  const root = rootWith('<h2>Code-Block</h2>\n<p>Mit <code>renderMermaid</code> inline.</p>\n<pre><code class="language-javascript">function dokufix(md) {\n  const html = marked.parse(md);\n  return renderMermaidIn(html);\n}\n</code></pre>\n<pre>ohne   code</pre>\n');
+  assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]), [
+    ['H2', 'Code-Block', undefined], ['P', 'Mit renderMermaid inline.', undefined],
+    ['PRE', 'function dokufix(md) { const html = marked.parse(md); return renderMermaidIn(html); }', KIND_CODE],
+    ['PRE', 'ohne code', KIND_CODE],
+  ]);
+  assert.deepEqual(codePlaces(root).filter(p => findHits('renderMermaidIn', p.text).length).map(p => p.el.tagName), ['PRE']);
+  assert.deepEqual(hitTexts(root, 'renderMermaidIn'), [['renderMermaidIn']]);
+  // Over a line break of the code, one range over the collapsed white space.
+  assert.deepEqual(hitTexts(root, 'parse(md); return'), [['parse(md);\n  return']]);
+});
+
+test('collectPlaces: a code block in a list item is no text of the item, and a place of its own', () => {
+  const root = rootWith('<ul>\n<li>Ein Punkt mit Code:<pre><code class="language-text">Quittung drucken\n</code></pre>\nund danach</li>\n<li>Noch einer</li>\n</ul>\n');
+  assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]),
+    [['LI', 'Ein Punkt mit Code: und danach', undefined], ['PRE', 'Quittung drucken', KIND_CODE], ['LI', 'Noch einer', undefined]]);
+  assert.deepEqual(hitTexts(root, 'Code: und'), [['Code:', 'und']]);
+});
+
+test('collectPlaces: a pre in a table cell is text of its row, as filterRowText() reads it, and no code block', () => {
+  const root = rootWith('<table><tbody><tr><td>Befehl</td><td><pre><code>npm   run pruefung\n</code></pre></td></tr></tbody></table>\n');
+  const row = root.querySelector('tr');
+  assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]), [['TR', 'Befehl npm run pruefung', KIND_ROW]]);
+  assert.equal(collectPlaces(root)[0].text, filterRowText(row));
+  assert.deepEqual(codePlaces(root), []);
+});
+
+test('collectPlaces: a diagram\'s fenced source, a warning\'s detail and the footer of an export are no code; a transient code block is none', () => {
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Abholbereit'))]], '<pre><code class="language-mermaid">flowchart LR\n  a[Stempeln] --> b</code></pre>\n<pre><code class="language-bpmn">&lt;bpmn:process isExecutable="false"/&gt;</code></pre>\n',
+    '<footer class="dokufix-meta"><p>Exportiert: 2026-10-03</p><pre>Exportiert</pre></footer>\n<pre ' + TRANSIENT_ATTR + '>Stempeln</pre>\n');
+  root.append(buildWarning(root.ownerDocument, 'Ein Diagramm konnte nicht gezeichnet werden.', 'Parse error: Stempeln'));
+  assert.ok(root.querySelector('.dokufix-warning pre'), 'the warning holds its detail in a pre');
+  assert.deepEqual(codePlaces(root), []);
+  for (const word of ['Stempeln', 'isExecutable', 'Exportiert', 'Parse']) assert.deepEqual(collectPlaces(root).filter(p => findHits(word, p.text).length), [], word);
+});
+
+test('a click on the result of the metadata panel or of a code block opens a closed <details> and centres the first hit; frontmatter.js knows nothing of the search', () => {
+  const js = read('app/search.js');
+  assert.match(js, /if \(place\.kind === KIND_META \|\| place\.kind === KIND_CODE\)\{ centreHit\(place, at\[0\]\); return; \}/);
+  assert.match(js, /if \(el\.tagName\.toUpperCase\(\) === 'DETAILS' && !el\.open\) el\.open = true;/);
+  assert.match(js, /window\.scrollBy\(0, at\.top \+ at\.height \/ 2 - window\.innerHeight \/ 2\);/);
+  // A hit without a box, in an author's closed <details>, scrolls to its place instead.
+  assert.match(js, /if \(!box\.width && !box\.height\)\{ el\.scrollIntoView\(\{ block: 'center' \}\); return; \}/);
+  assert.doesNotMatch(read('app/frontmatter.js'), /search(-places)?\.js|collectPlaces/);
+  // search-places.js names the panel's classes and the diagrams' languages: importing frontmatter.js or DIAGRAM_KINDS would bring them into the reader bundle.
+  assert.doesNotMatch(read('app/search-places.js'), /from '\.\/frontmatter\.js'|import \{[^}]*\bDIAGRAM_KINDS\b/);
+});
+
 // ---------- the results under their headings (story 4) ----------
 // The groups of a search for term over the fragment, as plain data: level,
 // label, the numbers of the branch, the text of each own result, the children.
@@ -842,6 +965,8 @@ test('the hits are highlighted through the CSS Custom Highlight API, where the b
   const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
   assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
   assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
+  // On screen the text of a hit is dark, readable on the dark background of a code block (story 8); in print nothing is set.
+  assert.match(css, /^@media screen\{::highlight\(search-hit\)\{color:#1c1c1e\}\}$/m);
 });
 
 test('a row\'s result says its kind before its text, and a hidden row says so after it, both no text of the place; a filter changed while the panel is open searches again', () => {

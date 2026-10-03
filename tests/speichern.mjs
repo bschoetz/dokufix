@@ -57,7 +57,7 @@
 // with a saved file, which is one of the allowed differences, and the second
 // generation has to open numbered.
 //
-// Five more saves visit states of the page that leave marks on its own
+// Six more saves visit states of the page that leave marks on its own
 // elements, and each saved file is compared with the built file the same way:
 //
 //   5. a narrow window, saved with the hamburger panel open (the download menu
@@ -95,6 +95,12 @@
 //      "Einpassen", no viewer, and the page scrolls. Each diagram has the
 //      line of its downloads (story 2.10) with the picture button, which is
 //      transient; opened, the saved file shows one again below each
+//  10. the metadata panel opened by a click on its result in the search
+//      (epic 5, story 8), which sets its `open`: the saved file is compared
+//      as every other and opens with the panel closed, since "Mit Editor"
+//      saves from the source; `nur-lesen`, `schlank` and `kompakt` written
+//      after such a click are byte for byte the files written with the panel
+//      and the search closed, since an export renders the document anew
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -698,6 +704,89 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     const viewerClosed = await viewerState(o.page);
     check(scope, 'opened, no viewer runs, and nothing of bpmn-js is in <body>', JSON.stringify(viewerClosed) === JSON.stringify({ viewer: false, scale: null, lightbox: 0, cursor: false }), JSON.stringify(viewerClosed));
     check(scope, 'opened, it shows the picture button below each diagram again', JSON.stringify(await pictureButtons(o.page)) === '[".svg true",".svg true"]', JSON.stringify(await pictureButtons(o.page)));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+
+    // 10. saved and exported after a click on a result of the search opened the metadata panel
+    scope = name + ' metadata panel opened by the search';
+    const withMeta = path.join(dir, 'metadaten-offen.html');
+    const metaState = page => page.evaluate(() => {
+      const d = document.querySelector('#preview details.dokufix-frontmatter');
+      const p = document.querySelector('body > .search-panel');
+      return { panel: !!d, open: !!d && d.open, search: !!p && !p.hidden };
+    });
+    const META_RESULT = 'body > .search-panel .search-results .search-result';
+    // The search opened, "version" typed, which only the panel holds in B, and its result clicked.
+    const openByClick = async () => {
+      await o.page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+      if (!(await searchState(o.page)).open) await o.page.keyboard.press('/');
+      await o.page.fill('body > .search-panel input', '');
+      await o.page.fill('body > .search-panel input', 'version');
+      await o.page.waitForFunction(sel => Array.from(document.querySelectorAll(sel + ' .search-kind')).some(k => k.textContent === 'Metadaten: '), META_RESULT, { timeout: 5000 }).catch(() => {});
+      await o.page.locator(META_RESULT, { hasText: 'Metadaten: ' }).first().click({ timeout: 5000 }).catch(() => {});
+      return metaState(o.page);
+    };
+    o = await open(browser, opts.file);
+    await o.page.evaluate(text => {
+      const source = document.getElementById('source');
+      source.value = text;
+      source.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('render-btn').click();
+    }, DOC_B);
+    await o.page.waitForFunction(() => /Dokument B/.test(document.querySelector('#preview h1')?.textContent || '') && !!document.querySelector('#preview details.dokufix-frontmatter'), null, { timeout: 30000 });
+    await o.page.clock.setFixedTime(new Date('2026-10-03T12:00:00+02:00'));
+    const OPENED = JSON.stringify({ panel: true, open: true, search: true });
+    const metaOpen = await openByClick();
+    // Through the DOM: in read mode the toolbar is hidden, and leaving read mode closes the search.
+    const [metaDownload] = await Promise.all([
+      o.page.waitForEvent('download', { timeout: 60000 }),
+      o.page.evaluate(() => document.querySelector('button[data-download="full"]').click()),
+    ]);
+    await metaDownload.saveAs(withMeta);
+    check(scope, 'the metadata panel, closed at first, was opened by a click on its result in the search when the file was saved', JSON.stringify(metaOpen) === OPENED, JSON.stringify(metaOpen));
+    // The read-only exports after such a click, then with the panel and the search closed, byte for byte the same.
+    const metaExports = {};
+    for (const kind of READONLY){
+      const out = {};
+      for (const [suffix, byClick] of [['metadaten-offen', true], ['metadaten-zu', false]]){
+        let at;
+        if (byClick) at = await openByClick();
+        else {
+          await o.page.evaluate(() => { const d = document.querySelector('#preview details.dokufix-frontmatter'); if (d) d.open = false; });
+          if ((await searchState(o.page)).open) await o.page.click('body > .search-panel .search-close');
+          at = await metaState(o.page);
+        }
+        const [download] = await Promise.all([
+          o.page.waitForEvent('download', { timeout: 60000 }),
+          o.page.evaluate(k => document.querySelector('button[data-download="' + k + '"]').click(), kind),
+        ]);
+        const file = path.join(dir, kind + '-' + suffix + '.html');
+        await download.saveAs(file);
+        await o.page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+        out[suffix] = { file, state: at };
+      }
+      metaExports[kind] = out;
+    }
+    check(scope, 'nur-lesen, schlank and kompakt were started once with the panel opened by a click on its result, and once with the panel and the search closed',
+      READONLY.every(k => JSON.stringify(metaExports[k]['metadaten-offen'].state) === OPENED && JSON.stringify(metaExports[k]['metadaten-zu'].state) === JSON.stringify({ panel: true, open: false, search: false })),
+      JSON.stringify(READONLY.map(k => [k, metaExports[k]['metadaten-offen'].state, metaExports[k]['metadaten-zu'].state])));
+    for (const kind of READONLY){
+      const a = fs.readFileSync(metaExports[kind]['metadaten-offen'].file), b = fs.readFileSync(metaExports[kind]['metadaten-zu'].file);
+      const text = a.toString('utf8');
+      // kompakt carries its document packed; the others show the panel closed.
+      const closedPanel = kind === 'readonly-compact' || (/<details class="dokufix-frontmatter">/.test(text) && !/<details class="dokufix-frontmatter"[^>]*\bopen\b/.test(text));
+      check(scope, kind + ' written after the click is the file written with the panel closed, byte for byte, its panel closed',
+        a.equals(b) && closedPanel, a.length + ' B and ' + b.length + ' B, panel closed ' + closedPanel);
+    }
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    await checkAgainstBuiltFile(scope, browser, withMeta, built, 1);
+    o = await open(browser, withMeta);
+    s = await state(o.page);
+    same(scope, 'the saved file holds document B', s.source, DOC_B);
+    await o.page.waitForFunction(() => !!document.querySelector('#preview details.dokufix-frontmatter'), null, { timeout: 30000 }).catch(() => {});
+    const reopenedMeta = await metaState(o.page);
+    check(scope, 'opened, its metadata panel is closed', JSON.stringify(reopenedMeta) === JSON.stringify({ panel: true, open: false, search: false }), JSON.stringify(reopenedMeta));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 

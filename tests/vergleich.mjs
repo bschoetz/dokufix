@@ -1958,7 +1958,11 @@ async function assertFilters(page, check, exp, key){
 // export), read back into linkedom; that the two read the same elements is
 // checked first. Since story 7 a diagram is a place, its figure: its result
 // says "BPMN-Diagramm: " or "Mermaid-Diagramm: ", a click brings the start of
-// the figure into the window, and none of its hits is highlighted.
+// the figure into the window, and none of its hits is highlighted. Since
+// story 8 the metadata panel and every code block are places: their results
+// say "Metadaten: " and "Code: ", a click opens the closed panel and brings
+// the first hit to the middle of the window, and the hits are highlighted,
+// in dark text on the yellow.
 const SEARCH_TERM = 'Tabelle';
 // A term that occurs often in both documents: its list is longer than the
 // panel. In the reference document it stands in a BPMN diagram as well.
@@ -1976,8 +1980,9 @@ async function assertSearch(page, check, key){
   const ROOT_SEL = editor ? '#preview' : 'main.reader-body';
   await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
   await frames(page);
-  // Since story 6 every table row is a place as well, since story 7 every diagram's figure.
-  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6, tr, figure.dokufix-diagram';
+  // Since story 6 every table row is a place as well, since story 7 every diagram's figure,
+  // since story 8 every code block and the metadata panel.
+  const PLACE_SEL = 'p, li, h1, h2, h3, h4, h5, h6, tr, figure.dokufix-diagram, pre, details.dokufix-frontmatter';
   const panelFacts = () => page.evaluate(rootSel => {
     const p = document.querySelector('body > .search-panel');
     const box = el => { if (!el) return null; const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
@@ -2270,6 +2275,10 @@ async function assertSearch(page, check, key){
   // result says its kind, a click brings the figure's top into the window,
   // nothing in it is highlighted; its source and its frame are no text.
   await assertSearchDiagrams();
+  // --- story 8: hits in the metadata panel and in code blocks. Each is one
+  // place with its kind; a click opens the closed panel and centres the first
+  // hit, which is highlighted, readable on the dark code background.
+  await assertSearchMetaCode();
 
   // --- from 1500 px it lies over the rail, and still not over "Editor ↩"
   await page.setViewportSize({ width: 1600, height: 1000 });
@@ -2456,6 +2465,180 @@ async function assertSearch(page, check, key){
     }
     check('search: a word only in a diagram\'s source (' + noLabels.slice(0, -3).join(', ') + ') or in its frame (the large view\'s "Einpassen" and "Schließen", the credit\'s "Gezeichnet") lists no diagram for it, only one whose labels hold it',
       strays.length === 0, json(strays));
+    // A term with hits for the checks after this one, as the tables leave one.
+    await search(SEARCH_TERM);
+  }
+
+  // Story 8, inside assertSearch for its helpers. In the demo text the terms
+  // its special cases name: "Beispiel-Autorin", a value of the metadata
+  // panel, "gueltig_bis", a key of it, "renderMermaidIn" in the code block
+  // under "Code-Block (kein Mermaid)", "Rückbuchungsbeleg" in a code block in
+  // a list item. In another document a word of the panel's values and one of
+  // a code block, the fewest places first, and the panel's first key.
+  async function assertSearchMetaCode(){
+    const placesOf = collectPlaces(root);
+    const index = new Map(all.map((el, n) => [el, n]));
+    const expected = term => placesOf.map(p => ({ el: p.el, text: p.text, kind: p.kind, hits: findHits(term, p.text).length, at: index.get(p.el) })).filter(p => p.hits);
+    const META = 'Metadaten', CODE = 'Code';
+    const PANEL_SEL = 'details.dokufix-frontmatter';
+    const panels = Array.from(root.querySelectorAll(PANEL_SEL));
+    // A code block: a pre with text outside the panel, a warning, a table row (text of the row), the footer of an export and anything transient, not a diagram's source.
+    const pres = Array.from(root.querySelectorAll('pre')).filter(pre => !pre.closest(PANEL_SEL + ', .dokufix-warning, tr, .dokufix-meta, [data-dokufix-transient]') &&
+      !Array.from(pre.children).some(c => /^code$/i.test(c.tagName) && /\blanguage-(mermaid|bpmn)\b/.test(c.className)) && pre.textContent.trim());
+    const metas = placesOf.filter(p => p.kind === META), codes = placesOf.filter(p => p.kind === CODE);
+    const at = els => els.map(el => index.get(el));
+    check('search: the metadata panel is one place of the kind "' + META + '", every code block outside it, a warning, a table row and the footer of an export one of the kind "' + CODE + '"; a diagram\'s source is none',
+      sameList(at(metas.map(p => p.el)), at(panels)) && sameList(at(codes.map(p => p.el)), at(pres)) && (!opts.demo || (panels.length === 1 && pres.length >= 3)),
+      json({ panels: panels.length, metas: metas.length, pres: pres.length, codes: codes.length }));
+    // The ranges of the highlight inside the elements of sel, with the box of each and whether it lies in the panel's summary.
+    const litIn = sel => page.evaluate(([rootSel, name, sel]) => {
+      const h = window.CSS && CSS.highlights && CSS.highlights.get(name);
+      const els = Array.from(document.querySelectorAll(rootSel + ' ' + sel));
+      return (h ? Array.from(h) : []).map(s => {
+        const r = document.createRange();
+        r.setStart(s.startContainer, s.startOffset);
+        r.setEnd(s.endContainer, s.endOffset);
+        const el = els.find(e => e.contains(s.startContainer));
+        if (!el) return null;
+        const b = r.getBoundingClientRect();
+        const node = s.startContainer.nodeType === 1 ? s.startContainer : s.startContainer.parentElement;
+        return { text: r.toString(), at: els.indexOf(el), top: b.top, bottom: b.bottom, height: b.height, inSummary: !!node.closest('summary') };
+      }).filter(Boolean);
+    }, [ROOT_SEL, HIGHLIGHT, sel]);
+    // A word of the places of the kind, the fewest places first.
+    const words = text => text.match(/\p{L}{6,}/gu) || [];
+    const pick = (kind, term) => {
+      if (term) return { term, at: expected(term) };
+      let best = null;
+      for (const p of placesOf.filter(d => d.kind === kind)){
+        for (const w of words(p.text)){
+          const where = expected(w);
+          if (!best || where.length < best.at.length) best = { term: w, at: where };
+        }
+      }
+      return best;
+    };
+    // A click on the result n: from the end of the document, so the click has to scroll. Where the place and its first hit are then.
+    const clickResult = async (n, sel, place) => {
+      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+      await frames(page);
+      await page.locator('body > .search-panel .search-results .search-result').nth(n).click();
+      await frames(page);
+      const lit = (await litIn(sel)).filter(r => r.at === place);
+      return { ...(await page.evaluate(([rootSel, sel, place]) => {
+        const el = document.querySelectorAll(rootSel + ' ' + sel)[place];
+        return { open: el.tagName === 'DETAILS' ? el.open : null, height: innerHeight, scrolled: scrollY, max: document.documentElement.scrollHeight - innerHeight,
+          panel: !document.querySelector('body > .search-panel').hidden };
+      }, [ROOT_SEL, sel, place])), first: lit[0] || null, ranges: lit.length };
+    };
+    // The first hit in the middle of the window, or as near as the page scrolls; in view, drawn.
+    const centred = f => !!f.first && f.first.height > 0 && f.first.top >= 0 && f.first.bottom <= f.height &&
+      (Math.abs((f.first.top + f.first.bottom) / 2 - f.height / 2) <= 2 || (f.scrolled <= 1 && (f.first.top + f.first.bottom) / 2 < f.height / 2) || (f.scrolled >= f.max - 1 && (f.first.top + f.first.bottom) / 2 > f.height / 2));
+    const kindOk = (listed, wantAt, term) => listed.summary === summaryOf(wantAt) && listed.results.length === wantAt.length &&
+      listed.results.every((r, i) => kindAs(r, wantAt[i]) && wantAt[i].text.includes(bodyOf(r)) && r.marks.length >= 1 && r.marks.every(m => m.toLowerCase() === term.toLowerCase()));
+
+    if (panels.length){
+      const panelAt = index.get(panels[0]);
+      const closePanel = () => page.evaluate(([rootSel, sel]) => { const d = document.querySelector(rootSel + ' ' + sel); if (d) d.open = false; }, [ROOT_SEL, PANEL_SEL]);
+      await closePanel();
+      const value = pick(META, opts.demo ? 'Beispiel-Autorin' : null);
+      if (value){
+        const { term, at: wantAt } = value;
+        const listed = await search(term);
+        const n = wantAt.findIndex(p => p.kind === META);
+        const lit = await litIn(PANEL_SEL);
+        const first = groupsOf(wantAt).groups[0];
+        check('search: "' + term + '", a value of the metadata panel, closed, lists the panel once, "' + META + ': " and its keys and values around the hit, in the first group; its hits are highlighted in it',
+          n >= 0 && kindOk(listed, wantAt, term) && !!first && first.results.some(r => r.el === panels[0]) && lit.length === wantAt[n].hits && (!opts.demo || wantAt.length === 1),
+          json({ summary: listed.summary, results: listed.results.map(r => r.text.slice(0, 80)), expected: wantAt.map(p => [p.kind || p.el.tagName, p.hits]), first: first && first.label, lit: lit.length }));
+        if (n >= 0){
+          const landed = await clickResult(n, PANEL_SEL, 0);
+          check('search: a click on the panel\'s result opens it, brings its first hit to the middle of the window, or as near as the page scrolls, highlighted; the search panel stays open',
+            landed.open === true && landed.panel && centred(landed) && landed.ranges === wantAt[n].hits, json(landed));
+          await closePanel();
+        }
+      }
+      // A key of the panel: the panel is a result.
+      const key = opts.demo ? 'gueltig_bis' : (panels[0].querySelector('dt') || {}).textContent;
+      if (key){
+        const listed = await search(key);
+        const wantKey = expected(key);
+        check('search: "' + key + '", a key of the metadata panel, lists the panel', kindOk(listed, wantKey, key) && listed.results.some(r => r.kind === META + ': '),
+          json({ summary: listed.summary, results: listed.results.map(r => r.text.slice(0, 60)) }));
+      }
+      // Its frame: the label "Metadaten" and the digest are no text, so a title the digest repeats counts once.
+      const label = await search(META);
+      const wantLabel = expected(META);
+      const digest = ((panels[0].querySelector('.dokufix-fm-digest') || {}).textContent || '').split(' · ')[0].trim();
+      const digestPlace = digest && expected(digest).find(p => p.kind === META);
+      let repeated = null;
+      if (digest){
+        const listed = await search(digest);
+        const lit = await litIn(PANEL_SEL);
+        repeated = { term: digest, listed: listed.results.filter(r => r.kind === META + ': ').length, hits: digestPlace ? digestPlace.hits : 0, lit: lit.length, inSummary: lit.filter(r => r.inSummary).length };
+      }
+      check('search: the frame of the panel is no text of it: "' + META + '" lists no panel, and ' + (digest ? 'the digest\'s "' + digest + '" counts in the panel as often as its rows hold it, never in the summary' : 'its digest holds no row'),
+        !wantLabel.some(p => p.kind === META) && !label.results.some(r => r.kind === META + ': ') &&
+          (!repeated || (repeated.lit === repeated.hits && repeated.inSummary === 0 && repeated.listed === (repeated.hits ? 1 : 0) && (!opts.demo || repeated.hits === 1))),
+        json({ label: label.results.map(r => r.kind), repeated }));
+    } else {
+      const none = await search(SEARCH_TERM);
+      check('search: a document without metadata lists no result as "' + META + ': "', metas.length === 0 && none.results.every(r => r.kind !== META + ': '), json(none.results.map(r => r.kind)));
+    }
+
+    if (pres.length){
+      const code = pick(CODE, opts.demo ? 'renderMermaidIn' : null);
+      if (code){
+        const { term, at: wantAt } = code;
+        const listed = await search(term);
+        const n = wantAt.findIndex(p => p.kind === CODE);
+        const lit = await highlightFacts();
+        check('search: "' + term + '", a word of a code block, lists the block once, "' + CODE + ': " and its text around the hit; its hits are highlighted',
+          n >= 0 && kindOk(listed, wantAt, term) && litAs(lit, term, {}, wantAt, t => t.toLowerCase() === term.toLowerCase()) && (!opts.demo || wantAt.length === 1),
+          json({ summary: listed.summary, results: listed.results.map(r => r.text.slice(0, 80)), expected: wantAt.map(p => [p.kind || p.el.tagName, p.hits]), lit: litLine(lit, term, {}, wantAt) }));
+        if (n >= 0){
+          // Its index among the pre elements of the content, as the page counts them.
+          const preAt = Array.from(root.querySelectorAll('pre')).indexOf(wantAt[n].el);
+          const landed = await clickResult(n, 'pre', preAt);
+          // Readable: the colour the highlight gives its text on screen, against the yellow and the block's own colours.
+          const colours = await page.evaluate(([rootSel, name, place]) => {
+            let color = null, background = null;
+            const walk = rules => { for (const rule of rules){
+              if (rule.media && rule.cssRules){ if (matchMedia(rule.media.mediaText).matches) walk(rule.cssRules); continue; }
+              if (rule.selectorText === '::highlight(' + name + ')'){ color = rule.style.color || color; background = rule.style.backgroundColor || background; }
+            } };
+            for (const sheet of document.styleSheets){ try { walk(sheet.cssRules); } catch (e){ /* a sheet of another origin */ } }
+            const pre = document.querySelectorAll(rootSel + ' pre')[place];
+            const cs = getComputedStyle(pre);
+            return { color, background, preColor: cs.color, preBackground: cs.backgroundColor };
+          }, [ROOT_SEL, HIGHLIGHT, preAt]);
+          const rgb = c => { const m = String(c).match(/\d+(\.\d+)?/g); return m ? m.slice(0, 3).map(Number) : null; };
+          const lum = c => { const v = rgb(c); return v ? v.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }).reduce((s, x, i) => s + x * [0.2126, 0.7152, 0.0722][i], 0) : NaN; };
+          const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+          const readable = !!colours.color && !!colours.background && contrast(colours.color, colours.background) >= 4.5 && contrast(colours.preColor, colours.background) < 4.5 && lum(colours.preBackground) < 0.1;
+          check('search: a click on the code block\'s result brings its first hit to the middle of the window, or as near as the page scrolls, highlighted, in a dark text that reads on the yellow where the block\'s light text would not',
+            preAt >= 0 && landed.panel && centred(landed) && landed.ranges === wantAt[n].hits && readable,
+            json({ landed, colours, contrast: colours.color && colours.background ? Math.round(contrast(colours.color, colours.background) * 10) / 10 : null }));
+        }
+      }
+      // A code block in a list item is no text of the item, and a place of its own.
+      const inItems = pres.filter(pre => pre.closest('li'));
+      const glued = inItems.filter(pre => { const li = placesOf.find(p => p.el === pre.closest('li')); return li && li.text.includes(pre.textContent.trim().split(/\s+/)[0]); });
+      let item = null;
+      if (opts.demo){
+        const wantItem = expected('Rückbuchungsbeleg');
+        const listed = await search('Rückbuchungsbeleg');
+        item = { results: listed.results.map(r => r.text.slice(0, 60)), ok: wantItem.length === 1 && wantItem[0].kind === CODE && !!wantItem[0].el.closest('li') && kindOk(listed, wantItem, 'Rückbuchungsbeleg') };
+      }
+      check('search: a code block in a list item is a place of its own and no text of the item' + (opts.demo ? ': "Rückbuchungsbeleg" lists the block alone' : ''),
+        glued.length === 0 && (!opts.demo || (inItems.length >= 1 && item.ok)), json({ inItems: inItems.length, glued: glued.length, item }));
+    } else {
+      const none = await search(SEARCH_TERM);
+      check('search: a document without a code block lists no result as "' + CODE + ': "', codes.length === 0 && none.results.every(r => r.kind !== CODE + ': '), json(none.results.map(r => r.kind)));
+    }
+    // No code: the source of a diagram.
+    const source = await search('isExecutable');
+    check('search: a word only in a diagram\'s source lists no code block', !source.results.some(r => r.kind === CODE + ': '), json(source.results.map(r => r.text.slice(0, 60))));
     // A term with hits for the checks after this one, as the tables leave one.
     await search(SEARCH_TERM);
   }

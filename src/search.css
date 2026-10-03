@@ -87,8 +87,11 @@
 .search-hidden{color:#a40e26;font-style:italic}
 /* The hits in the document while the panel is open (src/app/search.js): a
    highlight of the CSS Custom Highlight API, no element and no class in the
-   document, in the colour of the marks in the results. Not printed. */
+   document, in the colour of the marks in the results. On screen its text is
+   dark, so a hit stays readable on the dark background of a code block,
+   whose light text would not read on the yellow. Not printed. */
 ::highlight(search-hit){background-color:#ffe066}
+@media screen{::highlight(search-hit){color:#1c1c1e}}
 @media print{
   .search-panel{display:none !important}
   ::highlight(search-hit){background-color:transparent}

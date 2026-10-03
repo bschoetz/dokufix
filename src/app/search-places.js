@@ -8,8 +8,8 @@ import { TRANSIENT_ATTR } from './transient.js';
 
 // --- Search: the places --------------------------------------------------------
 // The places of a document a search lists, each with the text it is searched
-// in: every paragraph, list item, heading, table row and diagram of the
-// preview, in the order of the document.
+// in: every paragraph, list item, heading, table row, diagram and code block
+// of the preview, and its metadata panel, in the order of the document.
 //
 //   collectPlaces(root) → [{ el, text, map, kind }, …]
 //   nodeRanges(map, { start, end }) → [{ startNode, startOffset, endNode, endOffset }, …]
@@ -49,18 +49,37 @@ import { TRANSIENT_ATTR } from './transient.js';
 // figure's class. Nothing inside a diagram is highlighted: its map holds no
 // node, so nodeRanges() makes no range of a hit in it.
 //
+// The metadata panel (frontmatter.js), `details.dokufix-frontmatter`, is one
+// place, of the kind KIND_META, "Metadaten". Its text is the author's data:
+// every key (`dt`) and value (`dd`, the items of a list, a nested list of
+// keys), with a blank and a new part at the edge of each, so a key and its
+// value never run together and no range of a hit runs over that edge; and
+// the raw text of a block that could not be read (`pre.dokufix-fm-raw`). Not
+// its summary, the label "Metadaten" and the digest, which repeats rows of
+// it, nor the mark of an empty value, "—". It is not walked into: its keys,
+// values and list items are no places of their own.
+//
+// A code block is one place, of the kind KIND_CODE, "Code": every `pre`
+// outside the metadata panel, a warning and a table row, its text as it stands,
+// white space collapsed as everywhere. A fenced block of a diagram
+// (`pre > code.language-mermaid`, `language-bpmn`) is no code: it is the
+// source of a diagram, a figure once drawn (diagrams.js), and no place.
+// Inline `code` is text of its paragraph. A code block in a list item is no
+// text of the item, and a place of its own; one in a table cell is text of
+// its row, as everything a row holds (rowReading()), and no place.
+//
 // Beside its text a place carries the map of it: for every unit of the text
 // the text node and offset it came from. It is made in the same walk that
 // reads the text, so the two cannot drift. nodeRanges() turns the range of a
 // hit in the text (search-match.js) into ranges of the document, which the
 // panel draws (search.js); what the text leaves out, it leaves out as well.
 //
-// What is no place, nor holds one: a warning, a code block, the metadata
-// panel, the inline table of contents (its entries are the headings, which
-// are places of their own), the heading of the list of footnotes, which the
-// document styles hide, and whatever is transient. A table inside a warning
-// or the metadata panel is no place either. A diagram holds no place: its
-// labels are its own text.
+// What is no place, nor holds one: a warning, the metadata in the footer of
+// an export, the inline table of contents (its entries are the headings,
+// which are places of their own), the heading of the list of footnotes, which
+// the document styles hide, and whatever is transient. A table or code block
+// inside a warning is no place either. A diagram, a code block and the
+// metadata panel hold no place: what they hold is their own text.
 //
 // A place inside a place is a place of its own and no text of the outer one: a
 // list item of a loose list holds its text in a paragraph, which is the place,
@@ -75,21 +94,32 @@ import { TRANSIENT_ATTR } from './transient.js';
 const PLACE_TAGS = new Set(['P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 // Read as places of their own, or as the lists and tables their items and
-// rows are.
-const OWN_TAGS = new Set([...PLACE_TAGS, 'UL', 'OL', 'TABLE']);
+// rows are, or a code block.
+const OWN_TAGS = new Set([...PLACE_TAGS, 'UL', 'OL', 'TABLE', 'PRE']);
 // No place, nor anything inside it.
-const EXCLUDED_TAGS = new Set(['PRE', 'SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
+const EXCLUDED_TAGS = new Set(['SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
 // What a table row is to the panel: the word before its result.
 export const KIND_ROW = 'Tabelle';
 // What a diagram is to the panel, by the class of its figure.
 export const KIND_BPMN = 'BPMN-Diagramm';
 export const KIND_MERMAID = 'Mermaid-Diagramm';
 const DIAGRAM_KINDS = [[DIAGRAM_CLASS + '-bpmn', KIND_BPMN], [DIAGRAM_CLASS + '-mermaid', KIND_MERMAID]];
+// What the metadata panel and a code block are to the panel.
+export const KIND_META = 'Metadaten';
+export const KIND_CODE = 'Code';
+// The metadata panel and the mark of an empty value in it (frontmatter.js),
+// named here: importing them would put frontmatter.js into the reader bundle.
+const META_CLASS = 'dokufix-frontmatter';
+const META_EMPTY_CLASS = 'dokufix-fm-empty';
+// Where a key, a value or a list item of the panel begins and ends.
+const META_APART = new Set(['DT', 'DD', 'LI']);
+// The languages of a fenced block that is a diagram's source (DIAGRAM_KINDS in
+// diagrams.js, which would bring the renderers into the reader bundle).
+const DIAGRAM_LANGUAGES = ['mermaid', 'bpmn'];
 const EXCLUDED_CLASSES = [
   CHIP_STATUS_CLASS, FACET_BAR_CLASS, STEP_NUMBER_CLASS,
   'dokufix-warning',        // warning.js
   'dokufix-fn-preview',     // footnotes.js, inside a marker; named for itself as well
-  'dokufix-frontmatter',    // the metadata panel, frontmatter.js
   'dokufix-meta',           // the metadata of a read-only export
   'dokufix-toc',            // the inline table of contents, toc.js
   DIAGRAM_CLASS,            // a diagram's figure: a place of its own, read by diagramReading()
@@ -270,22 +300,66 @@ function diagramPlace(figure){
   return { el: figure, text, map, kind: kind ? kind[1] : 'Diagramm' };
 }
 
+const isMetaPanel = el => tagOf(el) === 'DETAILS' && el.classList.contains(META_CLASS);
+
+// Whether a pre is the fenced block of a diagram, not yet its figure.
+const isDiagramSource = pre => Array.from(pre.children).some(code => tagOf(code) === 'CODE' &&
+  DIAGRAM_LANGUAGES.some(lang => code.classList.contains('language-' + lang)));
+
+// The text of a code block or of the metadata panel: every text node in it,
+// in order, a line break as a blank, without anything transient. In the panel
+// without its summary and the mark of an empty value, and with a blank and a
+// new part at the edges of every key, value and list item, as at a cell's
+// edge in a row.
+function ownReading(el, meta){
+  const r = reading();
+  const read = node => {
+    for (let child = node.firstChild; child; child = child.nextSibling){
+      if (child.nodeType === TEXT){ readText(r, child); continue; }
+      if (child.nodeType !== ELEMENT) continue;
+      const tag = tagOf(child);
+      if (tag === 'BR'){ readBlank(r, ' '); continue; }
+      if (child.hasAttribute(TRANSIENT_ATTR) || EXCLUDED_TAGS.has(tag) ||
+          (meta && (tag === 'SUMMARY' || child.classList.contains(META_EMPTY_CLASS)))){ r.part++; continue; }
+      const apart = meta && META_APART.has(tag);
+      if (apart){ r.part++; readBlank(r, ' '); }
+      read(child);
+      if (apart){ readBlank(r, ' '); r.part++; }
+    }
+  };
+  read(el);
+  return finish(r);
+}
+
 // The places under root, in the order of the document. Beside its text each
 // carries its map: for every unit of the text the node and offset it came
 // from, and its part (see reading() above); nodeRanges() makes node ranges
-// of it. A row and a diagram carry their kind as well.
+// of it. A row, a diagram, a code block and the metadata panel carry their
+// kind as well.
 export function collectPlaces(root){
   const places = [];
   const visit = node => {
     for (let child = node.firstElementChild; child; child = child.nextElementSibling){
-      // A diagram is read whole, by its SVG, and not walked into.
-      if (isDiagram(child) && !child.hasAttribute(TRANSIENT_ATTR)){
-        const place = diagramPlace(child);
-        if (place) places.push(place);
-        continue;
+      const tag = tagOf(child);
+      if (!child.hasAttribute(TRANSIENT_ATTR)){
+        // A diagram is read whole, by its SVG, and not walked into.
+        if (isDiagram(child)){
+          const place = diagramPlace(child);
+          if (place) places.push(place);
+          continue;
+        }
+        // So are the metadata panel and a code block, by their text; a
+        // diagram's source is no place.
+        const meta = isMetaPanel(child);
+        if (meta || tag === 'PRE'){
+          if (meta || !isDiagramSource(child)){
+            const { text, map } = ownReading(child, meta);
+            if (text) places.push({ el: child, text, map, kind: meta ? KIND_META : KIND_CODE });
+          }
+          continue;
+        }
       }
       if (excluded(child)) continue;
-      const tag = tagOf(child);
       // A row is read whole, a table in one of its cells with it.
       if (tag === 'TR'){
         const { text, map } = rowReading(child);

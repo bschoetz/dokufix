@@ -548,7 +548,14 @@ flowchart LR
 - Ein Treffer zählt, was Sie sehen: Das Sequenzdiagramm zeichnet jede Beteiligte oben und unten, die Suche nach Nutzerin findet es deshalb mit zwei Treffern, dazu diese Zeile.
 - Was nur in der Quelle eines Diagramms steht, ist kein Treffer: Der Teilprozess „Einarbeiten“ im letzten Diagramm enthält eine Aufgabe Stempeln, die nicht gezeichnet ist; die Suche nach ihr findet nur diese Zeile, ebenso die Suche nach dem Namen des Prozesses, Prozess_Neu.
 - Der Rahmen eines Diagramms gehört nicht zu ihm: Die Suche nach Einpassen oder Gezeichnet findet kein Diagramm, obwohl die große Ansicht und die Zeile unter einem BPMN-Diagramm diese Wörter zeigen.
-- Was nur in einem Code-Block oder im Metadaten-Kopf steht, findet die Suche noch nicht.
+- Der Metadaten-Kopf ganz oben ist eine Stelle, auch zugeklappt: Die Suche nach dem Namen der Autorin, den er nennt, findet nur ihn, als „Metadaten:“ in der ersten Gruppe. Ein Klick klappt ihn auf und rollt zum Namen, der gelb hinterlegt ist; der Kopf bleibt offen.
+- Auch ein Schlüssel des Kopfs ist ein Treffer: Die Suche nach gueltig_bis findet den Kopf und diese Zeile.
+- Die Beschriftung des Kopfs gehört nicht zu ihm: Die Suche nach Metadaten findet ihn nicht. Den Titel, den die Zeile neben der Beschriftung wiederholt, zählt der Kopf einmal: Die Suche nach „Willkommen bei dokufix“ findet ihn mit einem Treffer.
+- Ein Code-Block ist eine Stelle: Die Suche nach der Funktion, die der Block unter „Code-Block (kein Mermaid)“ in seiner dritten Zeile aufruft, findet nur ihn, als „Code:“. Ein Klick rollt den Treffer in die Mitte des Fensters; er ist gelb hinterlegt, in dunkler Schrift lesbar.
+- Ein Code-Block in einem Listenpunkt ist eine Stelle für sich und kein Text des Punkts: Die Suche nach dem ersten Wort im Block hier findet nur den Block, als „Code:“.
+  ```text
+  Rückbuchungsbeleg ausdrucken
+  ```
 
 | Nur in dieser Tabelle |
 |---|
