@@ -4324,17 +4324,18 @@ async function liveViewerUse(page, check, key, opts, { FIG, fig, n, openStage, r
 // CDP (Input.dispatchTouchEvent), which Firefox has not; there the check says
 // so in its name. At "Einpassen": one finger moves the diagram by its own way;
 // two fingers that begin on two different shapes pinch out in small steps,
-// then a third lands and the two go on, then a second pinch beyond scale 4.
+// then a third lands and the two go on, then a pinch beyond scale 4 and
+// pinches below 0.2, then a tap on the logo, which opens its lightbox.
 // At every step the diagram point under the fingers' middle before lies under
 // their middle after (to 2 px), so the diagram moves by no more than the
 // fingers did; at the end the scale is that of the start times the ratio of
-// the distances (to 0.01), at most 4, and the view is open and the page has
+// the distances (to 0.01), between 0.2 and 4, and the view is open and the page has
 // not scrolled. The fingers of two shapes are two touch lists of one: read
 // from e.targetTouches, the diagram jumps at the first move of the pinch.
 async function liveViewerTouch(page, check, { FIG, n, step }){
   const json = JSON.stringify;
   const NAME = 'live viewer, touch (Chromium only, by CDP): one finger moves the diagram, two that begin on two shapes zoom it at their middle by the ratio of their distances, '
-    + 'a third finger changes nothing, the scale stops at 4; no step jumps, the view stays open, the page does not scroll';
+    + 'a third finger changes nothing, the scale stops at 4 and at 0.2, a tap on the logo opens its lightbox; no step jumps, the view stays open, the page does not scroll';
   if (page.context().browser().browserType().name() !== 'chromium'){
     check('live viewer, touch: not checked in Firefox, which has no CDP to dispatch touches; Chromium checks it', true);
     return;
@@ -4439,7 +4440,30 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
   await frames(page);
   const limit = await view();
   if (Math.abs(limit.s - 4) > 0.0005) problems.push('a pinch to 15 times the distance from scale ' + pinched.s.toFixed(3) + ' stops at ' + limit.s.toFixed(3) + ', not at 4');
-  if (!limit.open) problems.push('the view closed');
+
+  // --- a pinch far below scale 0.2: from 600 px apart to 20, three times
+  for (let r = 0; r < 3; r++){
+    await touch('touchStart', [{ x: c.x - 300, y: c.y, id: 7 + 2 * r }]);
+    await touch('touchStart', [{ x: c.x - 300, y: c.y, id: 7 + 2 * r }, { x: c.x + 300, y: c.y, id: 8 + 2 * r }]);
+    for (let k = 1; k <= 10; k++) await touch('touchMove', [{ x: c.x - 300 + 29 * k, y: c.y, id: 7 + 2 * r }, { x: c.x + 300 - 29 * k, y: c.y, id: 8 + 2 * r }]);
+    await touch('touchEnd', []);
+  }
+  await frames(page);
+  const least = await view();
+  if (Math.abs(least.s - 0.2) > 0.0005) problems.push('a pinch to a thirtieth of the distance, three times, from scale 4 stops at ' + least.s.toFixed(3) + ', not at 0.2');
+
+  // --- a tap on the logo stays a tap: its lightbox opens, as at a click
+  const logo = await page.evaluate(([sel, n]) => { const r = document.querySelectorAll(sel)[n].querySelector('.dokufix-diagram-live .bjs-powered-by').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, [FIG, n]);
+  await touch('touchStart', [{ ...logo, id: 20 }]);
+  await touch('touchEnd', []);
+  await frames(page);
+  const tapped = await page.evaluate(() => document.querySelectorAll('body > .bjs-powered-by-lightbox').length);
+  if (tapped !== 1) problems.push('a tap on the logo opened ' + tapped + ' lightboxes, not 1');
+  await page.evaluate(() => { const b = document.querySelector('body > .bjs-powered-by-lightbox .backdrop'); if (b) b.click(); });
+  await frames(page);
+  const lightboxLeft = await page.evaluate(() => document.querySelectorAll('body > .bjs-powered-by-lightbox').length);
+  if (lightboxLeft) problems.push('the lightbox stayed after a click on its backdrop');
+  if (!limit.open || !(await view()).open) problems.push('the view closed');
   if (limit.scrollY !== scrollY0) problems.push('the page scrolled from ' + scrollY0 + ' to ' + limit.scrollY);
   await page.evaluate(() => { document.removeEventListener('touchstart', window.vergleichTouchListener, { capture: true }); delete window.vergleichTouchListener; delete window.vergleichTouches; });
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
