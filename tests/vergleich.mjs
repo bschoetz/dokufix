@@ -2974,7 +2974,25 @@ async function assertMagnifier(page, check, key){
   check('magnifier: a click opens the panel with the focus in its field; a click on the open panel closes nothing, the term and its results stay',
     opened.panel && opened.focused && opened.term === '' && typed.results > 0 && again.panel && again.focused && again.term === SEARCH_TERM && again.results === typed.results,
     json({ opened: [opened.panel, opened.focused, opened.term], typed: typed.results, again: [again.panel, again.focused, again.term, again.results] }));
-  await page.evaluate(() => { const p = document.querySelector('body > .search-panel'); if (p && !p.hidden) p.querySelector('.search-close').click(); });
+  // --- story 5.16, M2: closed with the focus in it, the panel puts the focus
+  // back on what opened it, else on the magnifier: opened by the magnifier,
+  // Escape; opened by "/" with the focus on the body, "×"
+  const focusFacts = () => page.evaluate(() => {
+    const p = document.querySelector('body > .search-panel'), a = document.activeElement;
+    return { panel: !!p && !p.hidden, magnifier: !!a && a.classList.contains('search-magnifier'), at: a ? a.tagName + (a.className ? '.' + a.className : '') : null };
+  });
+  await page.keyboard.press('Escape');
+  await frames(page);
+  const escaped = await focusFacts();
+  await page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
+  await page.keyboard.press('/');
+  await frames(page);
+  await page.click('body > .search-panel .search-close', { timeout: 5000 }).catch(() => {});
+  await frames(page);
+  const crossed = await focusFacts();
+  check('magnifier: closed with the focus in it, the panel puts the focus on the magnifier: opened by it and closed by Escape, opened by "/" from the body and closed by "×"',
+    !escaped.panel && escaped.magnifier && !crossed.panel && crossed.magnifier, json({ escaped, crossed }));
+  await page.evaluate(() => { const p = document.querySelector('body > .search-panel'); if (p && !p.hidden) p.querySelector('.search-close').click(); if (document.activeElement) document.activeElement.blur(); });
   await frames(page);
   // --- the editor file: not in edit mode
   if (editor){

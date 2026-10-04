@@ -95,7 +95,8 @@ import { TABLE_CLASS } from './tables.js';
 // while the focus is in a field, where it is typed, nor while the large view
 // of a diagram is open (large-view.js), which lies over the panel. It puts
 // the focus into the panel's field. The close button closes it, and so does Escape, which then
-// does nothing else (registerSearch()). A closed panel forgets its term;
+// does nothing else (registerSearch()); a focus in the panel goes back to
+// what had it before, else to the magnifier (closeSearch()). A closed panel forgets its term;
 // opened again, it reads the root afresh. The search runs on typing, after a
 // short pause, outside the render, so a failure in it breaks no render.
 //
@@ -142,6 +143,9 @@ const EXCERPT_MAX = 160;
 export const HIGHLIGHT = 'search-hit';
 
 let panel = null;
+let magnifier = null;
+// What had the focus when the panel opened, outside it; null for the body.
+let opener = null;
 let input = null;
 let summary = null;
 let list = null;
@@ -442,12 +446,15 @@ function buildMagnifier(){
   button.append(svg);
   button.addEventListener('click', openSearch);
   document.body.appendChild(button);
+  magnifier = button;
 }
 
 // Opens the panel, empty, and puts the focus into its field; an open panel
-// keeps its term and only gets the focus.
+// keeps its term and only gets the focus. It remembers what had the focus.
 export function openSearch(){
   if (!isSearchOpen()){
+    const at = document.activeElement;
+    opener = at && at !== document.body && !panel.contains(at) ? at : null;
     input.value = '';
     clearResults();
     panel.hidden = false;
@@ -456,7 +463,10 @@ export function openSearch(){
 }
 
 // Closes the panel and forgets its term and results; the switches keep
-// their state. A closed panel stays as it is.
+// their state. A closed panel stays as it is. Where the focus was in the
+// panel, it goes back to what had it when the panel opened, where that is
+// still in the page, else to the magnifier; never to a result, nor into the
+// document, which the search does not change.
 export function closeSearch(){
   if (!isSearchOpen()) return;
   clearTimeout(timer);
@@ -465,7 +475,8 @@ export function closeSearch(){
   panel.hidden = true;
   input.value = '';
   clearResults();
-  if (hadFocus) document.activeElement.blur();
+  if (hadFocus) (opener && opener.isConnected ? opener : magnifier).focus();
+  opener = null;
 }
 
 // Where a "/" is text: a field, a list of choices, anything editable; not a

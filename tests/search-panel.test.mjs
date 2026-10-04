@@ -33,6 +33,10 @@ import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from '../src/app/diagrams.js';
 const AFTER = 220;
 const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
 let loads = 0;
+// Whether a is the element b, said by tag and class: an element in an
+// assertion's message would be printed whole, with its document.
+const name = el => el ? el.tagName + (el.className ? '.' + String(el.className).split(' ').join('.') : '') : String(el);
+const same = (a, b, what) => assert.ok(a === b, (what ? what + ': ' : '') + name(a) + ' is not ' + name(b));
 
 // A page as an export has it, the content container holding content, with
 // the search registered over it. options:
@@ -112,7 +116,8 @@ test('the panel and the magnifier are made once, at load, in <body> outside the 
 test('"/" opens the panel, empty, with the focus in its field; "×" closes it and forgets the term; the switches keep their state', async () => {
   const p = await open('<p>Eine Tabelle.</p>');
   const e = p.key('/', p.document.body);
-  assert.ok(e.defaultPrevented && !p.panel.hidden && p.document.activeElement === p.input);
+  assert.ok(e.defaultPrevented && !p.panel.hidden);
+  same(p.document.activeElement, p.input);
   await p.type('Tabelle');
   const fuzzy = p.panel.querySelectorAll('.search-switch input')[1];
   fuzzy.checked = true;
@@ -179,13 +184,13 @@ test('a row says its kind before its text, no text of the place; a row a filter 
   assert.equal(p.summary(), 'Keine Treffer');
   await p.type('Zitronenfalter');
   const at = i => { p.scrolls.length = 0; p.results()[i].click(); return p.scrolls[0]; };
-  assert.equal(at(0).el, p.root.querySelectorAll('tr')[0], 'a shown row: the row');
+  same(at(0).el, p.root.querySelectorAll('tr')[0], 'a shown row: the row');
   assert.deepEqual(at(0).options, { block: 'center' });
-  assert.equal(at(1).el, p.root.querySelector('.' + FILTER_CLASS), 'hidden by the free-text filter: its field');
-  assert.equal(at(3).el, p.root.querySelector('.' + FACET_BAR_CLASS), 'hidden by the facet filter: the facet buttons');
+  same(at(1).el, p.root.querySelector('.' + FILTER_CLASS), 'hidden by the free-text filter: its field');
+  same(at(3).el, p.root.querySelector('.' + FACET_BAR_CLASS), 'hidden by the facet filter: the facet buttons');
   // Whether a row is hidden is read again on the click.
   hiddenByFacet.clear();
-  assert.equal(at(3).el, p.root.querySelectorAll('.' + FACETS_CLASS + ' tr')[1]);
+  same(at(3).el, p.root.querySelectorAll('.' + FACETS_CLASS + ' tr')[1]);
 });
 
 test('a change of a table filter in the root searches again after the pause while the panel is open and holds a term', async () => {
@@ -238,7 +243,9 @@ test('a click on a diagram\'s result scrolls the start of its figure; on the met
   await p.type('Abholbereit');
   assert.deepEqual(p.texts(), ['BPMN-Diagramm: Abholbereit', 'Code: Abholbereit Beispiel-Autorin']);
   p.results()[0].click();
-  assert.deepEqual(p.scrolls, [{ el: p.root.querySelector('figure'), options: { block: 'start' } }]);
+  assert.equal(p.scrolls.length, 1);
+  same(p.scrolls[0].el, p.root.querySelector('figure'));
+  assert.deepEqual(p.scrolls[0].options, { block: 'start' });
   await p.type('Beispiel-Autorin');
   const meta = p.root.querySelector('details');
   assert.ok(!meta.open);
@@ -254,7 +261,9 @@ test('a click on a code block\'s result whose hit has no box scrolls to the bloc
   p.search.openSearch();
   await p.type('Abholbereit');
   p.results()[0].click();
-  assert.deepEqual(p.scrolls, [{ el: p.root.querySelector('pre'), options: { block: 'center' } }]);
+  assert.equal(p.scrolls.length, 1);
+  same(p.scrolls[0].el, p.root.querySelector('pre'));
+  assert.deepEqual(p.scrolls[0].options, { block: 'center' });
 });
 
 test('a click on a result whose place a render replaced since searches again', async () => {
@@ -264,7 +273,7 @@ test('a click on a result whose place a render replaced since searches again', a
   p.root.innerHTML = '<p>Zwei Tabellen.</p><p>Tabelle.</p>';
   p.results()[0].click();
   assert.equal(p.summary(), '2 Treffer an 2 Stellen in 1 Abschnitt');
-  assert.deepEqual(p.scrolls, []);
+  assert.equal(p.scrolls.length, 0);
 });
 
 // ---------- the field in its label (story 5.16, M3) ----------
@@ -276,4 +285,48 @@ test('the field stands in its label, which names it without an id: no element of
   assert.ok(!label.hasAttribute('for'));
   assert.deepEqual(Array.from(p.panel.querySelectorAll('[id]')).map(el => el.id), []);
   assert.deepEqual(Array.from(p.document.querySelectorAll('[id="search-input"]')).map(el => el.tagName), ['H1']);
+});
+
+// ---------- the focus after closing (story 5.16, M2) ----------
+test('closing the panel with the focus in it puts the focus back on what had it when the panel opened, else on the magnifier, never on a result', async () => {
+  const p = await open('<p>Eine Tabelle, <a href="#x">ein Verweis</a>.</p><p>Noch eine Tabelle.</p>');
+  const link = p.root.querySelector('a');
+  // Opened by the magnifier, which a click focused, closed by Escape: the magnifier.
+  p.magnifier.focus();
+  p.magnifier.click();
+  same(p.document.activeElement, p.input);
+  await p.type('Tabelle');
+  p.key('Escape', p.input);
+  assert.ok(p.panel.hidden);
+  same(p.document.activeElement, p.magnifier);
+  // Opened by a click on the magnifier that did not focus it (Safari), closed by "×": the magnifier.
+  p.magnifier.blur();
+  p.magnifier.click();
+  p.panel.querySelector('.search-close').focus();
+  p.panel.querySelector('.search-close').click();
+  same(p.document.activeElement, p.magnifier);
+  // Opened by "/" with the focus on the body, "×": the magnifier.
+  p.magnifier.blur();
+  p.key('/', p.document.body);
+  p.panel.querySelector('.search-close').click();
+  same(p.document.activeElement, p.magnifier);
+  // Opened by "/" with the focus on a link of the document, closed from a result: the link.
+  link.focus();
+  p.key('/', link);
+  await p.type('Tabelle');
+  p.results()[1].focus();
+  p.key('Escape', p.results()[1]);
+  same(p.document.activeElement, link);
+  // The link gone from the page by then: the magnifier.
+  p.key('/', link);
+  link.remove();
+  p.key('Escape', p.input);
+  same(p.document.activeElement, p.magnifier);
+  // With the focus outside the panel, closing leaves it there.
+  p.key('/', p.magnifier);
+  const other = p.root.querySelector('p');
+  other.focus();
+  p.key('Escape', other);
+  assert.ok(p.panel.hidden);
+  same(p.document.activeElement, other);
 });
