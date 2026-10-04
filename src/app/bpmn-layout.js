@@ -536,8 +536,10 @@ export function spreadPorts(routes, box){
 // each other. Each after the first runs around both nodes instead: the second
 // below them, out of the bottom of its source and into the bottom of its
 // target, the third above, the fourth further below, and so on; for nodes one
-// above the other, right and left. A way that a foreign symbol blocks is not
-// taken.
+// above the other, right and left. The first level lies 20 px beyond the
+// outermost edge of the two nodes and of every symbol of their row within
+// the span, each further one 20 px farther. A way that a foreign symbol
+// blocks is not taken.
 export function separateTwins(routes, box){
   const seen = new Map();
   for (const r of routes){
@@ -546,9 +548,12 @@ export function separateTwins(routes, box){
     seen.set(pair, n + 1);
     if (!n) continue;
     const s = box[r.f.from], t = box[r.f.to], dir = n % 2 ? 1 : -1, ring = 20 * Math.ceil(n / 2);
-    const [u, v, su] = Math.abs(s.cx - t.cx) >= 1 ? ['y', 'x', 'h'] : ['x', 'y', 'w'];
+    const [u, v, su, sv] = Math.abs(s.cx - t.cx) >= 1 ? ['y', 'x', 'h', 'w'] : ['x', 'y', 'w', 'h'];
     const edge = c => c['c' + u] + dir * c[su] / 2;
-    const out = dir > 0 ? Math.max(edge(s), edge(t)) + ring : Math.min(edge(s), edge(t)) - ring;
+    const lo = Math.min(s['c' + v], t['c' + v]), hi = Math.max(s['c' + v], t['c' + v]);
+    const row = Object.values(box).filter(c => (Math.abs(c['c' + u] - s['c' + u]) < 1 || Math.abs(c['c' + u] - t['c' + u]) < 1) && c['c' + v] + c[sv] / 2 > lo && c['c' + v] - c[sv] / 2 < hi);
+    const edges = [s, t, ...row].map(edge);
+    const out = dir > 0 ? Math.max(...edges) + ring : Math.min(...edges) - ring;
     const at = (c, w) => ({ [u]: w, [v]: c['c' + v] });
     const next = [at(s, edge(s)), at(s, out), at(t, out), at(t, edge(t))];
     if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;

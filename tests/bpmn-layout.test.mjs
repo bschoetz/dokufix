@@ -305,6 +305,14 @@ test('correction 6: the second flow between one pair runs below both nodes, the 
   assert.deepEqual(blocked[1].pts, same());
 });
 
+test('correction 6: the level of a twin lies 20 px beyond the tallest symbol of the row within its span, not 5 px under it', () => {
+  const box = { G1: node(100, 100, 50, 50), T: node(250, 100, 120, 80, true), G2: node(400, 100, 50, 50) };
+  const routes = [1, 2, 3].map(() => ({ f: { from: 'G1', to: 'G2' }, pts: ptsOf([[125, 100], [375, 100]]), obstacles: [{ x1: 190, y1: 60, x2: 310, y2: 140 }] }));
+  separateTwins(routes, box);
+  assert.deepEqual(routes[1].pts, ptsOf([[100, 125], [100, 160], [400, 160], [400, 125]]), 'below the task\'s bottom at 140, not the diamonds\' at 125');
+  assert.deepEqual(routes[2].pts, ptsOf([[100, 75], [100, 40], [400, 40], [400, 75]]), 'above the task\'s top at 60');
+});
+
 // ---------- correction 7: flows back within a row (story 2.20) ----------
 test('correction 7: a flow back within a row runs around the row, four points, none in the row\'s band', () => {
   const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true), G: node(450, 100, 50, 50) };
