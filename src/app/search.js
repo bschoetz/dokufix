@@ -39,6 +39,9 @@ import { TABLE_CLASS } from './tables.js';
 // scrolls to the table's filter controls, the facet buttons, else the field of
 // the free-text filter, else the table, and the filter stays as it is.
 // Whether a row is hidden is read when the search runs and again on the click.
+// A row in a closed <details> of the author, a facet table's included, is
+// not hidden by a filter; a click on the result of any place in a closed
+// <details> opens it first, and it stays open.
 // While the panel is open and holds a term, a change of a table filter in the
 // root (typing in its field, choosing a facet value) runs the search again
 // after the same pause as typing, so the marks follow.
@@ -216,12 +219,25 @@ const HIDDEN_NOTE = ' (ausgeblendet)';
 
 const hasClass = (el, cls) => !!el && el.nodeType === 1 && el.classList.contains(cls);
 
+// The closed <details> an element stands in, below the root, outside their
+// <summary>, which shows while they are closed. Read from the DOM, not from
+// a box: Chromium gives a box to what a closed <details> holds.
+function closedAround(el){
+  const out = [], root = rootOf();
+  for (let n = el; n !== root && n.parentElement; n = n.parentElement){
+    const d = n.parentElement;
+    if (d.tagName.toUpperCase() === 'DETAILS' && !d.hasAttribute('open') && n.tagName.toUpperCase() !== 'SUMMARY') out.push(d);
+  }
+  return out;
+}
+
 // Whether a table filter hides a row now: the free-text filter gives it a
 // class; a facet filter hides it by CSS alone, so a row of a facet table
-// without a box is hidden. A row without a box elsewhere, in a closed
-// <details> say, is not hidden by a filter, and counts as shown.
+// without a box is hidden. A row without a box elsewhere, or in a closed
+// <details>, a facet table's included, is not hidden by a filter, and counts
+// as shown.
 const rowHidden = row => row.classList.contains(FILTER_OUT_CLASS) ||
-  (!!row.closest('.' + FACETS_CLASS) && !row.getClientRects().length);
+  (!!row.closest('.' + FACETS_CLASS) && !row.getClientRects().length && !closedAround(row).length);
 
 // The filter controls of a row's table: the facet buttons, else the field of
 // the free-text filter, else the table. As filter.js finds them: the field
@@ -283,6 +299,9 @@ function resultItem({ place, at }){
   button.addEventListener('click', () => {
     // The root was rendered anew since: search it again.
     if (!place.el.isConnected){ search(); return; }
+    // A place in a closed <details> of the author: the <details> opened, as
+    // the reader would, as centreHit() opens the metadata panel.
+    for (const d of closedAround(place.el)) d.setAttribute('open', '');
     if (hasClass(place.el, DIAGRAM_CLASS)){ place.el.scrollIntoView({ block: 'start' }); return; }
     if (place.kind === KIND_META || place.kind === KIND_CODE){ centreHit(place, at[0]); return; }
     (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });

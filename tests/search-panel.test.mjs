@@ -469,3 +469,45 @@ test('a change of the root\'s nodes or text drops the kept places: a diagram dra
   p.key('Enter', p.input);
   assert.deepEqual(p.texts(), ['Mermaid-Diagramm: Abholbereit']);
 });
+
+// ---------- a facet table in a closed <details> (story 5.16, N8) ----------
+test('a facet table in a closed <details>: no row says " (ausgeblendet)", and a click opens the <details> and scrolls to the row', async () => {
+  const hiddenByFacet = new Set();
+  const p = await open('<details><summary>Arten</summary>' + facetTable([{ text: 'Zitronenfalter Ost' }, { text: 'Zitronenfalter West' }]) + '</details>' +
+    '<details><summary>Mehr</summary><p>Ein Zitronenfalter im Absatz.</p></details>', { noBox: el => hiddenByFacet.has(el) });
+  const [inTable, inText] = p.root.querySelectorAll('details');
+  p.search.openSearch();
+  await p.type('Zitronenfalter');
+  assert.deepEqual(p.texts(), ['Tabelle: Zitronenfalter Ost', 'Tabelle: Zitronenfalter West', 'Ein Zitronenfalter im Absatz.']);
+  p.results()[1].click();
+  assert.ok(inTable.hasAttribute('open'), 'the <details> is opened');
+  assert.ok(!inText.hasAttribute('open'));
+  assert.equal(p.scrolls.length, 1);
+  same(p.scrolls[0].el, p.root.querySelectorAll('tr')[1]);
+  // A paragraph in a closed <details> is opened to as well.
+  p.scrolls.length = 0;
+  p.results()[2].click();
+  assert.ok(inText.hasAttribute('open'));
+  same(p.scrolls[0].el, p.root.querySelector('p'));
+  // Opened, the facet filter's hiding is a filter's again.
+  hiddenByFacet.add(p.root.querySelectorAll('tr')[0]);
+  await p.type('Zitronenfalter ');
+  assert.deepEqual(p.texts(), ['Tabelle: Zitronenfalter Ost (ausgeblendet)', 'Tabelle: Zitronenfalter West', 'Ein Zitronenfalter im Absatz.']);
+});
+
+test('a row a facet filter hides in a closed <details>: the click opens the <details> and goes to the facet buttons; a summary, which shows, opens nothing', async () => {
+  const hiddenByFacet = new Set();
+  const p = await open('<details><summary>Zitronenfalter, die Arten</summary>' + facetTable([{ text: 'Zitronenfalter Ost' }, { text: 'Zitronenfalter West' }]) + '</details>', { noBox: el => hiddenByFacet.has(el) });
+  hiddenByFacet.add(p.root.querySelectorAll('tr')[0]);
+  const details = p.root.querySelector('details');
+  p.search.openSearch();
+  await p.type('Zitronenfalter');
+  assert.deepEqual(p.texts(), ['Zitronenfalter, die Arten', 'Tabelle: Zitronenfalter Ost', 'Tabelle: Zitronenfalter West']);
+  p.results()[0].click();
+  assert.ok(!details.hasAttribute('open'), 'the summary shows: nothing is opened');
+  same(p.scrolls[0].el, p.root.querySelector('summary'));
+  p.scrolls.length = 0;
+  p.results()[1].click();
+  assert.ok(details.hasAttribute('open'));
+  same(p.scrolls[0].el, p.root.querySelector('.' + FACET_BAR_CLASS));
+});

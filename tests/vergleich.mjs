@@ -2340,6 +2340,46 @@ async function assertSearch(page, check, key){
   check('search: raw HTML with "' + N1_TERM + '" directly in a div, a dt, a dd, a summary, a bare blockquote and a figcaption lists each as a result of its own, and the paragraph in the details; an image\'s alt is no result',
     sameList(raw.results.map(r => r.text), wantRaw) && raw.summary === '7 Treffer an 7 Stellen in 1 Abschnitt', json({ summary: raw.summary, results: raw.results.map(r => r.text) }));
 
+  // --- story 5.16, N8: the first facet table put into a closed <details> for
+  // the moment, a word put into its first row: the row is not marked
+  // "(ausgeblendet)", and a click opens the <details> and brings the row into
+  // the window. All of it is taken back afterwards.
+  const N8_TERM = 'Vergleichsfalter';
+  const wrapped = await page.evaluate(([rootSel, t]) => {
+    const g = document.querySelector(rootSel + ' .dokufix-facets');
+    if (!g) return false;
+    const d = document.createElement('details');
+    d.id = 'vergleich-n8';
+    d.append(document.createElement('summary'));
+    d.firstChild.textContent = 'Zu';
+    g.before(d);
+    d.append(g);
+    const word = document.createElement('span');
+    word.id = 'vergleich-n8-word';
+    word.textContent = ' ' + t;
+    g.querySelector('tbody tr td').append(word);
+    window.scrollTo(0, 0);
+    return true;
+  }, [ROOT_SEL, N8_TERM]);
+  if (wrapped){
+    const inDetails = await search(N8_TERM);
+    await page.locator('body > .search-panel .search-results .search-result').first().click().catch(() => {});
+    await frames(page);
+    const opened = await page.evaluate(() => {
+      const d = document.getElementById('vergleich-n8'), r = d.querySelector('tbody tr').getBoundingClientRect();
+      return { open: d.open, top: r.top, bottom: r.bottom, height: innerHeight };
+    });
+    await page.evaluate(() => {
+      document.getElementById('vergleich-n8-word').remove();
+      const d = document.getElementById('vergleich-n8');
+      d.replaceWith(d.querySelector('.dokufix-facets'));
+      window.scrollTo(0, 0);
+    });
+    check('search: a row of a facet table in a closed <details> is listed without "(ausgeblendet)"; a click opens the <details> and brings the row into the window',
+      inDetails.results.length === 1 && !inDetails.results[0].hidden && inDetails.results[0].kind === 'Tabelle: ' && opened.open && opened.bottom > opened.top && opened.top >= 0 && opened.bottom <= opened.height,
+      json({ results: inDetails.results, opened }));
+  }
+
   // --- story 6: hits in tables. A term from a table row: its result reads
   // "Tabelle: " before the row's text, a click centres the row, and the
   // highlight lies in the row's cells, one range per cell a hit touches.
