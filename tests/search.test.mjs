@@ -1006,6 +1006,30 @@ test('the styles of the search: a hit highlighted in the colour of the marks, no
   assert.match(css, /^\.search-hidden\{color:#a40e26;font-style:italic\}$/m);
 });
 
+test('the narrow view of the search has one width: NARROW of search.js is the query of the bar\'s rules in search.css and of the app\'s narrow layout in app.css (story 12)', () => {
+  const narrow = read('app/search.js').match(/^export const NARROW = '(\([^']*\))';$/m);
+  assert.ok(narrow, 'search.js says NARROW once');
+  assert.equal(narrow[1], '(max-width:820px)');
+  const css = read('search.css');
+  // The bar's rules, and the collapse, only inside that query.
+  const at = css.indexOf('@media ' + narrow[1] + '{');
+  assert.ok(at > 0, 'search.css has @media ' + narrow[1]);
+  // The block of the query, to its closing brace.
+  let depth = 0, end = css.indexOf('{', at);
+  for (; end < css.length; end++){
+    if (css[end] === '{') depth++;
+    else if (css[end] === '}' && --depth === 0) break;
+  }
+  const inside = css.slice(at, end + 1), outside = css.slice(0, at) + css.slice(end + 1);
+  for (const rule of ['.search-collapsed', 'search-bar{display:flex', '.search-bar button{']) assert.ok(inside.includes(rule), rule + ' inside the query');
+  assert.match(css, /^\.search-bar\{display:none\}$/m);
+  assert.ok(!/\.search-collapsed/.test(outside), 'no rule of the collapse outside the query, before or after it');
+  assert.ok(!/\.search-bar[\s\S]*?\{(?!display:none)/.test(outside.replace(/^\.search-bar\{display:none\}$/m, '')), 'no rule of the bar outside the query but the one that hides it');
+  assert.ok(read('app.css').includes('@media ' + narrow[1] + '{'), 'app.css has the same query');
+  // Every element of the bar is made with createElement.
+  assert.match(read('app/search.js'), /bar\.className = 'search-bar';/);
+});
+
 // ---------- run time (story 5.16, N5) ----------
 test('groupResults walks into no diagram, code block or metadata panel: none holds a group heading', () => {
   const root = rootWith('<h2>A</h2>\n<figure class="dokufix-diagram"><div class="dokufix-diagram-svg"><svg><g><text>Tabelle</text></g></svg></div></figure>\n' +

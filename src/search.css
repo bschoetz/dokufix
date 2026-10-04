@@ -119,6 +119,36 @@
 .search-magnifier:hover{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
 .search-magnifier:focus-visible{outline:2px solid #1c1c1e;outline-offset:2px}
 .search-magnifier svg{display:block}
+/* The bar of a collapsed panel (src/app/search.js, story 12): in the narrow
+   view, a window of at most 820 px, the app's narrow layout (src/app.css),
+   a click on a result collapses the panel to a bar at the bottom of the
+   window, as wide as the window, so the place it brings into view is not
+   covered: the line "Stelle 2 von 7", "‹" and "›", "Liste" and "×", each at
+   least 44 px high and wide, a touch target. While it stands there the
+   window scrolls a place into view above it (scroll-padding). The query is
+   NARROW of the script, which tests/search.test.mjs holds it to. Outside
+   the narrow view no rule here applies: a wider window shows the whole
+   panel, collapsed or not, and never the bar. */
+.search-bar{display:none}
+@media (max-width:820px){
+  .search-panel.search-collapsed:not([hidden]){
+    top:auto;left:0;right:0;bottom:0;width:auto;
+    border-width:1px 0 0;border-radius:0;
+    box-shadow:0 -4px 16px rgba(0,0,0,0.12);
+  }
+  .search-collapsed > :not(.search-bar){display:none}
+  .search-collapsed > .search-bar{display:flex;align-items:center;gap:4px;padding:8px 10px}
+  .search-bar-count{flex:1;min-width:0;padding-left:4px;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .search-bar button{
+    min-width:44px;min-height:44px;padding:0 10px;
+    background:none;border:1px solid #c7c7cc;border-radius:6px;
+    color:#1c1c1e;font:inherit;font-size:15px;cursor:pointer;
+  }
+  .search-bar .search-bar-prev,.search-bar .search-bar-next,.search-bar .search-bar-close{font-size:22px;line-height:1}
+  .search-bar button:disabled{color:#c7c7cc;border-color:#e5e5ea;cursor:default}
+  .search-bar button:focus-visible{outline:2px solid #1c1c1e;outline-offset:1px}
+  html:has(> body > .search-panel.search-collapsed:not([hidden])){scroll-padding-bottom:61px}
+}
 @media print{
   .search-panel,.search-magnifier{display:none !important}
   ::highlight(search-hit){background-color:transparent}

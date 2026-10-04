@@ -2511,8 +2511,174 @@ async function assertSearch(page, check, key){
     hidden && bare.summary === wantSummary && bare.results.length === want.length && consoleErrors.length === 0,
     json({ hidden, summary: bare.summary, results: bare.results.length, errors: consoleErrors }));
   await page.click('body > .search-panel .search-close');
+  // --- story 12: the search on a narrow screen
+  await assertSearchNarrow();
   // --- story 10: the magnifier
   await assertMagnifier(page, check, key);
+
+  // Story 12, inside assertSearch for its helpers. At 390 px, the window of a
+  // phone, a tap on a result collapses the panel to a bar at the bottom of the
+  // window, as wide as it, "Stelle N von M", its buttons at least 44 px high;
+  // the place stands in the window above the bar, the focus is out of the
+  // field and on the bar; "Liste" brings the whole panel back with its term,
+  // its results and the list scrolled where it was, the focus on the result;
+  // "›" and "‹" go through the results, "‹" disabled on the first, "›" on the
+  // last; widened to 1000 px the whole panel shows; "×" closes it and its
+  // highlight. At 1400 px a click collapses nothing. The tap is a click of the
+  // mouse at the result's middle, where nothing lies over it, so the list is
+  // scrolled by the run alone. Starts and ends at 1400 px with the panel closed.
+  async function assertSearchNarrow(){
+    const PHONE = { width: 390, height: 844 };
+    const BAR_SEL = 'body > .search-panel .search-bar';
+    await page.setViewportSize(PHONE);
+    await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+    await frames(page);
+    await press('/');
+    const long = await search(LONG_TERM);
+    const wantLong = expected(LONG_TERM);
+    // A result of a place no taller than a row, no diagram, code block or metadata
+    // panel, that the list can be scrolled to so that it stands 120 px below the
+    // top of the list, under the stacked group headings, and is not covered.
+    const plain = wantLong.map((p, i) => (!p.kind || p.kind === 'Tabelle') ? i : -1).filter(i => i >= 0);
+    const aimed = await page.evaluate(([plain, row]) => {
+      const list = document.querySelector('body > .search-panel .search-results');
+      const buttons = Array.from(list.querySelectorAll('.search-result'));
+      const max = list.scrollHeight - list.clientHeight;
+      list.scrollTop = 0;
+      const portTop = list.getBoundingClientRect().top + list.clientTop;
+      for (const k of plain){
+        const b = buttons[k];
+        if (!b) continue;
+        const at = b.getBoundingClientRect().top - portTop - 3 * row - 36;
+        if (at <= 0 || at > max) continue;
+        list.scrollTop = at;
+        const r = b.getBoundingClientRect();
+        const x = r.left + r.width / 2, y = r.top + r.height / 2;
+        const t = document.elementFromPoint(x, y);
+        if (t && b.contains(t) && r.bottom <= list.getBoundingClientRect().bottom) return { k, scrollTop: list.scrollTop, x, y };
+      }
+      list.scrollTop = 0;
+      return null;
+    }, [plain, GROUP_ROW]);
+    if (!aimed){
+      check('search at 390 px: a result of "' + LONG_TERM + '" in a scrolled list, to tap', false, json({ results: long.results.length, max: 'not scrollable or none uncovered' }));
+      await page.click('body > .search-panel .search-close').catch(() => {});
+      await page.setViewportSize({ width: 1400, height: 1000 });
+      return;
+    }
+    const barFacts = at => page.evaluate(([rootSel, sel, at, bar]) => {
+      const p = document.querySelector('body > .search-panel');
+      const b = document.querySelector(bar);
+      const box = el => { const r = el.getBoundingClientRect(); return { left: r.left, top: r.top, right: r.right, bottom: r.bottom }; };
+      const place = at >= 0 ? document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at] : null;
+      const list = p.querySelector('.search-results');
+      const a = document.activeElement;
+      const buttons = Array.from(b.querySelectorAll('button'));
+      return {
+        open: !p.hidden, collapsed: p.classList.contains('search-collapsed'), bar: getComputedStyle(b).display !== 'none',
+        listShown: list.getClientRects().length > 0, fieldShown: p.querySelector('input').getClientRects().length > 0,
+        panel: box(p), place: place ? box(place) : null, count: (b.querySelector('.search-bar-count') || {}).textContent,
+        heights: buttons.map(x => Math.round(x.getBoundingClientRect().height)), widths: buttons.map(x => Math.round(x.getBoundingClientRect().width)),
+        prev: (b.querySelector('.search-bar-prev') || {}).disabled, next: (b.querySelector('.search-bar-next') || {}).disabled,
+        focus: a === p.querySelector('input') ? 'field' : b.contains(a) ? a.className : Array.from(list.querySelectorAll('.search-result')).indexOf(a),
+        value: p.querySelector('input').value, results: list.querySelectorAll('.search-result').length, scrollTop: list.scrollTop, scrolled: Math.round(scrollY),
+        window: { width: document.documentElement.clientWidth, height: innerHeight },
+      };
+    }, [ROOT_SEL, PLACE_SEL, at, BAR_SEL]);
+    const M = wantLong.length;
+    const k = aimed.k;
+    // What a click on a result changes in the document, a closed <details> opened
+    // and a code block scrolled sideways, is put back at the end: the steps
+    // below go through every result.
+    await page.evaluate(rootSel => {
+      const root = document.querySelector(rootSel);
+      window.vergleichNarrow = { open: Array.from(root.querySelectorAll('details')).map(d => d.open), left: Array.from(root.querySelectorAll('pre')).map(p => p.scrollLeft) };
+    }, ROOT_SEL);
+    // The tap.
+    await page.mouse.click(aimed.x, aimed.y);
+    await frames(page);
+    const tapped = await barFacts(wantLong[k].at);
+    const atBottom = f => f.open && f.collapsed && f.bar && !f.listShown && !f.fieldShown && Math.abs(f.panel.bottom - f.window.height) <= 1 &&
+      Math.abs(f.panel.left) <= 1 && Math.abs(f.panel.right - f.window.width) <= 1 && f.panel.bottom - f.panel.top <= 72;
+    const above = f => !!f.place && f.place.top >= 0 && f.place.bottom <= f.panel.top + 0.5 && !overlap(f.place, f.panel);
+    check('search at 390 px: a tap on result ' + (k + 1) + ' of "' + LONG_TERM + '" collapses the panel to a bar at the bottom of the window, as wide as it, "Stelle ' + (k + 1) + ' von ' + M + '"; its buttons at least 44 px; the place in the window above the bar, not under the panel; the focus out of the field, on the bar',
+      long.results.length === M && atBottom(tapped) && tapped.count === 'Stelle ' + (k + 1) + ' von ' + M && tapped.heights.length === 4 && tapped.heights.every(h => h >= 44) && tapped.widths.every(w => w >= 44) &&
+        above(tapped) && typeof tapped.focus === 'string' && tapped.focus.startsWith('search-bar-'),
+      json(tapped));
+    // "Liste": the whole panel, its term and results, the list where it was, the focus on the result.
+    await page.click(BAR_SEL + ' .search-bar-list');
+    await frames(page);
+    const listed = await barFacts(-1);
+    check('search at 390 px: "Liste" brings the whole panel back with "' + LONG_TERM + '" and its ' + M + ' results, the list scrolled where it was, the focus on result ' + (k + 1),
+      listed.open && !listed.collapsed && !listed.bar && listed.listShown && listed.fieldShown && listed.value === LONG_TERM && listed.results === M &&
+        Math.abs(listed.scrollTop - aimed.scrollTop) <= 1 && listed.focus === k,
+      json({ ...listed, expectedScrollTop: aimed.scrollTop }));
+    // "›" and "‹": the next and the previous result, as a click on it does; disabled at the ends.
+    await page.mouse.click(aimed.x, aimed.y);
+    await frames(page);
+    await page.click(BAR_SEL + ' .search-bar-next');
+    await frames(page);
+    const nextOne = await barFacts(wantLong[k + 1] ? wantLong[k + 1].at : -1);
+    await page.click(BAR_SEL + ' .search-bar-prev');
+    await frames(page);
+    const back = await barFacts(wantLong[k].at);
+    const ends = await page.evaluate(bar => {
+      const b = document.querySelector(bar), prev = b.querySelector('.search-bar-prev'), next = b.querySelector('.search-bar-next'), count = b.querySelector('.search-bar-count');
+      let toFirst = 0, toLast = 0;
+      while (!prev.disabled && toFirst < 1000){ prev.click(); toFirst++; }
+      const first = { count: count.textContent, prev: prev.disabled, next: next.disabled };
+      while (!next.disabled && toLast < 1000){ next.click(); toLast++; }
+      return { toFirst, first, toLast, last: { count: count.textContent, prev: prev.disabled, next: next.disabled } };
+    }, BAR_SEL);
+    check('search at 390 px: "›" goes to result ' + (k + 2) + ', "‹" back to ' + (k + 1) + ', each place above the bar; "‹" is disabled on the first, "›" on the last, the bar collapsed throughout',
+      k + 1 < M && nextOne.collapsed && nextOne.count === 'Stelle ' + (k + 2) + ' von ' + M && (!plain.includes(k + 1) || above(nextOne)) &&
+        back.collapsed && back.count === 'Stelle ' + (k + 1) + ' von ' + M && above(back) && !back.prev && !back.next &&
+        ends.toFirst === k && ends.first.count === 'Stelle 1 von ' + M && ends.first.prev && !ends.first.next &&
+        ends.toLast === M - 1 && ends.last.count === 'Stelle ' + M + ' von ' + M && ends.last.next && !ends.last.prev,
+      json({ next: [nextOne.count, nextOne.scrolled], back: [back.count, back.place, back.panel.top], ends }));
+    // Widened to 1000 px while collapsed: the whole panel; narrowed again it stays whole.
+    await page.setViewportSize({ width: 1000, height: 1000 });
+    await frames(page);
+    const widened = await barFacts(-1);
+    await page.setViewportSize(PHONE);
+    await frames(page);
+    const narrowed = await barFacts(-1);
+    check('search: collapsed at 390 px and the window widened to 1000 px, the whole panel shows, with its term and results, and no bar; narrowed again it stays whole',
+      widened.open && !widened.collapsed && !widened.bar && widened.listShown && widened.fieldShown && widened.results === M && !narrowed.collapsed && narrowed.listShown,
+      json({ widened: { ...widened, panel: round(widened.panel) }, narrowed: narrowed.collapsed }));
+    // "×" on the bar closes the panel and its highlight.
+    await page.locator('body > .search-panel .search-results .search-result').nth(k).click({ timeout: 5000 }).catch(() => {});
+    await frames(page);
+    const again = await barFacts(-1);
+    await page.click(BAR_SEL + ' .search-bar-close', { timeout: 5000 }).catch(() => {});
+    await frames(page);
+    const crossed = await barFacts(-1);
+    const litCrossed = await highlightFacts();
+    check('search at 390 px: "×" on the bar closes the panel; the term is gone and no hit stays highlighted',
+      again.collapsed && !crossed.open && !crossed.collapsed && crossed.value === '' && litCrossed.ranges.length === 0, json({ again: again.collapsed, open: crossed.open, value: crossed.value, ranges: litCrossed.ranges.length }));
+    // At 1400 px a click on a result collapses nothing.
+    await page.setViewportSize({ width: 1400, height: 1000 });
+    await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+    await frames(page);
+    await press('/');
+    await search(SEARCH_TERM);
+    await page.locator('body > .search-panel .search-results .search-result').nth(1).click();
+    await frames(page);
+    const wide = await barFacts(-1);
+    const widePanel = await panelFacts();
+    check('search at 1400 px: a click on a result leaves the whole panel open, its list and field shown, and no bar',
+      wide.open && !wide.collapsed && !wide.bar && wide.listShown && wide.fieldShown && wide.results === want.length && placed(widePanel), json({ ...wide, panel: round(wide.panel) }));
+    await page.click('body > .search-panel .search-close');
+    await page.evaluate(rootSel => {
+      const root = document.querySelector(rootSel), was = window.vergleichNarrow;
+      root.querySelectorAll('details').forEach((d, i) => { if (i < was.open.length) d.open = was.open[i]; });
+      root.querySelectorAll('pre').forEach((p, i) => { if (i < was.left.length) p.scrollLeft = was.left[i]; });
+      delete window.vergleichNarrow;
+      window.scrollTo(0, 0);
+      if (document.activeElement) document.activeElement.blur();
+    }, ROOT_SEL);
+    await frames(page);
+  }
 
   // Story 7, inside assertSearch for its helpers. In the demo text the terms
   // its special cases name: "Abholbereit" in a BPMN diagram, "nachfordern" in

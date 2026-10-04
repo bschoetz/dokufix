@@ -11,7 +11,9 @@
 // (document.activeElement, focus(), blur()); a box (getClientRects()), which
 // an element has unless it stands in a closed <details> or the case says it
 // has none; scrollIntoView(), window.scrollBy() and a Range, which record
-// where they were asked to scroll. Escape goes through the one Escape
+// where they were asked to scroll; where a case says so, window.matchMedia,
+// whose query matches while the window is narrow and which tells its
+// listeners when that changes (resize()). Escape goes through the one Escape
 // listener (src/app/escape.js) with the panel's step and a table filter's
 // field's after it, as src/app.js lists them; linkedom calls a
 // listener on window last, after those on the document, so the order of
@@ -49,7 +51,8 @@ const same = (a, b, what) => assert.ok(a === b, (what ? what + ': ' : '') + name
 //   highlights  false: the browser has no CSS.highlights
 //   rangeBox    the box of a Range, the first hit of a place
 //   main        attributes of the content container, as markup
-async function open(content, { noBox = () => false, highlights = true, rangeBox = { left: 0, right: 10, top: 600, bottom: 610, width: 10, height: 10 }, main = '' } = {}){
+//   narrow      true or false: the window has matchMedia and is narrow, or wide; left out, it has none
+async function open(content, { noBox = () => false, highlights = true, rangeBox = { left: 0, right: 10, top: 600, bottom: 610, width: 10, height: 10 }, main = '', narrow } = {}){
   const { document, window } = parseHTML('<!DOCTYPE html><html><head></head><body><main class="reader-body dokufix-doc"' + main + '>' + content + '</main></body></html>');
   const root = document.querySelector('main');
   const scrolls = [];
@@ -70,6 +73,15 @@ async function open(content, { noBox = () => false, highlights = true, rangeBox 
   document.createRange = () => ({ setStart(){}, setEnd(){}, getBoundingClientRect: () => rangeBox });
   window.scrollBy = (x, y) => { scrolls.push({ by: y }); };
   window.innerHeight = 900;
+  const media = { narrow, queries: [], listeners: [] };
+  if (narrow !== undefined){
+    window.matchMedia = query => {
+      media.queries.push(query);
+      return { media: query, get matches(){ return media.narrow; }, addEventListener: (type, fn) => { if (type === 'change') media.listeners.push(fn); } };
+    };
+  }
+  // The window made narrow or wide: the query's listeners hear it.
+  const resize = to => { media.narrow = to; for (const fn of media.listeners) fn({ matches: to }); };
   Object.assign(globalThis, {
     document, window, MutationObserver: window.MutationObserver,
     CSS: highlights ? { highlights: new Map() } : {},
@@ -100,7 +112,14 @@ async function open(content, { noBox = () => false, highlights = true, rangeBox 
   const texts = () => results().map(b => b.textContent);
   const heads = () => Array.from(panel.querySelectorAll('.search-group-head')).map(h => h.querySelector('.search-group-title').textContent + ' | ' + h.querySelector('.search-group-count').textContent);
   const lit = () => (CSS.highlights && CSS.highlights.get(search.HIGHLIGHT)) || null;
-  return { document, window, root, search, panel, input, magnifier, scrolls, key, type, summary, results, texts, heads, lit };
+  // The bar of a collapsed panel (story 12): whether the panel is collapsed, its line, its buttons.
+  const bar = {
+    collapsed: () => panel.classList.contains('search-collapsed'),
+    count: () => panel.querySelector('.search-bar-count').textContent,
+    prev: panel.querySelector('.search-bar-prev'), next: panel.querySelector('.search-bar-next'),
+    list: panel.querySelector('.search-bar-list'), close: panel.querySelector('.search-bar-close'),
+  };
+  return { document, window, root, search, panel, input, magnifier, scrolls, key, type, summary, results, texts, heads, lit, media, resize, bar };
 }
 
 const table = rows => '<div class="' + TABLE_CLASS + '"><table><tbody>' + rows.map(r => '<tr' + (r.cls ? ' class="' + r.cls + '"' : '') + '><td>' + r.text + '</td></tr>').join('') + '</tbody></table></div>';
@@ -578,5 +597,206 @@ test('the close button comes before the field in the order of the panel\'s contr
   p.search.openSearch();
   await p.type('Tabelle');
   const order = Array.from(p.panel.querySelectorAll('button, input')).map(el => el.className || el.type);
-  assert.deepEqual(order, ['search-close', 'search-input', 'checkbox', 'checkbox', 'search-result']);
+  // The buttons of the bar last, shown only while the panel is collapsed (story 12).
+  assert.deepEqual(order, ['search-close', 'search-input', 'checkbox', 'checkbox', 'search-result', 'search-bar-prev', 'search-bar-next', 'search-bar-list', 'search-bar-close']);
+});
+
+// ---------- the search on a narrow screen (story 12) ----------
+const PHONE = '<h2>Eins</h2><p>Eine Tabelle.</p><p>Noch eine Tabelle.</p><h2>Zwei</h2><p>Die dritte Tabelle.</p><p>Die vierte Tabelle.</p>';
+
+test('in the narrow view a click on a result collapses the panel to its bar, "Stelle 2 von 4", before the place is scrolled into view; the field gives up the focus, which goes to the bar; collapsed is still open, highlighted', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  assert.ok(!p.bar.collapsed());
+  let atScroll = null;
+  const scrollIntoView = p.window.HTMLElement.prototype.scrollIntoView;
+  p.window.HTMLElement.prototype.scrollIntoView = function(options){ atScroll = p.bar.collapsed(); scrollIntoView.call(this, options); };
+  p.results()[1].click();
+  p.window.HTMLElement.prototype.scrollIntoView = scrollIntoView;
+  assert.ok(p.bar.collapsed() && atScroll === true, 'collapsed before the scroll');
+  assert.equal(p.bar.count(), 'Stelle 2 von 4');
+  same(p.scrolls[p.scrolls.length - 1].el, p.root.querySelectorAll('p')[1]);
+  assert.ok(p.document.activeElement !== p.input && p.bar.next.parentNode.contains(p.document.activeElement), 'the focus on the bar');
+  same(p.document.activeElement, p.bar.next);
+  assert.ok(p.search.isSearchOpen() && !p.panel.hidden && p.lit().size === 4);
+  assert.deepEqual([...new Set(p.media.queries)], [p.search.NARROW]);
+  assert.equal(p.search.NARROW, '(max-width:820px)');
+});
+
+test('the bar\'s "‹" and "›" click the previous and the next result in the order of the list, across the groups; "‹" is disabled on the first, "›" on the last, and the focus leaves a button that becomes disabled', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  p.results()[1].click();
+  const clicked = [];
+  p.results().forEach((b, i) => b.addEventListener('click', () => clicked.push(i)));
+  p.bar.next.click();
+  assert.equal(p.bar.count(), 'Stelle 3 von 4');
+  same(p.scrolls[p.scrolls.length - 1].el, p.root.querySelectorAll('p')[2]);
+  p.bar.next.click();
+  assert.equal(p.bar.count(), 'Stelle 4 von 4');
+  assert.ok(p.bar.next.disabled && !p.bar.prev.disabled);
+  same(p.document.activeElement, p.bar.prev, 'the focus from the disabled "›" to "‹"');
+  p.bar.next.click();
+  assert.equal(p.bar.count(), 'Stelle 4 von 4');
+  for (let k = 0; k < 3; k++) p.bar.prev.click();
+  assert.equal(p.bar.count(), 'Stelle 1 von 4');
+  assert.ok(p.bar.prev.disabled && !p.bar.next.disabled);
+  same(p.document.activeElement, p.bar.next);
+  assert.deepEqual(clicked, [2, 3, 2, 1, 0], 'each step a click on that result');
+  assert.ok(p.bar.collapsed());
+});
+
+test('a step of the bar does what a click on that result does: a hidden row to its filter controls, a diagram to its start, a code block to its first hit', async () => {
+  const p = await open(filterField + table([{ text: 'Zitronenfalter Nord' }, { text: 'Zitronenfalter Süd', cls: FILTER_OUT_CLASS }]) +
+    '<figure class="' + DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-mermaid"><div class="' + DIAGRAM_SVG_CLASS + '"><svg><text>Zitronenfalter</text></svg></div></figure><pre><code>Zitronenfalter()</code></pre>', { narrow: true });
+  p.search.openSearch();
+  await p.type('Zitronenfalter');
+  p.results()[0].click();
+  assert.equal(p.bar.count(), 'Stelle 1 von 4');
+  p.scrolls.length = 0;
+  p.bar.next.click();
+  same(p.scrolls[0].el, p.root.querySelector('.' + FILTER_CLASS), 'the hidden row: its field');
+  p.bar.next.click();
+  same(p.scrolls[1].el, p.root.querySelector('figure'));
+  assert.deepEqual(p.scrolls[1].options, { block: 'start' });
+  p.bar.next.click();
+  assert.ok('by' in p.scrolls[2], 'the code block: its first hit to the middle');
+  assert.equal(p.bar.count(), 'Stelle 4 von 4');
+});
+
+test('"Liste" brings the whole panel back with its term and results, the list scrolled where it was, the focus on the current result', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  const list = p.panel.querySelector('.search-results');
+  list.scrollTop = 40;
+  p.results()[1].click();
+  p.bar.next.click();
+  // A list under display:none may lose its scroll position.
+  list.scrollTop = 0;
+  p.bar.list.click();
+  assert.ok(!p.bar.collapsed() && !p.panel.hidden);
+  assert.equal(p.input.value, 'Tabelle');
+  assert.equal(p.results().length, 4);
+  assert.equal(p.summary(), '4 Treffer an 4 Stellen in 2 Abschnitten');
+  assert.equal(list.scrollTop, 40);
+  same(p.document.activeElement, p.results()[2]);
+});
+
+test('"×" on the bar closes the panel as the close button does: the term forgotten, the highlight gone, the focus back on what opened it', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.magnifier.focus();
+  p.magnifier.click();
+  await p.type('Tabelle');
+  p.results()[0].click();
+  p.bar.close.click();
+  assert.ok(p.panel.hidden && !p.search.isSearchOpen() && !p.bar.collapsed());
+  assert.equal(p.input.value, '');
+  assert.equal(p.lit(), null);
+  same(p.document.activeElement, p.magnifier);
+  // Opened again, the whole panel, empty.
+  p.key('/', p.document.body);
+  assert.ok(!p.panel.hidden && !p.bar.collapsed() && p.results().length === 0);
+});
+
+test('in a wide window, and where the browser has no matchMedia, a click on a result leaves the panel as it is: no collapse', async () => {
+  for (const narrow of [false, undefined]){
+    const p = await open(PHONE, { narrow });
+    p.search.openSearch();
+    await p.type('Tabelle');
+    p.results()[1].click();
+    assert.ok(!p.bar.collapsed(), 'narrow ' + narrow);
+    assert.equal(p.results().length, 4);
+    // Enter in the field neither.
+    p.key('Enter', p.input);
+    assert.ok(!p.bar.collapsed());
+    same(p.document.activeElement, p.input);
+  }
+});
+
+test('"/" and the magnifier on a collapsed panel bring the whole panel back with the focus in its field, the term kept', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  p.results()[1].click();
+  const e = p.key('/', p.document.activeElement);
+  assert.ok(e.defaultPrevented && !p.bar.collapsed());
+  same(p.document.activeElement, p.input);
+  assert.equal(p.input.value, 'Tabelle');
+  p.results()[2].click();
+  assert.ok(p.bar.collapsed());
+  p.magnifier.click();
+  assert.ok(!p.bar.collapsed() && !p.panel.hidden);
+  same(p.document.activeElement, p.input);
+  assert.equal(p.results().length, 4);
+});
+
+test('Escape on a collapsed panel closes the search; Enter in the field collapses it as a click on the first result does', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  p.key('Enter', p.input);
+  assert.ok(p.bar.collapsed());
+  assert.equal(p.bar.count(), 'Stelle 1 von 4');
+  assert.ok(p.search.searchStep.applies());
+  const e = p.key('Escape', p.document.activeElement);
+  assert.ok(e.defaultPrevented && p.panel.hidden && !p.bar.collapsed() && p.lit() === null);
+});
+
+test('a search again while collapsed, a table filter changed, keeps the bar and finds the current place in the new list; a place no longer listed: the number of places, "›" to the first', async () => {
+  const p = await open('<p>Eine Tabelle.</p>' + filterField + table([{ text: 'Tabelle Nord' }, { text: 'Tabelle Süd' }]), { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  p.results()[1].click();
+  assert.equal(p.bar.count(), 'Stelle 2 von 3');
+  const field = p.root.querySelector('.' + FILTER_INPUT_CLASS);
+  const filtered = async () => { field.dispatchEvent(new p.window.Event('input', { bubbles: true })); await sleep(AFTER); };
+  // The row hidden by the filter, a paragraph put before it: the bar follows its place.
+  p.root.querySelectorAll('tr')[0].classList.add(FILTER_OUT_CLASS);
+  p.root.prepend(Object.assign(p.document.createElement('p'), { textContent: 'Davor eine Tabelle.' }));
+  await filtered();
+  assert.ok(p.bar.collapsed());
+  assert.equal(p.bar.count(), 'Stelle 3 von 4');
+  assert.ok(!!p.results()[2].querySelector('.search-hidden'));
+  // Its place gone.
+  p.root.querySelectorAll('tr')[0].remove();
+  await filtered();
+  assert.ok(p.bar.collapsed());
+  assert.equal(p.bar.count(), '3 Stellen');
+  assert.ok(p.bar.prev.disabled && !p.bar.next.disabled);
+  p.bar.next.click();
+  assert.equal(p.bar.count(), 'Stelle 1 von 3');
+});
+
+test('a window widened out of the narrow view while collapsed shows the whole panel again, the focus from the bar on the current result; narrowed again, it stays whole', async () => {
+  const p = await open(PHONE, { narrow: true });
+  p.search.openSearch();
+  await p.type('Tabelle');
+  const list = p.panel.querySelector('.search-results');
+  list.scrollTop = 25;
+  p.results()[3].click();
+  list.scrollTop = 0;
+  p.resize(false);
+  assert.ok(!p.bar.collapsed() && !p.panel.hidden);
+  assert.equal(list.scrollTop, 25);
+  same(p.document.activeElement, p.results()[3]);
+  p.resize(true);
+  assert.ok(!p.bar.collapsed());
+  // Wide, a click collapses nothing.
+  p.resize(false);
+  p.results()[0].click();
+  assert.ok(!p.bar.collapsed());
+});
+
+test('the bar is transient with the panel, its elements made with createElement: buttons of their own, no id, the close button of the panel and of the bar named alike', async () => {
+  const p = await open(PHONE, { narrow: true });
+  const bar = p.panel.querySelector(':scope > .search-bar');
+  same(bar, p.panel.lastElementChild);
+  assert.ok(p.panel.hasAttribute(TRANSIENT_ATTR) && !p.root.querySelector('.search-bar'));
+  assert.deepEqual(Array.from(bar.querySelectorAll('button')).map(b => [b.type, b.textContent, b.getAttribute('aria-label')]),
+    [['button', '‹', 'Vorige Stelle'], ['button', '›', 'Nächste Stelle'], ['button', 'Liste', null], ['button', '×', 'Suche schließen']]);
+  assert.equal(p.panel.querySelector('.search-close').getAttribute('aria-label'), 'Suche schließen');
+  assert.equal(bar.querySelectorAll('[id]').length, 0);
 });

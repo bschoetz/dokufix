@@ -19,7 +19,8 @@ import { TABLE_CLASS } from './tables.js';
 // stays at the top of the list while its results scroll under it. Both lists
 // say role="list", which keeps a list a list without list-style in Safari
 // and VoiceOver. A click on
-// a result scrolls the document to its place; the panel stays open.
+// a result scrolls the document to its place; the panel stays open, but in
+// the narrow view (below).
 //
 // A place with a kind, a table row, a diagram, the metadata panel or a code
 // block (search-places.js), says it before its text: "Tabelle: ",
@@ -121,6 +122,32 @@ import { TABLE_CLASS } from './tables.js';
 // first back to the field; none of them with Ctrl, Alt, Meta or Shift.
 // Escape is as above.
 //
+// In the narrow view, a window of at most 820 px (NARROW, the app's narrow
+// layout), the panel would cover the place a click brings into view. There a
+// click on a result, Enter in the field and a step of the bar collapse it to
+// a bar at the bottom of the window, before the document scrolls: "Stelle 2
+// von 7", "‹" and "›" to the previous and the next result, in the order of
+// the list, as a click on it does, "Liste" back to the whole panel with its
+// term, its results and the list scrolled where it was, the focus on the
+// current result, and "×", which closes the panel as the close button does.
+// The field gives up the focus, so the on-screen keyboard closes; the focus
+// goes to the bar. Collapsed is still open: Escape closes it, "/" and the
+// magnifier bring the whole panel back with the focus in its field, the
+// highlight stays, and leaving read mode closes it. The bar keeps no list
+// of its own: it remembers the place of the current result and finds it in
+// the list, so a search that runs again, a table filter changed, keeps the
+// bar on that place, and where the place is no longer listed the bar says
+// how many places there are, "›" to the first. matchMedia is asked at the
+// click alone, so a wider window never collapses; widened while collapsed,
+// the window shows the whole panel by CSS, and a listener of the query takes
+// the collapse. Where the browser has no matchMedia nothing collapses.
+//
+//   <div class="search-bar"><span class="search-bar-count" aria-live="polite">Stelle 2 von 7</span>
+//   <button type="button" class="search-bar-prev" aria-label="Vorige Stelle">‹</button>
+//   <button type="button" class="search-bar-next" aria-label="Nächste Stelle">›</button>
+//   <button type="button" class="search-bar-list">Liste</button>
+//   <button type="button" class="search-bar-close" aria-label="Suche schließen">×</button></div>
+//
 // Two switches below the field change how the term is compared
 // (search-match.js): case-sensitive, and light fuzzy, which ignores white
 // space, hyphens and dots. Both start off; flipping one searches again at
@@ -140,6 +167,12 @@ import { TABLE_CLASS } from './tables.js';
 // has no CSS.highlights, the results are listed without highlight.
 
 const PANEL_CLASS = 'search-panel';
+// The class of a panel collapsed to its bar (src/search.css).
+const COLLAPSED_CLASS = 'search-collapsed';
+// The narrow view, where a click collapses the panel: the media query of the
+// app's narrow layout (src/app.css) and of the bar's rules (src/search.css),
+// which tests/search.test.mjs holds to this one.
+export const NARROW = '(max-width:820px)';
 const MAGNIFIER_CLASS = 'search-magnifier';
 // The Octicon "search", 16 px (@primer/octicons 19.38.0, build/svg/search-16.svg).
 const MAGNIFIER_PATH = 'M10.68 11.74a6 6 0 0 1-7.922-8.982 6 6 0 0 1 8.982 7.922l3.04 3.04a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215ZM11.5 7a4.499 4.499 0 1 0-8.997 0A4.499 4.499 0 0 0 11.5 7Z';
@@ -175,6 +208,16 @@ let inReadMode = () => false;
 let places = null;
 let observed = null;
 let observer = null;
+// The bar of a collapsed panel: its line and its buttons; the place of the
+// result it stands on, null for none; the result button of each place; and
+// where the list was scrolled when the panel collapsed.
+let barCount = null;
+let barPrev = null;
+let barNext = null;
+let barList = null;
+let current = null;
+const placeOf = new WeakMap();
+let listTop = 0;
 
 export const isSearchOpen = () => !!panel && !panel.hidden;
 
@@ -300,6 +343,9 @@ function resultItem({ place, at }){
   button.addEventListener('click', () => {
     // The root was rendered anew since: search it again.
     if (!place.el.isConnected){ search(); return; }
+    // In the narrow view the panel collapses to its bar first, so the place
+    // is scrolled into view above it.
+    if (narrow()) collapseOn(place.el);
     // A place in a closed <details> of the author: the <details> opened, as
     // the reader would, as centreHit() opens the metadata panel.
     for (const d of closedAround(place.el)) d.setAttribute('open', '');
@@ -307,6 +353,7 @@ function resultItem({ place, at }){
     if (place.kind === KIND_META || place.kind === KIND_CODE){ centreHit(place, at[0]); return; }
     (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });
   });
+  placeOf.set(button, place.el);
   li.append(button);
   return li;
 }
@@ -394,8 +441,14 @@ function placesOf(root){
 }
 
 // Runs the search for what the field holds, over the root as it is now; over
-// a root the decoder of `schlank` still unpacks, once it is done.
+// a root the decoder of `schlank` still unpacks, once it is done. A collapsed
+// panel's bar follows the new list.
 function search(){
+  runSearch();
+  if (collapsed()) updateBar();
+}
+
+function runSearch(){
   clearTimeout(timer);
   timer = 0;
   const root = rootOf();
@@ -510,9 +563,97 @@ function buildPanel(){
     if (to) to.focus();
   });
 
-  // The close button first, so that Tab goes from the field to the switches.
-  panel.append(close, label, switches, summary, list);
+  // The close button first, so that Tab goes from the field to the switches;
+  // the bar last, shown only while the panel is collapsed.
+  panel.append(close, label, switches, summary, list, buildBar());
   document.body.appendChild(panel);
+}
+
+// --- The bar of a collapsed panel (narrow view) ---------------------------------
+
+const narrow = () => typeof window.matchMedia === 'function' && window.matchMedia(NARROW).matches;
+const collapsed = () => !!panel && panel.classList.contains(COLLAPSED_CLASS);
+const resultButtons = () => Array.from(list.querySelectorAll('.search-result'));
+// Where the current place stands in the list, -1 where it is not listed.
+const currentAt = results => results.findIndex(b => placeOf.get(b) === current);
+
+function barButton(cls, text, aria, onClick){
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = cls;
+  if (aria) button.setAttribute('aria-label', aria);
+  button.textContent = text;
+  button.addEventListener('click', onClick);
+  return button;
+}
+
+function buildBar(){
+  const bar = document.createElement('div');
+  bar.className = 'search-bar';
+  barCount = document.createElement('span');
+  barCount.className = 'search-bar-count';
+  barCount.setAttribute('aria-live', 'polite');
+  barPrev = barButton('search-bar-prev', '‹', 'Vorige Stelle', () => step(-1));
+  barNext = barButton('search-bar-next', '›', 'Nächste Stelle', () => step(1));
+  barList = barButton('search-bar-list', 'Liste', '', () => { expand(); focusCurrent(); });
+  bar.append(barCount, barPrev, barNext, barList, barButton('search-bar-close', '×', 'Suche schließen', closeSearch));
+  return bar;
+}
+
+// The result before or after the current one, clicked; from no current
+// place "›" goes to the first.
+function step(by){
+  const results = resultButtons();
+  const to = results[currentAt(results) + by];
+  if (to) to.click();
+}
+
+// The bar's line and its steps, for the current place in the list as it is
+// now. A place no longer listed is dropped: the line says how many places
+// there are, or what the summary says where there are none.
+function updateBar(){
+  const results = resultButtons();
+  const at = currentAt(results);
+  if (at < 0) current = null;
+  const n = results.length;
+  const was = document.activeElement;
+  barCount.textContent = at >= 0 ? 'Stelle ' + (at + 1) + ' von ' + n : n ? n + (n === 1 ? ' Stelle' : ' Stellen') : summary.textContent;
+  barPrev.disabled = at <= 0;
+  barNext.disabled = at >= n - 1;
+  // A step that came to an end of the list: the focus to a button that takes it.
+  if ((was === barPrev || was === barNext) && was.disabled) focusBar();
+}
+
+const focusBar = () => [barNext, barPrev, barList].find(b => !b.disabled).focus();
+
+// Collapses the panel to its bar on a place; the field gives up the focus,
+// and the on-screen keyboard closes. Collapsed already, the bar only moves on.
+function collapseOn(el){
+  current = el;
+  const first = !collapsed();
+  if (first){
+    listTop = list.scrollTop;
+    panel.classList.add(COLLAPSED_CLASS);
+    input.blur();
+  }
+  updateBar();
+  if (first) focusBar();
+}
+
+// Shows the whole panel again, the list scrolled where it was; says whether
+// the focus was in the panel, on the bar.
+function expand(){
+  if (!collapsed()) return false;
+  const hadFocus = panel.contains(document.activeElement);
+  panel.classList.remove(COLLAPSED_CLASS);
+  list.scrollTop = listTop;
+  return hadFocus;
+}
+
+// The focus on the current result, or into the field where none is listed.
+function focusCurrent(){
+  const results = resultButtons();
+  (results[currentAt(results)] || input).focus();
 }
 
 // The magnifier: a button in <body>, transient, that opens the panel.
@@ -549,6 +690,8 @@ export function openSearch(){
     clearResults();
     panel.hidden = false;
   }
+  // A collapsed panel shows its list again.
+  expand();
   input.focus();
 }
 
@@ -563,6 +706,8 @@ export function closeSearch(){
   timer = 0;
   const hadFocus = panel.contains(document.activeElement);
   panel.hidden = true;
+  panel.classList.remove(COLLAPSED_CLASS);
+  current = null;
   input.value = '';
   clearResults();
   if (hadFocus){
@@ -592,6 +737,13 @@ export function registerSearch({ root, inReadMode: readMode }){
   inReadMode = readMode;
   buildPanel();
   buildMagnifier();
+  // A window widened out of the narrow view shows the whole panel by CSS; the
+  // collapse goes, and a focus on the bar goes to the current result. See the
+  // README, "Keys and events".
+  const query = typeof window.matchMedia === 'function' ? window.matchMedia(NARROW) : null;
+  if (query && typeof query.addEventListener === 'function'){
+    query.addEventListener('change', () => { if (!query.matches && expand()) focusCurrent(); });
+  }
   // A change of a table filter in the root searches again while the panel is
   // open and holds a term, after the filter's own listeners, which sit on the
   // field and the facet group. See the README, "Keys and events".

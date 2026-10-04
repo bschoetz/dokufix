@@ -461,8 +461,9 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.equal(html.split('<script type="text/plain" id="dokufix-reader-js">').length, 2, 'one block, of a type that does not run');
   assert.ok(!html.includes('dokufix-filter-js'), 'the block of the filter alone is gone');
   const code = readerBlock(html);
-  // The bound leaves room for what epic 5 still puts into the bundle (story 5.16).
-  assert.ok(code.length > 6000 && code.length < 30000, code.length + ' B');
+  // The bound leaves room for what epic 5 still puts into the bundle (story 5.16);
+  // raised from 30 000 for the bar of the search on a narrow screen (story 5.12, Ben 2026-10-04).
+  assert.ok(code.length > 6000 && code.length < 34000, code.length + ' B');
   assert.match(code, /^\(\(\)=>\{[\s\S]*\}\)\(\);$/, 'one minified IIFE');
   assert.ok(!/<\/script/i.test(code) && !code.includes('<!--'));
   // Nothing of the editor's elements: dom.js is not in the bundle.
