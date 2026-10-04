@@ -70,11 +70,17 @@ const folded = text => tidy(text).toLocaleLowerCase('de');
 
 const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
+// What holds no text a reader reads: a picture, a stylesheet, a script, a
+// template. The search of the reading view leaves the same out, and its
+// test holds the two readings of a row together.
+const TEXTLESS_TAGS = new Set(['SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
+
 // The text of a row as the filter searches it: its cells joined by a blank, a
 // line break as a blank, without the word a status chip carries for assistive
 // technology, without a footnote marker and its preview, without the controls
-// of a facet filter and without anything transient. A table nested in a cell
-// is text of its cell, its cells joined by a blank as well.
+// of a facet filter, without anything transient and without an SVG, a
+// stylesheet, a script or a template. A table nested in a cell is text of its
+// cell, its cells joined by a blank as well.
 export function filterRowText(row){
   let text = '';
   const read = node => {
@@ -84,7 +90,7 @@ export function filterRowText(row){
       const tag = tagOf(child);
       if (tag === 'BR'){ text += ' '; continue; }
       if (child.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(child) ||
-          child.classList.contains(CHIP_STATUS_CLASS) || child.classList.contains(FACET_BAR_CLASS)) continue;
+          child.classList.contains(CHIP_STATUS_CLASS) || child.classList.contains(FACET_BAR_CLASS) || TEXTLESS_TAGS.has(tag)) continue;
       const cell = tag === 'TD' || tag === 'TH';
       if (cell) text += ' ';
       read(child);

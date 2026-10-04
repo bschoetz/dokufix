@@ -245,8 +245,9 @@ const headingText = h => headingReading(h).text;
 
 // The text of a table row, as filterRowText() in filter.js reads it, and in
 // the same order of rules: a line break as a blank; left out what is
-// transient, a footnote marker with its preview, the word of a status chip and
-// the controls of a facet filter; a blank before and after every cell, a cell
+// transient, a footnote marker with its preview, the word of a status chip,
+// the controls of a facet filter, and an SVG, a stylesheet, a script or a
+// template (EXCLUDED_TAGS); a blank before and after every cell, a cell
 // of a table nested in a cell as well. Nothing else is left out: what a row
 // holds is text of the row, as the filter searches it. The part is counted up
 // at every cell's edge, so that no range of a hit (nodeRanges()) runs from one
@@ -260,7 +261,7 @@ function rowReading(row){
       const tag = tagOf(child);
       if (tag === 'BR'){ readBlank(r, ' '); continue; }
       if (child.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(child) ||
-          child.classList.contains(CHIP_STATUS_CLASS) || child.classList.contains(FACET_BAR_CLASS)){ r.part++; continue; }
+          child.classList.contains(CHIP_STATUS_CLASS) || child.classList.contains(FACET_BAR_CLASS) || EXCLUDED_TAGS.has(tag)){ r.part++; continue; }
       const cell = tag === 'TD' || tag === 'TH';
       if (cell){ r.part++; readBlank(r, ' '); }
       read(child);

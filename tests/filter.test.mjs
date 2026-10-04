@@ -217,6 +217,20 @@ test('the text of a row leaves out what is transient and the controls of a facet
   const root = rootWith('<table><tbody><tr><td>eins<div data-dokufix-transient="">flüchtig</div></td><td><fieldset class="dokufix-facet-bar"><legend>X</legend>Alle 3</fieldset><table><tbody><tr><td>I</td><td>pq</td></tr></tbody></table></td></tr></tbody></table>');
   assert.equal(filterRowText(root.querySelector('tr')), 'eins I pq');
 });
+test('the text of a row leaves out an SVG, a stylesheet, a script and a template in a cell, as the search does (story 5.16, N2)', () => {
+  const root = rendered(marker('filter') + '<table><thead><tr><th>A</th><th>B</th></tr></thead><tbody>' +
+    '<tr><td>Form<svg viewBox="0 0 10 10"><text>Kreis</text></svg></td><td><style>.x{fill:red}</style>Stil</td></tr>' +
+    '<tr><td><script>var y = 1;</script>Ende</td><td><template><b>Vorlage</b></template>Rest</td></tr></tbody></table>');
+  const rows = root.querySelectorAll('tbody tr');
+  assert.equal(filterRowText(rows[0]), 'Form Stil');
+  assert.equal(filterRowText(rows[1]), 'Ende Rest');
+  for (const term of ['Kreis', 'fill', 'var y', 'Vorlage']){
+    type(root, term);
+    assert.deepEqual(state(root), { shown: [], count: '0 von 2 Zeilen' }, term);
+  }
+  type(root, 'Stil');
+  assert.equal(state(root).count, '1 von 2 Zeilen');
+});
 test('the header row and <tfoot> are never hidden; the counter counts the data rows', () => {
   const root = rendered(marker('filter') + '<table><thead><tr><th>A</th></tr></thead><tbody><tr><td>x</td></tr><tr><td>y</td></tr></tbody><tfoot><tr><td>Summe</td></tr></tfoot></table>');
   type(root, 'zzz');

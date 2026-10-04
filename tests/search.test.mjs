@@ -577,6 +577,8 @@ test('collectPlaces: the text of every row is filterRowText() of the row, over a
     '<tr>\n<td></td>\n<td></td>\n<td></td>\n</tr>\n' +
     '<tr>\n<td>flüchtig<span ' + TRANSIENT_ATTR + '>weg</span>da</td>\n<td><p>Absatz</p>\n<ul>\n<li>Punkt</li>\n</ul></td>\n<td><table><tbody><tr><td>in</td><td>nen<code>🔴 Aus</code></td></tr></tbody></table></td>\n</tr>\n' +
     '<tr>\n<td colspan="2"> 😀 İ <!-- Kommentar --> ẞ </td>\n<td><fieldset class="dokufix-facet-bar"><legend>X</legend>Alle 3</fieldset>Rest' + ref(2) + '.</td>\n</tr>\n' +
+    // Story 5.16, N2: an SVG, a stylesheet, a script and a template in a cell are no text of the row.
+    '<tr>\n<td>Form<svg viewBox="0 0 10 10"><text>Kreis</text></svg></td>\n<td><style>.x{fill:red}</style>Stil</td>\n<td><script>var y = 1;</script><template><b>Vorlage</b></template>Ende</td>\n</tr>\n' +
     '</tbody><tfoot><tr><td>Summe</td><td>5</td><td></td></tr></tfoot></table></div></div>\n';
   const root = rootWith(html);
   buildChips(root);
@@ -584,7 +586,9 @@ test('collectPlaces: the text of every row is filterRowText() of the row, over a
   const places = collectPlaces(root);
   assert.deepEqual(places.map(p => p.el), rows.filter(tr => filterRowText(tr)), 'every row with text is a place, a nested row none');
   for (const place of places) assert.equal(place.text, filterRowText(place.el));
-  assert.equal(places.length, 6);
+  assert.equal(places.length, 7);
+  assert.equal(places[5].text, 'Form Stil Ende');
+  for (const word of ['Kreis', 'fill', 'var y', 'Vorlage']) assert.deepEqual(places.filter(p => findHits(word, p.text).length), [], word);
   // The map holds as for every place: each unit from the character of a text node.
   for (const { text, map } of places){
     assert.equal(map.nodes.length, text.length);
