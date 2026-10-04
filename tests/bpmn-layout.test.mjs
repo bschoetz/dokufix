@@ -203,7 +203,7 @@ test('a flow end is docked on the outline: a task anywhere on its side, a circle
   let pts = ptsOf([[0, 115], [50, 115]]);
   attach(pts, false, task);
   assert.deepEqual(pts.at(-1), P(40, 115));
-  // Closer than NEAR to the middle, 10 px off: at the middle, with no step.
+  // Closer than NEAR to the middle, 10 px off: at the middle; the flow turns halfway to get there.
   pts = ptsOf([[0, 110], [50, 110]]);
   attach(pts, false, task);
   assert.deepEqual(pts.at(-1), P(40, 100));
