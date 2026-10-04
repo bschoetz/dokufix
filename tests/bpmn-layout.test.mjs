@@ -737,6 +737,19 @@ test('flow labels keep off other labels, flows and symbols, the own gateway incl
   assert.deepEqual(flowLabel(pts, 'ja', true, cover), all[2]);
 });
 
+test('the label of a flow back from a gateway stands at the gateway\'s end of its leg, inside the ring first, so the corner beside the gateway stays free', () => {
+  // A ring out of a gateway's top (100, 75), up to its leg at y 40, left to x 0, down into its target.
+  const ring = ptsOf([[100, 75], [100, 40], [0, 40], [0, 75]]);
+  const size = { w: 30, h: 15 };
+  const [first, second] = flowLabelPlaces(ring, 'nein', true, size, true);
+  assert.deepEqual(first, [60, 44, 30, 15], 'below the leg, inside the ring, 10 px from its corner');
+  assert.deepEqual(second, [60, 21, 30, 15], 'then above it');
+  const below = ptsOf([[100, 125], [100, 160], [0, 160], [0, 125]]);
+  assert.deepEqual(flowLabelPlaces(below, 'nein', true, size, true)[0], [60, 141, 30, 15], 'a ring below the row: above its leg first');
+  // Not a flow back: the place beside the stub at the exit, as before.
+  assert.deepEqual(flowLabelPlaces(ring, 'nein', true, size)[0], [106, 52, 30, 15]);
+});
+
 test('a long flow label is as wide as bpmn-js wraps it, 90 px at most, and as high as its lines', () => {
   const text = 'eine sehr lange Beschriftung eines Flusses, die bpmn-js auf mehrere Zeilen umbricht';
   const [, , w, h] = flowLabel(ptsOf([[0, 0], [600, 0]]), text, false);

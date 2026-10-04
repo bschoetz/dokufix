@@ -6,9 +6,7 @@
  "ref4": [],
  "hund": [],
  "mehrere": [],
- "zwei": [
-  "label-on-label Z5 Z_Gefunden"
- ],
+ "zwei": [],
  "mitte": [],
  "ereignis": [],
  "ref8": [],
@@ -36,9 +34,7 @@
   "small-step Flow_3",
   "small-step Flow_47"
  ],
- "r01": [
-  "label-on-label F8_e_d e"
- ],
+ "r01": [],
  "r02": [],
  "r03": [],
  "r04": [],
@@ -54,10 +50,7 @@
  "r09": [],
  "r10": [],
  "r11": [],
- "r12": [
-  "label-on-flow g F6_g_z",
-  "label-on-node g z"
- ],
+ "r12": [],
  "r13": [],
  "r14": [
   "on-one-line-shared F4_g_a F5_g_b"

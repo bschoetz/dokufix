@@ -751,18 +751,24 @@ export function bestPlace(places, avoid){
 // a gateway first right at the exit ("ja", "nein"; a stub shorter than 20 px
 // is skipped), otherwise first in the middle of the longest piece; above a
 // horizontal piece, right of a vertical one, then on its other side; then
-// the middle of every other piece, longest first, both sides. Each [x, y, w,
-// h], the size labelSize() estimates, or the size given; bpmn-js centres the
-// text on x + w/2, starts it at y and wraps it at 90 px.
-export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text)){
+// the middle of every other piece, longest first, both sides. A flow back
+// routed around its row (loop) from a gateway starts at the gateway's end of
+// its longest piece, its leg, inside the ring first, between the leg and the
+// row: beside the stub it would take the corner the gateway's own label
+// needs where two flows back leave the gateway. Each [x, y, w, h], the size
+// labelSize() estimates, or the size given; bpmn-js centres the text on
+// x + w/2, starts it at y and wraps it at 90 px.
+export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text), loop = false){
   const { w, h } = size;
   const pieces = pts.slice(1).map((b, i) => ({ a: pts[i], b, len: Math.abs(pts[i].x - b.x) + Math.abs(pts[i].y - b.y) }));
   const places = [];
-  const beside = (a, b, exit) => {
+  // inside: 1 below a horizontal piece first, otherwise above first.
+  const beside = (a, b, exit, inside = 0) => {
     if (Math.abs(a.y - b.y) < 1){
       const dir = Math.sign(b.x - a.x) || 1;
       const x = exit ? (dir > 0 ? a.x + 10 : a.x - 10 - w) : (a.x + b.x) / 2 - w / 2;
-      places.push([R(x), R(a.y - 4 - h), R(w), h], [R(x), R(a.y + 4), R(w), h]);
+      const pair = [[R(x), R(a.y - 4 - h), R(w), h], [R(x), R(a.y + 4), R(w), h]];
+      places.push(...(inside > 0 ? pair.reverse() : pair));
     } else {
       const dir = Math.sign(b.y - a.y) || 1;
       const y = exit ? (dir > 0 ? a.y + 8 : a.y - 8 - h) : (a.y + b.y) / 2 - h / 2;
@@ -770,8 +776,8 @@ export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text)){
     }
   };
   if (atGateway){
-    const first = pieces.length > 1 && pieces[0].len < 20 ? pieces[1] : pieces[0];
-    beside(first.a, first.b, true);
+    const first = loop ? pieces.reduce((m, p) => p.len > m.len ? p : m) : pieces.length > 1 && pieces[0].len < 20 ? pieces[1] : pieces[0];
+    beside(first.a, first.b, true, loop ? Math.sign(pts[0].y - first.a.y) : 0);
   }
   for (const piece of [...pieces].sort((x, y) => y.len - x.len)) beside(piece.a, piece.b, false);
   return places;
@@ -780,8 +786,8 @@ export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text)){
 // The label of a flow: the first of flowLabelPlaces() that keeps off avoid
 // (boxes [x, y, w, h]: other labels, symbols, pieces of flows), or the one
 // covered least.
-export function flowLabel(pts, text, atGateway, avoid = [], size = labelSize(text)){
-  return bestPlace(flowLabelPlaces(pts, text, atGateway, size), avoid);
+export function flowLabel(pts, text, atGateway, avoid = [], size = labelSize(text), loop = false){
+  return bestPlace(flowLabelPlaces(pts, text, atGateway, size, loop), avoid);
 }
 
 // The places a label of an event or a gateway may take, in the order they
@@ -899,12 +905,12 @@ export function layoutGeometry(model, raw, measure = labelSize){
   const segments = routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
   const symbols = model.nodes.map(n => di.nodes[n.id]);
   const taken = [];
-  for (const { f, pts } of routes){
+  for (const { f, pts, loop } of routes){
     if (!f.name) continue;
     // Two flows leaving one corner of a gateway: their labels go to their
     // longest pieces, not both to that corner.
     const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
-    const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken], measure(f.name));
+    const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken], measure(f.name), !!loop);
     di.flowLabels[f.id] = place;
     taken.push(place);
   }

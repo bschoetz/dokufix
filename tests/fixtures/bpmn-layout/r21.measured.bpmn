@@ -29,7 +29,7 @@
       <bpmndi:BPMNEdge id="F1_s_g1_di" bpmnElement="F1_s_g1"><di:waypoint x="64" y="-47"/><di:waypoint x="144" y="-47"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F2_g1_t_di" bpmnElement="F2_g1_t"><di:waypoint x="194" y="-47"/><di:waypoint x="230" y="-47"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F3_t_g2_di" bpmnElement="F3_t_g2"><di:waypoint x="350" y="-47"/><di:waypoint x="386" y="-47"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F4_g2_g1_di" bpmnElement="F4_g2_g1"><di:waypoint x="411" y="-72"/><di:waypoint x="411" y="-107"/><di:waypoint x="169" y="-107"/><di:waypoint x="169" y="-72"/><bpmndi:BPMNLabel><dc:Bounds x="417" y="-95" width="20" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_g2_g1_di" bpmnElement="F4_g2_g1"><di:waypoint x="411" y="-72"/><di:waypoint x="411" y="-107"/><di:waypoint x="169" y="-107"/><di:waypoint x="169" y="-72"/><bpmndi:BPMNLabel><dc:Bounds x="381" y="-103" width="20" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F5_g2_g1_di" bpmnElement="F5_g2_g1"><di:waypoint x="411" y="-22"/><di:waypoint x="411" y="-2"/><di:waypoint x="169" y="-2"/><di:waypoint x="169" y="-22"/><bpmndi:BPMNLabel><dc:Bounds x="417" y="-14" width="58" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F6_g2_z_di" bpmnElement="F6_g2_z"><di:waypoint x="436" y="-47"/><di:waypoint x="530" y="-47"/><bpmndi:BPMNLabel><dc:Bounds x="446" y="-66" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

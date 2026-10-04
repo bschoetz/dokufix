@@ -141,7 +141,7 @@
       <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="618" y="-19"/><di:waypoint x="618" y="1"/><di:waypoint x="319" y="1"/><di:waypoint x="319" y="-19"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="784" y="-19"/><di:waypoint x="784" y="51"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="844" y="91"/><di:waypoint x="856" y="91"/><di:waypoint x="856" y="-59"/><di:waypoint x="906" y="-59"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="931" y="-84"/><di:waypoint x="931" y="-119"/><di:waypoint x="824" y="-119"/><di:waypoint x="824" y="-99"/><bpmndi:BPMNLabel><dc:Bounds x="937" y="-107" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="931" y="-84"/><di:waypoint x="931" y="-119"/><di:waypoint x="824" y="-119"/><di:waypoint x="824" y="-99"/><bpmndi:BPMNLabel><dc:Bounds x="898" y="-115" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="956" y="-59"/><di:waypoint x="1026" y="-59"/><bpmndi:BPMNLabel><dc:Bounds x="966" y="-78" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1086" y="-19"/><di:waypoint x="1086" y="201"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13"><di:waypoint x="1146" y="241"/><di:waypoint x="1192" y="241"/></bpmndi:BPMNEdge>

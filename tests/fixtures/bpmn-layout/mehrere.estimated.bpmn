@@ -31,7 +31,7 @@
       <bpmndi:BPMNEdge id="M3_di" bpmnElement="M3"><di:waypoint x="339" y="-53"/><di:waypoint x="375" y="-53"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="M4_di" bpmnElement="M4"><di:waypoint x="495" y="-53"/><di:waypoint x="535" y="-53"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="M5_di" bpmnElement="M5"><di:waypoint x="585" y="-53"/><di:waypoint x="679" y="-53"/><bpmndi:BPMNLabel><dc:Bounds x="595" y="-72" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="M6_di" bpmnElement="M6"><di:waypoint x="560" y="-28"/><di:waypoint x="560" y="7"/><di:waypoint x="123" y="7"/><di:waypoint x="123" y="-13"/><bpmndi:BPMNLabel><dc:Bounds x="566" y="-20" width="26" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M6_di" bpmnElement="M6"><di:waypoint x="560" y="-28"/><di:waypoint x="560" y="7"/><di:waypoint x="123" y="7"/><di:waypoint x="123" y="-13"/><bpmndi:BPMNLabel><dc:Bounds x="524" y="-12" width="26" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

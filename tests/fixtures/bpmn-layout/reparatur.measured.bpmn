@@ -40,7 +40,7 @@
       <bpmndi:BPMNEdge id="B3_di" bpmnElement="B3"><di:waypoint x="223" y="87"/><di:waypoint x="259" y="87"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="B4_di" bpmnElement="B4"><di:waypoint x="379" y="87"/><di:waypoint x="427" y="87"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="B5_di" bpmnElement="B5"><di:waypoint x="452" y="62"/><di:waypoint x="452" y="-53"/><di:waypoint x="524" y="-53"/><bpmndi:BPMNLabel><dc:Bounds x="458" y="39" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="B6_di" bpmnElement="B6"><di:waypoint x="452" y="112"/><di:waypoint x="452" y="147"/><di:waypoint x="3" y="147"/><di:waypoint x="3" y="127"/><bpmndi:BPMNLabel><dc:Bounds x="458" y="120" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B6_di" bpmnElement="B6"><di:waypoint x="452" y="112"/><di:waypoint x="452" y="147"/><di:waypoint x="3" y="147"/><di:waypoint x="3" y="127"/><bpmndi:BPMNLabel><dc:Bounds x="419" y="128" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="B7_di" bpmnElement="B7"><di:waypoint x="644" y="-53"/><di:waypoint x="717" y="-53"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
