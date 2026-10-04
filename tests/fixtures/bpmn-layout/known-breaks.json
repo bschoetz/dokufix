@@ -1,0 +1,102 @@
+{
+ "ref3": [
+  "on-one-line-shared Flow_13 Flow_14",
+  "on-one-line-shared Flow_7 Flow_9"
+ ],
+ "ref4": [],
+ "hund": [],
+ "mehrere": [],
+ "zwei": [
+  "label-on-label Z5 Z_Gefunden"
+ ],
+ "mitte": [],
+ "ereignis": [],
+ "ref8": [],
+ "demo2": [],
+ "demo3": [],
+ "reparatur": [],
+ "demo5": [],
+ "demo6": [],
+ "hund2": [
+  "double-headed GW_Merge_Probe Flow_47 Flow_53",
+  "label-on-flow GW_Fluss Flow_28",
+  "label-on-flow GW_Nachprobe Flow_53",
+  "label-on-flow GW_Versuche Flow_22",
+  "label-on-node GW_Qualitaet Task_Labor",
+  "label-outside-lane GW_Nachprobe",
+  "on-one-line-foreign Flow_47 Flow_53",
+  "on-one-line-shared Flow_17 Flow_24",
+  "on-one-line-shared Flow_31 Flow_32",
+  "on-one-line-shared Flow_34 Flow_36",
+  "on-one-line-shared Flow_38 Flow_40",
+  "on-one-line-shared Flow_39 Flow_40",
+  "on-one-line-shared Flow_51 Flow_52",
+  "parallel Flow_47 Flow_53",
+  "small-step Flow_21",
+  "small-step Flow_3",
+  "small-step Flow_47",
+  "through-own Flow_18 GW_Merge_Ruhig"
+ ],
+ "r01": [
+  "label-on-label F8_e_d e"
+ ],
+ "r02": [],
+ "r03": [],
+ "r04": [],
+ "r05": [
+  "on-one-line-shared F2_a_g F3_b_g",
+  "parallel F2_a_g F3_b_g",
+  "parallel F5_g_c F7_d_c",
+  "small-step F3_b_g"
+ ],
+ "r06": [],
+ "r07": [],
+ "r08": [],
+ "r09": [],
+ "r10": [],
+ "r11": [],
+ "r12": [
+  "label-on-flow g F6_g_z",
+  "label-on-node g z"
+ ],
+ "r13": [],
+ "r14": [
+  "on-one-line-shared F4_g_a F5_g_b"
+ ],
+ "r15": [
+  "label-outside-lane F10_b3_b1",
+  "label-outside-lane F7_gb_b1",
+  "on-one-line-shared F7_gb_b1 F8_gb_b2"
+ ],
+ "r16": [
+  "on-one-line-shared F11_u1_p2 F4_x_p2",
+  "on-one-line-shared F11_u1_p2 F5_y_p2",
+  "on-one-line-shared F2_p1_x F3_p1_y",
+  "on-one-line-shared F4_x_p2 F5_y_p2",
+  "parallel F11_u1_p2 F4_x_p2",
+  "parallel F11_u1_p2 F5_y_p2",
+  "parallel F3_p1_y F4_x_p2",
+  "parallel F4_x_p2 F5_y_p2",
+  "small-step F5_y_p2"
+ ],
+ "r17": [],
+ "r18": [
+  "label-outside-lane F18_m6_m1",
+  "label-outside-lane F22_m6_m3"
+ ],
+ "r19": [
+  "label-outside-lane F4_g_a",
+  "on-one-line-shared F4_g_a F6_g_d",
+  "on-one-line-shared F7_d_z F8_c_z"
+ ],
+ "r20": [
+  "double-headed g F3_u_g F5_g_c",
+  "on-one-line-foreign F3_u_g F5_g_c",
+  "on-one-line-shared F7_d_z F8_c_z"
+ ],
+ "r21": [],
+ "r22": [
+  "label-outside-lane F8_d_c",
+  "on-one-line-shared F4_g_a F5_g_b"
+ ]
+}
