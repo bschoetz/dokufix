@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:startEvent id="s" name="Start"/>
+    <bpmn:task id="a" name="A"/>
+    <bpmn:exclusiveGateway id="g" name="ok?"/>
+    <bpmn:task id="b" name="B"/>
+    <bpmn:exclusiveGateway id="h" name="fertig?"/>
+    <bpmn:endEvent id="z" name="Ende"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_g" sourceRef="a" targetRef="g"/>
+    <bpmn:sequenceFlow id="F3_g_b" sourceRef="g" targetRef="b" name="ja"/>
+    <bpmn:sequenceFlow id="F4_g_a" sourceRef="g" targetRef="a" name="nein"/>
+    <bpmn:sequenceFlow id="F5_b_h" sourceRef="b" targetRef="h"/>
+    <bpmn:sequenceFlow id="F6_h_b" sourceRef="h" targetRef="b" name="nein"/>
+    <bpmn:sequenceFlow id="F7_h_a" sourceRef="h" targetRef="a" name="neu"/>
+    <bpmn:sequenceFlow id="F8_h_z" sourceRef="h" targetRef="z" name="ja"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Oben"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Mitte"><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_3" name="Unten"><bpmn:flowNodeRef>d</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:task id="a" name="Auftrag"/>
+    <bpmn:task id="b" name="Prüfen"/>
+    <bpmn:exclusiveGateway id="g" name="Ergebnis?"/>
+    <bpmn:task id="c" name="Abschließen"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:task id="d" name="Nacharbeit"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_g" sourceRef="a" targetRef="g"/>
+    <bpmn:sequenceFlow id="F3_b_g" sourceRef="b" targetRef="g"/>
+    <bpmn:sequenceFlow id="F4_g_b" sourceRef="g" targetRef="b" name="unklar"/>
+    <bpmn:sequenceFlow id="F5_g_c" sourceRef="g" targetRef="c" name="gut"/>
+    <bpmn:sequenceFlow id="F6_g_d" sourceRef="g" targetRef="d" name="schlecht"/>
+    <bpmn:sequenceFlow id="F7_d_c" sourceRef="d" targetRef="c"/>
+    <bpmn:sequenceFlow id="F8_c_z" sourceRef="c" targetRef="z"/>
+    <bpmn:sequenceFlow id="F9_a_b" sourceRef="a" targetRef="b"/>
+  </bpmn:process>
+</bpmn:definitions>

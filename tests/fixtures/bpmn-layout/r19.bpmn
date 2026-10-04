@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Oben"><bpmn:flowNodeRef>u</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Row"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_3" name="Unten"><bpmn:flowNodeRef>d</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:task id="a" name="Vorbereiten"/>
+    <bpmn:task id="u" name="Freigeben"/>
+    <bpmn:exclusiveGateway id="g" name="Freigabe?"/>
+    <bpmn:task id="c" name="Ausführen"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:task id="d" name="Eskalieren"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_u" sourceRef="a" targetRef="u"/>
+    <bpmn:sequenceFlow id="F3_u_g" sourceRef="u" targetRef="g"/>
+    <bpmn:sequenceFlow id="F4_g_a" sourceRef="g" targetRef="a" name="zurück"/>
+    <bpmn:sequenceFlow id="F5_g_c" sourceRef="g" targetRef="c" name="ja"/>
+    <bpmn:sequenceFlow id="F6_g_d" sourceRef="g" targetRef="d" name="eskalieren"/>
+    <bpmn:sequenceFlow id="F7_d_z" sourceRef="d" targetRef="z"/>
+    <bpmn:sequenceFlow id="F8_c_z" sourceRef="c" targetRef="z"/>
+  </bpmn:process>
+</bpmn:definitions>

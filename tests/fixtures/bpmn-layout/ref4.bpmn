@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess" isExecutable="false">
+    <bpmn:startEvent id="Los" name="Medium zurück"/>
+    <bpmn:task id="Aufgabe" name="Etikett scannen"/>
+    <bpmn:intermediateCatchEvent id="Warten" name="Zwei Tage"><bpmn:timerEventDefinition id="Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="Regal" name="Zurück ins Regal"/>
+    <bpmn:endEvent id="Fertig" name="Wieder ausleihbar"/>
+    <bpmn:sequenceFlow id="O1" sourceRef="Los" targetRef="Aufgabe"/>
+    <bpmn:sequenceFlow id="O2" sourceRef="Aufgabe" targetRef="Warten"/>
+    <bpmn:sequenceFlow id="O3" sourceRef="Warten" targetRef="Regal"/>
+    <bpmn:sequenceFlow id="O4" sourceRef="Regal" targetRef="Fertig"/>
+  </bpmn:process>
+</bpmn:definitions>

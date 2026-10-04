@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="L"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>g1</bpmn:flowNodeRef><bpmn:flowNodeRef>t</bpmn:flowNodeRef><bpmn:flowNodeRef>g2</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:exclusiveGateway id="g1" name="Eintritt"/>
+    <bpmn:task id="t" name="Prüfung"/>
+    <bpmn:exclusiveGateway id="g2" name="Ergebnis?"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:sequenceFlow id="F1_s_g1" sourceRef="s" targetRef="g1"/>
+    <bpmn:sequenceFlow id="F2_g1_t" sourceRef="g1" targetRef="t"/>
+    <bpmn:sequenceFlow id="F3_t_g2" sourceRef="t" targetRef="g2"/>
+    <bpmn:sequenceFlow id="F4_g2_g1" sourceRef="g2" targetRef="g1" name="neu"/>
+    <bpmn:sequenceFlow id="F5_g2_g1" sourceRef="g2" targetRef="g1" name="korrigieren"/>
+    <bpmn:sequenceFlow id="F6_g2_z" sourceRef="g2" targetRef="z" name="ok"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C">
+      <bpmndi:BPMNShape id="P_di" bpmnElement="P" isHorizontal="true"><dc:Bounds x="-72" y="-123" width="672" height="152"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1_di" bpmnElement="Lane_1" isHorizontal="true"><dc:Bounds x="-42" y="-123" width="642" height="152"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="28" y="-65" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g1_di" bpmnElement="g1" isMarkerVisible="true"><dc:Bounds x="144" y="-72" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="124" y="2" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t_di" bpmnElement="t"><dc:Bounds x="230" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g2_di" bpmnElement="g2" isMarkerVisible="true"><dc:Bounds x="386" y="-72" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="423" y="-89" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z"><dc:Bounds x="530" y="-65" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_s_g1_di" bpmnElement="F1_s_g1"><di:waypoint x="64" y="-47"/><di:waypoint x="144" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_g1_t_di" bpmnElement="F2_g1_t"><di:waypoint x="194" y="-47"/><di:waypoint x="230" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_t_g2_di" bpmnElement="F3_t_g2"><di:waypoint x="350" y="-47"/><di:waypoint x="386" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_g2_g1_di" bpmnElement="F4_g2_g1"><di:waypoint x="411" y="-72"/><di:waypoint x="411" y="-107"/><di:waypoint x="169" y="-107"/><di:waypoint x="169" y="-72"/><bpmndi:BPMNLabel><dc:Bounds x="417" y="-95" width="20" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_g2_g1_di" bpmnElement="F5_g2_g1"><di:waypoint x="411" y="-22"/><di:waypoint x="411" y="-2"/><di:waypoint x="169" y="-2"/><di:waypoint x="169" y="-22"/><bpmndi:BPMNLabel><dc:Bounds x="417" y="-14" width="73" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_g2_z_di" bpmnElement="F6_g2_z"><di:waypoint x="436" y="-47"/><di:waypoint x="530" y="-47"/><bpmndi:BPMNLabel><dc:Bounds x="446" y="-66" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

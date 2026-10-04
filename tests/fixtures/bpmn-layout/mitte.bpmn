@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Fernleihe" name="Fernleihe" processRef="Prozess_Fernleihe"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Fernleihe" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="F_Leserin" name="Leserin"><bpmn:flowNodeRef>F_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Abholen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="F_Theke" name="Theke"><bpmn:flowNodeRef>F_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Frage</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="F_Leihverkehr" name="Leihverkehr"><bpmn:flowNodeRef>F_Senden</bpmn:flowNodeRef><bpmn:flowNodeRef>F_Ende</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="F_Start" name="Titel fehlt"/>
+    <bpmn:task id="F_Aufnehmen" name="Bestellung aufnehmen"/>
+    <bpmn:task id="F_Pruefen" name="Angaben prüfen"/>
+    <bpmn:exclusiveGateway id="F_Frage" name="Angaben vollständig?"/>
+    <bpmn:sendTask id="F_Senden" name="An den Leihverkehr senden"/>
+    <bpmn:manualTask id="F_Abholen" name="Buch abholen"/>
+    <bpmn:endEvent id="F_Ende" name="Bestellt"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="F_Start" targetRef="F_Aufnehmen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="F_Aufnehmen" targetRef="F_Pruefen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="F_Pruefen" targetRef="F_Frage"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="F_Frage" targetRef="F_Aufnehmen" name="nein"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="F_Senden" targetRef="F_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>

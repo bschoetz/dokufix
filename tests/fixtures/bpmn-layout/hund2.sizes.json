@@ -1,0 +1,66 @@
+{
+ "Melkzeit erreicht": {
+  "w": 89,
+  "h": 15
+ },
+ "Euter gesund?": {
+  "w": 76,
+  "h": 15
+ },
+ "Hündin ruhig?": {
+  "w": 76,
+  "h": 15
+ },
+ "3 Versuche erreicht?": {
+  "w": 58,
+  "h": 29
+ },
+ "Milchfluss ausreichend?": {
+  "w": 70,
+  "h": 29
+ },
+ "Alle Zitzen gemolken?": {
+  "w": 59,
+  "h": 44
+ },
+ "Weitere Hündin wartet?": {
+  "w": 83,
+  "h": 29
+ },
+ "Entzündung abgeklungen?": {
+  "w": 75,
+  "h": 29
+ },
+ "Charge verworfen": {
+  "w": 53,
+  "h": 29
+ },
+ "15 Min abkühlen lassen": {
+  "w": 89,
+  "h": 29
+ },
+ "Menge plausibel?": {
+  "w": 53,
+  "h": 29
+ },
+ "Qualität in Ordnung?": {
+  "w": 55,
+  "h": 44
+ },
+ "Nachprobe bereits genommen?": {
+  "w": 67,
+  "h": 44
+ },
+ "Milch eingelagert": {
+  "w": 60,
+  "h": 29
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 23,
+  "h": 15
+ }
+}

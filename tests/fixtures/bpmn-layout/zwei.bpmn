@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Erwerbung" name="Anschaffungswunsch" processRef="Prozess_Erwerbung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Erwerbung" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="Z_Erwerbung" name="Erwerbung"><bpmn:flowNodeRef>Z_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Aufnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Suchen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Gefunden</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Preis</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Frei</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Z_Leserin" name="Leserin"><bpmn:flowNodeRef>Z_Absage</bpmn:flowNodeRef><bpmn:flowNodeRef>Z_Abgesagt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Z_Start" name="Wunsch eingegangen"/>
+    <bpmn:task id="Z_Aufnehmen" name="Wunsch aufnehmen"/>
+    <bpmn:task id="Z_Suchen" name="Titel suchen"/>
+    <bpmn:exclusiveGateway id="Z_Gefunden" name="Gefunden?"/>
+    <bpmn:task id="Z_Preis" name="Preis prüfen"/>
+    <bpmn:exclusiveGateway id="Z_Frei" name="Freigegeben?"/>
+    <bpmn:task id="Z_Bestellen" name="Bestellen"/>
+    <bpmn:endEvent id="Z_Ende" name="Bestellt"/>
+    <bpmn:sendTask id="Z_Absage" name="Absage schreiben"/>
+    <bpmn:endEvent id="Z_Abgesagt" name="Abgesagt"/>
+    <bpmn:sequenceFlow id="Z1" sourceRef="Z_Start" targetRef="Z_Aufnehmen"/>
+    <bpmn:sequenceFlow id="Z2" sourceRef="Z_Aufnehmen" targetRef="Z_Suchen"/>
+    <bpmn:sequenceFlow id="Z3" sourceRef="Z_Suchen" targetRef="Z_Gefunden"/>
+    <bpmn:sequenceFlow id="Z4" sourceRef="Z_Gefunden" targetRef="Z_Preis" name="ja"/>
+    <bpmn:sequenceFlow id="Z5" sourceRef="Z_Gefunden" targetRef="Z_Suchen" name="nein"/>
+    <bpmn:sequenceFlow id="Z10" sourceRef="Z_Gefunden" targetRef="Z_Absage" name="vergriffen"/>
+    <bpmn:sequenceFlow id="Z6" sourceRef="Z_Preis" targetRef="Z_Frei"/>
+    <bpmn:sequenceFlow id="Z7" sourceRef="Z_Frei" targetRef="Z_Bestellen" name="ja"/>
+    <bpmn:sequenceFlow id="Z8" sourceRef="Z_Frei" targetRef="Z_Aufnehmen" name="nein"/>
+    <bpmn:sequenceFlow id="Z9" sourceRef="Z_Bestellen" targetRef="Z_Ende"/>
+    <bpmn:sequenceFlow id="Z11" sourceRef="Z_Absage" targetRef="Z_Abgesagt"/>
+  </bpmn:process>
+</bpmn:definitions>

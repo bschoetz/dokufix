@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Rueckgabe" isExecutable="false">
+    <bpmn:startEvent id="R_Start" name="Medium zurück"/>
+    <bpmn:serviceTask id="R_Scannen" name="Etikett scannen"/>
+    <bpmn:intermediateCatchEvent id="R_Warten" name="Zwei Tage"><bpmn:timerEventDefinition id="R_Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="R_Regal" name="Zurück ins Regal"/>
+    <bpmn:endEvent id="R_Ende" name="Wieder ausleihbar"/>
+    <bpmn:sequenceFlow id="R1" sourceRef="R_Start" targetRef="R_Scannen"/>
+    <bpmn:sequenceFlow id="R2" sourceRef="R_Scannen" targetRef="R_Warten"/>
+    <bpmn:sequenceFlow id="R3" sourceRef="R_Warten" targetRef="R_Regal"/>
+    <bpmn:sequenceFlow id="R4" sourceRef="R_Regal" targetRef="R_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Prozess_Rueckgabe">
+      <bpmndi:BPMNShape id="R_Start_di" bpmnElement="R_Start"><dc:Bounds x="-33" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-60" y="-35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="R_Scannen_di" bpmnElement="R_Scannen"><dc:Bounds x="63" y="-97" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="R_Warten_di" bpmnElement="R_Warten"><dc:Bounds x="243" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="216" y="-35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="R_Regal_di" bpmnElement="R_Regal"><dc:Bounds x="339" y="-97" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="R_Ende_di" bpmnElement="R_Ende"><dc:Bounds x="519" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="492" y="-35" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="R1_di" bpmnElement="R1"><di:waypoint x="3" y="-57"/><di:waypoint x="63" y="-57"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="R2_di" bpmnElement="R2"><di:waypoint x="183" y="-57"/><di:waypoint x="243" y="-57"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="R3_di" bpmnElement="R3"><di:waypoint x="279" y="-57"/><di:waypoint x="339" y="-57"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="R4_di" bpmnElement="R4"><di:waypoint x="459" y="-57"/><di:waypoint x="519" y="-57"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

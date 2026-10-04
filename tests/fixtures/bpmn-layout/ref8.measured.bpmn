@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess" isExecutable="false">
+    <bpmn:startEvent id="G_Start" name="Mahnung &amp; Gebühr"/>
+    <bpmn:task id="G_Zahlen" name="5 % zahlen"/>
+    <bpmn:endEvent id="G_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="G1" sourceRef="G_Start" targetRef="G_Zahlen"/>
+    <bpmn:sequenceFlow id="G2" sourceRef="G_Zahlen" targetRef="G_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Prozess">
+      <bpmndi:BPMNShape id="G_Start_di" bpmnElement="G_Start"><dc:Bounds x="-33" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-60" y="-31" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Zahlen_di" bpmnElement="G_Zahlen"><dc:Bounds x="63" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Ende_di" bpmnElement="G_Ende"><dc:Bounds x="243" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="216" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="G1_di" bpmnElement="G1"><di:waypoint x="3" y="-53"/><di:waypoint x="63" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="G2_di" bpmnElement="G2"><di:waypoint x="183" y="-53"/><di:waypoint x="243" y="-53"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Mahnstelle" name="Mahnung" processRef="Prozess_Mahnung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Mahnung" isExecutable="false">
+    <bpmn:startEvent id="M_Start" name="Frist abgelaufen"/>
+    <bpmn:task id="M_Erinnern" name="Leserin erinnern"/>
+    <bpmn:task id="M_Notieren" name="Neue Frist notieren"/>
+    <bpmn:task id="M_Pruefen" name="Rückgabe prüfen"/>
+    <bpmn:exclusiveGateway id="M_Frage" name="Zurückgegeben?"/>
+    <bpmn:endEvent id="M_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="M1" sourceRef="M_Start" targetRef="M_Erinnern"/>
+    <bpmn:sequenceFlow id="M2" sourceRef="M_Erinnern" targetRef="M_Notieren"/>
+    <bpmn:sequenceFlow id="M3" sourceRef="M_Notieren" targetRef="M_Pruefen"/>
+    <bpmn:sequenceFlow id="M4" sourceRef="M_Pruefen" targetRef="M_Frage"/>
+    <bpmn:sequenceFlow id="M5" sourceRef="M_Frage" targetRef="M_Ende" name="ja"/>
+    <bpmn:sequenceFlow id="M6" sourceRef="M_Frage" targetRef="M_Erinnern" name="nein"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Zusammenarbeit">
+      <bpmndi:BPMNShape id="Mahnstelle_di" bpmnElement="Mahnstelle" isHorizontal="true"><dc:Bounds x="-133" y="-129" width="882" height="152"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Start_di" bpmnElement="M_Start"><dc:Bounds x="-33" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-60" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Erinnern_di" bpmnElement="M_Erinnern"><dc:Bounds x="63" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Notieren_di" bpmnElement="M_Notieren"><dc:Bounds x="219" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Pruefen_di" bpmnElement="M_Pruefen"><dc:Bounds x="375" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Frage_di" bpmnElement="M_Frage" isMarkerVisible="true"><dc:Bounds x="535" y="-78" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="515" y="-97" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="M_Ende_di" bpmnElement="M_Ende"><dc:Bounds x="679" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="652" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="M1_di" bpmnElement="M1"><di:waypoint x="3" y="-53"/><di:waypoint x="63" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M2_di" bpmnElement="M2"><di:waypoint x="183" y="-53"/><di:waypoint x="219" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M3_di" bpmnElement="M3"><di:waypoint x="339" y="-53"/><di:waypoint x="375" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M4_di" bpmnElement="M4"><di:waypoint x="495" y="-53"/><di:waypoint x="535" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M5_di" bpmnElement="M5"><di:waypoint x="585" y="-53"/><di:waypoint x="679" y="-53"/><bpmndi:BPMNLabel><dc:Bounds x="595" y="-72" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="M6_di" bpmnElement="M6"><di:waypoint x="560" y="-28"/><di:waypoint x="560" y="7"/><di:waypoint x="123" y="7"/><di:waypoint x="123" y="-13"/><bpmndi:BPMNLabel><dc:Bounds x="566" y="-20" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

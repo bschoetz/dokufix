@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="L1"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>g1</bpmn:flowNodeRef><bpmn:flowNodeRef>t</bpmn:flowNodeRef><bpmn:flowNodeRef>g2</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Beginn"/>
+    <bpmn:exclusiveGateway id="g1"/>
+    <bpmn:task id="t" name="Großer Arbeitsschritt"/>
+    <bpmn:exclusiveGateway id="g2" name="Wiederholen?"/>
+    <bpmn:endEvent id="z" name="Ende"/>
+    <bpmn:sequenceFlow id="F1_s_g1" sourceRef="s" targetRef="g1"/>
+    <bpmn:sequenceFlow id="F2_g1_t" sourceRef="g1" targetRef="t"/>
+    <bpmn:sequenceFlow id="F3_t_g2" sourceRef="t" targetRef="g2"/>
+    <bpmn:sequenceFlow id="F4_g2_g1" sourceRef="g2" targetRef="g1" name="ja"/>
+    <bpmn:sequenceFlow id="F5_g2_z" sourceRef="g2" targetRef="z" name="nein"/>
+  </bpmn:process>
+</bpmn:definitions>

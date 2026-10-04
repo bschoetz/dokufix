@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess" isExecutable="false">
+    <bpmn:startEvent id="G_Start" name="Mahnung &amp; Gebühr"/>
+    <bpmn:task id="G_Zahlen" name="5 % zahlen"/>
+    <bpmn:endEvent id="G_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="G1" sourceRef="G_Start" targetRef="G_Zahlen"/>
+    <bpmn:sequenceFlow id="G2" sourceRef="G_Zahlen" targetRef="G_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>

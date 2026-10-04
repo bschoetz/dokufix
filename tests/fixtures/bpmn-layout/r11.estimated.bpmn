@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:startEvent id="s"/>
+    <bpmn:task id="a" name="Eins"/>
+    <bpmn:task id="b" name="Zwei"/>
+    <bpmn:task id="c" name="Drei"/>
+    <bpmn:parallelGateway id="g"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_c" sourceRef="b" targetRef="c"/>
+    <bpmn:sequenceFlow id="F4_c_g" sourceRef="c" targetRef="g"/>
+    <bpmn:sequenceFlow id="F5_g_z" sourceRef="g" targetRef="z"/>
+    <bpmn:sequenceFlow id="F6_g_a" sourceRef="g" targetRef="a"/>
+    <bpmn:sequenceFlow id="F7_c_b" sourceRef="c" targetRef="b"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Proc">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="28" y="-65" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a_di" bpmnElement="a"><dc:Bounds x="133" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b_di" bpmnElement="b"><dc:Bounds x="317" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_di" bpmnElement="c"><dc:Bounds x="501" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g"><dc:Bounds x="689" y="-72" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z"><dc:Bounds x="833" y="-65" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_s_a_di" bpmnElement="F1_s_a"><di:waypoint x="64" y="-47"/><di:waypoint x="133" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_a_b_di" bpmnElement="F2_a_b"><di:waypoint x="253" y="-47"/><di:waypoint x="317" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_b_c_di" bpmnElement="F3_b_c"><di:waypoint x="437" y="-47"/><di:waypoint x="501" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_c_g_di" bpmnElement="F4_c_g"><di:waypoint x="621" y="-47"/><di:waypoint x="689" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_g_z_di" bpmnElement="F5_g_z"><di:waypoint x="739" y="-47"/><di:waypoint x="833" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_g_a_di" bpmnElement="F6_g_a"><di:waypoint x="714" y="-22"/><di:waypoint x="714" y="29"/><di:waypoint x="193" y="29"/><di:waypoint x="193" y="-7"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_c_b_di" bpmnElement="F7_c_b"><di:waypoint x="561" y="-7"/><di:waypoint x="561" y="13"/><di:waypoint x="377" y="13"/><di:waypoint x="377" y="-7"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

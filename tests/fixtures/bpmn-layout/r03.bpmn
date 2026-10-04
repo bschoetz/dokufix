@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Kunde"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>k1</bpmn:flowNodeRef><bpmn:flowNodeRef>k2</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Service"><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>d</bpmn:flowNodeRef><bpmn:flowNodeRef>gx</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_3" name="Lager"><bpmn:flowNodeRef>l1</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Anfrage"/>
+    <bpmn:task id="k1" name="Rückfrage beantworten"/>
+    <bpmn:task id="k2" name="Ware annehmen"/>
+    <bpmn:task id="a" name="Annehmen"/>
+    <bpmn:task id="b" name="Klären"/>
+    <bpmn:task id="c" name="Angebot"/>
+    <bpmn:exclusiveGateway id="d" name="Angenommen?"/>
+    <bpmn:exclusiveGateway id="gx" name="Lieferbar?"/>
+    <bpmn:task id="l1" name="Kommissionieren"/>
+    <bpmn:endEvent id="z" name="Ende"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_k1" sourceRef="b" targetRef="k1"/>
+    <bpmn:sequenceFlow id="F4_k1_c" sourceRef="k1" targetRef="c"/>
+    <bpmn:sequenceFlow id="F5_c_d" sourceRef="c" targetRef="d"/>
+    <bpmn:sequenceFlow id="F6_d_b" sourceRef="d" targetRef="b" name="nein"/>
+    <bpmn:sequenceFlow id="F7_d_gx" sourceRef="d" targetRef="gx" name="ja"/>
+    <bpmn:sequenceFlow id="F8_gx_a" sourceRef="gx" targetRef="a" name="nein"/>
+    <bpmn:sequenceFlow id="F9_gx_l1" sourceRef="gx" targetRef="l1" name="ja"/>
+    <bpmn:sequenceFlow id="F10_l1_k2" sourceRef="l1" targetRef="k2"/>
+    <bpmn:sequenceFlow id="F11_k2_z" sourceRef="k2" targetRef="z"/>
+  </bpmn:process>
+</bpmn:definitions>

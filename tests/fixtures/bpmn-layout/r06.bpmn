@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Bahn"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:task id="a" name="Entwurf"/>
+    <bpmn:task id="b" name="Review"/>
+    <bpmn:exclusiveGateway id="c" name="Urteil?"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_c" sourceRef="b" targetRef="c"/>
+    <bpmn:sequenceFlow id="F4_c_a" sourceRef="c" targetRef="a" name="überarbeiten"/>
+    <bpmn:sequenceFlow id="F5_c_a" sourceRef="c" targetRef="a" name="neu beginnen"/>
+    <bpmn:sequenceFlow id="F6_c_z" sourceRef="c" targetRef="z" name="ok"/>
+  </bpmn:process>
+</bpmn:definitions>

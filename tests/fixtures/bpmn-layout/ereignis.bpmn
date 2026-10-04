@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Vormerkung" isExecutable="false">
+    <bpmn:startEvent id="E_Start" name="Buch vorgemerkt"/>
+    <bpmn:intermediateCatchEvent id="E_Warten" name="Buch zurück"><bpmn:messageEventDefinition id="E_Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="E_Benachrichtigen" name="Leserin benachrichtigen"/>
+    <bpmn:exclusiveGateway id="E_Frage" name="Abgeholt?"/>
+    <bpmn:intermediateCatchEvent id="E_Frist" name="Eine Woche"><bpmn:timerEventDefinition id="E_Frist_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="E_Ende" name="Ausgeliehen"/>
+    <bpmn:sequenceFlow id="E1" sourceRef="E_Start" targetRef="E_Warten"/>
+    <bpmn:sequenceFlow id="E2" sourceRef="E_Warten" targetRef="E_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="E3" sourceRef="E_Benachrichtigen" targetRef="E_Frage"/>
+    <bpmn:sequenceFlow id="E4" sourceRef="E_Frage" targetRef="E_Ende" name="ja"/>
+    <bpmn:sequenceFlow id="E5" sourceRef="E_Frage" targetRef="E_Frist" name="nein"/>
+    <bpmn:sequenceFlow id="E6" sourceRef="E_Frist" targetRef="E_Warten"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Oben"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>g1</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Mitte"><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>d</bpmn:flowNodeRef><bpmn:flowNodeRef>g2</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_3" name="Unten"><bpmn:flowNodeRef>e</bpmn:flowNodeRef><bpmn:flowNodeRef>f</bpmn:flowNodeRef><bpmn:flowNodeRef>g3</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Los"/>
+    <bpmn:task id="a" name="Erfassen"/>
+    <bpmn:task id="b" name="Prüfen"/>
+    <bpmn:exclusiveGateway id="g1" name="ok?"/>
+    <bpmn:task id="c" name="Rechnen"/>
+    <bpmn:task id="d" name="Kontrollieren"/>
+    <bpmn:exclusiveGateway id="g2" name="stimmt?"/>
+    <bpmn:task id="e" name="Buchen"/>
+    <bpmn:task id="f" name="Abgleichen"/>
+    <bpmn:exclusiveGateway id="g3" name="ausgeglichen?"/>
+    <bpmn:endEvent id="z" name="Fertig"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_g1" sourceRef="b" targetRef="g1"/>
+    <bpmn:sequenceFlow id="F4_g1_a" sourceRef="g1" targetRef="a" name="nein"/>
+    <bpmn:sequenceFlow id="F5_g1_c" sourceRef="g1" targetRef="c" name="ja"/>
+    <bpmn:sequenceFlow id="F6_c_d" sourceRef="c" targetRef="d"/>
+    <bpmn:sequenceFlow id="F7_d_g2" sourceRef="d" targetRef="g2"/>
+    <bpmn:sequenceFlow id="F8_g2_c" sourceRef="g2" targetRef="c" name="nein"/>
+    <bpmn:sequenceFlow id="F9_g2_e" sourceRef="g2" targetRef="e" name="ja"/>
+    <bpmn:sequenceFlow id="F10_e_f" sourceRef="e" targetRef="f"/>
+    <bpmn:sequenceFlow id="F11_f_g3" sourceRef="f" targetRef="g3"/>
+    <bpmn:sequenceFlow id="F12_g3_e" sourceRef="g3" targetRef="e" name="nein"/>
+    <bpmn:sequenceFlow id="F13_g3_z" sourceRef="g3" targetRef="z" name="ja"/>
+  </bpmn:process>
+</bpmn:definitions>

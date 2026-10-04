@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Vormerkung" isExecutable="false">
+    <bpmn:startEvent id="E_Start" name="Buch vorgemerkt"/>
+    <bpmn:intermediateCatchEvent id="E_Warten" name="Buch zurück"><bpmn:messageEventDefinition id="E_Warten_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="E_Benachrichtigen" name="Leserin benachrichtigen"/>
+    <bpmn:exclusiveGateway id="E_Frage" name="Abgeholt?"/>
+    <bpmn:intermediateCatchEvent id="E_Frist" name="Eine Woche"><bpmn:timerEventDefinition id="E_Frist_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="E_Ende" name="Ausgeliehen"/>
+    <bpmn:sequenceFlow id="E1" sourceRef="E_Start" targetRef="E_Warten"/>
+    <bpmn:sequenceFlow id="E2" sourceRef="E_Warten" targetRef="E_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="E3" sourceRef="E_Benachrichtigen" targetRef="E_Frage"/>
+    <bpmn:sequenceFlow id="E4" sourceRef="E_Frage" targetRef="E_Ende" name="ja"/>
+    <bpmn:sequenceFlow id="E5" sourceRef="E_Frage" targetRef="E_Frist" name="nein"/>
+    <bpmn:sequenceFlow id="E6" sourceRef="E_Frist" targetRef="E_Warten"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Prozess_Vormerkung">
+      <bpmndi:BPMNShape id="E_Start_di" bpmnElement="E_Start"><dc:Bounds x="-37" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-64" y="-35" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Warten_di" bpmnElement="E_Warten"><dc:Bounds x="88" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="61" y="-94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Benachrichtigen_di" bpmnElement="E_Benachrichtigen"><dc:Bounds x="184" y="-97" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Frage_di" bpmnElement="E_Frage" isMarkerVisible="true"><dc:Bounds x="340" y="-82" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="320" y="-28" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Frist_di" bpmnElement="E_Frist"><dc:Bounds x="484" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="457" y="-94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Ende_di" bpmnElement="E_Ende"><dc:Bounds x="608" y="-75" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="581" y="-35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="E1_di" bpmnElement="E1"><di:waypoint x="-1" y="-57"/><di:waypoint x="88" y="-57"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E2_di" bpmnElement="E2"><di:waypoint x="124" y="-57"/><di:waypoint x="184" y="-57"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E3_di" bpmnElement="E3"><di:waypoint x="304" y="-57"/><di:waypoint x="340" y="-57"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E4_di" bpmnElement="E4"><di:waypoint x="365" y="-82"/><di:waypoint x="365" y="-113"/><di:waypoint x="626" y="-113"/><di:waypoint x="626" y="-75"/><bpmndi:BPMNLabel><dc:Bounds x="371" y="-105" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E5_di" bpmnElement="E5"><di:waypoint x="390" y="-57"/><di:waypoint x="484" y="-57"/><bpmndi:BPMNLabel><dc:Bounds x="400" y="-76" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="E6_di" bpmnElement="E6"><di:waypoint x="502" y="-39"/><di:waypoint x="502" y="3"/><di:waypoint x="106" y="3"/><di:waypoint x="106" y="-39"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

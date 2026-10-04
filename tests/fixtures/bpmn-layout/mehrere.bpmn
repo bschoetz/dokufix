@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Mahnstelle" name="Mahnung" processRef="Prozess_Mahnung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Mahnung" isExecutable="false">
+    <bpmn:startEvent id="M_Start" name="Frist abgelaufen"/>
+    <bpmn:task id="M_Erinnern" name="Leserin erinnern"/>
+    <bpmn:task id="M_Notieren" name="Neue Frist notieren"/>
+    <bpmn:task id="M_Pruefen" name="Rückgabe prüfen"/>
+    <bpmn:exclusiveGateway id="M_Frage" name="Zurückgegeben?"/>
+    <bpmn:endEvent id="M_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="M1" sourceRef="M_Start" targetRef="M_Erinnern"/>
+    <bpmn:sequenceFlow id="M2" sourceRef="M_Erinnern" targetRef="M_Notieren"/>
+    <bpmn:sequenceFlow id="M3" sourceRef="M_Notieren" targetRef="M_Pruefen"/>
+    <bpmn:sequenceFlow id="M4" sourceRef="M_Pruefen" targetRef="M_Frage"/>
+    <bpmn:sequenceFlow id="M5" sourceRef="M_Frage" targetRef="M_Ende" name="ja"/>
+    <bpmn:sequenceFlow id="M6" sourceRef="M_Frage" targetRef="M_Erinnern" name="nein"/>
+  </bpmn:process>
+</bpmn:definitions>

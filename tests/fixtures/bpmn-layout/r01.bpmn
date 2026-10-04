@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Bearbeitung"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>d</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef><bpmn:flowNodeRef>f</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Start"/>
+    <bpmn:task id="a" name="Antrag prüfen"/>
+    <bpmn:task id="b" name="Daten erfassen"/>
+    <bpmn:exclusiveGateway id="c" name="Vollständig?"/>
+    <bpmn:task id="d" name="Bescheid entwerfen"/>
+    <bpmn:exclusiveGateway id="e" name="Freigabe?"/>
+    <bpmn:task id="f" name="Versenden"/>
+    <bpmn:exclusiveGateway id="g" name="Zugestellt?"/>
+    <bpmn:endEvent id="z" name="Ende"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_c" sourceRef="b" targetRef="c"/>
+    <bpmn:sequenceFlow id="F4_c_d" sourceRef="c" targetRef="d" name="ja"/>
+    <bpmn:sequenceFlow id="F5_c_a" sourceRef="c" targetRef="a" name="nein"/>
+    <bpmn:sequenceFlow id="F6_d_e" sourceRef="d" targetRef="e"/>
+    <bpmn:sequenceFlow id="F7_e_f" sourceRef="e" targetRef="f" name="ja"/>
+    <bpmn:sequenceFlow id="F8_e_d" sourceRef="e" targetRef="d" name="nein"/>
+    <bpmn:sequenceFlow id="F9_f_g" sourceRef="f" targetRef="g"/>
+    <bpmn:sequenceFlow id="F10_g_z" sourceRef="g" targetRef="z" name="ja"/>
+    <bpmn:sequenceFlow id="F11_g_b" sourceRef="g" targetRef="b" name="nein"/>
+    <bpmn:sequenceFlow id="F12_e_b" sourceRef="e" targetRef="b" name="zurück"/>
+  </bpmn:process>
+</bpmn:definitions>

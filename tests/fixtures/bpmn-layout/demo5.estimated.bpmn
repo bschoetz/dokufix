@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <collaboration id="graph">
+    <participant id="subgraph" name="Verlängerung" processRef="Process_1"/>
+  </collaboration>
+  <process id="Process_1" isExecutable="false">
+    <startEvent id="start" name="Leserin fragt"/>
+    <exclusiveGateway id="Flow_1" name="Vorgemerkt?"/>
+    <task id="style" name="Frist verlängern"/>
+    <task id="click" name="Bescheid geben"/>
+    <endEvent id="end" name="Erledigt"/>
+    <textAnnotation id="Notiz"><text>Höchstens zweimal</text></textAnnotation>
+    <association id="Zur_Notiz" sourceRef="style" targetRef="Notiz"/>
+    <sequenceFlow id="S1" sourceRef="start" targetRef="Flow_1"/>
+    <sequenceFlow id="S2" sourceRef="Flow_1" targetRef="style" name="nein"/>
+    <sequenceFlow id="S3" sourceRef="Flow_1" targetRef="style" name="ja, aber kurz"/>
+    <sequenceFlow id="S4" sourceRef="style" targetRef="click"/>
+    <sequenceFlow id="S5" sourceRef="click" targetRef="end"/>
+  </process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="graph">
+      <bpmndi:BPMNShape id="subgraph_di" bpmnElement="subgraph" isHorizontal="true"><dc:Bounds x="-133" y="-129" width="763" height="152"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start"><dc:Bounds x="-33" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-60" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Flow_1_di" bpmnElement="Flow_1" isMarkerVisible="true"><dc:Bounds x="97" y="-78" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="77" y="-97" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="style_di" bpmnElement="style"><dc:Bounds x="217" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="click_di" bpmnElement="click"><dc:Bounds x="374" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end"><dc:Bounds x="560" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="533" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="S1_di" bpmnElement="S1"><di:waypoint x="3" y="-53"/><di:waypoint x="97" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="S2_di" bpmnElement="S2"><di:waypoint x="147" y="-53"/><di:waypoint x="217" y="-53"/><bpmndi:BPMNLabel><dc:Bounds x="157" y="-72" width="26" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="S3_di" bpmnElement="S3"><di:waypoint x="122" y="-28"/><di:waypoint x="122" y="7"/><di:waypoint x="277" y="7"/><di:waypoint x="277" y="-13"/><bpmndi:BPMNLabel><dc:Bounds x="128" y="-20" width="86" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="S4_di" bpmnElement="S4"><di:waypoint x="337" y="-53"/><di:waypoint x="374" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="S5_di" bpmnElement="S5"><di:waypoint x="494" y="-53"/><di:waypoint x="560" y="-53"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</definitions>
+<!-- Ende des Modells -->

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Neu" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="N_Theke" name="Theke"><bpmn:flowNodeRef>N_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Pruefen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Magazin" name="Magazin"><bpmn:flowNodeRef>N_Einarbeiten</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Ende</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Frist</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Werkstatt" name="Werkstatt"/>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="N_Start" name="Neues Buch"/>
+    <bpmn:task id="N_Pruefen" name="Lieferung prüfen"/>
+    <bpmn:boundaryEvent id="N_Frist" name="Eine Woche" attachedToRef="N_Pruefen"><bpmn:timerEventDefinition id="N_Frist_Def"/></bpmn:boundaryEvent>
+    <bpmn:subProcess id="N_Einarbeiten" name="Einarbeiten">
+      <bpmn:startEvent id="N_E_Start"/>
+      <bpmn:task id="N_E_Stempeln" name="Stempeln"/>
+      <bpmn:sequenceFlow id="N_E1" sourceRef="N_E_Start" targetRef="N_E_Stempeln"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="N_Ende" name="Im Regal"/>
+    <bpmn:sequenceFlow id="N1" sourceRef="N_Start" targetRef="N_Pruefen"/>
+    <bpmn:sequenceFlow id="N2" sourceRef="N_Pruefen" targetRef="N_Einarbeiten"/>
+    <bpmn:sequenceFlow id="N3" sourceRef="N_Einarbeiten" targetRef="N_Ende"/>
+    <bpmn:sequenceFlow id="N4" sourceRef="N_Frist" targetRef="N_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Prozess_Neu">
+      <bpmndi:BPMNShape id="N_Theke_di" bpmnElement="N_Theke" isHorizontal="true"><dc:Bounds x="-103" y="-129" width="433" height="146"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Magazin_di" bpmnElement="N_Magazin" isHorizontal="true"><dc:Bounds x="-103" y="17" width="433" height="141"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Werkstatt_di" bpmnElement="N_Werkstatt" isHorizontal="true"><dc:Bounds x="-103" y="158" width="433" height="107"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Start_di" bpmnElement="N_Start"><dc:Bounds x="-33" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-60" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Pruefen_di" bpmnElement="N_Pruefen"><dc:Bounds x="71" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Einarbeiten_di" bpmnElement="N_Einarbeiten"><dc:Bounds x="71" y="47" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Ende_di" bpmnElement="N_Ende"><dc:Bounds x="260" y="69" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="233" y="109" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1"><di:waypoint x="3" y="-53"/><di:waypoint x="71" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N2_di" bpmnElement="N2"><di:waypoint x="131" y="-13"/><di:waypoint x="131" y="47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N3_di" bpmnElement="N3"><di:waypoint x="191" y="87"/><di:waypoint x="260" y="87"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

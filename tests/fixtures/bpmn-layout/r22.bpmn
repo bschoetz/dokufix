@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Eins"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Zwei"><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>d</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_3" name="Drei"><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:task id="a" name="A"/>
+    <bpmn:task id="b" name="B"/>
+    <bpmn:exclusiveGateway id="g" name="G?"/>
+    <bpmn:task id="c" name="C"/>
+    <bpmn:task id="d" name="D"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:task id="e" name="E"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_g" sourceRef="b" targetRef="g"/>
+    <bpmn:sequenceFlow id="F4_g_a" sourceRef="g" targetRef="a" name="x"/>
+    <bpmn:sequenceFlow id="F5_g_b" sourceRef="g" targetRef="b" name="y"/>
+    <bpmn:sequenceFlow id="F6_g_c" sourceRef="g" targetRef="c" name="ok"/>
+    <bpmn:sequenceFlow id="F7_c_d" sourceRef="c" targetRef="d"/>
+    <bpmn:sequenceFlow id="F8_d_c" sourceRef="d" targetRef="c" name="zurück"/>
+    <bpmn:sequenceFlow id="F9_d_e" sourceRef="d" targetRef="e"/>
+    <bpmn:sequenceFlow id="F10_e_z" sourceRef="e" targetRef="z"/>
+    <bpmn:sequenceFlow id="F11_c_z" sourceRef="c" targetRef="z"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Buchpflege" name="Reparatur" processRef="Prozess_Reparatur"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Reparatur" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="B_Theke" name="Theke"><bpmn:flowNodeRef>B_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ausgeben</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="B_Werkstatt" name="Werkstatt"><bpmn:flowNodeRef>B_Ansehen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Kleben</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Pressen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Frage</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="B_Start" name="Buch beschädigt"/>
+    <bpmn:task id="B_Ansehen" name="Schaden ansehen"/>
+    <bpmn:task id="B_Kleben" name="Rücken kleben"/>
+    <bpmn:task id="B_Pressen" name="Über Nacht pressen"/>
+    <bpmn:exclusiveGateway id="B_Frage" name="Hält es?"/>
+    <bpmn:task id="B_Ausgeben" name="Wieder ausgeben"/>
+    <bpmn:endEvent id="B_Ende" name="Im Regal"/>
+    <bpmn:sequenceFlow id="B1" sourceRef="B_Start" targetRef="B_Ansehen"/>
+    <bpmn:sequenceFlow id="B2" sourceRef="B_Ansehen" targetRef="B_Kleben"/>
+    <bpmn:sequenceFlow id="B3" sourceRef="B_Kleben" targetRef="B_Pressen"/>
+    <bpmn:sequenceFlow id="B4" sourceRef="B_Pressen" targetRef="B_Frage"/>
+    <bpmn:sequenceFlow id="B5" sourceRef="B_Frage" targetRef="B_Ausgeben" name="ja"/>
+    <bpmn:sequenceFlow id="B6" sourceRef="B_Frage" targetRef="B_Ansehen" name="nein"/>
+    <bpmn:sequenceFlow id="B7" sourceRef="B_Ausgeben" targetRef="B_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>

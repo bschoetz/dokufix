@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Eins"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Zwei"><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>d</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_3" name="Drei"><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:task id="a" name="A"/>
+    <bpmn:task id="b" name="B"/>
+    <bpmn:exclusiveGateway id="g" name="G?"/>
+    <bpmn:task id="c" name="C"/>
+    <bpmn:task id="d" name="D"/>
+    <bpmn:endEvent id="z"/>
+    <bpmn:task id="e" name="E"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_g" sourceRef="b" targetRef="g"/>
+    <bpmn:sequenceFlow id="F4_g_a" sourceRef="g" targetRef="a" name="x"/>
+    <bpmn:sequenceFlow id="F5_g_b" sourceRef="g" targetRef="b" name="y"/>
+    <bpmn:sequenceFlow id="F6_g_c" sourceRef="g" targetRef="c" name="ok"/>
+    <bpmn:sequenceFlow id="F7_c_d" sourceRef="c" targetRef="d"/>
+    <bpmn:sequenceFlow id="F8_d_c" sourceRef="d" targetRef="c" name="zurück"/>
+    <bpmn:sequenceFlow id="F9_d_e" sourceRef="d" targetRef="e"/>
+    <bpmn:sequenceFlow id="F10_e_z" sourceRef="e" targetRef="z"/>
+    <bpmn:sequenceFlow id="F11_c_z" sourceRef="c" targetRef="z"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C">
+      <bpmndi:BPMNShape id="P_di" bpmnElement="P" isHorizontal="true"><dc:Bounds x="-72" y="-154" width="1185" height="483"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1_di" bpmnElement="Lane_1" isHorizontal="true"><dc:Bounds x="-42" y="-154" width="1155" height="182"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_2_di" bpmnElement="Lane_2" isHorizontal="true"><dc:Bounds x="-42" y="28" width="1155" height="150"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_3_di" bpmnElement="Lane_3" isHorizontal="true"><dc:Bounds x="-42" y="178" width="1155" height="151"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="28" y="-65" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a_di" bpmnElement="a"><dc:Bounds x="139" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b_di" bpmnElement="b"><dc:Bounds x="329" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g" isMarkerVisible="true"><dc:Bounds x="519" y="-72" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="537" y="-54" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_di" bpmnElement="c"><dc:Bounds x="639" y="63" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d_di" bpmnElement="d"><dc:Bounds x="829" y="63" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z"><dc:Bounds x="1043" y="85" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="829" y="213" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_s_a_di" bpmnElement="F1_s_a"><di:waypoint x="64" y="-47"/><di:waypoint x="139" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_a_b_di" bpmnElement="F2_a_b"><di:waypoint x="259" y="-47"/><di:waypoint x="329" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_b_g_di" bpmnElement="F3_b_g"><di:waypoint x="449" y="-47"/><di:waypoint x="519" y="-47"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_g_a_di" bpmnElement="F4_g_a"><di:waypoint x="544" y="-72"/><di:waypoint x="544" y="-123"/><di:waypoint x="199" y="-123"/><di:waypoint x="199" y="-87"/><bpmndi:BPMNLabel><dc:Bounds x="368" y="-142" width="7" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_g_b_di" bpmnElement="F5_g_b"><di:waypoint x="544" y="-72"/><di:waypoint x="544" y="-107"/><di:waypoint x="389" y="-107"/><di:waypoint x="389" y="-87"/><bpmndi:BPMNLabel><dc:Bounds x="463" y="-103" width="7" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_g_c_di" bpmnElement="F6_g_c"><di:waypoint x="544" y="-22"/><di:waypoint x="544" y="103"/><di:waypoint x="639" y="103"/><bpmndi:BPMNLabel><dc:Bounds x="550" y="-14" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_c_d_di" bpmnElement="F7_c_d"><di:waypoint x="759" y="103"/><di:waypoint x="829" y="103"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_d_c_di" bpmnElement="F8_d_c"><di:waypoint x="849" y="143"/><di:waypoint x="849" y="163"/><di:waypoint x="699" y="163"/><di:waypoint x="699" y="143"/><bpmndi:BPMNLabel><dc:Bounds x="754" y="167" width="40" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_d_e_di" bpmnElement="F9_d_e"><di:waypoint x="889" y="143"/><di:waypoint x="889" y="213"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_e_z_di" bpmnElement="F10_e_z"><di:waypoint x="949" y="253"/><di:waypoint x="961" y="253"/><di:waypoint x="961" y="103"/><di:waypoint x="1043" y="103"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F11_c_z_di" bpmnElement="F11_c_z"><di:waypoint x="699" y="63"/><di:waypoint x="699" y="51"/><di:waypoint x="1061" y="51"/><di:waypoint x="1061" y="85"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

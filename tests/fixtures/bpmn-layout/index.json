@@ -1,0 +1,196 @@
+{
+ "mermaid": "12.0.0",
+ "shows": "the items of entries 21 and 25 of the epic an input shows, from the pre-analysis of 2026-10-04",
+ "fixtures": {
+  "ref3": {
+   "source": "tests/referenz.md:671"
+  },
+  "ref4": {
+   "source": "tests/referenz.md:725"
+  },
+  "hund": {
+   "source": "tests/referenz.md:746"
+  },
+  "mehrere": {
+   "source": "tests/referenz.md:868"
+  },
+  "zwei": {
+   "source": "tests/referenz.md:895",
+   "also": [
+    "src/demo.md:678"
+   ],
+   "shows": [
+    "25.2"
+   ]
+  },
+  "mitte": {
+   "source": "tests/referenz.md:935",
+   "also": [
+    "src/demo.md:718"
+   ]
+  },
+  "ereignis": {
+   "source": "tests/referenz.md:969"
+  },
+  "ref8": {
+   "source": "tests/referenz.md:1047"
+  },
+  "demo2": {
+   "source": "src/demo.md:316",
+   "also": [
+    "src/showcase.md:125"
+   ]
+  },
+  "demo3": {
+   "source": "src/demo.md:352"
+  },
+  "reparatur": {
+   "source": "src/demo.md:375"
+  },
+  "demo5": {
+   "source": "src/demo.md:620"
+  },
+  "demo6": {
+   "source": "src/demo.md:648"
+  },
+  "hund2": {
+   "source": "_bmad-output/initiative-dokufix/analysis-bpmn-loops/hund2/hund2.bpmn",
+   "note": "the large example of the loop analysis, fictitious; in no document (decision of 2026-10-04)",
+   "shows": [
+    "25.1",
+    "25.3"
+   ]
+  },
+  "r01": {
+   "review": "one lane, five flows back: nested, overlapping, disjoint",
+   "source": "the independent review of story 2.20, input r01 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "25.2"
+   ]
+  },
+  "r02": {
+   "review": "three lanes, a flow back in each",
+   "source": "the independent review of story 2.20, input r02 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r03": {
+   "review": "middle lane with two overlapping flows back (growth), lanes above/below with cross flows",
+   "source": "the independent review of story 2.20, input r03 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.3"
+   ]
+  },
+  "r04": {
+   "review": "flow back between events / from event / to event",
+   "source": "the independent review of story 2.20, input r04 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r05": {
+   "review": "gateway with flow back and forward flow down to another lane; incoming from top lane",
+   "source": "the independent review of story 2.20, input r05 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "25.3"
+   ]
+  },
+  "r06": {
+   "review": "twin flows back (two flows back between the same pair) with a node between",
+   "source": "the independent review of story 2.20, input r06 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r07": {
+   "review": "a flow back next to forward twins, and an opposite pair A->B, B->A",
+   "source": "the independent review of story 2.20, input r07 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r08": {
+   "review": "flow back spanning a task between gateway and event (ends small, middle tall)",
+   "source": "the independent review of story 2.20, input r08 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r09": {
+   "review": "cross-lane flows crossing a ring's span (middle lane loop)",
+   "source": "the independent review of story 2.20, input r09 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r10": {
+   "review": "no lanes, pool",
+   "source": "the independent review of story 2.20, input r10 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "25.2"
+   ]
+  },
+  "r11": {
+   "review": "no lanes, no pool",
+   "source": "the independent review of story 2.20, input r11 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r12": {
+   "review": "long labels on flows back",
+   "source": "the independent review of story 2.20, input r12 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "25.2"
+   ]
+  },
+  "r13": {
+   "review": "a row of only events and gateways",
+   "source": "the independent review of story 2.20, input r13 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r14": {
+   "review": "top lane loop going down (growth into lower lane), two lanes",
+   "source": "the independent review of story 2.20, input r14 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.1"
+   ]
+  },
+  "r15": {
+   "review": "middle lane, flows back on both sides by conflicts (crowded), growth both ways",
+   "source": "the independent review of story 2.20, input r15 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.1",
+    "21.2"
+   ]
+  },
+  "r16": {
+   "review": "parallel gateways, gateway to gateway back, and gateway with forward flow up",
+   "source": "the independent review of story 2.20, input r16 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.1",
+    "25.3"
+   ]
+  },
+  "r17": {
+   "review": "overlap chain: three flows back with staggered overlapping spans, same lengths",
+   "source": "the independent review of story 2.20, input r17 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r18": {
+   "review": "middle lane, five nested flows back from different sources, neighbours above and below over the whole span",
+   "source": "the independent review of story 2.20, input r18 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.2",
+    "21.3"
+   ]
+  },
+  "r19": {
+   "review": "gateway: arrival on top from upper lane, loop back to the adjacent task, another out flow down",
+   "source": "the independent review of story 2.20, input r19 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.1",
+    "21.2"
+   ],
+   "note": "measured XML from the layout at 6eb0b39, not the review's browser file: a3c5a0e changed F4_g_a and F6_g_d after the capture"
+  },
+  "r20": {
+   "review": "same, but the other out flow goes up and arrival from below",
+   "source": "the independent review of story 2.20, input r20 (made by a generator from a spec of nodes, lanes and flows)"
+  },
+  "r21": {
+   "review": "twin flows back between gateways with a tall task between",
+   "source": "the independent review of story 2.20, input r21 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.4",
+    "25.2"
+   ]
+  },
+  "r22": {
+   "review": "two separate lanes, ring in the bottom row of the top lane pushed down by a used top port",
+   "source": "the independent review of story 2.20, input r22 (made by a generator from a spec of nodes, lanes and flows)",
+   "shows": [
+    "21.1",
+    "21.2"
+   ]
+  }
+ }
+}
