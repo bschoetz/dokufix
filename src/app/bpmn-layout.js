@@ -41,8 +41,8 @@
 // (tests/vergleich.mjs on tests/referenz.md).
 export const MERMAID_LAYOUT_VERSION = '12.0.0';
 
-// The distances of 12 px the layout keeps (the geometry, below), each by what
-// it is for:
+// The distances the layout keeps (the geometry, below), 12 px but the last,
+// each by what it is for:
 // STUB              where a flow docks: the piece that leaves its symbol runs
 //                   this far before it turns (attach(), dockApart(), a ring
 //                   from a gateway's corner in loopBack())
@@ -62,7 +62,11 @@ export const MERMAID_LAYOUT_VERSION = '12.0.0';
 //                   nearer, its lane grows (growLane())
 // FRAME_MARGIN      every waypoint and label keeps this far from the edge of
 //                   the outer lanes and the pool (layoutGeometry())
-const STUB = 12, ATTACH_CLEARANCE = 12, OBSTACLE_OFFSET = 12, FAN_ROOM = 12, NEAR = 12, SPAN_TOLERANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12;
+// LABEL_GAP         4 px: a label across the border of its owner's lane with
+//                   another lane lies this far inside once that lane has
+//                   grown (labelRoom()), as far as a flow's label keeps from
+//                   its piece
+const STUB = 12, ATTACH_CLEARANCE = 12, OBSTACLE_OFFSET = 12, FAN_ROOM = 12, NEAR = 12, SPAN_TOLERANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12, LABEL_GAP = 4;
 // They stand among the module's first declarations: esbuild writes such a
 // constant's value in place of its name only before the first declaration
 // that is no such constant, and so the built page carries no names for them.
@@ -803,6 +807,65 @@ export function growLane(ring, lanes, box, routes, placed){
   return need;
 }
 
+// After the labels, not the spike's (story 2.21). A label that lies in no
+// lane, across the border of its owner's lane with another lane, makes that
+// lane grow there as a ring does (growLane()), until the label lies
+// LABEL_GAP inside: everything beyond the border moves away, and the label
+// stays beside its owner. Each label moves with its owner: anchor, the
+// symbol of an event or a gateway (its box in box, moved by growLane()), or
+// for a flow's label the point of its flow nearest the label's middle (a
+// point { x, y } of its own, on the piece the label stands beside); the
+// owner's lane is the lane that holds the anchor. After each growth every
+// other label moves by what its anchor moved, whichever side of the border
+// the label lies on, so that the order of the labels does not change the
+// result. A label beyond an outer lane's outer border grows nothing here:
+// the frame grows at the end of layoutGeometry(). labels: [{ boxes, anchor
+// }], boxes the arrays [x, y, w, h] that move together, the first the
+// label's text, which is checked; lanes: the boxes of every lane, as for
+// loopBack(). Returns { up, down }: by how much the lanes grew upwards and
+// downwards.
+export function labelRoom(labels, lanes, box, routes){
+  const grown = { up: 0, down: 0 };
+  if (!lanes.length) return grown;
+  const inside = (x, y, l) => x >= l[0] && x <= l[0] + l[2] && y >= l[1] && y <= l[1] + l[3];
+  const within = ([x, y, w, h], l) => inside(x, y, l) && inside(x + w, y + h, l);
+  const ay = a => 'cy' in a ? a.cy : a.y;
+  // The anchors of flow labels move with the flows' points.
+  const points = { pts: labels.map(l => l.anchor).filter(a => !('cy' in a)), obstacles: [] };
+  for (const l of labels){
+    const text = l.boxes[0];
+    if (lanes.some(b => within(text, b))) continue;
+    for (const dir of [-1, 1]){
+      const lane = lanes.find(b => b[1] <= ay(l.anchor) && ay(l.anchor) <= b[1] + b[3]);
+      if (!lane) break;
+      const [, y, , h] = text, border = dir > 0 ? lane[1] + lane[3] : lane[1], edge = dir > 0 ? y + h : y;
+      if ((edge - border) * dir <= 0) continue;
+      const before = labels.map(o => ay(o.anchor));
+      // growLane() keeps a ring's level RING_CLEARANCE from the border.
+      const need = growLane({ r: { pts: [] }, dir, y: edge + dir * (LABEL_GAP - RING_CLEARANCE), cy: lane[1] + lane[3] / 2 }, lanes, box, routes.concat(points), []);
+      if (!need) continue;
+      if (dir > 0) grown.down += need; else grown.up += need;
+      labels.forEach((o, i) => {
+        const moved = ay(o.anchor) - before[i];
+        if (moved) for (const b of o.boxes) b[1] += moved;
+      });
+    }
+  }
+  return grown;
+}
+
+// The point of a flow nearest to (x, y): on the nearest of its pieces.
+export function nearestOnFlow(pts, x, y){
+  let best = null, least = Infinity;
+  for (let i = 1; i < pts.length; i++){
+    const a = pts[i - 1], b = pts[i];
+    const px = Math.min(Math.max(a.x, b.x), Math.max(Math.min(a.x, b.x), x)), py = Math.min(Math.max(a.y, b.y), Math.max(Math.min(a.y, b.y), y));
+    const d = Math.hypot(px - x, py - y);
+    if (d < least){ least = d; best = { x: px, y: py }; }
+  }
+  return best;
+}
+
 // A label as bpmn-js lays it out: at most 90 px wide, wrapped at blanks,
 // 12 px text. Estimated, since no font is measured here: { w, h }. The page
 // measures each label as bpmn-js will draw it (src/app/bpmn.js) and keeps
@@ -1005,7 +1068,7 @@ export function layoutGeometry(model, raw, measure = labelSize){
   // gateways; where every place is taken, the one covered least.
   const segments = routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
   const symbols = model.nodes.map(n => di.nodes[n.id]);
-  const taken = [];
+  const taken = [], owners = [];
   for (const { f, pts, loop } of routes){
     if (!f.name) continue;
     // Two flows leaving one corner of a gateway: their labels go to their
@@ -1014,6 +1077,7 @@ export function layoutGeometry(model, raw, measure = labelSize){
     const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken], measure(f.name), !!loop);
     di.flowLabels[f.id] = place;
     taken.push(place);
+    owners.push({ boxes: [place], anchor: nearestOnFlow(pts, place[0] + place[2] / 2, place[1] + place[3] / 2) });
   }
   for (const n of model.nodes){
     if (n.type === 'task' || !n.name) continue;
@@ -1022,6 +1086,15 @@ export function layoutGeometry(model, raw, measure = labelSize){
     const [x, y, w, h] = place;
     di.labels[n.id] = [R(x + w / 2 - LABEL_WIDTH / 2), R(y), LABEL_WIDTH, R(h)];
     taken.push(place);
+    owners.push({ boxes: [place, di.labels[n.id]], anchor: box[n.id] });
+  }
+  // A lane a label reaches out of grows, and what lies beyond moves, each
+  // label with its owner.
+  const room = labelRoom(owners, model.lanes.map(l => laneBox[l.key]), box, routes);
+  if (room.up || room.down){
+    for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
+    for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
+    if (di.pool){ di.pool[1] -= room.up; di.pool[3] += room.up + room.down; }
   }
 
   // Flows routed around a row, and labels, can lie beyond Mermaid's lanes:

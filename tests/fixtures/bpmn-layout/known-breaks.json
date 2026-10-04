@@ -21,7 +21,6 @@
   "label-on-flow GW_Nachprobe Flow_53",
   "label-on-flow GW_Versuche Flow_22",
   "label-on-node GW_Qualitaet Task_Labor",
-  "label-outside-lane GW_Nachprobe",
   "on-one-line-foreign Flow_47 Flow_53",
   "on-one-line-shared Flow_17 Flow_24",
   "on-one-line-shared Flow_34 Flow_36",
@@ -47,8 +46,6 @@
  "r13": [],
  "r14": [],
  "r15": [
-  "label-outside-lane F10_b3_b1",
-  "label-outside-lane F7_gb_b1",
   "on-one-line-shared F7_gb_b1 F8_gb_b2"
  ],
  "r16": [
@@ -60,10 +57,7 @@
   "parallel F3_p1_y F4_x_p2"
  ],
  "r17": [],
- "r18": [
-  "label-outside-lane F18_m6_m1",
-  "label-outside-lane F22_m6_m3"
- ],
+ "r18": [],
  "r19": [
   "on-one-line-shared F7_d_z F8_c_z"
  ],
@@ -71,7 +65,5 @@
   "on-one-line-shared F7_d_z F8_c_z"
  ],
  "r21": [],
- "r22": [
-  "label-outside-lane F8_d_c"
- ]
+ "r22": []
 }

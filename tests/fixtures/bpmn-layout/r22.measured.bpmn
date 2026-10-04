@@ -29,10 +29,10 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C">
-      <bpmndi:BPMNShape id="P_di" bpmnElement="P" isHorizontal="true"><dc:Bounds x="-72" y="-135" width="1185" height="464"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_di" bpmnElement="P" isHorizontal="true"><dc:Bounds x="-72" y="-135" width="1185" height="472"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_1_di" bpmnElement="Lane_1" isHorizontal="true"><dc:Bounds x="-42" y="-135" width="1155" height="163"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_2_di" bpmnElement="Lane_2" isHorizontal="true"><dc:Bounds x="-42" y="28" width="1155" height="150"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_3_di" bpmnElement="Lane_3" isHorizontal="true"><dc:Bounds x="-42" y="178" width="1155" height="151"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_2_di" bpmnElement="Lane_2" isHorizontal="true"><dc:Bounds x="-42" y="28" width="1155" height="158"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_3_di" bpmnElement="Lane_3" isHorizontal="true"><dc:Bounds x="-42" y="186" width="1155" height="151"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="28" y="-65" width="36" height="36"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="a_di" bpmnElement="a"><dc:Bounds x="139" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="b_di" bpmnElement="b"><dc:Bounds x="329" y="-87" width="120" height="80"/></bpmndi:BPMNShape>
@@ -40,7 +40,7 @@
       <bpmndi:BPMNShape id="c_di" bpmnElement="c"><dc:Bounds x="639" y="63" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="d_di" bpmnElement="d"><dc:Bounds x="829" y="63" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="z_di" bpmnElement="z"><dc:Bounds x="1043" y="85" width="36" height="36"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="829" y="213" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="829" y="221" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="F1_s_a_di" bpmnElement="F1_s_a"><di:waypoint x="64" y="-47"/><di:waypoint x="139" y="-47"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F2_a_b_di" bpmnElement="F2_a_b"><di:waypoint x="259" y="-47"/><di:waypoint x="329" y="-47"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F3_b_g_di" bpmnElement="F3_b_g"><di:waypoint x="449" y="-47"/><di:waypoint x="519" y="-47"/></bpmndi:BPMNEdge>
@@ -49,8 +49,8 @@
       <bpmndi:BPMNEdge id="F6_g_c_di" bpmnElement="F6_g_c"><di:waypoint x="544" y="-22"/><di:waypoint x="544" y="103"/><di:waypoint x="639" y="103"/><bpmndi:BPMNLabel><dc:Bounds x="550" y="-14" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F7_c_d_di" bpmnElement="F7_c_d"><di:waypoint x="759" y="103"/><di:waypoint x="829" y="103"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F8_d_c_di" bpmnElement="F8_d_c"><di:waypoint x="849" y="143"/><di:waypoint x="849" y="163"/><di:waypoint x="699" y="163"/><di:waypoint x="699" y="143"/><bpmndi:BPMNLabel><dc:Bounds x="757" y="167" width="35" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F9_d_e_di" bpmnElement="F9_d_e"><di:waypoint x="889" y="143"/><di:waypoint x="889" y="213"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F10_e_z_di" bpmnElement="F10_e_z"><di:waypoint x="949" y="253"/><di:waypoint x="961" y="253"/><di:waypoint x="961" y="103"/><di:waypoint x="1043" y="103"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_d_e_di" bpmnElement="F9_d_e"><di:waypoint x="889" y="143"/><di:waypoint x="889" y="221"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_e_z_di" bpmnElement="F10_e_z"><di:waypoint x="949" y="261"/><di:waypoint x="961" y="261"/><di:waypoint x="961" y="103"/><di:waypoint x="1043" y="103"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F11_c_z_di" bpmnElement="F11_c_z"><di:waypoint x="699" y="63"/><di:waypoint x="699" y="51"/><di:waypoint x="1061" y="51"/><di:waypoint x="1061" y="85"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

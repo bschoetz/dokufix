@@ -20,7 +20,7 @@ import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, unfold, orthogonal, loopBack, LEVEL_STEP,
-  portEnds, portCandidates, conflictScore, growLane, dockApart, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  portEnds, portCandidates, conflictScore, growLane, dockApart, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -574,6 +574,60 @@ test('growLane: a ring closer than 12 px to the border with another lane makes i
   assert.equal(growLane({ r: ring, dir: 1, y: 240, cy: 200 }, lanes, box, [ring], []), 0, 'far enough from the border');
   assert.equal(growLane({ r: ring, dir: -1, y: 0, cy: 50 }, lanes, box, [ring], []), 0, 'by the top of the outer lane: the frame grows later');
   assert.equal(growLane({ r: ring, dir: 1, y: 255, cy: 900 }, lanes, box, [ring], []), 0, 'in no lane');
+});
+
+// ---------- labels across a lane's border (story 2.21) ----------
+test('labelRoom: a label across the border of its owner\'s middle lane makes that lane grow 4 px beyond it; what lies beyond moves, each label with its owner', () => {
+  const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
+  const box = { G: { ...gateway(200, 220) }, B: node(400, 320, 120, 80, true), E: node(600, 320, 36, 36) };
+  const flow = { f: { from: 'G', to: 'B' }, pts: ptsOf([[200, 245], [200, 320], [340, 320]]), obstacles: [{ x1: 340, y1: 280, x2: 460, y2: 360 }] };
+  const g = { boxes: [[185, 250, 30, 20], [155, 250, 90, 20]], anchor: box.G };
+  const e = { boxes: [[585, 342, 30, 15], [555, 342, 90, 15]], anchor: box.E };
+  assert.deepEqual(labelRoom([g, e], lanes, box, [flow]), { up: 0, down: 14 }, '270 + 4 - 260');
+  assert.deepEqual(lanes, [[0, 0, 1000, 140], [0, 140, 1000, 134], [0, 274, 1000, 100]]);
+  assert.deepEqual(g.boxes, [[185, 250, 30, 20], [155, 250, 90, 20]], 'the label stays beside its gateway');
+  assert.equal(box.G.cy, 220);
+  assert.deepEqual([box.B.cy, box.E.cy], [334, 334]);
+  assert.deepEqual(e.boxes, [[585, 356, 30, 15], [555, 356, 90, 15]], 'the event\'s label moved with its event');
+  assert.deepEqual(flow.pts, ptsOf([[200, 245], [200, 334], [340, 334]]));
+  assert.deepEqual(flow.obstacles[0], { x1: 340, y1: 294, x2: 460, y2: 374 });
+  // A label inside its lane, or beyond an outer lane's outer border, grows nothing here.
+  const top = { boxes: [[185, -10, 30, 15]], anchor: node(200, 30, 36, 36) };
+  assert.deepEqual(labelRoom([top], lanes, { T: top.anchor }, []), { up: 0, down: 0 });
+  assert.deepEqual(labelRoom([g], [], box, []), { up: 0, down: 0 }, 'no lanes');
+});
+
+test('labelRoom: several labels at one border give the same layout in either order, each at its distance to its owner', () => {
+  const run = order => {
+    const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
+    const box = { G1: gateway(200, 220), G2: gateway(600, 220), E: node(800, 290, 36, 36) };
+    const labels = {
+      G1: { boxes: [[185, 250, 30, 20]], anchor: box.G1 },             // below its gateway, across the border down
+      G2: { boxes: [[585, 252, 30, 29]], anchor: box.G2 },             // farther down
+      E: { boxes: [[785, 254, 30, 15]], anchor: box.E },               // above its event in the lane below, across the border up
+    };
+    const grown = labelRoom(order.map(k => labels[k]), lanes, box, []);
+    return { grown, lanes, labels: Object.fromEntries(Object.entries(labels).map(([k, l]) => [k, [l.boxes[0][1] - l.anchor.cy, l.boxes[0][1]]])), cy: Object.fromEntries(Object.entries(box).map(([k, c]) => [k, c.cy])) };
+  };
+  const a = run(['G1', 'G2', 'E']), b = run(['E', 'G2', 'G1']);
+  assert.deepEqual(a, b);
+  assert.deepEqual(a.grown, { up: 10, down: 25 });
+  assert.deepEqual(a.lanes, [[0, -10, 1000, 140], [0, 130, 1000, 145], [0, 275, 1000, 110]]);
+  assert.deepEqual(Object.values(a.labels).map(l => l[0]), [30, 32, -36], 'each label at its distance to its owner');
+});
+
+test('labelRoom: a flow\'s label beside its piece in the next lane, reaching back across the border into the source\'s lane: the piece\'s lane grows, the label stays beside its piece', () => {
+  const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
+  const box = { T: node(300, 200, 120, 80, true), B: node(500, 320, 120, 80, true) };
+  const flow = { f: { from: 'T', to: 'B' }, pts: ptsOf([[300, 240], [300, 275], [500, 275], [500, 280]]), obstacles: [] };
+  const text = [370, 252, 60, 19];
+  assert.deepEqual(nearestOnFlow(flow.pts, 400, 261.5), P(400, 275), 'the anchor on the piece it stands above');
+  const label = { boxes: [text], anchor: nearestOnFlow(flow.pts, 400, 261.5) };
+  assert.deepEqual(labelRoom([label], lanes, box, [flow]), { up: 12, down: 0 }, '260 + 4 - 252');
+  assert.deepEqual(lanes, [[0, -12, 1000, 140], [0, 128, 1000, 120], [0, 248, 1000, 112]], 'the lane below grew upwards, the lanes above moved');
+  assert.deepEqual(text, [370, 252, 60, 19], 'the label stays, 4 px above its piece');
+  assert.deepEqual(flow.pts, ptsOf([[300, 228], [300, 275], [500, 275], [500, 280]]), 'the source moved up with its lane');
+  assert.equal(box.T.cy, 188);
 });
 
 test('labels: estimated at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {
