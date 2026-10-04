@@ -252,8 +252,10 @@ async function layoutBpmn(xml, doc, index, measurer){
 // must not contain "-flowchart-", by which a node is found (Mermaid 12.0.0
 // gives a node no data-id, only id="<render id>-flowchart-<node id>-<n>").
 // Mermaid puts its temporary element into the host; the host goes in any case.
+// Exported for tests/capture-bpmn.mjs, which bundles it into the built page to
+// take the raw positions of the fixtures as the page takes them.
 let layoutRuns = 0;
-async function mermaidPositions(model, doc, index){
+export async function mermaidPositions(model, doc, index){
   const host = offscreenHost(doc);
   try {
     const id = 'dokufix-bpmn-layout-' + index + '-' + (++layoutRuns);
