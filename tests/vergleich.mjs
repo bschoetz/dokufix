@@ -4329,13 +4329,16 @@ async function liveViewerUse(page, check, key, opts, { FIG, fig, n, openStage, r
 // At every step the diagram point under the fingers' middle before lies under
 // their middle after (to 2 px), so the diagram moves by no more than the
 // fingers did; at the end the scale is that of the start times the ratio of
-// the distances (to 0.01), between 0.2 and 4, and the view is open and the page has
-// not scrolled. The fingers of two shapes are two touch lists of one: read
-// from e.targetTouches, the diagram jumps at the first move of the pinch.
+// the distances (to 0.01), between 0.2 and 4, and the view is open. The
+// container's touch-action is none, and every touchmove in the viewer is
+// prevented, as a listener on window hears it after the viewer's own. The
+// fingers of two shapes are two touch lists of one: read from
+// e.targetTouches, the scale stays far below 1.6 times the start, and the
+// diagram jumps when the third finger lands.
 async function liveViewerTouch(page, check, { FIG, n, step }){
   const json = JSON.stringify;
   const NAME = 'live viewer, touch (Chromium only, by CDP): one finger moves the diagram, two that begin on two shapes zoom it at their middle by the ratio of their distances, '
-    + 'a third finger changes nothing, the scale stops at 4 and at 0.2, a tap on the logo opens its lightbox; no step jumps, the view stays open, the page does not scroll';
+    + 'a third finger changes nothing, the scale stops at 4 and at 0.2, a tap on the logo opens its lightbox; no step jumps, the view stays open; the container has touch-action none and every touchmove in it is prevented';
   if (page.context().browser().browserType().name() !== 'chromium'){
     check('live viewer, touch: not checked in Firefox, which has no CDP to dispatch touches; Chromium checks it', true);
     return;
@@ -4349,7 +4352,7 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
     const g = c && c.querySelector('svg > g.viewport');
     const m = g ? g.getCTM() : null, r = c ? c.getBoundingClientRect() : null;
     return { open: f.querySelector('.dokufix-diagram-toggle').checked, s: m ? m.a : null, e: m ? m.e : null, f: m ? m.f : null,
-             left: r ? r.left : null, top: r ? r.top : null, scrollY };
+             left: r ? r.left : null, top: r ? r.top : null };
   }, [FIG, n]);
   // A point of the page in the diagram, and back.
   const toDiagram = (v, p) => ({ x: (p.x - v.left - v.e) / v.s, y: (p.y - v.top - v.f) / v.s });
@@ -4359,7 +4362,23 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
   const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(p => ({ x: p.x, y: p.y, id: p.id, radiusX: 1, radiusY: 1, force: 1 })) });
   const problems = [];
   const v0 = await view();
-  const scrollY0 = v0.scrollY;
+  // Whether each touchmove in the viewer was prevented, heard on window in the
+  // bubble phase, after the viewer's own listener; and the container's touch-action.
+  const touchAction = await page.evaluate(([sel, n]) => {
+    const live = document.querySelectorAll(sel)[n].querySelector('.dokufix-diagram-live');
+    window.vergleichMoves = [];
+    window.vergleichMoveListener = e => { if (live.contains(e.target)) window.vergleichMoves.push(e.defaultPrevented); };
+    window.addEventListener('touchmove', window.vergleichMoveListener, { passive: true });
+    return getComputedStyle(live).touchAction;
+  }, [FIG, n]);
+  if (touchAction !== 'none') problems.push('the container has touch-action ' + touchAction + ', not none');
+  const stopListening = () => page.evaluate(() => {
+    window.removeEventListener('touchmove', window.vergleichMoveListener, { passive: true });
+    if (window.vergleichTouchListener) document.removeEventListener('touchstart', window.vergleichTouchListener, { capture: true });
+    const moves = window.vergleichMoves;
+    for (const k of ['vergleichMoves', 'vergleichMoveListener', 'vergleichTouches', 'vergleichTouchListener']) delete window[k];
+    return moves;
+  });
 
   // --- one finger
   const live = await page.evaluate(([sel, n]) => { const r = document.querySelectorAll(sel)[n].querySelector('.dokufix-diagram-live').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, [FIG, n]);
@@ -4389,6 +4408,8 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
   }
   if (!pair){
     check(NAME, false, 'no two shapes of their own inside the viewer to begin on: ' + json(shapes.map(s => s.id)));
+    await stopListening();
+    await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
     await cdp.detach();
     return;
   }
@@ -4464,8 +4485,8 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
   const lightboxLeft = await page.evaluate(() => document.querySelectorAll('body > .bjs-powered-by-lightbox').length);
   if (lightboxLeft) problems.push('the lightbox stayed after a click on its backdrop');
   if (!limit.open || !(await view()).open) problems.push('the view closed');
-  if (limit.scrollY !== scrollY0) problems.push('the page scrolled from ' + scrollY0 + ' to ' + limit.scrollY);
-  await page.evaluate(() => { document.removeEventListener('touchstart', window.vergleichTouchListener, { capture: true }); delete window.vergleichTouchListener; delete window.vergleichTouches; });
+  const moves = await stopListening();
+  if (!moves.length || !moves.every(Boolean)) problems.push(moves.filter(p => !p).length + ' of ' + moves.length + ' touchmoves in the viewer not prevented');
   await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
   await cdp.detach();
   check(NAME, problems.length === 0, 'begun on ' + pair.a.id + ' and ' + pair.b.id + ', ' + Math.round(d0) + ' px apart: ' + problems.slice(0, 4).join(' | '));
