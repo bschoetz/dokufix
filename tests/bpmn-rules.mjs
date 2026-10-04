@@ -18,7 +18,9 @@
 //                             each other at one symbol: <symbol> <flow> <flow>
 //   on-one-line-shared,       two pieces of different flows on one line, side
 //   on-one-line-foreign,      by side, sharing a source or a target or not; or
-//   parallel                  closer than 12 px
+//   parallel                  closer than 12 px; not two flows that arrive at
+//                             one gateway and run together into one docking
+//                             point on their last pieces: a merge (story 2.21)
 //   point-outside-lanes       a waypoint in no lane
 //   node-outside-lane         a symbol not inside the lane that holds it
 //   lane-gap                  two lanes one below the other that do not meet
@@ -129,6 +131,8 @@ export function breaksOf(xml, model, sizes = {}){
     const overlap = Math.min(Math.max(s.a[v], s.b[v]), Math.max(t.a[v], t.b[v])) - Math.max(Math.min(s.a[v], s.b[v]), Math.min(t.a[v], t.b[v]));
     if (d >= 12 || overlap <= 0) continue;
     const sf = flowOf[s.id], tf = flowOf[t.id];
+    const merge = !d && sf.to === tf.to && type[sf.to] === 'gateway' && s.i === s.n - 1 && t.i === t.n - 1 && s.b[0] === t.b[0] && s.b[1] === t.b[1];
+    if (merge) continue;
     const ids = [s.id, t.id].sort();
     if (d) add('parallel', ...ids);
     else add(sf.from === tf.from || sf.to === tf.to ? 'on-one-line-shared' : 'on-one-line-foreign', ...ids);

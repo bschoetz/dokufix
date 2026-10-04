@@ -580,26 +580,70 @@ const flowBack = (r, box) => {
 
 // Correction 8, not the spike's (story 2.21). A flow that arrives at the
 // vertex of a gateway another flow leaves by looks like one double-headed
-// arrow. The arriving one docks on a free vertex instead: the vertex on the
-// side its piece before the end comes from, otherwise the opposite one; it
-// runs STUB beyond the vertex and turns into it, or, where its run before
-// already passes the vertex on that side, turns into it from there. A way a
-// foreign symbol blocks, one whose new pieces cross or lie on another flow,
-// or one that would leave its source backwards, is not taken: the end stays.
-// An end moved counts at its new vertex for the arrivals after it. The flows
-// back are left out on both sides, as arriving, as leaving and as flows to
-// keep off: loopBack() routes them afterwards, from Mermaid's route their
-// ends say nothing, and they keep off the vertices used then.
+// arrow. The arriving one moves (Ben, 2026-10-04: a crossing beside the
+// gateway and a double-headed arrow are both bad):
+//   - first it joins another arriving flow, as a merge drawn by hand: one of
+//     its runs that meets the other flow's last piece at least STUB from the
+//     vertex goes on to that piece, and the flow runs along it into the
+//     vertex the other flow docks on (one no flow leaves by);
+//   - otherwise it docks on a free vertex: the vertex on the side its piece
+//     before the end comes from, otherwise the opposite one; it runs STUB
+//     beyond the vertex and turns into it, or, where its run before already
+//     passes the vertex on that side, turns into it from there;
+//   - otherwise it stays.
+// A way a foreign symbol blocks, one whose new pieces cross or lie on another
+// flow (on the joined flow, only along its last piece), or one that would
+// leave its source backwards, is not taken. An end moved counts at its new
+// vertex for the arrivals after it. The flows back are left out on both
+// sides, as arriving, as leaving and as flows to keep off: loopBack() routes
+// them afterwards, from Mermaid's route their ends say nothing, and they keep
+// off the vertices used then.
 export function dockApart(routes, box, gateways){
   const at = (p, q) => Math.abs(p.x - q.x) < 3 && Math.abs(p.y - q.y) < 3;
   const same = (p, q) => Math.abs(p.x - q.x) < 0.5 && Math.abs(p.y - q.y) < 0.5;
   const forward = routes.filter(r => !flowBack(r, box));
+  // Whether one of the pieces meets a piece of route o; skip: the index of a
+  // piece of o left out (the last piece of the flow joined).
+  const crosses = (pieces, o, skip = -1) => pieces.some(([u, v]) => o.pts.slice(1).some((w, i) => i !== skip && meets(u, v, o.pts[i], w)));
   for (const id of gateways){
     const c = box[id];
     const ends = portEnds(forward, id);
+    // The join into the vertex of another arriving end o: true where taken.
+    const join = e => {
+      const pts = e.r.pts;
+      for (const o of ends){
+        if (o === e || o.out || at(o.p, e.p) || ends.some(x => x.out && at(x.p, o.p))) continue;
+        const v = o.p, w = o.q;
+        // u: the axis the last piece of o keeps; t: the one it runs along.
+        const u = Math.abs(v.x - w.x) < 0.5 ? 'x' : Math.abs(v.y - w.y) < 0.5 ? 'y' : null;
+        if (!u) continue;
+        const t = u === 'x' ? 'y' : 'x';
+        for (let i = pts.length - 2; i >= 0; i--){
+          const a = pts[i], b = pts[i + 1];
+          if (Math.abs(a[t] - b[t]) >= 0.5) continue;                           // a run across the last piece of o
+          const level = a[t];
+          if (Math.abs(level - v[t]) < STUB || (level - w[t]) * (level - v[t]) > 0) continue;
+          if (!i && Math.sign(v[u] - a[u]) !== Math.sign(b[u] - a[u])) continue;  // not backwards out of the source
+          const next = pts.slice(0, i + 1), meet = { [u]: v[u], [t]: level };
+          if (!same(meet, a)) next.push(meet);
+          next.push({ x: v.x, y: v.y });
+          const pieces = next.slice(i + 1).map((pt, k) => [next[i + k], pt]);
+          if (pieces.some(([p, q]) => blocked(p, q, e.r.obstacles))) continue;
+          if (forward.some(r => r !== e.r && crosses(pieces, r, r === o.r ? r.pts.length - 2 : -1))) continue;
+          // Nor across its own pieces kept, but the one it goes on from.
+          if (crosses(pieces, { pts: next.slice(0, i) })) continue;
+          pts.splice(0, pts.length, ...next);
+          e.p = pts[pts.length - 1];
+          e.q = pts[pts.length - 2];
+          return true;
+        }
+      }
+      return false;
+    };
     for (const e of ends){
       const pts = e.r.pts, n = pts.length;
       if (e.out || n < 3 || !ends.some(o => o.out && at(o.p, e.p))) continue;
+      if (join(e)) continue;
       const p = pts[n - 1], q = pts[n - 2], k = pts[n - 3], m = pts[n - 4];
       // a: the axis of the end piece; the free vertices lie on the other, b.
       const a = Math.abs(p.y - q.y) < 1 ? 'x' : Math.abs(p.x - q.x) < 1 ? 'y' : null;
@@ -630,7 +674,7 @@ export function dockApart(routes, box, gateways){
       const from = tail.length === 2 ? next.length - 2 : head.length - 1;
       const pieces = next.slice(from + 1).map((pt, i) => [next[from + i], pt]);
       if (pieces.some(([u, v]) => blocked(u, v, e.r.obstacles))) continue;
-      if (pieces.some(([u, v]) => forward.some(o => o !== e.r && o.pts.slice(1).some((w, i) => meets(u, v, o.pts[i], w))))) continue;
+      if (forward.some(o => o !== e.r && crosses(pieces, o))) continue;
       pts.splice(0, n, ...next);
       e.p = pts[pts.length - 1];
       e.q = pts[pts.length - 2];

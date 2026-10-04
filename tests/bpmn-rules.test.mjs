@@ -94,3 +94,16 @@ test('each rule on a diagram made up for it', () => {
   ];
   for (const [what, input, expected] of cases) assert.deepEqual(made(input), expected, what);
 });
+
+test('two flows that arrive at one gateway and run together into one docking point are a merge, not a break; at a task they are', () => {
+  const ways = {
+    F3: [[160, 50], [160, 30], [525, 30], [525, 65]],                 // from A over the row into G's top
+    F5: [[420, 90], [460, 90], [460, 45], [525, 45], [525, 65]],      // from B, joining F3's last run
+  };
+  const flows = [{ id: 'F3', from: 'A', to: 'G' }, { id: 'F5', from: 'B', to: 'G' }];
+  const xml = '<x>\n' + Object.entries(SHAPES).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+    Object.entries(ways).map(([id, w]) => '      <bpmndi:BPMNEdge id="' + id + '_di" bpmnElement="' + id + '">' + w.map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>\n').join('') + '</x>';
+  assert.deepEqual(breaksOf(xml, { ...M, flows }, SIZES), []);
+  const task = { ...M, nodes: M.nodes.map(n => n.id === 'G' ? { ...n, type: 'task' } : n), flows };
+  assert.deepEqual(breaksOf(xml, task, SIZES), ['on-one-line-shared F3 F5']);
+});

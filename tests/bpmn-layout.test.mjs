@@ -527,8 +527,8 @@ test('correction 8: an arrow arriving at a gateway\'s vertex another flow leaves
 test('correction 8: an arrival whose free vertex lies only across the flow it leaves stays; an end moved counts at its new vertex; no point twice', () => {
   const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), X: node(300, -100, 120, 80, true), V: node(560, -100, 120, 80, true), U: node(240, -40, 120, 80, true) };
   const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
-  // The top taken by a flow from above: the bottom vertex is reached only across the flow out.
-  const top = { f: { from: 'X', to: 'G' }, pts: ptsOf([[300, -60], [300, 75]]), obstacles: [] };
+  // The top taken by a flow up, no arriving flow to join: the bottom vertex is reached only across the flow out.
+  const top = { f: { from: 'G', to: 'X' }, pts: ptsOf([[300, 75], [300, -60]]), obstacles: [] };
   const across = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), obstacles: [] };
   dockApart([out(), top, across], box, ['G']);
   assert.deepEqual(across.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), 'the end stays');
@@ -542,6 +542,36 @@ test('correction 8: an arrival whose free vertex lies only across the flow it le
   const axis = { f: { from: 'U', to: 'G' }, pts: ptsOf([[300, -40], [337, -40], [337, 100], [325, 100]]), obstacles: [] };
   dockApart([out(), axis], box, ['G']);
   assert.deepEqual(axis.pts, ptsOf([[300, -40], [300, 75]]));
+});
+
+test('correction 8: an arrival at the vertex a flow leaves by first joins another arriving flow\'s last run into its vertex, a merge; where that is blocked or crosses, a free vertex; else it stays', () => {
+  const box = { G: gateway(300, 100), U: node(300, -100, 120, 80, true), C: node(560, 100, 120, 80, true), V: node(560, -100, 120, 80, true) };
+  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
+  const down = () => ({ f: { from: 'U', to: 'G' }, pts: ptsOf([[300, -60], [300, 75]]), obstacles: [] });
+  // As hund2's Flow_53 at GW_Merge_Probe: from the upper right, its run at y 40 goes on to the flow down and into the top.
+  const e = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, 40], [337, 40], [337, 100], [325, 100]]), obstacles: [] };
+  const joined = down();
+  dockApart([out(), joined, e], box, ['G']);
+  assert.deepEqual(e.pts, ptsOf([[560, -60], [560, 40], [300, 40], [300, 75]]));
+  assert.deepEqual(joined.pts, ptsOf([[300, -60], [300, 75]]), 'the flow joined stays');
+  // Nearer than 12 px to the vertex no run joins: the free vertices as before.
+  const close = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, 66], [337, 66], [337, 100], [325, 100]]), obstacles: [] };
+  dockApart([out(), down(), close], box, ['G']);
+  assert.deepEqual(close.pts, ptsOf([[560, -60], [560, 66], [337, 66], [337, 100], [325, 100]]), 'the top used, the bottom across the flow out: it stays');
+  // The join crosses the flow out, which turns down 20 px beyond the gateway: the free top vertex instead.
+  const box2 = { G: gateway(300, 100), D: node(345, 340, 120, 80, true), B: node(300, 440, 120, 80, true), W: node(560, 340, 120, 80, true) };
+  const turning = () => ({ f: { from: 'G', to: 'D' }, pts: ptsOf([[325, 100], [345, 100], [345, 300]]), obstacles: [] });
+  const up = () => ({ f: { from: 'B', to: 'G' }, pts: ptsOf([[300, 400], [300, 125]]), obstacles: [] });
+  const w = list => ({ f: { from: 'W', to: 'G' }, pts: ptsOf(list), obstacles: [] });
+  const way = [[560, 300], [560, 200], [360, 200], [360, 100], [325, 100]];
+  const free = w(way);
+  dockApart([turning(), up(), free], box2, ['G']);
+  assert.deepEqual(free.pts, ptsOf([[560, 300], [560, 200], [360, 200], [360, 63], [300, 63], [300, 75]]));
+  // That way blocked as well: it stays.
+  const stays = w(way);
+  stays.obstacles = [{ x1: 320, y1: 55, x2: 330, y2: 70 }];
+  dockApart([turning(), up(), stays], box2, ['G']);
+  assert.deepEqual(stays.pts, ptsOf(way));
 });
 
 test('conflictScore: one per piece of another flow crossed, lain on or run beside closer than 12 px, one per used port of a gateway or an event', () => {
