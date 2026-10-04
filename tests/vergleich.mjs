@@ -2061,6 +2061,28 @@ async function assertSearch(page, check, key){
     f.panel.right - f.panel.left <= 380.5 && f.panel.bottom <= f.window.height && f.panel.bottom - f.panel.top >= f.window.height - 120;
   const where = editor ? 'below "Editor ↩", not over it' : '64 px from the top, as in the editor';
   check('search: the panel stands on the right ' + where + ', at most 380 px wide and about as high as the window (1400 px)', placed(opened), round(opened.panel) + ', button ' + round(opened.button));
+  // --- story 5.16, M3: the field stands in its label, which names it without
+  // an id; with a heading "Search Input" in the document, whose anchor is the
+  // id the field once had, a click on the label's text still focuses it
+  await page.evaluate(rootSel => {
+    const h = document.createElement('h2');
+    h.id = 'search-input';
+    h.textContent = 'Search Input';
+    document.querySelector(rootSel).prepend(h);
+    document.activeElement.blur();
+  }, ROOT_SEL);
+  await page.click('body > .search-panel .search-label-text');
+  const labelled = await page.evaluate(() => {
+    const p = document.querySelector('body > .search-panel');
+    const input = p.querySelector('input');
+    const label = p.querySelector('label');
+    const facts = { focused: document.activeElement === input, control: !!label && label.control === input, ids: Array.from(p.querySelectorAll('[id]')).map(el => el.id),
+      byId: (document.getElementById('search-input') || {}).tagName || null };
+    document.getElementById('search-input').remove();
+    return facts;
+  });
+  check('search: the field stands in its label, no element of the panel has an id; beside a heading "Search Input" a click on the label focuses the field',
+    labelled.focused && labelled.control && labelled.ids.length === 0 && labelled.byId === 'H2', json(labelled));
 
   // --- the term: one result per place that holds it, the summary in numbers that match
   const html = await rootHtml();

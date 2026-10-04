@@ -266,3 +266,14 @@ test('a click on a result whose place a render replaced since searches again', a
   assert.equal(p.summary(), '2 Treffer an 2 Stellen in 1 Abschnitt');
   assert.deepEqual(p.scrolls, []);
 });
+
+// ---------- the field in its label (story 5.16, M3) ----------
+test('the field stands in its label, which names it without an id: no element of the panel has an id, so a heading "Search Input" shares none with it', async () => {
+  const p = await open('<h1 id="search-input">Search Input</h1>');
+  const label = p.panel.querySelector('label.search-label');
+  assert.ok(label && label.contains(p.input), 'the field in its label');
+  assert.equal(label.textContent, 'Im Dokument suchen');
+  assert.ok(!label.hasAttribute('for'));
+  assert.deepEqual(Array.from(p.panel.querySelectorAll('[id]')).map(el => el.id), []);
+  assert.deepEqual(Array.from(p.document.querySelectorAll('[id="search-input"]')).map(el => el.tagName), ['H1']);
+});

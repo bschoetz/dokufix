@@ -25,15 +25,18 @@
   box-shadow:0 8px 28px rgba(0,0,0,0.18);
   font-size:14px;line-height:1.4;
 }
-.search-head{display:flex;align-items:center;gap:8px;padding:10px 10px 6px 14px}
-.search-label{flex:1;font-size:13px;font-weight:700}
+/* The field stands in its label, below its text, and the close button at
+   the top right of the panel, beside the text: the field needs no id. */
+.search-label{display:flex;flex-direction:column;padding:10px 14px 0}
+.search-label-text{margin-bottom:6px;padding-right:36px;font-size:13px;font-weight:700;line-height:24px}
 .search-close{
+  position:absolute;top:10px;right:10px;
   background:none;border:0;color:#6e6e73;cursor:pointer;
   font:inherit;font-size:20px;line-height:1;padding:2px 6px;border-radius:4px;
 }
 .search-close:hover{color:#1c1c1e;background:#f2f2f7}
 .search-input{
-  margin:0 14px;padding:7px 10px;
+  padding:7px 10px;
   font:inherit;color:inherit;
   border:1px solid #c7c7cc;border-radius:4px;
 }

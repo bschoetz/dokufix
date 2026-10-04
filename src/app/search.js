@@ -41,11 +41,9 @@ import { TABLE_CLASS } from './tables.js';
 // after the same pause as typing, so the marks follow.
 //
 //   <div class="search-panel" role="search" aria-label="Suche im Dokument" data-dokufix-transient hidden>
-//   <div class="search-head">
-//   <label class="search-label" for="search-input">Im Dokument suchen</label>
+//   <label class="search-label"><span class="search-label-text">Im Dokument suchen</span>
+//   <input type="search" class="search-input" autocomplete="off" spellcheck="false"></label>
 //   <button type="button" class="search-close" aria-label="Suche schließen">×</button>
-//   </div>
-//   <input type="search" id="search-input" class="search-input" autocomplete="off" spellcheck="false">
 //   <div class="search-switches">
 //   <label class="search-switch"><input type="checkbox">Groß- und Kleinschreibung beachten</label>
 //   <label class="search-switch"><input type="checkbox">Leerzeichen, Bindestriche und Punkte ignorieren</label>
@@ -71,7 +69,9 @@ import { TABLE_CLASS } from './tables.js';
 //
 // The panel is frame, not document: it is made once, at load, in <body>
 // outside the root, and carries data-dokufix-transient, so a saved file has
-// neither the panel nor a term typed into it. Nothing of it touches the
+// neither the panel nor a term typed into it. No element of it has an id: an
+// id of the document, the anchor of a heading "Search Input" say, could be
+// the same; the field stands in its label, which names it so. Nothing of it touches the
 // root's DOM: the places and their text are read (search-places.js), the
 // hits found in that text (search-match.js), and the results are made with
 // createElement and textContent, so the document's text stays text. Its
@@ -382,23 +382,8 @@ function buildPanel(){
   panel.setAttribute(TRANSIENT_ATTR, '');
   panel.hidden = true;
 
-  const head = document.createElement('div');
-  head.className = 'search-head';
-  const label = document.createElement('label');
-  label.className = 'search-label';
-  label.htmlFor = 'search-input';
-  label.textContent = 'Im Dokument suchen';
-  const close = document.createElement('button');
-  close.type = 'button';
-  close.className = 'search-close';
-  close.setAttribute('aria-label', 'Suche schließen');
-  close.textContent = '×';
-  close.addEventListener('click', closeSearch);
-  head.append(label, close);
-
   input = document.createElement('input');
   input.type = 'search';
-  input.id = 'search-input';
   input.className = 'search-input';
   input.setAttribute('autocomplete', 'off');
   input.setAttribute('spellcheck', 'false');
@@ -406,6 +391,19 @@ function buildPanel(){
     clearTimeout(timer);
     timer = setTimeout(search, PAUSE);
   });
+
+  const label = document.createElement('label');
+  label.className = 'search-label';
+  const title = document.createElement('span');
+  title.className = 'search-label-text';
+  title.textContent = 'Im Dokument suchen';
+  label.append(title, input);
+  const close = document.createElement('button');
+  close.type = 'button';
+  close.className = 'search-close';
+  close.setAttribute('aria-label', 'Suche schließen');
+  close.textContent = '×';
+  close.addEventListener('click', closeSearch);
 
   const switches = document.createElement('div');
   switches.className = 'search-switches';
@@ -419,7 +417,7 @@ function buildPanel(){
   list = document.createElement('ol');
   list.className = 'search-results';
 
-  panel.append(head, input, switches, summary, list);
+  panel.append(label, close, switches, summary, list);
   document.body.appendChild(panel);
 }
 
