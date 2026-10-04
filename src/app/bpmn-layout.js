@@ -51,7 +51,9 @@ export const MERMAID_LAYOUT_VERSION = '12.0.0';
 // FAN_ROOM          a flow from a gateway's corner needs this much between the
 //                   gateway's middle and its target's side (fanOut())
 // NEAR              two parallel runs closer than this read as one (near(),
-//                   the conflicts of a ring in loopBack())
+//                   the conflicts of a ring in loopBack()); an end on a
+//                   task's side closer than this to its middle docks at the
+//                   middle (attach())
 // SPAN_TOLERANCE    the spans of two rings closer than this count as
 //                   overlapping, and the rings take distinct levels (loopBack())
 // RING_CLEARANCE    a ring keeps this far from the border with another lane;
@@ -256,7 +258,10 @@ export function axisMap(items, minGap, maxGap){
 }
 
 // Brings one end of a flow to its BPMN symbol (c: { cx, cy, w, h, task }). A
-// circle and a diamond are met on their axis, a task anywhere on its side.
+// circle and a diamond are met on their axis, a task anywhere on its side;
+// an end Mermaid docked closer than NEAR to the middle of a task's side
+// docks at the middle, where an offset of a few pixels would give a small
+// step and a run beside another flow's.
 // side: where the end ran beside its node in Mermaid's unscaled positions;
 // then the flow docks from that side with a short stub, instead of being
 // pulled through the symbol and its neighbours in the same column. A slanted
@@ -273,7 +278,7 @@ export function attach(pts, atStart, c, side){
   const i = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2, k = atStart ? 2 : pts.length - 3;
   const p = pts[i], q = pts[j];
   const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
-  const aim = (v, mid, half) => c.task ? Math.min(mid + half - ATTACH_CLEARANCE, Math.max(mid - half + ATTACH_CLEARANCE, v)) : mid;
+  const aim = (v, mid, half) => c.task && Math.abs(v - mid) >= NEAR ? Math.min(mid + half - ATTACH_CLEARANCE, Math.max(mid - half + ATTACH_CLEARANCE, v)) : mid;
   const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
   // The end and its neighbour are read anew: ins() may have put corners in.
   const clear = (axis, dir) => {

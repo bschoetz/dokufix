@@ -28,11 +28,7 @@
   "on-one-line-shared Flow_34 Flow_36",
   "on-one-line-shared Flow_38 Flow_40",
   "on-one-line-shared Flow_39 Flow_40",
-  "on-one-line-shared Flow_51 Flow_52",
-  "parallel Flow_47 Flow_53",
-  "small-step Flow_21",
-  "small-step Flow_3",
-  "small-step Flow_47"
+  "on-one-line-shared Flow_51 Flow_52"
  ],
  "r01": [],
  "r02": [],
@@ -40,9 +36,7 @@
  "r04": [],
  "r05": [
   "on-one-line-shared F2_a_g F3_b_g",
-  "parallel F2_a_g F3_b_g",
-  "parallel F5_g_c F7_d_c",
-  "small-step F3_b_g"
+  "on-one-line-shared F5_g_c F7_d_c"
  ],
  "r06": [],
  "r07": [],
@@ -66,10 +60,7 @@
   "on-one-line-shared F2_p1_x F3_p1_y",
   "on-one-line-shared F4_x_p2 F5_y_p2",
   "parallel F11_u1_p2 F4_x_p2",
-  "parallel F11_u1_p2 F5_y_p2",
-  "parallel F3_p1_y F4_x_p2",
-  "parallel F4_x_p2 F5_y_p2",
-  "small-step F5_y_p2"
+  "parallel F3_p1_y F4_x_p2"
  ],
  "r17": [],
  "r18": [

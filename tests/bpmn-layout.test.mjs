@@ -199,10 +199,18 @@ test('the axis is scaled piecewise: each column to its size, each gap into 36 to
 
 test('a flow end is docked on the outline: a task anywhere on its side, a circle and a diamond on their axis', () => {
   const task = node(100, 100, 120, 80, true), circle = node(300, 100, 36, 36);
-  // Horizontal end into the left side of a task, slightly off its centre: kept, on the side.
-  let pts = ptsOf([[0, 110], [50, 110]]);
+  // Horizontal end into the left side of a task, 15 px off its centre: kept, on the side.
+  let pts = ptsOf([[0, 115], [50, 115]]);
   attach(pts, false, task);
-  assert.deepEqual(pts.at(-1), P(40, 110));
+  assert.deepEqual(pts.at(-1), P(40, 115));
+  // Closer than NEAR to the middle, 10 px off: at the middle, with no step.
+  pts = ptsOf([[0, 110], [50, 110]]);
+  attach(pts, false, task);
+  assert.deepEqual(pts.at(-1), P(40, 100));
+  assert.ok(pts.every((p, i) => !i || p.x === pts[i - 1].x || p.y === pts[i - 1].y), 'right angles kept');
+  pts = ptsOf([[0, 112], [50, 112]]);
+  attach(pts, false, task);
+  assert.deepEqual(pts.at(-1), P(40, 112), '12 px off is kept');
   // Into a circle off its axis: a jog is put in, the end is on the axis.
   pts = ptsOf([[200, 110], [250, 110]]);
   attach(pts, false, circle);
@@ -225,9 +233,9 @@ test('a flow keeps 12 px to its own symbol before it turns: a run 1 px inside it
   attach(far, true, task);
   assert.deepEqual(far, ptsOf([[130, 140], [130, 160], [300, 160], [300, 300]]));
   // The same at the end of a flow, leaving by the side: the run moves, the start stays.
-  const end = ptsOf([[0, 300], [165, 300], [165, 90], [150, 90]]);
+  const end = ptsOf([[0, 300], [165, 300], [165, 85], [150, 85]]);
   attach(end, false, task);
-  assert.deepEqual(end, ptsOf([[0, 300], [172, 300], [172, 90], [160, 90]]));
+  assert.deepEqual(end, ptsOf([[0, 300], [172, 300], [172, 85], [160, 85]]));
   // At the end, with corners put in before it: the run beside the symbol is the one that moves.
   const bent = ptsOf([[200, 300], [155, 150], [155, 138]]);
   attach(bent, false, task);

@@ -60,7 +60,7 @@
       <bpmndi:BPMNEdge id="F9_t2_t3_di" bpmnElement="F9_t2_t3"><di:waypoint x="468" y="8"/><di:waypoint x="538" y="8"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F10_t3_b2_di" bpmnElement="F10_t3_b2"><di:waypoint x="658" y="8"/><di:waypoint x="908" y="8"/><di:waypoint x="908" y="268"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F11_gm_b2_di" bpmnElement="F11_gm_b2"><di:waypoint x="778" y="158"/><di:waypoint x="815" y="158"/><di:waypoint x="815" y="283"/><di:waypoint x="848" y="283"/><bpmndi:BPMNLabel><dc:Bounds x="788" y="139" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F12_b1_b2_di" bpmnElement="F12_b1_b2"><di:waypoint x="468" y="313"/><di:waypoint x="848" y="313"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F12_b1_b2_di" bpmnElement="F12_b1_b2"><di:waypoint x="468" y="308"/><di:waypoint x="848" y="308"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F13_b2_z_di" bpmnElement="F13_b2_z"><di:waypoint x="968" y="308"/><di:waypoint x="1062" y="308"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
