@@ -91,16 +91,18 @@ Ein Bild liegt einmal in der Datei und braucht nichts von außen.
 
 Fahren Sie mit der Maus über diese Fußnote[^vorschau] — der Text erscheint direkt an der Stelle, ohne dass Sie ans Dokumentende springen müssen.
 
-## Ein Diagramm
+## Ein Sequenzdiagramm
 
 ```mermaid
-flowchart LR
-    A[Markdown-Quelle] --> B((dokufix))
-    B --> C[HTML-Layout]
-    B --> D[Mermaid-SVG]
-    C --> E[Vorschau]
-    D --> E
-    E --> F{{Eine Datei}}
+sequenceDiagram
+    autonumber
+    Nutzerin->>+dokufix: Markdown eintippen
+    Nutzerin->>+dokufix: "Rendern" klicken
+    dokufix->>marked: Parsen
+    marked-->>dokufix: HTML
+    dokufix->>mermaid: Diagramme rendern
+    mermaid-->>dokufix: SVG
+    dokufix-->>-Nutzerin: Fertige Vorschau
 ```
 
 ## Ein Prozessmodell
