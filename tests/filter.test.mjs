@@ -34,6 +34,7 @@ import { buildChips } from '../src/app/chips.js';
 import { buildTables, TABLE_CLASS } from '../src/app/tables.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
 import { registerEscape } from '../src/app/escape.js';
+import { findHits, tooShort } from '../src/app/search-match.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -259,6 +260,18 @@ test('filterMatches: one phrase, case ignored, blanks collapsed; an empty term m
   assert.ok(filterMatches(' a  b ', 'x a b y'));
   assert.ok(!filterMatches('a b', 'a  c b'));
   assert.ok(filterMatches('a b', 'a\n b'), 'the text is collapsed as well');
+});
+test('filterMatches asks findHits() with both switches off, and has no minimum length (story 5.11)', () => {
+  const rows = ['Status-Chip grün', 'STRAẞE und Straße', 'Die ΟΔΟΣ hier', 'İstanbul, Ankara', 'Zitronenfalter Nord', 'Hin- und Rückweg', '🚧 Baustelle'];
+  const terms = ['status', 'statuschip', 'Status-Chip', 'straße', 'οδοσ', 'οδος', 'istanbul', 'İstanbul', 'falter n', 'hin-', '🚧', 'ü', 'ab', 'xyz'];
+  for (const text of rows) for (const term of terms)
+    assert.equal(filterMatches(term, text), findHits(term, text).length > 0, JSON.stringify([term, text]));
+  // One and two characters filter, where the search would wait for a third.
+  assert.ok(tooShort('ü') && tooShort('ab'));
+  assert.ok(filterMatches('ü', 'Rückweg') && !filterMatches('ü', 'Nord'));
+  assert.ok(filterMatches('ab', 'Ankara Abend') && !filterMatches('ab', 'Nord'));
+  // Light fuzzy stays off: no switch, no hyphen ignored.
+  assert.ok(!filterMatches('statuschip', 'Status-Chip grün'));
 });
 
 // ---------- beside a facet filter ----------

@@ -2,8 +2,9 @@
 // Where a term occurs in the text of one place of the document, as ranges of
 // that text, and the part of the text a result shows around them. The places
 // and their text come from search-places.js, the panel that shows the results
-// from search.js; the table filter is to use it as well (epic 5, story 11), so
-// what the comparison does comes in as options, not as the panel's state.
+// from search.js; the table filter matches by it as well, with both options
+// off (filterMatches() of filter.js, epic 5, story 11), so what the comparison
+// does comes in as options, not as the panel's state.
 //
 //   findHits('tabelle', 'Eine Tabelle, noch eine Tabelle.')
 //     → [{ start: 5, end: 12 }, { start: 24, end: 31 }]
@@ -11,9 +12,10 @@
 //     → [{ start: 4, end: 15 }]
 //   findHits('tabelle', 'Tabelle', { caseSensitive: true }) → []
 //
-// The term is compared as the free-text filter compares it (filter.js): blanks
-// collapsed and none at its ends, case ignored, German rules of case
-// (toLocaleLowerCase('de')). Two options change that:
+// Without options the term is compared with blanks collapsed and none at its
+// ends, case ignored, German rules of case (toLocaleLowerCase('de')); the
+// free-text filter compares so as well, by asking this module (filter.js).
+// Two options change that:
 // - caseSensitive: case counts; nothing is lowered.
 // - fuzzy, light fuzzy: white space, hyphens (-, U+2010, U+2011, the soft
 //   hyphen U+00AD) and dots are ignored in the term and in the text, so

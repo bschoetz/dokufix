@@ -3,6 +3,7 @@ import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACETS_CLASS, FACET_BAR_CLASS, facetKeyClass, isFootnoteMarker, rowsOf } from './facets.js';
 import { TABLE_CLASS } from './tables.js';
 import { TRANSIENT_ATTR } from './transient.js';
+import { findHits } from './search-match.js';
 
 // --- Free-text filter ------------------------------------------------------
 // A table with the marker "filter" before it gets a search field above it
@@ -65,8 +66,6 @@ export const FILTER_LABEL = 'Tabelle filtern';
 
 // White space collapsed, none at the ends.
 const tidy = text => String(text).replace(/\s+/g, ' ').trim();
-// The form in which a term and a row's text are compared: case ignored.
-const folded = text => tidy(text).toLocaleLowerCase('de');
 
 const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
@@ -101,12 +100,14 @@ export function filterRowText(row){
   return tidy(text);
 }
 
-// Whether a row's text matches a term: the term, blanks collapsed and none at
-// its ends, as one phrase anywhere in the text, case ignored. An empty term
-// matches every row.
+// Whether a row's text matches a term, by the rules of the search with both
+// of its switches off (findHits() of search-match.js, story 11 of epic 5): the
+// term, blanks collapsed and none at its ends, as one phrase anywhere in the
+// text, case ignored. An empty term matches every row. The filter has no
+// switches and no minimum length: it filters from the first character typed,
+// tooShort() is the search's.
 export function filterMatches(term, text){
-  const wanted = folded(term);
-  return !wanted || folded(text).includes(wanted);
+  return !tidy(term) || findHits(term, tidy(text)).length > 0;
 }
 
 // What the counter says: "14 Zeilen" when every row is shown, else
