@@ -14,8 +14,11 @@ import { TABLE_CLASS } from './tables.js';
 // it, under a line that says how many hits there are at how many places in how
 // many sections. The results stand grouped under the headings H2 to H4 the
 // rail lists (groupResults() in search-places.js), each group heading with the
-// hits and places of its branch; a group heading is text, not a button, and
-// stays at the top of the list while its results scroll under it. A click on
+// hits and places of its branch; a group heading is text, not a button, a
+// heading of its level for assistive technology (role, aria-level), and
+// stays at the top of the list while its results scroll under it. Both lists
+// say role="list", which keeps a list a list without list-style in Safari
+// and VoiceOver. A click on
 // a result scrolls the document to its place; the panel stays open.
 //
 // A place with a kind, a table row, a diagram, the metadata panel or a code
@@ -49,10 +52,10 @@ import { TABLE_CLASS } from './tables.js';
 //   <label class="search-switch"><input type="checkbox">Leerzeichen, Bindestriche und Punkte ignorieren</label>
 //   </div>
 //   <p class="search-summary" role="status">3 Treffer an 2 Stellen in 2 Abschnitten</p>
-//   <ol class="search-results">
+//   <ol class="search-results" role="list">
 //   <li class="search-group search-group-h2">
-//   <div class="search-group-head"><span class="search-group-title">Eine Tabelle</span><span class="search-group-count">2 Treffer an 1 Stelle</span></div>
-//   <ol class="search-group-list">
+//   <div class="search-group-head" role="heading" aria-level="2"><span class="search-group-title">Eine Tabelle</span><span class="search-group-count">2 Treffer an 1 Stelle</span></div>
+//   <ol class="search-group-list" role="list">
 //   <li><button type="button" class="search-result">… eine <mark>Tabelle</mark> mit …</button></li>
 //   <li><button type="button" class="search-result"><span class="search-kind">Tabelle: </span>Karten Block …<span class="search-hidden"> (ausgeblendet)</span></button></li>
 //   <li class="search-group search-group-h3">…</li>
@@ -290,6 +293,8 @@ function groupItem(group){
   li.className = 'search-group search-group-h' + group.level;
   const head = document.createElement('div');
   head.className = 'search-group-head';
+  head.setAttribute('role', 'heading');
+  head.setAttribute('aria-level', group.level);
   const title = document.createElement('span');
   title.className = 'search-group-title';
   title.textContent = group.label;
@@ -300,6 +305,7 @@ function groupItem(group){
   head.append(title, count);
   const list = document.createElement('ol');
   list.className = 'search-group-list';
+  list.setAttribute('role', 'list');
   list.append(...group.results.map(resultItem), ...group.children.map(groupItem));
   li.append(head, list);
   return li;
@@ -444,6 +450,7 @@ function buildPanel(){
 
   list = document.createElement('ol');
   list.className = 'search-results';
+  list.setAttribute('role', 'list');
   // Down and Up on a result: the next, the previous one, from the first back
   // to the field.
   list.addEventListener('keydown', e => {

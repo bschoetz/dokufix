@@ -405,3 +405,15 @@ test('Down in the field goes to the first result, Down and Up through the result
   assert.ok(!none.defaultPrevented);
   same(p.document.activeElement, p.input);
 });
+
+// ---------- the semantics of the list (story 5.16, N4) ----------
+test('a group heading is a heading of the level of its heading in the document, and both lists keep their semantics without list-style', async () => {
+  const p = await open('<h2>Eins</h2><p>Eine Tabelle.</p><h3>Zwei</h3><p>Tabelle.</p><h4>Drei</h4><p>Tabelle.</p>');
+  p.search.openSearch();
+  await p.type('Tabelle');
+  const heads = Array.from(p.panel.querySelectorAll('.search-group-head'));
+  assert.deepEqual(heads.map(h => [h.getAttribute('role'), h.getAttribute('aria-level')]), [['heading', '2'], ['heading', '3'], ['heading', '4']]);
+  const lists = Array.from(p.panel.querySelectorAll('ol'));
+  assert.equal(lists.length, 4);
+  assert.ok(lists.every(ol => ol.getAttribute('role') === 'list'));
+});
