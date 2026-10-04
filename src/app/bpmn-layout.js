@@ -41,6 +41,28 @@
 // (tests/vergleich.mjs on tests/referenz.md).
 export const MERMAID_LAYOUT_VERSION = '12.0.0';
 
+// The distances of 12 px the layout keeps (the geometry, below), each by what
+// it is for:
+// ATTACH_CLEARANCE  where a flow docks: the piece that leaves its symbol runs
+//                   this far before it turns, and an end on a task's side
+//                   keeps this far from a corner (attach())
+// OBSTACLE_OFFSET   a run moved off a foreign symbol lies this far beside it
+//                   (nudge(), detour())
+// FAN_ROOM          a flow from a gateway's corner needs this much between the
+//                   gateway's middle and its target's side (fanOut())
+// NEAR              two parallel runs closer than this read as one (near(),
+//                   the conflicts of a ring in loopBack())
+// SPAN_TOLERANCE    the spans of two rings closer than this count as
+//                   overlapping, and the rings take distinct levels (loopBack())
+// RING_CLEARANCE    a ring keeps this far from the border with another lane;
+//                   nearer, its lane grows (growLane())
+// FRAME_MARGIN      every waypoint and label keeps this far from the edge of
+//                   the outer lanes and the pool (layoutGeometry())
+const ATTACH_CLEARANCE = 12, OBSTACLE_OFFSET = 12, FAN_ROOM = 12, NEAR = 12, SPAN_TOLERANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12;
+// They stand among the module's first declarations: esbuild writes such a
+// constant's value in place of its name only before the first declaration
+// that is no such constant, and so the built page carries no names for them.
+
 // The reasons a laid-out diagram is refused, the detail of the BPMN warning.
 export const LAYOUT_SEVERAL_POOLS = 'Mehrere Pools lassen sich ohne Koordinaten noch nicht anordnen.';
 export const LAYOUT_NOTHING = 'Das BPMN-XML enthält kein Element, das sich anordnen lässt.';
@@ -243,21 +265,21 @@ export function axisMap(items, minGap, maxGap){
 // with a corner put in, so that the piece is horizontal or vertical; a flow
 // of two points, a diagonal from end to end, gets two corners halfway, so
 // that neither lies in the symbol at the other end. The piece that leaves
-// the symbol keeps 12 px before the flow turns: a run Mermaid laid just
-// beside its own, larger node lies on the edge of the BPMN symbol once
-// scaled, or inside it; the run moves 12 px off the side, the other end
-// left where it is.
+// the symbol keeps ATTACH_CLEARANCE before the flow turns: a run Mermaid
+// laid just beside its own, larger node lies on the edge of the BPMN symbol
+// once scaled, or inside it; the run moves that far off the side, the other
+// end left where it is.
 export function attach(pts, atStart, c, side){
   const i = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2, k = atStart ? 2 : pts.length - 3;
   const p = pts[i], q = pts[j];
   const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
-  const aim = (v, mid, half) => c.task ? Math.min(mid + half - 12, Math.max(mid - half + 12, v)) : mid;
+  const aim = (v, mid, half) => c.task ? Math.min(mid + half - ATTACH_CLEARANCE, Math.max(mid - half + ATTACH_CLEARANCE, v)) : mid;
   const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
   // The end and its neighbour are read anew: ins() may have put corners in.
   const clear = (axis, dir) => {
     if (pts.length < 3) return;
     const e = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2;
-    const edge = pts[e][axis], need = edge + dir * 12, run = pts[j][axis];
+    const edge = pts[e][axis], need = edge + dir * ATTACH_CLEARANCE, run = pts[j][axis];
     if ((run - need) * dir >= 0) return;
     for (let n = j; n > 0 && n < pts.length - 1 && Math.abs(pts[n][axis] - run) < 0.5; n += atStart ? 1 : -1) pts[n][axis] = need;
   };
@@ -278,16 +300,16 @@ export function attach(pts, atStart, c, side){
     }
     return;
   }
-  if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + 12); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
-  if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + 12); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
-  // An end piece beside the symbol keeps 12 px from its side, as one docked by side does: Mermaid runs it a pixel off.
+  if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + ATTACH_CLEARANCE); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
+  if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + ATTACH_CLEARANCE); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
+  // An end piece beside the symbol keeps ATTACH_CLEARANCE from its side, as one docked by side does: Mermaid runs it a pixel off.
   if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5){
     const sign = Math.sign(p.x - c.cx);
-    p.x = q.x = c.cx + sign * Math.max(Math.abs(p.x - c.cx), c.w / 2 + 12); p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy }); return;
+    p.x = q.x = c.cx + sign * Math.max(Math.abs(p.x - c.cx), c.w / 2 + ATTACH_CLEARANCE); p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy }); return;
   }
   if (Math.abs(p.y - q.y) < 1 && Math.abs(p.y - c.cy) > c.h / 2 + 0.5){
     const sign = Math.sign(p.y - c.cy);
-    p.y = q.y = c.cy + sign * Math.max(Math.abs(p.y - c.cy), c.h / 2 + 12); p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 }); return;
+    p.y = q.y = c.cy + sign * Math.max(Math.abs(p.y - c.cy), c.h / 2 + ATTACH_CLEARANCE); p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 }); return;
   }
   if (Math.abs(p.x - q.x) < 1){                                   // a vertical end
     const dir = Math.sign(q.y - c.cy) || 1, tx = aim(p.x, c.cx, c.w / 2);
@@ -316,10 +338,10 @@ export function nudge(pts, obstacles){
     const a = pts[i], b = pts[i + 1];
     if (Math.abs(a.x - b.x) < 1){
       const lo = Math.min(a.y, b.y), hi = Math.max(a.y, b.y);
-      for (const o of obstacles) if (a.x > o.x1 - 8 && a.x < o.x2 + 8 && hi > o.y1 && lo < o.y2) a.x = b.x = (a.x - o.x1 < o.x2 - a.x) ? o.x1 - 12 : o.x2 + 12;
+      for (const o of obstacles) if (a.x > o.x1 - 8 && a.x < o.x2 + 8 && hi > o.y1 && lo < o.y2) a.x = b.x = (a.x - o.x1 < o.x2 - a.x) ? o.x1 - OBSTACLE_OFFSET : o.x2 + OBSTACLE_OFFSET;
     } else if (Math.abs(a.y - b.y) < 1){
       const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
-      for (const o of obstacles) if (a.y > o.y1 - 8 && a.y < o.y2 + 8 && hi > o.x1 && lo < o.x2) a.y = b.y = (a.y - o.y1 < o.y2 - a.y) ? o.y1 - 12 : o.y2 + 12;
+      for (const o of obstacles) if (a.y > o.y1 - 8 && a.y < o.y2 + 8 && hi > o.x1 && lo < o.x2) a.y = b.y = (a.y - o.y1 < o.y2 - a.y) ? o.y1 - OBSTACLE_OFFSET : o.y2 + OBSTACLE_OFFSET;
     }
   }
 }
@@ -336,14 +358,14 @@ export function detour(pts, atStart, c, obstacles){
     const hit = obstacles.filter(o => p.x > o.x1 - 2 && p.x < o.x2 + 2 && hi > o.y1 && lo < o.y2);
     if (!hit.length) return;
     const sign = p.x >= c.cx ? 1 : -1;
-    const x = sign > 0 ? Math.max(c.cx + c.w / 2, ...hit.map(o => o.x2)) + 12 : Math.min(c.cx - c.w / 2, ...hit.map(o => o.x1)) - 12;
+    const x = sign > 0 ? Math.max(c.cx + c.w / 2, ...hit.map(o => o.x2)) + OBSTACLE_OFFSET : Math.min(c.cx - c.w / 2, ...hit.map(o => o.x1)) - OBSTACLE_OFFSET;
     p.x = q.x = x; p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy });
   } else if (Math.abs(p.y - q.y) < 1){
     const lo = Math.min(p.x, q.x), hi = Math.max(p.x, q.x);
     const hit = obstacles.filter(o => p.y > o.y1 - 2 && p.y < o.y2 + 2 && hi > o.x1 && lo < o.x2);
     if (!hit.length) return;
     const sign = p.y >= c.cy ? 1 : -1;
-    const y = sign > 0 ? Math.max(c.cy + c.h / 2, ...hit.map(o => o.y2)) + 12 : Math.min(c.cy - c.h / 2, ...hit.map(o => o.y1)) - 12;
+    const y = sign > 0 ? Math.max(c.cy + c.h / 2, ...hit.map(o => o.y2)) + OBSTACLE_OFFSET : Math.min(c.cy - c.h / 2, ...hit.map(o => o.y1)) - OBSTACLE_OFFSET;
     p.y = q.y = y; p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 });
   }
 }
@@ -402,6 +424,22 @@ export function orthogonal(pts){
 export const exitSide = pts => Math.abs(pts[0].y - pts[1].y) < 0.5 ? (pts[1].x > pts[0].x ? 'x+' : 'x-') : Math.abs(pts[0].x - pts[1].x) < 0.5 ? (pts[1].y > pts[0].y ? 'y+' : 'y-') : '';
 const blocked = (a, b, obstacles) => obstacles.some(o => Math.max(a.x, b.x) > o.x1 - 2 && Math.min(a.x, b.x) < o.x2 + 2 && Math.max(a.y, b.y) > o.y1 - 2 && Math.min(a.y, b.y) < o.y2 + 2);
 
+// The ends of the flows at one symbol, read where they lie when asked, in the
+// order of routes: [{ r, p, q, out }], the route, its end point at the
+// symbol, the point next to it, and whether the flow leaves there. p and q
+// are the route's own points: what moves them moves the flow. The corrections
+// that ask which ports are used read them here (fanOut(), spreadPorts(),
+// loopBack()), each at its own moment and on its own routes.
+export function portEnds(routes, id){
+  const ends = [];
+  for (const r of routes){
+    const pts = r.pts;
+    if (r.f.from === id) ends.push({ r, p: pts[0], q: pts[1], out: true });
+    if (r.f.to === id) ends.push({ r, p: pts[pts.length - 1], q: pts[pts.length - 2], out: false });
+  }
+  return ends;
+}
+
 // Correction 4. Two flows that leave a gateway at the same corner lie on top
 // of each other on their first piece. Where one of them turns at once, it
 // takes the free corner in its direction instead. And a flow that leaves on
@@ -413,8 +451,7 @@ const blocked = (a, b, obstacles) => obstacles.some(o => Math.max(a.x, b.x) > o.
 export function fanOut(routes, box, gateways){
   for (const id of gateways){
     const c = box[id], outs = routes.filter(r => r.f.from === id);
-    const used = new Set(outs.map(r => exitSide(r.pts)));
-    routes.filter(r => r.f.to === id).forEach(r => used.add(exitSide([...r.pts].reverse())));
+    const used = new Set(portEnds(routes, id).map(e => exitSide([e.p, e.q])));
     for (const r of outs){
       const pts = r.pts, side = exitSide(pts);
       if (r.loop || pts.length < 3 || !side || !outs.some(o => o !== r && exitSide(o.pts) === side)) continue;
@@ -426,7 +463,7 @@ export function fanOut(routes, box, gateways){
       let next;
       if (pts.length === 3){                                                  // ended in the target from above or below: now from the side
         const t = box[r.f.to], du = Math.sign(pts[1][u] - pts[0][u]), edge = t[cu] - du * t[su] / 2;
-        if ((edge - c[cu]) * du < 12) continue;
+        if ((edge - c[cu]) * du < FAN_ROOM) continue;
         next = [start, { [u]: c[cu], [v]: t[cv] }, { [u]: edge, [v]: t[cv] }];
       } else {
         if (Math.abs(pts[2][v] - pts[3][v]) > 0.5) continue;
@@ -436,7 +473,7 @@ export function fanOut(routes, box, gateways){
       pts.splice(0, pts.length, ...next);
       used.add(corner);
     }
-    const arriving = new Set(routes.filter(r => r.f.to === id).map(r => exitSide([...r.pts].reverse())));
+    const arriving = new Set(portEnds(routes, id).filter(e => !e.out).map(e => exitSide([e.p, e.q])));
     for (const r of outs){
       const pts = r.pts, side = exitSide(pts);
       if (r.loop || pts.length < 4 || !side || !arriving.has(side)) continue;
@@ -457,13 +494,11 @@ export function fanOut(routes, box, gateways){
 // move goes aside.
 export function spreadPorts(routes, box){
   const ends = [];
-  for (const r of routes) for (const atStart of [true, false]){
-    const c = box[atStart ? r.f.from : r.f.to];
-    if (!c.task) continue;
-    const pts = r.pts, p = pts[atStart ? 0 : pts.length - 1], q = pts[atStart ? 1 : pts.length - 2];
+  // Ends only meet ends at the same task, so the tasks are read one by one.
+  for (const [id, c] of Object.entries(box)) if (c.task) for (const { r, p, q, out } of portEnds(routes, id)){
     const vertical = Math.abs(p.x - q.x) < 1;
     if (!vertical && Math.abs(p.y - q.y) >= 1) continue;
-    ends.push({ p, q, c, vertical, out: atStart, side: vertical ? (p.y < c.cy ? 'top' : 'bottom') : (p.x < c.cx ? 'left' : 'right'), movable: pts.length >= 3 });
+    ends.push({ p, q, c, vertical, out, side: vertical ? (p.y < c.cy ? 'top' : 'bottom') : (p.x < c.cx ? 'left' : 'right'), movable: r.pts.length >= 3 });
   }
   for (const a of ends) for (const b of ends){
     if (a === b || a.c !== b.c || a.side !== b.side || a.out === b.out) continue;
@@ -514,12 +549,12 @@ function meets(a, b, c, d){
   return v[0].x > lo(h[0], h[1], 'x') && v[0].x < hi(h[0], h[1], 'x') && h[0].y > lo(v[0], v[1], 'y') && h[0].y < hi(v[0], v[1], 'y');
 }
 
-// Two parallel pieces that run less than 12 px apart and side by side.
+// Two parallel pieces that run less than NEAR apart and side by side.
 function near(a, b, c, d){
   const flat = (p, q) => Math.abs(p.y - q.y) < 0.5;
   if (flat(a, b) !== flat(c, d)) return false;
   const [u, v] = flat(a, b) ? ['y', 'x'] : ['x', 'y'];
-  return Math.abs(a[u] - c[u]) < 12 && Math.min(a[v], b[v]) < Math.max(c[v], d[v]) && Math.min(c[v], d[v]) < Math.max(a[v], b[v]);
+  return Math.abs(a[u] - c[u]) < NEAR && Math.min(a[v], b[v]) < Math.max(c[v], d[v]) && Math.min(c[v], d[v]) < Math.max(a[v], b[v]);
 }
 
 // The distance between two levels of flows back on one side of a row,
@@ -535,26 +570,23 @@ export const LEVEL_STEP = 16;
 // bottom of its target.
 //   - The level: 20 px beyond the outermost edge of the row's symbols within
 //     the flow's span; a flow back on the same side whose span overlaps
-//     (12 px apart or less) takes the next level out, LEVEL_STEP farther.
-//     The flows back are taken shortest first, so a nested one lies inside;
-//     those with disjoint spans share the innermost level. Where a level
-//     out, up to three, has fewer conflicts, the ring takes that one.
-//   - The side: the one with fewer conflicts at its level (a piece of
-//     another flow crossed, shared or run beside closer than 12 px; a port
-//     of a gateway or an event another flow uses); at a tie, the side
-//     Mermaid's route kept to (r.loopSide: 1 below, -1 above). A way a
-//     foreign symbol blocks is not taken.
-//   - The ports: a circle and a diamond on their top or bottom; a task at
-//     the middle of the side, or, when another flow docks at the middle, 20
-//     px in from a corner: the one with fewer conflicts, at a tie the one
-//     facing the other end.
+//     (less than SPAN_TOLERANCE apart) takes the next level out, LEVEL_STEP
+//     farther. The flows back are taken shortest first, so a nested one lies
+//     inside; those with disjoint spans share the innermost level. Where a
+//     level out, up to three, has fewer conflicts, the ring takes that one.
+//   - The side: the one with fewer conflicts at its level (conflictScore());
+//     at a tie, the side Mermaid's route kept to (r.loopSide: 1 below, -1
+//     above). A way a foreign symbol blocks is not taken.
+//   - The ports (portCandidates()): a circle and a diamond on their top or
+//     bottom; a task at the middle of the side, or, when another flow docks
+//     at the middle, 20 px in from a corner: the one with fewer conflicts, at
+//     a tie the one facing the other end.
 //   - A twin separateTwins() routed (r.twin) is left as it is; it runs
 //     before, so its ring is one of the flows a flow back keeps off.
 //   - lanes: the boxes [x, y, w, h] of every lane. A ring that comes closer
-//     than 12 px to the border with another lane makes its lane grow there:
-//     everything beyond the border moves away by what the ring needs (the
-//     lanes, the symbols in box, the flows' points and obstacles). Beyond
-//     the outer lanes the growth at the end of layoutGeometry() makes room.
+//     than RING_CLEARANCE to the border with another lane makes its lane grow
+//     there (growLane()). Beyond the outer lanes the growth at the end of
+//     layoutGeometry() makes room.
 // Returns { up, down }: by how much the lanes grew upwards and downwards.
 export function loopBack(routes, box, lanes = []){
   const grown = { up: 0, down: 0 };
@@ -566,40 +598,29 @@ export function loopBack(routes, box, lanes = []){
   if (!back.length) return grown;
   const fixed = routes.filter(r => !back.includes(r));
   const placed = [];
-  const ends = r => [r.pts[0], r.pts[r.pts.length - 1]];
   for (const r of back){
     const s = box[r.f.from], t = box[r.f.to];
+    // The flows a ring keeps off: all but the flows back not yet placed.
     const others = fixed.concat(placed.map(p => p.r));
-    const used = others.flatMap(ends);
-    // The ports on one side: the middle, or, where another flow docks there,
-    // 20 px in from either corner, the one facing the other end first.
-    const ports = (c, dir, toward) => {
-      const y = c.cy + dir * c.h / 2;
-      if (!c.task || !used.some(p => Math.abs(p.y - y) < 1 && Math.abs(p.x - c.cx) < 14)) return [{ x: c.cx, y }];
-      const facing = Math.sign(toward - c.cx) || 1;
-      return [facing, -facing].map(sign => ({ x: c.cx + sign * (c.w / 2 - 20), y }));
-    };
+    const usedAt = id => portEnds(others, id).map(e => e.p);
+    const usedS = usedAt(r.f.from), usedT = usedAt(r.f.to);
     let best = null;
     const mermaid = r.loopSide || -1;
     for (const dir of [mermaid, -mermaid]){
       let side = null;
-      for (const a of ports(s, dir, t.cx)) for (const b of ports(t, dir, s.cx)){
+      for (const a of portCandidates(s, dir, t.cx, usedS)) for (const b of portCandidates(t, dir, s.cx, usedT)){
         const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
         const row = Object.values(box).filter(c => Math.abs(c.cy - s.cy) < 1 && c.cx + c.w / 2 > lo && c.cx - c.w / 2 < hi);
         let y = (dir > 0 ? Math.max(...row.map(c => c.cy + c.h / 2)) : Math.min(...row.map(c => c.cy - c.h / 2))) + dir * 20;
         for (const p of placed){
-          if (p.dir !== dir || Math.abs(p.cy - s.cy) >= 1 || p.lo >= hi + 12 || lo >= p.hi + 12) continue;
+          if (p.dir !== dir || Math.abs(p.cy - s.cy) >= 1 || p.lo >= hi + SPAN_TOLERANCE || lo >= p.hi + SPAN_TOLERANCE) continue;
           y = dir > 0 ? Math.max(y, p.y + LEVEL_STEP) : Math.min(y, p.y - LEVEL_STEP);
         }
         // The level, or up to three farther out where that has fewer conflicts.
         for (let k = 0; k < 4 && !(side && !side.conflicts); k++){
           const out = y + dir * k * LEVEL_STEP, next = [a, { x: a.x, y: out }, { x: b.x, y: out }, b];
           if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
-          let conflicts = 0;
-          for (const o of others) for (let i = 1; i < o.pts.length; i++) for (let j = 1; j < next.length; j++){
-            if (meets(next[j - 1], next[j], o.pts[i - 1], o.pts[i]) || near(next[j - 1], next[j], o.pts[i - 1], o.pts[i])) conflicts++;
-          }
-          for (const [c, p] of [[s, a], [t, b]]) if (!c.task && used.some(q => Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2)) conflicts++;
+          const conflicts = conflictScore(next, others, [[s, a, usedS], [t, b, usedT]]);
           if (!side || conflicts < side.conflicts) side = { next, conflicts, dir, y: out, lo, hi };
         }
       }
@@ -608,30 +629,68 @@ export function loopBack(routes, box, lanes = []){
     if (!best) continue;
     r.pts.splice(0, r.pts.length, ...best.next);
     r.loop = true;
-    placed.push({ r, dir: best.dir, y: best.y, lo: best.lo, hi: best.hi, cy: s.cy });
-    // The lane grows where the ring comes closer than 12 px to another lane.
-    const { dir, y } = best;
-    const lane = lanes.find(b => b[1] <= s.cy && s.cy <= b[1] + b[3]);
-    if (!lane) continue;
-    const border = dir > 0 ? lane[1] + lane[3] : lane[1];
-    const beyond = lanes.some(b => b !== lane && Math.abs((dir > 0 ? b[1] : b[1] + b[3]) - border) < 1);
-    const need = Math.ceil((y + dir * 12 - border) * dir);
-    if (!beyond || need <= 0) continue;
-    const away = v => (v - border) * dir > 0;
-    for (const b of lanes){
-      if (b === lane){ b[3] += need; if (dir < 0) b[1] -= need; }
-      else if (away(b[1] + b[3] / 2)) b[1] += dir * need;
-    }
-    for (const c of Object.values(box)) if (away(c.cy)) c.cy += dir * need;
-    const moved = new Set(r.pts);                                      // the ring itself stays: the lane grows around it
-    for (const o of routes){
-      for (const p of o.pts) if (away(p.y) && !moved.has(p)){ moved.add(p); p.y += dir * need; }
-      for (const ob of o.obstacles || []) if (away((ob.y1 + ob.y2) / 2) && !moved.has(ob)){ moved.add(ob); ob.y1 += dir * need; ob.y2 += dir * need; }
-    }
-    for (const p of placed) if (p.r !== r && away(p.y)) p.y += dir * need;
-    if (dir > 0) grown.down += need; else grown.up += need;
+    const ring = { r, dir: best.dir, y: best.y, lo: best.lo, hi: best.hi, cy: s.cy };
+    placed.push(ring);
+    const need = growLane(ring, lanes, box, routes, placed);
+    if (ring.dir > 0) grown.down += need; else grown.up += need;
   }
   return grown;
+}
+
+// The ports a ring may take on one side of the symbol c (dir: 1 its bottom,
+// -1 its top): the middle; on a task where another flow docks at the middle
+// (used: the end points of the other flows at c), 20 px in from either
+// corner, the one facing the ring's other end (toward: its x) first.
+export function portCandidates(c, dir, toward, used){
+  const y = c.cy + dir * c.h / 2;
+  if (!c.task || !used.some(p => Math.abs(p.y - y) < 1 && Math.abs(p.x - c.cx) < 14)) return [{ x: c.cx, y }];
+  const facing = Math.sign(toward - c.cx) || 1;
+  return [facing, -facing].map(sign => ({ x: c.cx + sign * (c.w / 2 - 20), y }));
+}
+
+// The conflicts of a ring's way next ([{ x, y }, …]) with the flows others:
+// one per piece of another flow it crosses, lies on or runs beside closer
+// than NEAR, per piece of its own; and one per port of the ring on a gateway
+// or an event that another flow uses. ports: [[c, port, used]], the ring's
+// two ends, each with its symbol and the end points of the other flows there.
+export function conflictScore(next, others, ports){
+  let conflicts = 0;
+  for (const o of others) for (let i = 1; i < o.pts.length; i++) for (let j = 1; j < next.length; j++){
+    if (meets(next[j - 1], next[j], o.pts[i - 1], o.pts[i]) || near(next[j - 1], next[j], o.pts[i - 1], o.pts[i])) conflicts++;
+  }
+  for (const [c, p, used] of ports) if (!c.task && used.some(q => Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2)) conflicts++;
+  return conflicts;
+}
+
+// The lane of a ring grows where the ring comes closer than RING_CLEARANCE
+// to the border with another lane: everything beyond the border moves away
+// by what the ring needs (the lanes, the symbols in box, the flows' points
+// and obstacles, and the levels of the rings placed before). The ring itself
+// stays: the lane grows around it. ring: { r, dir, y, cy }, its route, its
+// side (1 below the row, -1 above), its level and the row's middle. A ring
+// in no lane, or by an outer lane's outer border, grows nothing. Returns by
+// how much the lane grew: 0 where it did not.
+export function growLane(ring, lanes, box, routes, placed){
+  const { r, dir, y, cy } = ring;
+  const lane = lanes.find(b => b[1] <= cy && cy <= b[1] + b[3]);
+  if (!lane) return 0;
+  const border = dir > 0 ? lane[1] + lane[3] : lane[1];
+  const beyond = lanes.some(b => b !== lane && Math.abs((dir > 0 ? b[1] : b[1] + b[3]) - border) < 1);
+  const need = Math.ceil((y + dir * RING_CLEARANCE - border) * dir);
+  if (!beyond || need <= 0) return 0;
+  const away = v => (v - border) * dir > 0;
+  for (const b of lanes){
+    if (b === lane){ b[3] += need; if (dir < 0) b[1] -= need; }
+    else if (away(b[1] + b[3] / 2)) b[1] += dir * need;
+  }
+  for (const c of Object.values(box)) if (away(c.cy)) c.cy += dir * need;
+  const moved = new Set(r.pts);
+  for (const o of routes){
+    for (const p of o.pts) if (away(p.y) && !moved.has(p)){ moved.add(p); p.y += dir * need; }
+    for (const ob of o.obstacles || []) if (away((ob.y1 + ob.y2) / 2) && !moved.has(ob)){ moved.add(ob); ob.y1 += dir * need; ob.y2 += dir * need; }
+  }
+  for (const p of placed) if (p.r !== r && away(p.y)) p.y += dir * need;
+  return need;
 }
 
 // A label as bpmn-js lays it out: at most 90 px wide, wrapped at blanks,
@@ -846,12 +905,12 @@ export function layoutGeometry(model, raw, measure = labelSize){
 
   // Flows routed around a row, and labels, can lie beyond Mermaid's lanes:
   // the outer lanes and the pool grow until every waypoint and every label
-  // lies inside, 12 px from the edge (the top lane up, the bottom lane down,
+  // lies inside, FRAME_MARGIN from the edge (the top lane up, the bottom lane down,
   // every lane and the pool left and right). The frame is every lane, the
   // synthetic ones included: a lane without an id keeps its row.
   const drawn = model.lanes.filter(l => !l.synthetic).map(l => di.lanes[l.id]);
   if (di.pool || drawn.length){
-    const M = 12, xs = [], ys = [];
+    const M = FRAME_MARGIN, xs = [], ys = [];
     for (const way of Object.values(di.flows)) for (const [x, y] of way){ xs.push(x); ys.push(y); }
     for (const [x, y, w, h] of taken){ xs.push(x, x + w); ys.push(y, y + h); }
     const frame = model.lanes.map(l => laneBox[l.key]);

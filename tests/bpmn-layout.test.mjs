@@ -19,7 +19,8 @@ import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
-  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, loopBack, LEVEL_STEP, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, loopBack, LEVEL_STEP,
+  portEnds, portCandidates, conflictScore, growLane, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -392,6 +393,62 @@ test('correction 7: a flow back in a middle lane stays in its lane, 12 px from t
   assert.equal(box.B.cy, 332, 'the symbol below moved');
   assert.deepEqual(routes[1].pts, ptsOf([[300, 240], [300, 292]]), 'the flow down: its end moved, its start stayed');
   assert.deepEqual(routes[1].obstacles[0], { x1: 240, y1: 292, x2: 360, y2: 372 });
+});
+
+// ---------- the seams of the routing (story 2.24) ----------
+test('portEnds: the ends of the flows at a symbol, in the order of the routes, the route\'s own points', () => {
+  const a = { f: { from: 'A', to: 'B' }, pts: ptsOf([[10, 0], [20, 0], [20, 30], [40, 30]]) };
+  const b = { f: { from: 'C', to: 'A' }, pts: ptsOf([[0, 50], [0, 20], [5, 20]]) };
+  const c = { f: { from: 'C', to: 'D' }, pts: ptsOf([[0, 50], [0, 90]]) };
+  const ends = portEnds([a, b, c], 'A');
+  assert.deepEqual(ends.map(e => [e.r === a ? 'a' : 'b', e.out]), [['a', true], ['b', false]]);
+  assert.ok(ends[0].p === a.pts[0] && ends[0].q === a.pts[1], 'a leaving flow: its first point and the one after');
+  assert.ok(ends[1].p === b.pts[2] && ends[1].q === b.pts[1], 'an arriving flow: its last point and the one before');
+  a.pts[0].y = 5;
+  assert.equal(ends[0].p.y, 5, 'live: what moves the route moves the end');
+  assert.deepEqual(portEnds([c], 'A'), []);
+});
+
+test('portCandidates: the middle of a side, or on a task with the middle taken the two points 20 px in from the corners, the one facing the other end first', () => {
+  const t = node(100, 100, 120, 80, true), g = node(300, 100, 50, 50);
+  assert.deepEqual(portCandidates(t, 1, 0, []), [P(100, 140)]);
+  assert.deepEqual(portCandidates(t, -1, 0, [P(100, 140)]), [P(100, 60)], 'the bottom middle taken does not touch the top');
+  assert.deepEqual(portCandidates(t, 1, 0, [P(110, 140)]), [P(60, 140), P(140, 140)], 'taken within 14 px of the middle; the other end lies left');
+  assert.deepEqual(portCandidates(t, 1, 500, [P(110, 140)]), [P(140, 140), P(60, 140)], 'the other end right');
+  assert.deepEqual(portCandidates(t, 1, 0, [P(114, 140)]), [P(100, 140)], '14 px off the middle is free');
+  assert.deepEqual(portCandidates(g, 1, 0, [P(300, 125)]), [P(300, 125)], 'a diamond keeps its vertex: a used one is a conflict');
+});
+
+test('conflictScore: one per piece of another flow crossed, lain on or run beside closer than 12 px, one per used port of a gateway or an event', () => {
+  const ring = ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]);
+  const g = node(300, 100, 50, 50), t = node(100, 100, 120, 80, true);
+  const route = list => ({ pts: ptsOf(list) });
+  assert.equal(conflictScore(ring, [route([[200, 0], [200, 50]])], [[g, ring[0], []], [t, ring[3], []]]), 0);
+  assert.equal(conflictScore(ring, [route([[200, 100], [200, 300]])], [[g, ring[0], []], [t, ring[3], []]]), 1, 'crossed once');
+  assert.equal(conflictScore(ring, [route([[150, 170], [250, 170]])], [[g, ring[0], []], [t, ring[3], []]]), 1, '10 px beside its level');
+  assert.equal(conflictScore(ring, [route([[150, 172], [250, 172]])], [[g, ring[0], []], [t, ring[3], []]]), 0, '12 px beside: apart');
+  assert.equal(conflictScore(ring, [], [[g, ring[0], [P(301, 126)]], [t, ring[3], []]]), 1, 'the gateway\'s bottom used');
+  assert.equal(conflictScore(ring, [], [[g, ring[0], []], [t, ring[3], [P(100, 140)]]]), 0, 'a task\'s port is chosen by portCandidates(), not counted');
+});
+
+test('growLane: a ring closer than 12 px to the border with another lane makes its lane grow; what lies beyond moves, the ring stays; by an outer border nothing grows', () => {
+  const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
+  const box = { T: node(300, 200, 120, 80, true), B: node(300, 320, 120, 80, true) };
+  const ring = { f: { from: 'T', to: 'T0' }, pts: ptsOf([[300, 240], [300, 255], [100, 255], [100, 240]]), obstacles: [] };
+  const down = { f: { from: 'T', to: 'B' }, pts: ptsOf([[300, 240], [300, 280]]), obstacles: [{ x1: 240, y1: 280, x2: 360, y2: 360 }] };
+  const before = { r: {}, dir: 1, y: 300, cy: 320 };
+  const placed = [before, { r: ring, dir: 1, y: 255, cy: 200 }];
+  assert.equal(growLane(placed[1], lanes, box, [ring, down], placed), 7, '255 + 12 - 260');
+  assert.deepEqual(lanes, [[0, 0, 1000, 140], [0, 140, 1000, 127], [0, 267, 1000, 100]]);
+  assert.equal(box.B.cy, 327);
+  assert.equal(box.T.cy, 200);
+  assert.deepEqual(ring.pts, ptsOf([[300, 240], [300, 255], [100, 255], [100, 240]]), 'the ring as it was');
+  assert.deepEqual(down.pts, ptsOf([[300, 240], [300, 287]]));
+  assert.deepEqual(down.obstacles[0], { x1: 240, y1: 287, x2: 360, y2: 367 });
+  assert.equal(before.y, 307, 'a level placed before, beyond the border, moved');
+  assert.equal(growLane({ r: ring, dir: 1, y: 240, cy: 200 }, lanes, box, [ring], []), 0, 'far enough from the border');
+  assert.equal(growLane({ r: ring, dir: -1, y: 0, cy: 50 }, lanes, box, [ring], []), 0, 'by the top of the outer lane: the frame grows later');
+  assert.equal(growLane({ r: ring, dir: 1, y: 255, cy: 900 }, lanes, box, [ring], []), 0, 'in no lane');
 });
 
 test('labels: estimated at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {
