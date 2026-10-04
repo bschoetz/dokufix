@@ -227,6 +227,10 @@ test('a flow keeps 12 px to its own symbol before it turns: a run 1 px inside it
   const end = ptsOf([[0, 300], [165, 300], [165, 90], [150, 90]]);
   attach(end, false, task);
   assert.deepEqual(end, ptsOf([[0, 300], [172, 300], [172, 90], [160, 90]]));
+  // At the end, with corners put in before it: the run beside the symbol is the one that moves.
+  const bent = ptsOf([[200, 300], [155, 150], [155, 138]]);
+  attach(bent, false, task);
+  assert.deepEqual(bent, ptsOf([[200, 300], [155, 150], [155, 152], [148, 152], [148, 140]]));
 });
 
 test('correction 1: an inner piece through a foreign symbol moves beside it', () => {
@@ -321,6 +325,29 @@ test('correction 7: nested flows back on one side take distinct levels, the shor
   const apart = [back('T2', 'T1'), back('T6', 'T5')];
   loopBack(apart, box);
   assert.deepEqual(apart.map(level), [40, 40], 'disjoint spans: one level');
+  // Spans that overlap only partly: on one side the outer would cross the
+  // inner, so the second takes the other side, 20 px below the tasks.
+  const staggered = [back('T3', 'T1'), back('T4', 'T2')];
+  loopBack(staggered, box);
+  assert.deepEqual(staggered.map(level), [40, 160], 'partly overlapping: one above, one below');
+  // Spans less than 12 px apart count as overlapping, 12 px or more apart do not.
+  const events = x => Object.fromEntries(x.map((cx, i) => ['E' + i, node(cx, 100, 36, 36)]));
+  const backOn = (b, from, to) => ({ f: { from, to }, pts: ptsOf([[b[from].cx, 82], [b[from].cx, 70], [b[to].cx, 70], [b[to].cx, 82]]), obstacles: [], loopSide: -1 });
+  for (const [gap, levels] of [[10, 2], [12, 1]]){
+    const b = events([100, 300, 300 + gap, 500]);
+    const two = [backOn(b, 'E1', 'E0'), backOn(b, 'E3', 'E2')];
+    loopBack(two, b);
+    assert.equal(new Set(two.map(level)).size, levels, gap + ' px apart: ' + JSON.stringify(two.map(level)));
+  }
+});
+
+test('correction 4 leaves a ring of correction 7 as it is: rebuilt from its pieces it would run through the row', () => {
+  const box = { A: node(100, 100, 120, 80, true), G: node(300, 100, 50, 50), B: node(300, 300, 120, 80, true) };
+  const ring = { f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]), obstacles: [], loop: true };
+  const down = { f: { from: 'G', to: 'B' }, pts: ptsOf([[300, 125], [300, 260]]), obstacles: [] };
+  const before = JSON.stringify(ring.pts);
+  fanOut([ring, down], box, new Set(['G']));
+  assert.equal(JSON.stringify(ring.pts), before);
 });
 
 test('correction 7: a flow back keeps off the ring of a twin, which separateTwins() routed before it and which it leaves alone', () => {

@@ -253,9 +253,11 @@ export function attach(pts, atStart, c, side){
   const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
   const aim = (v, mid, half) => c.task ? Math.min(mid + half - 12, Math.max(mid - half + 12, v)) : mid;
   const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
+  // The end and its neighbour are read anew: ins() may have put corners in.
   const clear = (axis, dir) => {
     if (pts.length < 3) return;
-    const edge = pts[i][axis], need = edge + dir * 12, run = pts[j][axis];
+    const e = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2;
+    const edge = pts[e][axis], need = edge + dir * 12, run = pts[j][axis];
     if ((run - need) * dir >= 0) return;
     for (let n = j; n > 0 && n < pts.length - 1 && Math.abs(pts[n][axis] - run) < 0.5; n += atStart ? 1 : -1) pts[n][axis] = need;
   };
@@ -405,7 +407,8 @@ const blocked = (a, b, obstacles) => obstacles.some(o => Math.max(a.x, b.x) > o.
 // takes the free corner in its direction instead. And a flow that leaves on
 // the side where a flow arrives looks as if it branched before the gateway;
 // it starts at the corner in its direction instead, sharing a short piece
-// with another flow there if need be.
+// with another flow there if need be. A ring of loopBack() (r.loop) keeps
+// its route: rebuilt from its pieces it would run through the row.
 // routes: [{ f, pts, obstacles }]; box: node id → { cx, cy, w, h }.
 export function fanOut(routes, box, gateways){
   for (const id of gateways){
@@ -414,7 +417,7 @@ export function fanOut(routes, box, gateways){
     routes.filter(r => r.f.to === id).forEach(r => used.add(exitSide([...r.pts].reverse())));
     for (const r of outs){
       const pts = r.pts, side = exitSide(pts);
-      if (pts.length < 3 || !side || !outs.some(o => o !== r && exitSide(o.pts) === side)) continue;
+      if (r.loop || pts.length < 3 || !side || !outs.some(o => o !== r && exitSide(o.pts) === side)) continue;
       const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h', su = u === 'x' ? 'w' : 'h';
       if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) continue;                   // the second piece has to turn
       const dir = Math.sign(pts[2][v] - pts[1][v]), corner = v + (dir > 0 ? '+' : '-');
@@ -436,7 +439,7 @@ export function fanOut(routes, box, gateways){
     const arriving = new Set(routes.filter(r => r.f.to === id).map(r => exitSide([...r.pts].reverse())));
     for (const r of outs){
       const pts = r.pts, side = exitSide(pts);
-      if (pts.length < 4 || !side || !arriving.has(side)) continue;
+      if (r.loop || pts.length < 4 || !side || !arriving.has(side)) continue;
       const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h';
       if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) continue;
       const dir = Math.sign(pts[2][v] - pts[1][v]);
@@ -604,6 +607,7 @@ export function loopBack(routes, box, lanes = []){
     }
     if (!best) continue;
     r.pts.splice(0, r.pts.length, ...best.next);
+    r.loop = true;
     placed.push({ r, dir: best.dir, y: best.y, lo: best.lo, hi: best.hi, cy: s.cy });
     // The lane grows where the ring comes closer than 12 px to another lane.
     const { dir, y } = best;
