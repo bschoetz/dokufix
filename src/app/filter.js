@@ -102,8 +102,8 @@ export function filterRowText(row){
 
 // Whether a row's text matches a term, by the rules of the search with both
 // of its switches off (findHits() of search-match.js, story 11 of epic 5): the
-// term, blanks collapsed and none at its ends, as one phrase anywhere in the
-// text, case ignored. An empty term matches every row. The filter has no
+// term, blanks collapsed, as one phrase anywhere in the text, case ignored; a
+// blank at an edge of the term marks a word boundary (story 14). An empty term matches every row. The filter has no
 // switches and no minimum length: it filters from the first character typed,
 // tooShort() is the search's.
 export function filterMatches(term, text){

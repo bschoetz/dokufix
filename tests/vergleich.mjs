@@ -2195,6 +2195,27 @@ async function assertSearch(page, check, key){
     litAs(litChip, 'statuschip', { fuzzy: true }, wantChip, t => fuzzyStrip(t) === 'statuschip') && litChip.ranges.some(r => r.text === 'Status-Chip'),
     litLine(litChip, 'statuschip', { fuzzy: true }, wantChip));
   await flip(1);
+  // --- a blank at the edge of the term marks a word boundary (story 14): "Klick " lists the places where
+  // "Klick" ends a word, not those where it only begins one, and marks the word alone, without the blank
+  const bounded = await search('Klick ');
+  const litBounded = await highlightFacts();
+  const wantBounded = expectedWith('Klick ', {}), wantKlick = expectedWith('Klick', {});
+  const longer = wantKlick.some(p => /klick\p{L}/iu.test(p.text) && !findHits('Klick ', p.text).length);
+  check('search: "Klick " with a blank at its end lists the places where "Klick" ends a word' + (longer ? ', fewer than "Klick"' : '') + '; every mark is the word alone',
+    bounded.summary === summaryOf(wantBounded) && bounded.results.length === wantBounded.length && (!longer || wantBounded.length < wantKlick.length) &&
+      (!litBounded.api || litBounded.ranges.every(r => r.text.toLowerCase() === 'klick')),
+    json({ summary: bounded.summary, expected: summaryOf(wantBounded), klick: summaryOf(wantKlick), marks: litBounded.ranges.map(r => r.text) }));
+  const leading = await search(' Klick');
+  const wantLeading = expectedWith(' Klick', {});
+  check('search: " Klick" with a blank at its start lists as many places as Node expects, every mark the word alone',
+    leading.summary === summaryOf(wantLeading) && leading.results.length === wantLeading.length && leading.results.every(r => r.marks.every(m => m.toLowerCase() === 'klick')),
+    json({ summary: leading.summary, expected: summaryOf(wantLeading), marks: leading.results.map(r => r.marks) }));
+  await search('Klick ');
+  const fuzzyBounded = await flip(1);
+  const wantFuzzyBounded = expectedWith('Klick ', { fuzzy: true });
+  check('search: light fuzzy flipped on, "Klick " lists as many places as "Klick" does under it: the blank marks no boundary',
+    fuzzyBounded.summary === summaryOf(wantFuzzyBounded) && summaryOf(wantFuzzyBounded) === summaryOf(expectedWith('Klick', { fuzzy: true })), json({ summary: fuzzyBounded.summary, expected: summaryOf(wantFuzzyBounded) }));
+  await flip(1);
   const short = await search('Ta');
   const litShort = await highlightFacts();
   check('search: "Ta" lists nothing, highlights nothing and the summary says it is too short', short.summary === TOO_SHORT && short.results.length === 0 && litShort.ranges.length === 0, json(short.summary) + ', ' + short.results.length + ', ' + litShort.ranges.length + ' ranges');

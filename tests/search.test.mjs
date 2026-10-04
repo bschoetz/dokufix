@@ -169,6 +169,41 @@ test('findHits, case-sensitive and light fuzzy: the hyphen is ignored, the case 
   assert.deepEqual(findHits('StatusChip', 'Status-Chip', { caseSensitive: true, fuzzy: true }), [{ start: 0, end: 11 }]);
 });
 
+test('findHits: a blank at the end of the term asks for a word boundary after the hit, one at its start for one before it (story 5.14)', () => {
+  const text = 'Ein Klick. Klicken, Doppelklick, Klick-Event (Klick) Klick_x 🚧Klick🚧 Klick';
+  const at = term => findHits(term, text).map(h => h.start);
+  assert.deepEqual(at('Klick'), [4, 11, 26, 33, 46, 53, 63, 71]);
+  assert.deepEqual(at('Klick '), [4, 26, 33, 46, 53, 63, 71], 'not Klicken');
+  assert.deepEqual(at(' Klick'), [4, 11, 33, 46, 53, 63, 71], 'not Doppelklick');
+  assert.deepEqual(at(' Klick '), [4, 33, 46, 53, 63, 71]);
+  assert.deepEqual(at('Klick   '), at('Klick '), 'blanks at the edge collapse');
+  assert.deepEqual(covered(text, findHits(' Klick ', text)), Array(6).fill('Klick'), 'the range is the word, without the blank');
+  // A miss is looked past from its second character.
+  assert.deepEqual(findHits('aa ', 'aaa aa').map(h => h.start), [1, 4]);
+  // A mark belongs to the character before it: an accent to its letter, a variation selector or keycap mark to its emoji.
+  assert.equal(findHits(' Klick', '⚠️Klick').length, 1);
+  assert.equal(findHits(' Klick', '1️⃣Klick').length, 0, 'a keycap is a digit with marks');
+  assert.equal(findHits(' Klick', '#️⃣Klick').length, 1);
+  assert.equal(findHits('Klick ', 'Klick⚠️').length, 1);
+  assert.equal(findHits(' Klick', 'e\u0301\u0301Klick').length, 0, 'two accents on a letter');
+  // A surrogate pair is one character.
+  assert.deepEqual(findHits('Cafe ', 'Cafe\u0301 x'), []);
+  assert.deepEqual(findHits(' Klick', 'e\u0301Klick'), []);
+  assert.deepEqual(findHits(' Klick', '𝔄Klick'), [], 'a letter outside the BMP');
+  assert.deepEqual(findHits('Klick ', 'Klick𝔄'), []);
+  // Case-sensitive keeps the boundary; a blank inside the term is a character of it.
+  assert.deepEqual(findHits('klick ', 'Klick klick.', { caseSensitive: true }), [{ start: 6, end: 11 }]);
+  assert.deepEqual(covered('Ein Klick hier', findHits(' Klick h', 'Ein Klick hier')), ['Klick h']);
+});
+test('findHits, light fuzzy: a blank at the edge marks no boundary', () => {
+  assert.deepEqual(covered('Klicken', findHits('Klick ', 'Klicken', { fuzzy: true })), ['Klick']);
+  assert.deepEqual(covered('Doppelklick', findHits(' Klick', 'Doppelklick', { fuzzy: true })), ['klick']);
+});
+test('tooShort: a blank at the edge is no letter: "ab " is too short, "Tab " is not', () => {
+  assert.equal(tooShort('ab '), true);
+  assert.equal(tooShort(' Tab '), false);
+});
+
 test('findHits, light fuzzy: a term it leaves empty finds nothing', () => {
   assert.deepEqual(findHits('-.-', 'a-.-b', { fuzzy: true }), []);
   assert.deepEqual(findHits(' . ', 'a . b', { fuzzy: true }), []);

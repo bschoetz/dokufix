@@ -12,15 +12,26 @@
 //     → [{ start: 4, end: 15 }]
 //   findHits('tabelle', 'Tabelle', { caseSensitive: true }) → []
 //
-// Without options the term is compared with blanks collapsed and none at its
-// ends, case ignored, German rules of case (toLocaleLowerCase('de')); the
-// free-text filter compares so as well, by asking this module (filter.js).
+// Without options the term is compared with blanks collapsed, case ignored,
+// German rules of case (toLocaleLowerCase('de')); the free-text filter
+// compares so as well, by asking this module (filter.js). A blank at an edge
+// of the term is no character of it but a word boundary (story 14): at its
+// end the hit ends where the text ends or a character follows that is no
+// letter or digit, at its start it starts behind such a one; "Klick " finds
+// "Klick." and "Klick", not "Klicken", " Klick" not "Doppelklick". Every
+// character but a letter or a digit stands at a boundary, a hyphen, "_" and an
+// emoji too; a mark belongs to the character before it: a combining accent to
+// its letter, so "Cafe " does not find "Cafe" + U+0301, a variation selector
+// to its emoji, so " Klick" finds "⚠️Klick". The range is
+// the word's, without the blank. A hit at no boundary is none, and the next
+// one is looked for from its second character.
 // Two options change that:
 // - caseSensitive: case counts; nothing is lowered.
 // - fuzzy, light fuzzy: white space, hyphens (-, U+2010, U+2011, the soft
 //   hyphen U+00AD) and dots are ignored in the term and in the text, so
 //   "statuschip", "Status Chip" and "status.chip" find "Status-Chip". Nothing
-//   else: no umlaut folded, "oe" is no "ö", no letters swapped.
+//   else: no umlaut folded, "oe" is no "ö", no letters swapped. Since it
+//   ignores blanks, a blank at an edge of the term marks no boundary either.
 // Lowering can change the length of a text, "İ" becomes "i̇", two UTF-16
 // units, and fuzzy leaves characters out; so the text is compared one
 // character at a time, and each unit compared remembers the character it came
@@ -82,6 +93,35 @@ function compared(text, { caseSensitive = false, fuzzy = false } = {}){
   return { out, from, to };
 }
 
+// What a word is made of: letters and digits. Every other character stands at
+// a word boundary. A mark (a combining accent, an emoji's variation selector)
+// belongs to the character before it.
+const WORD = /[\p{L}\p{N}]/u;
+const MARK = /\p{M}/u;
+// The character that ends before index at of text, a surrogate pair as one.
+function charBefore(text, at){
+  const pair = at > 1 && isLow(text.charCodeAt(at - 1)) && isHigh(text.charCodeAt(at - 2));
+  return text.slice(at - (pair ? 2 : 1), at);
+}
+// Whether a word goes on before index at of text: the character there, past
+// the marks it carries, is a letter or a digit; at the start there is none.
+function wordBefore(text, at){
+  while (at > 0){
+    const ch = charBefore(text, at);
+    if (!MARK.test(ch)) return WORD.test(ch);
+    at -= ch.length;
+  }
+  return false;
+}
+// Whether a word goes on at index at of text: a letter or a digit stands
+// there, or a mark, which belongs to the character the hit ends with, so the
+// hit ends inside it; at the end of the text there is none.
+function wordAt(text, at){
+  if (at >= text.length) return false;
+  const ch = String.fromCodePoint(text.codePointAt(at));
+  return WORD.test(ch) || MARK.test(ch);
+}
+
 // The term as it is compared: tidied, without what fuzzy ignores.
 const termOf = (term, fuzzy) => {
   const t = tidy(term);
@@ -115,14 +155,20 @@ export function tooShort(term, { fuzzy = false } = {}){
 export function findHits(term, text, options = {}){
   const wanted = compared(termOf(term, options.fuzzy), options).out;
   if (!wanted) return [];
-  const { out, from, to } = compared(String(text), options);
+  text = String(text);
+  // The word boundaries a blank at an edge of the term asks for, not under fuzzy.
+  const raw = String(term);
+  const atStart = !options.fuzzy && /^\s/.test(raw), atEnd = !options.fuzzy && /\s$/.test(raw);
+  const { out, from, to } = compared(text, options);
   const hits = [];
   let end = 0;
   for (let i = out.indexOf(wanted); i >= 0; i = out.indexOf(wanted, i + 1)){
     const start = from[i];
     // A hit that begins inside the character the last one ended in.
     if (start < end) continue;
-    end = to[i + wanted.length - 1];
+    const stop = to[i + wanted.length - 1];
+    if ((atStart && wordBefore(text, start)) || (atEnd && wordAt(text, stop))) continue;
+    end = stop;
     hits.push({ start, end });
     i += wanted.length - 1;
   }

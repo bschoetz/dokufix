@@ -273,6 +273,12 @@ test('filterMatches asks findHits() with both switches off, and has no minimum l
   // Light fuzzy stays off: no switch, no hyphen ignored.
   assert.ok(!filterMatches('statuschip', 'Status-Chip grün'));
 });
+test('filterMatches: a blank at the edge of the term marks a word boundary, as in the search (story 5.14); only blanks match every row', () => {
+  assert.ok(filterMatches('Klick ', 'Ein Klick.') && !filterMatches('Klick ', 'Klicken'));
+  assert.ok(filterMatches(' Klick', 'Klick-Event') && !filterMatches(' Klick', 'Doppelklick'));
+  assert.ok(filterMatches('a ', 'Haus a') && !filterMatches('a ', 'Haus'), 'one character and a blank filter too');
+  assert.ok(filterMatches('  ', 'Klicken'));
+});
 
 // ---------- beside a facet filter ----------
 // Chooses the control with this key in the first facet group, as a click does:
