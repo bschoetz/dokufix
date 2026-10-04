@@ -33,6 +33,7 @@ Frame: **"body for information"** — HTML is the current skin, can be shed (MD 
 - `_bmad-output/` is a ticket store in the BMad v7 layout and a git repository of its own; this repository ignores it. The paths in this file resolve on a checkout that has the store beside it.
 - `_bmad-output/initiative-dokufix/` — the initiative with its requirements (FR1–FR25, NFR1–NFR11), both epics as ticket trees, the plan of every built story, and `deferred-work.md`.
 - `docs/komponenten-aus-markdown.md` — analysis, measurements and decisions behind epic 2 (German).
+- `docs/assetverwaltung.md` — analysis and architecture of image asset management: four layers, the decisions E1–E4, older files, phases, and a side finding (the version list ends up in a saved file) (German).
 - `spikes/komponenten-aus-markdown/` — the spike epic 2 is derived from; reference for behaviour, not code to merge.
 
 ## Key technical decisions captured
