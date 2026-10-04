@@ -404,6 +404,19 @@ export function dedupe(pts, inner = false){
   }
 }
 
+// A point on one line with its two neighbours but outside them, a way out
+// and back: it adds nothing to the route, and as an end's neighbour it is
+// read as the end's direction. Mermaid starts a flow with 20 px on the far
+// side of a diamond, the side then read to dock on, and runs out and back on
+// a detour. Each such point goes; the ends stay.
+export function unfold(pts){
+  for (let i = pts.length - 2; i > 0 && pts.length > 2; i--){
+    const a = pts[i - 1], b = pts[i], c = pts[i + 1];
+    const back = (u, v) => Math.abs(a[v] - b[v]) < 0.5 && Math.abs(b[v] - c[v]) < 0.5 && (b[u] - a[u]) * (c[u] - b[u]) < 0;
+    if (back('x', 'y') || back('y', 'x')){ pts.splice(i, 1); if (i < pts.length - 1) i++; }
+  }
+}
+
 // The last safeguard for right angles: a slanted piece gets a corner, so
 // that it goes on in the direction of the piece before it (the first piece:
 // leaves its end as it would dock). Then doubled points and points between
@@ -850,9 +863,10 @@ export function layoutGeometry(model, raw, measure = labelSize){
       Math.abs(o.y - o2.y) < 1 && Math.abs(o.y - r.cy) > r.h / 2 + 0.5 ? { axis: 'y', sign: Math.sign(o.y - r.cy) } : null;
     const sideFrom = beside(orig[0], orig[1], rawOf[f.from]), sideTo = beside(orig[orig.length - 1], orig[orig.length - 2], rawOf[f.to]);
     const pts = orig.map(p => ({ x: mapX(p.x), y: mapY(p.y) }));
-    // A point Mermaid gives twice, or a stub under a pixel, would read as an
-    // end of no direction or of the wrong one.
+    // A point Mermaid gives twice, a stub under a pixel, or a way out and
+    // back would read as an end of no direction or of the wrong one.
     dedupe(pts, true);
+    unfold(pts);
     attach(pts, true, box[f.from], sideFrom);
     attach(pts, false, box[f.to], sideTo);
     const obstacles = model.nodes.filter(n => n.id !== f.from && n.id !== f.to).map(n => rect(box[n.id]));

@@ -34,8 +34,7 @@
   "parallel Flow_47 Flow_53",
   "small-step Flow_21",
   "small-step Flow_3",
-  "small-step Flow_47",
-  "through-own Flow_18 GW_Merge_Ruhig"
+  "small-step Flow_47"
  ],
  "r01": [
   "label-on-label F8_e_d e"

@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
-  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, orthogonal, loopBack, LEVEL_STEP,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, unfold, orthogonal, loopBack, LEVEL_STEP,
   portEnds, portCandidates, conflictScore, growLane, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
@@ -673,6 +673,25 @@ test('the last safeguard: a slanted piece gets a corner in the direction of the 
   const after = ptsOf([[0, 0], [0.7, 0], [0.7, 50], [40, 50], [40.4, 50.6]]);
   dedupe(after);
   assert.deepEqual(after, ptsOf([[0, 0], [0.7, 50], [40.4, 50.6]]));
+});
+
+test('a way out and back goes before docking: the flow docks on the side it goes to, not through its own gateway', () => {
+  const pts = ptsOf([[100, 0], [80, 0], [300, 0]]);
+  unfold(pts);
+  assert.deepEqual(pts, ptsOf([[100, 0], [300, 0]]), 'the stub on the far side goes');
+  const down = ptsOf([[100, 0], [80, 0], [80, 50], [300, 50]]);
+  unfold(down);
+  assert.equal(down.length, 4, 'a stub that turns is a way, not a way back');
+  const inner = ptsOf([[0, 0], [50, 0], [50, 40], [50, 20], [90, 20]]);
+  unfold(inner);
+  assert.deepEqual(inner, ptsOf([[0, 0], [50, 0], [50, 20], [90, 20]]), 'out and back inside the route goes as well');
+  // The flow of the large example: a gateway at 1086..1136, Mermaid's stub 12 px left of it, the target right.
+  const gateway = { cx: 1111, cy: -59, w: 50, h: 50, task: false };
+  const flow = ptsOf([[1086, -59], [1074, -59], [1178, -59]]);
+  unfold(flow);
+  attach(flow, true, gateway);
+  assert.deepEqual(flow[0], P(1136, -59), 'from the right corner');
+  assert.ok(flow.every(p => p.x >= 1136), 'no piece in the gateway: ' + JSON.stringify(flow));
 });
 
 test('a point Mermaid gives twice does not turn the flow through its own source', () => {
