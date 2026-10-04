@@ -96,12 +96,25 @@ Fahren Sie mit der Maus über diese Fußnote[^vorschau] — der Text erscheint d
 ```mermaid
 sequenceDiagram
     autonumber
+    participant Nutzerin
+    participant dokufix
+    participant marked
+    participant mermaid
+    participant bpmn as bpmn-js
     Nutzerin->>+dokufix: Markdown eintippen
     Nutzerin->>+dokufix: "Rendern" klicken
     dokufix->>marked: Parsen
     marked-->>dokufix: HTML
-    dokufix->>mermaid: Diagramme rendern
+    dokufix->>mermaid: Mermaid-Diagramme zeichnen
     mermaid-->>dokufix: SVG
+    Note over dokufix,bpmn: BPMN ohne Koordinaten
+    dokufix->>mermaid: Prozess als Swimlane-Text anordnen
+    mermaid-->>dokufix: Lage von Knoten, Bahnen und Flüssen
+    dokufix->>bpmn: Beschriftungen messen
+    bpmn-->>dokufix: Maße
+    dokufix->>dokufix: auf BPMN-Symbole skalieren, Koordinaten einfügen
+    dokufix->>bpmn: BPMN-Diagramme zeichnen
+    bpmn-->>dokufix: SVG
     dokufix-->>-Nutzerin: Fertige Vorschau
 ```
 
