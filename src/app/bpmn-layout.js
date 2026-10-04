@@ -637,8 +637,9 @@ export function dockApart(routes, box, gateways){
     return i !== skip && near(u, v, o.pts[i], w) && Math.abs(u[k] - o.pts[i][k]) >= 1;
   }));
   const piecesOf = pts => pts.slice(1).map((q, i) => [pts[i], q]);
-  // A new pair is refused; a pair the flow had before may grow longer.
-  const newPair = (pieces, e, skipOf = () => -1) => forward.some(o => o !== e.r && !beside(piecesOf(e.r.pts), o) && beside(pieces, o, skipOf(o)));
+  // A new pair is refused; a pair the pieces replaced or extended had (old,
+  // the flow's points from the first of them on) may grow longer.
+  const newPair = (pieces, old, e, skipOf = () => -1) => forward.some(o => o !== e.r && !beside(piecesOf(old), o) && beside(pieces, o, skipOf(o)));
   for (const id of gateways){
     const c = box[id];
     const ends = portEnds(forward, id);
@@ -664,7 +665,7 @@ export function dockApart(routes, box, gateways){
           const pieces = next.slice(i + 1).map((pt, k) => [next[i + k], pt]);
           if (pieces.some(([p, q]) => blocked(p, q, e.r.obstacles))) continue;
           if (forward.some(r => r !== e.r && crosses(pieces, r, r === o.r ? r.pts.length - 2 : -1))) continue;
-          if (newPair(pieces, e, r => r === o.r ? r.pts.length - 2 : -1)) continue;
+          if (newPair(pieces, pts.slice(i), e, r => r === o.r ? r.pts.length - 2 : -1)) continue;
           // Nor across its own pieces kept, but the one it goes on from.
           if (crosses(pieces, { pts: next.slice(0, i) })) continue;
           pts.splice(0, pts.length, ...next);
@@ -711,7 +712,7 @@ export function dockApart(routes, box, gateways){
       const pieces = next.slice(from + 1).map((pt, i) => [next[from + i], pt]);
       if (pieces.some(([u, v]) => blocked(u, v, e.r.obstacles))) continue;
       if (forward.some(o => o !== e.r && crosses(pieces, o))) continue;
-      if (newPair(pieces, e)) continue;
+      if (newPair(pieces, pts.slice(tail.length === 2 ? n - 4 : n - 3), e)) continue;
       pts.splice(0, n, ...next);
       e.p = pts[pts.length - 1];
       e.q = pts[pts.length - 2];
@@ -826,13 +827,21 @@ export function loopBack(routes, box, lanes = []){
     // that stays there. At the source not by a flow out that fanOut() moves
     // to a free corner once the ring leaves by its vertex too, on a way that
     // crosses and lies on no other flow; from that vertex the ring keeps off
-    // the flow's new way. At a gateway the ring flows back to, its vertex on
-    // that side by flows out only, since arriving ones merge with the ring
-    // there; and a vertex that faces the target of a flow leaving that
-    // gateway is not taken.
+    // the flow's new way; at most one such flow a corner. At a gateway the
+    // ring flows back to, its vertex on the ring's side is used by flows out
+    // only, since arriving ones merge with the ring there; its side corners
+    // stay used by arriving flows as well. A vertex of that gateway that
+    // faces the target of a flow leaving it is not taken, except where no
+    // other port of the target is free: then the ring takes it after all
+    // (the side chosen above, with its port).
     const sides = new Set(endsS.map(e => exitSide([e.p, e.q])));
     const clear = (way, own) => !others.some(o => o !== own && o.pts.slice(1).some((q, i) => way.slice(1).some((w, k) => meets(way[k], w, o.pts[i], q))));
-    const leaving = s.gateway ? endsS.filter(e => e.out).map(e => ({ e, way: fanWay(e.r, s, box, sides) })).filter(m => m.way && clear(m.way.next, m.e.r)) : [];
+    // At most one flow to a corner, as in fanOut().
+    const leaving = [];
+    if (s.gateway) for (const e of endsS.filter(e => e.out)){
+      const way = fanWay(e.r, s, box, sides);
+      if (way && clear(way.next, e.r)){ leaving.push({ e, way }); sides.add(way.corner); }
+    }
     const movedBy = a => leaving.filter(m => at(m.e.p, a));
     const othersFrom = a => movedBy(a).length ? others.map(o => { const m = movedBy(a).find(x => x.e.r === o); return m ? { ...o, pts: m.way.next } : o; }) : others;
     const vertexT = { x: t.cx, y: t.cy + best.dir * t.h / 2 };

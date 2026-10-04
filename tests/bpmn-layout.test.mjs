@@ -582,6 +582,10 @@ test('correction 8: a free vertex is refused where its new pieces would run besi
   const newPair = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
   dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[200, 57], [320, 57]]), obstacles: [] }, newPair], box, ['G']);
   assert.deepEqual(newPair.pts, ptsOf(way), 'it stays');
+  // The same foreign flow running also 6 px beside a piece the flow keeps: that pair says nothing about the new run, refused.
+  const kept = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
+  dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[450, -282], [450, -36], [200, -36], [200, 57], [320, 57]]), obstacles: [] }, kept], box, ['G']);
+  assert.deepEqual(kept.pts, ptsOf(way), 'it stays');
   // A foreign flow 6 px beside the run it had: the pair grows, the way is taken.
   const grows = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
   dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[343, -20], [343, 50]]), obstacles: [] }, grows], box, ['G']);
@@ -616,6 +620,21 @@ test('correction 7: a flow back leaves the vertex a flow forward uses that fanOu
   loopBack(routes, box);
   assert.deepEqual(routes[3].pts, ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]), 'out of the bottom vertex, 20 px under A');
   assert.deepEqual(routes[2].pts, ptsOf([[325, 100], [480, 100], [480, 192]]), 'the flow to Y from the right corner, as fanOut() moves it');
+});
+
+test('correction 7: of two flows out of the vertex that turn the same way, only one could take the free corner: the vertex stays used, neither moves, the two do not end on one line', () => {
+  const box = { A: node(100, 100, 120, 80, true), G: gateway(300, 100), Y1: node(480, 180, 36, 36), Y2: node(600, 250, 36, 36) };
+  const routes = [
+    { f: { from: 'A', to: 'G' }, pts: ptsOf([[160, 100], [275, 100]]), obstacles: [] },
+    { f: { from: 'G', to: 'Y1' }, pts: ptsOf([[300, 125], [300, 180], [462, 180]]), obstacles: [] },
+    { f: { from: 'G', to: 'Y2' }, pts: ptsOf([[300, 125], [300, 250], [582, 250]]), obstacles: [] },
+    { f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 150], [100, 150], [100, 140]]), obstacles: [{ x1: 180, y1: -300, x2: 260, y2: 50 }], loopSide: 1 },
+  ];
+  loopBack(routes, box);
+  fanOut(routes, box, ['G']);
+  assert.deepEqual(routes[1].pts, ptsOf([[300, 125], [300, 180], [462, 180]]));
+  assert.deepEqual(routes[2].pts, ptsOf([[300, 125], [300, 250], [582, 250]]));
+  assert.deepEqual(routes[3].pts, ptsOf([[325, 100], [337, 100], [337, 160], [100, 160], [100, 140]]), 'the ring from the right corner');
 });
 
 test('correction 7: at a gateway it flows back to, a vertex arriving flows use is no conflict: the ring merges there (u13); one that faces the target of a flow leaving is not taken', () => {
