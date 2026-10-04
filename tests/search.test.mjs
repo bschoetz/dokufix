@@ -22,15 +22,11 @@
 // source, no range of its hits; of story 8, the metadata panel and every code
 // block as one place each, the panel's keys and values apart and without its
 // summary, a diagram's source, a warning's detail and the footer of an export
-// no code. That "/" opens the panel, the
-// summary, the marks and the switches in a browser, the group headings that
-// stay at the top while the list scrolls, a click that scrolls, the
-// highlight drawn in the document, a row's result with "Tabelle: ", a hidden
-// row, a diagram's result with its prefix and the click to its start, the
-// click that opens the metadata panel and centres a hit, and a saved file
-// without the panel are for
-// the browser runs (tests/vergleich.mjs,
-// tests/speichern.mjs).
+// no code. What the panel does with them, src/app/search.js, is for
+// tests/search-panel.test.mjs; where it stands, the group headings that stay
+// at the top while the list scrolls, the highlight drawn, the order of Escape
+// and a saved file without the panel are for the browser runs
+// (tests/vergleich.mjs, tests/speichern.mjs).
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -722,9 +718,7 @@ test('nodeRanges: a hit in a diagram is no range of the document, so nothing in 
   assert.deepEqual(groups.map(g => [g.label, g.hits, g.places]), [['Fernleihe', 3, 2]]);
 });
 
-test('a diagram\'s result scrolls the start of its figure into view; the panel goes by the figure\'s class, and diagrams.js knows nothing of the search', () => {
-  const js = read('app/search.js');
-  assert.match(js, /if \(hasClass\(place\.el, DIAGRAM_CLASS\)\)\{ place\.el\.scrollIntoView\(\{ block: 'start' \}\); return; \}/);
+test('diagrams.js knows nothing of the search', () => {
   assert.doesNotMatch(read('app/diagrams.js'), /search(-places)?\.js|collectPlaces/);
 });
 
@@ -833,13 +827,7 @@ test('collectPlaces: a diagram\'s fenced source, a warning\'s detail and the foo
   for (const word of ['Stempeln', 'isExecutable', 'Exportiert', 'Parse']) assert.deepEqual(collectPlaces(root).filter(p => findHits(word, p.text).length), [], word);
 });
 
-test('a click on the result of the metadata panel or of a code block opens a closed <details> and centres the first hit; frontmatter.js knows nothing of the search', () => {
-  const js = read('app/search.js');
-  assert.match(js, /if \(place\.kind === KIND_META \|\| place\.kind === KIND_CODE\)\{ centreHit\(place, at\[0\]\); return; \}/);
-  assert.match(js, /if \(el\.tagName\.toUpperCase\(\) === 'DETAILS' && !el\.open\) el\.open = true;/);
-  assert.match(js, /window\.scrollBy\(0, at\.top \+ at\.height \/ 2 - window\.innerHeight \/ 2\);/);
-  // A hit without a box, in an author's closed <details>, scrolls to its place instead.
-  assert.match(js, /if \(!box\.width && !box\.height\)\{ el\.scrollIntoView\(\{ block: 'center' \}\); return; \}/);
+test('frontmatter.js knows nothing of the search, and search-places.js imports neither it nor DIAGRAM_KINDS', () => {
   assert.doesNotMatch(read('app/frontmatter.js'), /search(-places)?\.js|collectPlaces/);
   // search-places.js names the panel's classes and the diagrams' languages: importing frontmatter.js or DIAGRAM_KINDS would bring them into the reader bundle.
   assert.doesNotMatch(read('app/search-places.js'), /from '\.\/frontmatter\.js'|import \{[^}]*\bDIAGRAM_KINDS\b/);
@@ -961,39 +949,9 @@ test('the match and the places are pure: neither imports the page\'s elements', 
   }
 });
 
-test('the panel is transient, and the script calls registerSearch() after registerLicences(); render.js knows nothing of the search', () => {
-  assert.match(read('app/search.js'), /panel\.setAttribute\(TRANSIENT_ATTR, ''\)/);
-  const app = read('app.js');
-  assert.ok(app.indexOf('registerSearch({ root: previewEl, inReadMode });') > app.indexOf('registerLicences();') && app.indexOf('registerLicences();') > 0);
-  // The page closes the panel on leaving read mode; the reader bundle of the exports has none to leave.
-  assert.match(app, /new MutationObserver\(\(\) => \{ if \(!inReadMode\(\)\) closeSearch\(\); \}\)/);
+test('the reader bundle registers the search over its content container, always in read mode; render.js and filter.js know nothing of the search', () => {
   assert.match(read('reader.js'), /registerSearch\(\{ root, inReadMode: \(\) => true \}\)/);
   assert.doesNotMatch(read('app/render.js'), /search(-match|-places)?\.js|collectPlaces|findHits|Search/);
-});
-
-test('the hits are highlighted through the CSS Custom Highlight API, where the browser has it, in the colour of the marks and not in print', () => {
-  const js = read('app/search.js'), css = read('search.css');
-  assert.match(js, /export const HIGHLIGHT = 'search-hit';/);
-  assert.match(js, /typeof CSS !== 'undefined' && !!CSS\.highlights && typeof Highlight === 'function' && typeof StaticRange === 'function'/);
-  assert.match(js, /new StaticRange\(/);
-  // Nothing of the document is touched: no element made or changed for a hit.
-  assert.doesNotMatch(js, /surroundContents|splitText|normalize\(/);
-  const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
-  assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
-  assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
-  // On screen the text of a hit is dark, readable on the dark background of a code block (story 8); in print nothing is set.
-  assert.match(css, /^@media screen\{::highlight\(search-hit\)\{color:#1c1c1e\}\}$/m);
-});
-
-test('a row\'s result says its kind before its text, and a hidden row says so after it, both no text of the place; a filter changed while the panel is open searches again', () => {
-  const js = read('app/search.js'), css = read('search.css');
-  assert.match(js, /kind\.className = 'search-kind';\s*kind\.textContent = place\.kind \+ ': ';/);
-  assert.match(js, /const HIDDEN_NOTE = ' \(ausgeblendet\)';/);
-  // Hidden is what a filter hides: the free-text filter's class, or no box in a facet table; a row without a box elsewhere is not.
-  assert.match(js, /row\.classList\.contains\(FILTER_OUT_CLASS\) \|\|\s*\(!!row\.closest\('\.' \+ FACETS_CLASS\) && !row\.getClientRects\(\)\.length\)/);
-  assert.match(js, /document\.addEventListener\('input', onFilter\);\s*document\.addEventListener\('change', onFilter\);/);
-  assert.match(css, /^\.search-kind\{color:#6e6e73\}$/m);
-  assert.match(css, /^\.search-hidden\{color:#a40e26;font-style:italic\}$/m);
-  // filter.js is not changed for it: the search reads the filter's classes, the filter knows nothing of the search.
+  // The search reads the filter's classes, the filter knows nothing of the search.
   assert.doesNotMatch(read('app/filter.js'), /search(-places)?\.js|collectPlaces|registerSearch/);
 });
