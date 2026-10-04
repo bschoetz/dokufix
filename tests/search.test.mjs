@@ -1001,3 +1001,31 @@ test('findHits: what lowering a whole text would change is lowered one character
   assert.deepEqual(findHits('Tabelle', 'tabelle Tabelle', { caseSensitive: true }), [{ start: 8, end: 15 }]);
   assert.deepEqual(findHits('statuschip', 'ein Status-Chip.', { fuzzy: true }), [{ start: 4, end: 15 }]);
 });
+
+// ---------- raw HTML (story 5.16, N1) ----------
+test('collectPlaces: text directly in a block that is no place, a div, a dt and a dd, a summary, a figcaption, a bare blockquote, makes it a place of its own, read as a paragraph; an image\'s alt is no text', () => {
+  const html = '<div>Zitronenfalter im <em>div</em></div>\n<dl>\n<dt>Zitronenfalter</dt>\n<dd>Ein Falter, gelb</dd>\n</dl>\n' +
+    '<details><summary>Mehr zum Zitronenfalter</summary>\n<p>Ein Absatz im details.</p>\n</details>\n<blockquote>Zitronenfalter, zitiert</blockquote>\n' +
+    '<figure><img src="x.png" alt="Zitronenfalter im Bild"><figcaption>Ein Zitronenfalter</figcaption></figure>\n<p>Ein Absatz.</p>\n';
+  assert.deepEqual(places(html), [['div', 'Zitronenfalter im div'], ['dt', 'Zitronenfalter'], ['dd', 'Ein Falter, gelb'], ['summary', 'Mehr zum Zitronenfalter'],
+    ['p', 'Ein Absatz im details.'], ['blockquote', 'Zitronenfalter, zitiert'], ['figcaption', 'Ein Zitronenfalter'], ['p', 'Ein Absatz.']]);
+  // Its hits are ranges of the document like any other.
+  assert.deepEqual(hitTexts(rootWith(html), 'Zitronenfalter im div'), [['Zitronenfalter im div']]);
+});
+
+test('collectPlaces: such a block is read without the places, lists and tables in it, which are places of their own; a block in it is text of it; one in a place is text of the place', () => {
+  const html = '<div>Davor\n<p>Ein Absatz</p>\ndanach <span>und</span>\n<div>innen</div>\n<ul><li>Punkt</li></ul>\n</div>\n' +
+    '<ul><li>Ein Punkt mit <div>Block</div></li></ul>\n<blockquote>\n<p>Ein Zitat</p>\n</blockquote>\n<div><strong>Nur fett</strong></div>\n';
+  assert.deepEqual(places(html), [['div', 'Davor danach und innen'], ['p', 'Ein Absatz'], ['li', 'Punkt'], ['li', 'Ein Punkt mit Block'], ['p', 'Ein Zitat'], ['strong', 'Nur fett']]);
+});
+
+test('collectPlaces: no block of the page\'s own is a place for its text: the field of a table filter with its counter, a warning, the inline table of contents, a callout, a facet group, a table\'s wrapper, a transient element', () => {
+  const html = '<div class="dokufix-filter" ' + TRANSIENT_ATTR + '><input type="search" class="dokufix-filter-input"><span class="dokufix-filter-count" role="status">2 Zeilen</span></div>\n' +
+    '<div class="dokufix-table"><table><tbody><tr><td>Zeile</td></tr></tbody></table></div>\n' +
+    '<div class="dokufix-warning" role="note">Warnung direkt<p>Text</p></div>\n' +
+    '<nav class="dokufix-toc">Inhalt<ol><li><a href="#a">A</a></li></ol></nav>\n' +
+    '<div class="dokufix-callout dokufix-callout-note" role="note"><p class="dokufix-callout-label">Hinweis</p>\n<p>Im Hinweis.</p>\n</div>\n' +
+    '<div class="dokufix-facets"><fieldset class="dokufix-facet-bar"><legend>Art</legend>Alle</fieldset><div class="dokufix-table"><table><tbody><tr><td>Wert</td></tr></tbody></table></div></div>\n' +
+    '<div ' + TRANSIENT_ATTR + '>Flüchtig</div>\n<section class="footnotes"><h2>Fußnoten</h2>\n<ol><li id="fn-1">Fußnote <a href="#r" data-footnote-backref="">↩</a></li></ol></section>\n';
+  assert.deepEqual(places(html), [['tr', 'Zeile'], ['p', 'Hinweis'], ['p', 'Im Hinweis.'], ['tr', 'Wert'], ['li', 'Fußnote']]);
+});

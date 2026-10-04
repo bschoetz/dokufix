@@ -2322,6 +2322,24 @@ async function assertSearch(page, check, key){
     scrolledDown > 0 && entered.scrolled < scrolledDown && entered.top >= 0 && entered.bottom <= entered.height && enterFocus === 'field' && sameList(walk.map(String), ['0', '1', '0', 'field']),
     json({ scrolledDown, entered, enterFocus, walk }));
 
+  // --- story 5.16, N1: raw HTML put into the document for the moment, text
+  // directly in a div, a dt and a dd, the summary of a details, a bare
+  // blockquote and a figcaption: each a place of its own, found; an image's
+  // alt is not
+  const N1_TERM = 'Schwalbenschwanz';
+  await page.evaluate(([rootSel, t]) => {
+    const box = document.createElement('div');
+    box.id = 'vergleich-n1';
+    box.innerHTML = '<div>' + t + ' im div</div><dl><dt>' + t + ' im dt</dt><dd>' + t + ' im dd</dd></dl><details><summary>' + t + ' im summary</summary><p>' + t + ' im Absatz</p></details>' +
+      '<blockquote>' + t + ' im blockquote</blockquote><figure><img alt="' + t + ' im alt"><figcaption>' + t + ' in figcaption</figcaption></figure>';
+    document.querySelector(rootSel).append(box);
+  }, [ROOT_SEL, N1_TERM]);
+  const raw = await search(N1_TERM);
+  await page.evaluate(() => document.getElementById('vergleich-n1').remove());
+  const wantRaw = ['im div', 'im dt', 'im dd', 'im summary', 'im Absatz', 'im blockquote', 'in figcaption'].map(w => N1_TERM + ' ' + w);
+  check('search: raw HTML with "' + N1_TERM + '" directly in a div, a dt, a dd, a summary, a bare blockquote and a figcaption lists each as a result of its own, and the paragraph in the details; an image\'s alt is no result',
+    sameList(raw.results.map(r => r.text), wantRaw) && raw.summary === '7 Treffer an 7 Stellen in 1 Abschnitt', json({ summary: raw.summary, results: raw.results.map(r => r.text) }));
+
   // --- story 6: hits in tables. A term from a table row: its result reads
   // "Tabelle: " before the row's text, a click centres the row, and the
   // highlight lies in the row's cells, one range per cell a hit touches.

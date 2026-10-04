@@ -92,6 +92,19 @@ import { TRANSIENT_ATTR } from './transient.js';
 // row nothing is a place of its own: a paragraph or list in a cell is text of
 // the row. A place without text is none.
 //
+// Raw HTML can put text where Markdown never does: directly in a `div`, a
+// `dt` or `dd`, the `summary` of an author's `details`, a `figcaption`, a
+// bare `blockquote`. Any element outside a place that holds a text node of
+// its own, not only white space, is a place of its own, read as a paragraph
+// is: without the places, lists, tables and code blocks in it, which are
+// places of their own, and with every other element in it, a `div` included,
+// as its text. Nothing inside it or inside any other place is such a place.
+// So a `dl` is no place, each of its `dt` and `dd` is one; a `details` with a
+// Markdown paragraph is none, its `summary` and the paragraph are. What is
+// left out above stays out, a warning, the inline table of contents, the
+// field of a table filter with its counter, whatever is transient. An image's
+// `alt` is no text.
+//
 // Pure logic: works on the root it is handed and changes nothing in it.
 
 const PLACE_TAGS = new Set(['P', 'LI', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
@@ -177,7 +190,8 @@ function finish(r){
   return { text, map: { nodes, offsets, parts } };
 }
 
-// The text of a paragraph or list item, without the places and lists inside it.
+// The text of a paragraph, a list item or a block with text of its own,
+// without the places and lists inside it.
 function blockText(block){
   const r = reading();
   const read = node => {
@@ -331,6 +345,12 @@ function ownReading(el, meta){
   return finish(r);
 }
 
+// Whether an element holds a text node of its own that is not white space.
+function ownText(el){
+  for (let n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === TEXT && /\S/.test(n.data)) return true;
+  return false;
+}
+
 // The places under root, in the order of the document. Beside its text each
 // carries its map: for every unit of the text the node and offset it came
 // from, and its part (see reading() above); nodeRanges() makes node ranges
@@ -338,7 +358,9 @@ function ownReading(el, meta){
 // kind as well.
 export function collectPlaces(root){
   const places = [];
-  const visit = node => {
+  // inPlace: whether node lies in a place, so that nothing in it is a place by
+  // its own text.
+  const visit = (node, inPlace) => {
     for (let child = node.firstElementChild; child; child = child.nextElementSibling){
       const tag = tagOf(child);
       if (!child.hasAttribute(TRANSIENT_ATTR)){
@@ -366,14 +388,15 @@ export function collectPlaces(root){
         if (text) places.push({ el: child, text, map, kind: KIND_ROW });
         continue;
       }
-      if (PLACE_TAGS.has(tag)){
+      const place = PLACE_TAGS.has(tag) || (!inPlace && ownText(child));
+      if (place){
         const { text, map } = HEADING_TAGS.has(tag) ? headingReading(child) : blockText(child);
         if (text) places.push({ el: child, text, map });
       }
-      visit(child);
+      visit(child, inPlace || place);
     }
   };
-  visit(root);
+  visit(root, false);
   return places;
 }
 
