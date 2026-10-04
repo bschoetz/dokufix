@@ -28,7 +28,9 @@ import { DOMParser } from 'linkedom';
 import { readProcess, layoutGeometry, appendDiagram, labelSize } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-export const FIXTURE_DIR = path.join(here, 'fixtures/bpmn-layout');
+// DOKUFIX_FIXTURE_DIR points the command at a copy (tests/bpmn-fixtures.test.mjs
+// checks --write on one).
+export const FIXTURE_DIR = process.env.DOKUFIX_FIXTURE_DIR || path.join(here, 'fixtures/bpmn-layout');
 export const MODES = ['measured', 'estimated'];
 // The files each input has, by their ending.
 export const FIXTURE_FILES = ['.bpmn', '.raw.json', '.sizes.json', '.measured.bpmn', '.estimated.bpmn'];
