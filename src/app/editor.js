@@ -82,14 +82,17 @@ export function registerViewToggle(){
     document.body.classList.remove('mode-view');
     sourceEl.focus();
   });
-  // ESC leaves view mode
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && document.body.classList.contains('mode-view')) {
-      document.body.classList.remove('mode-view');
-      sourceEl.focus();
-    }
-  });
 }
+
+// The step of Escape (src/app/escape.js), the last of the list: read mode is
+// left, as by "Editor ↩", and the focus goes to the source.
+export const readModeStep = {
+  applies: () => document.body.classList.contains('mode-view'),
+  close: () => {
+    document.body.classList.remove('mode-view');
+    sourceEl.focus();
+  },
+};
 
 // "license information": the link and its view (licences.js). It is frame, not
 // document, so it stands twice: in the toolbar, as the first of the actions,

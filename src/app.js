@@ -14,10 +14,12 @@ import { state } from './app/state.js';
 import { loadDocState, sanitizeVersion, isValidEntry, setPersistFailed, updateVersionBadge, registerVersionDialog, updateDirtyState } from './app/persistence.js';
 import { render } from './app/render.js';
 import { registerRailClicks } from './app/rail.js';
-import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle, registerLicences } from './app/editor.js';
-import { registerDownloadMenu } from './app/downloads/menu.js';
-import { registerSearch, closeSearch } from './app/search.js';
-import { registerLargeViewKeys } from './app/large-view.js';
+import { registerEditorInput, registerReset, registerNumbering, registerHamburger, registerViewToggle, registerLicences, readModeStep } from './app/editor.js';
+import { registerDownloadMenu, menuStep } from './app/downloads/menu.js';
+import { registerSearch, closeSearch, searchStep } from './app/search.js';
+import { registerLargeViewKeys, largeViewStep } from './app/large-view.js';
+import { filterFieldStep } from './app/filter.js';
+import { registerEscape } from './app/escape.js';
 
 // A page whose script tag of Mermaid failed has no mermaid; the script runs
 // on, and every diagram that needs it becomes a warning (app/diagrams.js,
@@ -56,8 +58,13 @@ registerHamburger();
 registerViewToggle();
 registerStorageBanner();
 registerLicences();
-// Escape, "+" and "-" of the large view of a diagram, before every other key
-// listener (window, capture): an open view is the first thing Escape closes.
+// The order of Escape, one listener on window in the capture phase: one Escape
+// closes the first of these that is open, and nothing else. The large view of
+// a diagram, which lies over everything; the search panel; a table filter's
+// field that holds text, with the focus in it; the download menu (edit mode);
+// read mode itself.
+registerEscape(document, [largeViewStep, searchStep, filterFieldStep, menuStep, readModeStep]);
+// "+" and "-" of the large view of a diagram (window, capture).
 registerLargeViewKeys(document);
 // The search reads the preview and opens in read mode; leaving read mode, in
 // whatever way, closes it.

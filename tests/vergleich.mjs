@@ -4094,6 +4094,13 @@ async function assertLargeView(page, check, exp, key){
       json({ open: editSlash.open, search: editSlash.search, prevented: editSlash.prevented }));
     const editEsc = await press('Escape');
     check('large view in edit mode: Escape closes it, and edit mode stays', !editEsc.open && !editEsc.read && editEsc.preview.overflow === 'auto', json({ open: editEsc.open, read: editEsc.read, preview: editEsc.preview }));
+    // The download menu, open in edit mode: Escape closes it, and edit mode stays (story 5.9).
+    await page.click('#download-btn');
+    const menu = () => page.evaluate(() => ({ open: document.getElementById('download-wrap').classList.contains('open'), read: document.body.classList.contains('mode-view') }));
+    const menuOpen = await menu();
+    await page.keyboard.press('Escape');
+    const menuEsc = await menu();
+    check('download menu in edit mode: Escape closes it, and edit mode stays', menuOpen.open && !menuEsc.open && !menuEsc.read, json({ menuOpen, menuEsc }));
     // The click itself scrolls nothing in the pane either.
     const paneLow = await lowClick(true);
     check('large view in edit mode: a click low on a diagram whose top lies above the pane opens it, and a second click closes it, and the pane stays where it was',

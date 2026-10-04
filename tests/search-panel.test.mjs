@@ -11,8 +11,12 @@
 // (document.activeElement, focus(), blur()); a box (getClientRects()), which
 // an element has unless it stands in a closed <details> or the case says it
 // has none; scrollIntoView(), window.scrollBy() and a Range, which record
-// where they were asked to scroll. linkedom has no capture phase, so the
-// order of the Escape listeners is the browser runs' (tests/vergleich.mjs).
+// where they were asked to scroll. Escape goes through the one Escape
+// listener (src/app/escape.js) with the panel's step and a table filter's
+// field's after it, as src/app.js lists them; linkedom calls a
+// listener on window last, after those on the document, so the order of
+// Escape among the listeners of a page is the browser runs'
+// (tests/vergleich.mjs).
 //
 // The cases are what the panel does with the places and hits that
 // tests/search.test.mjs pins: the pause before a search, the summary, the
@@ -24,10 +28,11 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { TRANSIENT_ATTR } from '../src/app/transient.js';
-import { FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_OUT_CLASS } from '../src/app/filter.js';
+import { FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_OUT_CLASS, filterFieldStep } from '../src/app/filter.js';
 import { FACETS_CLASS, FACET_BAR_CLASS } from '../src/app/facets.js';
 import { TABLE_CLASS } from '../src/app/tables.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from '../src/app/diagrams.js';
+import { registerEscape } from '../src/app/escape.js';
 
 // Longer than the pause of the search, 150 ms.
 const AFTER = 220;
@@ -73,6 +78,7 @@ async function open(content, { noBox = () => false, highlights = true, rangeBox 
   });
   const search = await import('../src/app/search.js?load=' + (++loads));
   search.registerSearch({ root, inReadMode: () => true });
+  registerEscape(document, [search.searchStep, filterFieldStep]);
   const panel = document.querySelector('body > .search-panel');
   const input = panel.querySelector('.search-input');
   const magnifier = document.querySelector('body > .search-magnifier');
@@ -191,6 +197,19 @@ test('a row says its kind before its text, no text of the place; a row a filter 
   // Whether a row is hidden is read again on the click.
   hiddenByFacet.clear();
   same(at(3).el, p.root.querySelectorAll('.' + FACETS_CLASS + ' tr')[1]);
+});
+
+test('Escape with the panel open and the focus in a table filter\'s field that holds text closes the panel, and the field keeps its text; the next Escape empties it', async () => {
+  const p = await open(filterField + table([{ text: 'Zitronenfalter Nord' }, { text: 'Zitronenfalter Süd' }]));
+  p.search.openSearch();
+  const field = p.root.querySelector('.' + FILTER_INPUT_CLASS);
+  field.value = 'Nord';
+  field.focus();
+  const first = p.key('Escape', field);
+  assert.ok(first.defaultPrevented && p.panel.hidden && !p.search.isSearchOpen());
+  assert.equal(field.value, 'Nord');
+  p.key('Escape', field);
+  assert.equal(field.value, '');
 });
 
 test('a change of a table filter in the root searches again after the pause while the panel is open and holds a term', async () => {

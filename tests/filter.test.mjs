@@ -27,12 +27,13 @@ import { parseHTML } from 'linkedom';
 import { MARKERS, readMarker, judgeMarker, applyMarkers } from '../src/app/markers.js';
 import {
   FILTER, FILTER_ATTR, FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_COUNT_CLASS, FILTER_OUT_CLASS, FILTER_PLACEHOLDER, FILTER_LABEL,
-  markFilter, filterRowText, filterMatches, filterCountText, applyFilter, attachTableFilters, showFilteredRows, removeFilterMarks,
+  markFilter, filterRowText, filterMatches, filterCountText, applyFilter, attachTableFilters, showFilteredRows, removeFilterMarks, filterFieldStep,
 } from '../src/app/filter.js';
 import { FACETS_CLASS } from '../src/app/facets.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildTables, TABLE_CLASS } from '../src/app/tables.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
+import { registerEscape } from '../src/app/escape.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -346,10 +347,12 @@ function escape(target){
   target.dispatchEvent(ev);
   return ev;
 }
+// The field's step in the one Escape listener (src/app/escape.js), with a
+// step after it that stands for leaving read mode, as src/app.js lists them.
 test('Escape in a field with text empties it and goes no further; in an empty field it reaches the page, which leaves read mode there', () => {
   const root = rendered(marker('filter') + FIELDS_TABLE);
   let reached = 0;
-  root.ownerDocument.addEventListener('keydown', () => reached++);
+  registerEscape(root.ownerDocument, [filterFieldStep, { applies: () => true, close: () => reached++ }]);
   type(root, 'tour');
   const input = root.querySelector('.' + FILTER_INPUT_CLASS);
   const ev = escape(input);

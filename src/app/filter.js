@@ -188,8 +188,7 @@ function buildField(table){
 // Run-time pass "Tabellenfilter": every table marked by the component gets its
 // field, once, directly above its wrapper. Typing filters; choosing a value of
 // a facet filter on the same table updates the counter. Escape in a field
-// that holds text empties it and goes no further, so it does not leave read
-// mode; in an empty field it does what it does everywhere.
+// that holds text empties it (filterFieldStep, below).
 export function attachTableFilters(root){
   for (const table of Array.from(root.querySelectorAll('table[' + FILTER_ATTR + ']'))){
     const anchor = anchorOf(table);
@@ -200,18 +199,32 @@ export function attachTableFilters(root){
     anchor.parentNode.insertBefore(field, anchor);
     const update = () => applyFilter(table, input.value, count);
     input.addEventListener('input', update);
-    input.addEventListener('keydown', e => {
-      if (e.key !== 'Escape' || !input.value) return;
-      e.preventDefault();
-      e.stopPropagation();
-      input.value = '';
-      update();
-    });
     const group = facetGroupOf(table);
     if (group) group.addEventListener('change', update);
     update();
   }
 }
+
+// The field of the pass that holds the focus of e and some text, or null.
+function filledField(e){
+  const input = e.target;
+  if (!isElement(input, FILTER_INPUT_CLASS) || !input.value) return null;
+  const field = input.parentNode;
+  return isElement(field, FILTER_CLASS) && field.hasAttribute(TRANSIENT_ATTR) ? input : null;
+}
+
+// The step of Escape (src/app/escape.js): a field that holds text, with the
+// focus in it, is emptied, and Escape goes no further, so it does not leave
+// read mode; in an empty field it does what it does everywhere. Emptied, the
+// field fires `input`, as typing does, and its table is filtered anew.
+export const filterFieldStep = {
+  applies: e => !!filledField(e),
+  close: e => {
+    const input = filledField(e);
+    input.value = '';
+    input.dispatchEvent(new input.ownerDocument.defaultView.Event('input', { bubbles: true }));
+  },
+};
 
 // Export step of all three read-only exports: no row is hidden in what leaves
 // the page. An export renders before it copies, so no row is hidden then, but

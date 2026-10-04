@@ -1,4 +1,5 @@
 import { DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_CLASS } from './diagrams.js';
+import { documentOf } from './escape.js';
 
 // --- The large view of a diagram: its keys -----------------------------------
 // The view itself is document content and works without a script
@@ -10,9 +11,10 @@ import { DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_CLASS } from './diagr
 //   Escape   closes the view, and does nothing else
 //   +  -     the next or the previous zoom step, held at the first and the last
 //
-// One listener on window, in the capture phase: it hears a key before every
-// listener on the document, the Escape of the search included, so an open
-// view is the first thing Escape closes (see the README, "Keys and events").
+// Escape is a step of the one Escape listener (largeViewStep, src/app/escape.js),
+// the first of its list, so an open view is the first thing Escape closes (see
+// the README, "Keys and events"). "+" and "-" have their own listener on
+// window, in the capture phase, before every listener on the document.
 // It sets the checked property of the controls, never their attribute: a file
 // written while a view is open opens closed, at "Einpassen". Each key then
 // dispatches a bubbling `change` on the control it set, as a click, Space or
@@ -21,7 +23,7 @@ import { DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_CLASS } from './diagr
 // no way of closing it or choosing a step.
 //
 // Pure logic apart from the listener: largeViewOpen() and the steps read the
-// document they are handed.
+// document they are handed, largeViewStep the document of its event.
 
 const OPEN_SEL = '.' + DIAGRAM_TOGGLE_CLASS;
 
@@ -67,21 +69,22 @@ export function stepLargeView(toggle, delta){
   changed(next);
 }
 
+// The step of Escape (src/app/escape.js): an open view, the last one, closes.
+export const largeViewStep = {
+  applies: e => largeViewOpen(documentOf(e)),
+  close: e => closeLargeView(openToggle(documentOf(e))),
+};
+
 const STEP_KEYS = { '+': 1, '-': -1 };
 
+// "+" and "-" while a view is open.
 export function registerLargeViewKeys(doc){
   const win = doc.defaultView;
   win.addEventListener('keydown', e => {
     if (e.isComposing || e.defaultPrevented) return;
+    if (!(e.key in STEP_KEYS) || e.ctrlKey || e.altKey || e.metaKey) return;
     const toggle = openToggle(doc);
     if (!toggle) return;
-    if (e.key === 'Escape'){
-      e.preventDefault();
-      e.stopPropagation();
-      closeLargeView(toggle);
-      return;
-    }
-    if (!(e.key in STEP_KEYS) || e.ctrlKey || e.altKey || e.metaKey) return;
     e.preventDefault();
     stepLargeView(toggle, STEP_KEYS[e.key]);
   }, true);

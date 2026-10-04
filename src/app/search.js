@@ -101,7 +101,7 @@ import { TABLE_CLASS } from './tables.js';
 // while the focus is in a field, where it is typed, nor while the large view
 // of a diagram is open (large-view.js), which lies over the panel. It puts
 // the focus into the panel's field. The close button closes it, and so does Escape, which then
-// does nothing else (registerSearch()); a focus in the panel goes back to
+// does nothing else (searchStep, a step of src/app/escape.js); a focus in the panel goes back to
 // what had it before, else to the magnifier (closeSearch()). A closed panel forgets its term;
 // opened again, it reads the root afresh. The search runs on typing, after a
 // short pause, outside the render, so a failure in it breaks no render.
@@ -573,6 +573,12 @@ export function closeSearch(){
   opener = null;
 }
 
+// The step of Escape (src/app/escape.js): an open panel closes, wherever the
+// focus is, and its term goes with it; the caller lists it after the large
+// view of a diagram, which lies over the panel, and before a table filter's
+// field, so a field that holds text keeps it.
+export const searchStep = { applies: () => isSearchOpen(), close: () => closeSearch() };
+
 // Where a "/" is text: a field, a list of choices, anything editable; not a
 // checkbox or a radio button, which take no text.
 const typesText = el => !!el && el.nodeType === 1 &&
@@ -614,16 +620,4 @@ export function registerSearch({ root, inReadMode: readMode }){
     e.preventDefault();
     openSearch();
   });
-  // Escape closes an open panel and nothing else. It listens in the capture
-  // phase of the document, before every other listener of Escape (a table
-  // filter's field, the download menu, leaving read mode in editor.js), and
-  // stops the event there: one Escape, one thing closed. Only the large view
-  // of a diagram comes before it, on window (large-view.js). See the README,
-  // "Keys and events".
-  document.addEventListener('keydown', e => {
-    if (e.key !== 'Escape' || e.isComposing || !isSearchOpen()) return;
-    e.preventDefault();
-    e.stopPropagation();
-    closeSearch();
-  }, true);
 }

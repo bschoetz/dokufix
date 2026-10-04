@@ -14,13 +14,15 @@ function toggleMenu(force){
   downloadWrap.classList.toggle('open', willOpen);
   downloadBtn.setAttribute('aria-expanded', String(willOpen));
 }
+// The step of Escape (src/app/escape.js): an open menu closes.
+export const menuStep = {
+  applies: () => downloadWrap.classList.contains('open'),
+  close: () => toggleMenu(false),
+};
 export function registerDownloadMenu(){
   downloadBtn.addEventListener('click', e => { e.stopPropagation(); toggleMenu(); });
   document.addEventListener('click', e => {
     if (!downloadWrap.contains(e.target)) toggleMenu(false);
-  });
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' && downloadWrap.classList.contains('open')) toggleMenu(false);
   });
 
   downloadWrap.querySelectorAll('button[data-download]').forEach(btn => {

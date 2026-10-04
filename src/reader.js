@@ -22,8 +22,11 @@
 //     container carries the decoder's mark; a search then waits for the
 //     decoder's event, which the search hears however late it comes.
 //   - the keys of the large view of a diagram (src/app/large-view.js):
-//     Escape closes it, "+" and "-" change its zoom step. The view itself
-//     works without them, as in `nur-lesen`.
+//     "+" and "-" change its zoom step; its Escape is the first step of the
+//     order below. The view itself works without them, as in `nur-lesen`.
+//   - the order of Escape (src/app/escape.js), the three steps of the page's
+//     that an export has: the large view, the search panel, a table filter's
+//     field that holds text. One Escape closes the first of them that is open.
 //   - the picture button below every drawn diagram (src/app/diagram-downloads.js),
 //     as the run-time pass "Diagramm-Bilder" does in the page: a click saves
 //     the SVG of the figure as a file. In `schlank` it reads the SVG at the
@@ -31,9 +34,10 @@
 //     beside it is document content and needs no script.
 //
 // It must not import src/app/dom.js, which looks up the editor's elements.
-import { attachTableFilters } from './app/filter.js';
-import { registerSearch } from './app/search.js';
-import { registerLargeViewKeys } from './app/large-view.js';
+import { attachTableFilters, filterFieldStep } from './app/filter.js';
+import { registerSearch, searchStep } from './app/search.js';
+import { registerLargeViewKeys, largeViewStep } from './app/large-view.js';
+import { registerEscape } from './app/escape.js';
 import { attachSvgDownloads } from './app/diagram-downloads.js';
 
 /* global SEARCH_CSS */
@@ -45,5 +49,6 @@ if (root){
   style.textContent = SEARCH_CSS;
   document.head.appendChild(style);
   registerSearch({ root, inReadMode: () => true });
+  registerEscape(document, [largeViewStep, searchStep, filterFieldStep]);
   registerLargeViewKeys(document);
 }
