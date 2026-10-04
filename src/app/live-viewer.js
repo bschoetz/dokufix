@@ -9,9 +9,10 @@ import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CL
 // and a drag move the diagram, Ctrl+arrow keys too, and the library shows its
 // logo, bottom right, as its licence asks. bpmn-js hears only the mouse: on a
 // touch screen one finger moves the diagram and two zoom it at their middle,
-// by listeners of this module on the container (attachTouch()). The zoom
-// steps of the view set its scale. The read-only exports never start it: the reader bundle does not
-// carry this module, and a Mermaid diagram keeps the static view everywhere.
+// by listeners of this module on the container (attachTouch(), story 2.23).
+// The zoom steps of the view set its scale. The read-only exports never start
+// it: the reader bundle does not carry this module, and a Mermaid diagram
+// keeps the static view everywhere.
 //
 //   <div class="dokufix-diagram-view">
 //     <div class="dokufix-diagram-bar">
@@ -44,9 +45,9 @@ import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CL
 // (no BpmnJS, an import that fails) leaves the static view of story 2.9, and
 // says so in one line on the console; the reader gets no warning.
 //
-// The pure part, sourceXml(), diagramToOpen(), stepViewbox() and touchStep(),
-// works on the strings and numbers it is handed (tests/live-viewer.test.mjs). The rest
-// needs a page and the library.
+// The pure part, sourceXml(), diagramToOpen(), stepViewbox(),
+// countedFingers() and touchStep(), works on the strings and numbers it is
+// handed (tests/live-viewer.test.mjs). The rest needs a page and the library.
 
 export const LIVE_CLASS = 'dokufix-diagram-live';
 export const HINT_CLASS = 'dokufix-diagram-hint';
@@ -107,20 +108,33 @@ export function stepViewbox(step, inner, outer){
   };
 }
 
-// One move of the fingers on the viewer: before and after, the points of the
-// fingers in the viewer, in pixels, in the same order. One finger moves the
+// The fingers on the viewer are { id, x, y }: the identifier of the touch and
+// its point in the viewer, in pixels. Of all fingers, at most two count: the
+// two (or the one) that counted before, while they all still touch and their
+// number is still the one that counts, whatever the order of the touches;
+// else the first two of now, afresh. So a third finger changes nothing, and a
+// finger more or less below two, or one of the two lifted, starts afresh.
+export function countedFingers(before, now){
+  const kept = before.slice(0, 2).map(f => now.find(t => t.id === f.id));
+  if (kept.length === Math.min(now.length, 2) && kept.every(Boolean)) return kept;
+  return now.slice(0, 2);
+}
+
+// One move of the fingers: before, the fingers that counted (countedFingers());
+// after, all fingers now, paired with those by id. One finger moves the
 // diagram with it; two move it with their middle and zoom it at that middle
 // by the change of their distance. { dx, dy, factor, center }, or null where
-// the number of fingers changed (a finger more or less starts afresh, so the
-// diagram does not jump) or none touches. A third finger and more are ignored.
+// the fingers that count changed (a finger more or less starts afresh, so
+// the diagram does not jump) or none touches. Two fingers on one point zoom
+// nothing.
 export function touchStep(before, after){
-  const n = Math.min(after.length, 2);
-  if (!n || Math.min(before.length, 2) !== n) return null;
-  if (n === 1) return { dx: after[0].x - before[0].x, dy: after[0].y - before[0].y, factor: 1, center: { x: after[0].x, y: after[0].y } };
+  const now = countedFingers(before, after);
+  if (!now.length || now.length !== before.length || now.some((f, k) => f.id !== before[k].id)) return null;
+  if (now.length === 1) return { dx: now[0].x - before[0].x, dy: now[0].y - before[0].y, factor: 1, center: { x: now[0].x, y: now[0].y } };
   const middle = ([a, b]) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
   const distance = ([a, b]) => Math.hypot(a.x - b.x, a.y - b.y);
-  const from = middle(before), to = middle(after);
-  const d0 = distance(before), d1 = distance(after);
+  const from = middle(before), to = middle(now);
+  const d0 = distance(before), d1 = distance(now);
   return { dx: to.x - from.x, dy: to.y - from.y, factor: d0 > 0 && d1 > 0 ? d1 / d0 : 1, center: to };
 }
 
@@ -210,30 +224,37 @@ async function startViewer(figure){
   }
 }
 
-// Touch on the viewer's container: each move of the fingers moves the canvas
-// and zooms it (touchStep()), between the scales of TOUCH_SCALE. The move is
+// Touch on the viewer's container (story 2.23): each move of the fingers
+// moves the canvas and zooms it (touchStep()), between the scales of
+// TOUCH_SCALE. The fingers are all touches that began in the container, read
+// from e.touches and paired by identifier, not by their place in the list:
+// e.targetTouches holds only those on the element the event's touch began
+// on, and two fingers on two shapes are two lists of one. The move is
 // prevented, so the browser neither scrolls nor zooms the page; the document
-// styles say the same by touch-action. A tap stays a tap: its logo opens.
-// The listeners go with the container.
+// styles say the same by touch-action. A tap stays a tap: touchstart is
+// passive, and the logo, a step and "Schließen" get their click. The scale
+// of a gesture is kept here, not read back from the canvas, which rounds it
+// to three places at every move. The listeners go with the container.
 function attachTouch(box, canvas){
-  let last = [];
-  const points = e => {
+  let last = [], scale = 1;
+  const fingers = e => {
     const rect = canvas.getContainer().getBoundingClientRect();
-    return Array.from(e.targetTouches, t => ({ x: t.clientX - rect.left, y: t.clientY - rect.top }));
+    return Array.from(e.touches).filter(t => box.contains(t.target))
+      .map(t => ({ id: t.identifier, x: t.clientX - rect.left, y: t.clientY - rect.top }));
   };
-  const restart = e => { last = points(e); };
+  const restart = e => { last = countedFingers(last, fingers(e)); scale = canvas.zoom(); };
   box.addEventListener('touchstart', restart, { passive: true });
   box.addEventListener('touchend', restart, { passive: true });
   box.addEventListener('touchcancel', restart, { passive: true });
   box.addEventListener('touchmove', e => {
     if (e.cancelable) e.preventDefault();
-    const now = points(e);
+    const now = fingers(e);
     const step = touchStep(last, now);
-    last = now;
+    last = countedFingers(last, now);
     if (!step) return;
     if (step.dx || step.dy) canvas.scroll({ dx: step.dx, dy: step.dy });
     if (step.factor !== 1){
-      const scale = Math.min(TOUCH_SCALE.max, Math.max(TOUCH_SCALE.min, canvas.zoom() * step.factor));
+      scale = Math.min(TOUCH_SCALE.max, Math.max(TOUCH_SCALE.min, scale * step.factor));
       canvas.zoom(scale, step.center);
     }
   }, { passive: false });

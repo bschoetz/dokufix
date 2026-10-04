@@ -22,8 +22,8 @@
 // title, BPMN diagrams with their elements, colours and credit, a BPMN diagram
 // laid out without coordinates with its counts and a clean drawing, the large
 // view of a diagram in every variant and with scripts off, the live viewer of
-// a BPMN diagram in the editor and in Mit Editor and none in a read-only file,
-// the licence
+// a BPMN diagram in the editor and in Mit Editor, touch on it in Chromium, and
+// none in a read-only file, the licence
 // information, the search in Mit Editor, schlank and kompakt, no <script> and
 // nothing of the search in nur-lesen, nothing of bpmn-js and no editor rules
 // in a read-only export). The font check of the BPMN labels (Chromium,
@@ -4051,7 +4051,8 @@ async function assertLargeViewWithoutScripts(browser, file, check, exp, key){
 // the elements of the picture, with its classes and colours, the laid-out
 // diagram where the author wrote no coordinates. "150 %" gives scale 1.5,
 // "+" the next step, the same step chosen again applies again; Ctrl+wheel
-// raises the scale, a drag moves the diagram, and neither closes the view.
+// raises the scale, a drag moves the diagram, and neither closes the view;
+// in Chromium one finger moves it and two zoom it (liveViewerTouch()).
 // "Schließen", Escape and Space on the checkbox close it and leave nothing of
 // it: no container, no hint, no lightbox of the logo, no cursor class on
 // <body>; so does a render while it is open. A Mermaid diagram keeps the
@@ -4232,6 +4233,7 @@ async function liveViewerUse(page, check, key, opts, { FIG, fig, n, openStage, r
   check('live viewer: a drag moves the diagram, a click on it moves nothing, and the view stays open after both; the cursor class bpmn-js sets on <body> while dragging is gone after it',
     dragged.open && Math.abs(dragged.x - (again.x - 140)) <= 2 && Math.abs(dragged.y - again.y) <= 0.5 && Math.abs(dragged.scale - again.scale) <= 0.005 && clicked.open && Math.abs(clicked.x - dragged.x) <= 0.5 && during.length > 0 && after.length === 0,
     json({ before: [again.x, again.y], dragged: [dragged.open, dragged.x, dragged.y], clicked: [clicked.open, clicked.x], during, after }));
+  await liveViewerTouch(page, check, { FIG, n, step });
   await step(2);
   await page.keyboard.press('+');
   await frames(page);
@@ -4316,6 +4318,133 @@ async function liveViewerUse(page, check, key, opts, { FIG, fig, n, openStage, r
       }
     }
   }
+}
+
+// Touch on the live viewer (story 2.23), Chromium only: its touches come by
+// CDP (Input.dispatchTouchEvent), which Firefox has not; there the check says
+// so in its name. At "Einpassen": one finger moves the diagram by its own way;
+// two fingers that begin on two different shapes pinch out in small steps,
+// then a third lands and the two go on, then a second pinch beyond scale 4.
+// At every step the diagram point under the fingers' middle before lies under
+// their middle after (to 2 px), so the diagram moves by no more than the
+// fingers did; at the end the scale is that of the start times the ratio of
+// the distances (to 0.01), at most 4, and the view is open and the page has
+// not scrolled. The fingers of two shapes are two touch lists of one: read
+// from e.targetTouches, the diagram jumps at the first move of the pinch.
+async function liveViewerTouch(page, check, { FIG, n, step }){
+  const json = JSON.stringify;
+  const NAME = 'live viewer, touch (Chromium only, by CDP): one finger moves the diagram, two that begin on two shapes zoom it at their middle by the ratio of their distances, '
+    + 'a third finger changes nothing, the scale stops at 4; no step jumps, the view stays open, the page does not scroll';
+  if (page.context().browser().browserType().name() !== 'chromium'){
+    check('live viewer, touch: not checked in Firefox, which has no CDP to dispatch touches; Chromium checks it', true);
+    return;
+  }
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+  await step(0);
+  // The viewport of the canvas: its scale, its offset and the corner of its container, in the page.
+  const view = () => page.evaluate(([sel, n]) => {
+    const f = document.querySelectorAll(sel)[n], c = f.querySelector('.dokufix-diagram-live .djs-container');
+    const g = c && c.querySelector('svg > g.viewport');
+    const m = g ? g.getCTM() : null, r = c ? c.getBoundingClientRect() : null;
+    return { open: f.querySelector('.dokufix-diagram-toggle').checked, s: m ? m.a : null, e: m ? m.e : null, f: m ? m.f : null,
+             left: r ? r.left : null, top: r ? r.top : null, scrollY };
+  }, [FIG, n]);
+  // A point of the page in the diagram, and back.
+  const toDiagram = (v, p) => ({ x: (p.x - v.left - v.e) / v.s, y: (p.y - v.top - v.f) / v.s });
+  const toPage = (v, d) => ({ x: v.left + v.e + d.x * v.s, y: v.top + v.f + d.y * v.s });
+  const far = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const middle = ([a, b]) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const touch = (type, points) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: points.map(p => ({ x: p.x, y: p.y, id: p.id, radiusX: 1, radiusY: 1, force: 1 })) });
+  const problems = [];
+  const v0 = await view();
+  const scrollY0 = v0.scrollY;
+
+  // --- one finger
+  const live = await page.evaluate(([sel, n]) => { const r = document.querySelectorAll(sel)[n].querySelector('.dokufix-diagram-live').getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, [FIG, n]);
+  await touch('touchStart', [{ ...live, id: 1 }]);
+  for (let k = 1; k <= 8; k++) await touch('touchMove', [{ x: live.x - 15 * k, y: live.y + 5 * k, id: 1 }]);
+  await touch('touchEnd', []);
+  await frames(page);
+  const panned = await view();
+  if (!(Math.abs(panned.e - (v0.e - 120)) <= 1 && Math.abs(panned.f - (v0.f + 40)) <= 1 && Math.abs(panned.s - v0.s) <= 0.0005))
+    problems.push('one finger moved by (-120, 40): ' + json({ before: [v0.e, v0.f, v0.s], after: [panned.e, panned.f, panned.s] }));
+
+  // --- two fingers on the two nearest shapes, inside the viewer, in steps
+  await step(0);
+  const shapes = await page.evaluate(([sel, n]) => {
+    const live = document.querySelectorAll(sel)[n].querySelector('.dokufix-diagram-live'), b = live.getBoundingClientRect();
+    return Array.from(live.querySelectorAll('g.djs-element.djs-shape[data-element-id]')).map(g => {
+      const r = g.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+      const hit = document.elementFromPoint(x, y);
+      return { id: g.getAttribute('data-element-id'), x, y, own: !!hit && g.contains(hit) && !Array.from(g.querySelectorAll('g.djs-element')).some(c => c.contains(hit)),
+               inside: x > b.left + b.width * 0.2 && x < b.right - b.width * 0.2 && y > b.top + b.height * 0.2 && y < b.bottom - b.height * 0.2 };
+    }).filter(p => p.own && p.inside && !p.id.endsWith('_label'));
+  }, [FIG, n]);
+  let pair = null;
+  for (let i = 0; i < shapes.length; i++) for (let j = i + 1; j < shapes.length; j++){
+    const d = far(shapes[i], shapes[j]);
+    if (d >= 40 && (!pair || d < pair.d)) pair = { a: shapes[i], b: shapes[j], d };
+  }
+  if (!pair){
+    check(NAME, false, 'no two shapes of their own inside the viewer to begin on: ' + json(shapes.map(s => s.id)));
+    await cdp.detach();
+    return;
+  }
+  const start = await view();
+  const m0 = middle([pair.a, pair.b]), d0 = far(pair.a, pair.b), under0 = toDiagram(start, m0);
+  const RATIO = 1.6, SHIFT = { x: 30, y: 20 }, STEPS = 16;
+  // The two fingers at t of the way, 0 to 1: out along their line from the middle, the middle shifted.
+  const at = t => {
+    const r = 1 + (RATIO - 1) * t, mx = m0.x + SHIFT.x * t, my = m0.y + SHIFT.y * t;
+    return [{ x: mx + (pair.a.x - m0.x) * r, y: my + (pair.a.y - m0.y) * r, id: 2 }, { x: mx + (pair.b.x - m0.x) * r, y: my + (pair.b.y - m0.y) * r, id: 3 }];
+  };
+  const third = { x: m0.x + 5, y: m0.y + 60, id: 4 };
+  let prev = at(0), v = start;
+  // The shape each finger's touch began on, as the page heard it.
+  await page.evaluate(() => {
+    window.vergleichTouches = {};
+    window.vergleichTouchListener = e => { for (const t of e.changedTouches){ const g = t.target.closest && t.target.closest('[data-element-id]'); window.vergleichTouches[t.identifier] = g ? g.getAttribute('data-element-id') : t.target.nodeName; } };
+    document.addEventListener('touchstart', window.vergleichTouchListener, { capture: true, passive: true });
+  });
+  await touch('touchStart', [prev[0]]);
+  await touch('touchStart', prev);
+  const began = await page.evaluate(() => Object.values(window.vergleichTouches));
+  if (json(began.slice().sort()) !== json([pair.a.id, pair.b.id].sort()))
+    problems.push('the two fingers did not begin on ' + pair.a.id + ' and ' + pair.b.id + ': ' + json(began));
+  for (let k = 1; k <= STEPS; k++){
+    if (k === STEPS / 2 + 1) await touch('touchStart', prev.concat(third));
+    const now = at(k / STEPS);
+    await touch('touchMove', k > STEPS / 2 ? now.concat(third) : now);
+    const w = await view();
+    const was = middle(prev), is = middle(now), moved = Math.max(far(prev[0], now[0]), far(prev[1], now[1]));
+    const landed = toPage(w, toDiagram(v, was));
+    if (far(landed, is) > 2 || far(landed, was) > moved + 2)
+      problems.push('step ' + k + ': the point under the middle went to ' + json([Math.round(landed.x), Math.round(landed.y)]) + ', the middle to ' + json([Math.round(is.x), Math.round(is.y)]) + ', the fingers moved ' + Math.round(moved) + ' px');
+    prev = now; v = w;
+  }
+  await touch('touchEnd', []);
+  await frames(page);
+  const pinched = await view();
+  const m1 = middle(prev), under1 = toPage(pinched, under0);
+  if (Math.abs(pinched.s - start.s * RATIO) > 0.01 || far(under1, m1) > 2)
+    problems.push('pinch: scale ' + pinched.s.toFixed(3) + ' for ' + (start.s * RATIO).toFixed(3) + ', the start middle\'s point ' + Math.round(far(under1, m1)) + ' px from the end middle');
+
+  // --- a pinch far beyond scale 4
+  const c = middle([pair.a, pair.b]);
+  await touch('touchStart', [{ x: c.x - 20, y: c.y, id: 5 }]);
+  await touch('touchStart', [{ x: c.x - 20, y: c.y, id: 5 }, { x: c.x + 20, y: c.y, id: 6 }]);
+  for (let k = 1; k <= 10; k++) await touch('touchMove', [{ x: c.x - 20 - 28 * k, y: c.y, id: 5 }, { x: c.x + 20 + 28 * k, y: c.y, id: 6 }]);
+  await touch('touchEnd', []);
+  await frames(page);
+  const limit = await view();
+  if (Math.abs(limit.s - 4) > 0.0005) problems.push('a pinch to 15 times the distance from scale ' + pinched.s.toFixed(3) + ' stops at ' + limit.s.toFixed(3) + ', not at 4');
+  if (!limit.open) problems.push('the view closed');
+  if (limit.scrollY !== scrollY0) problems.push('the page scrolled from ' + scrollY0 + ' to ' + limit.scrollY);
+  await page.evaluate(() => { document.removeEventListener('touchstart', window.vergleichTouchListener, { capture: true }); delete window.vergleichTouchListener; delete window.vergleichTouches; });
+  await cdp.send('Emulation.setTouchEmulationEnabled', { enabled: false });
+  await cdp.detach();
+  check(NAME, problems.length === 0, 'begun on ' + pair.a.id + ' and ' + pair.b.id + ', ' + Math.round(d0) + ' px apart: ' + problems.slice(0, 4).join(' | '));
 }
 
 // ---------- assertions ----------

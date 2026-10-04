@@ -1,13 +1,14 @@
 // The pure part of the live viewer (src/app/live-viewer.js), run in Node:
 // the XML of a source link, the diagram the viewer opens, the viewbox of each
-// zoom step, a move of the fingers on a touch screen. That the viewer starts, zooms, moves and goes is checked by the
-// browser runs (tests/vergleich.mjs, tests/durchlaeufe.mjs, tests/speichern.mjs).
+// zoom step, the fingers that count on a touch screen and a move of them.
+// That the viewer starts, zooms, moves and goes is checked by the browser
+// runs (tests/vergleich.mjs, tests/durchlaeufe.mjs, tests/speichern.mjs).
 //
 //   npm test          (node --test tests/*.test.mjs)
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sourceXml, diagramToOpen, stepViewbox, touchStep, FIT_MARGIN, FIT_MOST, START_MARGIN, LIVE_HINT, TOUCH_SCALE } from '../src/app/live-viewer.js';
+import { sourceXml, diagramToOpen, stepViewbox, countedFingers, touchStep, FIT_MARGIN, FIT_MOST, START_MARGIN, LIVE_HINT } from '../src/app/live-viewer.js';
 import { sourceDataUrl } from '../src/app/diagram-downloads.js';
 
 const MIME = 'application/xml;charset=utf-8';
@@ -113,32 +114,59 @@ test('the hint in the bar reads as Ben decided', () => {
 });
 
 // ---------- touch ----------
+// A finger: its identifier and its point in the viewer.
+const f = (id, x, y) => ({ id, x, y });
+
 test('one finger moves the diagram with it, and zooms nothing', () => {
-  assert.deepEqual(touchStep([{ x: 100, y: 200 }], [{ x: 70, y: 260 }]), { dx: -30, dy: 60, factor: 1, center: { x: 70, y: 260 } });
+  assert.deepEqual(touchStep([f(1, 100, 200)], [f(1, 70, 260)]), { dx: -30, dy: 60, factor: 1, center: { x: 70, y: 260 } });
 });
 
 test('two fingers move the diagram with their middle and zoom it at that middle by their distance', () => {
-  const step = touchStep([{ x: 100, y: 100 }, { x: 200, y: 100 }], [{ x: 90, y: 120 }, { x: 290, y: 120 }]);
+  const step = touchStep([f(1, 100, 100), f(2, 200, 100)], [f(1, 90, 120), f(2, 290, 120)]);
   assert.equal(step.dx, 40);
   assert.equal(step.dy, 20);
   assert.equal(step.factor, 2);
   assert.deepEqual(step.center, { x: 190, y: 120 });
-  assert.equal(touchStep([{ x: 0, y: 0 }, { x: 300, y: 400 }], [{ x: 50, y: 50 }, { x: 200, y: 250 }]).factor, 0.5);
+  assert.equal(touchStep([f(1, 0, 0), f(2, 300, 400)], [f(1, 50, 50), f(2, 200, 250)]).factor, 0.5);
 });
 
-test('a finger more or less, or none, moves nothing: the diagram does not jump', () => {
-  assert.equal(touchStep([{ x: 0, y: 0 }], [{ x: 0, y: 0 }, { x: 300, y: 0 }]), null);
-  assert.equal(touchStep([{ x: 0, y: 0 }, { x: 300, y: 0 }], [{ x: 10, y: 0 }]), null);
+test('the fingers are paired by their identifier, not by their place in the list', () => {
+  const before = [f(7, 100, 100), f(3, 200, 100)];
+  const after = [f(3, 290, 120), f(7, 90, 120)];
+  assert.deepEqual(touchStep(before, after), { dx: 40, dy: 20, factor: 2, center: { x: 190, y: 120 } });
+  assert.deepEqual(countedFingers(before, after), [f(7, 90, 120), f(3, 290, 120)]);
+  assert.deepEqual(touchStep([f(5, 10, 10)], [f(5, 30, 0)]), { dx: 20, dy: -10, factor: 1, center: { x: 30, y: 0 } });
+});
+
+test('a finger more or less below two, or none, moves nothing: the diagram does not jump', () => {
+  assert.equal(touchStep([f(1, 0, 0)], [f(1, 0, 0), f(2, 300, 0)]), null);
+  assert.equal(touchStep([f(1, 0, 0), f(2, 300, 0)], [f(1, 10, 0)]), null);
   assert.equal(touchStep([], []), null);
-  assert.equal(touchStep([{ x: 0, y: 0 }], []), null);
+  assert.equal(touchStep([], [f(1, 0, 0)]), null);
+  assert.equal(touchStep([f(1, 0, 0)], []), null);
+  assert.equal(touchStep([f(1, 0, 0)], [f(2, 50, 0)]), null);
+  assert.deepEqual(countedFingers([f(1, 0, 0)], [f(1, 0, 0), f(2, 300, 0)]), [f(1, 0, 0), f(2, 300, 0)]);
+  assert.deepEqual(countedFingers([f(1, 0, 0), f(2, 300, 0)], [f(2, 310, 0)]), [f(2, 310, 0)]);
+  assert.deepEqual(countedFingers([f(1, 0, 0)], []), []);
 });
 
-test('a third finger is ignored, and two fingers on one point zoom nothing', () => {
-  const step = touchStep([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 50 }], [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 900, y: 900 }]);
-  assert.deepEqual(step, { dx: 0, dy: 0, factor: 1, center: { x: 50, y: 0 } });
-  assert.equal(touchStep([{ x: 5, y: 5 }, { x: 5, y: 5 }], [{ x: 0, y: 0 }, { x: 10, y: 0 }]).factor, 1);
+test('a third finger is ignored, also where it lands first in the list; the two of before keep counting', () => {
+  const before = [f(1, 0, 0), f(2, 100, 0)];
+  const after = [f(9, 900, 900), f(1, 0, 0), f(2, 100, 0)];
+  assert.deepEqual(countedFingers(before, after), [f(1, 0, 0), f(2, 100, 0)]);
+  assert.deepEqual(touchStep(before, after), { dx: 0, dy: 0, factor: 1, center: { x: 50, y: 0 } });
+  assert.deepEqual(touchStep(before, [f(2, 200, 0), f(9, 0, 0), f(1, 0, 0)]), { dx: 50, dy: 0, factor: 2, center: { x: 100, y: 0 } });
 });
 
-test('two fingers zoom between the scales of Ctrl+wheel in bpmn-js', () => {
-  assert.deepEqual(TOUCH_SCALE, { min: 0.2, max: 4 });
+test('a counted finger lifted while a third touches starts afresh with the first two of now', () => {
+  const before = [f(1, 0, 0), f(2, 100, 0)];
+  const after = [f(2, 100, 0), f(9, 300, 0)];
+  assert.equal(touchStep(before, after), null);
+  assert.deepEqual(countedFingers(before, after), [f(2, 100, 0), f(9, 300, 0)]);
+  assert.deepEqual(touchStep(countedFingers(before, after), [f(9, 400, 0), f(2, 100, 0)]), { dx: 50, dy: 0, factor: 1.5, center: { x: 250, y: 0 } });
+});
+
+test('two fingers on one point zoom nothing, they only move', () => {
+  assert.deepEqual(touchStep([f(1, 5, 5), f(2, 5, 5)], [f(1, 0, 0), f(2, 10, 0)]), { dx: 0, dy: -5, factor: 1, center: { x: 5, y: 0 } });
+  assert.equal(touchStep([f(1, 0, 0), f(2, 10, 0)], [f(1, 7, 7), f(2, 7, 7)]).factor, 1);
 });

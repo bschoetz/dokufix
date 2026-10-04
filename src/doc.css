@@ -200,10 +200,11 @@
        definite height for bpmn-js to fill; the stage is hidden behind it.
        The container is not positioned (bpmn-js positions what it puts into
        it, inside the fixed view only). Its canvas takes the focus at a click,
-       without a ring. Touch on it is the script's (one finger moves the
-       diagram, two zoom it), not the browser's: touch-action:none. The hint stands in the bar, before "Schließen"; in a
-       narrow window it shrinks and is cut off first, and below 520 px it is
-       not shown, so "Schließen" stays in the window. */
+       without a ring. Touch on it is the script's (story 2.23: one finger
+       moves the diagram, two zoom it), not the browser's: touch-action:none.
+       The hint stands in the bar, before "Schließen"; in a narrow window it
+       shrinks and is cut off first, and below 520 px it is not shown, so
+       "Schließen" stays in the window. */
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-live{display:block;flex:1;min-height:0;overflow:hidden;touch-action:none}
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-live + .dokufix-diagram-stage{display:none}
     .dokufix-doc .dokufix-diagram-live svg:focus{outline:none}
