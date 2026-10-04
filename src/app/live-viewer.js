@@ -7,8 +7,10 @@ import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CL
 // large view of a BPMN diagram starts the navigated viewer of bpmn-js (global
 // BpmnJS) in place of the picture: Ctrl+wheel zooms at the pointer, the wheel
 // and a drag move the diagram, Ctrl+arrow keys too, and the library shows its
-// logo, bottom right, as its licence asks. The zoom steps of the view set its
-// scale. The read-only exports never start it: the reader bundle does not
+// logo, bottom right, as its licence asks. bpmn-js hears only the mouse: on a
+// touch screen one finger moves the diagram and two zoom it at their middle,
+// by listeners of this module on the container (attachTouch()). The zoom
+// steps of the view set its scale. The read-only exports never start it: the reader bundle does not
 // carry this module, and a Mermaid diagram keeps the static view everywhere.
 //
 //   <div class="dokufix-diagram-view">
@@ -42,8 +44,8 @@ import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CL
 // (no BpmnJS, an import that fails) leaves the static view of story 2.9, and
 // says so in one line on the console; the reader gets no warning.
 //
-// The pure part, sourceXml(), diagramToOpen() and stepViewbox(), works on the
-// strings and numbers it is handed (tests/live-viewer.test.mjs). The rest
+// The pure part, sourceXml(), diagramToOpen(), stepViewbox() and touchStep(),
+// works on the strings and numbers it is handed (tests/live-viewer.test.mjs). The rest
 // needs a page and the library.
 
 export const LIVE_CLASS = 'dokufix-diagram-live';
@@ -55,6 +57,8 @@ export const FIT_MARGIN = 24;
 export const FIT_MOST = 1.5;
 // Where a diagram is larger than the viewer, it starts at its top left, with this margin.
 export const START_MARGIN = 20;
+// The scales two fingers zoom between: those of Ctrl+wheel in bpmn-js.
+export const TOUCH_SCALE = { min: 0.2, max: 4 };
 
 // The text of a source link's data: URL, as sourceDataUrl() wrote it: the
 // XML the picture was drawn from.
@@ -101,6 +105,23 @@ export function stepViewbox(step, inner, outer){
     y: height >= inner.height ? inner.y - (height - inner.height) / 2 : inner.y - START_MARGIN,
     width, height,
   };
+}
+
+// One move of the fingers on the viewer: before and after, the points of the
+// fingers in the viewer, in pixels, in the same order. One finger moves the
+// diagram with it; two move it with their middle and zoom it at that middle
+// by the change of their distance. { dx, dy, factor, center }, or null where
+// the number of fingers changed (a finger more or less starts afresh, so the
+// diagram does not jump) or none touches. A third finger and more are ignored.
+export function touchStep(before, after){
+  const n = Math.min(after.length, 2);
+  if (!n || Math.min(before.length, 2) !== n) return null;
+  if (n === 1) return { dx: after[0].x - before[0].x, dy: after[0].y - before[0].y, factor: 1, center: { x: after[0].x, y: after[0].y } };
+  const middle = ([a, b]) => ({ x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 });
+  const distance = ([a, b]) => Math.hypot(a.x - b.x, a.y - b.y);
+  const from = middle(before), to = middle(after);
+  const d0 = distance(before), d1 = distance(after);
+  return { dx: to.x - from.x, dy: to.y - from.y, factor: d0 > 0 && d1 > 0 ? d1 / d0 : 1, center: to };
 }
 
 // --- in the page ---
@@ -165,6 +186,7 @@ async function startViewer(figure){
     view.insertBefore(box, stage);
     state.box = box;
     state.viewer = new BpmnJS({ container: box, ...BPMN_VIEWER_CONFIG });
+    attachTouch(box, state.viewer.get('canvas'));
     const id = diagramToOpen(xml);
     const result = await (id ? state.viewer.importXML(xml, id) : state.viewer.importXML(xml));
     state.importing = false;
@@ -186,6 +208,35 @@ async function startViewer(figure){
     if (running.get(figure) === state) stopViewer(figure);
     else destroy(state);
   }
+}
+
+// Touch on the viewer's container: each move of the fingers moves the canvas
+// and zooms it (touchStep()), between the scales of TOUCH_SCALE. The move is
+// prevented, so the browser neither scrolls nor zooms the page; the document
+// styles say the same by touch-action. A tap stays a tap: its logo opens.
+// The listeners go with the container.
+function attachTouch(box, canvas){
+  let last = [];
+  const points = e => {
+    const rect = canvas.getContainer().getBoundingClientRect();
+    return Array.from(e.targetTouches, t => ({ x: t.clientX - rect.left, y: t.clientY - rect.top }));
+  };
+  const restart = e => { last = points(e); };
+  box.addEventListener('touchstart', restart, { passive: true });
+  box.addEventListener('touchend', restart, { passive: true });
+  box.addEventListener('touchcancel', restart, { passive: true });
+  box.addEventListener('touchmove', e => {
+    if (e.cancelable) e.preventDefault();
+    const now = points(e);
+    const step = touchStep(last, now);
+    last = now;
+    if (!step) return;
+    if (step.dx || step.dy) canvas.scroll({ dx: step.dx, dy: step.dy });
+    if (step.factor !== 1){
+      const scale = Math.min(TOUCH_SCALE.max, Math.max(TOUCH_SCALE.min, canvas.zoom() * step.factor));
+      canvas.zoom(scale, step.center);
+    }
+  }, { passive: false });
 }
 
 // The viewer of the figure destroyed, its container and hint out, and what

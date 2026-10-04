@@ -51,7 +51,7 @@ flowchart LR
     E --> F{{Eine Datei}}
 ```
 
-Ein Klick auf ein Diagramm zeigt es groß über dem ganzen Fenster, eingepasst oder in 100, 150 und 200 %, und „Schließen“ oder ein zweiter Klick schließt es wieder, in jeder Fassung, auch in der offenen ohne Skript; wo ein Skript läuft, schließt es auch Escape, und `+` und `-` wechseln die Stufe. Ein BPMN-Diagramm zeigt die große Ansicht im Editor und in der Datei mit Editor im Viewer von bpmn.io: Strg + Mausrad zoomt, Ziehen verschiebt, das Logo von bpmn.io steht unten rechts, und ein Klick auf das Diagramm schließt es dort nicht.
+Ein Klick auf ein Diagramm zeigt es groß über dem ganzen Fenster, eingepasst oder in 100, 150 und 200 %, und „Schließen“ oder ein zweiter Klick schließt es wieder, in jeder Fassung, auch in der offenen ohne Skript; wo ein Skript läuft, schließt es auch Escape, und `+` und `-` wechseln die Stufe. Ein BPMN-Diagramm zeigt die große Ansicht im Editor und in der Datei mit Editor im Viewer von bpmn.io: Strg + Mausrad zoomt, Ziehen verschiebt, auf dem Handy verschiebt ein Finger und zwei Finger zoomen, das Logo von bpmn.io steht unten rechts, und ein Klick auf das Diagramm schließt es dort nicht.
 
 Unter jedem Diagramm stehen zwei kleine Knöpfe zum Herunterladen. Der erste gibt die Quelle: `.mmd`, den Mermaid-Text, wie er im Block steht, für einen Mermaid-Editor, oder `.bpmn`, das XML, wie es gezeichnet wurde, samt Koordinaten, für ein BPMN-Werkzeug wie den Camunda Modeler. Er geht in jeder Fassung, auch ohne Skript. Der zweite, `.svg`, gibt das Bild, das Sie sehen, für ein anderes Dokument; ihn gibt es, wo ein Skript läuft: im Editor, in der Datei mit Editor und in den Fassungen „schlank“ und „kompakt“. Die Dateien heißen nach der Überschrift über dem Diagramm.
 

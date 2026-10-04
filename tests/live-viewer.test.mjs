@@ -1,13 +1,13 @@
 // The pure part of the live viewer (src/app/live-viewer.js), run in Node:
 // the XML of a source link, the diagram the viewer opens, the viewbox of each
-// zoom step. That the viewer starts, zooms, moves and goes is checked by the
+// zoom step, a move of the fingers on a touch screen. That the viewer starts, zooms, moves and goes is checked by the
 // browser runs (tests/vergleich.mjs, tests/durchlaeufe.mjs, tests/speichern.mjs).
 //
 //   npm test          (node --test tests/*.test.mjs)
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sourceXml, diagramToOpen, stepViewbox, FIT_MARGIN, FIT_MOST, START_MARGIN, LIVE_HINT } from '../src/app/live-viewer.js';
+import { sourceXml, diagramToOpen, stepViewbox, touchStep, FIT_MARGIN, FIT_MOST, START_MARGIN, LIVE_HINT, TOUCH_SCALE } from '../src/app/live-viewer.js';
 import { sourceDataUrl } from '../src/app/diagram-downloads.js';
 
 const MIME = 'application/xml;charset=utf-8';
@@ -110,4 +110,35 @@ test('an empty diagram or a viewer of no size gives scale 1, never a box of no s
 
 test('the hint in the bar reads as Ben decided', () => {
   assert.equal(LIVE_HINT, 'Strg + Mausrad: zoomen · Ziehen: verschieben');
+});
+
+// ---------- touch ----------
+test('one finger moves the diagram with it, and zooms nothing', () => {
+  assert.deepEqual(touchStep([{ x: 100, y: 200 }], [{ x: 70, y: 260 }]), { dx: -30, dy: 60, factor: 1, center: { x: 70, y: 260 } });
+});
+
+test('two fingers move the diagram with their middle and zoom it at that middle by their distance', () => {
+  const step = touchStep([{ x: 100, y: 100 }, { x: 200, y: 100 }], [{ x: 90, y: 120 }, { x: 290, y: 120 }]);
+  assert.equal(step.dx, 40);
+  assert.equal(step.dy, 20);
+  assert.equal(step.factor, 2);
+  assert.deepEqual(step.center, { x: 190, y: 120 });
+  assert.equal(touchStep([{ x: 0, y: 0 }, { x: 300, y: 400 }], [{ x: 50, y: 50 }, { x: 200, y: 250 }]).factor, 0.5);
+});
+
+test('a finger more or less, or none, moves nothing: the diagram does not jump', () => {
+  assert.equal(touchStep([{ x: 0, y: 0 }], [{ x: 0, y: 0 }, { x: 300, y: 0 }]), null);
+  assert.equal(touchStep([{ x: 0, y: 0 }, { x: 300, y: 0 }], [{ x: 10, y: 0 }]), null);
+  assert.equal(touchStep([], []), null);
+  assert.equal(touchStep([{ x: 0, y: 0 }], []), null);
+});
+
+test('a third finger is ignored, and two fingers on one point zoom nothing', () => {
+  const step = touchStep([{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 50, y: 50 }], [{ x: 0, y: 0 }, { x: 100, y: 0 }, { x: 900, y: 900 }]);
+  assert.deepEqual(step, { dx: 0, dy: 0, factor: 1, center: { x: 50, y: 0 } });
+  assert.equal(touchStep([{ x: 5, y: 5 }, { x: 5, y: 5 }], [{ x: 0, y: 0 }, { x: 10, y: 0 }]).factor, 1);
+});
+
+test('two fingers zoom between the scales of Ctrl+wheel in bpmn-js', () => {
+  assert.deepEqual(TOUCH_SCALE, { min: 0.2, max: 4 });
 });
