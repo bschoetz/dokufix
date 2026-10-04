@@ -2300,6 +2300,28 @@ async function assertSearch(page, check, key){
   check('search: a click on the last result scrolls the document to its place, and the panel stays open with its results',
     landed.scrolled > 0 && landed.top >= 0 && landed.bottom <= landed.height && landed.open && landed.results === want.length, json(landed));
 
+  // --- story 5.16, N3: Enter in the field follows the first result; Down goes
+  // to it, Down and Up through the results, Up on the first back to the field
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  await page.focus('body > .search-panel input');
+  await frames(page);
+  const scrolledDown = await page.evaluate(() => Math.round(scrollY));
+  await press('Enter');
+  const focusAt = () => page.evaluate(() => {
+    const p = document.querySelector('body > .search-panel'), a = document.activeElement;
+    return a === p.querySelector('input') ? 'field' : Array.from(p.querySelectorAll('.search-result')).indexOf(a);
+  });
+  const entered = await page.evaluate(([rootSel, sel, at]) => {
+    const r = document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at].getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom, height: innerHeight, scrolled: Math.round(scrollY) };
+  }, [ROOT_SEL, PLACE_SEL, want[0].at]);
+  const enterFocus = await focusAt();
+  const walk = [];
+  for (const k of ['ArrowDown', 'ArrowDown', 'ArrowUp', 'ArrowUp']){ await press(k); walk.push(await focusAt()); }
+  check('search: Enter in the field brings the first result\'s place into the window and leaves the focus in the field; Down goes to the first result, Down to the second, Up back, Up on the first to the field',
+    scrolledDown > 0 && entered.scrolled < scrolledDown && entered.top >= 0 && entered.bottom <= entered.height && enterFocus === 'field' && sameList(walk.map(String), ['0', '1', '0', 'field']),
+    json({ scrolledDown, entered, enterFocus, walk }));
+
   // --- story 6: hits in tables. A term from a table row: its result reads
   // "Tabelle: " before the row's text, a click centres the row, and the
   // highlight lies in the row's cells, one range per cell a hit touches.

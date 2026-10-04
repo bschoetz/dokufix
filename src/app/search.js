@@ -110,6 +110,10 @@ import { TABLE_CLASS } from './tables.js';
 // the preview and every other file, never waits, whatever it holds: packed
 // markup an author writes is markup.
 //
+// Enter in the field follows the first result, as a click on it does; Down
+// puts the focus on it, and Down and Up go through the results, Up from the
+// first back to the field. Escape is as above.
+//
 // Two switches below the field change how the term is compared
 // (search-match.js): case-sensitive, and light fuzzy, which ignores white
 // space, hyphens and dots. Both start off; flipping one searches again at
@@ -404,6 +408,17 @@ function buildPanel(){
     clearTimeout(timer);
     timer = setTimeout(search, PAUSE);
   });
+  // Enter follows the first result, Down puts the focus on it, each after a
+  // search that still waits for the pause. See the README, "Keys and events".
+  input.addEventListener('keydown', e => {
+    if ((e.key !== 'Enter' && e.key !== 'ArrowDown') || e.isComposing) return;
+    if (timer) search();
+    const first = list.querySelector('.search-result');
+    if (!first) return;
+    e.preventDefault();
+    if (e.key === 'Enter') first.click();
+    else first.focus();
+  });
 
   const label = document.createElement('label');
   label.className = 'search-label';
@@ -429,6 +444,17 @@ function buildPanel(){
 
   list = document.createElement('ol');
   list.className = 'search-results';
+  // Down and Up on a result: the next, the previous one, from the first back
+  // to the field.
+  list.addEventListener('keydown', e => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    const results = Array.from(list.querySelectorAll('.search-result'));
+    const at = results.indexOf(e.target);
+    if (at < 0) return;
+    e.preventDefault();
+    const to = e.key === 'ArrowDown' ? results[at + 1] : results[at - 1] || input;
+    if (to) to.focus();
+  });
 
   panel.append(label, close, switches, summary, list);
   document.body.appendChild(panel);

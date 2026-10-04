@@ -358,3 +358,50 @@ test('while the root carries the mark of the decoder of `schlank`, the summary s
   assert.equal(p.summary(), '1 Treffer an 1 Stelle in 1 Abschnitt');
   assert.equal(p.results().length, 1);
 });
+
+// ---------- keys in the panel (story 5.16, N3) ----------
+test('Enter in the field follows the first result, after a search that still waited for the pause; with no result it does nothing', async () => {
+  const p = await open('<h2>Eins</h2><p>Eine Tabelle.</p><p>Noch eine Tabelle.</p>');
+  p.search.openSearch();
+  p.input.value = 'Tabelle';
+  p.input.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+  const e = p.key('Enter', p.input);
+  assert.ok(e.defaultPrevented);
+  assert.equal(p.summary(), '2 Treffer an 2 Stellen in 1 Abschnitt', 'the waiting search ran');
+  assert.equal(p.scrolls.length, 1);
+  same(p.scrolls[0].el, p.root.querySelectorAll('p')[0]);
+  same(p.document.activeElement, p.input);
+  await p.type('xyzzy');
+  p.scrolls.length = 0;
+  p.key('Enter', p.input);
+  assert.equal(p.scrolls.length, 0);
+});
+
+test('Down in the field goes to the first result, Down and Up through the results, Up on the first back to the field', async () => {
+  const p = await open('<h2>Eins</h2><p>Eine Tabelle.</p><h2>Zwei</h2><p>Noch eine Tabelle.</p><p>Die dritte Tabelle.</p>');
+  p.search.openSearch();
+  p.input.value = 'Tabelle';
+  p.input.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+  const down = p.key('ArrowDown', p.input);
+  assert.ok(down.defaultPrevented);
+  const [a, b, c] = p.results();
+  same(p.document.activeElement, a, 'the waiting search ran, and the focus is on the first result');
+  p.key('ArrowDown');
+  same(p.document.activeElement, b, 'into the next group');
+  p.key('ArrowDown');
+  same(p.document.activeElement, c);
+  p.key('ArrowDown');
+  same(p.document.activeElement, c, 'the last stays');
+  p.key('ArrowUp');
+  p.key('ArrowUp');
+  same(p.document.activeElement, a);
+  const up = p.key('ArrowUp');
+  assert.ok(up.defaultPrevented);
+  same(p.document.activeElement, p.input);
+  assert.equal(p.scrolls.length, 0, 'moving the focus scrolls the document nowhere');
+  // No result: Down stays in the field and goes on.
+  await p.type('xyzzy');
+  const none = p.key('ArrowDown', p.input);
+  assert.ok(!none.defaultPrevented);
+  same(p.document.activeElement, p.input);
+});
