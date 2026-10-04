@@ -2071,7 +2071,9 @@ async function assertSearch(page, check, key){
     document.querySelector(rootSel).prepend(h);
     document.activeElement.blur();
   }, ROOT_SEL);
-  await page.click('body > .search-panel .search-label-text');
+  // The label's text; a panel without it (before story 5.16) is clicked on its label.
+  await page.click('body > .search-panel .search-label-text', { timeout: 2000 })
+    .catch(() => page.click('body > .search-panel label', { timeout: 2000 }).catch(() => {}));
   const labelled = await page.evaluate(() => {
     const p = document.querySelector('body > .search-panel');
     const input = p.querySelector('input');
