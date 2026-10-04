@@ -960,6 +960,17 @@ test('the reader bundle registers the search over its content container, always 
   assert.doesNotMatch(read('app/filter.js'), /search(-places)?\.js|collectPlaces|registerSearch/);
 });
 
+test('the styles of the search: a hit highlighted in the colour of the marks, not in print, dark on screen; a kind grey, a hidden row red and italic', () => {
+  const css = read('search.css');
+  const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
+  assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
+  assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
+  // On screen the text of a hit is dark, readable on the dark background of a code block (story 8); in print nothing is set.
+  assert.match(css, /^@media screen\{::highlight\(search-hit\)\{color:#1c1c1e\}\}$/m);
+  assert.match(css, /^\.search-kind\{color:#6e6e73\}$/m);
+  assert.match(css, /^\.search-hidden\{color:#a40e26;font-style:italic\}$/m);
+});
+
 // ---------- run time (story 5.16, N5) ----------
 test('groupResults walks into no diagram, code block or metadata panel: none holds a group heading', () => {
   const root = rootWith('<h2>A</h2>\n<figure class="dokufix-diagram"><div class="dokufix-diagram-svg"><svg><g><text>Tabelle</text></g></svg></div></figure>\n' +
