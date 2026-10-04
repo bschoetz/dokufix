@@ -16,15 +16,12 @@
  "demo5": [],
  "demo6": [],
  "hund2": [
-  "double-headed GW_Merge_Probe Flow_47 Flow_53",
   "label-on-flow GW_Fluss Flow_28",
   "label-on-flow GW_Nachprobe Flow_53",
   "label-on-flow GW_Versuche Flow_22",
   "label-on-node GW_Qualitaet Task_Labor",
   "label-outside-lane GW_Nachprobe",
-  "on-one-line-foreign Flow_47 Flow_53",
   "on-one-line-shared Flow_17 Flow_24",
-  "on-one-line-shared Flow_31 Flow_32",
   "on-one-line-shared Flow_34 Flow_36",
   "on-one-line-shared Flow_38 Flow_40",
   "on-one-line-shared Flow_39 Flow_40",
@@ -46,9 +43,7 @@
  "r11": [],
  "r12": [],
  "r13": [],
- "r14": [
-  "on-one-line-shared F4_g_a F5_g_b"
- ],
+ "r14": [],
  "r15": [
   "label-outside-lane F10_b3_b1",
   "label-outside-lane F7_gb_b1",
@@ -68,18 +63,13 @@
   "label-outside-lane F22_m6_m3"
  ],
  "r19": [
-  "label-outside-lane F4_g_a",
-  "on-one-line-shared F4_g_a F6_g_d",
   "on-one-line-shared F7_d_z F8_c_z"
  ],
  "r20": [
-  "double-headed g F3_u_g F5_g_c",
-  "on-one-line-foreign F3_u_g F5_g_c",
   "on-one-line-shared F7_d_z F8_c_z"
  ],
  "r21": [],
  "r22": [
-  "label-outside-lane F8_d_c",
-  "on-one-line-shared F4_g_a F5_g_b"
+  "label-outside-lane F8_d_c"
  ]
 }

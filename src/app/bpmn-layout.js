@@ -43,9 +43,11 @@ export const MERMAID_LAYOUT_VERSION = '12.0.0';
 
 // The distances of 12 px the layout keeps (the geometry, below), each by what
 // it is for:
-// ATTACH_CLEARANCE  where a flow docks: the piece that leaves its symbol runs
-//                   this far before it turns, and an end on a task's side
-//                   keeps this far from a corner (attach())
+// STUB              where a flow docks: the piece that leaves its symbol runs
+//                   this far before it turns (attach(), dockApart(), a ring
+//                   from a gateway's corner in loopBack())
+// ATTACH_CLEARANCE  an end on a task's side keeps this far from a corner
+//                   (attach())
 // OBSTACLE_OFFSET   a run moved off a foreign symbol lies this far beside it
 //                   (nudge(), detour())
 // FAN_ROOM          a flow from a gateway's corner needs this much between the
@@ -60,7 +62,7 @@ export const MERMAID_LAYOUT_VERSION = '12.0.0';
 //                   nearer, its lane grows (growLane())
 // FRAME_MARGIN      every waypoint and label keeps this far from the edge of
 //                   the outer lanes and the pool (layoutGeometry())
-const ATTACH_CLEARANCE = 12, OBSTACLE_OFFSET = 12, FAN_ROOM = 12, NEAR = 12, SPAN_TOLERANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12;
+const STUB = 12, ATTACH_CLEARANCE = 12, OBSTACLE_OFFSET = 12, FAN_ROOM = 12, NEAR = 12, SPAN_TOLERANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12;
 // They stand among the module's first declarations: esbuild writes such a
 // constant's value in place of its name only before the first declaration
 // that is no such constant, and so the built page carries no names for them.
@@ -270,7 +272,7 @@ export function axisMap(items, minGap, maxGap){
 // with a corner put in, so that the piece is horizontal or vertical; a flow
 // of two points, a diagonal from end to end, gets two corners halfway, so
 // that neither lies in the symbol at the other end. The piece that leaves
-// the symbol keeps ATTACH_CLEARANCE before the flow turns: a run Mermaid
+// the symbol keeps STUB before the flow turns: a run Mermaid
 // laid just beside its own, larger node lies on the edge of the BPMN symbol
 // once scaled, or inside it; the run moves that far off the side, the other
 // end left where it is.
@@ -284,7 +286,7 @@ export function attach(pts, atStart, c, side){
   const clear = (axis, dir) => {
     if (pts.length < 3) return;
     const e = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2;
-    const edge = pts[e][axis], need = edge + dir * ATTACH_CLEARANCE, run = pts[j][axis];
+    const edge = pts[e][axis], need = edge + dir * STUB, run = pts[j][axis];
     if ((run - need) * dir >= 0) return;
     for (let n = j; n > 0 && n < pts.length - 1 && Math.abs(pts[n][axis] - run) < 0.5; n += atStart ? 1 : -1) pts[n][axis] = need;
   };
@@ -305,16 +307,16 @@ export function attach(pts, atStart, c, side){
     }
     return;
   }
-  if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + ATTACH_CLEARANCE); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
-  if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + ATTACH_CLEARANCE); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
-  // An end piece beside the symbol keeps ATTACH_CLEARANCE from its side, as one docked by side does: Mermaid runs it a pixel off.
+  if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + STUB); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
+  if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + STUB); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
+  // An end piece beside the symbol keeps STUB from its side, as one docked by side does: Mermaid runs it a pixel off.
   if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5){
     const sign = Math.sign(p.x - c.cx);
-    p.x = q.x = c.cx + sign * Math.max(Math.abs(p.x - c.cx), c.w / 2 + ATTACH_CLEARANCE); p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy }); return;
+    p.x = q.x = c.cx + sign * Math.max(Math.abs(p.x - c.cx), c.w / 2 + STUB); p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy }); return;
   }
   if (Math.abs(p.y - q.y) < 1 && Math.abs(p.y - c.cy) > c.h / 2 + 0.5){
     const sign = Math.sign(p.y - c.cy);
-    p.y = q.y = c.cy + sign * Math.max(Math.abs(p.y - c.cy), c.h / 2 + ATTACH_CLEARANCE); p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 }); return;
+    p.y = q.y = c.cy + sign * Math.max(Math.abs(p.y - c.cy), c.h / 2 + STUB); p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 }); return;
   }
   if (Math.abs(p.x - q.x) < 1){                                   // a vertical end
     const dir = Math.sign(q.y - c.cy) || 1, tx = aim(p.x, c.cx, c.w / 2);
@@ -562,6 +564,57 @@ export function separateTwins(routes, box){
   }
 }
 
+// A flow back of loopBack(): within one row, its target left of its source
+// at the same height; a twin separateTwins() routed is none.
+const flowBack = (r, box) => {
+  const s = box[r.f.from], t = box[r.f.to];
+  return !r.twin && Math.abs(s.cy - t.cy) < 1 && t.cx + t.w / 2 < s.cx - s.w / 2;
+};
+
+// Correction 8, not the spike's (story 2.21). A flow that arrives at the
+// vertex of a gateway another flow leaves by looks like one double-headed
+// arrow. The arriving one docks on a free vertex instead: the vertex on the
+// side its piece before the end comes from, otherwise the opposite one; it
+// runs STUB beyond the vertex and turns into it, or, where its run before
+// already passes the vertex on that side, turns into it from there. A way a
+// foreign symbol blocks, or one that would leave its source backwards, is
+// not taken: the end stays. The flows back are left out on both sides, as
+// arriving and as leaving: loopBack() routes them afterwards, from Mermaid's
+// route their ends say nothing, and they keep off the vertices used then.
+export function dockApart(routes, box, gateways){
+  const at = (p, q) => Math.abs(p.x - q.x) < 3 && Math.abs(p.y - q.y) < 3;
+  for (const id of gateways){
+    const c = box[id];
+    const ends = portEnds(routes.filter(r => !flowBack(r, box)), id);
+    for (const e of ends){
+      const pts = e.r.pts, n = pts.length;
+      if (e.out || n < 3 || !ends.some(o => o.out && at(o.p, e.p))) continue;
+      const p = pts[n - 1], q = pts[n - 2], k = pts[n - 3], m = pts[n - 4];
+      // a: the axis of the end piece; the free vertices lie on the other, b.
+      const a = Math.abs(p.y - q.y) < 1 ? 'x' : Math.abs(p.x - q.x) < 1 ? 'y' : null;
+      if (!a) continue;
+      const b = a === 'x' ? 'y' : 'x', ca = 'c' + a, cb = 'c' + b, half = c[b === 'x' ? 'w' : 'h'] / 2;
+      const dir = Math.sign(k[b] - c[cb]);
+      const vertexOn = d => ({ [a]: c[ca], [b]: c[cb] + d * half });
+      const free = d => !ends.some(o => o !== e && at(o.p, vertexOn(d)));
+      const d = !dir ? 0 : free(dir) ? dir : free(-dir) ? -dir : 0;
+      if (!d) continue;
+      const vertex = vertexOn(d);
+      let next;
+      if (m && d === dir && Math.abs(m[b] - k[b]) < 1 && (k[b] - vertex[b]) * d >= STUB && Math.min(m[a], k[a]) <= c[ca] && c[ca] <= Math.max(m[a], k[a])){
+        next = [...pts.slice(0, n - 3), { [a]: c[ca], [b]: k[b] }, vertex];
+      } else {
+        const level = c[cb] + d * (half + STUB);
+        if (!m && Math.sign(level - k[b]) !== Math.sign(q[b] - k[b])) continue;
+        next = [...pts.slice(0, n - 2), { [a]: k[a], [b]: level }, { [a]: c[ca], [b]: level }, vertex];
+      }
+      // The new pieces start at index n - 3: the turn into the vertex, or k.
+      if (next.slice(n - 2).some((pt, i) => blocked(next[n - 3 + i], pt, e.r.obstacles))) continue;
+      pts.splice(0, n, ...next);
+    }
+  }
+}
+
 // Two pieces, each horizontal or vertical, that cross or lie on each other.
 function meets(a, b, c, d){
   const flat = (p, q) => Math.abs(p.y - q.y) < 0.5;
@@ -601,9 +654,12 @@ export const LEVEL_STEP = 16;
 //     at a tie, the side Mermaid's route kept to (r.loopSide: 1 below, -1
 //     above). A way a foreign symbol blocks is not taken.
 //   - The ports (portCandidates()): a circle and a diamond on their top or
-//     bottom; a task at the middle of the side, or, when another flow docks
-//     at the middle, 20 px in from a corner: the one with fewer conflicts, at
-//     a tie the one facing the other end.
+//     bottom; a diamond whose vertex there another flow uses on a side
+//     corner instead, STUB out and then to the level, the corner facing the
+//     other end first, the one away from it at one conflict more; a task at
+//     the middle of the side, or, when another flow docks at the middle,
+//     20 px in from a corner: the one with fewer conflicts, at a tie the one
+//     facing the other end. The level spans from the stub of a side corner.
 //   - A twin separateTwins() routed (r.twin) is left as it is; it runs
 //     before, so its ring is one of the flows a flow back keeps off.
 //   - lanes: the boxes [x, y, w, h] of every lane. A ring that comes closer
@@ -613,11 +669,7 @@ export const LEVEL_STEP = 16;
 // Returns { up, down }: by how much the lanes grew upwards and downwards.
 export function loopBack(routes, box, lanes = []){
   const grown = { up: 0, down: 0 };
-  const isBack = r => {
-    const s = box[r.f.from], t = box[r.f.to];
-    return !r.twin && Math.abs(s.cy - t.cy) < 1 && t.cx + t.w / 2 < s.cx - s.w / 2;
-  };
-  const back = routes.filter(isBack).sort((p, q) => Math.abs(box[p.f.from].cx - box[p.f.to].cx) - Math.abs(box[q.f.from].cx - box[q.f.to].cx));
+  const back = routes.filter(r => flowBack(r, box)).sort((p, q) => Math.abs(box[p.f.from].cx - box[p.f.to].cx) - Math.abs(box[q.f.from].cx - box[q.f.to].cx));
   if (!back.length) return grown;
   const fixed = routes.filter(r => !back.includes(r));
   const placed = [];
@@ -632,7 +684,10 @@ export function loopBack(routes, box, lanes = []){
     for (const dir of [mermaid, -mermaid]){
       let side = null;
       for (const a of portCandidates(s, dir, t.cx, usedS)) for (const b of portCandidates(t, dir, s.cx, usedT)){
-        const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
+        // A ring from a gateway's corner runs its stub out first: its level
+        // spans from there.
+        const ax = a.stub ? a.stub.x : a.x, bx = b.stub ? b.stub.x : b.x;
+        const lo = Math.min(ax, bx), hi = Math.max(ax, bx);
         const row = Object.values(box).filter(c => Math.abs(c.cy - s.cy) < 1 && c.cx + c.w / 2 > lo && c.cx - c.w / 2 < hi);
         let y = (dir > 0 ? Math.max(...row.map(c => c.cy + c.h / 2)) : Math.min(...row.map(c => c.cy - c.h / 2))) + dir * 20;
         for (const p of placed){
@@ -641,9 +696,11 @@ export function loopBack(routes, box, lanes = []){
         }
         // The level, or up to three farther out where that has fewer conflicts.
         for (let k = 0; k < 4 && !(side && !side.conflicts); k++){
-          const out = y + dir * k * LEVEL_STEP, next = [a, { x: a.x, y: out }, { x: b.x, y: out }, b];
+          const out = y + dir * k * LEVEL_STEP;
+          const next = [{ x: a.x, y: a.y }, ...(a.stub ? [{ ...a.stub }] : []), { x: ax, y: out }, { x: bx, y: out }, ...(b.stub ? [{ ...b.stub }] : []), { x: b.x, y: b.y }];
           if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
-          const conflicts = conflictScore(next, others, [[s, a, usedS], [t, b, usedT]]);
+          // The corner away from the other end counts one conflict more.
+          const conflicts = conflictScore(next, others, [[s, a, usedS], [t, b, usedT]]) + (a.away ? 1 : 0) + (b.away ? 1 : 0);
           if (!side || conflicts < side.conflicts) side = { next, conflicts, dir, y: out, lo, hi };
         }
       }
@@ -663,9 +720,20 @@ export function loopBack(routes, box, lanes = []){
 // The ports a ring may take on one side of the symbol c (dir: 1 its bottom,
 // -1 its top): the middle; on a task where another flow docks at the middle
 // (used: the end points of the other flows at c), 20 px in from either
-// corner, the one facing the ring's other end (toward: its x) first.
+// corner, the one facing the ring's other end (toward: its x) first. On a
+// gateway whose vertex there another flow uses, its free side corners
+// first, each with a stub STUB out (stub: { x, y }), from where the ring
+// turns to its level: the one facing the other end, then the one away from
+// it (away: true, one conflict more in loopBack()), then the used vertex,
+// which conflictScore() counts. An event keeps its vertex.
 export function portCandidates(c, dir, toward, used){
   const y = c.cy + dir * c.h / 2;
+  const taken = p => used.some(q => Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2);
+  if (c.gateway && taken({ x: c.cx, y })){
+    const facing = Math.sign(toward - c.cx) || 1;
+    const corners = [facing, -facing].map(sign => ({ x: c.cx + sign * c.w / 2, y: c.cy, stub: { x: c.cx + sign * (c.w / 2 + STUB), y: c.cy }, ...(sign !== facing ? { away: true } : {}) }));
+    return [...corners.filter(k => !taken(k)), { x: c.cx, y }];
+  }
   if (!c.task || !used.some(p => Math.abs(p.y - y) < 1 && Math.abs(p.x - c.cx) < 14)) return [{ x: c.cx, y }];
   const facing = Math.sign(toward - c.cx) || 1;
   return [facing, -facing].map(sign => ({ x: c.cx + sign * (c.w / 2 - 20), y }));
@@ -763,7 +831,9 @@ export function bestPlace(places, avoid){
 // horizontal piece, right of a vertical one, then on its other side; then
 // the middle of every other piece, longest first, both sides. A flow back
 // routed around its row (loop) from a gateway starts at the gateway's end of
-// its longest piece, its leg, inside the ring first, between the leg and the
+// its leg, the run along its level (its longest horizontal piece: a ring
+// from a side corner has a stub before it, and its level may be shorter
+// than the piece up to it), inside the ring first, between the leg and the
 // row: beside the stub it would take the corner the gateway's own label
 // needs where two flows back leave the gateway. Each [x, y, w, h], the size
 // labelSize() estimates, or the size given; bpmn-js centres the text on
@@ -786,7 +856,8 @@ export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text), lo
     }
   };
   if (atGateway){
-    const first = loop ? pieces.reduce((m, p) => p.len > m.len ? p : m) : pieces.length > 1 && pieces[0].len < 20 ? pieces[1] : pieces[0];
+    const level = pieces.filter(p => Math.abs(p.a.y - p.b.y) < 1);
+    const first = loop && level.length ? level.reduce((m, p) => p.len > m.len ? p : m) : pieces.length > 1 && pieces[0].len < 20 ? pieces[1] : pieces[0];
     beside(first.a, first.b, true, loop ? Math.sign(pts[0].y - first.a.y) : 0);
   }
   for (const piece of [...pieces].sort((x, y) => y.len - x.len)) beside(piece.a, piece.b, false);
@@ -866,7 +937,7 @@ export function layoutGeometry(model, raw, measure = labelSize){
   for (const n of model.nodes){
     const r = rawOf[n.id], cx = mapX(r.cx), cy = mapY(r.cy), [w, h] = r.size;
     di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h];
-    box[n.id] = { cx, cy, w, h, task: n.type === 'task' };
+    box[n.id] = { cx, cy, w, h, task: n.type === 'task', gateway: n.type === 'gateway' };
   }
   const rect = c => ({ x1: c.cx - c.w / 2, x2: c.cx + c.w / 2, y1: c.cy - c.h / 2, y2: c.cy + c.h / 2 });
 
@@ -898,12 +969,13 @@ export function layoutGeometry(model, raw, measure = labelSize){
   // routed there is no flow back of loopBack()'s. A middle lane a flow back
   // needs room in grows, and what lies beyond it moves.
   separateTwins(routes, box);
+  const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
+  dockApart(routes, box, gateways);
   const grown = loopBack(routes, box, model.lanes.map(l => laneBox[l.key]));
   if (grown.up || grown.down){
     for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
     if (di.pool){ di.pool[1] -= grown.up; di.pool[3] += grown.up + grown.down; }
   }
-  const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
   fanOut(routes, box, gateways);
   spreadPorts(routes, box);
   for (const { pts } of routes) orthogonal(pts);
