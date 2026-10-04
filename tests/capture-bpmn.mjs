@@ -14,6 +14,11 @@
 // of flows, each text once). A text the renderer cannot measure gets the
 // estimate, as in the page.
 //
+// An input that already has a diagram part (a BPMNDiagram, such as the laid-out
+// <n>.measured.bpmn and <n>.estimated.bpmn of the fixtures) is no author XML:
+// it is skipped, with a line naming it, so that tests/fixtures/bpmn-layout/*.bpmn
+// captures the author XML alone.
+//
 // Chromium only: the sizes depend on its fonts. It is /usr/bin/chromium, or
 // the path in CHROMIUM; without it the command stops with exit 1. Exit 1 also
 // when an input cannot be read or laid out by Mermaid.
@@ -40,6 +45,10 @@ export async function captureBundle(){
   return result.outputFiles[0].text;
 }
 
+// Whether the XML has a diagram part: a BPMNDiagram, whatever its prefix,
+// outside comments and CDATA sections.
+export const hasDiagram = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
+
 // The texts the layout measures, in the order it may ask for them, each once.
 export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat(model.flows.map(f => f.name).filter(Boolean)))];
 
@@ -56,12 +65,17 @@ function parseArgs(argv){
 
 async function main(argv){
   const args = parseArgs(argv);
-  const inputs = args.files.map(file => {
+  const inputs = args.files.filter(file => {
+    if (!hasDiagram(fs.readFileSync(file, 'utf8'))) return true;
+    console.log('skipped, it has a diagram part: ' + shown(file));
+    return false;
+  }).map(file => {
     const read = readModel(fs.readFileSync(file, 'utf8'));
     if (!read) throw new Error(file + ': no BPMN definitions');
     const base = path.basename(file).replace(/\.bpmn$/, '');
     return { file, model: read.model, out: path.join(args.out || path.dirname(file), base) };
   });
+  if (!inputs.length) return;
   if (!fs.existsSync(PAGE)) throw new Error('no built page at ' + shown(PAGE) + ': npm run build first');
   if (!fs.existsSync(CHROMIUM)) throw new Error('Chromium not found at ' + CHROMIUM + ': install it, or name its path in CHROMIUM');
   const bundle = await captureBundle();

@@ -170,7 +170,7 @@
     "21.1",
     "21.2"
    ],
-   "note": "measured XML from the layout at 6eb0b39, not the review's browser file: a3c5a0e changed F4_g_a and F6_g_d after the capture"
+   "note": "measured XML from the layout at 6eb0b39, not the review's browser file: a3c5a0e changed F4_g_a, F6_g_d and the label of the gateway g after the capture"
   },
   "r20": {
    "review": "same, but the other out flow goes up and arrival from below",

@@ -7,10 +7,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { MERMAID_LAYOUT_VERSION } from '../src/app/bpmn-layout.js';
 import { FIXTURE_DIR, FIXTURE_FILES, MODES, fixtureIndex, fixtureNames, readFixture, layOut, expectedFile, firstDifference, differenceText } from './bpmn-fixtures.mjs';
 
 const names = fixtureNames();
+const here = path.dirname(fileURLToPath(import.meta.url));
+const FIXTURES_COMMAND = path.join(here, 'bpmn-fixtures.mjs'), CAPTURE_COMMAND = path.join(here, 'capture-bpmn.mjs');
 
 test('the fixtures: 36 inputs, each with its five files, the index and the known breaks, nothing else in the folder, raw positions of the pinned Mermaid', () => {
   assert.equal(names.length, 36);
@@ -50,10 +56,6 @@ test('an input without labels has no sizes, and both modes give the same XML', (
 
 // The two commands from outside, as Ben runs them: on a copy of the fixtures,
 // so that the folder itself is never written by a test.
-import { spawnSync } from 'node:child_process';
-import os from 'node:os';
-import path from 'node:path';
-
 const run = (script, args, env) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8', env: { ...process.env, ...env } });
 
 test('npm run fixtures names a changed expected XML, and --write writes it back and leaves the known list as it is', () => {
@@ -63,25 +65,39 @@ test('npm run fixtures names a changed expected XML, and --write writes it back 
     const file = path.join(copy, 'zwei.measured.bpmn'), good = fs.readFileSync(file, 'utf8');
     fs.writeFileSync(file, good.replace(/<di:waypoint x="(\d+)"/, (m, x) => '<di:waypoint x="' + (Number(x) + 1) + '"'));
     const env = { DOKUFIX_FIXTURE_DIR: copy };
-    const check = run('tests/bpmn-fixtures.mjs', [], env);
+    const check = run(FIXTURES_COMMAND, [], env);
     assert.equal(check.status, 1);
     assert.match(check.stdout, /zwei, measured/);
     assert.match(check.stdout, /1 laid-out XML differ/);
-    const write = run('tests/bpmn-fixtures.mjs', ['--write'], env);
+    const write = run(FIXTURES_COMMAND, ['--write'], env);
     assert.equal(write.status, 0, write.stderr);
     assert.match(write.stdout, /written: zwei\.measured; known breaks unchanged/);
     assert.equal(fs.readFileSync(file, 'utf8'), good);
     assert.equal(fs.readFileSync(path.join(copy, 'known-breaks.json'), 'utf8'), fs.readFileSync(path.join(FIXTURE_DIR, 'known-breaks.json'), 'utf8'));
-    assert.equal(run('tests/bpmn-fixtures.mjs', [], env).status, 0);
+    assert.equal(run(FIXTURES_COMMAND, [], env).status, 0);
   } finally { fs.rmSync(copy, { recursive: true, force: true }); }
 });
 
 test('npm run capture without Chromium stops with exit 1 and says where it looked', () => {
   const out = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-capture-'));
   try {
-    const r = run('tests/capture-bpmn.mjs', ['--out', out, path.join(FIXTURE_DIR, 'zwei.bpmn')], { CHROMIUM: path.join(out, 'no-chromium') });
+    const r = run(CAPTURE_COMMAND, ['--out', out, path.join(FIXTURE_DIR, 'zwei.bpmn')], { CHROMIUM: path.join(out, 'no-chromium') });
     assert.equal(r.status, 1);
     assert.match(r.stderr, /Chromium not found at .*no-chromium/);
+    assert.deepEqual(fs.readdirSync(out), []);
+  } finally { fs.rmSync(out, { recursive: true, force: true }); }
+});
+
+test('npm run capture skips an input with a diagram part, naming it, so the fixtures\' glob captures the author XML alone', () => {
+  const out = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-capture-'));
+  try {
+    const laidOut = ['zwei.measured.bpmn', 'zwei.estimated.bpmn'].map(f => path.join(FIXTURE_DIR, f));
+    const only = run(CAPTURE_COMMAND, ['--out', out, ...laidOut], { CHROMIUM: path.join(out, 'no-chromium') });
+    assert.equal(only.status, 0, only.stderr);
+    assert.equal(only.stdout.match(/^skipped, it has a diagram part: .*zwei\.(measured|estimated)\.bpmn$/gm).length, 2);
+    const mixed = run(CAPTURE_COMMAND, ['--out', out, path.join(FIXTURE_DIR, 'zwei.bpmn'), ...laidOut], { CHROMIUM: path.join(out, 'no-chromium') });
+    assert.equal(mixed.status, 1, 'the author XML is left: it needs Chromium');
+    assert.doesNotMatch(mixed.stdout, /zwei\.bpmn$/m);
     assert.deepEqual(fs.readdirSync(out), []);
   } finally { fs.rmSync(out, { recursive: true, force: true }); }
 });
