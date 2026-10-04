@@ -107,3 +107,21 @@ test('two flows that arrive at one gateway and run together into one docking poi
   const task = { ...M, nodes: M.nodes.map(n => n.id === 'G' ? { ...n, type: 'task' } : n), flows };
   assert.deepEqual(breaksOf(xml, task, SIZES), ['on-one-line-shared F3 F5']);
 });
+
+test('a merge is the whole rest of the way two flows share into one vertex of a gateway, from where at most one of them turns: a T, not a ⊤; a split is none', () => {
+  const shapes = { ...SHAPES, D: [700, 50, 120, 80] };
+  const M2 = { ...M, nodes: [...M.nodes, { id: 'D', type: 'task', name: 'D' }] };
+  const xmlOf = ways => '<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+    Object.entries(ways).map(([id, w]) => '      <bpmndi:BPMNEdge id="' + id + '_di" bpmnElement="' + id + '">' + w.map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>\n').join('') + '</x>';
+  const check = (ways, flows) => breaksOf(xmlOf(ways), { ...M2, flows }, SIZES);
+  const F3 = [[160, 50], [160, 30], [525, 30], [525, 65]];
+  // Two runs at y 30 from either side, both turning down into G's top at one point: a ⊤.
+  assert.deepEqual(check({ F3, F6: [[700, 90], [680, 90], [680, 30], [525, 30], [525, 65]] }, [{ id: 'F3', from: 'A', to: 'G' }, { id: 'F6', from: 'D', to: 'G' }]), ['on-one-line-shared F3 F6']);
+  // From above into the middle of F3's run at y 30, then along it and down: a T, the whole rest shared.
+  const F6 = [[760, 50], [760, 10], [400, 10], [400, 30], [525, 30], [525, 65]];
+  assert.deepEqual(check({ F3, F6 }, [{ id: 'F3', from: 'A', to: 'G' }, { id: 'F6', from: 'D', to: 'G' }]), []);
+  // From above straight down through the point where F3 turns into it: one turns.
+  assert.deepEqual(check({ F3, F6: [[760, 50], [760, 10], [525, 10], [525, 65]] }, [{ id: 'F3', from: 'A', to: 'G' }, { id: 'F6', from: 'D', to: 'G' }]), []);
+  // Two flows out of G on one line: a split, no merge.
+  assert.deepEqual(check({ F4: [[525, 115], [525, 200], [160, 200], [160, 250]], F7: [[525, 115], [525, 200], [760, 200], [760, 130]] }, [{ id: 'F4', from: 'G', to: 'C' }, { id: 'F7', from: 'G', to: 'D' }]), ['on-one-line-shared F4 F7']);
+});

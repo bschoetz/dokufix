@@ -477,25 +477,11 @@ export function fanOut(routes, box, gateways){
     const c = box[id], outs = routes.filter(r => r.f.from === id);
     const used = new Set(portEnds(routes, id).map(e => exitSide([e.p, e.q])));
     for (const r of outs){
-      const pts = r.pts, side = exitSide(pts);
-      if (r.loop || pts.length < 3 || !side || !outs.some(o => o !== r && exitSide(o.pts) === side)) continue;
-      const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h', su = u === 'x' ? 'w' : 'h';
-      if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) continue;                   // the second piece has to turn
-      const dir = Math.sign(pts[2][v] - pts[1][v]), corner = v + (dir > 0 ? '+' : '-');
-      if (!dir || used.has(corner)) continue;
-      const start = { [u]: c[cu], [v]: c[cv] + dir * c[sv] / 2 };
-      let next;
-      if (pts.length === 3){                                                  // ended in the target from above or below: now from the side
-        const t = box[r.f.to], du = Math.sign(pts[1][u] - pts[0][u]), edge = t[cu] - du * t[su] / 2;
-        if ((edge - c[cu]) * du < FAN_ROOM) continue;
-        next = [start, { [u]: c[cu], [v]: t[cv] }, { [u]: edge, [v]: t[cv] }];
-      } else {
-        if (Math.abs(pts[2][v] - pts[3][v]) > 0.5) continue;
-        next = [start, { [u]: c[cu], [v]: pts[2][v] }, ...pts.slice(3)];
-      }
-      if (blocked(next[0], next[1], r.obstacles) || blocked(next[1], next[2], r.obstacles)) continue;
-      pts.splice(0, pts.length, ...next);
-      used.add(corner);
+      if (!outs.some(o => o !== r && exitSide(o.pts) === exitSide(r.pts))) continue;
+      const way = fanWay(r, c, box, used);
+      if (!way) continue;
+      r.pts.splice(0, r.pts.length, ...way.next);
+      used.add(way.corner);
     }
     const arriving = new Set(portEnds(routes, id).filter(e => !e.out).map(e => exitSide([e.p, e.q])));
     for (const r of outs){
@@ -511,6 +497,33 @@ export function fanOut(routes, box, gateways){
       pts.splice(0, 2, ...next);
     }
   }
+}
+
+// The way fanOut() gives the flow r out of the gateway c where another flow
+// leaves by its corner too: { next, corner }, the new points and the corner
+// it takes, or null where it stays (a ring, a flow that does not turn at
+// once, the corner in its direction used, no room, a way a foreign symbol
+// blocks). used: the sides the ends at c lie on, as exitSide() names them.
+// loopBack() asks it as well: such a flow does not keep its vertex.
+export function fanWay(r, c, box, used){
+  const pts = r.pts, side = exitSide(pts);
+  if (r.loop || pts.length < 3 || !side) return null;
+  const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h', su = u === 'x' ? 'w' : 'h';
+  if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) return null;                 // the second piece has to turn
+  const dir = Math.sign(pts[2][v] - pts[1][v]), corner = v + (dir > 0 ? '+' : '-');
+  if (!dir || used.has(corner)) return null;
+  const start = { [u]: c[cu], [v]: c[cv] + dir * c[sv] / 2 };
+  let next;
+  if (pts.length === 3){                                                  // ended in the target from above or below: now from the side
+    const t = box[r.f.to], du = Math.sign(pts[1][u] - pts[0][u]), edge = t[cu] - du * t[su] / 2;
+    if ((edge - c[cu]) * du < FAN_ROOM) return null;
+    next = [start, { [u]: c[cu], [v]: t[cv] }, { [u]: edge, [v]: t[cv] }];
+  } else {
+    if (Math.abs(pts[2][v] - pts[3][v]) > 0.5) return null;
+    next = [start, { [u]: c[cu], [v]: pts[2][v] }, ...pts.slice(3)];
+  }
+  if (blocked(next[0], next[1], r.obstacles) || blocked(next[1], next[2], r.obstacles)) return null;
+  return { next, corner };
 }
 
 // Correction 5. Where a flow arrives at the same side of a task as another
@@ -571,6 +584,15 @@ export function separateTwins(routes, box){
   }
 }
 
+// The vertices of the gateway c that face the symbol d: each on a side
+// beyond whose edge d lies clear of c.
+const facingVertices = (c, d) => [
+  ...(d.cy + d.h / 2 < c.cy - c.h / 2 ? [{ x: c.cx, y: c.cy - c.h / 2 }] : []),
+  ...(d.cy - d.h / 2 > c.cy + c.h / 2 ? [{ x: c.cx, y: c.cy + c.h / 2 }] : []),
+  ...(d.cx + d.w / 2 < c.cx - c.w / 2 ? [{ x: c.cx - c.w / 2, y: c.cy }] : []),
+  ...(d.cx - d.w / 2 > c.cx + c.w / 2 ? [{ x: c.cx + c.w / 2, y: c.cy }] : []),
+];
+
 // A flow back of loopBack(): within one row, its target left of its source
 // at the same height; a twin separateTwins() routed is none.
 const flowBack = (r, box) => {
@@ -592,9 +614,12 @@ const flowBack = (r, box) => {
 //     passes the vertex on that side, turns into it from there;
 //   - otherwise it stays.
 // A way a foreign symbol blocks, one whose new pieces cross or lie on another
-// flow (on the joined flow, only along its last piece), or one that would
-// leave its source backwards, is not taken. An end moved counts at its new
-// vertex for the arrivals after it. The flows back are left out on both
+// flow (on the joined flow, only along its last piece) or run beside one
+// closer than NEAR where the flow did not before (a pair it had may grow
+// longer), or one that would leave its source backwards, is not taken; nor
+// a free vertex that faces the target of a flow leaving the gateway (Ben,
+// 2026-10-04). An end moved counts at its new vertex for the arrivals after
+// it. The flows back are left out on both
 // sides, as arriving, as leaving and as flows to keep off: loopBack() routes
 // them afterwards, from Mermaid's route their ends say nothing, and they keep
 // off the vertices used then.
@@ -605,6 +630,15 @@ export function dockApart(routes, box, gateways){
   // Whether one of the pieces meets a piece of route o; skip: the index of a
   // piece of o left out (the last piece of the flow joined).
   const crosses = (pieces, o, skip = -1) => pieces.some(([u, v]) => o.pts.slice(1).some((w, i) => i !== skip && meets(u, v, o.pts[i], w)));
+  // Whether one of the pieces runs beside a piece of route o, closer than
+  // NEAR and not on its line: a pair the rule check calls parallel.
+  const beside = (pieces, o, skip = -1) => pieces.some(([u, v]) => o.pts.slice(1).some((w, i) => {
+    const flat = Math.abs(u.y - v.y) < 0.5, k = flat ? 'y' : 'x';
+    return i !== skip && near(u, v, o.pts[i], w) && Math.abs(u[k] - o.pts[i][k]) >= 1;
+  }));
+  const piecesOf = pts => pts.slice(1).map((q, i) => [pts[i], q]);
+  // A new pair is refused; a pair the flow had before may grow longer.
+  const newPair = (pieces, e, skipOf = () => -1) => forward.some(o => o !== e.r && !beside(piecesOf(e.r.pts), o) && beside(pieces, o, skipOf(o)));
   for (const id of gateways){
     const c = box[id];
     const ends = portEnds(forward, id);
@@ -630,6 +664,7 @@ export function dockApart(routes, box, gateways){
           const pieces = next.slice(i + 1).map((pt, k) => [next[i + k], pt]);
           if (pieces.some(([p, q]) => blocked(p, q, e.r.obstacles))) continue;
           if (forward.some(r => r !== e.r && crosses(pieces, r, r === o.r ? r.pts.length - 2 : -1))) continue;
+          if (newPair(pieces, e, r => r === o.r ? r.pts.length - 2 : -1)) continue;
           // Nor across its own pieces kept, but the one it goes on from.
           if (crosses(pieces, { pts: next.slice(0, i) })) continue;
           pts.splice(0, pts.length, ...next);
@@ -651,7 +686,8 @@ export function dockApart(routes, box, gateways){
       const b = a === 'x' ? 'y' : 'x', ca = 'c' + a, cb = 'c' + b, half = c[b === 'x' ? 'w' : 'h'] / 2;
       const dir = Math.sign(k[b] - c[cb]);
       const vertexOn = d => ({ [a]: c[ca], [b]: c[cb] + d * half });
-      const free = d => !ends.some(o => o !== e && at(o.p, vertexOn(d)));
+      const facing = forward.filter(o => o.f.from === id).flatMap(o => facingVertices(c, box[o.f.to]));
+      const free = d => !ends.some(o => o !== e && at(o.p, vertexOn(d))) && !facing.some(f => at(f, vertexOn(d)));
       const d = !dir ? 0 : free(dir) ? dir : free(-dir) ? -dir : 0;
       if (!d) continue;
       const vertex = vertexOn(d);
@@ -675,6 +711,7 @@ export function dockApart(routes, box, gateways){
       const pieces = next.slice(from + 1).map((pt, i) => [next[from + i], pt]);
       if (pieces.some(([u, v]) => blocked(u, v, e.r.obstacles))) continue;
       if (forward.some(o => o !== e.r && crosses(pieces, o))) continue;
+      if (newPair(pieces, e)) continue;
       pts.splice(0, n, ...next);
       e.p = pts[pts.length - 1];
       e.q = pts[pts.length - 2];
@@ -727,6 +764,8 @@ export const LEVEL_STEP = 16;
 //     the middle of the side, or, when another flow docks at the middle,
 //     20 px in from a corner: the one with fewer conflicts, at a tie the one
 //     facing the other end. The level spans from the stub of a side corner.
+//     The side is chosen with every end counted as using its port; the
+//     ports on it with the ends that stay (below).
 //   - A twin separateTwins() routed (r.twin) is left as it is; it runs
 //     before, so its ring is one of the flows a flow back keeps off.
 //   - lanes: the boxes [x, y, w, h] of every lane. A ring that comes closer
@@ -744,13 +783,13 @@ export function loopBack(routes, box, lanes = []){
     const s = box[r.f.from], t = box[r.f.to];
     // The flows a ring keeps off: all but the flows back not yet placed.
     const others = fixed.concat(placed.map(p => p.r));
-    const usedAt = id => portEnds(others, id).map(e => e.p);
-    const usedS = usedAt(r.f.from), usedT = usedAt(r.f.to);
-    let best = null;
-    const mermaid = r.loopSide || -1;
-    for (const dir of [mermaid, -mermaid]){
+    const at = (p, q) => Math.abs(p.x - q.x) < 2 && Math.abs(p.y - q.y) < 2;
+    // The best way on the side dir, or null: used, the end points of the
+    // other flows taken as used at s and at t; othersFrom(a), the flows a
+    // ring from the port a keeps off.
+    const wayOn = (dir, usedS, usedT, othersFrom, banned = []) => {
       let side = null;
-      for (const a of portCandidates(s, dir, t.cx, usedS)) for (const b of portCandidates(t, dir, s.cx, usedT)){
+      for (const a of portCandidates(s, dir, t.cx, usedS)) for (const b of portCandidates(t, dir, s.cx, usedT.concat(banned)).filter(b => !banned.some(f => at(f, b)))){
         // A ring from a gateway's corner runs its stub out first: its level
         // spans from there.
         const ax = a.stub ? a.stub.x : a.x, bx = b.stub ? b.stub.x : b.x;
@@ -767,15 +806,44 @@ export function loopBack(routes, box, lanes = []){
           const next = [{ x: a.x, y: a.y }, ...(a.stub ? [{ ...a.stub }] : []), { x: ax, y: out }, { x: bx, y: out }, ...(b.stub ? [{ ...b.stub }] : []), { x: b.x, y: b.y }];
           if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
           // The corner away from the other end counts one conflict more.
-          const conflicts = conflictScore(next, others, [[s, a, usedS], [t, b, usedT]]) + (a.away ? 1 : 0) + (b.away ? 1 : 0);
-          if (!side || conflicts < side.conflicts) side = { next, conflicts, dir, y: out, lo, hi };
+          const conflicts = conflictScore(next, othersFrom(a), [[s, a, usedS], [t, b, usedT]]) + (a.away ? 1 : 0) + (b.away ? 1 : 0);
+          if (!side || conflicts < side.conflicts) side = { next, conflicts, dir, y: out, lo, hi, a };
         }
       }
+      return side;
+    };
+    // The side: every end at s and at t counts as using its port (entry 22
+    // changes how the side is chosen).
+    const endsS = portEnds(others, r.f.from), endsT = portEnds(others, r.f.to);
+    let best = null;
+    const mermaid = r.loopSide || -1;
+    for (const dir of [mermaid, -mermaid]){
+      const side = wayOn(dir, endsS.map(e => e.p), endsT.map(e => e.p), () => others);
       if (side && (!best || side.conflicts < best.conflicts)) best = side;
     }
     if (!best) continue;
+    // The ports on that side (Ben, 2026-10-04): a vertex is used by an end
+    // that stays there. At the source not by a flow out that fanOut() moves
+    // to a free corner once the ring leaves by its vertex too, on a way that
+    // crosses and lies on no other flow; from that vertex the ring keeps off
+    // the flow's new way. At a gateway the ring flows back to, its vertex on
+    // that side by flows out only, since arriving ones merge with the ring
+    // there; and a vertex that faces the target of a flow leaving that
+    // gateway is not taken.
+    const sides = new Set(endsS.map(e => exitSide([e.p, e.q])));
+    const clear = (way, own) => !others.some(o => o !== own && o.pts.slice(1).some((q, i) => way.slice(1).some((w, k) => meets(way[k], w, o.pts[i], q))));
+    const leaving = s.gateway ? endsS.filter(e => e.out).map(e => ({ e, way: fanWay(e.r, s, box, sides) })).filter(m => m.way && clear(m.way.next, m.e.r)) : [];
+    const movedBy = a => leaving.filter(m => at(m.e.p, a));
+    const othersFrom = a => movedBy(a).length ? others.map(o => { const m = movedBy(a).find(x => x.e.r === o); return m ? { ...o, pts: m.way.next } : o; }) : others;
+    const vertexT = { x: t.cx, y: t.cy + best.dir * t.h / 2 };
+    best = wayOn(best.dir, endsS.filter(e => !leaving.some(m => m.e === e)).map(e => e.p), endsT.filter(e => e.out || !t.gateway || !at(e.p, vertexT)).map(e => e.p), othersFrom,
+      t.gateway ? endsT.filter(e => e.out).flatMap(e => facingVertices(t, box[e.r.f.to])) : []) || best;
+    if (!best) continue;
     r.pts.splice(0, r.pts.length, ...best.next);
     r.loop = true;
+    // The flow out the ring takes the vertex of moves to its corner now, as
+    // fanOut() would move it, so that the rings after this one see it there.
+    for (const m of movedBy(best.a)) m.e.r.pts.splice(0, m.e.r.pts.length, ...m.way.next);
     const ring = { r, dir: best.dir, y: best.y, lo: best.lo, hi: best.hi, cy: s.cy };
     placed.push(ring);
     const need = growLane(ring, lanes, box, routes, placed);
@@ -861,11 +929,13 @@ export function growLane(ring, lanes, box, routes, placed){
 // point { x, y } of its own, on the piece the label stands beside); the
 // owner's lane is the lane that holds the anchor. After each growth every
 // other label moves by what its anchor moved, whichever side of the border
-// the label lies on, so that the order of the labels does not change the
-// result. A label beyond an outer lane's outer border grows nothing here:
-// the frame grows at the end of layoutGeometry(). labels: [{ boxes, anchor
-// }], boxes the arrays [x, y, w, h] that move together, the first the
-// label's text, which is checked; lanes: the boxes of every lane, as for
+// the label lies on, and every label is checked again until none crosses a
+// border (a growth can bring a label that lay wholly in the next lane across
+// the border that moved), so that the order of the labels does not change
+// the result. A label beyond an outer lane's outer border grows nothing
+// here: the frame grows at the end of layoutGeometry(). labels: [{ boxes,
+// anchor }], boxes the arrays [x, y, w, h] that move together, the first
+// the label's text, which is checked; lanes: the boxes of every lane, as for
 // loopBack(). Returns { up, down }: by how much the lanes grew upwards and
 // downwards.
 export function labelRoom(labels, lanes, box, routes){
@@ -876,25 +946,34 @@ export function labelRoom(labels, lanes, box, routes){
   const ay = a => 'cy' in a ? a.cy : a.y;
   // The anchors of flow labels move with the flows' points.
   const points = { pts: labels.map(l => l.anchor).filter(a => !('cy' in a)), obstacles: [] };
-  for (const l of labels){
-    const text = l.boxes[0];
-    if (lanes.some(b => within(text, b))) continue;
-    for (const dir of [-1, 1]){
-      const lane = lanes.find(b => b[1] <= ay(l.anchor) && ay(l.anchor) <= b[1] + b[3]);
-      if (!lane) break;
-      const [, y, , h] = text, border = dir > 0 ? lane[1] + lane[3] : lane[1], edge = dir > 0 ? y + h : y;
-      if ((edge - border) * dir <= 0) continue;
-      const before = labels.map(o => ay(o.anchor));
-      // growLane() keeps a ring's level RING_CLEARANCE from the border.
-      const need = growLane({ r: { pts: [] }, dir, y: edge + dir * (LABEL_GAP - RING_CLEARANCE), cy: lane[1] + lane[3] / 2 }, lanes, box, routes.concat(points), []);
-      if (!need) continue;
-      if (dir > 0) grown.down += need; else grown.up += need;
-      labels.forEach((o, i) => {
-        const moved = ay(o.anchor) - before[i];
-        if (moved) for (const b of o.boxes) b[1] += moved;
-      });
+  // One pass over the labels: whether a lane grew.
+  const pass = () => {
+    let grew = false;
+    for (const l of labels){
+      const text = l.boxes[0];
+      if (lanes.some(b => within(text, b))) continue;
+      for (const dir of [-1, 1]){
+        const lane = lanes.find(b => b[1] <= ay(l.anchor) && ay(l.anchor) <= b[1] + b[3]);
+        if (!lane) break;
+        const [, y, , h] = text, border = dir > 0 ? lane[1] + lane[3] : lane[1], edge = dir > 0 ? y + h : y;
+        if ((edge - border) * dir <= 0) continue;
+        const before = labels.map(o => ay(o.anchor));
+        // growLane() keeps a ring's level RING_CLEARANCE from the border.
+        const need = growLane({ r: { pts: [] }, dir, y: edge + dir * (LABEL_GAP - RING_CLEARANCE), cy: lane[1] + lane[3] / 2 }, lanes, box, routes.concat(points), []);
+        if (!need) continue;
+        grew = true;
+        if (dir > 0) grown.down += need; else grown.up += need;
+        labels.forEach((o, i) => {
+          const moved = ay(o.anchor) - before[i];
+          if (moved) for (const b of o.boxes) b[1] += moved;
+        });
+      }
     }
-  }
+    return grew;
+  };
+  // A label once inside its owner's lane stays there, so each grows its lane
+  // at most once a side: the passes end.
+  for (let n = 0; n <= 2 * labels.length && pass(); n++);
   return grown;
 }
 

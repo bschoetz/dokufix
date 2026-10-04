@@ -574,6 +574,70 @@ test('correction 8: an arrival at the vertex a flow leaves by first joins anothe
   assert.deepEqual(stays.pts, ptsOf(way));
 });
 
+test('correction 8: a free vertex is refused where its new pieces would run beside a foreign flow closer than 12 px; a pair the flow had may grow longer', () => {
+  const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), V: node(560, -100, 120, 80, true), X: node(0, -300, 36, 36), Y: node(0, 300, 36, 36) };
+  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
+  const way = [[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]];
+  // A foreign flow 6 px above the run into the top vertex: a new pair, refused; the bottom lies across the flow out.
+  const newPair = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
+  dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[200, 57], [320, 57]]), obstacles: [] }, newPair], box, ['G']);
+  assert.deepEqual(newPair.pts, ptsOf(way), 'it stays');
+  // A foreign flow 6 px beside the run it had: the pair grows, the way is taken.
+  const grows = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
+  dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[343, -20], [343, 50]]), obstacles: [] }, grows], box, ['G']);
+  assert.deepEqual(grows.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 63], [300, 63], [300, 75]]));
+});
+
+test('correction 8: a free vertex that faces the target of a flow leaving the gateway is not taken', () => {
+  const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), X: node(440, -100, 120, 80, true), V: node(600, -100, 120, 80, true) };
+  const routes = () => [
+    { f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] },
+    { f: { from: 'G', to: 'X' }, pts: ptsOf([[325, 100], [440, 100], [440, -60]]), obstacles: [] },
+  ];
+  const way = [[600, -60], [600, -30], [345, -30], [345, 100], [325, 100]];
+  const e = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
+  dockApart([...routes(), e], box, ['G']);
+  assert.deepEqual(e.pts, ptsOf(way), 'the top faces X, the bottom lies across the flows out: it stays');
+  // X below the row instead: the top is free and taken.
+  box.X = node(440, 300, 120, 80, true);
+  const f = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
+  dockApart([{ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] }, { f: { from: 'G', to: 'X' }, pts: ptsOf([[325, 100], [440, 100], [440, 260]]), obstacles: [] }, f], box, ['G']);
+  assert.deepEqual(f.pts, ptsOf([[600, -60], [600, -30], [345, -30], [345, 63], [300, 63], [300, 75]]));
+});
+
+test('correction 7: a flow back leaves the vertex a flow forward uses that fanOut() moves to a free corner, and that flow moves now: no away corner, no crossing (u3)', () => {
+  const box = { A: node(100, 100, 120, 80, true), G: gateway(300, 100), X: node(300, -100, 120, 80, true), Y: node(480, 210, 36, 36) };
+  const routes = [
+    { f: { from: 'A', to: 'G' }, pts: ptsOf([[160, 100], [275, 100]]), obstacles: [] },
+    { f: { from: 'G', to: 'X' }, pts: ptsOf([[300, 75], [300, -60]]), obstacles: [] },
+    { f: { from: 'G', to: 'Y' }, pts: ptsOf([[300, 125], [300, 210], [462, 210]]), obstacles: [] },
+    { f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 150], [100, 150], [100, 140]]), obstacles: [], loopSide: 1 },
+  ];
+  loopBack(routes, box);
+  assert.deepEqual(routes[3].pts, ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]), 'out of the bottom vertex, 20 px under A');
+  assert.deepEqual(routes[2].pts, ptsOf([[325, 100], [480, 100], [480, 192]]), 'the flow to Y from the right corner, as fanOut() moves it');
+});
+
+test('correction 7: at a gateway it flows back to, a vertex arriving flows use is no conflict: the ring merges there (u13); one that faces the target of a flow leaving is not taken', () => {
+  const box = { M: gateway(100, 100), S: node(400, 100, 120, 80, true), U: node(100, -100, 120, 80, true) };
+  const below = [{ x1: 40, y1: 150, x2: 460, y2: 175 }];
+  const routes = () => [
+    { f: { from: 'U', to: 'M' }, pts: ptsOf([[100, -60], [100, 75]]), obstacles: [] },
+    { f: { from: 'M', to: 'S' }, pts: ptsOf([[125, 100], [340, 100]]), obstacles: [] },
+    { f: { from: 'S', to: 'M' }, pts: ptsOf([[400, 60], [400, 50], [100, 50], [100, 75]]), obstacles: below, loopSide: -1 },
+  ];
+  const merge = routes();
+  loopBack(merge, box);
+  assert.deepEqual(merge[2].pts, ptsOf([[400, 60], [400, 40], [100, 40], [100, 75]]), 'into the top vertex, along the arriving flow');
+  // Without the arriving flow, and a flow out of M's right corner up to a symbol above: the top faces
+  // that symbol and is not taken; the right corner is used, the ring takes the left one.
+  box.X = node(300, -100, 120, 80, true);
+  const facing = routes().slice(1);
+  facing.push({ f: { from: 'M', to: 'X' }, pts: ptsOf([[125, 100], [180, 100], [180, -100], [240, -100]]), obstacles: [] });
+  loopBack(facing, box);
+  assert.deepEqual(facing[1].pts.at(-1), P(75, 100), 'the left corner, not the top vertex');
+});
+
 test('conflictScore: one per piece of another flow crossed, lain on or run beside closer than 12 px, one per used port of a gateway or an event', () => {
   const ring = ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]);
   const g = node(300, 100, 50, 50), t = node(100, 100, 120, 80, true);
@@ -658,6 +722,19 @@ test('labelRoom: a flow\'s label beside its piece in the next lane, reaching bac
   assert.deepEqual(text, [370, 252, 60, 19], 'the label stays, 4 px above its piece');
   assert.deepEqual(flow.pts, ptsOf([[300, 228], [300, 275], [500, 275], [500, 280]]), 'the source moved up with its lane');
   assert.equal(box.T.cy, 188);
+});
+
+test('labelRoom: a label wholly in the next lane is checked again after a growth; in either order the same lanes, no label across a border', () => {
+  const run = order => {
+    const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
+    const box = { G1: gateway(200, 220), G2: gateway(600, 240) };
+    const labels = { G1: { boxes: [[185, 250, 30, 20]], anchor: box.G1 }, G2: { boxes: [[585, 262, 30, 15]], anchor: box.G2 } };
+    labelRoom(order.map(k => labels[k]), lanes, box, []);
+    return { lanes, labels: Object.values(labels).map(l => l.boxes[0]) };
+  };
+  const a = run(['G2', 'G1']), b = run(['G1', 'G2']);
+  assert.deepEqual(a, b);
+  assert.deepEqual(a.lanes, [[0, 0, 1000, 140], [0, 140, 1000, 141], [0, 281, 1000, 100]], '14 px for G1\'s label, then 7 for G2\'s, which the border reached');
 });
 
 test('labels: estimated at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {

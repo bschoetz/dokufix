@@ -19,8 +19,12 @@
 //   on-one-line-shared,       two pieces of different flows on one line, side
 //   on-one-line-foreign,      by side, sharing a source or a target or not; or
 //   parallel                  closer than 12 px; not two flows that arrive at
-//                             one gateway and run together into one docking
-//                             point on their last pieces: a merge (story 2.21)
+//                             one gateway and share the whole rest of their
+//                             way into one docking point from where they meet
+//                             (also in the middle of a piece of the other),
+//                             at most one of them turning there (a T or an
+//                             L, not a ⊤): a merge (story 2.21; a split is no
+//                             merge)
 //   point-outside-lanes       a waypoint in no lane
 //   node-outside-lane         a symbol not inside the lane that holds it
 //   lane-gap                  two lanes one below the other that do not meet
@@ -68,6 +72,31 @@ export function readDiagram(xml){
 
 // The breaks of one laid-out diagram, sorted, each once. model: readProcess()'s;
 // sizes: the measured label sizes by text.
+// The pieces two flows share as a merge, as pairs "<i> <j>" of the index of
+// a piece of a and one of b (piece i: from waypoint i - 1 to i), or null
+// where they are none. a and b: waypoints [[x, y], …] that end on one point.
+// The way is walked back from that point while both run on in one
+// direction; where they part, at most one of them may turn (a corner of it,
+// or its first point, there).
+export function mergedPieces(a, b){
+  const same = (p, q) => p[0] === q[0] && p[1] === q[1];
+  if (a.length < 2 || b.length < 2 || !same(a.at(-1), b.at(-1))) return null;
+  const toward = (p, q) => [Math.sign(q[0] - p[0]), Math.sign(q[1] - p[1])].join();
+  const pairs = new Set();
+  let i = a.length - 1, j = b.length - 1, at = a[i];
+  while (i > 0 && j > 0 && toward(at, a[i - 1]) === toward(at, b[j - 1])){
+    pairs.add(i + ' ' + j);
+    const la = Math.abs(a[i - 1][0] - at[0]) + Math.abs(a[i - 1][1] - at[1]), lb = Math.abs(b[j - 1][0] - at[0]) + Math.abs(b[j - 1][1] - at[1]);
+    at = la <= lb ? a[i - 1] : b[j - 1];
+    if (la <= lb) i--;
+    if (lb <= la) j--;
+  }
+  if (!pairs.size) return null;
+  // Turning where they part: a corner there, or the flow's first point.
+  const turns = (w, k) => same(w[k], at) && (k === 0 || toward(at, w[k - 1]) !== toward(w[k + 1], at));
+  return turns(a, i) && turns(b, j) ? null : pairs;
+}
+
 export function breaksOf(xml, model, sizes = {}){
   const out = new Set();
   const add = (rule, ...ids) => out.add([rule, ...ids].join(' '));
@@ -121,6 +150,7 @@ export function breaksOf(xml, model, sizes = {}){
     if (a.node === b.node && a.out !== b.out && Math.hypot(a.p[0] - b.p[0], a.p[1] - b.p[1]) < 3) add('double-headed', a.node, ...[a.id, b.id].sort());
   }
 
+  const merges = new Map();
   for (let p = 0; p < segs.length; p++) for (let q = p + 1; q < segs.length; q++){
     const s = segs[p], t = segs[q];
     if (s.id === t.id) continue;
@@ -131,8 +161,11 @@ export function breaksOf(xml, model, sizes = {}){
     const overlap = Math.min(Math.max(s.a[v], s.b[v]), Math.max(t.a[v], t.b[v])) - Math.max(Math.min(s.a[v], s.b[v]), Math.min(t.a[v], t.b[v]));
     if (d >= 12 || overlap <= 0) continue;
     const sf = flowOf[s.id], tf = flowOf[t.id];
-    const merge = !d && sf.to === tf.to && type[sf.to] === 'gateway' && s.i === s.n - 1 && t.i === t.n - 1 && s.b[0] === t.b[0] && s.b[1] === t.b[1];
-    if (merge) continue;
+    if (!d && sf.to === tf.to && type[sf.to] === 'gateway'){
+      const key = s.id + ' ' + t.id;
+      if (!merges.has(key)) merges.set(key, mergedPieces(di.flows[s.id], di.flows[t.id]));
+      if (merges.get(key)?.has(s.i + ' ' + t.i)) continue;
+    }
     const ids = [s.id, t.id].sort();
     if (d) add('parallel', ...ids);
     else add(sf.from === tf.from || sf.to === tf.to ? 'on-one-line-shared' : 'on-one-line-foreign', ...ids);
