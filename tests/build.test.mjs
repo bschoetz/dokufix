@@ -1,6 +1,7 @@
 // Proves what build.mjs promises: the same file from the same sources, exit 1
-// with nothing written where a source would give a broken page, and a readable
-// second file (--dev, --watch) that never takes the place of the committed one.
+// with nothing written where a source would give a broken page, a readable
+// second file (--dev, --watch) that never takes the place of the committed one,
+// and the showcase, the same page with src/showcase.md as its demo text.
 //
 //   npm test          (node --test tests/*.test.mjs)
 //
@@ -25,6 +26,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
 const srcDir = path.join(root, 'src');
 const committed = path.join(root, 'dist/dokufix.html');
+const committedShowcase = path.join(root, 'dist/dokufix-showcase.html');
 const original = name => fs.readFileSync(path.join(srcDir, name), 'utf8');
 
 // Runs build.mjs on a copy of src/ in which the given files are replaced: a
@@ -88,6 +90,126 @@ test('--check fails when the built file is missing', () => {
   assert.equal(r.status, 1, r.stdout);
   assert.match(r.stderr, /is missing/);
   assert.equal(r.html, null);
+});
+
+// ---------- the showcase ----------
+// Builds a copy of src/ with --out and --showcase-out into a temporary folder.
+// Returns the process result, the two built files if they were written, and
+// the names of the files in the folder of the output.
+function buildBoth(changed = {}, extraArgs = []){
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  const copy = path.join(dir, 'src');
+  fs.cpSync(srcDir, copy, { recursive: true });
+  for (const [name, text] of Object.entries(changed)){
+    if (text === null) fs.rmSync(path.join(copy, name));
+    else fs.writeFileSync(path.join(copy, name), text);
+  }
+  const out = path.join(dir, 'dist/dokufix.html'), showcase = path.join(dir, 'dist/dokufix-showcase.html');
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--src', copy, '--out', out, '--showcase-out', showcase, ...extraArgs], { encoding: 'utf8' });
+  const read = file => fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
+  const result = { status: r.status, stdout: r.stdout, stderr: r.stderr, html: read(out), showcase: read(showcase) };
+  fs.rmSync(dir, { recursive: true });
+  return result;
+}
+// The page without the contents of the given data blocks.
+const withoutBlocks = (html, ids) => ids.reduce((h, id) => h.replace(dataBlock(h, id), ''), html);
+test('unchanged sources give both committed files, byte for byte', () => {
+  const r = buildBoth();
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /dokufix\.html written[\s\S]*dokufix-showcase\.html written/);
+  assert.ok(r.html === fs.readFileSync(committed, 'utf8'), 'the build of src/ differs from dist/dokufix.html; run "npm run build"');
+  assert.ok(r.showcase === fs.readFileSync(committedShowcase, 'utf8'), 'the build of src/ differs from dist/dokufix-showcase.html; run "npm run build"');
+});
+test('with --out alone only that file is written, and showcase.md is not needed', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  fs.cpSync(srcDir, path.join(dir, 'src'), { recursive: true });
+  fs.rmSync(path.join(dir, 'src/showcase.md'));
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--src', path.join(dir, 'src'), '--out', path.join(dir, 'out/dokufix.html')], { encoding: 'utf8' });
+  const written = fs.readdirSync(path.join(dir, 'out'));
+  fs.rmSync(dir, { recursive: true });
+  assert.equal(r.status, 0, r.stderr);
+  assert.deepEqual(written, ['dokufix.html']);
+});
+test('the showcase is the built file with another demo text: equal outside #dokufix-demo and #dokufix-assets, its demo block holds src/showcase.md', () => {
+  const html = fs.readFileSync(committed, 'utf8'), showcase = fs.readFileSync(committedShowcase, 'utf8');
+  assert.notEqual(html, showcase);
+  assert.equal(withoutBlocks(showcase, ['dokufix-demo', 'dokufix-assets']), withoutBlocks(html, ['dokufix-demo', 'dokufix-assets']));
+  // Both carry every image of src/assets/: the asset blocks are the same, so the files differ in #dokufix-demo alone.
+  assert.equal(dataBlock(showcase, 'dokufix-assets'), dataBlock(html, 'dokufix-assets'));
+  assert.deepEqual(JSON.parse(dataBlock(showcase, 'dokufix-demo')), { text: original('showcase.md') });
+  // The images it names are in its asset block.
+  const assets = JSON.parse(dataBlock(showcase, 'dokufix-assets'));
+  const named = Array.from(original('showcase.md').matchAll(/#asset-([0-9a-f]{64})/g), m => m[1]);
+  assert.ok(named.length > 0, 'the showcase shows an image');
+  for (const hash of named) assert.ok(assets[hash], 'the showcase carries ' + hash);
+});
+test('the showcase text is short: no special cases, no code block of its own', () => {
+  const text = original('showcase.md');
+  assert.ok(text.length < original('demo.md').length / 2, text.length + ' B');
+  assert.ok(!/^## Sonderfälle/m.test(text) && !/^```(?!mermaid|bpmn)\w/m.test(text));
+  // The BPMN diagram is written without coordinates, so the layout draws it.
+  assert.match(text, /^```bpmn$/m);
+  assert.ok(!text.includes('bpmndi'), 'no coordinates');
+});
+test('--check passes on both committed files', () => {
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--check', '--out', committed, '--showcase-out', committedShowcase], { encoding: 'utf8' });
+  assert.equal(r.status, 0, r.stderr);
+  assert.match(r.stdout, /dokufix\.html is up to date[\s\S]*dokufix-showcase\.html is up to date/);
+});
+test('--check fails when showcase.md changed and dist/ was not rebuilt; it names the showcase alone', () => {
+  const before = fs.readFileSync(committedShowcase);
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  fs.cpSync(srcDir, path.join(dir, 'src'), { recursive: true });
+  fs.appendFileSync(path.join(dir, 'src/showcase.md'), 'Ein Satz mehr.\n');
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--check', '--src', path.join(dir, 'src'), '--out', committed, '--showcase-out', committedShowcase], { encoding: 'utf8' });
+  fs.rmSync(dir, { recursive: true });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /dokufix-showcase\.html is stale/);
+  assert.ok(!/dokufix\.html is stale/.test(r.stderr), r.stderr);
+  assert.match(r.stdout, /dokufix\.html is up to date/);
+  assert.ok(before.equals(fs.readFileSync(committedShowcase)), '--check wrote to the showcase');
+});
+test('--check fails when the showcase is missing', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
+  const out = path.join(dir, 'dokufix.html'), showcase = path.join(dir, 'dokufix-showcase.html');
+  fs.copyFileSync(committed, out);
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--check', '--out', out, '--showcase-out', showcase], { encoding: 'utf8' });
+  const written = fs.existsSync(showcase);
+  fs.rmSync(dir, { recursive: true });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /dokufix-showcase\.html is missing/);
+  assert.ok(!written);
+});
+test('the showcase text names an image src/assets/ does not hold: exit 1, showcase.md named, neither file written', () => {
+  const missing = 'cd'.repeat(32);
+  const r = buildBoth({ 'showcase.md': original('showcase.md') + '\n![x](#asset-' + missing + ')\n' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.ok(r.stderr.includes('showcase.md refers to #asset-' + missing + ', which src/assets/ does not hold'), r.stderr);
+  assert.equal(r.html, null);
+  assert.equal(r.showcase, null);
+});
+test('showcase.md missing while the showcase is asked for: exit 1, "source not found", neither file written', () => {
+  const r = buildBoth({ 'showcase.md': null });
+  assert.equal(r.status, 1, r.stdout);
+  assert.ok(r.stderr.startsWith('source not found: ') && r.stderr.trim().endsWith('showcase.md'), r.stderr);
+  assert.equal(r.html, null);
+  assert.equal(r.showcase, null);
+});
+test('--dev writes no showcase, and never a committed one', () => {
+  const r = buildBoth({}, ['--dev']);
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /--dev and --showcase-out do not go together/);
+  assert.equal(r.html, null);
+  const before = fs.readFileSync(committedShowcase);
+  const over = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--dev', '--out', committedShowcase], { encoding: 'utf8' });
+  assert.equal(over.status, 1, over.stdout);
+  assert.match(over.stderr, /--dev does not write dist\/dokufix-showcase\.html/);
+  assert.ok(before.equals(fs.readFileSync(committedShowcase)));
+});
+test('--out and --showcase-out cannot name the same file', () => {
+  const r = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--check', '--out', committed, '--showcase-out', committed], { encoding: 'utf8' });
+  assert.equal(r.status, 1, r.stdout);
+  assert.match(r.stderr, /name the same file/);
 });
 
 // ---------- the readable build ----------
@@ -479,7 +601,8 @@ test('started through a symlink, the build still runs', () => {
   const r = spawnSync(process.execPath, [link, '--check'], { encoding: 'utf8' });
   fs.rmSync(dir, { recursive: true });
   assert.equal(r.status, 0, r.stderr);
-  assert.match(r.stdout, /up to date/);
+  // Without --out the check is of both committed files.
+  assert.match(r.stdout, /dokufix\.html is up to date[\s\S]*dokufix-showcase\.html is up to date/);
 });
 
 // ---------- row 5: demo text with markup ----------

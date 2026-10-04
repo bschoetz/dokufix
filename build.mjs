@@ -1,13 +1,17 @@
-// Builds dist/dokufix.html, the one file that is dokufix, from the sources in src/.
+// Builds dist/dokufix.html, the one file that is dokufix, from the sources in src/,
+// and beside it dist/dokufix-showcase.html, the same page with a demo text of its
+// own: src/showcase.md, short, each core feature once, for a first look. The two
+// files differ in the #dokufix-demo block alone; the demo text src/demo.md, with
+// every variant and special case, stays the text of the regression checks.
 //
-//   node build.mjs            write dist/dokufix.html
-//   node build.mjs --check    write nothing; exit 1 when dist/dokufix.html is not
-//                             what the sources give
+//   node build.mjs            write dist/dokufix.html and dist/dokufix-showcase.html
+//   node build.mjs --check    write nothing; exit 1 when either file is missing or
+//                             not what the sources give
 //   node build.mjs --dev      write dist/dokufix.dev.html instead: the same page
 //                             with script and styles not minified and a source
 //                             map in the script. For reading and debugging; not
 //                             in git, never the committed file, and --check does
-//                             not look at it
+//                             not look at it. Of the demo text only: no showcase
 //   node build.mjs --dev --watch
 //                             the same, and again whenever a file under src/
 //                             changes ("npm run watch")
@@ -16,6 +20,10 @@
 //   --src <dir>    the sources (default: src/ beside this file)
 //   --out <file>   the built file (default: dist/dokufix.html beside this file,
 //                  with --dev dist/dokufix.dev.html)
+//   --showcase-out <file>
+//                  the showcase. Without --out and --showcase-out it is
+//                  dist/dokufix-showcase.html beside this file; with either of
+//                  them it is written, or checked, only where this one names it
 //
 // src/index.html is the page. It names each of the other sources once, as a slot:
 //
@@ -24,7 +32,8 @@
 //                      the search panel (src/search.css), minified
 //   {{slot:app.js}}    the script: src/app.js with the modules it imports,
 //                      bundled into one IIFE, minified
-//   {{slot:demo.md}}   the demo text, as {"text": …} inside the #dokufix-demo block
+//   {{slot:demo.md}}   the demo text, as {"text": …} inside the #dokufix-demo block;
+//                      in the showcase src/showcase.md
 //   {{slot:reader.js}} the reader bundle of the read-only exports `schlank` and
 //                      `kompakt`, the table filter and the search: src/reader.js
 //                      with the modules it imports, bundled into one IIFE,
@@ -42,6 +51,8 @@
 //
 // An image of the demo text lies in src/assets/ under its SHA-256, the name the
 // demo text refers to it by: src/assets/<sha256>.webp, ![…](#asset-<sha256>).
+// Both files carry every image of src/assets/; each demo text is checked against
+// it on its own.
 // The page's own markup goes into the built file as it is written.
 //
 // One thing is done to the script after esbuild: every "<!--" in it is written
@@ -53,13 +64,14 @@
 // string, a template or a regular expression, and there \x3c is the same
 // character. (Only the raw text of a tagged template would see the difference.)
 //
-// The build exits 1, and writes nothing, when
+// The build exits 1, and writes nothing, neither file, when
 //   - a source is missing;
 //   - a slot is missing from the page, stands there twice, or is not one of the six;
 //   - a file in src/assets/ is not named <sha256>.<ext> by the SHA-256 of its
 //     bytes, or has a type an image of the page cannot have; the page refuses
 //     an image whose bytes do not give its hash;
-//   - the demo text refers to an image (#asset-<hash>) that src/assets/ does not hold;
+//   - the demo text or the showcase text refers to an image (#asset-<hash>) that
+//     src/assets/ does not hold; the message names the text;
 //   - the minified script or the reader bundle contains "</script" or "<!--",
 //     or a minified stylesheet "</style": each would break its element, in the
 //     built file and in every file saved from it;
@@ -68,8 +80,8 @@
 //     name it imported.
 //
 // Two builds of the same sources are byte-identical, which is what --check and
-// the committed dist/dokufix.html rely on: no time, no path and no random value
-// goes into the file. (The --dev file carries the paths of the sources in its
+// the committed dist/dokufix.html and dist/dokufix-showcase.html rely on: no
+// time, no path and no random value goes into the file. (The --dev file carries the paths of the sources in its
 // source map, relative to where it is written.)
 
 import * as esbuild from 'esbuild';
@@ -82,6 +94,8 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // The committed file, and the readable one beside it.
 const COMMITTED = path.join(here, 'dist', 'dokufix.html');
 const DEV = path.join(here, 'dist', 'dokufix.dev.html');
+// The committed showcase: the same page with src/showcase.md as its demo text.
+const SHOWCASE = path.join(here, 'dist', 'dokufix-showcase.html');
 
 export const SLOTS = ['doc.css', 'app.css', 'app.js', 'reader.js', 'demo.md', 'assets'];
 const SLOT_RE = /\{\{slot:([^{}]*)\}\}/g;
@@ -144,8 +158,9 @@ const ASSET_REF_RE = /#asset-([0-9a-f]{12,64})/gi;
 
 // The block of the images: every file in src/assets/, in the order of its name,
 // checked against its name; and every image the demo text names, checked
-// against the block. Returns the object the block holds.
-export function readAssets(dir, demo){
+// against the block. demoName: the demo text's file, for the message. Returns
+// the object the block holds.
+export function readAssets(dir, demo, demoName = 'demo.md'){
   const out = {};
   const problems = [];
   const files = fs.existsSync(dir) ? fs.readdirSync(dir).filter(f => !f.startsWith('.')).sort() : [];
@@ -165,7 +180,7 @@ export function readAssets(dir, demo){
     out[hash] = { m: type, d: bytes.toString('base64') };
   }
   for (const ref of new Set(Array.from(demo.matchAll(ASSET_REF_RE), r => r[1].toLowerCase()))){
-    if (!out[ref]) problems.push('demo.md refers to #asset-' + ref + ', which src/assets/ does not hold');
+    if (!out[ref]) problems.push(demoName + ' refers to #asset-' + ref + ', which src/assets/ does not hold');
   }
   if (problems.length) throw new BuildError(problems.join('\n'));
   return out;
@@ -193,16 +208,19 @@ async function bundleScript(file, dev, outFile, define = {}){
   return result.outputFiles[0].text.trim().replaceAll('<!--', '\\x3c!--');
 }
 
-// The built page as a string. options: { dev, out }, see bundleScript().
+// The built page as a string. options: { dev, out }, see bundleScript(), and
+// demo, the file of the demo text in srcDir: 'demo.md', or 'showcase.md' for
+// the showcase.
 export async function build(srcDir, options = {}){
   const dev = !!options.dev;
+  const demoName = options.demo || 'demo.md';
   const read = name => {
     const file = path.join(srcDir, name);
     if (!fs.existsSync(file)) throw new BuildError('source not found: ' + file);
     return fs.readFileSync(file, 'utf8');
   };
   const template = read('index.html');
-  const demo = read('demo.md');
+  const demo = read(demoName);
   const docCss = read('doc.css'), appCss = read('app.css'), searchCss = read('search.css');
   read('app.js');   // esbuild reads them itself; this is for the message when one is missing
   read('reader.js');
@@ -221,7 +239,7 @@ export async function build(srcDir, options = {}){
       // Minified with --dev as well: an export carries it as it is.
       'reader.js': await bundleScript(path.join(srcDir, 'reader.js'), false, null, { SEARCH_CSS: JSON.stringify(searchMin) }),
       'demo.md': jsonForDataBlock({ text: demo }),
-      'assets': jsonForDataBlock(readAssets(path.join(srcDir, 'assets'), demo)),
+      'assets': jsonForDataBlock(readAssets(path.join(srcDir, 'assets'), demo, demoName)),
     };
   } catch (e){
     if (!e || !Array.isArray(e.errors)) throw e;
@@ -232,32 +250,50 @@ export async function build(srcDir, options = {}){
 }
 
 function parseArgs(argv){
-  const a = { check: false, dev: false, watch: false, src: path.join(here, 'src'), out: null };
+  const a = { check: false, dev: false, watch: false, src: path.join(here, 'src'), out: null, showcaseOut: null };
+  const valued = { '--src': 'src', '--out': 'out', '--showcase-out': 'showcaseOut' };
   for (let i = 0; i < argv.length; i++){
     const k = argv[i];
     if (k === '--check' || k === '--dev' || k === '--watch') a[k.slice(2)] = true;
-    else if (k === '--src' || k === '--out'){
+    else if (Object.hasOwn(valued, k)){
       if (argv[i + 1] === undefined) throw new BuildError(k + ' needs a value');
-      a[k.slice(2)] = path.resolve(argv[++i]);
+      a[valued[k]] = path.resolve(argv[++i]);
     }
     else throw new BuildError('unknown argument: ' + k);
   }
   if (a.dev && a.check) throw new BuildError('--dev and --check do not go together: the check is about the committed file, which is the minified one');
   if (a.watch && !a.dev) throw new BuildError('--watch goes with --dev: the committed file is built on purpose, not on every change');
+  if (a.dev && a.showcaseOut !== null) throw new BuildError('--dev and --showcase-out do not go together: the readable file is of the demo text only');
+  // Without either output named: both committed files, or with --dev the readable one.
+  if (a.out === null && a.showcaseOut === null && !a.dev) a.showcaseOut = SHOWCASE;
   if (a.out === null) a.out = a.dev ? DEV : COMMITTED;
-  // The readable file must never take the place of the committed one.
-  if (a.dev && a.out === COMMITTED) throw new BuildError('--dev does not write ' + path.relative(here, COMMITTED) + ': that is the committed file, and it is the minified one');
+  // The readable file must never take the place of a committed one.
+  for (const file of [COMMITTED, SHOWCASE]){
+    if (a.dev && a.out === file) throw new BuildError('--dev does not write ' + path.relative(here, file) + ': that is a committed file, and it is a minified one');
+  }
+  if (a.out === a.showcaseOut) throw new BuildError('--out and --showcase-out name the same file: ' + a.out);
   return a;
 }
 
 const shownPath = file => path.relative(process.cwd(), file) || file;
 const shownSize = html => Buffer.byteLength(html).toLocaleString('en-US').replace(/,/g, ' ') + ' B';
 
+// What a run builds: [file, html] for the built file and, if one is asked for,
+// the showcase. Both are built before either is written or compared, so a
+// source that breaks one of them leaves both files as they were.
+async function buildAll(opts){
+  const jobs = [[opts.out, build(opts.src, { dev: opts.dev, out: opts.out })]];
+  if (opts.showcaseOut) jobs.push([opts.showcaseOut, build(opts.src, { demo: 'showcase.md' })]);
+  const htmls = await Promise.all(jobs.map(([, job]) => job));
+  return jobs.map(([file], i) => [file, htmls[i]]);
+}
+
 async function buildAndWrite(opts){
-  const html = await build(opts.src, { dev: opts.dev, out: opts.out });
-  fs.mkdirSync(path.dirname(opts.out), { recursive: true });
-  fs.writeFileSync(opts.out, html);
-  console.log(shownPath(opts.out) + ' written (' + shownSize(html) + (opts.dev ? ', not minified, with a source map' : '') + ')');
+  for (const [file, html] of await buildAll(opts)){
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, html);
+    console.log(shownPath(file) + ' written (' + shownSize(html) + (opts.dev ? ', not minified, with a source map' : '') + ')');
+  }
 }
 
 // Builds, then builds again whenever something under the sources changes. A
@@ -285,11 +321,15 @@ async function main(){
   const opts = parseArgs(process.argv.slice(2));
   if (opts.watch) return watch(opts);
   if (opts.check){
-    const html = await build(opts.src);
-    const shown = shownPath(opts.out);
-    if (!fs.existsSync(opts.out)) throw new BuildError(shown + ' is missing; run "npm run build"');
-    if (fs.readFileSync(opts.out, 'utf8') !== html) throw new BuildError(shown + ' is stale: it is not what the sources give; run "npm run build" and commit the result');
-    console.log(shown + ' is up to date (' + shownSize(html) + ')');
+    // Every file is looked at, and every one that is not current named.
+    const problems = [];
+    for (const [file, html] of await buildAll(opts)){
+      const shown = shownPath(file);
+      if (!fs.existsSync(file)) problems.push(shown + ' is missing; run "npm run build"');
+      else if (fs.readFileSync(file, 'utf8') !== html) problems.push(shown + ' is stale: it is not what the sources give; run "npm run build" and commit the result');
+      else console.log(shown + ' is up to date (' + shownSize(html) + ')');
+    }
+    if (problems.length) throw new BuildError(problems.join('\n'));
     return;
   }
   await buildAndWrite(opts);
