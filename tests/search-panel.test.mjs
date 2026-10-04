@@ -511,3 +511,53 @@ test('a row a facet filter hides in a closed <details>: the click opens the <det
   assert.ok(details.hasAttribute('open'));
   same(p.scrolls[0].el, p.root.querySelector('.' + FACET_BAR_CLASS));
 });
+
+// ---------- review of story 5.16 ----------
+test('Enter and Down in the field, Down and Up on a result do nothing with Ctrl, Alt, Meta or Shift: Shift+Down selects in the field', async () => {
+  const p = await open('<p>Eine Tabelle.</p>');
+  p.search.openSearch();
+  await p.type('Tabelle');
+  for (const mod of ['ctrlKey', 'altKey', 'metaKey', 'shiftKey']){
+    for (const k of ['Enter', 'ArrowDown']){
+      const e = new p.window.Event('keydown', { bubbles: true, cancelable: true });
+      e.key = k;
+      e[mod] = true;
+      p.input.dispatchEvent(e);
+      assert.ok(!e.defaultPrevented, mod + ' ' + k);
+      same(p.document.activeElement, p.input, mod + ' ' + k);
+    }
+  }
+  assert.equal(p.scrolls.length, 0);
+  // On a result, Shift+Up and Shift+Down move nothing either.
+  const [first] = p.results();
+  first.focus();
+  for (const k of ['ArrowUp', 'ArrowDown']){
+    const e = new p.window.Event('keydown', { bubbles: true, cancelable: true });
+    e.key = k;
+    e.shiftKey = true;
+    first.dispatchEvent(e);
+    assert.ok(!e.defaultPrevented, 'Shift ' + k);
+    same(p.document.activeElement, first, 'Shift ' + k);
+  }
+});
+
+test('closing puts the focus on the magnifier where what opened the panel is in the page but takes no focus', async () => {
+  const p = await open('<details><summary>Mehr</summary><p><a href="#x">Verweis</a></p></details>');
+  const link = p.root.querySelector('a');
+  link.focus();
+  p.key('/', link);
+  // Now it takes none: the stand-in focus is refused, as a browser refuses it in a closed <details> or under display:none.
+  const focus = link.focus;
+  link.focus = () => {};
+  p.key('Escape', p.input);
+  link.focus = focus;
+  same(p.document.activeElement, p.magnifier);
+});
+
+test('the close button comes before the field in the order of the panel\'s controls, so Tab from the field goes to the switches and then the results', async () => {
+  const p = await open('<p>Eine Tabelle.</p>');
+  p.search.openSearch();
+  await p.type('Tabelle');
+  const order = Array.from(p.panel.querySelectorAll('button, input')).map(el => el.className || el.type);
+  assert.deepEqual(order, ['search-close', 'search-input', 'checkbox', 'checkbox', 'search-result']);
+});

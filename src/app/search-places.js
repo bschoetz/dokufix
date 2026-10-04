@@ -114,6 +114,10 @@ const HEADING_TAGS = new Set(['H1', 'H2', 'H3', 'H4', 'H5', 'H6']);
 const OWN_TAGS = new Set([...PLACE_TAGS, 'UL', 'OL', 'TABLE', 'PRE']);
 // No place, nor anything inside it.
 const EXCLUDED_TAGS = new Set(['SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
+// Nor a noscript or an iframe, whose content the page keeps as one raw text
+// node it never shows, raw tags and all. A row reads EXCLUDED_TAGS alone, as
+// filterRowText() does.
+const UNREAD_TAGS = new Set([...EXCLUDED_TAGS, 'NOSCRIPT', 'IFRAME']);
 // What a table row is to the panel: the word before its result.
 export const KIND_ROW = 'Tabelle';
 // The languages of the diagrams (diagram-kinds.js): what a figure of each is
@@ -141,7 +145,7 @@ const EXCLUDED_CLASSES = [
 const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
 function excluded(el){
-  return el.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(el) || EXCLUDED_TAGS.has(tagOf(el)) ||
+  return el.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(el) || UNREAD_TAGS.has(tagOf(el)) ||
     (tagOf(el) === 'A' && el.hasAttribute('data-footnote-backref')) ||
     // The heading marked-footnote puts above the footnotes: hidden by src/doc.css.
     (HEADING_TAGS.has(tagOf(el)) && tagOf(el.parentNode) === 'SECTION' && el.parentNode.classList.contains('footnotes')) ||
@@ -334,7 +338,7 @@ function ownReading(el, meta){
       if (child.nodeType !== ELEMENT) continue;
       const tag = tagOf(child);
       if (tag === 'BR'){ readBlank(r, ' '); continue; }
-      if (child.hasAttribute(TRANSIENT_ATTR) || EXCLUDED_TAGS.has(tag) ||
+      if (child.hasAttribute(TRANSIENT_ATTR) || UNREAD_TAGS.has(tag) ||
           (meta && (tag === 'SUMMARY' || child.classList.contains(META_EMPTY_CLASS)))){ r.part++; continue; }
       const apart = meta && META_APART.has(tag);
       if (apart){ r.part++; readBlank(r, ' '); }

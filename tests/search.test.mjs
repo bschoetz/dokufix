@@ -1044,3 +1044,12 @@ test('collectPlaces: no block of the page\'s own is a place for its text: the fi
     '<div ' + TRANSIENT_ATTR + '>Flüchtig</div>\n<section class="footnotes"><h2>Fußnoten</h2>\n<ol><li id="fn-1">Fußnote <a href="#r" data-footnote-backref="">↩</a></li></ol></section>\n';
   assert.deepEqual(places(html), [['tr', 'Zeile'], ['p', 'Hinweis'], ['p', 'Im Hinweis.'], ['tr', 'Wert'], ['li', 'Fußnote']]);
 });
+
+test('collectPlaces: a noscript or an iframe, whose content the page keeps as one raw text node it never shows, is no place, nor text of a place', () => {
+  const root = rootWith('<p>Davor</p>\n<div>Rahmen</div>\n');
+  const raw = (tag, text) => { const el = root.ownerDocument.createElement(tag); el.append(root.ownerDocument.createTextNode(text)); return el; };
+  root.append(raw('noscript', '<p>Zitronenfalter</p>'), raw('iframe', '<b>Zitronenfalter</b>'));
+  root.querySelector('div').append(raw('noscript', 'Zitronenfalter'));
+  root.querySelector('p').append(raw('iframe', 'Zitronenfalter'));
+  assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text]), [['P', 'Davor'], ['DIV', 'Rahmen']]);
+});

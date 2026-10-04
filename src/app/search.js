@@ -47,9 +47,9 @@ import { TABLE_CLASS } from './tables.js';
 // after the same pause as typing, so the marks follow.
 //
 //   <div class="search-panel" role="search" aria-label="Suche im Dokument" data-dokufix-transient hidden>
+//   <button type="button" class="search-close" aria-label="Suche schließen">×</button>
 //   <label class="search-label"><span class="search-label-text">Im Dokument suchen</span>
 //   <input type="search" class="search-input" autocomplete="off" spellcheck="false"></label>
-//   <button type="button" class="search-close" aria-label="Suche schließen">×</button>
 //   <div class="search-switches">
 //   <label class="search-switch"><input type="checkbox">Groß- und Kleinschreibung beachten</label>
 //   <label class="search-switch"><input type="checkbox">Leerzeichen, Bindestriche und Punkte ignorieren</label>
@@ -118,7 +118,8 @@ import { TABLE_CLASS } from './tables.js';
 //
 // Enter in the field follows the first result, as a click on it does; Down
 // puts the focus on it, and Down and Up go through the results, Up from the
-// first back to the field. Escape is as above.
+// first back to the field; none of them with Ctrl, Alt, Meta or Shift.
+// Escape is as above.
 //
 // Two switches below the field change how the term is compared
 // (search-match.js): case-sensitive, and light fuzzy, which ignores white
@@ -463,7 +464,7 @@ function buildPanel(){
   // Enter follows the first result, Down puts the focus on it, each after a
   // search that still waits for the pause. See the README, "Keys and events".
   input.addEventListener('keydown', e => {
-    if ((e.key !== 'Enter' && e.key !== 'ArrowDown') || e.isComposing) return;
+    if ((e.key !== 'Enter' && e.key !== 'ArrowDown') || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || e.isComposing) return;
     if (timer) search();
     const first = list.querySelector('.search-result');
     if (!first) return;
@@ -500,7 +501,7 @@ function buildPanel(){
   // Down and Up on a result: the next, the previous one, from the first back
   // to the field.
   list.addEventListener('keydown', e => {
-    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    if ((e.key !== 'ArrowDown' && e.key !== 'ArrowUp') || e.ctrlKey || e.altKey || e.metaKey || e.shiftKey) return;
     const results = Array.from(list.querySelectorAll('.search-result'));
     const at = results.indexOf(e.target);
     if (at < 0) return;
@@ -509,7 +510,8 @@ function buildPanel(){
     if (to) to.focus();
   });
 
-  panel.append(label, close, switches, summary, list);
+  // The close button first, so that Tab goes from the field to the switches.
+  panel.append(close, label, switches, summary, list);
   document.body.appendChild(panel);
 }
 
@@ -553,7 +555,7 @@ export function openSearch(){
 // Closes the panel and forgets its term and results; the switches keep
 // their state. A closed panel stays as it is. Where the focus was in the
 // panel, it goes back to what had it when the panel opened, where that is
-// still in the page, else to the magnifier; never to a result, nor into the
+// still in the page and takes it, else to the magnifier; never to a result, nor into the
 // document, which the search does not change.
 export function closeSearch(){
   if (!isSearchOpen()) return;
@@ -563,7 +565,11 @@ export function closeSearch(){
   panel.hidden = true;
   input.value = '';
   clearResults();
-  if (hadFocus) (opener && opener.isConnected ? opener : magnifier).focus();
+  if (hadFocus){
+    if (opener && opener.isConnected) opener.focus();
+    // One that takes no focus now, hidden or in a closed <details>: the magnifier.
+    if (document.activeElement !== opener) magnifier.focus();
+  }
   opener = null;
 }
 
