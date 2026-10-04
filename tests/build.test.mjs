@@ -20,7 +20,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { assemble, BuildError, SLOTS } from '../build.mjs';
-import { UNPACKED_EVENT } from '../src/app/search.js';
+import { UNPACKED_EVENT, UNPACKING_ATTR } from '../src/app/search.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
@@ -434,9 +434,10 @@ const readerBlock = html => {
   return html.slice(from, html.toLowerCase().indexOf('</script', from));
 };
 // Runs the bundle in a document as an export has it, the content container
-// holding the given markup. Returns the document, its window and the panel.
-function runReader(code, content){
-  const { document, window } = parseHTML('<!DOCTYPE html><html><head><style>body{}</style></head><body><main class="reader-body dokufix-doc">' + content + '</main></body></html>');
+// holding the given markup, with the mark of the decoder of `schlank` where
+// unpacking is set. Returns the document, its window and the panel.
+function runReader(code, content, unpacking = false){
+  const { document, window } = parseHTML('<!DOCTYPE html><html><head><style>body{}</style></head><body><main class="reader-body dokufix-doc"' + (unpacking ? ' ' + UNPACKING_ATTR : '') + '>' + content + '</main></body></html>');
   vm.runInNewContext(code, { document, window, setTimeout, clearTimeout, console });
   return { document, window, panel: document.querySelector('body > .search-panel') };
 }
@@ -512,20 +513,21 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.ok(!panel.hidden && searchField.value === 'Tabelle' && summaryOf(panel) === '3 Treffer an 2 Stellen in 1 Abschnitt', 'a click on the open panel closes nothing and keeps the term and its results');
   panel.querySelector('.search-close').click();
 });
-test('the reader bundle: a search over a packed diagram waits for the decoder\'s event, and runs after it, whether the diagram came out or not', async () => {
+test('the reader bundle: a search over a content container with the decoder\'s mark says it waits, and runs on the decoder\'s event, whether the diagram came out or not', async () => {
   const code = readerBlock(fs.readFileSync(committed, 'utf8'));
   const content = '<p>Eine Tabelle.</p><figure class="dokufix-diagram"><div class="dokufix-diagram-svg" data-gz="H4sIAAAAAAAA"></div></figure><p>Noch eine Tabelle.</p>';
-  const { document, window, panel } = runReader(code, content);
+  const { document, window, panel } = runReader(code, content, true);
   await slashAndType(document, window, 'Tabelle');
-  assert.equal(summaryOf(panel), '', 'nothing is searched while a diagram is packed');
+  assert.equal(summaryOf(panel), 'Diagramme werden entpackt …', 'nothing is searched while the decoder runs, and the summary says why');
   assert.equal(panel.querySelectorAll('.search-results .search-result').length, 0);
-  // The decoder failed on the diagram: the attribute stays, the event comes.
+  // The decoder failed on the diagram: the attribute stays, the mark goes, the event comes.
+  document.querySelector('main').removeAttribute(UNPACKING_ATTR);
   document.dispatchEvent(new window.Event('dokufix-diagrams-unpacked'));
   assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen in 1 Abschnitt', 'the waiting search runs on the event');
-  // Without a packed diagram nothing waits.
-  const plain = runReader(code, '<p>Eine Tabelle.</p>');
+  // Without the mark nothing waits, not even for a packed diagram (story 5.16, M1).
+  const plain = runReader(code, content);
   await slashAndType(plain.document, plain.window, 'Tabelle');
-  assert.equal(summaryOf(plain.panel), '1 Treffer an 1 Stelle in 1 Abschnitt');
+  assert.equal(summaryOf(plain.panel), '2 Treffer an 2 Stellen in 1 Abschnitt');
 });
 // The decoder of a `schlank` file as src/app/downloads/readonly-slim.js writes
 // it, with the name of its event filled in.
@@ -533,8 +535,8 @@ function slimDecoder(){
   const src = fs.readFileSync(path.join(srcDir, 'app/downloads/readonly-slim.js'), 'utf8');
   const m = src.match(/`<script>(\(async\(\)=>\{[\s\S]*?\}\)\(\);)<\\\/script>`/);
   assert.ok(m, 'the decoder was found in readonly-slim.js');
-  assert.ok(m[1].includes('${UNPACKED_EVENT}'), 'the decoder names the event by the constant of search.js');
-  return m[1].replace('${UNPACKED_EVENT}', UNPACKED_EVENT);
+  assert.ok(m[1].includes('${UNPACKED_EVENT}') && m[1].includes('${UNPACKING_ATTR}'), 'the decoder names the event and the mark by the constants of search.js');
+  return m[1].replace('${UNPACKED_EVENT}', UNPACKED_EVENT).replace('${UNPACKING_ATTR}', UNPACKING_ATTR);
 }
 test('the reader bundle with the real decoder of schlank: one diagram unpacks, one does not, and so do two source links; the event comes once, and the waiting search runs', async () => {
   const code = readerBlock(fs.readFileSync(committed, 'utf8'));
@@ -548,12 +550,12 @@ test('the reader bundle with the real decoder of schlank: one diagram unpacks, o
     '<figure class="dokufix-diagram"><div class="dokufix-diagram-downloads"><a download="A.mmd" data-gz-href="' + zlib.gzipSync(href).toString('base64') + '">.mmd</a></div></figure>' +
     '<figure class="dokufix-diagram"><div class="dokufix-diagram-downloads"><a download="B.mmd" data-gz-href="bm9jaCBrZWluIGd6aXA=">.mmd</a></div></figure>' +
     '<p>Noch eine Tabelle.</p>';
-  // As in the file: the bundle first, then the decoder.
-  const { document, window, panel } = runReader(code, content);
+  // As in the file: the content container with the mark, the bundle first, then the decoder.
+  const { document, window, panel } = runReader(code, content, true);
   let events = 0;
   document.addEventListener(UNPACKED_EVENT, () => { events++; });
   await slashAndType(document, window, 'Tabelle');
-  assert.equal(summaryOf(panel), '', 'nothing is searched while the diagrams are packed');
+  assert.equal(summaryOf(panel), 'Diagramme werden entpackt …', 'nothing is searched while the decoder runs');
   const failures = [];
   const arrived = new Promise(resolve => document.addEventListener(UNPACKED_EVENT, resolve, { once: true }));
   vm.runInNewContext(slimDecoder(), { document, Event: window.Event, atob, Uint8Array, Response, Blob, DecompressionStream, console: { error: (...a) => failures.push(a.join(' ')) } });
@@ -566,6 +568,7 @@ test('the reader bundle with the real decoder of schlank: one diagram unpacks, o
   assert.ok(links[0].getAttribute('href') === href && !links[0].hasAttribute('data-gz-href'), 'the first source link has its href back');
   assert.ok(!links[1].hasAttribute('href') && links[1].hasAttribute('data-gz-href') && failures.length === 2 && /Source link decode failed/.test(failures[1]), 'the second stays packed, its failure on the console');
   assert.equal(events, 1, 'the event comes once');
+  assert.ok(!document.querySelector('main').hasAttribute(UNPACKING_ATTR), 'the decoder took the mark');
   assert.equal(summaryOf(panel), '2 Treffer an 2 Stellen in 1 Abschnitt', 'the waiting search ran on the event');
 });
 test('the reader bundle: an attribute data-gz the author wrote outside a diagram is no reason to wait', async () => {

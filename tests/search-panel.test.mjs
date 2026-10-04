@@ -330,3 +330,31 @@ test('closing the panel with the focus in it puts the focus back on what had it 
   assert.ok(p.panel.hidden);
   same(p.document.activeElement, other);
 });
+
+// ---------- the wait for the decoder of `schlank` (story 5.16, M1) ----------
+// The mark the decoder of a `schlank` file sets on the content container (src/app/downloads/readonly-slim.js).
+const UNPACKING_ATTR = 'data-dokufix-unpacking';
+const packed = '<figure class="' + DIAGRAM_CLASS + '"><div class="' + DIAGRAM_SVG_CLASS + '" data-gz="AAAA"></div></figure>';
+
+test('a packed diagram in a root without the mark of a decoder, raw HTML in the editor say, is no reason to wait: the search runs', async () => {
+  const p = await open(packed + '<p>Ein Zitronenfalter.</p>');
+  p.search.openSearch();
+  await p.type('Zitronenfalter');
+  assert.equal(p.summary(), '1 Treffer an 1 Stelle in 1 Abschnitt');
+});
+
+test('while the root carries the mark of the decoder of `schlank`, the summary says "Diagramme werden entpackt …" and nothing is listed; the decoder takes the mark and sends its event, and the search runs', async () => {
+  const p = await open(packed + '<p>Ein Zitronenfalter.</p>', { main: ' ' + UNPACKING_ATTR });
+  p.search.openSearch();
+  await p.type('Zitronenfalter');
+  assert.equal(p.summary(), 'Diagramme werden entpackt …');
+  assert.equal(p.results().length, 0);
+  await p.type('');
+  assert.equal(p.summary(), '', 'an empty field says nothing, unpacking or not');
+  await p.type('Zitronenfalter');
+  // The decoder: its diagram could not be unpacked, it takes the mark all the same and says it is done.
+  p.root.removeAttribute(p.search.UNPACKING_ATTR);
+  p.document.dispatchEvent(new p.window.Event(p.search.UNPACKED_EVENT));
+  assert.equal(p.summary(), '1 Treffer an 1 Stelle in 1 Abschnitt');
+  assert.equal(p.results().length, 1);
+});

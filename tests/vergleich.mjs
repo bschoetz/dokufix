@@ -4734,6 +4734,25 @@ async function assertVariant(browser, file, key, exp, results, label){
       const live = await page.evaluate(() => ({ panels: document.querySelectorAll('.search-panel').length, magnifiers: document.querySelectorAll('.search-magnifier').length, sheets: Array.from(document.querySelectorAll('style')).filter(el => el.textContent.includes('.search-')).length }));
       check('search: no panel, no magnifier and no rule of them, in the file or in the open page', !/\.search-/.test(style) && !text.includes('search-magnifier') && live.panels === 0 && live.magnifiers === 0 && live.sheets === 0, JSON.stringify(live));
     } else await assertSearch(page, check, key);
+    if (key === 'schlank'){
+      // --- story 5.16, M1: the file writes its content container with the mark
+      // of its decoder, which the decoder takes when it is done; while the mark
+      // is there a search lists nothing and says so, and it runs on the
+      // decoder's event. The mark is put back here, the event sent by hand.
+      const written = /<main class="reader-body dokufix-doc" data-dokufix-unpacking>/.test(text) && text.includes('DecompressionStream');
+      const taken = await page.evaluate(() => !document.querySelector('main.reader-body').hasAttribute('data-dokufix-unpacking'));
+      await page.evaluate(() => { document.querySelector('main.reader-body').setAttribute('data-dokufix-unpacking', ''); window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
+      await page.keyboard.press('/');
+      await page.fill('body > .search-panel input', SEARCH_TERM);
+      await page.waitForFunction(() => document.querySelector('body > .search-panel [role="status"]').textContent !== '', null, { timeout: 5000 }).catch(() => {});
+      const summary = () => page.evaluate(() => ({ summary: document.querySelector('body > .search-panel [role="status"]').textContent, results: document.querySelectorAll('body > .search-panel .search-result').length }));
+      const waiting = await summary();
+      await page.evaluate(() => { document.querySelector('main.reader-body').removeAttribute('data-dokufix-unpacking'); document.dispatchEvent(new Event('dokufix-diagrams-unpacked')); });
+      const ran = await summary();
+      await page.evaluate(() => { const p = document.querySelector('body > .search-panel'); if (!p.hidden) p.querySelector('.search-close').click(); if (document.activeElement) document.activeElement.blur(); });
+      check('search: the file writes <main> with the mark of its decoder, which the decoder takes; with the mark a search lists nothing and says "Diagramme werden entpackt …", and on the decoder\'s event it runs',
+        written && taken && waiting.summary === 'Diagramme werden entpackt …' && waiting.results === 0 && /Treffer/.test(ran.summary) && ran.results > 0, JSON.stringify({ written, taken, waiting, ran }));
+    }
     // Outside its stylesheet, which carries the rules of every component, and
     // outside its scripts, which carry the reader bundle's code.
     const outsideStyle = text.replace(/<style>[\s\S]*?<\/style>/g, '').replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');

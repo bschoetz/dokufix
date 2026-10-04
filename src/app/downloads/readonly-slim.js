@@ -2,7 +2,7 @@ import { gzipB64 } from '../gzip.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from '../diagrams.js';
 import { DOWNLOADS_CLASS } from '../diagram-downloads.js';
 import { licencesHtml } from '../licences.js';
-import { UNPACKED_EVENT } from '../search.js';
+import { UNPACKED_EVENT, UNPACKING_ATTR } from '../search.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
 import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml, readerScript } from './export-body.js';
 
@@ -41,10 +41,11 @@ export async function downloadReadonlySlim(){
   // Tiny inline decoder (only emitted if there are diagrams or source links to
   // expand). It unpacks each SVG into its container and each source link's
   // href back onto the link. When it has gone through all of them, unpacked
-  // or failed, it says so with an event on the document: a search waits for
-  // it (search.js).
+  // or failed, it takes the mark the content container carries beside it and
+  // says so with an event on the document: a search over the container waits
+  // while the mark is there (search.js).
   const decoder = svgCount + linkCount > 0
-    ? `<script>(async()=>{const un=async b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();};for(const el of document.querySelectorAll('[data-gz]')){try{el.innerHTML=await un(el.getAttribute('data-gz'));el.removeAttribute('data-gz');}catch(e){console.error('SVG decode failed',e);}}for(const a of document.querySelectorAll('a[data-gz-href]')){try{a.setAttribute('href',await un(a.getAttribute('data-gz-href')));a.removeAttribute('data-gz-href');}catch(e){console.error('Source link decode failed',e);}}document.dispatchEvent(new Event('${UNPACKED_EVENT}'));})();<\/script>`
+    ? `<script>(async()=>{const un=async b=>{const u=Uint8Array.from(atob(b),c=>c.charCodeAt(0));return new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();};for(const el of document.querySelectorAll('[data-gz]')){try{el.innerHTML=await un(el.getAttribute('data-gz'));el.removeAttribute('data-gz');}catch(e){console.error('SVG decode failed',e);}}for(const a of document.querySelectorAll('a[data-gz-href]')){try{a.setAttribute('href',await un(a.getAttribute('data-gz-href')));a.removeAttribute('data-gz-href');}catch(e){console.error('Source link decode failed',e);}}const m=document.querySelector('main.reader-body');if(m)m.removeAttribute('${UNPACKING_ATTR}');document.dispatchEvent(new Event('${UNPACKED_EVENT}'));})();<\/script>`
     : '';
 
   // The reader bundle, the table filter and the search, in every file: it runs
@@ -71,7 +72,7 @@ ${noscript}
 </head>
 <body${bodyClassForExport()}>
 ${licencesHtml()}
-<main class="reader-body dokufix-doc">
+<main class="reader-body dokufix-doc"${decoder ? ' ' + UNPACKING_ATTR : ''}>
 ${body}
 ${buildMetaFooterHtml()}
 ${readerTag}

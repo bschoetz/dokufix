@@ -1,7 +1,7 @@
 import { findHits, excerpt, tooShort } from './search-match.js';
 import { collectPlaces, groupResults, nodeRanges, KIND_META, KIND_CODE } from './search-places.js';
 import { TRANSIENT_ATTR } from './transient.js';
-import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from './diagrams.js';
+import { DIAGRAM_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
 import { FILTER_CLASS, FILTER_INPUT_CLASS, FILTER_OUT_CLASS } from './filter.js';
 import { FACETS_CLASS, FACET_BAR_CLASS } from './facets.js';
@@ -101,10 +101,14 @@ import { TABLE_CLASS } from './tables.js';
 // short pause, outside the render, so a failure in it breaks no render.
 //
 // A diagram of a `schlank` file is packed (data-gz) until the file's decoder
-// has unpacked it, and the decoder announces its end with UNPACKED_EVENT on
-// the document, whether every diagram came out or not. A search over a root
-// that still holds a packed diagram waits for that event, then runs. A root
-// without one, the preview and every other file, never waits.
+// has unpacked it. The file writes its content container with the mark
+// UNPACKING_ATTR wherever it writes the decoder, and the decoder takes the
+// mark when it has gone through every packed diagram, whether each came out
+// or not, then announces its end with UNPACKED_EVENT on the document. A
+// search over a root with the mark lists nothing and says so in the summary,
+// "Diagramme werden entpackt …", and runs on the event. A root without it,
+// the preview and every other file, never waits, whatever it holds: packed
+// markup an author writes is markup.
 //
 // Two switches below the field change how the term is compared
 // (search-match.js): case-sensitive, and light fuzzy, which ignores white
@@ -132,9 +136,9 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 // What the decoder of a `schlank` file dispatches on the document when it has
 // gone through every packed diagram (src/app/downloads/readonly-slim.js).
 export const UNPACKED_EVENT = 'dokufix-diagrams-unpacked';
-// What the decoder fills: the SVG container of a diagram's figure, packed. An
-// attribute of that name an author writes elsewhere is no diagram to wait for.
-const PACKED_SEL = '.' + DIAGRAM_SVG_CLASS + '[data-gz]';
+// The mark of the content container of a `schlank` file while its decoder
+// runs: written with the decoder, taken by it before UNPACKED_EVENT.
+export const UNPACKING_ATTR = 'data-dokufix-unpacking';
 // How long typing pauses before the search runs, in milliseconds.
 const PAUSE = 150;
 // How many characters of a place's text a result shows at most.
@@ -155,13 +159,13 @@ let timer = 0;
 // From the caller: the element searched, and whether "/" may open the panel.
 let rootOf = () => null;
 let inReadMode = () => false;
-// Whether the decoder has announced its end.
-let unpacked = false;
 
 export const isSearchOpen = () => !!panel && !panel.hidden;
 
-// What the line above the results says when the term is too short.
+// What the line above the results says when the term is too short, and
+// while the decoder of a `schlank` file unpacks its diagrams.
 const TOO_SHORT = 'Zu kurz: mindestens drei Buchstaben oder Ziffern';
+const UNPACKING = 'Diagramme werden entpackt …';
 
 // How the switches say the term is compared.
 const matchOptions = () => ({ caseSensitive: caseBox.checked, fuzzy: fuzzyBox.checked });
@@ -333,13 +337,18 @@ function drawHighlight(found){
 }
 
 // Runs the search for what the field holds, over the root as it is now; over
-// a root with a packed diagram once the decoder is done.
+// a root the decoder of `schlank` still unpacks, once it is done.
 function search(){
   clearTimeout(timer);
   timer = 0;
   const root = rootOf();
-  if (!unpacked && root && root.querySelector(PACKED_SEL)) return;
   const term = input.value;
+  if (root && root.hasAttribute(UNPACKING_ATTR)){
+    list.replaceChildren();
+    clearHighlight();
+    summary.textContent = term.trim() ? UNPACKING : '';
+    return;
+  }
   const options = matchOptions();
   try {
     const found = [];
@@ -506,11 +515,10 @@ export function registerSearch({ root, inReadMode: readMode }){
   };
   document.addEventListener('input', onFilter);
   document.addEventListener('change', onFilter);
-  // A search that waits for a packed diagram runs when the decoder is done.
+  // A search that waits for the decoder runs when it is done.
   document.addEventListener(UNPACKED_EVENT, () => {
-    unpacked = true;
     if (isSearchOpen() && input.value) search();
-  }, { once: true });
+  });
   document.addEventListener('keydown', e => {
     if (e.key !== '/' || e.ctrlKey || e.altKey || e.metaKey || e.isComposing || e.defaultPrevented) return;
     if (typesText(e.target)) return;

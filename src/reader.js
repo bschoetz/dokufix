@@ -18,6 +18,9 @@
 //     minified, come in as SEARCH_CSS from the build and go into the head of
 //     the file here, behind its stylesheet; the file's own <style> does not
 //     carry them, so `nur-lesen`, which shares it, has none.
+//     In `schlank` it runs before the decoder of the diagrams, while the
+//     container carries the decoder's mark; a search then waits for the
+//     decoder's event, which the search hears however late it comes.
 //   - the keys of the large view of a diagram (src/app/large-view.js):
 //     Escape closes it, "+" and "-" change its zoom step. The view itself
 //     works without them, as in `nur-lesen`.
