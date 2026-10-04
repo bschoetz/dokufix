@@ -417,3 +417,55 @@ test('a group heading is a heading of the level of its heading in the document, 
   assert.equal(lists.length, 4);
   assert.ok(lists.every(ol => ol.getAttribute('role') === 'list'));
 });
+
+// ---------- the places kept between searches (story 5.16, N5) ----------
+// Counts every reading of a text node's text.
+function counted(node){
+  const data = node.data;
+  const reads = { n: 0 };
+  Object.defineProperty(node, 'data', { configurable: true, get: () => { reads.n++; return data; } });
+  return reads;
+}
+
+test('the places are read once and kept while the root does not change: a search again reads no text of the document that holds no hit', async () => {
+  const p = await open('<p>Eine Tabelle.</p><p>Ohne den Begriff.</p>');
+  const reads = counted(p.root.querySelectorAll('p')[1].firstChild);
+  p.search.openSearch();
+  await p.type('Tabelle');
+  assert.ok(reads.n > 0, 'the first search reads the document');
+  reads.n = 0;
+  await p.type('Tabell');
+  await p.type('Tabelle');
+  assert.equal(reads.n, 0, 'the searches after it read the places they kept');
+  assert.equal(p.summary(), '1 Treffer an 1 Stelle in 1 Abschnitt');
+  // Nor does a change of an attribute, a filter's class or an opened <details>: a hidden row is read when the search runs.
+  p.root.querySelectorAll('p')[0].setAttribute('class', 'x');
+  await p.type('Tabell');
+  assert.equal(reads.n, 0);
+  // Closed and opened again, over the same root, the panel keeps them too.
+  p.panel.querySelector('.search-close').click();
+  p.search.openSearch();
+  await p.type('Tabelle');
+  assert.equal(reads.n, 0);
+});
+
+test('a change of the root\'s nodes or text drops the kept places: a diagram drawn after the panel opened is found at the next search, and so is changed text', async () => {
+  const p = await open('<p>Eine Tabelle.</p><figure class="' + DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-mermaid"><div class="' + DIAGRAM_SVG_CLASS + '"></div></figure>');
+  p.search.openSearch();
+  await p.type('Abholbereit');
+  assert.equal(p.summary(), 'Keine Treffer');
+  // The diagram is drawn: its SVG goes into its container.
+  p.root.querySelector('.' + DIAGRAM_SVG_CLASS).innerHTML = '<svg><text>Abholbereit</text></svg>';
+  await p.type('Abholbereit ');
+  assert.deepEqual(p.texts(), ['Mermaid-Diagramm: Abholbereit']);
+  // A text changed in place.
+  p.root.querySelector('p').firstChild.data = 'Abholbereit ist das Buch.';
+  await p.type('Abholbereit');
+  assert.deepEqual(p.texts(), ['Abholbereit ist das Buch.', 'Mermaid-Diagramm: Abholbereit']);
+  // A change made in the same task as the search counts as well: the observer's records are taken.
+  p.root.querySelector('p').firstChild.data = 'Nichts mehr.';
+  p.input.value = 'Abholbereit';
+  p.input.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+  p.key('Enter', p.input);
+  assert.deepEqual(p.texts(), ['Mermaid-Diagramm: Abholbereit']);
+});

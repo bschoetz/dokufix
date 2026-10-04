@@ -955,3 +955,49 @@ test('the reader bundle registers the search over its content container, always 
   // The search reads the filter's classes, the filter knows nothing of the search.
   assert.doesNotMatch(read('app/filter.js'), /search(-places)?\.js|collectPlaces|registerSearch/);
 });
+
+// ---------- run time (story 5.16, N5) ----------
+test('groupResults walks into no diagram, code block or metadata panel: none holds a group heading', () => {
+  const root = rootWith('<h2>A</h2>\n<figure class="dokufix-diagram"><div class="dokufix-diagram-svg"><svg><g><text>Tabelle</text></g></svg></div></figure>\n' +
+    '<pre><code><span>Tabelle</span></code></pre>\n<details class="dokufix-frontmatter"><summary>Metadaten</summary><dl><dt>a</dt><dd>Tabelle</dd></dl></details>\n<h2>B</h2>\n<p>Tabelle.</p>\n');
+  const walked = [];
+  for (const el of root.querySelectorAll('figure *, pre *, details *')){
+    const first = el.firstElementChild;
+    Object.defineProperty(el, 'firstElementChild', { configurable: true, get: () => { walked.push(el.tagName); return first; } });
+  }
+  const found = collectPlaces(root).map(p => ({ el: p.el, hits: findHits('Tabelle', p.text).length })).filter(p => p.hits);
+  walked.length = 0;
+  const { groups } = groupResults(root, found);
+  assert.deepEqual(groups.map(g => [g.label, g.hits, g.results.map(r => r.el.tagName)]), [['A', 3, ['FIGURE', 'PRE', 'DETAILS']], ['B', 1, ['P']]]);
+  assert.deepEqual(walked, []);
+});
+
+test('findHits lowers a text whose length lowering does not change as a whole, not one character at a time', () => {
+  const lower = String.prototype.toLocaleLowerCase;
+  let calls = 0;
+  String.prototype.toLocaleLowerCase = function(...a){ calls++; return lower.apply(this, a); };
+  try {
+    const text = 'Der Zitronenfalter fliegt früh im Jahr. '.repeat(50);
+    assert.equal(findHits('zitronenfalter', text).length, 50);
+    assert.ok(calls <= 4, calls + ' calls');
+  } finally {
+    String.prototype.toLocaleLowerCase = lower;
+  }
+});
+
+test('findHits: what lowering a whole text would change is lowered one character at a time, as before: the capital sigma, a longer lowered form, a character outside the BMP', () => {
+  // Lowered whole, "ΟΔΟΣ" would end in the final sigma "ς"; one at a time it is "σ", and stays so.
+  assert.equal('ΟΔΟΣ'.toLocaleLowerCase('de'), 'οδος');
+  assert.deepEqual(findHits('οδοσ', 'Die ΟΔΟΣ hier'), [{ start: 4, end: 8 }]);
+  assert.deepEqual(findHits('οδος', 'Die ΟΔΟΣ hier'), []);
+  assert.deepEqual(findHits('ΟΔΟΣ', 'die οδοσ'), [{ start: 4, end: 8 }]);
+  // "İ" lowers to two units: the hits behind it keep the ranges of the original text.
+  assert.deepEqual(findHits('tabelle', 'İ Tabelle'), [{ start: 2, end: 9 }]);
+  // A surrogate pair, lowered whole: a hit behind it and one over it.
+  assert.deepEqual(findHits('tabelle', '𝔄 Tabelle 🚧'), [{ start: 3, end: 10 }]);
+  assert.deepEqual(findHits('🚧 tab', 'x 🚧 Tabelle'), [{ start: 2, end: 8 }]);
+  assert.deepEqual(findHits('𐐨', 'a 𐐀 b'), [{ start: 2, end: 4 }]);
+  // Case-sensitive, and light fuzzy, as they were.
+  assert.deepEqual(findHits('Tabelle', 'tabelle Tabelle', { caseSensitive: true }), [{ start: 8, end: 15 }]);
+  assert.deepEqual(findHits('statuschip', 'ein Status-Chip.', { fuzzy: true }), [{ start: 4, end: 15 }]);
+});

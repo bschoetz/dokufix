@@ -166,6 +166,11 @@ let timer = 0;
 // From the caller: the element searched, and whether "/" may open the panel.
 let rootOf = () => null;
 let inReadMode = () => false;
+// The places of the root, kept between searches (placesOf()), the root they
+// are of, and the observer that drops them.
+let places = null;
+let observed = null;
+let observer = null;
 
 export const isSearchOpen = () => !!panel && !panel.hidden;
 
@@ -346,6 +351,28 @@ function drawHighlight(found){
   }
 }
 
+// The places of the root, read once and kept while the root does not change:
+// a MutationObserver on the root drops them on any change of its nodes or its
+// text, a render, a diagram drawn late, the decoder of `schlank` unpacking,
+// and the records it holds and has not delivered yet count as such a change.
+// A change of an attribute does not: a filter hides a row by a class or by
+// CSS, and whether a row is hidden is read when the search runs. The search
+// thus knows nothing of the render. Without MutationObserver every search
+// reads the root. Records of attributes are passed over, should an
+// implementation deliver them unasked (linkedom does).
+const changed = records => records.some(r => r.type !== 'attributes');
+function placesOf(root){
+  if (root !== observed){
+    if (observer) observer.disconnect();
+    observed = root;
+    places = null;
+    observer = typeof MutationObserver === 'function' ? new MutationObserver(records => { if (changed(records)) places = null; }) : null;
+    if (observer) observer.observe(root, { childList: true, subtree: true, characterData: true });
+  }
+  if (!observer || changed(observer.takeRecords())) places = null;
+  return places || (places = collectPlaces(root));
+}
+
 // Runs the search for what the field holds, over the root as it is now; over
 // a root the decoder of `schlank` still unpacks, once it is done.
 function search(){
@@ -365,7 +392,7 @@ function search(){
     let hits = 0;
     const short = !!term.trim() && tooShort(term, options);
     if (term.trim() && !short){
-      for (const place of root ? collectPlaces(root) : []){
+      for (const place of root ? placesOf(root) : []){
         const at = findHits(term, place.text, options);
         if (!at.length) continue;
         found.push({ el: place.el, hits: at.length, place, at });

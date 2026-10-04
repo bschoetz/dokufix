@@ -25,6 +25,14 @@
 // from. A range is always one of the original text and covers whole
 // characters of it; a fuzzy hit spans from its first to its last matched
 // character, the ignored ones between them included, none before or after.
+// Where nothing of that can happen, without fuzzy, the text is lowered whole,
+// which is one call in place of one per character: where that leaves its
+// length as it is and the text holds no capital sigma "Σ". Lowered whole, a
+// "Σ" at the end of a word becomes "ς", one at a time always "σ"; the term
+// and the text stay compared one at a time there, as they always were. No
+// other character of German case rules lowers by its neighbours, and one
+// whose lowered form is longer changes the length. A surrogate pair maps both
+// its units to the whole character, as one at a time.
 //
 // A term too short is not searched (tooShort()): it needs three letters or
 // digits, unless it holds another character, an emoji, "#", or "-" without
@@ -33,6 +41,9 @@
 // applies to what is compared: "S-C" is too short.
 //
 // Pure logic: strings in, numbers out.
+
+const isHigh = code => code >= 0xD800 && code <= 0xDBFF;
+const isLow = code => code >= 0xDC00 && code <= 0xDFFF;
 
 // White space collapsed, none at the ends.
 const tidy = text => String(text).replace(/\s+/g, ' ').trim();
@@ -44,8 +55,19 @@ const IGNORED = /^[\s\-\u2010\u2011\u00AD.]$/u;
 // came from starts and ends in the original text: lowered unless case counts,
 // without the characters fuzzy ignores.
 function compared(text, { caseSensitive = false, fuzzy = false } = {}){
-  let out = '';
   const from = [], to = [];
+  if (!fuzzy){
+    const whole = caseSensitive ? text : text.toLocaleLowerCase('de');
+    if (whole.length === text.length && !text.includes('Σ')){
+      for (let i = 0; i < text.length; i++){
+        const pair = isHigh(text.charCodeAt(i)) && isLow(text.charCodeAt(i + 1));
+        from.push(i); to.push(i + (pair ? 2 : 1));
+        if (pair){ from.push(i); to.push(i + 2); i++; }
+      }
+      return { out: whole, from, to };
+    }
+  }
+  let out = '';
   let at = 0;
   for (const ch of text){
     if (!(fuzzy && IGNORED.test(ch))){
@@ -105,7 +127,6 @@ export function findHits(term, text, options = {}){
   return hits;
 }
 
-const isLow = code => code >= 0xDC00 && code <= 0xDFFF;
 
 // The part of the text a result shows: at most max units around the first
 // hit, a quarter of it before the hit, cut at a blank where one is near, and

@@ -436,8 +436,10 @@ export function nodeRanges(map, { start, end }){
 // result of their own.
 //
 // The groups go by the order of the document alone, not by the kind of a
-// place: any element under root can be a result. Pure logic, like
-// collectPlaces(): it reads root and changes nothing in it.
+// place: any element under root can be a result. The walk does not go into a
+// diagram, a code block or the metadata panel, which hold no heading, so the
+// inside of an SVG costs nothing. Pure logic, like collectPlaces(): it reads
+// root and changes nothing in it.
 
 export const FIRST_GROUP_LABEL = 'Am Anfang';
 const GROUP_TAG = /^H[234]$/;
@@ -474,7 +476,8 @@ export function groupResults(root, results){
       }
       const own = byEl.get(el);
       if (own) current.results.push(...own);
-      visit(el);
+      // A diagram, a code block and the metadata panel hold no heading.
+      if (!isDiagram(el) && tagOf(el) !== 'PRE' && !isMetaPanel(el)) visit(el);
     }
   };
   visit(root);
