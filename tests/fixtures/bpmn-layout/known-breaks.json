@@ -16,11 +16,13 @@
  "demo5": [],
  "demo6": [],
  "hund2": [
+  "double-headed GW_Merge_Probe Flow_47 Flow_53",
   "label-on-flow GW_Fluss Flow_28",
   "label-on-flow GW_Nachprobe Flow_53",
   "label-on-flow GW_Versuche Flow_22",
   "label-on-node GW_Qualitaet Task_Labor",
   "label-outside-lane GW_Nachprobe",
+  "on-one-line-foreign Flow_47 Flow_53",
   "on-one-line-shared Flow_17 Flow_24",
   "on-one-line-shared Flow_34 Flow_36",
   "on-one-line-shared Flow_38 Flow_40",

@@ -539,22 +539,25 @@ export function spreadPorts(routes, box){
 // below them, out of the bottom of its source and into the bottom of its
 // target, the third above, the fourth further below, and so on; for nodes one
 // above the other, right and left. The first level lies 20 px beyond the
-// outermost edge of the two nodes and of every symbol of their row within
-// the span, each further one 20 px farther. A way that a foreign symbol
+// outermost edge of the two nodes, of every symbol of their row within the
+// span and of every point of an earlier flow of the pair that keeps
+// Mermaid's route (Mermaid may run the first one 20 px beyond the row
+// already), each further one 20 px farther. A way that a foreign symbol
 // blocks is not taken.
 export function separateTwins(routes, box){
   const seen = new Map();
   for (const r of routes){
     const pair = r.f.from + '\u0000' + r.f.to;
-    const n = seen.get(pair) || 0;
-    seen.set(pair, n + 1);
+    const earlier = seen.get(pair) || [];
+    const n = earlier.length;
+    seen.set(pair, [...earlier, r]);
     if (!n) continue;
     const s = box[r.f.from], t = box[r.f.to], dir = n % 2 ? 1 : -1, ring = 20 * Math.ceil(n / 2);
     const [u, v, su, sv] = Math.abs(s.cx - t.cx) >= 1 ? ['y', 'x', 'h', 'w'] : ['x', 'y', 'w', 'h'];
     const edge = c => c['c' + u] + dir * c[su] / 2;
     const lo = Math.min(s['c' + v], t['c' + v]), hi = Math.max(s['c' + v], t['c' + v]);
     const row = Object.values(box).filter(c => (Math.abs(c['c' + u] - s['c' + u]) < 1 || Math.abs(c['c' + u] - t['c' + u]) < 1) && c['c' + v] + c[sv] / 2 > lo && c['c' + v] - c[sv] / 2 < hi);
-    const edges = [s, t, ...row].map(edge);
+    const edges = [s, t, ...row].map(edge).concat(earlier.filter(o => !o.twin).flatMap(o => o.pts.map(p => p[u])));
     const out = dir > 0 ? Math.max(...edges) + ring : Math.min(...edges) - ring;
     const at = (c, w) => ({ [u]: w, [v]: c['c' + v] });
     const next = [at(s, edge(s)), at(s, out), at(t, out), at(t, edge(t))];
@@ -577,15 +580,19 @@ const flowBack = (r, box) => {
 // side its piece before the end comes from, otherwise the opposite one; it
 // runs STUB beyond the vertex and turns into it, or, where its run before
 // already passes the vertex on that side, turns into it from there. A way a
-// foreign symbol blocks, or one that would leave its source backwards, is
-// not taken: the end stays. The flows back are left out on both sides, as
-// arriving and as leaving: loopBack() routes them afterwards, from Mermaid's
-// route their ends say nothing, and they keep off the vertices used then.
+// foreign symbol blocks, one whose new pieces cross or lie on another flow,
+// or one that would leave its source backwards, is not taken: the end stays.
+// An end moved counts at its new vertex for the arrivals after it. The flows
+// back are left out on both sides, as arriving, as leaving and as flows to
+// keep off: loopBack() routes them afterwards, from Mermaid's route their
+// ends say nothing, and they keep off the vertices used then.
 export function dockApart(routes, box, gateways){
   const at = (p, q) => Math.abs(p.x - q.x) < 3 && Math.abs(p.y - q.y) < 3;
+  const same = (p, q) => Math.abs(p.x - q.x) < 0.5 && Math.abs(p.y - q.y) < 0.5;
+  const forward = routes.filter(r => !flowBack(r, box));
   for (const id of gateways){
     const c = box[id];
-    const ends = portEnds(routes.filter(r => !flowBack(r, box)), id);
+    const ends = portEnds(forward, id);
     for (const e of ends){
       const pts = e.r.pts, n = pts.length;
       if (e.out || n < 3 || !ends.some(o => o.out && at(o.p, e.p))) continue;
@@ -600,17 +607,29 @@ export function dockApart(routes, box, gateways){
       const d = !dir ? 0 : free(dir) ? dir : free(-dir) ? -dir : 0;
       if (!d) continue;
       const vertex = vertexOn(d);
-      let next;
+      // head: the points kept; tail: the new ones, the turn into the vertex
+      // and the vertex, or the run STUB beyond it before.
+      let head, tail;
       if (m && d === dir && Math.abs(m[b] - k[b]) < 1 && (k[b] - vertex[b]) * d >= STUB && Math.min(m[a], k[a]) <= c[ca] && c[ca] <= Math.max(m[a], k[a])){
-        next = [...pts.slice(0, n - 3), { [a]: c[ca], [b]: k[b] }, vertex];
+        head = pts.slice(0, n - 3);
+        tail = [{ [a]: c[ca], [b]: k[b] }, vertex];
       } else {
         const level = c[cb] + d * (half + STUB);
         if (!m && Math.sign(level - k[b]) !== Math.sign(q[b] - k[b])) continue;
-        next = [...pts.slice(0, n - 2), { [a]: k[a], [b]: level }, { [a]: c[ca], [b]: level }, vertex];
+        head = pts.slice(0, n - 2);
+        tail = [{ [a]: k[a], [b]: level }, { [a]: c[ca], [b]: level }, vertex];
       }
-      // The new pieces start at index n - 3: the turn into the vertex, or k.
-      if (next.slice(n - 2).some((pt, i) => blocked(next[n - 3 + i], pt, e.r.obstacles))) continue;
+      // No point twice: a turn on the point before it goes.
+      const next = head.slice();
+      for (const pt of tail) if (!same(pt, next[next.length - 1])) next.push(pt);
+      // The new pieces: from the turn into the vertex, or from k on.
+      const from = tail.length === 2 ? next.length - 2 : head.length - 1;
+      const pieces = next.slice(from + 1).map((pt, i) => [next[from + i], pt]);
+      if (pieces.some(([u, v]) => blocked(u, v, e.r.obstacles))) continue;
+      if (pieces.some(([u, v]) => forward.some(o => o !== e.r && o.pts.slice(1).some((w, i) => meets(u, v, o.pts[i], w))))) continue;
       pts.splice(0, n, ...next);
+      e.p = pts[pts.length - 1];
+      e.q = pts[pts.length - 2];
     }
   }
 }

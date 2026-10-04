@@ -314,6 +314,19 @@ test('correction 6: the level of a twin lies 20 px beyond the tallest symbol of 
   assert.deepEqual(routes[2].pts, ptsOf([[100, 75], [100, 40], [400, 40], [400, 75]]), 'above the task\'s top at 60');
 });
 
+test('correction 6: a twin keeps off the first flow of its pair where Mermaid already ran it 20 px beyond the row', () => {
+  const box = { G1: gateway(100, 100), T: node(250, 100, 120, 80, true), G2: gateway(400, 100) };
+  const obstacles = [{ x1: 190, y1: 60, x2: 310, y2: 140 }];
+  const first = ptsOf([[100, 125], [100, 160], [400, 160], [400, 125]]);
+  const routes = [
+    { f: { from: 'G1', to: 'G2' }, pts: ptsOf([[100, 125], [100, 160], [400, 160], [400, 125]]), obstacles },
+    { f: { from: 'G1', to: 'G2' }, pts: ptsOf([[100, 125], [100, 162], [400, 162], [400, 125]]), obstacles },
+  ];
+  separateTwins(routes, box);
+  assert.deepEqual(routes[0].pts, first, 'the first keeps Mermaid\'s route');
+  assert.deepEqual(routes[1].pts, ptsOf([[100, 125], [100, 180], [400, 180], [400, 125]]), '20 px beyond the first, not on it');
+});
+
 // ---------- correction 7: flows back within a row (story 2.20) ----------
 test('correction 7: a flow back within a row runs around the row, four points, none in the row\'s band', () => {
   const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true), G: node(450, 100, 50, 50) };
@@ -509,6 +522,26 @@ test('correction 8: an arrow arriving at a gateway\'s vertex another flow leaves
   const stays = { f: { from: 'U', to: 'G' }, pts: ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]), obstacles: [] };
   dockApart([backOut, stays], box, ['G']);
   assert.deepEqual(stays.pts, ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]));
+});
+
+test('correction 8: an arrival whose free vertex lies only across the flow it leaves stays; an end moved counts at its new vertex; no point twice', () => {
+  const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), X: node(300, -100, 120, 80, true), V: node(560, -100, 120, 80, true), U: node(240, -40, 120, 80, true) };
+  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
+  // The top taken by a flow from above: the bottom vertex is reached only across the flow out.
+  const top = { f: { from: 'X', to: 'G' }, pts: ptsOf([[300, -60], [300, 75]]), obstacles: [] };
+  const across = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), obstacles: [] };
+  dockApart([out(), top, across], box, ['G']);
+  assert.deepEqual(across.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), 'the end stays');
+  // Two arrivals from above: the first takes the top; there it counts, and the second does not follow it.
+  const one = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), obstacles: [] };
+  const two = { f: { from: 'V', to: 'G' }, pts: ptsOf([[520, -60], [520, -20], [345, -20], [345, 100], [325, 100]]), obstacles: [] };
+  dockApart([out(), one, two], box, ['G']);
+  assert.deepEqual(one.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 63], [300, 63], [300, 75]]));
+  assert.deepEqual(two.pts, ptsOf([[520, -60], [520, -20], [345, -20], [345, 100], [325, 100]]), 'the top taken, the bottom across the flow out: it stays');
+  // The run before ends on the vertex's axis: the turn would be that point again and goes.
+  const axis = { f: { from: 'U', to: 'G' }, pts: ptsOf([[300, -40], [337, -40], [337, 100], [325, 100]]), obstacles: [] };
+  dockApart([out(), axis], box, ['G']);
+  assert.deepEqual(axis.pts, ptsOf([[300, -40], [300, 75]]));
 });
 
 test('conflictScore: one per piece of another flow crossed, lain on or run beside closer than 12 px, one per used port of a gateway or an event', () => {
