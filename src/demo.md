@@ -670,6 +670,8 @@ Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Tei
       <bpmn:startEvent id="N_E_Start"/>
       <bpmn:task id="N_E_Stempeln" name="Stempeln"/>
       <bpmn:sequenceFlow id="N_E1" sourceRef="N_E_Start" targetRef="N_E_Stempeln"/>
+      <bpmn:endEvent id="N_E_Ende"/>
+      <bpmn:sequenceFlow id="N_E2" sourceRef="N_E_Stempeln" targetRef="N_E_Ende"/>
     </bpmn:subProcess>
     <bpmn:endEvent id="N_Ende" name="Im Regal"/>
     <bpmn:sequenceFlow id="N1" sourceRef="N_Start" targetRef="N_Pruefen"/>
@@ -749,7 +751,7 @@ Ein Rückfluss in der mittleren von drei Bahnen: Sie sollten ihn innerhalb seine
     <bpmn:sequenceFlow id="F4" sourceRef="F_Frage" targetRef="F_Aufnehmen" name="nein"/>
     <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
     <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
-    <bpmn:sequenceFlow id="F7" sourceRef="F_Senden" targetRef="F_Ende"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="F_Abholen" targetRef="F_Ende"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

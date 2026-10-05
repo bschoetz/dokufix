@@ -957,7 +957,7 @@ Ein Rückfluss in der mittleren von drei Bahnen: sein Weg bleibt in seiner Bahn,
     <bpmn:sequenceFlow id="F4" sourceRef="F_Frage" targetRef="F_Aufnehmen" name="nein"/>
     <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
     <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
-    <bpmn:sequenceFlow id="F7" sourceRef="F_Senden" targetRef="F_Ende"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="F_Abholen" targetRef="F_Ende"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

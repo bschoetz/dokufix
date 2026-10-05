@@ -13,6 +13,8 @@
       <bpmn:startEvent id="N_E_Start"/>
       <bpmn:task id="N_E_Stempeln" name="Stempeln"/>
       <bpmn:sequenceFlow id="N_E1" sourceRef="N_E_Start" targetRef="N_E_Stempeln"/>
+      <bpmn:endEvent id="N_E_Ende"/>
+      <bpmn:sequenceFlow id="N_E2" sourceRef="N_E_Stempeln" targetRef="N_E_Ende"/>
     </bpmn:subProcess>
     <bpmn:endEvent id="N_Ende" name="Im Regal"/>
     <bpmn:sequenceFlow id="N1" sourceRef="N_Start" targetRef="N_Pruefen"/>
