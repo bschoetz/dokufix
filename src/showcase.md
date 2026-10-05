@@ -91,6 +91,19 @@ Ein Bild liegt einmal in der Datei und braucht nichts von außen.
 
 Fahren Sie mit der Maus über diese Fußnote[^vorschau] — der Text erscheint direkt an der Stelle, ohne dass Sie ans Dokumentende springen müssen.
 
+## Ein Code-Block
+
+```json
+{
+  "medium": "978-3-16-148410-0",
+  "ausgeliehen": "2026-10-05",
+  "faellig": "2026-11-02",
+  "verlaengerbar": true
+}
+```
+
+Code steht in fester Schrift auf dunklem Grund, so wie er geschrieben ist; eine lange Zeile rollt seitlich. Auch hier findet die Suche jedes Wort, zum Beispiel faellig.
+
 ## Ein Sequenzdiagramm
 
 ```mermaid

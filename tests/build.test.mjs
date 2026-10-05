@@ -143,10 +143,11 @@ test('the showcase is the built file with another demo text: equal outside #doku
   assert.ok(named.length > 0, 'the showcase shows an image');
   for (const hash of named) assert.ok(assets[hash], 'the showcase carries ' + hash);
 });
-test('the showcase text is short: no special cases, no code block of its own', () => {
+test('the showcase text is short: no special cases, one code block (Ben, 2026-10-05)', () => {
   const text = original('showcase.md');
   assert.ok(text.length < original('demo.md').length / 2, text.length + ' B');
-  assert.ok(!/^## Sonderfälle/m.test(text) && !/^```(?!mermaid|bpmn)\w/m.test(text));
+  assert.ok(!/^## Sonderfälle/m.test(text));
+  assert.equal((text.match(/^```(?!mermaid|bpmn)\w/gm) || []).length, 1, 'one code block');
   // The BPMN diagram is written without coordinates, so the layout draws it.
   assert.match(text, /^```bpmn$/m);
   assert.ok(!text.includes('bpmndi'), 'no coordinates');
