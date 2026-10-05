@@ -2781,6 +2781,16 @@ async function assertSearch(page, check, key){
       check('search: "' + term + '", a label of a ' + (n >= 0 ? wantAt[n].kind : 'diagram') + ', lists the diagram once, "' + (n >= 0 ? wantAt[n].kind : '?') + ': " and the labels around the hit; its hits are highlighted in its SVG, as the hits elsewhere',
         ok && litAs(lit, term, {}, wantAt, t => t.toLowerCase() === term.toLowerCase()) && lit.ranges.some(r => r.inSvg),
         json({ summary: listed.summary, results: listed.results.map(r => r.text.slice(0, 80)), expected: wantAt.map(p => [p.kind, p.hits]), lit: litLine(lit, term, {}, wantAt) }));
+      if (n >= 0){
+        // Story 18: the kind of the diagram's result with its icon, 12 px, a mask in the label's colour, a colour that is not the grey of the rest.
+        const kind = await page.evaluate(n => {
+          const k = document.querySelectorAll('body > .search-panel .search-results .search-result')[n].querySelector('.search-kind');
+          const b = getComputedStyle(k, '::before');
+          return { cls: k.className, colour: getComputedStyle(k).color, icon: b.backgroundColor, mask: (b.maskImage || b.webkitMaskImage || '').slice(0, 30), size: b.width + ' ' + b.height };
+        }, n);
+        check('search: the kind "' + wantAt[n].kind + ': " stands with its icon, 12 px, in a colour of its own, the icon in the colour of the label',
+          /search-kind-(bpmn|mermaid)$/.test(kind.cls) && kind.mask.startsWith('url("data:image/svg+xml') && kind.size === '12px 12px' && kind.icon === kind.colour && kind.colour !== 'rgb(110, 110, 115)', json(kind));
+      }
       if (n < 0) continue;
       const figureAt = figures.indexOf(wantAt[n].el);
       const landed = await clickResult(n, 'figure.dokufix-diagram', figureAt);

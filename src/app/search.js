@@ -1,5 +1,6 @@
 import { findHits, excerpt, tooShort } from './search-match.js';
-import { collectPlaces, groupResults, nodeRanges, KIND_META, KIND_CODE } from './search-places.js';
+import { collectPlaces, groupResults, nodeRanges, KIND_ROW, KIND_META, KIND_CODE } from './search-places.js';
+import { DIAGRAM_LANGUAGES, DIAGRAM_LABEL } from './diagram-kinds.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { DIAGRAM_CLASS } from './diagrams.js';
 import { largeViewOpen } from './large-view.js';
@@ -60,7 +61,7 @@ import { TABLE_CLASS } from './tables.js';
 //   <div class="search-group-head" role="heading" aria-level="2"><span class="search-group-title">Eine Tabelle</span><span class="search-group-count">2 Treffer an 1 Stelle</span></div>
 //   <ol class="search-group-list" role="list">
 //   <li><button type="button" class="search-result">… eine <mark>Tabelle</mark> mit …</button></li>
-//   <li><button type="button" class="search-result"><span class="search-kind">Tabelle: </span>Karten Block …<span class="search-hidden"> (ausgeblendet)</span></button></li>
+//   <li><button type="button" class="search-result"><span class="search-kind search-kind-table">Tabelle: </span>Karten Block …<span class="search-hidden"> (ausgeblendet)</span></button></li>
 //   <li class="search-group search-group-h3">…</li>
 //   </ol>
 //   </li>
@@ -317,6 +318,17 @@ function centreHit(place, hit){
   window.scrollBy(0, at.top + at.height / 2 - window.innerHeight / 2);
 }
 
+// The class of each kind beside search-kind, which gives it its icon and
+// colour in src/search.css (story 18): a table row, a diagram of each
+// language and of none, the metadata panel, a code block.
+const KIND_CLASSES = new Map([
+  [KIND_ROW, 'table'],
+  ...Object.entries(DIAGRAM_LANGUAGES).map(([lang, { label }]) => [label, lang]),
+  [DIAGRAM_LABEL, 'diagram'],
+  [KIND_META, 'meta'],
+  [KIND_CODE, 'code'],
+]);
+
 // A result: a button with the kind of its place, if it has one, and the part
 // of its text, which scrolls the document to the place, a diagram, the
 // metadata panel and a code block to their first hit; a hidden
@@ -329,7 +341,7 @@ function resultItem({ place, at }){
   const row = !!place.kind && place.el.tagName.toUpperCase() === 'TR';
   if (place.kind){
     const kind = document.createElement('span');
-    kind.className = 'search-kind';
+    kind.className = 'search-kind search-kind-' + KIND_CLASSES.get(place.kind);
     kind.textContent = place.kind + ': ';
     button.append(kind);
   }

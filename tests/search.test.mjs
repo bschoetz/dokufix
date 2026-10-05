@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
 import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_META, KIND_CODE } from '../src/app/search-places.js';
-import { DIAGRAM_LANGUAGES } from '../src/app/diagram-kinds.js';
+import { DIAGRAM_LANGUAGES, DIAGRAM_LABEL } from '../src/app/diagram-kinds.js';
 import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
 import { buildWarning } from '../src/app/warning.js';
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
@@ -1066,6 +1066,23 @@ test('the styles of the search: a hit highlighted in the colour of the marks, no
   assert.match(css, /^@media screen\{::highlight\(search-hit\)\{color:#1c1c1e\}\}$/m);
   assert.match(css, /^\.search-kind\{color:#6e6e73\}$/m);
   assert.match(css, /^\.search-hidden\{color:#a40e26;font-style:italic\}$/m);
+});
+
+test('each kind of result has a class, and a table, a diagram and a code block an icon and a colour: search.js names a class for every kind there is, search.css gives those an Octicon, the metadata panel keeps the grey without one, and every colour reads 4.5:1 on the panel and on a hovered result (story 18)', () => {
+  const js = read('app/search.js'), css = read('search.css');
+  for (const name of ['KIND_ROW', 'KIND_META', 'KIND_CODE', 'DIAGRAM_LABEL', 'DIAGRAM_LANGUAGES']) assert.match(js, new RegExp('KIND_CLASSES[\\s\\S]*' + name), name);
+  // Every rule of the kinds: its selector and its body.
+  const rules = [...css.matchAll(/^([^{}\n]*\.search-kind-[^{}\n]*)\{([^}]*)\}$/gm)].map(m => ({ sel: m[1], body: m[2] }));
+  const iconOf = key => rules.some(r => new RegExp('\\.search-kind-' + key + '\\b').test(r.sel) && /--search-kind-icon:url\("data:image\/svg\+xml,%3Csvg /.test(r.body));
+  for (const key of ['table', 'code', 'diagram', ...Object.keys(DIAGRAM_LANGUAGES)]) assert.ok(iconOf(key), key);
+  assert.ok(!iconOf('meta'));
+  const lum = hex => { const c = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255).map(v => v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4); return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]; };
+  const ratio = (a, b) => (Math.max(lum(a), lum(b)) + 0.05) / (Math.min(lum(a), lum(b)) + 0.05);
+  const colours = [...css.matchAll(/^\.search-kind(?:-[a-z]+)?\{color:(#[0-9a-f]{6})/gm)].map(m => m[1]);
+  assert.equal(colours.length, 5, colours.join());
+  for (const c of colours) for (const bg of ['#ffffff', '#f2f2f7']) assert.ok(ratio(c, bg) >= 4.5, c + ' on ' + bg + ': ' + ratio(c, bg).toFixed(2));
+  assert.equal(new Set(colours).size, colours.length, 'every colour once');
+  assert.equal(DIAGRAM_LABEL, 'Diagramm');
 });
 
 test('the narrow view of the search has one width: NARROW of search.js is the query of the bar\'s rules in search.css and of the app\'s narrow layout in app.css (story 12)', () => {

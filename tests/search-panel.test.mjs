@@ -203,6 +203,8 @@ test('a row says its kind before its text, no text of the place; a row a filter 
   await p.type('Zitronenfalter');
   assert.deepEqual(p.texts(), ['Tabelle: Zitronenfalter Nord', 'Tabelle: Zitronenfalter Süd (ausgeblendet)', 'Tabelle: Zitronenfalter Ost', 'Tabelle: Zitronenfalter West (ausgeblendet)', 'Tabelle: Zitronenfalter im Detail']);
   assert.deepEqual(p.results().map(b => (b.querySelector('.search-kind') || {}).textContent), Array(5).fill('Tabelle: '));
+  // Its class gives it the icon and colour of a table (story 18).
+  assert.deepEqual(p.results().map(b => b.querySelector('.search-kind').className), Array(5).fill('search-kind search-kind-table'));
   assert.deepEqual(p.results().map(b => !!b.querySelector('.search-hidden')), [false, true, false, true, false]);
   // The kind is no text: "Tabelle" finds no row.
   await p.type('Tabelle');

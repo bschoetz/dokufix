@@ -88,6 +88,22 @@
    text of a row a table's filter hides " (ausgeblendet)", in the dark red of
    the red status chip's label, so it is not overlooked (Ben, 2026-10-03). */
 .search-kind{color:#6e6e73}
+/* Each kind with an icon and a colour of its own, so the eye finds tables,
+   diagrams and code in the list at a glance (story 18, Ben 2026-10-05). The
+   icon is an Octicon (@primer/octicons 19.38.0, build/svg/<name>-16.svg),
+   drawn at 12 px as a mask in the colour of its label; the label keeps its
+   text. Every colour reads at least 4.5:1 on the panel and on a hovered
+   result (#f2f2f7). The metadata panel keeps the grey and has no icon. */
+.search-kind-table{color:#1a7f37;--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25ZM6.5 6.5v8h7.75a.25.25 0 0 0 .25-.25V6.5Zm8-1.5V1.75a.25.25 0 0 0-.25-.25H6.5V5Zm-13 1.5v7.75c0 .138.112.25.25.25H5v-8ZM5 5V1.5H1.75a.25.25 0 0 0-.25.25V5Z'/%3E%3C/svg%3E")}
+.search-kind-bpmn{color:#0969da}
+.search-kind-mermaid{color:#8250df}
+:is(.search-kind-bpmn,.search-kind-mermaid,.search-kind-diagram){--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h3.5C6.216 0 7 .784 7 1.75v3.5A1.75 1.75 0 0 1 5.25 7H4v4a1 1 0 0 0 1 1h4v-1.25C9 9.784 9.784 9 10.75 9h3.5c.966 0 1.75.784 1.75 1.75v3.5A1.75 1.75 0 0 1 14.25 16h-3.5A1.75 1.75 0 0 1 9 14.25v-.75H5A2.5 2.5 0 0 1 2.5 11V7h-.75A1.75 1.75 0 0 1 0 5.25Zm1.75-.25a.25.25 0 0 0-.25.25v3.5c0 .138.112.25.25.25h3.5a.25.25 0 0 0 .25-.25v-3.5a.25.25 0 0 0-.25-.25Zm9 9a.25.25 0 0 0-.25.25v3.5c0 .138.112.25.25.25h3.5a.25.25 0 0 0 .25-.25v-3.5a.25.25 0 0 0-.25-.25Z'/%3E%3C/svg%3E")}
+.search-kind-code{color:#bc4c00;--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z'/%3E%3C/svg%3E")}
+:is(.search-kind-table,.search-kind-bpmn,.search-kind-mermaid,.search-kind-diagram,.search-kind-code)::before{
+  content:"";display:inline-block;width:12px;height:12px;margin-right:4px;vertical-align:-1px;
+  background-color:currentColor;
+  -webkit-mask:no-repeat center/12px 12px var(--search-kind-icon);mask:no-repeat center/12px 12px var(--search-kind-icon);
+}
 .search-hidden{color:#a40e26;font-style:italic}
 /* The hits in the document while the panel is open (src/app/search.js): a
    highlight of the CSS Custom Highlight API, no element and no class in the
