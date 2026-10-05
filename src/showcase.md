@@ -156,7 +156,9 @@ BPMN-XML ohne Koordinaten genügt: Bahnen, Schritte und Flüsse aufschreiben, do
 
 ## Suche
 
-Die Taste `/` öffnet eine Suche über das ganze Dokument, Tabellen und Diagramme eingeschlossen; ein Klick auf einen Treffer führt dorthin.
+Die Taste `/` oder die Lupe oben rechts öffnet eine Suche über das ganze Dokument, Tabellen und Diagramme eingeschlossen. Die Treffer stehen nach Abschnitten geordnet in einer Liste und sind im Text gelb markiert, auch in den Diagrammen; ein Klick auf einen Treffer führt dorthin.
+
+Auf dem Handy klappt die Liste nach einem Tipp auf einen Treffer zu einer Leiste am unteren Rand zusammen, damit die Stelle frei bleibt: Mit ‹ und › geht es von Treffer zu Treffer, „Liste“ holt die ganze Liste zurück.
 
 ---
 
