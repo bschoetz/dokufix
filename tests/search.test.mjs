@@ -19,10 +19,10 @@
 // space; of story 6, table rows as places, their text that of the free-text
 // filter, their hits one range per cell; of story 7, a diagram as one place,
 // its text the labels of its SVG, its lines joined, nothing of its frame or
-// source, no range of its hits; of story 8, the metadata panel and every code
-// block as one place each, the panel's keys and values apart and without its
-// summary, a diagram's source, a warning's detail and the footer of an export
-// no code. What the panel does with them, src/app/search.js, is for
+// source; of story 17, the ranges of its hits, one per label line; of
+// story 8, the metadata panel and every code block as one place each, the
+// panel's keys and values apart and without its summary, a diagram's source,
+// a warning's detail and the footer of an export no code. What the panel does with them, src/app/search.js, is for
 // tests/search-panel.test.mjs; where it stands, the group headings that stay
 // at the top while the list scrolls, the highlight drawn, the order of Escape
 // and a saved file without the panel are for the browser runs
@@ -747,14 +747,76 @@ test('collectPlaces: a diagram in a list item is no text of the item, and a plac
   assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]), [['LI', 'Davor', undefined], ['FIGURE', 'Abholbereit', KIND_MERMAID]]);
 });
 
-test('nodeRanges: a hit in a diagram is no range of the document, so nothing in it is highlighted; the diagram stands under its heading', () => {
-  const root = diagramRoot([['bpmn', bpmnSvg(label('Abholbereit'), label('Buch ', 'abholbereit'))]], '<h2>Fernleihe</h2>\n<p>Abholbereit ist das Buch.</p>\n');
+// ---------- hits highlighted in diagrams (story 17) ----------
+// The ranges of a hit in a diagram: the texts of each, as a Range over it
+// would read them, by hitTexts() above.
+
+test('nodeRanges: a hit in a diagram is a range of its label, as a hit in the text; the diagram stands under its heading', () => {
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Abholbereit'), label('Buch ', 'abholbereit'))], ['mermaid', mermaidSvg('Unterlagen nachfordern', 'Prüfen')]], '<h2>Fernleihe</h2>\n<p>Abholbereit ist das Buch.</p>\n');
   const found = collectPlaces(root).map(p => ({ el: p.el, text: p.text, kind: p.kind, map: p.map, hits: findHits('abholbereit', p.text).length })).filter(p => p.hits);
   assert.deepEqual(found.map(p => [p.el.tagName, p.hits]), [['P', 1], ['FIGURE', 2]]);
-  assert.deepEqual(findHits('abholbereit', found[1].text).flatMap(hit => nodeRanges(found[1].map, hit)), []);
-  assert.deepEqual(findHits('abholbereit', found[0].text).flatMap(hit => nodeRanges(found[0].map, hit)).map(r => rangeText(root, r)), ['Abholbereit']);
+  assert.deepEqual(hitTexts(root, 'abholbereit'), [['Abholbereit'], ['Abholbereit'], ['abholbereit']]);
+  // Each range lies in the SVG: in the BPMN label's tspan, in the Mermaid label's paragraph.
+  const ranges = findHits('abholbereit', found[1].text).flatMap(hit => nodeRanges(found[1].map, hit));
+  assert.deepEqual(ranges.map(r => r.startNode.parentNode.tagName.toLowerCase()), ['tspan', 'tspan']);
+  const [mermaid] = diagramPlaces(root).filter(p => p.kind === KIND_MERMAID);
+  const [nach] = findHits('nachfordern', mermaid.text).flatMap(hit => nodeRanges(mermaid.map, hit));
+  assert.equal(nach.startNode.parentNode.tagName, 'P');
+  assert.ok(nach.startNode.parentNode.closest('foreignObject'));
+  assert.deepEqual(hitTexts(root, 'nachfordern'), [['nachfordern']]);
   const { groups } = groupResults(root, found);
   assert.deepEqual(groups.map(g => [g.label, g.hits, g.places]), [['Fernleihe', 3, 2]]);
+});
+
+test('nodeRanges: a hit over the lines of a BPMN label is one range per line, at a blank, a hyphen and a line ending in a letter alike', () => {
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Fernleihe ', 'bestellen'), label('Ausleih-', 'Statistik'), label('Rückgabe-', 'Automatenbedienung'),
+    label('Vormerkung', 'gemeldet'), label('Persönlich ', 'antworten am ', 'selben Tag'), label('Hin-', 'und Rückweg'), label('  Viel   ', '  Raum  '))]], '', '');
+  assert.deepEqual(hitTexts(root, 'Fernleihe bestellen'), [['Fernleihe', 'bestellen']]);
+  assert.deepEqual(hitTexts(root, 'Ausleih-Statistik'), [['Ausleih-', 'Statistik']]);
+  assert.deepEqual(hitTexts(root, 'Rückgabe-Automatenbedienung'), [['Rückgabe-', 'Automatenbedienung']]);
+  assert.deepEqual(hitTexts(root, 'Vormerkung gemeldet'), [['Vormerkung', 'gemeldet']]);
+  assert.deepEqual(hitTexts(root, 'antworten am selben'), [['antworten am', 'selben']]);
+  assert.deepEqual(hitTexts(root, 'Hin- und Rückweg', { fuzzy: true }), [['Hin-', 'und Rückweg']]);
+  // A hit inside one line is one range; collapsed white space at a line's edge lies in no range.
+  assert.deepEqual(hitTexts(root, 'Automatenbedienung'), [['Automatenbedienung']]);
+  assert.deepEqual(hitTexts(root, 'Viel Raum'), [['Viel', 'Raum']]);
+});
+
+test('nodeRanges: in a Mermaid label a hit over a line break is a range on each side of it', () => {
+  const root = diagramRoot([['mermaid', mermaidSvg('Termin bestätigen<br>am selben Tag', 'Ende')]], '', '');
+  assert.deepEqual(hitTexts(root, 'bestätigen am selben'), [['bestätigen', 'am selben']]);
+  assert.deepEqual(hitTexts(root, 'am selben Tag'), [['am selben Tag']]);
+});
+
+test('nodeRanges: a hit over two labels is one range per label, none over what lies between them; the frame, styles, title and description hold none', () => {
+  const root = diagramRoot([['bpmn', bpmnSvg(label('Medium zurück'), label('Etikett ', 'scannen'))], ['mermaid', mermaidSvg('Antrag', 'Prüfen')]], '', '');
+  assert.deepEqual(hitTexts(root, 'zurück Etikett'), [['zurück', 'Etikett']]);
+  assert.deepEqual(hitTexts(root, 'zurück Etikett scannen'), [['zurück', 'Etikett', 'scannen']]);
+  assert.deepEqual(hitTexts(root, 'Antrag Prüfen'), [['Antrag', 'Prüfen']]);
+  // Every range lies in one label: its ends in the same text, or the same paragraph of a foreignObject.
+  for (const place of diagramPlaces(root)){
+    for (const hit of [...findHits('zurück Etikett', place.text), ...findHits('Antrag Prüfen', place.text)]){
+      for (const r of nodeRanges(place.map, hit)) assert.equal(r.startNode, r.endNode);
+    }
+  }
+  for (const word of ['Rückgabe', DIAGRAM_CLOSE_TEXT, 'Gezeichnet', 'bpmn-js', 'fill', 'Titel', 'Beschreibung']) assert.deepEqual(hitTexts(root, word), [], word);
+});
+
+test('nodeRanges: an actor of a sequence diagram drawn twice holds a range in each drawing; the map holds as for every place', () => {
+  const actor = y => '<g><rect class="actor"></rect><text x="75" y="' + y + '" class="actor actor-box"><tspan x="75" dy="0">Nutzerin</tspan></text></g>';
+  const sequence = '<svg id="mermaid-2" aria-roledescription="sequence"><style>#mermaid-2 .actor{stroke:#ccc;}</style>' + actor(32) +
+    '<text x="200" y="80" class="messageText" dy="1em">Ausweis zeigen</text>' + actor(300) + '</svg>';
+  const root = diagramRoot([['mermaid', sequence]], '', '');
+  const [place] = diagramPlaces(root);
+  const ranges = findHits('Nutzerin', place.text).flatMap(hit => nodeRanges(place.map, hit));
+  assert.deepEqual(ranges.map(r => rangeText(root, r)), ['Nutzerin', 'Nutzerin']);
+  assert.notEqual(ranges[0].startNode, ranges[1].startNode);
+  assert.deepEqual(hitTexts(root, 'Nutzerin Ausweis'), [['Nutzerin', 'Ausweis']]);
+  const { text, map } = place;
+  assert.equal(map.nodes.length, text.length);
+  for (let i = 0; i < text.length; i++){
+    if (text[i] !== ' ') assert.equal(map.nodes[i].data[map.offsets[i]], text[i], text + ' at ' + i);
+  }
 });
 
 test('diagrams.js knows nothing of the search', () => {

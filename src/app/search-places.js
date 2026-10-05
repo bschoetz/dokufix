@@ -47,9 +47,16 @@ import { TRANSIENT_ATTR } from './transient.js';
 // SVG of a `schlank` file before the decoder) has no text and is no place; a
 // diagram that failed is a warning, no figure. Its kind, "BPMN-Diagramm" or
 // "Mermaid-Diagramm", is the label of its language (diagram-kinds.js), read
-// from the figure's class dokufix-diagram-<language>. Nothing inside a
-// diagram is highlighted: its map holds no node, so nodeRanges() makes no
-// range of a hit in it.
+// from the figure's class dokufix-diagram-<language>. A hit in it is
+// highlighted as in any place: every character of a label maps to its text
+// node in the SVG, and a new part begins at the edge of every `text` and
+// `foreignObject`, of a paragraph or `div` in one, at a line break and at the
+// end of every line of a `text`, so a hit over two labels or two lines of one
+// is one range per label line, none over what lies between. The blanks the
+// reading puts in map to no node. The static large view shows the same SVG,
+// scaled, so the highlight stays in it; the live viewer of a BPMN diagram
+// (live-viewer.js) draws an SVG of its own outside the SVG container, which
+// is not read, so nothing in it is highlighted.
 //
 // The metadata panel (frontmatter.js), `details.dokufix-frontmatter`, is one
 // place, of the kind KIND_META, "Metadaten". Its text is the author's data:
@@ -285,25 +292,28 @@ const LINE_JOINED = /[\s\-\u2010\u2011]$/u;
 
 const isDiagram = el => tagOf(el) === 'FIGURE' && el.classList.contains(DIAGRAM_CLASS);
 
-// The text of a diagram: the labels of its SVG, as above. Every unit maps to
-// no node, so no hit in it is a range of the document.
+// The text of a diagram: the labels of its SVG, as above. A character of a
+// label maps to its text node; a blank the reading puts in maps to none. The
+// part is counted up at the edge of every label, label block and line.
 function diagramReading(figure){
   const r = reading();
-  const put = s => { for (const ch of s) readBlank(r, ch); };
   // label: whether node lies in a text or a foreignObject, whose text is read.
   const read = (node, label) => {
     for (let child = node.firstChild; child; child = child.nextSibling){
-      if (child.nodeType === TEXT){ if (label) put(child.data); continue; }
+      if (child.nodeType === TEXT){ if (label) readText(r, child); continue; }
       if (child.nodeType !== ELEMENT) continue;
       const tag = tagOf(child);
       if (SVG_SKIPPED.has(tag)) continue;
-      if (tag === 'BR'){ put(' '); continue; }
+      if (tag === 'BR'){ r.part++; readBlank(r, ' '); r.part++; continue; }
       const apart = tag === 'TEXT' || tag === 'FOREIGNOBJECT' || (label && LABEL_BLOCKS.has(tag));
-      if (apart) put(' ');
+      if (apart){ r.part++; readBlank(r, ' '); }
       read(child, label || apart);
       // The end of a line of a text.
-      if (tag === 'TSPAN' && tagOf(node) === 'TEXT' && !LINE_JOINED.test(r.raw)) put(' ');
-      if (apart) put(' ');
+      if (tag === 'TSPAN' && tagOf(node) === 'TEXT'){
+        r.part++;
+        if (!LINE_JOINED.test(r.raw)) readBlank(r, ' ');
+      }
+      if (apart){ readBlank(r, ' '); r.part++; }
     }
   };
   const holder = figure.querySelector('.' + DIAGRAM_SVG_CLASS);

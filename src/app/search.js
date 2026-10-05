@@ -26,11 +26,10 @@ import { TABLE_CLASS } from './tables.js';
 // block (search-places.js), says it before its text: "Tabelle: ",
 // "BPMN-Diagramm: ", "Mermaid-Diagramm: ", "Metadaten: " or "Code: " in a
 // span of its own, which is no text of the place, so nothing in it is
-// marked. A diagram's text is its labels; a click on its result scrolls the
-// start of its figure to the top of the window, and nothing in it is
-// highlighted. A click on the result of the metadata panel or of a code
-// block brings its first hit to the middle of the window, so a hit deep in a
-// tall block is in view, a code block scrolled sideways to it as well; the
+// marked. A diagram's text is its labels. A click on the result of a
+// diagram, of the metadata panel or of a code block brings its first hit to
+// the middle of the window, so a hit deep in a tall diagram or block is in
+// view, a code block scrolled sideways to it as well; the
 // metadata panel, a <details>, is opened first where it is closed, and stays
 // open, as if the reader had opened it. Its `open` is no part of a file: a
 // `Mit Editor` file is saved from the source, an export renders anew. A row a table's filter hides, the free-text filter
@@ -158,8 +157,9 @@ import { TABLE_CLASS } from './tables.js';
 // the document, all of them, with the CSS Custom Highlight API: one Highlight
 // under the name HIGHLIGHT in CSS.highlights, of StaticRanges over the text
 // nodes the hits came from (nodeRanges() in search-places.js), drawn by
-// ::highlight() in src/search.css. Nothing is added to the root or changed in
-// it, so a file saved or exported while the panel is open is the file it
+// ::highlight() in src/search.css, in the labels of a diagram's SVG as in the
+// text; not in the live viewer of a BPMN large view, which draws its own.
+// Nothing is added to the root or changed in it, so a file saved or exported while the panel is open is the file it
 // would be without it. Every search replaces the highlight; a term too short,
 // an empty field and closing the panel take it away. A render that replaces
 // the root's nodes leaves ranges over nodes no longer in the document, which
@@ -318,8 +318,8 @@ function centreHit(place, hit){
 }
 
 // A result: a button with the kind of its place, if it has one, and the part
-// of its text, which scrolls the document to the place, a diagram to its
-// start, the metadata panel and a code block to their first hit; a hidden
+// of its text, which scrolls the document to the place, a diagram, the
+// metadata panel and a code block to their first hit; a hidden
 // row says so and scrolls to its table's filter controls.
 function resultItem({ place, at }){
   const li = document.createElement('li');
@@ -349,8 +349,7 @@ function resultItem({ place, at }){
     // A place in a closed <details> of the author: the <details> opened, as
     // the reader would, as centreHit() opens the metadata panel.
     for (const d of closedAround(place.el)) d.setAttribute('open', '');
-    if (hasClass(place.el, DIAGRAM_CLASS)){ place.el.scrollIntoView({ block: 'start' }); return; }
-    if (place.kind === KIND_META || place.kind === KIND_CODE){ centreHit(place, at[0]); return; }
+    if (hasClass(place.el, DIAGRAM_CLASS) || place.kind === KIND_META || place.kind === KIND_CODE){ centreHit(place, at[0]); return; }
     (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });
   });
   placeOf.set(button, place.el);

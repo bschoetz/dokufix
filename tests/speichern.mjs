@@ -71,7 +71,8 @@
 //   7. the view of the link "license information" open, in read mode and in
 //      the toolbar. Both elements are made by the script and marked transient,
 //      so the saved file has neither; opened, it makes them again, closed
-//   8. the search panel open in read mode, with a term and its results. The
+//   8. the search panel open in read mode, with a term and its results, the
+//      term a label of a Mermaid diagram holds as well (story 17). The
 //      panel is made by the script and marked transient, so the saved file
 //      has none; opened, it makes it again, closed and empty. Its hits are
 //      highlighted in the preview (epic 5, story 5): the saved file is
@@ -540,14 +541,17 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 
-    // 8. saved with the search panel open and a term typed into it
+    // 8. saved with the search panel open and a term typed into it, which a
+    // label of a Mermaid diagram holds as well (story 17: highlighted in its SVG)
     scope = name + ' search open';
     const withSearch = path.join(dir, 'suche-offen.html');
+    const DOC_S = DOC_A + '\n## Fünf\n\n```mermaid\nflowchart LR\n  a[Abschnitt im Bild] --> b[Ende]\n```\n';
     const searchState = page => page.evaluate(() => {
       const p = document.querySelector('body > .search-panel');
       const h = window.CSS && CSS.highlights && CSS.highlights.get('search-hit');
+      const live = h ? Array.from(h).filter(r => r.startContainer.isConnected) : [];
       return p ? { open: !p.hidden, term: p.querySelector('input').value, results: p.querySelectorAll('.search-results .search-result').length,
-        highlighted: h ? Array.from(h).filter(r => r.startContainer.isConnected).length : 0 } : null;
+        highlighted: live.length, inSvg: live.filter(r => !!r.startContainer.parentElement.closest('svg')).length } : null;
     });
     o = await open(browser, opts.file);
     await o.page.evaluate(text => {
@@ -555,8 +559,9 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       source.value = text;
       source.dispatchEvent(new Event('input', { bubbles: true }));
       document.getElementById('render-btn').click();
-    }, DOC_A);
-    await o.page.waitForFunction(() => /Dokument A/.test(document.querySelector('#preview h1')?.textContent || ''), null, { timeout: 30000 });
+    }, DOC_S);
+    await o.page.waitForFunction(() => /Dokument A/.test(document.querySelector('#preview h1')?.textContent || '') &&
+      !!document.querySelector('#preview figure.dokufix-diagram .dokufix-diagram-svg svg'), null, { timeout: 30000 });
     await o.page.evaluate(() => { if (document.activeElement) document.activeElement.blur(); });
     await o.page.keyboard.press('/');
     await o.page.keyboard.type('Abschnitt');
@@ -568,7 +573,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       o.page.evaluate(() => document.querySelector('button[data-download="full"]').click()),
     ]);
     await searchDownload.saveAs(withSearch);
-    check(scope, 'the panel was open with a term, its results and its hits highlighted in the preview when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0 && searchOpen.highlighted >= searchOpen.results, JSON.stringify(searchOpen));
+    check(scope, 'the panel was open with a term, its results and its hits highlighted in the preview, one in the diagram\'s SVG, when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0 && searchOpen.highlighted >= searchOpen.results && searchOpen.inSvg >= 1, JSON.stringify(searchOpen));
     check(scope, 'and is still open in the running page', JSON.stringify(await searchState(o.page)) === JSON.stringify(searchOpen), JSON.stringify(await searchState(o.page)));
     // Without its scripts and styles: the page's script and the reader bundle in
     // its data block name the panel's classes, and so does the stylesheet.
@@ -626,7 +631,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await checkAgainstBuiltFile(scope, browser, withSearch, built, 1);
     o = await open(browser, withSearch);
     s = await state(o.page);
-    same(scope, 'the saved file holds document A', s.source, DOC_A);
+    same(scope, 'the saved file holds document A with its diagram', s.source, DOC_S);
     const reopened = await searchState(o.page);
     check(scope, 'opened, its panel is closed and empty', !!reopened && !reopened.open && reopened.term === '' && reopened.results === 0, JSON.stringify(reopened));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));

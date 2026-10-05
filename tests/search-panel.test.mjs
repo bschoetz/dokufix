@@ -272,7 +272,7 @@ test('without CSS.highlights the results are listed all the same', async () => {
   assert.equal(p.summary(), '1 Treffer an 1 Stelle in 1 Abschnitt');
 });
 
-test('a click on a diagram\'s result scrolls the start of its figure; on the metadata panel\'s it opens the closed panel and brings the first hit to the middle of the window', async () => {
+test('a click on a diagram\'s result brings its first hit to the middle of the window (story 17); on the metadata panel\'s it opens the closed panel and does the same', async () => {
   const p = await open(
     '<details class="dokufix-frontmatter"><summary>Metadaten</summary><dl><dt>author</dt><dd>Beispiel-Autorin</dd></dl></details>' +
     '<figure class="' + DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-bpmn"><div class="' + DIAGRAM_SVG_CLASS + '"><svg><text>Abholbereit</text></svg></div></figure>' +
@@ -281,9 +281,10 @@ test('a click on a diagram\'s result scrolls the start of its figure; on the met
   await p.type('Abholbereit');
   assert.deepEqual(p.texts(), ['BPMN-Diagramm: Abholbereit', 'Code: Abholbereit Beispiel-Autorin']);
   p.results()[0].click();
-  assert.equal(p.scrolls.length, 1);
-  same(p.scrolls[0].el, p.root.querySelector('figure'));
-  assert.deepEqual(p.scrolls[0].options, { block: 'start' });
+  // The hit at 600 to 610 px: the window scrolls by 605 - 450.
+  assert.deepEqual(p.scrolls, [{ by: 155 }]);
+  // Its hit is highlighted, a range in the SVG's text.
+  assert.ok(p.lit().size >= 1);
   await p.type('Beispiel-Autorin');
   const meta = p.root.querySelector('details');
   assert.ok(!meta.open);
@@ -294,13 +295,20 @@ test('a click on a diagram\'s result scrolls the start of its figure; on the met
   assert.deepEqual(p.scrolls, [{ by: 155 }]);
 });
 
-test('a click on a code block\'s result whose hit has no box scrolls to the block itself', async () => {
-  const p = await open('<pre><code>Abholbereit</code></pre>', { rangeBox: { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 } });
+test('a click on a code block\'s or a diagram\'s result whose hit has no box scrolls to the block or the figure itself', async () => {
+  const p = await open('<pre><code>Abholbereit</code></pre>' +
+    '<figure class="' + DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-mermaid"><div class="' + DIAGRAM_SVG_CLASS + '"><svg><text>Abholbereit</text></svg></div></figure>',
+  { rangeBox: { left: 0, right: 0, top: 0, bottom: 0, width: 0, height: 0 } });
   p.search.openSearch();
   await p.type('Abholbereit');
   p.results()[0].click();
   assert.equal(p.scrolls.length, 1);
   same(p.scrolls[0].el, p.root.querySelector('pre'));
+  assert.deepEqual(p.scrolls[0].options, { block: 'center' });
+  p.scrolls.length = 0;
+  p.results()[1].click();
+  assert.equal(p.scrolls.length, 1);
+  same(p.scrolls[0].el, p.root.querySelector('figure'));
   assert.deepEqual(p.scrolls[0].options, { block: 'center' });
 });
 
@@ -648,7 +656,7 @@ test('the bar\'s "‹" and "›" click the previous and the next result in the o
   assert.ok(p.bar.collapsed());
 });
 
-test('a step of the bar does what a click on that result does: a hidden row to its filter controls, a diagram to its start, a code block to its first hit', async () => {
+test('a step of the bar does what a click on that result does: a hidden row to its filter controls, a diagram and a code block to their first hit', async () => {
   const p = await open(filterField + table([{ text: 'Zitronenfalter Nord' }, { text: 'Zitronenfalter Süd', cls: FILTER_OUT_CLASS }]) +
     '<figure class="' + DIAGRAM_CLASS + ' ' + DIAGRAM_CLASS + '-mermaid"><div class="' + DIAGRAM_SVG_CLASS + '"><svg><text>Zitronenfalter</text></svg></div></figure><pre><code>Zitronenfalter()</code></pre>', { narrow: true });
   p.search.openSearch();
@@ -659,8 +667,7 @@ test('a step of the bar does what a click on that result does: a hidden row to i
   p.bar.next.click();
   same(p.scrolls[0].el, p.root.querySelector('.' + FILTER_CLASS), 'the hidden row: its field');
   p.bar.next.click();
-  same(p.scrolls[1].el, p.root.querySelector('figure'));
-  assert.deepEqual(p.scrolls[1].options, { block: 'start' });
+  assert.ok('by' in p.scrolls[1], 'the diagram: its first hit to the middle');
   p.bar.next.click();
   assert.ok('by' in p.scrolls[2], 'the code block: its first hit to the middle');
   assert.equal(p.bar.count(), 'Stelle 4 von 4');

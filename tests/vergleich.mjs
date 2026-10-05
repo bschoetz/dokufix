@@ -1967,8 +1967,9 @@ async function assertFilters(page, check, exp, key){
 // container as the page shows it (the preview, or main.reader-body in an
 // export), read back into linkedom; that the two read the same elements is
 // checked first. Since story 7 a diagram is a place, its figure: its result
-// says "BPMN-Diagramm: " or "Mermaid-Diagramm: ", a click brings the start of
-// the figure into the window, and none of its hits is highlighted. Since
+// says "BPMN-Diagramm: " or "Mermaid-Diagramm: "; since story 17 its hits
+// are highlighted in its SVG, one range per line of a label, painted, and a
+// click brings the first hit to the middle of the window. Since
 // story 8 the metadata panel and every code block are places: their results
 // say "Metadaten: " and "Code: ", a click opens the closed panel and brings
 // the first hit to the middle of the window, and the hits are highlighted,
@@ -2118,15 +2119,70 @@ async function assertSearch(page, check, key){
   const rangeTexts = (term, options = {}) => collectPlaces(root).flatMap(p => findHits(term, p.text, options).flatMap(hit => nodeRanges(p.map, hit).map(coveredBy)));
   const hitCount = places => places.reduce((n, p) => n + p.hits, 0);
   // The highlight of a term as the product makes it over the content read
-  // back: one range per hit where nothing left out lies inside a hit, none in
-  // a diagram.
-  const litHits = places => hitCount(places.filter(p => !isDiagramKind(p.kind)));
+  // back: the ranges nodeRanges() makes of every hit over the content read
+  // back in Node, in a diagram as in the text (story 17). A hit is one range
+  // where nothing left out lies inside it, more where it runs over a cell's
+  // edge, two lines of a label or two labels. litHits() counts the hits, for
+  // litLine() alone.
+  const litHits = places => hitCount(places);
   const litAs = (facts, term, options, places, alike) => {
     const want = rangeTexts(term, options);
-    return facts.api && facts.ranges.length === litHits(places) && sameList(facts.ranges.map(r => r.text), want) &&
-      facts.ranges.every(r => r.inRoot && !r.inSvg && alike(r.text));
+    return facts.api && facts.ranges.length === want.length && sameList(facts.ranges.map(r => r.text), want) &&
+      facts.ranges.every(r => r.inRoot && alike(r.text));
   };
   const litLine = (facts, term, options, places) => json({ api: facts.api, ranges: facts.ranges.length, hits: litHits(places), texts: facts.ranges.slice(0, 6).map(r => r.text), expected: rangeTexts(term, options).slice(0, 6), outside: facts.ranges.filter(r => !r.inRoot).length, inSvg: facts.ranges.filter(r => r.inSvg).length });
+  // Stories 8 and 17, shared by the checks of the metadata panel, code blocks
+  // and diagrams.
+  // The ranges of the highlight inside the elements of sel, with the box of each and whether it lies in the panel's summary.
+  const litIn = sel => page.evaluate(([rootSel, name, sel]) => {
+    const h = window.CSS && CSS.highlights && CSS.highlights.get(name);
+    const els = Array.from(document.querySelectorAll(rootSel + ' ' + sel));
+    return (h ? Array.from(h) : []).map(s => {
+      const r = document.createRange();
+      r.setStart(s.startContainer, s.startOffset);
+      r.setEnd(s.endContainer, s.endOffset);
+      const el = els.find(e => e.contains(s.startContainer));
+      if (!el) return null;
+      const b = r.getBoundingClientRect();
+      const node = s.startContainer.nodeType === 1 ? s.startContainer : s.startContainer.parentElement;
+      return { text: r.toString(), at: els.indexOf(el), top: b.top, bottom: b.bottom, left: b.left, right: b.right, height: b.height, inSummary: !!node.closest('summary') };
+    }).filter(Boolean);
+  }, [ROOT_SEL, HIGHLIGHT, sel]);
+  // A click on the result n: from the end of the document, so the click has to scroll. Where the place and its first hit are then.
+  const clickResult = async (n, sel, place) => {
+    await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+    await frames(page);
+    await page.locator('body > .search-panel .search-results .search-result').nth(n).click();
+    await frames(page);
+    const lit = (await litIn(sel)).filter(r => r.at === place);
+    return { ...(await page.evaluate(([rootSel, sel, place]) => {
+      const el = document.querySelectorAll(rootSel + ' ' + sel)[place];
+      return { open: el.tagName === 'DETAILS' ? el.open : null, height: innerHeight, scrolled: scrollY, max: document.documentElement.scrollHeight - innerHeight,
+        panel: !document.querySelector('body > .search-panel').hidden };
+    }, [ROOT_SEL, sel, place])), first: lit[0] || null, ranges: lit.length };
+  };
+  // Whether the highlight is painted: the part in the window of the element
+  // inner (or of the place itself) of the place-th element of sel,
+  // photographed with the highlight and with it taken out, then restored.
+  const paintedIn = async (sel, place, inner) => {
+    const f = await page.evaluate(([rootSel, sel, place, inner]) => {
+      const el = document.querySelectorAll(rootSel + ' ' + sel)[place];
+      const r = (inner ? el.querySelector(inner) : el).getBoundingClientRect();
+      return { left: Math.max(0, r.left), top: Math.max(0, r.top), right: Math.min(document.documentElement.clientWidth, r.right), bottom: Math.min(innerHeight, r.bottom) };
+    }, [ROOT_SEL, sel, place, inner || null]);
+    if (f.right - f.left < 1 || f.bottom - f.top < 1) return { clip: f, differing: 0 };
+    const clip = { x: Math.floor(f.left), y: Math.floor(f.top), width: Math.max(1, Math.floor(f.right - f.left)), height: Math.max(1, Math.floor(f.bottom - f.top)) };
+    const withIt = await page.screenshot({ clip, animations: 'disabled', caret: 'hide' });
+    await page.evaluate(name => { window.vergleichLit = CSS.highlights.get(name); CSS.highlights.delete(name); }, HIGHLIGHT);
+    await frames(page);
+    const without = await page.screenshot({ clip, animations: 'disabled', caret: 'hide' });
+    await page.evaluate(name => { if (window.vergleichLit) CSS.highlights.set(name, window.vergleichLit); delete window.vergleichLit; }, HIGHLIGHT);
+    await frames(page);
+    return { clip, differing: comparePng(without, withIt, null).differing };
+  };
+  // The first hit in the middle of the window, or as near as the page scrolls; in view, drawn.
+  const centred = f => !!f.first && f.first.height > 0 && f.first.top >= 0 && f.first.bottom <= f.height &&
+    (Math.abs((f.first.top + f.first.bottom) / 2 - f.height / 2) <= 2 || (f.scrolled <= 1 && (f.first.top + f.first.bottom) / 2 < f.height / 2) || (f.scrolled >= f.max - 1 && (f.first.top + f.first.bottom) / 2 > f.height / 2));
   const want = expected(SEARCH_TERM);
   const wantSummary = summaryOf(want);
   const typed = await search(SEARCH_TERM);
@@ -2408,8 +2464,8 @@ async function assertSearch(page, check, key){
   // highlight lies in the row's cells, one range per cell a hit touches.
   await assertSearchTables();
   // --- story 7: hits in diagrams. A diagram is one place, its figure; its
-  // result says its kind, a click brings the figure's top into the window,
-  // nothing in it is highlighted; its source and its frame are no text.
+  // result says its kind; its source and its frame are no text. Story 17:
+  // its hits are highlighted in its SVG, a click centres the first.
   await assertSearchDiagrams();
   // --- story 8: hits in the metadata panel and in code blocks. Each is one
   // place with its kind; a click opens the closed panel and centres the first
@@ -2722,22 +2778,64 @@ async function assertSearch(page, check, key){
       const ok = n >= 0 && listed.results.length === wantAt.length && listed.summary === summaryOf(wantAt) &&
         listed.results.every((r, i) => kindAs(r, wantAt[i]) && wantAt[i].text.includes(bodyOf(r)) && r.marks.length >= 1 && r.marks.every(m => m.toLowerCase() === term.toLowerCase())) &&
         (!opts.demo || wantAt.filter(p => isDiagramKind(p.kind)).length === 1);
-      check('search: "' + term + '", a label of a ' + (n >= 0 ? wantAt[n].kind : 'diagram') + ', lists the diagram once, "' + (n >= 0 ? wantAt[n].kind : '?') + ': " and the labels around the hit; none of its hits is highlighted, the hits elsewhere are',
-        ok && litAs(lit, term, {}, wantAt, t => t.toLowerCase() === term.toLowerCase()),
+      check('search: "' + term + '", a label of a ' + (n >= 0 ? wantAt[n].kind : 'diagram') + ', lists the diagram once, "' + (n >= 0 ? wantAt[n].kind : '?') + ': " and the labels around the hit; its hits are highlighted in its SVG, as the hits elsewhere',
+        ok && litAs(lit, term, {}, wantAt, t => t.toLowerCase() === term.toLowerCase()) && lit.ranges.some(r => r.inSvg),
         json({ summary: listed.summary, results: listed.results.map(r => r.text.slice(0, 80)), expected: wantAt.map(p => [p.kind, p.hits]), lit: litLine(lit, term, {}, wantAt) }));
       if (n < 0) continue;
-      await page.evaluate(() => window.scrollTo(0, 0));
+      const figureAt = figures.indexOf(wantAt[n].el);
+      const landed = await clickResult(n, 'figure.dokufix-diagram', figureAt);
+      check('search: a click on the result of the diagram with "' + term + '" brings its first hit to the middle of the window, or as near as the page scrolls, highlighted; the panel stays open',
+        figureAt >= 0 && landed.panel && centred(landed) && landed.ranges === wantAt[n].hits, json(landed));
+      // Painted: the part of the figure in the window photographed with the
+      // highlight and with it taken out. The figure, not the first range's
+      // box: Firefox 153 gives a range in the text of a scaled SVG a box
+      // beside where it paints the text and its highlight.
+      const painted = landed.first ? await paintedIn('figure.dokufix-diagram', figureAt) : null;
+      check('search: the highlight of "' + term + '" is painted in the ' + wantAt[n].kind + ': the figure in the window differs with the highlight and without',
+        !!painted && painted.differing > 0, json(painted));
+      // The large view of the diagram, opened by its toggle as the reader
+      // opens it, with the panel open. Static (a Mermaid diagram everywhere,
+      // a BPMN diagram in `schlank` and `kompakt`): the same SVG, scaled, its
+      // ranges still in it and painted in the open view. The live viewer of
+      // a BPMN diagram in `Mit Editor` draws its own SVG: no range in it
+      // (Ben, 2026-10-05, on purpose).
+      const live = editor && wantAt[n].kind === DIAGRAM_LANGUAGES.bpmn.label;
+      const toggle = () => page.evaluate(([rootSel, at]) => document.querySelectorAll(rootSel + ' figure.dokufix-diagram')[at].querySelector(':scope > .dokufix-diagram-toggle').click(), [ROOT_SEL, figureAt]);
+      // Every range of the highlight in the figure: in its SVG container, in the live viewer's container.
+      const inView = () => page.evaluate(([rootSel, at, name]) => {
+        const f = document.querySelectorAll(rootSel + ' figure.dokufix-diagram')[at];
+        const h = window.CSS && CSS.highlights && CSS.highlights.get(name);
+        const ranges = (h ? Array.from(h) : []).filter(r => f.contains(r.startContainer));
+        const holder = f.querySelector('.dokufix-diagram-svg'), liveBox = f.querySelector('.dokufix-diagram-live');
+        return { open: f.querySelector(':scope > .dokufix-diagram-toggle').checked, ranges: ranges.length,
+          inSvg: ranges.filter(r => holder.contains(r.startContainer) && !!r.startContainer.parentElement.closest('svg')).length,
+          inLive: liveBox ? ranges.filter(r => liveBox.contains(r.startContainer)).length : 0, liveTexts: liveBox ? liveBox.querySelectorAll('text').length : 0,
+          viewer: !!(liveBox && liveBox.querySelector('.djs-container svg g.viewport')), stage: getComputedStyle(f.querySelector('.dokufix-diagram-stage')).display };
+      }, [ROOT_SEL, figureAt, HIGHLIGHT]);
+      await toggle();
       await frames(page);
-      await page.locator('body > .search-panel .search-results .search-result').nth(n).click();
-      await frames(page);
-      const at = await page.evaluate(([rootSel, sel, at]) => {
-        const el = document.querySelectorAll(rootSel + ' :is(' + sel + ')')[at];
-        const r = el.getBoundingClientRect();
-        return { tag: el.tagName, top: r.top, height: innerHeight, scrolled: scrollY, max: document.documentElement.scrollHeight - innerHeight,
-          open: !document.querySelector('body > .search-panel').hidden };
-      }, [ROOT_SEL, PLACE_SEL, wantAt[n].at]);
-      check('search: a click on the result of the diagram with "' + term + '" brings the top of its figure to the top of the window; the panel stays open',
-        at.tag === 'FIGURE' && at.open && at.top >= -1 && at.top < at.height && (Math.abs(at.top) <= 1 || at.scrolled >= at.max - 1), json(at));
+      if (!live){
+        await page.waitForTimeout(300);
+        const v = await inView();
+        const shown = v.open ? await paintedIn('figure.dokufix-diagram', figureAt, '.dokufix-diagram-stage svg') : null;
+        await toggle();
+        await frames(page);
+        const closed = await inView();
+        check('search: the static large view of the ' + wantAt[n].kind + ' with "' + term + '", opened with the panel open, keeps its ' + wantAt[n].hits + ' highlighted ranges in the SVG and paints them in the open view; closed again',
+          v.open && v.ranges === wantAt[n].hits && v.inSvg === v.ranges && v.stage !== 'none' && !!shown && shown.differing > 0 && !closed.open,
+          json({ view: v, painted: shown, closed: closed.open }));
+      } else {
+        const ready = await page.waitForFunction(([rootSel, at]) => !!document.querySelectorAll(rootSel + ' figure.dokufix-diagram')[at].querySelector('.dokufix-diagram-hint'),
+          [ROOT_SEL, figureAt], { timeout: 20000 }).then(() => true, () => false);
+        await frames(page);
+        const v = await inView();
+        await toggle();
+        await frames(page);
+        const closed = await inView();
+        const name = 'search: the live viewer of the BPMN diagram with "' + term + '", opened with the panel open, holds no range of the highlight; the picture behind it keeps its ' + wantAt[n].hits + '; closed again';
+        if (!ready || !v.viewer) check(name, !closed.open, json({ view: v, closed: closed.open }), 'not judged: the live viewer did not start in this run');
+        else check(name, v.open && v.liveTexts > 0 && v.inLive === 0 && v.ranges === wantAt[n].hits && v.inSvg === v.ranges && !closed.open, json({ view: v, closed: closed.open }));
+      }
     }
     // A label bpmn-js draws over two lines: one ending in a blank, one glued
     // ("Vormerkung" over "gemeldet"), one at a hyphen; found with light fuzzy off.
@@ -2751,8 +2849,14 @@ async function assertSearch(page, check, key){
     for (const [how, l, joined] of broken){
       const term = joined(l).replace(/\s+/g, ' ').trim();
       const listed = await search(term);
-      check('search: "' + term + '", a BPMN label drawn over two lines ' + how + ', is found with light fuzzy off',
-        listed.results.some(r => r.kind === DIAGRAM_LANGUAGES.bpmn.label + ': ' && r.marks.length >= 1), json({ lines: l, results: listed.results.map(r => r.text.slice(0, 80)) }));
+      // Story 17: highlighted as one range on each line, none over the two.
+      const lit = await highlightFacts();
+      const inSvg = lit.ranges.filter(r => r.inSvg).map(r => r.text);
+      const both = [l[0].trim(), l[1].trim()];
+      check('search: "' + term + '", a BPMN label drawn over two lines ' + how + ', is found with light fuzzy off and highlighted as one range on each line',
+        listed.results.some(r => r.kind === DIAGRAM_LANGUAGES.bpmn.label + ': ' && r.marks.length >= 1) && lit.api && sameList(lit.ranges.map(r => r.text), rangeTexts(term)) &&
+          inSvg.includes(both[0]) && inSvg.includes(both[1]),
+        json({ lines: l, results: listed.results.map(r => r.text.slice(0, 80)), inSvg }));
     }
     // What is no label: the source of a diagram and its frame. A diagram is
     // listed for such a word only where one of its labels, the text and
@@ -2794,21 +2898,6 @@ async function assertSearch(page, check, key){
     check('search: the metadata panel is one place of the kind "' + META + '", every code block outside it, a warning, a table row and the footer of an export one of the kind "' + CODE + '"; a diagram\'s source is none',
       sameList(at(metas.map(p => p.el)), at(panels)) && sameList(at(codes.map(p => p.el)), at(pres)) && (!opts.demo || (panels.length === 1 && pres.length >= 3)),
       json({ panels: panels.length, metas: metas.length, pres: pres.length, codes: codes.length }));
-    // The ranges of the highlight inside the elements of sel, with the box of each and whether it lies in the panel's summary.
-    const litIn = sel => page.evaluate(([rootSel, name, sel]) => {
-      const h = window.CSS && CSS.highlights && CSS.highlights.get(name);
-      const els = Array.from(document.querySelectorAll(rootSel + ' ' + sel));
-      return (h ? Array.from(h) : []).map(s => {
-        const r = document.createRange();
-        r.setStart(s.startContainer, s.startOffset);
-        r.setEnd(s.endContainer, s.endOffset);
-        const el = els.find(e => e.contains(s.startContainer));
-        if (!el) return null;
-        const b = r.getBoundingClientRect();
-        const node = s.startContainer.nodeType === 1 ? s.startContainer : s.startContainer.parentElement;
-        return { text: r.toString(), at: els.indexOf(el), top: b.top, bottom: b.bottom, height: b.height, inSummary: !!node.closest('summary') };
-      }).filter(Boolean);
-    }, [ROOT_SEL, HIGHLIGHT, sel]);
     // A word of the places of the kind, the fewest places first.
     const words = text => text.match(/\p{L}{6,}/gu) || [];
     const pick = (kind, term) => {
@@ -2822,22 +2911,6 @@ async function assertSearch(page, check, key){
       }
       return best;
     };
-    // A click on the result n: from the end of the document, so the click has to scroll. Where the place and its first hit are then.
-    const clickResult = async (n, sel, place) => {
-      await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
-      await frames(page);
-      await page.locator('body > .search-panel .search-results .search-result').nth(n).click();
-      await frames(page);
-      const lit = (await litIn(sel)).filter(r => r.at === place);
-      return { ...(await page.evaluate(([rootSel, sel, place]) => {
-        const el = document.querySelectorAll(rootSel + ' ' + sel)[place];
-        return { open: el.tagName === 'DETAILS' ? el.open : null, height: innerHeight, scrolled: scrollY, max: document.documentElement.scrollHeight - innerHeight,
-          panel: !document.querySelector('body > .search-panel').hidden };
-      }, [ROOT_SEL, sel, place])), first: lit[0] || null, ranges: lit.length };
-    };
-    // The first hit in the middle of the window, or as near as the page scrolls; in view, drawn.
-    const centred = f => !!f.first && f.first.height > 0 && f.first.top >= 0 && f.first.bottom <= f.height &&
-      (Math.abs((f.first.top + f.first.bottom) / 2 - f.height / 2) <= 2 || (f.scrolled <= 1 && (f.first.top + f.first.bottom) / 2 < f.height / 2) || (f.scrolled >= f.max - 1 && (f.first.top + f.first.bottom) / 2 > f.height / 2));
     const kindOk = (listed, wantAt, term) => listed.summary === summaryOf(wantAt) && listed.results.length === wantAt.length &&
       listed.results.every((r, i) => kindAs(r, wantAt[i]) && wantAt[i].text.includes(bodyOf(r)) && r.marks.length >= 1 && r.marks.every(m => m.toLowerCase() === term.toLowerCase()));
 
