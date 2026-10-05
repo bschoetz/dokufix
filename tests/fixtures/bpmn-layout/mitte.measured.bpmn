@@ -22,7 +22,7 @@
     <bpmn:sequenceFlow id="F4" sourceRef="F_Frage" targetRef="F_Aufnehmen" name="nein"/>
     <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
     <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
-    <bpmn:sequenceFlow id="F7" sourceRef="F_Senden" targetRef="F_Ende"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="F_Abholen" targetRef="F_Ende"/>
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Zusammenarbeit">
@@ -43,7 +43,7 @@
       <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="288" y="62"/><di:waypoint x="288" y="27"/><di:waypoint x="43" y="27"/><di:waypoint x="43" y="47"/><bpmndi:BPMNLabel><dc:Bounds x="255" y="31" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="288" y="112"/><di:waypoint x="288" y="227"/><di:waypoint x="371" y="227"/><bpmndi:BPMNLabel><dc:Bounds x="294" y="120" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="431" y="187"/><di:waypoint x="431" y="-16"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="491" y="227"/><di:waypoint x="573" y="227"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="491" y="-56"/><di:waypoint x="591" y="-56"/><di:waypoint x="591" y="209"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
