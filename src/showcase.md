@@ -102,7 +102,7 @@ Fahren Sie mit der Maus über diese Fußnote[^vorschau] — der Text erscheint d
 }
 ```
 
-Code steht in fester Schrift auf dunklem Grund, so wie er geschrieben ist; eine lange Zeile rollt seitlich. Auch hier findet die Suche jedes Wort, zum Beispiel faellig.
+Code steht in fester Schrift auf hellem Grund, so wie er geschrieben ist, jede Zeile mit ihrer Nummer; eine lange Zeile bricht um. Die Schaltfläche oben rechts kopiert ihn ohne die Nummern. Auch hier findet die Suche jedes Wort, zum Beispiel faellig.
 
 ## Ein Sequenzdiagramm
 

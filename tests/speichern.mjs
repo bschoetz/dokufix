@@ -85,7 +85,9 @@
 //      it clones it, and the clone of the preview is emptied, so the ranges
 //      are over replaced nodes when the file is written. That the highlight
 //      leaves the document's DOM as it is, tests/vergleich.mjs checks, with
-//      the panel open ("DOM unchanged")
+//      the panel open ("DOM unchanged"). The document's code block has its
+//      copy button (story 5.19), transient: neither the saved file nor an
+//      export holds it
 //   9. the large view of a BPMN diagram open in read mode, at "150 %", its
 //      live viewer running (story 2.11), the lightbox of the bpmn.io logo open
 //      in <body> and a drag going on, so the cursor class of bpmn-js is on
@@ -578,7 +580,10 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     // Without its scripts and styles: the page's script and the reader bundle in
     // its data block name the panel's classes, and so does the stylesheet.
     const withoutCode = file => fs.readFileSync(file, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '');
-    check(scope, 'the saved file holds no panel, no magnifier and no highlight', !/search-panel|search-input|search-magnifier|search-hit/.test(withoutCode(withSearch)));
+    // The code block of the document has its copy button in the running page (story 5.19), transient.
+    const copyButtons = await o.page.evaluate(() => Array.from(document.querySelectorAll('#preview pre.dokufix-code > button.dokufix-code-copy')).map(b => b.hasAttribute('data-dokufix-transient')));
+    check(scope, 'the running page has the copy button in the code block, transient', JSON.stringify(copyButtons) === '[true]', JSON.stringify(copyButtons));
+    check(scope, 'the saved file holds no panel, no magnifier, no highlight and no copy button', !/search-panel|search-input|search-magnifier|search-hit|dokufix-code-copy/.test(withoutCode(withSearch)));
     // The read-only exports, with the panel open, then with it closed. The
     // term is typed again before each, so its hits are highlighted when the
     // download starts; the download renders the preview anew before it clones
@@ -623,8 +628,8 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       JSON.stringify(READONLY.map(k => [k, whileOpen[k].state, afterClose[k].state])));
     for (const kind of READONLY){
       const a = fs.readFileSync(whileOpen[kind].file), b = fs.readFileSync(afterClose[kind].file);
-      check(scope, kind + ' written from the page with the panel open is the file written after it is closed, byte for byte, and holds no panel and no magnifier',
-        a.equals(b) && !/search-panel|search-input|search-magnifier|search-hit/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
+      check(scope, kind + ' written from the page with the panel open is the file written after it is closed, byte for byte, and holds no panel, no magnifier and no copy button',
+        a.equals(b) && !/search-panel|search-input|search-magnifier|search-hit|dokufix-code-copy/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
     }
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();

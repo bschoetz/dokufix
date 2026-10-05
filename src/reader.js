@@ -1,6 +1,7 @@
 // The second entry of the build: the reader bundle of the read-only exports
 // that run a script, `schlank` and `kompakt`. It carries the table filter,
-// the search, the keys of the large view and the picture button of a diagram.
+// the search, the keys of the large view, the picture button of a diagram and
+// the copy button of a code block.
 //
 // build.mjs bundles this file with what it imports into one small script,
 // minified, and writes it into the data block #dokufix-reader-js of the page,
@@ -32,6 +33,9 @@
 //     the SVG of the figure as a file. In `schlank` it reads the SVG at the
 //     click, after the decoder has filled the container. The source link
 //     beside it is document content and needs no script.
+//   - the copy button of every code block (src/app/code-blocks.js), as the
+//     run-time pass "Code kopieren" does in the page. The lines and their
+//     numbers are document content and need no script.
 //
 // It must not import src/app/dom.js, which looks up the editor's elements.
 import { attachTableFilters, filterFieldStep } from './app/filter.js';
@@ -39,12 +43,14 @@ import { registerSearch, searchStep } from './app/search.js';
 import { registerLargeViewKeys, largeViewStep } from './app/large-view.js';
 import { registerEscape } from './app/escape.js';
 import { attachSvgDownloads } from './app/diagram-downloads.js';
+import { attachCodeCopy } from './app/code-blocks.js';
 
 /* global SEARCH_CSS */
 const root = document.querySelector('main.reader-body');
 if (root){
   attachTableFilters(root);
   attachSvgDownloads(root);
+  attachCodeCopy(root);
   const style = document.createElement('style');
   style.textContent = SEARCH_CSS;
   document.head.appendChild(style);

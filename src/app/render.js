@@ -14,6 +14,7 @@ import { buildWarning, errorMessage } from './warning.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { renderDiagrams } from './diagrams.js';
 import { attachSvgDownloads } from './diagram-downloads.js';
+import { buildCodeLines, attachCodeCopy } from './code-blocks.js';
 import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
 
 // --- From source to preview ------------------------------------------------
@@ -32,7 +33,7 @@ import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
 // document and the context of this render, { frontmatter }: what was split off
 // the source before Markdown was parsed.
 //
-// The order matters in seven places. Callouts come before the headings: which
+// The order matters in eight places. Callouts come before the headings: which
 // headings count depends on where a heading stands, and one inside a callout
 // does not. Status chips come before the headings as well: a heading's anchor
 // and its entry in the table of contents are made from the heading as it
@@ -50,7 +51,9 @@ import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
 // retargeting first would build every preview out of the "↩" anchor instead
 // of the footnote. Diagrams come after callouts and status chips: a diagram's
 // title is the label of the document heading before it, as the table of
-// contents shows it (diagrams.js).
+// contents shows it (diagrams.js). Code blocks come last: the diagrams have
+// taken their fenced sources out by then, and a footnote preview has copied
+// its definition, a code block in it flattened to its text (code-blocks.js).
 export const DOCUMENT_PASSES = [
   { name: 'Metadaten', run: (root, context) => injectFrontmatterPanel(root, context.frontmatter) },
   { name: 'Hinweise', run: buildCallouts },
@@ -62,11 +65,12 @@ export const DOCUMENT_PASSES = [
   { name: 'Fußnoten-Vorschau', run: attachFootnotePreviews },
   { name: 'Fußnoten-Rücksprung', run: linkFootnoteReturnPaths },
   { name: 'Diagramme', run: renderDiagrams },
+  { name: 'Code-Blöcke', run: buildCodeLines },
 ];
 
 // Run-time passes attach what exists only while the page runs: a listener, the
-// search field of a table, the picture button below a diagram, the live viewer
-// in the large view of a BPMN diagram. Nothing they do is part of the
+// search field of a table, the picture button below a diagram, the copy button
+// of a code block, the live viewer in the large view of a BPMN diagram. Nothing they do is part of the
 // document. An element such a pass adds carries data-dokufix-transient (see
 // transient.js), so that no download takes it along. They run after every
 // document pass: the free-text filter finds each table in its wrapper, and the
@@ -76,6 +80,7 @@ export const RUNTIME_PASSES = [
   { name: 'Sprungmarken im Inhaltsverzeichnis', run: attachTocClicks },
   { name: 'Tabellenfilter', run: attachTableFilters },
   { name: 'Diagramm-Bilder', run: attachSvgDownloads },
+  { name: 'Code kopieren', run: attachCodeCopy },
   { name: 'BPMN-Ansicht', run: attachLiveViewers },
 ];
 

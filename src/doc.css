@@ -35,12 +35,58 @@
     background:#f0f0f3;padding:2px 6px;border-radius:3px;
     font-family:ui-monospace,monospace;font-size:0.88em;color:#c41a16;
   }
+  /* A code block (story 5.19, Ben 2026-10-05, variant C): a light box, every
+     line numbered, a long line wrapped. The lines are elements of their own
+     (src/app/code-blocks.js); a line that wraps hangs under its own text,
+     the gutter as wide as the last number has digits (--dokufix-code-digits
+     on the pre). The numbers are a counter in ::before: never selected,
+     copied or found. An empty line keeps its height and its number. Every
+     colour reads at least 4.5:1 on the box, the numbers' #5f6b78 5.0:1. */
   .dokufix-doc pre{
-    background:#1c1c1e;color:#f5f5f7;padding:16px 20px;
+    position:relative;
+    background:#f3f6fa;color:#1c2733;border:1px solid #dde4ee;padding:12px 16px;
     border-radius:6px;overflow-x:auto;margin:0 0 1em;
     font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;
+    white-space:pre-wrap;overflow-wrap:anywhere;
   }
   .dokufix-doc pre code{background:transparent;padding:0;color:inherit}
+  .dokufix-doc pre.dokufix-code{counter-reset:dokufix-code-line}
+  .dokufix-doc .dokufix-code-line{
+    display:block;position:relative;min-height:1.5em;
+    padding-left:calc(var(--dokufix-code-digits,1) * 1ch + 2ch);
+  }
+  .dokufix-doc .dokufix-code-line::before{
+    counter-increment:dokufix-code-line;content:counter(dokufix-code-line);
+    position:absolute;left:0;top:0;width:calc(var(--dokufix-code-digits,1) * 1ch);
+    text-align:right;color:#5f6b78;
+    -webkit-user-select:none;user-select:none;pointer-events:none;
+  }
+  /* The copy button at the top right of a code block, where a script runs
+     (transient, src/app/code-blocks.js). 28 px square, the 16 px Octicon
+     "copy" (@primer/octicons 19.38.0, MIT, © GitHub Inc.) as a mask in the
+     colour of the button; after a copy for 2 s the Octicon "check", in green;
+     after a failure the "copy" in red. The block keeps room on its right
+     for it where it stands; nothing of it is printed. */
+  .dokufix-doc .dokufix-code-copy{display:none}
+  @media not print{
+    .dokufix-doc pre.dokufix-code:has(> .dokufix-code-copy){padding-right:44px}
+    .dokufix-doc .dokufix-code-copy{
+      display:flex;align-items:center;justify-content:center;
+      position:absolute;top:6px;right:6px;width:28px;height:28px;margin:0;padding:0;
+      border:1px solid #dde4ee;border-radius:4px;background:#fff;color:#4b5a6b;cursor:pointer;
+    }
+  }
+  .dokufix-doc .dokufix-code-copy:hover{border-color:#b8c4d2;color:#1c2733}
+  .dokufix-doc .dokufix-code-copy:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+  .dokufix-doc .dokufix-code-copy::before{
+    content:"";flex:none;width:16px;height:16px;background-color:currentColor;
+    -webkit-mask:no-repeat center/16px 16px var(--dokufix-code-icon);mask:no-repeat center/16px 16px var(--dokufix-code-icon);
+  }
+  /* copy-16 */
+  .dokufix-doc .dokufix-code-copy{--dokufix-code-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z'/%3E%3Cpath d='M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z'/%3E%3C/svg%3E")}
+  /* check-16 */
+  .dokufix-doc .dokufix-code-copy.dokufix-code-copied{color:#1a7f37;--dokufix-code-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-code-copy.dokufix-code-failed{color:#a40e26}
   .dokufix-doc blockquote{
     border-left:4px solid #d4ff00;padding:10px 18px;
     background:#fafafa;margin:0 0 1em;color:#3a3a3f;
@@ -334,9 +380,9 @@
     font-size:.92em;
   }
   .dokufix-doc .dokufix-warning-title{margin:0}
-  /* The detail is a pre: it takes back the dark box every other pre gets. */
+  /* The detail is a pre: it takes back the light box every other pre gets. */
   .dokufix-doc .dokufix-warning-detail{
-    margin:.6em 0 0;padding:0;
+    margin:.6em 0 0;padding:0;border:0;border-radius:0;
     background:transparent;color:inherit;
     font-size:.9em;line-height:1.45;
     white-space:pre-wrap;overflow-wrap:anywhere;

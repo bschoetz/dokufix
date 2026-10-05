@@ -21,7 +21,8 @@
 // and facet filter, the free-text filter, the figure of every diagram with its
 // title, BPMN diagrams with their elements, colours and credit, a BPMN diagram
 // laid out without coordinates with its counts and a clean drawing, the large
-// view of a diagram in every variant and with scripts off, the live viewer of
+// view of a diagram in every variant and with scripts off, code blocks with
+// their numbers, wrapping and copy button (story 5.19), the live viewer of
 // a BPMN diagram in the editor and in Mit Editor, touch on it in Chromium, and
 // none in a read-only file, the licence
 // information, the search in Mit Editor, schlank and kompakt, no <script> and
@@ -369,7 +370,31 @@ function expectationsFor(md){
   }
   Object.assign(exp, markerExpectations(body));
   Object.assign(exp, tableExpectations(body));
+  exp.codeBlocks = codeExpectations(body);
   return exp;
+}
+
+// ---------- code blocks, read from the Markdown (story 5.19) ----------
+// Every fenced block that is no diagram, also one indented in a list item:
+// how many lines it has, whether one of them is empty and whether one is so
+// long (more than LONG_CODE_LINE characters) that it wraps in the column at
+// any width of the run. Not read: an indented code block, a fenced block in
+// a quotation, a <pre> written as HTML.
+const LONG_CODE_LINE = 120;
+function codeExpectations(body){
+  const blocks = [];
+  const lines = body.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i++){
+    const open = lines[i].match(/^([ \t]*)(`{3,}|~{3,})[ \t]*([\w-]*)/);
+    if (!open) continue;
+    const indent = open[1].length, close = new RegExp('^[ \\t]*' + (open[2][0] === '`' ? '`' : '~') + '{' + open[2].length + ',}[ \\t]*$');
+    const inner = [];
+    let j = i + 1;
+    for (; j < lines.length && !close.test(lines[j]); j++) inner.push(lines[j].slice(Math.min(indent, lines[j].match(/^[ \t]*/)[0].length)));
+    if (!DIAGRAM_KINDS.includes(open[3])) blocks.push({ lines: Math.max(inner.length, 1), empty: inner.some(l => !l.trim()), long: inner.some(l => l.length > LONG_CODE_LINE) });
+    i = j;
+  }
+  return blocks;
 }
 
 // ---------- tables, read from the Markdown ----------
@@ -3002,8 +3027,9 @@ async function assertSearch(page, check, key){
           const rgb = c => { const m = String(c).match(/\d+(\.\d+)?/g); return m ? m.slice(0, 3).map(Number) : null; };
           const lum = c => { const v = rgb(c); return v ? v.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }).reduce((s, x, i) => s + x * [0.2126, 0.7152, 0.0722][i], 0) : NaN; };
           const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
-          const readable = !!colours.color && !!colours.background && contrast(colours.color, colours.background) >= 4.5 && contrast(colours.preColor, colours.background) < 4.5 && lum(colours.preBackground) < 0.1;
-          check('search: a click on the code block\'s result brings its first hit to the middle of the window, or as near as the page scrolls, highlighted, in a dark text that reads on the yellow where the block\'s light text would not',
+          // Since story 5.19 the block is light, its own text dark: both read on the yellow.
+          const readable = !!colours.color && !!colours.background && contrast(colours.color, colours.background) >= 4.5 && contrast(colours.preColor, colours.background) >= 4.5 && lum(colours.preBackground) > 0.8;
+          check('search: a click on the code block\'s result brings its first hit to the middle of the window, or as near as the page scrolls, highlighted, in a dark text that reads on the yellow, as the light block\'s own text does',
             preAt >= 0 && landed.panel && centred(landed) && landed.ranges === wantAt[n].hits && readable,
             json({ landed, colours, contrast: colours.color && colours.background ? Math.round(contrast(colours.color, colours.background) * 10) / 10 : null }));
         }
@@ -4892,6 +4918,114 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
 }
 
 // ---------- assertions ----------
+// ---------- code blocks (story 5.19) ----------
+// Every code block light (variant C) in all four variants, every line numbered
+// by the counter, a long line wrapped under its own text, an empty line one
+// line high; the copy button where a script runs, transient, at the top right,
+// not printed; a click copies the code without the numbers and its final
+// "\n", the button then named "Kopiert" with the check, and after 2 s as before.
+const CODE_LOOK = { background: 'rgb(243, 246, 250)', border: '1px solid rgb(221, 228, 238)', color: 'rgb(28, 39, 51)' };
+async function assertCodeBlocks(page, check, exp, key, text){
+  const json = JSON.stringify;
+  const f = await page.evaluate(() => {
+    const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+    // What the document pass numbers: a pre whose one element is a code with text or its lines, no diagram's source, outside a warning, the metadata panel and anything transient.
+    const candidates = Array.from(root.querySelectorAll('pre')).filter(pre => {
+      const kids = Array.from(pre.children).filter(el => !el.hasAttribute('data-dokufix-transient'));
+      return kids.length === 1 && kids[0].tagName === 'CODE' && !/\blanguage-(mermaid|bpmn)\b/.test(kids[0].className) &&
+        !pre.closest('.dokufix-warning, .dokufix-frontmatter, [data-dokufix-transient]') && Array.from(kids[0].children).every(el => el.classList.contains('dokufix-code-line'));
+    });
+    const blocks = Array.from(root.querySelectorAll('pre.dokufix-code')).map(pre => {
+      const cs = getComputedStyle(pre), code = pre.querySelector(':scope > code');
+      const lh = parseFloat(cs.lineHeight);
+      const lines = Array.from(code.children);
+      const buttons = Array.from(pre.querySelectorAll('button.dokufix-code-copy'));
+      const b = buttons[0], br = b && b.getBoundingClientRect(), pr = pre.getBoundingClientRect();
+      const facts = lines.map(line => {
+        const r = line.getBoundingClientRect(), before = getComputedStyle(line, '::before'), ls = getComputedStyle(line);
+        const out = { text: line.textContent, height: r.height, right: r.right, counter: /counter\(dokufix-code-line\)/.test(before.content) || /^"?\d+"?$/.test(before.content),
+          numberColour: before.color, select: before.userSelect || before.webkitUserSelect, abs: before.position === 'absolute' };
+        if (r.height > lh * 1.5 && line.firstChild){
+          // The rows of a wrapped line: each begins at the left of its text, right of the gutter.
+          const range = document.createRange();
+          range.selectNodeContents(line.firstChild);
+          const rects = Array.from(range.getClientRects()).filter(x => x.width > 0);
+          const textLeft = r.left + parseFloat(ls.paddingLeft);
+          const rows = [...new Set(rects.map(x => Math.round(x.top)))];
+          const lefts = rows.map(top => Math.min(...rects.filter(x => Math.round(x.top) === top).map(x => x.left)));
+          out.wrapped = { rows: rows.length, hang: lefts.every(l => Math.abs(l - textLeft) <= 1.5), gutter: parseFloat(ls.paddingLeft) };
+        }
+        return out;
+      });
+      return {
+        look: { background: cs.backgroundColor, border: cs.borderTopWidth + ' ' + cs.borderTopStyle + ' ' + cs.borderTopColor, color: cs.color },
+        wraps: cs.whiteSpace === 'pre-wrap', scrolls: pre.scrollWidth > pre.clientWidth + 0.5, lh,
+        same: code.textContent === lines.map(l => l.textContent).join(''), digits: pre.style.getPropertyValue('--dokufix-code-digits').trim(), count: lines.length,
+        lines: facts,
+        buttons: buttons.map(x => ({ type: x.getAttribute('type'), transient: x.hasAttribute('data-dokufix-transient'), label: x.getAttribute('aria-label'), title: x.getAttribute('title'), text: x.textContent })),
+        button: b ? { topRight: br.right <= pr.right && br.right >= pr.right - 12 && br.top >= pr.top && br.top <= pr.top + 12, size: Math.round(br.width) + 'x' + Math.round(br.height),
+          clear: facts.every(l => l.right <= br.left + 0.5), icon: (() => { const x = getComputedStyle(b, '::before'); return (x.maskImage || x.webkitMaskImage || '').includes('data:image/svg+xml') && x.width + ' ' + x.height; })() } : null,
+      };
+    });
+    return { candidates: candidates.length, unnumbered: candidates.filter(pre => !pre.classList.contains('dokufix-code')).length, blocks };
+  });
+  const blocks = f.blocks;
+  check('code blocks: every code block of the Markdown is numbered, its lines as many as the block has (' + exp.codeBlocks.length + ')',
+    f.unnumbered === 0 && blocks.length === f.candidates && blocks.length >= exp.codeBlocks.length &&
+      exp.codeBlocks.every(e => blocks.some(b => b.count === e.lines)) && blocks.every(b => b.same && b.digits === String(String(b.count).length)),
+    json({ candidates: f.candidates, unnumbered: f.unnumbered, got: blocks.map(b => [b.count, b.digits, b.same]), expected: exp.codeBlocks.map(e => e.lines) }));
+  check('code blocks: light, variant C (' + json(CODE_LOOK) + '), wrapped, none scrolls sideways',
+    blocks.every(b => json(b.look) === json(CODE_LOOK) && b.wraps && !b.scrolls), json(blocks.map(b => [b.look, b.wraps, b.scrolls])));
+  const rgb = c => (String(c).match(/\d+(\.\d+)?/g) || []).slice(0, 3).map(Number);
+  const lum = c => rgb(c).map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }).reduce((s, x, i) => s + x * [0.2126, 0.7152, 0.0722][i], 0);
+  const contrast = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+  const badNumbers = blocks.flatMap(b => b.lines.filter(l => !l.counter || !l.abs || l.select !== 'none' || contrast(l.numberColour, b.look.background) < 4.5));
+  check('code blocks: every line has its number from the counter, not selectable, at least 4.5:1 on the block', blocks.length === 0 || badNumbers.length === 0,
+    json(badNumbers.slice(0, 3)) + (blocks[0] && blocks[0].lines[0] ? ' contrast ' + contrast(blocks[0].lines[0].numberColour, blocks[0].look.background).toFixed(2) : ''));
+  const empties = blocks.flatMap(b => b.lines.filter(l => l.text === '\n').map(l => ({ height: l.height, lh: b.lh })));
+  const wantEmpty = exp.codeBlocks.some(e => e.empty);
+  check('code blocks: an empty line is numbered and one line high' + (wantEmpty ? '' : ' (the document has none)'),
+    (!wantEmpty || empties.length > 0) && empties.every(e => Math.abs(e.height - e.lh) <= 1), json(empties));
+  const wrapped = blocks.flatMap(b => b.lines.filter(l => l.wrapped).map(l => l.wrapped));
+  const wantLong = exp.codeBlocks.some(e => e.long);
+  check('code blocks: a long line wraps, its rows under its own text, right of the gutter, with one number' + (wantLong ? '' : ' (the document has none)'),
+    (!wantLong || wrapped.length > 0) && wrapped.every(w => w.rows >= 2 && w.hang && w.gutter > 0), json(wrapped));
+  if (key === 'nur-lesen'){
+    check('code blocks: no copy button in nur-lesen, in the file or in the open page', !/<button[^>]*dokufix-code-copy/.test(text) && blocks.every(b => b.buttons.length === 0), json(blocks.map(b => b.buttons.length)));
+    return;
+  }
+  check('code blocks: every block has one copy button, a transient <button> named "Code kopieren", without text',
+    blocks.every(b => b.buttons.length === 1 && json(b.buttons[0]) === json({ type: 'button', transient: true, label: 'Code kopieren', title: 'Code kopieren', text: '' })),
+    json(blocks.map(b => b.buttons)));
+  check('code blocks: the button stands at the top right of its block, 28 px square, with the 16 px icon, clear of every line',
+    blocks.every(b => b.button && b.button.topRight && b.button.size === '28x28' && b.button.icon === '16px 16px' && b.button.clear), json(blocks.map(b => b.button)));
+  if (key === 'schlank' || key === 'kompakt'){
+    check('code blocks: ' + key + ' writes no copy button into its file; its reader bundle adds it', !/<button[^>]*dokufix-code-copy/.test(text), '');
+  }
+  if (!blocks.length) return;
+  // Not printed.
+  await page.emulateMedia({ media: 'print' });
+  const printed = await page.evaluate(() => Array.from(document.querySelectorAll('button.dokufix-code-copy')).map(b => getComputedStyle(b).display));
+  await page.emulateMedia({ media: null });
+  check('code blocks: the copy button is not printed', printed.length > 0 && printed.every(d => d === 'none'), json(printed));
+  // A click, with the clipboard stubbed in the page: what it was given.
+  await page.evaluate(() => {
+    window.vergleichCopied = [];
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async t => { window.vergleichCopied.push(t); } } });
+  });
+  const BTN = 'pre.dokufix-code > button.dokufix-code-copy';
+  const want = await page.evaluate(sel => document.querySelector(sel).parentElement.querySelector(':scope > code').textContent.replace(/\n$/, ''), BTN);
+  await page.locator(BTN).first().click();
+  await settles(page, sel => document.querySelector(sel).getAttribute('aria-label') === 'Kopiert', BTN);
+  const after = await page.evaluate(sel => { const b = document.querySelector(sel), x = getComputedStyle(b, '::before');
+    return { copied: window.vergleichCopied, label: b.getAttribute('aria-label'), title: b.getAttribute('title'), check: (x.maskImage || x.webkitMaskImage || '').includes('M13.78') }; }, BTN);
+  check('code blocks: a click copies the code without numbers and its final line break; the button is named "Kopiert" and shows the check',
+    json(after.copied) === json([want]) && after.label === 'Kopiert' && after.title === 'Kopiert' && after.check, json({ after, want }));
+  const back = await settles(page, sel => document.querySelector(sel).getAttribute('aria-label') === 'Code kopieren', BTN);
+  const icon = await page.evaluate(sel => { const x = getComputedStyle(document.querySelector(sel), '::before'); return (x.maskImage || x.webkitMaskImage || '').includes('M13.78'); }, BTN);
+  check('code blocks: after 2 s the button is "Code kopieren" again, with its copy icon', back && !icon, json({ back, icon }));
+}
+
 function makeChecker(results, scope){
   return (name, ok, detail, note) => {
     results.push({ scope, name, ok: !!ok, detail: ok ? '' : (detail === undefined ? '' : String(detail)), note: ok && note ? note : '' });
@@ -5002,6 +5136,8 @@ async function assertVariant(browser, file, key, exp, results, label){
     await assertLargeView(page, check, exp, key);
     // --- the downloads below a diagram (story 2.10)
     await assertDiagramDownloads(page, check, exp, key, text, label, path.dirname(file));
+    // --- code blocks: light, numbered, wrapped; the copy button where a script runs (story 5.19)
+    await assertCodeBlocks(page, check, exp, key, text);
     // --- the live viewer of a BPMN diagram (story 2.11): in Mit Editor, and in no read-only file
     await assertLiveViewer(page, check, exp, key);
     if (exp.toc) check('inline table of contents', s.tocLinks > 0 && s.tocBorder === '1px', s.tocLinks + ' links, border ' + s.tocBorder);

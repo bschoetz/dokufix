@@ -408,7 +408,11 @@ function dokufix(md) {
   const html = marked.parse(md);
   return renderMermaidIn(html);
 }
+
+// Diese Zeile ist länger als die Spalte: Sie bricht um, ihre Fortsetzung steht ohne eigene Nummer unter ihrem Text, und nichts rollt seitlich.
 ```
+
+Jede Zeile trägt ihre Nummer, auch die leere Zeile 5; die Nummern werden weder markiert noch kopiert noch gefunden. Die Schaltfläche oben rechts kopiert den Code, wie er geschrieben ist, und zeigt zwei Sekunden lang ein Häkchen; in der offenen Fassung ohne Skript (`-nur-lesen.html`) fehlt sie, Nummern und Umbruch bleiben.
 
 > **Träger für Inhalte.** Die HTML ist nur die aktuelle Hülle.
 

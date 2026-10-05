@@ -395,11 +395,12 @@ function buildCopy(outDir, module, edits, name){
 const withoutScripts = text => text.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, '');
 // What is transient in a read-only export once it has opened: the fields of the
 // filter, and in schlank and kompakt the panel of the search and its
-// magnifier (story 5.10), once each, and the picture button below each
-// diagram (story 2.10).
+// magnifier (story 5.10), once each, the picture button below each
+// diagram (story 2.10) and the copy button of each code block (story 5.19).
 const onlyOwnTransient = (s, x) => x.searchPanels === (s.endsWith('nur-lesen') ? 0 : 1) && x.magnifiers === x.searchPanels &&
   x.svgButtons === (s.endsWith('nur-lesen') ? 0 : x.figures.length) &&
-  x.transient === x.filters.length + x.searchPanels + x.magnifiers + x.svgButtons;
+  x.copyButtons === (s.endsWith('nur-lesen') ? 0 : x.codeBlocks) &&
+  x.transient === x.filters.length + x.searchPanels + x.magnifiers + x.svgButtons + x.copyButtons;
 
 // ---------- results ----------
 const results = [];
@@ -546,6 +547,9 @@ const facts = page => page.evaluate(() => {
     sourceLinks: Array.from(container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads > a[download]')).map(a => a.getAttribute('download')),
     svgButtons: container.querySelectorAll('figure.dokufix-diagram > .dokufix-diagram-downloads > button[data-dokufix-transient]').length,
     warningDownloads: container.querySelectorAll('.dokufix-warning :is(.dokufix-diagram-downloads, a[download])').length,
+    // The numbered code blocks and their copy buttons (story 5.19).
+    codeBlocks: container.querySelectorAll('pre.dokufix-code').length,
+    copyButtons: container.querySelectorAll('pre.dokufix-code > button.dokufix-code-copy[data-dokufix-transient]').length,
     // The figures, by their title.
     figures: Array.from(container.querySelectorAll('figure.dokufix-diagram')).map(f => f.getAttribute('aria-label')),
     // The BPMN diagrams: title, whether the SVG is there, and the markup of the credit below it.
@@ -751,7 +755,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
         // The search fields and the search panel that schlank and kompakt make
         // themselves when they open are transient; the code that makes them
         // names the attribute.
-        check(s, 'nothing transient but the fields, the search panel, its magnifier and the picture buttons the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels, magnifiers: x.magnifiers, svgButtons: x.svgButtons });
+        check(s, 'nothing transient but the fields, the search panel, its magnifier, the picture buttons and the copy buttons the file makes: not the attribute, not an element of this run', onlyOwnTransient(s, x) && !withoutScripts(text).includes('data-dokufix-transient') && !text.includes('durchlaeufe-'), { transient: x.transient, filters: x.filters.length, panels: x.searchPanels, magnifiers: x.magnifiers, svgButtons: x.svgButtons, codeBlocks: x.codeBlocks, copyButtons: x.copyButtons });
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       });
       check(scope, 'both views are still open in the running page', JSON.stringify(await views()) === '[true,true]', await views());

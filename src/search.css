@@ -108,8 +108,9 @@
 /* The hits in the document while the panel is open (src/app/search.js): a
    highlight of the CSS Custom Highlight API, no element and no class in the
    document, in the colour of the marks in the results. On screen its text is
-   dark, so a hit stays readable on the dark background of a code block,
-   whose light text would not read on the yellow. Not printed. */
+   dark, so a hit reads on the yellow wherever it stands; since the code
+   block is light (story 5.19) its own text would as well, and the rule
+   stays for any light text a document may have. Not printed. */
 ::highlight(search-hit){background-color:#ffe066}
 @media screen{::highlight(search-hit){color:#1c1c1e}}
 /* The magnifier (src/app/search.js), a button that opens the panel, for a

@@ -37,6 +37,7 @@ import { parseHTML } from 'linkedom';
 import { findHits, excerpt, tooShort } from '../src/app/search-match.js';
 import { collectPlaces, groupResults, nodeRanges, FIRST_GROUP_LABEL, KIND_ROW, KIND_META, KIND_CODE } from '../src/app/search-places.js';
 import { DIAGRAM_LANGUAGES, DIAGRAM_LABEL } from '../src/app/diagram-kinds.js';
+import { buildCodeLines, attachCodeCopy } from '../src/app/code-blocks.js';
 import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
 import { buildWarning } from '../src/app/warning.js';
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
@@ -904,6 +905,23 @@ test('collectPlaces: a code block is one place of the kind "' + KIND_CODE + '", 
   assert.deepEqual(hitTexts(root, 'parse(md); return'), [['parse(md);\n  return']]);
 });
 
+test('collectPlaces: a code block over its line elements (story 5.19) reads the same text, finds the same hits and covers the same characters; its copy button is no text', () => {
+  const html = '<pre><code class="language-javascript">function dokufix(md) {\n  const html = marked.parse(md);\n\n  return renderMermaidIn(html);\n}\n</code></pre>\n<ul>\n<li>Punkt<pre><code class="language-text">Rückbuchungsbeleg ausdrucken\n</code></pre>\n</li>\n</ul>\n';
+  const plain = rootWith(html), lined = rootWith(html);
+  buildCodeLines(lined);
+  attachCodeCopy(lined);
+  assert.equal(lined.querySelectorAll('.dokufix-code-line').length, 6);
+  assert.equal(lined.querySelectorAll('button.dokufix-code-copy').length, 2);
+  const read = root => collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]);
+  assert.deepEqual(read(lined), read(plain));
+  for (const term of ['renderMermaidIn', 'parse(md); return', 'html', 'Rückbuchungsbeleg', 'md) { const']){
+    assert.deepEqual(hitTexts(lined, term), hitTexts(plain, term), term);
+  }
+  // A hit over two lines is one range, from the text of one line into the next.
+  assert.deepEqual(hitTexts(lined, 'parse(md); return'), [['parse(md);\n\n  return']]);
+  assert.equal(codePlaces(lined)[0].el, lined.querySelector('pre'));
+});
+
 test('collectPlaces: a code block in a list item is no text of the item, and a place of its own', () => {
   const root = rootWith('<ul>\n<li>Ein Punkt mit Code:<pre><code class="language-text">Quittung drucken\n</code></pre>\nund danach</li>\n<li>Noch einer</li>\n</ul>\n');
   assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]),
@@ -1062,7 +1080,7 @@ test('the styles of the search: a hit highlighted in the colour of the marks, no
   const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
   assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
   assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
-  // On screen the text of a hit is dark, readable on the dark background of a code block (story 8); in print nothing is set.
+  // On screen the text of a hit is dark, readable on the yellow wherever it stands (story 8; the code block light since story 5.19); in print nothing is set.
   assert.match(css, /^@media screen\{::highlight\(search-hit\)\{color:#1c1c1e\}\}$/m);
   assert.match(css, /^\.search-kind\{color:#6e6e73\}$/m);
   assert.match(css, /^\.search-hidden\{color:#a40e26;font-style:italic\}$/m);

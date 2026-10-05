@@ -515,6 +515,17 @@ test('the built file carries the reader bundle in a block that does not run; it 
   assert.ok(!panel.hidden && searchField.value === 'Tabelle' && summaryOf(panel) === '3 Treffer an 2 Stellen in 1 Abschnitt', 'a click on the open panel closes nothing and keeps the term and its results');
   panel.querySelector('.search-close').click();
 });
+test('the reader bundle gives every numbered code block its copy button, transient, and no other pre one (story 5.19)', () => {
+  const code = readerBlock(fs.readFileSync(committed, 'utf8'));
+  const { document } = runReader(code, '<pre class="dokufix-code" style="--dokufix-code-digits:1"><code><span class="dokufix-code-line">eins\n</span><span class="dokufix-code-line">zwei\n</span></code></pre><pre>roh</pre><div class="dokufix-warning"><pre class="dokufix-warning-detail">Fehler</pre></div>');
+  const buttons = Array.from(document.querySelectorAll('main button'));
+  assert.equal(buttons.length, 1);
+  const [button] = buttons;
+  assert.ok(button.parentElement.classList.contains('dokufix-code') && button.classList.contains('dokufix-code-copy') && button.hasAttribute('data-dokufix-transient'));
+  assert.equal(button.getAttribute('type'), 'button');
+  assert.equal(button.getAttribute('aria-label'), 'Code kopieren');
+  assert.equal(document.querySelector('main pre code').textContent, 'eins\nzwei\n', 'the code\'s text is untouched');
+});
 test('the reader bundle: a search over a content container with the decoder\'s mark says it waits, and runs on the decoder\'s event, whether the diagram came out or not', async () => {
   const code = readerBlock(fs.readFileSync(committed, 'utf8'));
   const content = '<p>Eine Tabelle.</p><figure class="dokufix-diagram"><div class="dokufix-diagram-svg" data-gz="H4sIAAAAAAAA"></div></figure><p>Noch eine Tabelle.</p>';
