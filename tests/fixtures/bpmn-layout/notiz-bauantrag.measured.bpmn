@@ -1,0 +1,255 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bauantrag" targetNamespace="http://example.org/bauantrag">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="P_Antragsteller" name="Antragsteller" processRef="Process_Antragsteller" />
+    <bpmn:participant id="P_Bauamt" name="Bauamt" processRef="Process_Bauamt" />
+    <bpmn:messageFlow id="MF_Antrag" name="Bauantrag mit Unterlagen" sourceRef="Task_Einreichen" targetRef="Start_Bauamt" />
+    <bpmn:messageFlow id="MF_Nachforderung" name="Nachforderung" sourceRef="Task_Nachforderung" targetRef="Event_NachreichenEmpfang" />
+    <bpmn:messageFlow id="MF_Nachreichung" name="Nachgereichte Unterlagen" sourceRef="Task_Nachreichen" targetRef="Event_NachreichungEmpfang" />
+    <bpmn:messageFlow id="MF_Ablehnung" name="Ablehnungsbescheid" sourceRef="Task_Ablehnung" targetRef="Event_BescheidAbl" />
+    <bpmn:messageFlow id="MF_Genehmigung" name="Baugenehmigung" sourceRef="Task_Bescheid" targetRef="Event_BescheidGen" />
+    <bpmn:textAnnotation id="TA_Vollstaendigkeit">
+      <bpmn:text>Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Vollstaendigkeit" sourceRef="TA_Vollstaendigkeit" targetRef="Task_PruefenVollst" />
+    <bpmn:textAnnotation id="TA_Nachforderung">
+      <bpmn:text>Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Nachforderung" sourceRef="TA_Nachforderung" targetRef="MF_Nachforderung" />
+    <bpmn:textAnnotation id="TA_Rechtsgrundlage">
+      <bpmn:text>Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Rechtsgrundlage" sourceRef="TA_Rechtsgrundlage" targetRef="Task_PruefenRecht" />
+    <bpmn:textAnnotation id="TA_Beteiligung">
+      <bpmn:text>Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Beteiligung" sourceRef="TA_Beteiligung" targetRef="Task_Beteiligung" />
+    <bpmn:textAnnotation id="TA_Ausnahme">
+      <bpmn:text>Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Ausnahme" sourceRef="TA_Ausnahme" targetRef="Gateway_Ausnahme" />
+    <bpmn:textAnnotation id="TA_Entscheidungsfrist">
+      <bpmn:text>Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Entscheidungsfrist" sourceRef="TA_Entscheidungsfrist" targetRef="Task_Entscheidung" />
+    <bpmn:textAnnotation id="TA_Rechtsbehelf">
+      <bpmn:text>Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Rechtsbehelf" sourceRef="TA_Rechtsbehelf" targetRef="Task_Ablehnung" />
+    <bpmn:textAnnotation id="TA_Gebuehren">
+      <bpmn:text>Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Gebuehren" sourceRef="TA_Gebuehren" targetRef="Task_Bescheid" />
+    <bpmn:textAnnotation id="TA_Nachreichfrist">
+      <bpmn:text>Frist zur Nachreichung laeuft ab Zugang der Nachforderung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Nachreichfrist" sourceRef="TA_Nachreichfrist" targetRef="Flow_AS_Nachforderung" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Antragsteller" isExecutable="false">
+    <bpmn:startEvent id="Start_Antragsteller" name="Bauvorhaben geplant">
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Erstellen" name="Bauantrag und Bauvorlagen erstellen">
+    </bpmn:task>
+    <bpmn:task id="Task_Einreichen" name="Bauantrag einreichen">
+    </bpmn:task>
+    <bpmn:eventBasedGateway id="Gateway_Warten">
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Event_NachreichenEmpfang" name="Nachforderung erhalten">
+      <bpmn:messageEventDefinition id="MED_1" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_Nachreichen" name="Unterlagen nachreichen">
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_BescheidAbl" name="Ablehnungsbescheid erhalten">
+      <bpmn:messageEventDefinition id="MED_2" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_BescheidGen" name="Baugenehmigung erhalten">
+      <bpmn:messageEventDefinition id="MED_3" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_Abgelehnt" name="Antrag abgelehnt">
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Genehmigt" name="Bauvorhaben genehmigt">
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_AS_1" sourceRef="Start_Antragsteller" targetRef="Task_Erstellen" />
+    <bpmn:sequenceFlow id="Flow_AS_2" sourceRef="Task_Erstellen" targetRef="Task_Einreichen" />
+    <bpmn:exclusiveGateway id="Gateway_WartenJoin" />
+    <bpmn:sequenceFlow id="Flow_AS_3" sourceRef="Task_Einreichen" targetRef="Gateway_WartenJoin" />
+    <bpmn:sequenceFlow id="Flow_AS_Join" sourceRef="Gateway_WartenJoin" targetRef="Gateway_Warten" />
+    <bpmn:sequenceFlow id="Flow_AS_ToNachf" sourceRef="Gateway_Warten" targetRef="Event_NachreichenEmpfang" />
+    <bpmn:sequenceFlow id="Flow_AS_ToAbl" sourceRef="Gateway_Warten" targetRef="Event_BescheidAbl" />
+    <bpmn:sequenceFlow id="Flow_AS_ToGen" sourceRef="Gateway_Warten" targetRef="Event_BescheidGen" />
+    <bpmn:sequenceFlow id="Flow_AS_Nachforderung" sourceRef="Event_NachreichenEmpfang" targetRef="Task_Nachreichen" />
+    <bpmn:sequenceFlow id="Flow_AS_Zurueck" sourceRef="Task_Nachreichen" targetRef="Gateway_WartenJoin" />
+    <bpmn:sequenceFlow id="Flow_AS_EndAbl" sourceRef="Event_BescheidAbl" targetRef="End_Abgelehnt" />
+    <bpmn:sequenceFlow id="Flow_AS_EndGen" sourceRef="Event_BescheidGen" targetRef="End_Genehmigt" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Bauamt" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Bauamt">
+      <bpmn:lane id="Lane_Sachbearbeitung" name="Sachbearbeitung">
+        <bpmn:flowNodeRef>Start_Bauamt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PruefenVollst</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Vollst</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Nachforderung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Nachf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_NachreichungEmpfang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PruefenRecht</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Beteiligung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Empfehlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bescheid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ablehnung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Gen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Ausnahme</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Amtsleitung" name="Amtsleitung">
+        <bpmn:flowNodeRef>Task_Ausnahme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Entscheidung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Entscheid</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Bauamt" name="Bauantrag eingegangen">
+      <bpmn:messageEventDefinition id="MED_4" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_PruefenVollst" name="Vollstaendigkeit pruefen">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Vollst" name="Vollstaendig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Nachforderung" name="Fehlende Unterlagen nachfordern">
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_NachreichungEmpfang" name="Unterlagen eingegangen">
+      <bpmn:messageEventDefinition id="MED_5" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_PruefenRecht" name="Bauplanungs- und bauordnungsrechtlich pruefen">
+    </bpmn:task>
+    <bpmn:task id="Task_Beteiligung" name="Nachbarn und Fachbehoerden beteiligen">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Ausnahme" name="Ausnahme oder Befreiung noetig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Ausnahme" name="Ausnahme oder Befreiung entscheiden">
+    </bpmn:task>
+    <bpmn:task id="Task_Empfehlung" name="Entscheidungsvorschlag erarbeiten">
+    </bpmn:task>
+    <bpmn:task id="Task_Entscheidung" name="Ueber den Bauantrag entscheiden">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Entscheid" name="Genehmigungsfaehig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Bescheid" name="Baugenehmigung und Gebuehrenbescheid erstellen und zustellen">
+    </bpmn:task>
+    <bpmn:task id="Task_Ablehnung" name="Ablehnungsbescheid erstellen und zustellen">
+    </bpmn:task>
+    <bpmn:endEvent id="End_Gen" name="Genehmigung erteilt">
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Abl" name="Antrag abgelehnt">
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_B_1" sourceRef="Start_Bauamt" targetRef="Task_PruefenVollst" />
+    <bpmn:sequenceFlow id="Flow_B_2" sourceRef="Task_PruefenVollst" targetRef="Gateway_Vollst" />
+    <bpmn:sequenceFlow id="Flow_B_Nein" name="nein" sourceRef="Gateway_Vollst" targetRef="Task_Nachforderung" />
+    <bpmn:sequenceFlow id="Flow_B_Ja" name="ja" sourceRef="Gateway_Vollst" targetRef="Task_PruefenRecht" />
+    <bpmn:exclusiveGateway id="Gateway_Nachf" />
+    <bpmn:sequenceFlow id="Flow_B_NachfGW" sourceRef="Task_Nachforderung" targetRef="Gateway_Nachf" />
+    <bpmn:sequenceFlow id="Flow_B_Warten" sourceRef="Gateway_Nachf" targetRef="Event_NachreichungEmpfang" />
+    <bpmn:sequenceFlow id="Flow_B_Nachr" sourceRef="Event_NachreichungEmpfang" targetRef="Task_PruefenVollst" />
+    <bpmn:sequenceFlow id="Flow_B_3" sourceRef="Task_PruefenRecht" targetRef="Task_Beteiligung" />
+    <bpmn:sequenceFlow id="Flow_B_4" sourceRef="Task_Beteiligung" targetRef="Gateway_Ausnahme" />
+    <bpmn:sequenceFlow id="Flow_B_AusJa" name="ja" sourceRef="Gateway_Ausnahme" targetRef="Task_Ausnahme" />
+    <bpmn:sequenceFlow id="Flow_B_AusNein" name="nein" sourceRef="Gateway_Ausnahme" targetRef="Task_Empfehlung" />
+    <bpmn:sequenceFlow id="Flow_B_5" sourceRef="Task_Ausnahme" targetRef="Task_Empfehlung" />
+    <bpmn:sequenceFlow id="Flow_B_6" sourceRef="Task_Empfehlung" targetRef="Task_Entscheidung" />
+    <bpmn:sequenceFlow id="Flow_B_7" sourceRef="Task_Entscheidung" targetRef="Gateway_Entscheid" />
+    <bpmn:sequenceFlow id="Flow_B_EntJa" name="ja" sourceRef="Gateway_Entscheid" targetRef="Task_Bescheid" />
+    <bpmn:sequenceFlow id="Flow_B_EntNein" name="nein" sourceRef="Gateway_Entscheid" targetRef="Task_Ablehnung" />
+    <bpmn:sequenceFlow id="Flow_B_Abbruch" sourceRef="Gateway_Nachf" targetRef="Task_Ablehnung" />
+    <bpmn:sequenceFlow id="Flow_B_EndGen" sourceRef="Task_Bescheid" targetRef="End_Gen" />
+    <bpmn:sequenceFlow id="Flow_B_EndAbl" sourceRef="Task_Ablehnung" targetRef="End_Abl" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="P_Antragsteller_di" bpmnElement="P_Antragsteller" isHorizontal="true"><dc:Bounds x="0" y="0" width="1906" height="441"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="P_Bauamt_di" bpmnElement="P_Bauamt" isHorizontal="true"><dc:Bounds x="0" y="509" width="1906" height="884"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sachbearbeitung_di" bpmnElement="Lane_Sachbearbeitung" isHorizontal="true"><dc:Bounds x="30" y="509" width="1876" height="678"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Amtsleitung_di" bpmnElement="Lane_Amtsleitung" isHorizontal="true"><dc:Bounds x="30" y="1187" width="1876" height="206"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Antragsteller_di" bpmnElement="Start_Antragsteller"><dc:Bounds x="102" y="258" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="298" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Erstellen_di" bpmnElement="Task_Erstellen"><dc:Bounds x="210" y="236" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Einreichen_di" bpmnElement="Task_Einreichen"><dc:Bounds x="378" y="236" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Warten_di" bpmnElement="Gateway_Warten"><dc:Bounds x="753" y="251" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_NachreichenEmpfang_di" bpmnElement="Event_NachreichenEmpfang"><dc:Bounds x="760" y="156" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="798" y="160" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Nachreichen_di" bpmnElement="Task_Nachreichen"><dc:Bounds x="718" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_BescheidAbl_di" bpmnElement="Event_BescheidAbl"><dc:Bounds x="1609" y="258" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1582" y="225" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_BescheidGen_di" bpmnElement="Event_BescheidGen"><dc:Bounds x="1609" y="360" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1643" y="398" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Abgelehnt_di" bpmnElement="End_Abgelehnt"><dc:Bounds x="1759" y="258" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1732" y="298" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Genehmigt_di" bpmnElement="End_Genehmigt"><dc:Bounds x="1759" y="360" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1732" y="400" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_WartenJoin_di" bpmnElement="Gateway_WartenJoin" isMarkerVisible="true"><dc:Bounds x="581" y="251" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Bauamt_di" bpmnElement="Start_Bauamt"><dc:Bounds x="420" y="765" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="805" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PruefenVollst_di" bpmnElement="Task_PruefenVollst"><dc:Bounds x="546" y="743" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Vollst_di" bpmnElement="Gateway_Vollst" isMarkerVisible="true"><dc:Bounds x="753" y="758" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="733" y="739" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Nachforderung_di" bpmnElement="Task_Nachforderung"><dc:Bounds x="886" y="743" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_NachreichungEmpfang_di" bpmnElement="Event_NachreichungEmpfang"><dc:Bounds x="1096" y="663" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1128" y="667" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_PruefenRecht_di" bpmnElement="Task_PruefenRecht"><dc:Bounds x="718" y="867" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Beteiligung_di" bpmnElement="Task_Beteiligung"><dc:Bounds x="886" y="867" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Ausnahme_di" bpmnElement="Gateway_Ausnahme" isMarkerVisible="true"><dc:Bounds x="1089" y="882" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1000" y="934" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Ausnahme_di" bpmnElement="Task_Ausnahme"><dc:Bounds x="1054" y="1219" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Empfehlung_di" bpmnElement="Task_Empfehlung"><dc:Bounds x="1231" y="867" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Entscheidung_di" bpmnElement="Task_Entscheidung"><dc:Bounds x="1231" y="1219" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Entscheid_di" bpmnElement="Gateway_Entscheid" isMarkerVisible="true"><dc:Bounds x="1434" y="1234" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1414" y="1288" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Bescheid_di" bpmnElement="Task_Bescheid"><dc:Bounds x="1567" y="867" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Ablehnung_di" bpmnElement="Task_Ablehnung"><dc:Bounds x="1399" y="743" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Gen_di" bpmnElement="End_Gen"><dc:Bounds x="1759" y="889" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1732" y="929" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Abl_di" bpmnElement="End_Abl"><dc:Bounds x="1759" y="765" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1732" y="805" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Nachf_di" bpmnElement="Gateway_Nachf" isMarkerVisible="true"><dc:Bounds x="1089" y="758" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Vollstaendigkeit_di" bpmnElement="TA_Vollstaendigkeit"><dc:Bounds x="346" y="873" width="250" height="57"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Nachforderung_di" bpmnElement="TA_Nachforderung"><dc:Bounds x="836" y="300" width="250" height="72"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Rechtsgrundlage_di" bpmnElement="TA_Rechtsgrundlage"><dc:Bounds x="653" y="997" width="250" height="57"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Beteiligung_di" bpmnElement="TA_Beteiligung"><dc:Bounds x="821" y="1097" width="250" height="86"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Ausnahme_di" bpmnElement="TA_Ausnahme"><dc:Bounds x="1149" y="534" width="250" height="72"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Entscheidungsfrist_di" bpmnElement="TA_Entscheidungsfrist"><dc:Bounds x="1376" y="1324" width="200" height="57"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Rechtsbehelf_di" bpmnElement="TA_Rechtsbehelf"><dc:Bounds x="1644" y="561" width="250" height="57"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Gebuehren_di" bpmnElement="TA_Gebuehren"><dc:Bounds x="1637" y="997" width="200" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="TA_Nachreichfrist_di" bpmnElement="TA_Nachreichfrist"><dc:Bounds x="878" y="81" width="200" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_AS_1_di" bpmnElement="Flow_AS_1"><di:waypoint x="138" y="276"/><di:waypoint x="210" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_2_di" bpmnElement="Flow_AS_2"><di:waypoint x="330" y="276"/><di:waypoint x="378" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_3_di" bpmnElement="Flow_AS_3"><di:waypoint x="498" y="276"/><di:waypoint x="581" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_Join_di" bpmnElement="Flow_AS_Join"><di:waypoint x="631" y="276"/><di:waypoint x="753" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_ToNachf_di" bpmnElement="Flow_AS_ToNachf"><di:waypoint x="778" y="251"/><di:waypoint x="778" y="192"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_ToAbl_di" bpmnElement="Flow_AS_ToAbl"><di:waypoint x="803" y="276"/><di:waypoint x="1609" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_ToGen_di" bpmnElement="Flow_AS_ToGen"><di:waypoint x="778" y="301"/><di:waypoint x="778" y="378"/><di:waypoint x="1609" y="378"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_Nachforderung_di" bpmnElement="Flow_AS_Nachforderung"><di:waypoint x="778" y="156"/><di:waypoint x="778" y="112"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_Zurueck_di" bpmnElement="Flow_AS_Zurueck"><di:waypoint x="718" y="72"/><di:waypoint x="606" y="72"/><di:waypoint x="606" y="251"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_EndAbl_di" bpmnElement="Flow_AS_EndAbl"><di:waypoint x="1645" y="276"/><di:waypoint x="1759" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_AS_EndGen_di" bpmnElement="Flow_AS_EndGen"><di:waypoint x="1645" y="378"/><di:waypoint x="1759" y="378"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_1_di" bpmnElement="Flow_B_1"><di:waypoint x="456" y="783"/><di:waypoint x="546" y="783"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_2_di" bpmnElement="Flow_B_2"><di:waypoint x="666" y="783"/><di:waypoint x="753" y="783"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_Nein_di" bpmnElement="Flow_B_Nein"><di:waypoint x="803" y="783"/><di:waypoint x="886" y="783"/><bpmndi:BPMNLabel><dc:Bounds x="813" y="764" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_Ja_di" bpmnElement="Flow_B_Ja"><di:waypoint x="778" y="808"/><di:waypoint x="778" y="867"/><bpmndi:BPMNLabel><dc:Bounds x="784" y="816" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_NachfGW_di" bpmnElement="Flow_B_NachfGW"><di:waypoint x="1006" y="783"/><di:waypoint x="1089" y="783"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_Warten_di" bpmnElement="Flow_B_Warten"><di:waypoint x="1114" y="758"/><di:waypoint x="1114" y="699"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_Nachr_di" bpmnElement="Flow_B_Nachr"><di:waypoint x="1096" y="681"/><di:waypoint x="606" y="681"/><di:waypoint x="606" y="743"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_3_di" bpmnElement="Flow_B_3"><di:waypoint x="838" y="907"/><di:waypoint x="886" y="907"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_4_di" bpmnElement="Flow_B_4"><di:waypoint x="1006" y="907"/><di:waypoint x="1089" y="907"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_AusJa_di" bpmnElement="Flow_B_AusJa"><di:waypoint x="1114" y="932"/><di:waypoint x="1114" y="1219"/><bpmndi:BPMNLabel><dc:Bounds x="1120" y="940" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_AusNein_di" bpmnElement="Flow_B_AusNein"><di:waypoint x="1114" y="882"/><di:waypoint x="1114" y="851"/><di:waypoint x="1291" y="851"/><di:waypoint x="1291" y="867"/><bpmndi:BPMNLabel><dc:Bounds x="1120" y="859" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_5_di" bpmnElement="Flow_B_5"><di:waypoint x="1174" y="1259"/><di:waypoint x="1186" y="1259"/><di:waypoint x="1186" y="907"/><di:waypoint x="1231" y="907"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_6_di" bpmnElement="Flow_B_6"><di:waypoint x="1291" y="947"/><di:waypoint x="1291" y="1219"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_7_di" bpmnElement="Flow_B_7"><di:waypoint x="1351" y="1259"/><di:waypoint x="1434" y="1259"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_EntJa_di" bpmnElement="Flow_B_EntJa"><di:waypoint x="1484" y="1259"/><di:waypoint x="1627" y="1259"/><di:waypoint x="1627" y="947"/><bpmndi:BPMNLabel><dc:Bounds x="1494" y="1240" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_EntNein_di" bpmnElement="Flow_B_EntNein"><di:waypoint x="1459" y="1234"/><di:waypoint x="1459" y="823"/><bpmndi:BPMNLabel><dc:Bounds x="1465" y="1211" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_Abbruch_di" bpmnElement="Flow_B_Abbruch"><di:waypoint x="1139" y="783"/><di:waypoint x="1399" y="783"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_EndGen_di" bpmnElement="Flow_B_EndGen"><di:waypoint x="1687" y="907"/><di:waypoint x="1759" y="907"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B_EndAbl_di" bpmnElement="Flow_B_EndAbl"><di:waypoint x="1519" y="783"/><di:waypoint x="1759" y="783"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Antrag_di" bpmnElement="MF_Antrag"><di:waypoint x="438" y="316"/><di:waypoint x="438" y="765"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="460.5" width="75" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Nachforderung_di" bpmnElement="MF_Nachforderung"><di:waypoint x="946" y="743"/><di:waypoint x="946" y="485"/><di:waypoint x="706" y="485"/><di:waypoint x="706" y="220"/><di:waypoint x="778" y="220"/><di:waypoint x="778" y="192"/><bpmndi:BPMNLabel><dc:Bounds x="712" y="467.5" width="81" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Nachreichung_di" bpmnElement="MF_Nachreichung"><di:waypoint x="748" y="112"/><di:waypoint x="748" y="128"/><di:waypoint x="690" y="128"/><di:waypoint x="690" y="465"/><di:waypoint x="1114" y="465"/><di:waypoint x="1114" y="663"/><bpmndi:BPMNLabel><dc:Bounds x="1120" y="460.5" width="77" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Ablehnung_di" bpmnElement="MF_Ablehnung"><di:waypoint x="1459" y="743"/><di:waypoint x="1459" y="485"/><di:waypoint x="1531" y="485"/><di:waypoint x="1531" y="344"/><di:waypoint x="1627" y="344"/><di:waypoint x="1627" y="294"/><bpmndi:BPMNLabel><dc:Bounds x="1537" y="460.5" width="88" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Genehmigung_di" bpmnElement="MF_Genehmigung"><di:waypoint x="1627" y="867"/><di:waypoint x="1627" y="396"/><bpmndi:BPMNLabel><dc:Bounds x="1633" y="460.5" width="81" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Vollstaendigkeit_di" bpmnElement="As_Vollstaendigkeit"><di:waypoint x="471" y="873"/><di:waypoint x="558" y="823"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Nachforderung_di" bpmnElement="As_Nachforderung"><di:waypoint x="836" y="336"/><di:waypoint x="826" y="485"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Rechtsgrundlage_di" bpmnElement="As_Rechtsgrundlage"><di:waypoint x="778" y="997"/><di:waypoint x="778" y="947"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Beteiligung_di" bpmnElement="As_Beteiligung"><di:waypoint x="946" y="1097"/><di:waypoint x="946" y="947"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Ausnahme_di" bpmnElement="As_Ausnahme"><di:waypoint x="1149" y="570"/><di:waypoint x="1116" y="884"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Entscheidungsfrist_di" bpmnElement="As_Entscheidungsfrist"><di:waypoint x="1376" y="1353"/><di:waypoint x="1327" y="1299"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Rechtsbehelf_di" bpmnElement="As_Rechtsbehelf"><di:waypoint x="1644" y="590"/><di:waypoint x="1497" y="743"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Gebuehren_di" bpmnElement="As_Gebuehren"><di:waypoint x="1737" y="997"/><di:waypoint x="1675" y="947"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="As_Nachreichfrist_di" bpmnElement="As_Nachreichfrist"><di:waypoint x="878" y="103"/><di:waypoint x="778" y="134"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

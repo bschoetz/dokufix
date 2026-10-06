@@ -1,0 +1,222 @@
+{
+ "Bauvorhaben geplant": {
+  "w": 70,
+  "h": 29
+ },
+ "Nachforderung erhalten": {
+  "w": 81,
+  "h": 29
+ },
+ "Ablehnungsbescheid erhalten": {
+  "w": 88,
+  "h": 29
+ },
+ "Baugenehmigung erhalten": {
+  "w": 81,
+  "h": 29
+ },
+ "Antrag abgelehnt": {
+  "w": 54,
+  "h": 29
+ },
+ "Bauvorhaben genehmigt": {
+  "w": 70,
+  "h": 29
+ },
+ "Bauantrag eingegangen": {
+  "w": 70,
+  "h": 29
+ },
+ "Vollstaendig?": {
+  "w": 71,
+  "h": 15
+ },
+ "Unterlagen eingegangen": {
+  "w": 70,
+  "h": 29
+ },
+ "Ausnahme oder Befreiung noetig?": {
+  "w": 84,
+  "h": 44
+ },
+ "Genehmigungsfaehig?": {
+  "w": 85,
+  "h": 29
+ },
+ "Genehmigung erteilt": {
+  "w": 76,
+  "h": 29
+ },
+ "nein": {
+  "w": 23,
+  "h": 15
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "Bauantrag mit Unterlagen": {
+  "w": 75,
+  "h": 29
+ },
+ "Nachforderung": {
+  "w": 81,
+  "h": 15
+ },
+ "Nachgereichte Unterlagen": {
+  "w": 77,
+  "h": 29
+ },
+ "Ablehnungsbescheid": {
+  "w": 88,
+  "h": 29
+ },
+ "Baugenehmigung": {
+  "w": 81,
+  "h": 29
+ },
+ "note:100:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+  "w": 100,
+  "h": 158
+ },
+ "note:150:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+  "w": 150,
+  "h": 100
+ },
+ "note:200:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+  "w": 200,
+  "h": 72
+ },
+ "note:250:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+  "w": 250,
+  "h": 57
+ },
+ "note:100:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+  "w": 100,
+  "h": 158
+ },
+ "note:150:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+  "w": 150,
+  "h": 100
+ },
+ "note:200:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+  "w": 200,
+  "h": 86
+ },
+ "note:250:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+  "w": 250,
+  "h": 72
+ },
+ "note:100:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+  "w": 100,
+  "h": 144
+ },
+ "note:150:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+  "w": 150,
+  "h": 100
+ },
+ "note:200:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+  "w": 200,
+  "h": 72
+ },
+ "note:250:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+  "w": 250,
+  "h": 57
+ },
+ "note:100:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+  "w": 100,
+  "h": 187
+ },
+ "note:150:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+  "w": 150,
+  "h": 144
+ },
+ "note:200:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+  "w": 200,
+  "h": 86
+ },
+ "note:250:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+  "w": 250,
+  "h": 86
+ },
+ "note:100:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+  "w": 100,
+  "h": 172
+ },
+ "note:150:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+  "w": 150,
+  "h": 129
+ },
+ "note:200:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+  "w": 200,
+  "h": 100
+ },
+ "note:250:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+  "w": 250,
+  "h": 72
+ },
+ "note:100:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+  "w": 100,
+  "h": 129
+ },
+ "note:150:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+  "w": 150,
+  "h": 86
+ },
+ "note:200:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+  "w": 200,
+  "h": 57
+ },
+ "note:250:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+  "w": 250,
+  "h": 57
+ },
+ "note:100:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+  "w": 100,
+  "h": 129
+ },
+ "note:150:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+  "w": 150,
+  "h": 86
+ },
+ "note:200:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+  "w": 200,
+  "h": 72
+ },
+ "note:250:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+  "w": 250,
+  "h": 57
+ },
+ "note:100:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+  "w": 100,
+  "h": 86
+ },
+ "note:150:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+  "w": 150,
+  "h": 57
+ },
+ "note:200:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+  "w": 250,
+  "h": 43
+ },
+ "note:100:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+  "w": 100,
+  "h": 86
+ },
+ "note:150:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+  "w": 150,
+  "h": 57
+ },
+ "note:200:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+  "w": 250,
+  "h": 43
+ }
+}

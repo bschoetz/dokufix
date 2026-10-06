@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bauantrag" targetNamespace="http://example.org/bauantrag">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="P_Antragsteller" name="Antragsteller" processRef="Process_Antragsteller" />
+    <bpmn:participant id="P_Bauamt" name="Bauamt" processRef="Process_Bauamt" />
+    <bpmn:messageFlow id="MF_Antrag" name="Bauantrag mit Unterlagen" sourceRef="Task_Einreichen" targetRef="Start_Bauamt" />
+    <bpmn:messageFlow id="MF_Nachforderung" name="Nachforderung" sourceRef="Task_Nachforderung" targetRef="Event_NachreichenEmpfang" />
+    <bpmn:messageFlow id="MF_Nachreichung" name="Nachgereichte Unterlagen" sourceRef="Task_Nachreichen" targetRef="Event_NachreichungEmpfang" />
+    <bpmn:messageFlow id="MF_Ablehnung" name="Ablehnungsbescheid" sourceRef="Task_Ablehnung" targetRef="Event_BescheidAbl" />
+    <bpmn:messageFlow id="MF_Genehmigung" name="Baugenehmigung" sourceRef="Task_Bescheid" targetRef="Event_BescheidGen" />
+    <bpmn:textAnnotation id="TA_Vollstaendigkeit">
+      <bpmn:text>Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Vollstaendigkeit" sourceRef="TA_Vollstaendigkeit" targetRef="Task_PruefenVollst" />
+    <bpmn:textAnnotation id="TA_Nachforderung">
+      <bpmn:text>Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Nachforderung" sourceRef="TA_Nachforderung" targetRef="MF_Nachforderung" />
+    <bpmn:textAnnotation id="TA_Rechtsgrundlage">
+      <bpmn:text>Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Rechtsgrundlage" sourceRef="TA_Rechtsgrundlage" targetRef="Task_PruefenRecht" />
+    <bpmn:textAnnotation id="TA_Beteiligung">
+      <bpmn:text>Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Beteiligung" sourceRef="TA_Beteiligung" targetRef="Task_Beteiligung" />
+    <bpmn:textAnnotation id="TA_Ausnahme">
+      <bpmn:text>Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Ausnahme" sourceRef="TA_Ausnahme" targetRef="Gateway_Ausnahme" />
+    <bpmn:textAnnotation id="TA_Entscheidungsfrist">
+      <bpmn:text>Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Entscheidungsfrist" sourceRef="TA_Entscheidungsfrist" targetRef="Task_Entscheidung" />
+    <bpmn:textAnnotation id="TA_Rechtsbehelf">
+      <bpmn:text>Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Rechtsbehelf" sourceRef="TA_Rechtsbehelf" targetRef="Task_Ablehnung" />
+    <bpmn:textAnnotation id="TA_Gebuehren">
+      <bpmn:text>Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Gebuehren" sourceRef="TA_Gebuehren" targetRef="Task_Bescheid" />
+    <bpmn:textAnnotation id="TA_Nachreichfrist">
+      <bpmn:text>Frist zur Nachreichung laeuft ab Zugang der Nachforderung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="As_Nachreichfrist" sourceRef="TA_Nachreichfrist" targetRef="Flow_AS_Nachforderung" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Antragsteller" isExecutable="false">
+    <bpmn:startEvent id="Start_Antragsteller" name="Bauvorhaben geplant">
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Erstellen" name="Bauantrag und Bauvorlagen erstellen">
+    </bpmn:task>
+    <bpmn:task id="Task_Einreichen" name="Bauantrag einreichen">
+    </bpmn:task>
+    <bpmn:eventBasedGateway id="Gateway_Warten">
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Event_NachreichenEmpfang" name="Nachforderung erhalten">
+      <bpmn:messageEventDefinition id="MED_1" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_Nachreichen" name="Unterlagen nachreichen">
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_BescheidAbl" name="Ablehnungsbescheid erhalten">
+      <bpmn:messageEventDefinition id="MED_2" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Event_BescheidGen" name="Baugenehmigung erhalten">
+      <bpmn:messageEventDefinition id="MED_3" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_Abgelehnt" name="Antrag abgelehnt">
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Genehmigt" name="Bauvorhaben genehmigt">
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_AS_1" sourceRef="Start_Antragsteller" targetRef="Task_Erstellen" />
+    <bpmn:sequenceFlow id="Flow_AS_2" sourceRef="Task_Erstellen" targetRef="Task_Einreichen" />
+    <bpmn:exclusiveGateway id="Gateway_WartenJoin" />
+    <bpmn:sequenceFlow id="Flow_AS_3" sourceRef="Task_Einreichen" targetRef="Gateway_WartenJoin" />
+    <bpmn:sequenceFlow id="Flow_AS_Join" sourceRef="Gateway_WartenJoin" targetRef="Gateway_Warten" />
+    <bpmn:sequenceFlow id="Flow_AS_ToNachf" sourceRef="Gateway_Warten" targetRef="Event_NachreichenEmpfang" />
+    <bpmn:sequenceFlow id="Flow_AS_ToAbl" sourceRef="Gateway_Warten" targetRef="Event_BescheidAbl" />
+    <bpmn:sequenceFlow id="Flow_AS_ToGen" sourceRef="Gateway_Warten" targetRef="Event_BescheidGen" />
+    <bpmn:sequenceFlow id="Flow_AS_Nachforderung" sourceRef="Event_NachreichenEmpfang" targetRef="Task_Nachreichen" />
+    <bpmn:sequenceFlow id="Flow_AS_Zurueck" sourceRef="Task_Nachreichen" targetRef="Gateway_WartenJoin" />
+    <bpmn:sequenceFlow id="Flow_AS_EndAbl" sourceRef="Event_BescheidAbl" targetRef="End_Abgelehnt" />
+    <bpmn:sequenceFlow id="Flow_AS_EndGen" sourceRef="Event_BescheidGen" targetRef="End_Genehmigt" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Bauamt" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Bauamt">
+      <bpmn:lane id="Lane_Sachbearbeitung" name="Sachbearbeitung">
+        <bpmn:flowNodeRef>Start_Bauamt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PruefenVollst</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Vollst</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Nachforderung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Nachf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_NachreichungEmpfang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_PruefenRecht</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Beteiligung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Empfehlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bescheid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ablehnung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Gen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abl</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Amtsleitung" name="Amtsleitung">
+        <bpmn:flowNodeRef>Gateway_Ausnahme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ausnahme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Entscheidung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Entscheid</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Bauamt" name="Bauantrag eingegangen">
+      <bpmn:messageEventDefinition id="MED_4" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_PruefenVollst" name="Vollstaendigkeit pruefen">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Vollst" name="Vollstaendig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Nachforderung" name="Fehlende Unterlagen nachfordern">
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_NachreichungEmpfang" name="Unterlagen eingegangen">
+      <bpmn:messageEventDefinition id="MED_5" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_PruefenRecht" name="Bauplanungs- und bauordnungsrechtlich pruefen">
+    </bpmn:task>
+    <bpmn:task id="Task_Beteiligung" name="Nachbarn und Fachbehoerden beteiligen">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Ausnahme" name="Ausnahme oder Befreiung noetig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Ausnahme" name="Ausnahme oder Befreiung entscheiden">
+    </bpmn:task>
+    <bpmn:task id="Task_Empfehlung" name="Entscheidungsvorschlag erarbeiten">
+    </bpmn:task>
+    <bpmn:task id="Task_Entscheidung" name="Ueber den Bauantrag entscheiden">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Entscheid" name="Genehmigungsfaehig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Bescheid" name="Baugenehmigung und Gebuehrenbescheid erstellen und zustellen">
+    </bpmn:task>
+    <bpmn:task id="Task_Ablehnung" name="Ablehnungsbescheid erstellen und zustellen">
+    </bpmn:task>
+    <bpmn:endEvent id="End_Gen" name="Genehmigung erteilt">
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Abl" name="Antrag abgelehnt">
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_B_1" sourceRef="Start_Bauamt" targetRef="Task_PruefenVollst" />
+    <bpmn:sequenceFlow id="Flow_B_2" sourceRef="Task_PruefenVollst" targetRef="Gateway_Vollst" />
+    <bpmn:sequenceFlow id="Flow_B_Nein" name="nein" sourceRef="Gateway_Vollst" targetRef="Task_Nachforderung" />
+    <bpmn:sequenceFlow id="Flow_B_Ja" name="ja" sourceRef="Gateway_Vollst" targetRef="Task_PruefenRecht" />
+    <bpmn:exclusiveGateway id="Gateway_Nachf" />
+    <bpmn:sequenceFlow id="Flow_B_NachfGW" sourceRef="Task_Nachforderung" targetRef="Gateway_Nachf" />
+    <bpmn:sequenceFlow id="Flow_B_Warten" sourceRef="Gateway_Nachf" targetRef="Event_NachreichungEmpfang" />
+    <bpmn:sequenceFlow id="Flow_B_Nachr" sourceRef="Event_NachreichungEmpfang" targetRef="Task_PruefenVollst" />
+    <bpmn:sequenceFlow id="Flow_B_3" sourceRef="Task_PruefenRecht" targetRef="Task_Beteiligung" />
+    <bpmn:sequenceFlow id="Flow_B_4" sourceRef="Task_Beteiligung" targetRef="Gateway_Ausnahme" />
+    <bpmn:sequenceFlow id="Flow_B_AusJa" name="ja" sourceRef="Gateway_Ausnahme" targetRef="Task_Ausnahme" />
+    <bpmn:sequenceFlow id="Flow_B_AusNein" name="nein" sourceRef="Gateway_Ausnahme" targetRef="Task_Empfehlung" />
+    <bpmn:sequenceFlow id="Flow_B_5" sourceRef="Task_Ausnahme" targetRef="Task_Empfehlung" />
+    <bpmn:sequenceFlow id="Flow_B_6" sourceRef="Task_Empfehlung" targetRef="Task_Entscheidung" />
+    <bpmn:sequenceFlow id="Flow_B_7" sourceRef="Task_Entscheidung" targetRef="Gateway_Entscheid" />
+    <bpmn:sequenceFlow id="Flow_B_EntJa" name="ja" sourceRef="Gateway_Entscheid" targetRef="Task_Bescheid" />
+    <bpmn:sequenceFlow id="Flow_B_EntNein" name="nein" sourceRef="Gateway_Entscheid" targetRef="Task_Ablehnung" />
+    <bpmn:sequenceFlow id="Flow_B_Abbruch" sourceRef="Gateway_Nachf" targetRef="Task_Ablehnung" />
+    <bpmn:sequenceFlow id="Flow_B_EndGen" sourceRef="Task_Bescheid" targetRef="End_Gen" />
+    <bpmn:sequenceFlow id="Flow_B_EndAbl" sourceRef="Task_Ablehnung" targetRef="End_Abl" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -107,5 +107,20 @@
   "label-on-flow bt F4_g_a",
   "label-on-node F4_g_a g"
  ],
- "demo-notizen": []
+ "demo-notizen": [],
+ "notiz-hund2": [
+  "association-through A_Temp Task_Verwerfen",
+  "node-outside-lane GW_Alle Lane_Melker",
+  "node-outside-lane GW_Fluss Lane_Melker",
+  "node-outside-lane GW_Merge_Ende Lane_Melker",
+  "node-outside-lane GW_Merge_Probe Lane_Labor",
+  "node-outside-lane GW_ParJoin Lane_Melker",
+  "node-outside-lane GW_ParSplit Lane_Melker"
+ ],
+ "notiz-bauantrag": [
+  "association-through As_Ausnahme Gateway_Nachf",
+  "label-on-node Gateway_Ausnahme Task_Beteiligung",
+  "node-outside-lane Gateway_Ausnahme Lane_Amtsleitung",
+  "on-one-line-shared Flow_AS_ToNachf MF_Nachforderung"
+ ]
 }

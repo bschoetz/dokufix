@@ -18,8 +18,8 @@ const names = fixtureNames();
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_COMMAND = path.join(here, 'bpmn-fixtures.mjs'), CAPTURE_COMMAND = path.join(here, 'capture-bpmn.mjs');
 
-test('the fixtures: 55 inputs, each with its five files, the index and the known breaks, nothing else in the folder, raw positions of the pinned Mermaid', () => {
-  assert.equal(names.length, 55);
+test('the fixtures: 57 inputs, each with its five files, the index and the known breaks, nothing else in the folder, raw positions of the pinned Mermaid', () => {
+  assert.equal(names.length, 57);
   const files = fs.readdirSync(FIXTURE_DIR).sort();
   const wanted = ['index.json', 'known-breaks.json', ...names.flatMap(n => FIXTURE_FILES.map(e => n + e))].sort();
   assert.deepEqual(files, wanted);
@@ -50,7 +50,7 @@ test('a difference names the element and the first line that differs', () => {
 
 test('a fixture with text annotations has each measured in every width the layout may take (story 2.31)', () => {
   const withNotes = names.filter(name => readModel(readFixture(name).xml).model.notes.length);
-  assert.deepEqual(withNotes, ['demo5', 'notiz-morgen', 'notiz-zwei', 'notiz-fluss', 'notiz-pool', 'notiz-r12', 'demo-notizen']);
+  assert.deepEqual(withNotes, ['demo5', 'notiz-morgen', 'notiz-zwei', 'notiz-fluss', 'notiz-pool', 'notiz-r12', 'demo-notizen', 'notiz-hund2', 'notiz-bauantrag']);
   for (const name of withNotes){
     const fx = readFixture(name);
     for (const n of readModel(fx.xml).model.notes) for (const w of NOTE_WIDTHS) assert.ok(fx.sizes['note:' + w + ':' + n.text], name + ': ' + w + ' ' + n.text);

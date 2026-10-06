@@ -1,0 +1,142 @@
+{
+ "Melkzeit erreicht": {
+  "w": 89,
+  "h": 15
+ },
+ "Euter gesund?": {
+  "w": 76,
+  "h": 15
+ },
+ "Hündin ruhig?": {
+  "w": 76,
+  "h": 15
+ },
+ "3 Versuche erreicht?": {
+  "w": 58,
+  "h": 29
+ },
+ "Milchfluss ausreichend?": {
+  "w": 70,
+  "h": 29
+ },
+ "Alle Zitzen gemolken?": {
+  "w": 59,
+  "h": 44
+ },
+ "Weitere Hündin wartet?": {
+  "w": 83,
+  "h": 29
+ },
+ "Entzündung abgeklungen?": {
+  "w": 75,
+  "h": 29
+ },
+ "Charge verworfen": {
+  "w": 53,
+  "h": 29
+ },
+ "Temperatur geprüft": {
+  "w": 61,
+  "h": 29
+ },
+ "15 Min abkühlen lassen": {
+  "w": 89,
+  "h": 29
+ },
+ "Menge plausibel?": {
+  "w": 53,
+  "h": 29
+ },
+ "Qualität in Ordnung?": {
+  "w": 55,
+  "h": 44
+ },
+ "Nachprobe bereits genommen?": {
+  "w": 67,
+  "h": 44
+ },
+ "Milch eingelagert": {
+  "w": 60,
+  "h": 29
+ },
+ "Nach 30 Minuten": {
+  "w": 45,
+  "h": 29
+ },
+ "Hündin beißt": {
+  "w": 69,
+  "h": 15
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 23,
+  "h": 15
+ },
+ "note:100:Bei Rötung oder Wärme immer Nein": {
+  "w": 100,
+  "h": 57
+ },
+ "note:150:Bei Rötung oder Wärme immer Nein": {
+  "w": 150,
+  "h": 43
+ },
+ "note:200:Bei Rötung oder Wärme immer Nein": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Bei Rötung oder Wärme immer Nein": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Nur mit Handschuhen": {
+  "w": 100,
+  "h": 43
+ },
+ "note:150:Nur mit Handschuhen": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Nur mit Handschuhen": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Nur mit Handschuhen": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+  "w": 100,
+  "h": 115
+ },
+ "note:150:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+  "w": 150,
+  "h": 72
+ },
+ "note:200:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+  "w": 200,
+  "h": 57
+ },
+ "note:250:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+  "w": 250,
+  "h": 43
+ },
+ "note:100:Kühlkette": {
+  "w": 100,
+  "h": 40
+ },
+ "note:150:Kühlkette": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Kühlkette": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Kühlkette": {
+  "w": 250,
+  "h": 40
+ }
+}

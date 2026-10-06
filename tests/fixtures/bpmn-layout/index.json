@@ -324,6 +324,20 @@
    "shows": [
     "31"
    ]
+  },
+  "notiz-hund2": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/notizen/nz06-hund2.bpmn",
+   "note": "hund2 with four text annotations, one at a boundary event; where no round has a free place, the stripe's place with the fewest faults is taken, below the lane first at a boundary event (review of 2.31)",
+   "shows": [
+    "31"
+   ]
+  },
+  "notiz-bauantrag": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/notizen/nz08-llm-bauantrag.bpmn",
+   "note": "two pools, nine long text annotations, written by an LLM given only the task of a building application and the rule; stripes with the fewest faults, and text annotations that move with the lower pool when the upper one grows in the frame step (shift(); review of 2.31)",
+   "shows": [
+    "31"
+   ]
   }
  }
 }

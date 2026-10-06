@@ -102,7 +102,8 @@ test('what the layout cannot place is left out, with every flow that touches it;
     '<bpmn:dataObjectReference id="DO" dataObjectRef="DOB"/><bpmn:dataObject id="DOB"/><bpmn:dataStoreReference id="DS"/>' +
     '<bpmn:textAnnotation id="N"><bpmn:text>Notiz</bpmn:text></bpmn:textAnnotation><bpmn:association id="AS" sourceRef="T" targetRef="N"/><bpmn:group id="GR"/>' +
     '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="SP"/>' +
-    '<bpmn:sequenceFlow id="F3" sourceRef="B" targetRef="Mahnen"/><bpmn:sequenceFlow id="F4" sourceRef="T" targetRef="SP_T"/></bpmn:process>');
+    '<bpmn:sequenceFlow id="F3" sourceRef="B" targetRef="Mahnen"/><bpmn:sequenceFlow id="F4" sourceRef="T" targetRef="SP_T"/></bpmn:process>' +
+    '<bpmn:process id="Q"><bpmn:task id="QT"/></bpmn:process>');
   const { model, leftOut } = read(xml);
   assert.deepEqual(model.nodes.map(n => n.id), ['S', 'T', 'Mahnen', 'SP']);
   assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2', 'F3']);
@@ -110,8 +111,10 @@ test('what the layout cannot place is left out, with every flow that touches it;
   // A text annotation with its association is read (story 2.31); one without text is left out.
   assert.deepEqual(model.notes, [{ id: 'N', text: 'Notiz', pool: 0 }]);
   assert.deepEqual(model.associations, [{ id: 'AS', note: 'N', partner: 'T', kind: 'node', toNote: true }]);
-  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'DA', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'GR', 'F4']);
+  // A process no participant refers to is named once, after what the collaboration holds (review of 2.31).
+  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'Q', 'DA', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'GR', 'F4']);
   assert.equal(leftOutLine(leftOut[0]), 'textAnnotation KA: has no text');
+  assert.equal(leftOutLine(leftOut[2]), 'process Q: no participant refers to it');
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'SP_T')), 'task SP_T: inside the sub-process SP');
 });
 
@@ -680,6 +683,10 @@ const RULE_CASES = [
   ['R1: a gateway stands in the lane of its nearest predecessor; the way changes lane after the decision', 'gatewayLane',
     [['A', 'S:s:0 T:t:1'], ['B', 'G:x:2 U:t:3 V:t:3 E:e:4']], 'S>T T>G G>U G>V U>E V>E',
     at => at.G.lane === 'A'],
+  // Review of 2.31: the split of x-rg3 (external, so made up here), whose three ways begin in one other lane.
+  ['R1: a split whose three or more ways all begin in one other lane stands in that lane', 'gatewayLane',
+    [['A', 'S:s:0 T:t:1 G:x:2'], ['B', 'X:t:3 Y:t:3 Z:t:3 M:x:4 E:e:5']], 'S>T T>G G>X G>Y G>Z X>M Y>M Z>M M>E',
+    at => at.G.lane === 'B'],
   ['R2: two ways of a decision that go on in one lane never share a row; the other one goes below', 'pathRows',
     [['A', 'S:s:0 G:x:1 T1:t:2 T2:t:3 E1:e:4 U1:t:2 U2:t:3 E2:e:4']], 'S>G G>T1 T1>T2 T2>E1 G>U1 U1>U2 U2>E2',
     at => at.T1.y === at.G.y && at.T2.y === at.G.y && at.U1.y === at.U2.y && at.U1.y > at.G.y],
@@ -701,6 +708,13 @@ const RULE_CASES = [
   ['R11: an end whose row is free to the right stands in the last column', 'endAlign',
     [['A', 'S:s:0 G:x:1 T:t:2 E1:e:3 U:t:2 V:t:3 W:t:4 E2:e:5']], 'S>G G>T T>E1 G>U U>V V>W W>E2',
     at => at.E1.x === at.E2.x && at.E1.y !== at.E2.y],
+  // Review of 2.31: R12 and R16 made up from random processes, as x-rg2 and x-wv6 show them (external inputs).
+  ['R12: where the picture has crossings, a merge is tried in another lane', 'crossProbe',
+    [['A', 'S:s:0 T:t:2 E:e:4'], ['B', 'G:x:1 H:x:2 U:t:2 M:x:3']], 'S>G G>H H>M G>T T>M G>U U>M M>E H>E',
+    at => at.M.lane === 'B'],
+  ['R16: of a gateway and a node below it in one column, the gateway is tried a column further', 'stagger',
+    [['A', 'S:s:0 G:x:1 E:e:5'], ['B', 'T:t:2 X:x:2 M:x:4'], ['C', 'U:x:3']], 'S>G G>T T>U U>M G>X X>M M>E U>E X>E',
+    at => at.X.x !== at.U.x],
   ['R15: the starts of a lane stand left-aligned, each in a row of its own', 'startAlign',
     [['A', 'S1:s:0 S2:s:1 T:t:2 E:e:3']], 'S1>T S2>T T>E',
     at => at.S1.x === at.S2.x && at.S1.y !== at.S2.y],
@@ -906,7 +920,8 @@ const boxedFixture = (name, order) => {
   // The fixture's raw positions by id, under the keys the nodes get here; Q's nodes from column 0.
   const own = new Map(readModel(fx.xml).model.nodes.map(n => [n.id, fx.raw.nodes[n.key]]));
   const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, own.get(n.id) || { cx: n.id === 'QS' ? 0 : 100, cy: 0, w: 50, h: 50 }])) };
-  const di = layoutGeometry(model, raw, t => fx.sizes[t] || labelSize(t));
+  // A text annotation is measured in a width (story 2.31).
+  const di = layoutGeometry(model, raw, measureOf(fx.sizes, 'measured'));
   return model.pools.map(p => [p.id, di.pools[p.id]]);
 };
 const gapsOf = frames => frames.slice(1).map(([, f], i) => f[1] - (frames[i][1][1] + frames[i][1][3]));
@@ -923,12 +938,13 @@ test('a pool below one that grows down keeps its height: its labels move with it
 });
 
 test('a black box on top of a pool whose lanes grow upward: the pool moves down, the box keeps its gap (review of story 2.29)', () => {
-  // r12's top lane grows for its labels; hund2's lanes grow for labels across a border (labelRoom()).
-  for (const name of ['r12', 'hund2']) assert.deepEqual(gapsOf(boxedFixture(name, ['B', 'P'])), [40], name);
+  // r12's top lane grows for its labels; hund2's lanes grow for labels across a border (labelRoom()); notiz-r12's lane
+  // grows by a stripe for its text annotation (review of 2.31).
+  for (const name of ['r12', 'hund2', 'notiz-r12']) assert.deepEqual(gapsOf(boxedFixture(name, ['B', 'P'])), [40], name);
 });
 
 test('a black box between two pools and below one whose lanes grow keeps its gaps (review of story 2.29)', () => {
-  for (const name of ['r12', 'hund2']){
+  for (const name of ['r12', 'hund2', 'notiz-r12']){
     assert.deepEqual(gapsOf(boxedFixture(name, ['P', 'B'])), [40], name + ' box below');
     assert.deepEqual(gapsOf(boxedFixture(name, ['P', 'B', 'Q'])), [40, 40], name + ' box between');
     assert.deepEqual(gapsOf(boxedFixture(name, ['Q', 'B', 'P'])), [40, 40], name + ' box between, the growing pool below');
