@@ -5,8 +5,9 @@
 //
 //   1. readProcess() reads the XML into its pools, each with its lanes, flow
 //      nodes and sequence flows, a black box without lanes (story 2.29), the
-//      events on an activity's border with their host (story 2.30), and the
-//      message flows between pools, or refuses with the reason
+//      events on an activity's border with their host (story 2.30), the
+//      message flows between pools, and the text annotations with their
+//      associations (story 2.31), or refuses with the reason
 //   2. mermaidSource() writes that as Mermaid swimlane-beta text, with ids
 //      of its own (n1…, l1…), so that Mermaid never sees the author's ids
 //   3. Mermaid renders it off-screen (src/app/bpmn.js, the one part that needs
@@ -16,7 +17,8 @@
 //      lanes, and rows within each lane. The rules R1–R16 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
 //      the labels get their places, in the size the page measures for them
-//      (bpmn-js's text renderer) or, without a page, as estimated
+//      (bpmn-js's text renderer) or, without a page, as estimated; the text
+//      annotations last, each beside what it comments, no node moved for it
 //   5. appendDiagram() writes the result as a diagram part (BPMN-DI) into the
 //      author's XML, before its closing definitions tag; a node a rule put in
 //      another lane moves there in the lane set too, nothing else changes
@@ -25,10 +27,12 @@
 // step 5 exactly as it draws XML that came with coordinates.
 //
 // What the layout cannot place is left out, and the rest is laid out and
-// drawn (Ben, 2026-10-03): text annotations, data objects and stores,
-// associations, groups, parent lanes of nested lanes, the content of a
-// sub-process, a boundary event on what is no activity laid out, a message
-// flow at a boundary event, and every flow that touches one of them. readProcess() lists
+// drawn (Ben, 2026-10-03): data objects and stores, groups, parent lanes of
+// nested lanes, the content of a sub-process, a boundary event on what is no
+// activity laid out, a message flow at a boundary event, a text annotation
+// without text or without an association to something laid out, an
+// association without a text annotation at one end, and every flow that
+// touches one of them. readProcess() lists
 // them; the page names each on the console, not in the document.
 //
 // Pure logic: no page, no library. The XML comes in as a parsed document; the
@@ -126,6 +130,12 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //            flows between two pools laid out, each end a flow node or a
 //            participant; fromPool, toPool: where an end is a participant,
 //            the index of its pool
+//     notes: [{ id, text, pool }], the text annotations (story 2.31): text,
+//            their text, the author's line breaks kept; pool, the index of the
+//            pool of their first association's partner, null at a message flow
+//     associations: [{ id, note, partner, kind, toNote }], each from a text
+//            annotation to its partner: kind node, boundary, flow, message or
+//            pool; toNote where the text annotation is the target
 //     insert: null, or where processes have no collaboration (Ben,
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
@@ -148,12 +158,12 @@ export function readProcess(doc){
   const collaboration = participants.length ? participants[0].parentElement : null;
   // The text annotations and associations of the collaboration and of each process, read once the pools are (story 2.31).
   const noted = [];
-  const noteSlot = (el, pool) => { const slot = { id: attr(el, 'id'), tag: local(el), reason: null }; leftOut.push(slot); noted.push({ el, pool, slot }); };
+  const noteSlot = el => { const slot = { id: attr(el, 'id'), tag: local(el), reason: null }; leftOut.push(slot); noted.push({ el, slot }); };
   // A message flow keeps its place in the list; whether it is left out is known once the pools are read.
   const slots = new Map();
   if (collaboration) for (const el of kids(collaboration)){
     if (local(el) === 'messageFlow'){ slots.set(el, { id: attr(el, 'id'), tag: 'messageFlow', reason: null }); leftOut.push(slots.get(el)); }
-    else if (NOTED.has(local(el))) noteSlot(el, null);
+    else if (NOTED.has(local(el))) noteSlot(el);
     else if (LEFT_OUT.has(local(el))) leave(el, 'not laid out');
   }
 
@@ -168,7 +178,7 @@ export function readProcess(doc){
   const byId = new Map(), poolOfNode = new Map();
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
-    const own = readPool(proc, participant, nodes, lanes, leave, el => noteSlot(el, pools.length));
+    const own = readPool(proc, participant, nodes, lanes, leave, noteSlot);
     // A participant without a process of its own (a black box) is a pool without lanes (story 2.29).
     if (!own && participant && attr(participant, 'id')){ pools.push({ id: attr(participant, 'id'), name: clean(attr(participant, 'name')), el: participant, proc, box: true }); continue; }
     if (!own){ blackBoxes.push({ participant, proc }); continue; }
@@ -224,22 +234,22 @@ export function readProcess(doc){
   return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, insert }, leftOut };
 }
 
-// The text annotations and their associations (story 2.31): noted, [{ el, pool, slot }] in the order of the XML, pool
-// the index of the pool whose process holds it (null in the collaboration), slot its entry in leftOut, whose reason
-// stays null where it is laid out. An association with a text annotation at one end and at the other a flow node, a
+// The text annotations and their associations (story 2.31): noted, [{ el, slot }] in the order of the XML, slot its
+// entry in leftOut, whose reason stays null where it is laid out. A text annotation's pool is that of the partner of its
+// first association (a message flow: none). An association with a text annotation at one end and at the other a flow node, a
 // boundary event, a sequence or message flow, or a pool laid out is kept; the rest is left out. A text annotation
-// without an association kept is left out (NOTES.lone 'weglassen') or kept in its pool.
+// without text, or without an association kept, is left out (Ben, 2026-10-06).
 function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages }){
   const notes = [], associations = [];
   const poolIndex = new Map(pools.map((p, i) => [p.id, i]).filter(([id]) => id));
   const boundaryOf = new Map(boundaries.map(b => [b.id, b]));
   const flowOf = new Map(flows.map(f => [f.id, f])), messageOf = new Map(messages.map(m => [m.id, m]));
-  const texts = new Map();
-  for (const { el, pool, slot } of noted) if (local(el) === 'textAnnotation'){
+  const texts = new Map(), empty = new Set();
+  for (const { el, slot } of noted) if (local(el) === 'textAnnotation'){
     if (!attr(el, 'id')) slot.reason = 'has no id';
     // A text annotation without text is no comment (Ben, 2026-10-06, nz13-rg1: Signavio's IT-system markers).
-    else if (!noteText(el)) slot.reason = 'has no text';
-    else texts.set(attr(el, 'id'), { el, pool, slot });
+    else if (!noteText(el)){ slot.reason = 'has no text'; empty.add(attr(el, 'id')); }
+    else texts.set(attr(el, 'id'), { el, slot });
   }
   // The other end: its kind and the pool it lies in (a message flow in none).
   const partnerOf = id => byId.has(id) ? { kind: 'node', pool: poolOfNode.get(id) }
@@ -254,22 +264,19 @@ function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages
     const note = texts.has(from) && !texts.has(to) ? from : texts.has(to) && !texts.has(from) ? to : null;
     const other = note === from ? to : from, partner = note && partnerOf(other);
     if (!id) slot.reason = 'has no id';
+    else if (!note && (empty.has(from) || empty.has(to))) slot.reason = 'its text annotation ' + (empty.has(from) ? from : to) + ' has no text';
     else if (!note) slot.reason = texts.has(from) ? 'between two text annotations' : 'has no text annotation at either end';
     else if (!partner) slot.reason = 'touches ' + (other || 'nothing') + ', which is not laid out';
     else {
-      associations.push({ id, note, partner: other, kind: partner.kind, ...(note === to ? { toNote: true } : {}), slot });
+      associations.push({ id, note, partner: other, kind: partner.kind, ...(note === to ? { toNote: true } : {}) });
       if (!linked.has(note)) linked.set(note, partner.pool);
     }
   }
-  for (const [id, { el, pool, slot }] of texts){
-    const at = linked.has(id) ? linked.get(id) : pool;
-    if (!linked.has(id) && NOTES.lone === 'weglassen') slot.reason = 'has no association to anything laid out';
-    else if (!linked.has(id) && (at === null || pools[at].box)) slot.reason = 'has no association, and no pool laid out holds it';
-    else notes.push({ id, text: noteText(el), pool: at });
+  for (const [id, { el, slot }] of texts){
+    if (!linked.has(id)) slot.reason = 'has no association to anything laid out';
+    else notes.push({ id, text: noteText(el), pool: linked.get(id) });
   }
-  // An association whose text annotation is left out goes with it.
-  for (let i = associations.length - 1; i >= 0; i--) if (!notes.some(n => n.id === associations[i].note)) associations[i].slot.reason = 'its text annotation ' + associations[i].note + ' is left out';
-  return { notes, associations: associations.filter(a => a.slot.reason === null).map(({ slot, ...a }) => a) };
+  return { notes, associations };
 }
 
 // The flow nodes, lanes and sequence flows of one pool's process, keyed on
@@ -656,7 +663,9 @@ export function labelPlaces(c, size, gateway){
 // A text annotation keeps NOTE_GAP from its partner, room for its association that the eye can follow (Ben,
 // 2026-10-06, nz02-fluss: "Zeile muss höher sein, damit genug platz ist für die Verbindung"; bpmn-js keeps 50 too).
 const NOTE_GAP = 50;
-// The sides in the order they are tried after the one NOTES.place names: right of the partner first (Ben, 2026-10-06,
+// What a text annotation keeps off symbols, flows, labels and other text annotations.
+const NOTE_CLEAR = 6;
+// The sides in the order they are tried: right of the partner first (Ben, 2026-10-06,
 // nz03-pool, nz06-hund2: "Kommentare rechts vom Ziel …; in manchen Diagrammen geht es einfach nicht, dann ist es schon
 // ok, wenn der Kommentar links vom Ziel steht").
 const NOTE_SIDES = ['rechts', 'oben-rechts', 'unten-rechts', 'oben', 'unten', 'oben-links', 'unten-links', 'links'];
@@ -674,10 +683,10 @@ export function noteSize(text, measure = labelSize){
 }
 
 // The places a text annotation of size { w, h } may take beside c ({ cx, cy, w, h }, a symbol or, w and h 0, a point
-// on a flow), far px further out than the nearest, in the order they are tried: the side NOTES.place names first, then
-// the others; above and below centred first, then moved right and left, beside right and left level first, then
-// moved down and up, so that the association can stand beside a flow's end in the middle. Each [x, y, w, h].
-export function notePlaces(c, size, first = NOTES.place, far = 0){
+// on a flow), far px further out than the nearest, in the order of NOTE_SIDES; above and below centred first, then
+// moved right and left, beside right and left level first, then moved down and up, so that the association can stand
+// beside a flow's end in the middle. Each [x, y, w, h].
+export function notePlaces(c, size, far = 0){
   const { w, h } = size;
   const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w, c.cx - w + 20, c.cx - 20], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
   const d = NOTE_GAP / 2 + far;
@@ -691,8 +700,7 @@ export function notePlaces(c, size, first = NOTES.place, far = 0){
     'rechts': ys.map(y => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
     'links': ys.map(y => [c.cx - c.w / 2 - NOTE_GAP - far - w, y]),
   })[side];
-  const order = [first, ...NOTE_SIDES.filter(x => x !== first)];
-  return order.flatMap(side => at(side).map(p => [...p.map(R), w, h]));
+  return NOTE_SIDES.flatMap(side => at(side).map(p => [...p.map(R), w, h]));
 }
 
 // The shape of an association's partner: { kind: 'rect' | 'circle' | 'diamond' | 'point', cx, cy, w, h }.
@@ -717,50 +725,27 @@ function edgeAt(s, v, dir, across){
 
 // The waypoints of an association from a text annotation's box n ([x, y, w, h]) to its partner's shape s. A box
 // right of the partner: from the middle of its bracket, its left edge (Ben, 2026-10-06: "verbindungslinie auf die
-// Bracket gerichtet"), across where the partner reaches that height, else, line 'gerade', straight to the partner's
-// outline, or, 'winklig', across to above or below the partner's middle and down or up to it. Otherwise, line
-// 'gerade', from the middle of the box's side facing the partner (Ben, 2026-10-06, nz05-r12: "wenn wir nicht die
+// Bracket gerichtet"), across where the partner reaches that height, else straight to the partner's outline.
+// Otherwise from the middle of the box's side facing the partner (Ben, 2026-10-06, nz05-r12: "wenn wir nicht die
 // Bracket verbinden können, dann den Text möglichst mittig mit der Linie ansteuern") to the partner's nearest point:
 // on a task's facing side ATTACH_CLEARANCE from its corners where the side allows, on an event's or a gateway's
-// outline towards that middle; or, 'winklig', straight down, up or across where the two overlap, else right-angled as
-// above from the side facing the partner. [[x, y], …].
-export function associationWay(n, s, line = NOTES.line){
+// outline towards that middle. [[x, y], …].
+export function associationWay(n, s){
   const [x, y, w, h] = n, mx = x + w / 2, my = y + h / 2;
   const sx1 = s.cx - s.w / 2, sx2 = s.cx + s.w / 2, sy1 = s.cy - s.h / 2, sy2 = s.cy + s.h / 2;
   if (x >= sx2 + 1){
     // The height rounded first, the end towards the partner's middle, so that it lies on the outline, not beside it.
     if (my >= sy1 && my <= sy2){ const v = R(my); return [[R(x), v], [Math.floor(edgeAt(s, v, 1, true)), v]]; }
-    if (line === 'winklig') return [[x, my], [s.cx, my], [s.cx, edgeAt(s, s.cx, my < s.cy ? -1 : 1, false)]].map(p => p.map(R));
     const b = outline(s, x, my);
     return [[x, my], [b.x, b.y]].map(p => p.map(R));
   }
-  if (line !== 'winklig'){
-    // The side of the box facing the partner: above or below it where they overlap across, else beside it.
-    const across = Math.min(x + w, sx2) - Math.max(x, sx1) > 0 || !(Math.min(y + h, sy2) - Math.max(y, sy1) > 0) && Math.abs(my - s.cy) - h / 2 >= Math.abs(mx - s.cx) - w / 2;
-    const a = across ? { x: mx, y: my < s.cy ? y + h : y } : { x: mx < s.cx ? x + w : x, y: my };
-    const clamp = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v));
-    const b = s.kind === 'rect'
-      ? (across ? { x: clamp(a.x, sx1 + ATTACH_CLEARANCE, sx2 - ATTACH_CLEARANCE), y: my < s.cy ? sy1 : sy2 } : { x: mx < s.cx ? sx1 : sx2, y: clamp(a.y, sy1 + ATTACH_CLEARANCE, sy2 - ATTACH_CLEARANCE) })
-      : outline(s, a.x, a.y);
-    return [[a.x, a.y], [b.x, b.y]].map(p => p.map(R));
-  }
-  const pick = (a1, a2, b1, b2, c) => c >= a1 && c <= a2 ? c : (Math.max(a1, b1) + Math.min(a2, b2)) / 2;
-  // Straight down or up where the two overlap by 10 px or more (a point: where the box reaches it).
-  const reach = s.kind === 'point' ? 0 : 10;
-  if (Math.min(x + w, sx2) - Math.max(x, sx1) >= reach){
-    const v = pick(x, x + w, sx1, sx2, s.cx), dir = my < s.cy ? -1 : 1;
-    return [[v, dir < 0 ? y + h : y], [v, edgeAt(s, v, dir, false)]].map(p => p.map(R));
-  }
-  if (Math.min(y + h, sy2) - Math.max(y, sy1) >= reach){
-    const v = pick(y, y + h, sy1, sy2, s.cy), dir = mx < s.cx ? -1 : 1;
-    return [[dir < 0 ? x + w : x, v], [edgeAt(s, v, dir, true), v]].map(p => p.map(R));
-  }
-  if (line === 'winklig'){
-    const sx = mx < s.cx ? x + w : x, dir = my < s.cy ? -1 : 1;
-    return [[sx, my], [s.cx, my], [s.cx, edgeAt(s, s.cx, dir, false)]].map(p => p.map(R));
-  }
-  const box = { kind: 'rect', cx: mx, cy: my, w, h };
-  const a = outline(box, s.cx, s.cy), b = outline(s, mx, my);
+  // The side of the box facing the partner: above or below it where they overlap across, else beside it.
+  const across = Math.min(x + w, sx2) - Math.max(x, sx1) > 0 || !(Math.min(y + h, sy2) - Math.max(y, sy1) > 0) && Math.abs(my - s.cy) - h / 2 >= Math.abs(mx - s.cx) - w / 2;
+  const a = across ? { x: mx, y: my < s.cy ? y + h : y } : { x: mx < s.cx ? x + w : x, y: my };
+  const clamp = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v));
+  const b = s.kind === 'rect'
+    ? (across ? { x: clamp(a.x, sx1 + ATTACH_CLEARANCE, sx2 - ATTACH_CLEARANCE), y: my < s.cy ? sy1 : sy2 } : { x: mx < s.cx ? sx1 : sx2, y: clamp(a.y, sy1 + ATTACH_CLEARANCE, sy2 - ATTACH_CLEARANCE) })
+    : outline(s, a.x, a.y);
   return [[a.x, a.y], [b.x, b.y]].map(p => p.map(R));
 }
 
@@ -846,11 +831,6 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
 });
 
-// The text annotations (story 2.31), for Ben's choice on the feedback page: room 'suchen' (a free place near the
-// partner, else beyond its lane's border, which grows) or 'streifen' (the place chosen, a stripe opened across the
-// pool where it is taken); place 'rechts' (Ben, 2026-10-06), 'oben-rechts' (as bpmn-js places one), 'unten-rechts', 'oben', 'unten'; line 'gerade'
-// (straight, slanted where it must) or 'winklig' (right angles); lone 'weglassen' or 'oben-links' (top left in its pool).
-export const NOTES = { room: 'suchen', place: 'rechts', line: 'gerade', lone: 'weglassen' };
 
 // The grid's measures.
 const GAP_BASE = 48;        // a gap between columns without tracks
@@ -2751,11 +2731,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
   // The text annotations (story 2.31), each beside the partner of its first association, after the labels, keeping
   // off every symbol, piece of a flow, label and text annotation placed before it, its association off symbols and
-  // labels: the first free place of notePlaces(); where none is free, NOTES.room 'streifen' opens a stripe across
-  // the pools above or below the partner (everything beyond it moves away), and otherwise, or where no stripe helps,
-  // it goes beyond the border of its partner's lane, which grows below as for a label. A text annotation at a pool
-  // stands right of its frame, once that is done; one without an association (NOTES.lone 'oben-links') above the
-  // top left of its pool's first lane.
+  // labels: the first free place of notePlaces() in the rounds NOTE_ROUNDS; where none is free, at the border of its
+  // partner's lane, which grows there. A text annotation at a pool stands right of its frame, once that is done.
   const notes = model.notes || [], assocs = model.associations || [];
   const notePool = new Map();
   // Per text annotation at a flow the point it was placed for, relative to its box: the association ends on the flow
@@ -2798,12 +2775,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     for (const n of notes){
       notePool.set(n.id, n.pool ?? undefined);
       const size = noteSize(n.text, measure), a = assocs.find(x => x.note === n.id);
-      if (a && a.kind === 'pool') continue;
-      if (!a){
-        const lb = laneBox[model.lanes.find(l => (l.pool ?? 0) === n.pool).key];
-        add(n, [R(lb[0] + 8), R(lb[1] - size.h - LABEL_GAP), size.w, size.h], { x: lb[0], y: lb[1] + 1 });
-        continue;
-      }
+      if (a.kind === 'pool') continue;
       // At a flow: points on it, the middles of its horizontal pieces first, longest first, then of the others; on a
       // piece longer than 160 px also a quarter in from either end.
       const anchors = [];
@@ -2818,36 +2790,20 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       const others = () => [...symbols.filter(b => !nodeOf.has(a.partner) || b !== di.nodes[a.partner]), ...taken];
       // A flow's own pieces are where its association ends.
       const foreign = () => nodeOf.has(a.partner) ? segments : routes.filter(r => r.f.id !== a.partner).flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
-      // Free: the box on nothing, its association through no symbol, label or text annotation and along no flow;
-      // crossing none, where the round has such a place.
-      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken]) === 0 && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
+      // Free: the box NOTE_CLEAR off everything (its bracket on a flow's line reads as one line with it), its association
+      // through no symbol, label or text annotation and along no flow; crossing none, where the round has such a place.
+      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken], NOTE_CLEAR) === 0 && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
       let place = null, anchor = anchors[0];
       rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors){
-        place = notePlaces(centre(an), size, NOTES.place, far).find(p => clear(p, an, crossing));
+        place = notePlaces(centre(an), size, far).find(p => clear(p, an, crossing));
         if (place){ anchor = an; break rounds; }
       }
-      const own = di.labels[a.partner];
-      const flat = anchors.find(an => 'cy' in an || an.level);
-      if (!place && NOTES.room === 'streifen' && flat){
-        anchor = flat;
-        const c = centre(anchor);
-        const down = NOTES.place === 'unten';
-        const top = Math.min(c.cy - c.h / 2, ...(own && own[1] < c.cy ? [own[1]] : []));
-        const bottom = Math.max(c.cy + c.h / 2, ...(own && own[1] > c.cy ? [own[1] + own[3]] : []));
-        const cut = down ? bottom + 1 : top - 1;
-        openStripe(cut, size.h + NOTE_GAP + 4, 'cy' in anchor ? [] : [anchor]);
-        const y = R(down ? bottom + NOTE_GAP : cut + 3);
-        const right = NOTES.place === 'oben-rechts' || NOTES.place === 'rechts';
-        const xs = right ? [c.cx + c.w / 2 + 10, c.cx - size.w / 2, c.cx - c.w / 2 - 10 - size.w] : [c.cx - size.w / 2, c.cx + c.w / 2 + 10, c.cx - c.w / 2 - 10 - size.w];
-        const tries = xs.map(x => [R(x), y, size.w, size.h]);
-        place = tries.find(p => clear(p, anchor, true)) || tries[0];
-      }
       // At the border of the partner's lane, which grows there by a stripe across the pools (everything beyond moves
-      // away): above first, below first for NOTES.place 'unten' and an event on an activity's lower edge. The first
+      // away): above first, below first for an event on an activity's lower edge. The first
       // place whose association keeps off symbols, labels, text annotations and flows within the lane, and that no
       // flow crosses the stripe at; else the one with the fewest of these faults, the nearest first.
       if (!place){
-        const below = NOTES.place === 'unten' || a.kind === 'boundary';
+        const below = a.kind === 'boundary';
         let first = null, least = Infinity;
         for (const down of [below, !below]) for (const an of anchors){
           if (place) break;
@@ -2856,8 +2812,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
           const cut = down ? lane[1] + lane[3] : lane[1];
           const inLane = b => b[1] + b[3] / 2 >= lane[1] && b[1] + b[3] / 2 <= lane[1] + lane[3];
           const step = size.w + 10;
-          const xs = (NOTES.place === 'oben-rechts' || NOTES.place === 'rechts' ? [c.cx + c.w / 2 + 10, c.cx + 10, c.cx - size.w / 2, c.cx - 10 - size.w] : [c.cx - size.w / 2, c.cx + 10, c.cx - 10 - size.w, c.cx + c.w / 2 + 10])
-            .concat([1, -1, 2, -2].map(k => c.cx - size.w / 2 + k * step));
+          const xs = [c.cx + c.w / 2 + 10, c.cx + 10, c.cx - size.w / 2, c.cx - 10 - size.w].concat([1, -1, 2, -2].map(k => c.cx - size.w / 2 + k * step));
           for (const x of xs){
             // In the stripe, NOTE_GAP / 2 below the border.
             const p = [R(x), R(cut + NOTE_GAP / 2), size.w, size.h];
@@ -2881,7 +2836,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
           const d = size.h + NOTE_GAP;
           openStripe(t.cut, d, 'cy' in anchor ? [] : [anchor], t.lane);
           place = t.p;
-        } else place = bestPlace(NOTE_ROUNDS.flatMap(far => notePlaces(centre(anchor), size, NOTES.place, far)), [...symbols, ...segments, ...taken]);
+        } else place = bestPlace(NOTE_ROUNDS.flatMap(far => notePlaces(centre(anchor), size, far)), [...symbols, ...segments, ...taken]);
       }
       if (!('cy' in anchor)) aimOf.set(n.id, { dx: anchor.x - place[0], dy: anchor.y - place[1] });
       add(n, place, anchor);

@@ -21,7 +21,9 @@ import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, DEFAULT_RULES,
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, dedupe, orthogonal,
   growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_NOTHING, layoutStrayText,
+  noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS,
 } from '../src/app/bpmn-layout.js';
+import { breaksOf } from './bpmn-rules.mjs';
 import { readFixture, readModel } from './bpmn-fixtures.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -105,7 +107,11 @@ test('what the layout cannot place is left out, with every flow that touches it;
   assert.deepEqual(model.nodes.map(n => n.id), ['S', 'T', 'Mahnen', 'SP']);
   assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2', 'F3']);
   assert.deepEqual(model.boundaries, [{ id: 'B', name: '', host: 'T', cancel: true }]);
-  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'DA', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'N', 'AS', 'GR', 'F4']);
+  // A text annotation with its association is read (story 2.31); one without text is left out.
+  assert.deepEqual(model.notes, [{ id: 'N', text: 'Notiz', pool: 0 }]);
+  assert.deepEqual(model.associations, [{ id: 'AS', note: 'N', partner: 'T', kind: 'node', toNote: true }]);
+  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'DA', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'GR', 'F4']);
+  assert.equal(leftOutLine(leftOut[0]), 'textAnnotation KA: has no text');
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'SP_T')), 'task SP_T: inside the sub-process SP');
 });
 
@@ -1205,4 +1211,161 @@ test('a boundary event of a process with nothing else to lay out is named on the
   const { leftOut } = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="Q" processRef="R"/></bpmn:collaboration>' +
     '<bpmn:process id="P">' + LINE + '</bpmn:process><bpmn:process id="R"><bpmn:boundaryEvent id="B" attachedToRef="X"/></bpmn:process>'));
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'B')), 'boundaryEvent B: attached to X, which is not laid out');
+});
+
+// ---------- text annotations (story 2.31) ----------
+// A process (or, with collab, a collaboration around it and further processes) laid out with Mermaid's columns made
+// up, per node id its column; the breaks of the rules that concern text annotations.
+function notesLaid(body, cols, collab = null){
+  const xml = xmlOf((collab || '') + (collab ? '' : '<bpmn:process id="P">' + body + '</bpmn:process>'));
+  const { model, leftOut } = read(collab ? xmlOf(collab) : xml);
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: cols[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
+  const di = layoutGeometry(model, raw);
+  const out = appendDiagram(collab ? xmlOf(collab) : xml, model, di).xml;
+  return { model, leftOut, di, xml: out, breaks: breaksOf(out, model).filter(b => /^(note|association)-/.test(b)) };
+}
+const note = (id, text) => '<bpmn:textAnnotation id="' + id + '"><bpmn:text>' + text + '</bpmn:text></bpmn:textAnnotation>';
+const assoc = (id, from, to) => '<bpmn:association id="' + id + '" sourceRef="' + from + '" targetRef="' + to + '"/>';
+const LINE_COLS = { S: 0, T: 1, E: 2 };
+
+test('text annotations are read with their text, line breaks kept; an association either way, at a node, an event, a flow', () => {
+  const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/>' +
+    '<bpmn:textAnnotation id="N1"><bpmn:text>  erste Zeile  \n  zweite   Zeile </bpmn:text></bpmn:textAnnotation>' + note('N2', 'am Fluss') + note('N3', 'am Ereignis') +
+    assoc('A1', 'T', 'N1') + assoc('A2', 'N2', 'F1') + assoc('A3', 'N3', 'B') + '</bpmn:process>'));
+  assert.deepEqual(model.notes, [{ id: 'N1', text: 'erste Zeile\nzweite Zeile', pool: 0 }, { id: 'N2', text: 'am Fluss', pool: 0 }, { id: 'N3', text: 'am Ereignis', pool: 0 }]);
+  assert.deepEqual(model.associations, [
+    { id: 'A1', note: 'N1', partner: 'T', kind: 'node', toNote: true }, { id: 'A2', note: 'N2', partner: 'F1', kind: 'flow' }, { id: 'A3', note: 'N3', partner: 'B', kind: 'boundary' }]);
+  assert.deepEqual(leftOut, []);
+});
+
+test('in a collaboration: a text annotation at a pool, at a black box, at a message flow; Mermaid never sees one', () => {
+  const collab = '<bpmn:collaboration id="K"><bpmn:participant id="PA" name="A" processRef="P"/><bpmn:participant id="PB" name="Bank"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="T" targetRef="PB"/>' + note('N1', 'Vertrag') + assoc('A1', 'PA', 'N1') + note('N2', 'Nur SEPA') + assoc('A2', 'N2', 'PB') +
+    note('N3', 'per EDI') + assoc('A3', 'M', 'N3') + '</bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>';
+  const { model } = read(xmlOf(collab));
+  assert.deepEqual(model.associations.map(a => [a.id, a.kind]), [['A1', 'pool'], ['A2', 'pool'], ['A3', 'message']]);
+  assert.deepEqual(model.notes.map(n => [n.id, n.pool]), [['N1', 0], ['N2', 1], ['N3', null]]);
+  const plain = read(xmlOf(collab.replace(/<bpmn:textAnnotation[^]*?<\/bpmn:textAnnotation>|<bpmn:association [^>]*\/>/g, ''))).model;
+  assert.equal(mermaidSource(model), mermaidSource(plain));
+});
+
+test('what is no comment is left out, saying why: no text, no association, an association between two annotations or none', () => {
+  const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:task id="K" isForCompensation="true"/><bpmn:boundaryEvent id="B" attachedToRef="T"><bpmn:compensateEventDefinition id="CD"/></bpmn:boundaryEvent>' +
+    '<bpmn:textAnnotation id="Leer"/>' + assoc('AL', 'Leer', 'T') + note('Allein', 'ohne Linie') + note('X', 'x') + note('Y', 'y') + assoc('AXY', 'X', 'Y') +
+    assoc('AK', 'B', 'K') + note('Z', 'zu nichts') + assoc('AZ', 'Z', 'Nichts') +
+    '<bpmn:subProcess id="SP"><bpmn:task id="I"/>' + note('IN', 'innen') + assoc('IA', 'I', 'IN') + '</bpmn:subProcess></bpmn:process>'));
+  assert.deepEqual(model.notes, []);
+  assert.deepEqual(leftOut.map(leftOutLine), [
+    'textAnnotation Leer: has no text', 'association AL: its text annotation Leer has no text',
+    'textAnnotation Allein: has no association to anything laid out', 'textAnnotation X: has no association to anything laid out',
+    'textAnnotation Y: has no association to anything laid out', 'association AXY: between two text annotations',
+    'association AK: has no text annotation at either end', 'textAnnotation Z: has no association to anything laid out', 'association AZ: touches Nichts, which is not laid out',
+    'task I: inside the sub-process SP', 'textAnnotation IN: inside the sub-process SP', 'association IA: inside the sub-process SP']);
+});
+
+test('a text annotation stands right of its task first, 50 px off; its association runs level to the middle of its bracket', () => {
+  // The task last, so that right of it is free.
+  const { di, xml, breaks } = notesLaid('<bpmn:startEvent id="S"/><bpmn:task id="T" name="Tun"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/>' +
+    note('N', 'Checkliste') + assoc('A', 'T', 'N'), { S: 0, T: 1 });
+  const t = bx(di.nodes.T), n = bx(di.notes.N);
+  assert.equal(n.x, t.right + 50);
+  assert.equal(n.cy, t.cy);
+  // From its source, the task, to its target, the note's bracket.
+  assert.deepEqual(di.associations.A, [[t.right, n.cy], [n.x, n.cy]]);
+  assert.match(xml, /<bpmndi:BPMNShape id="N_di" bpmnElement="N"><dc:Bounds x="\d+" y="\d+" width="\d+" height="\d+"\/><\/bpmndi:BPMNShape>/);
+  assert.match(xml, /<bpmndi:BPMNEdge id="A_di" bpmnElement="A"><di:waypoint x="\d+" y="\d+"\/><di:waypoint x="\d+" y="\d+"\/><\/bpmndi:BPMNEdge>/);
+  assert.deepEqual(breaks, []);
+});
+
+test('text annotations without coordinates leave every input without one as it was', () => {
+  const body = LINE + '<bpmn:task id="X" name="Weiter"/><bpmn:sequenceFlow id="F3" sourceRef="E" targetRef="X"/>'.replace(/E" targetRef="X"/, 'T" targetRef="X"');
+  const plain = notesLaid(body, { ...LINE_COLS, X: 2 });
+  assert.equal(plain.di.notes, undefined);
+  const withNote = notesLaid(body + note('N', 'n') + assoc('A', 'X', 'N'), { ...LINE_COLS, X: 2 });
+  assert.deepEqual(withNote.di.nodes, plain.di.nodes, 'the symbols stand where they stood');
+});
+
+test('two text annotations at one task, at a gateway with a label, at an event: none on another, none on a label', () => {
+  const body = '<bpmn:startEvent id="S" name="Los"/><bpmn:task id="T" name="Prüfen"/><bpmn:exclusiveGateway id="G" name="Eilig?"/><bpmn:task id="A" name="Sofort"/>' +
+    '<bpmn:task id="B" name="Einplanen"><bpmn:standardLoopCharacteristics id="LC"/></bpmn:task><bpmn:endEvent id="E" name="Erledigt"/>' +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="G"/><bpmn:sequenceFlow id="F3" sourceRef="G" targetRef="A" name="ja"/>' +
+    '<bpmn:sequenceFlow id="F4" sourceRef="G" targetRef="B" name="nein"/><bpmn:sequenceFlow id="F5" sourceRef="A" targetRef="E"/><bpmn:sequenceFlow id="F6" sourceRef="B" targetRef="E"/>' +
+    note('N1', 'Checkliste A verwenden') + assoc('A1', 'T', 'N1') + note('N2', 'Bei Großkunden zusätzlich Vertrag prüfen') + assoc('A2', 'T', 'N2') +
+    note('N3', 'Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert.') + assoc('A3', 'N3', 'G') +
+    note('N4', 'Wöchentlich') + assoc('A4', 'B', 'N4') + note('N5', 'Kunde per Mail informieren') + assoc('A5', 'E', 'N5');
+  const { di, breaks } = notesLaid(body, { S: 0, T: 1, G: 2, A: 3, B: 3, E: 4 });
+  assert.deepEqual(breaks, []);
+  assert.equal(Object.keys(di.notes).length, 5);
+  assert.ok(di.notes.N3[2] >= 200, 'the long one wider: ' + di.notes.N3);
+});
+
+test('a text annotation at a flow: its association ends on the flow, at the point it was placed for', () => {
+  const { di, breaks } = notesLaid(LINE + note('N', 'Innerhalb von 4 Stunden') + assoc('A', 'F2', 'N'), LINE_COLS);
+  const w = di.associations.A, end = w[0];
+  assert.ok(nearestOnFlow(di.flows.F2.map(([x, y]) => ({ x, y })), ...end).x === end[0] && di.flows.F2.some(([, y]) => y === end[1]), 'on F2: ' + JSON.stringify(w));
+  assert.deepEqual(breaks, []);
+});
+
+test('a text annotation at a pool stands right of its frame, its association level to the frame', () => {
+  const collab = '<bpmn:collaboration id="K"><bpmn:participant id="PA" name="A" processRef="P"/><bpmn:participant id="PB" name="Bank"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="T" targetRef="PB"/>' + note('N1', 'Vertrag') + assoc('A1', 'PA', 'N1') + note('N2', 'Nur SEPA') + assoc('A2', 'N2', 'PB') +
+    note('N3', 'per EDI') + assoc('A3', 'M', 'N3') + '</bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>';
+  const { di, breaks } = notesLaid(null, LINE_COLS, collab);
+  for (const [n, a, p] of [['N1', 'A1', 'PA'], ['N2', 'A2', 'PB']]){
+    const pool = bx(di.pools[p]), box = bx(di.notes[n]);
+    assert.equal(box.x, pool.right + 50);
+    assert.deepEqual(di.associations[a].map(q => q[0]).sort((u, v) => u - v), [pool.right, box.x]);
+  }
+  assert.deepEqual(breaks, []);
+});
+
+test('where nothing near is free, the lane grows at its border for the text annotation; the symbols keep their order (notiz-r12)', () => {
+  const fx = readFixture('notiz-r12');
+  const measure = (t, w) => (w ? fx.sizes['note:' + w + ':' + t] : fx.sizes[t]) || labelSize(t, w);
+  const plainXml = fx.xml.replace(/<bpmn:textAnnotation[^]*?<\/bpmn:textAnnotation>|<bpmn:association [^>]*\/>/g, '');
+  const withNotes = readModel(fx.xml).model, plain = readModel(plainXml).model;
+  const di = layoutGeometry(withNotes, fx.raw, measure), before = layoutGeometry(plain, fx.raw, measure);
+  const lane = Object.keys(di.lanes)[0];
+  assert.ok(di.lanes[lane][3] > before.lanes[lane][3], 'the lane higher: ' + di.lanes[lane] + ' / ' + before.lanes[lane]);
+  const order = (d, k) => Object.keys(d.nodes).sort((p, q) => d.nodes[p][k] - d.nodes[q][k] || (p < q ? -1 : 1));
+  assert.deepEqual(order(di, 0), order(before, 0), 'the columns kept');
+  assert.deepEqual(order(di, 1), order(before, 1), 'the rows kept');
+  assert.deepEqual(breaksOf(appendDiagram(fx.xml, withNotes, di).xml, withNotes).filter(b => /^(note|association)-/.test(b)), []);
+});
+
+test('the size of a text annotation: the narrowest width a third as high as wide, at least 40 px high; measured or estimated', () => {
+  assert.deepEqual(NOTE_WIDTHS, [100, 150, 200, 250]);
+  assert.deepEqual(labelSize('kurz', 100), { w: 100, h: 40 });
+  assert.equal(labelSize('eins\nzwei\ndrei', 100).h, 3 * 15 + 14, 'the author\'s line breaks count');
+  assert.deepEqual(noteSize('kurz'), { w: 150, h: 40 }, '40 px is more than a third of 100');
+  const long = 'Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel nachfragen.';
+  assert.equal(noteSize(long).w, 250);
+  assert.deepEqual(noteSize('x', (t, w) => ({ w, h: w === 200 ? 57 : 72 })), { w: 200, h: 57 }, 'Ben\'s Behandeln: 200 × 57, not 150 × 72');
+});
+
+test('the places of a text annotation: right first, then up and down right, above, below, up and down left, left; further out by round', () => {
+  const c = { cx: 100, cy: 100, w: 120, h: 80 }, size = { w: 100, h: 40 };
+  const near = notePlaces(c, size), far = notePlaces(c, size, 25);
+  assert.deepEqual(near[0], [210, 80, 100, 40], 'right, level');
+  assert.deepEqual(far[0], [235, 80, 100, 40]);
+  assert.deepEqual(near[3], [185, -5, 100, 40], 'up right');
+  assert.deepEqual(near.at(-3), [-110, 80, 100, 40], 'left, level, last');
+});
+
+test('the way of an association: to the bracket where the box stands right, else to the middle of its facing side', () => {
+  const task = { kind: 'rect', cx: 100, cy: 100, w: 120, h: 80 };
+  assert.deepEqual(associationWay([210, 80, 100, 40], task), [[210, 100], [160, 100]], 'level to the bracket');
+  assert.deepEqual(associationWay([185, -5, 100, 40], task), [[185, 15], [140, 60]], 'slanted from the bracket to the outline, towards the middle');
+  // Above, overlapping the task: from the middle of the box's lower side to the nearest point of the task's top, 12 px off its corner (Ben, nz05-r12).
+  assert.deepEqual(associationWay([-28, -50, 150, 43], task), [[47, -7], [52, 60]]);
+  assert.deepEqual(associationWay([-200, 80, 100, 40], { kind: 'circle', cx: 100, cy: 100, w: 36, h: 36 }), [[-100, 100], [82, 100]]);
+  assert.deepEqual(associationWay([150, 0, 100, 40], { kind: 'point', cx: 120, cy: 200, w: 0, h: 0 }), [[150, 20], [120, 200]]);
+});
+
+test('an association may cross a flow, not run along one', () => {
+  const along = [[100, 0, 0, 200]], across = [[0, 100, 300, 0]];
+  assert.equal(wayAlong([[100, 50], [100, 150]], along), true);
+  assert.equal(wayAlong([[102, 50], [102, 150]], along), true, 'within 3 px');
+  assert.equal(wayAlong([[50, 50], [150, 50]], along), false, 'across');
+  assert.equal(wayAlong([[100, 50], [100, 150]], across), false);
 });

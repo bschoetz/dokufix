@@ -50,8 +50,10 @@
 // and with text annotations (story 2.31), each its box, each association its
 // waypoints:
 //   note-on-node, note-on-flow, a text annotation on a symbol, on a piece of a
-//   note-on-label, note-on-note flow, on a label, on another text annotation:
-//                             <annotation> <what it lies on>
+//   note-on-label, note-on-note flow or within 2 px of it (its bracket would
+//                             read as one line with the flow), on a label, on
+//                             another text annotation: <annotation> <what it
+//                             lies on>
 //   association-through       an association through a symbol or a label not
 //                             its partner's: <association> <what it passes>
 //   association-off           an association whose end at its text annotation
@@ -135,6 +137,10 @@ export function breaksOf(xml, model, sizes = {}){
   // The associations' edges are no flows (story 2.31).
   const associations = model.associations || [], assocWays = {};
   for (const a of associations) if (di.flows[a.id]){ assocWays[a.id] = di.flows[a.id]; delete di.flows[a.id]; }
+  // An edge of no flow the model knows (another layout's association to what dokufix leaves out, as bpmn.io draws it in
+  // the BPMN Assistant) is not checked.
+  const known = new Set(model.flows.concat(model.messages || []).map(f => f.id));
+  for (const id of Object.keys(di.flows)) if (!known.has(id)) delete di.flows[id];
   const boundaries = model.boundaries || [];
   const nodes = Object.fromEntries(model.nodes.concat(boundaries).map(n => [n.id, di.shapes[n.id]]));
   const type = Object.fromEntries(model.nodes.map(n => [n.id, n.type]).concat(boundaries.map(b => [b.id, 'inter'])));
@@ -304,7 +310,7 @@ export function breaksOf(xml, model, sizes = {}){
     for (const [nid, b] of Object.entries(nodes)) if (overlaps(n.box, b)) add('note-on-node', n.id, nid);
     for (const sg of segs){
       const x1 = Math.min(sg.a[0], sg.b[0]), x2 = Math.max(sg.a[0], sg.b[0]), y1 = Math.min(sg.a[1], sg.b[1]), y2 = Math.max(sg.a[1], sg.b[1]);
-      if (x2 > x && x1 < x + w && y2 > y && y1 < y + h) add('note-on-flow', n.id, sg.id);
+      if (x2 >= x - 2 && x1 <= x + w + 2 && y2 >= y - 2 && y1 <= y + h + 2) add('note-on-flow', n.id, sg.id);
     }
     for (const l of labels) if (overlaps(n.box, l.box)) add('note-on-label', n.id, l.id);
     for (const m of notes) if (m !== n && overlaps(n.box, m.box)) add('note-on-note', ...[n.id, m.id].sort());

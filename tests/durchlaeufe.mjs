@@ -361,7 +361,7 @@ const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, 
 // with coordinates, twelve without, three of them the loop process and the two
 // loop special cases of story 2.20, three those of several pools of story
 // 2.12, two the boundary events of story 2.30).
-const DEMO_DIAGRAMS = 19;
+const DEMO_DIAGRAMS = 20;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';

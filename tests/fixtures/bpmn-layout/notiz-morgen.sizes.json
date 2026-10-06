@@ -1,0 +1,66 @@
+{
+ "Wecker klingelt": {
+  "w": 82,
+  "h": 15
+ },
+ "„Bad ist frei!“": {
+  "w": 69,
+  "h": 15
+ },
+ "Bad frei": {
+  "w": 41,
+  "h": 15
+ },
+ "Alle aus dem Haus": {
+  "w": 69,
+  "h": 29
+ },
+ "note:100:Nicht trödeln: Papa wartet auf das freie Bad.": {
+  "w": 100,
+  "h": 57
+ },
+ "note:150:Nicht trödeln: Papa wartet auf das freie Bad.": {
+  "w": 150,
+  "h": 43
+ },
+ "note:200:Nicht trödeln: Papa wartet auf das freie Bad.": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Nicht trödeln: Papa wartet auf das freie Bad.": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+  "w": 100,
+  "h": 86
+ },
+ "note:150:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+  "w": 150,
+  "h": 57
+ },
+ "note:200:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+  "w": 250,
+  "h": 43
+ },
+ "note:100:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+  "w": 100,
+  "h": 86
+ },
+ "note:150:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+  "w": 150,
+  "h": 57
+ },
+ "note:200:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+  "w": 250,
+  "h": 43
+ }
+}

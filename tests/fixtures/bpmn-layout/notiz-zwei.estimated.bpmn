@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/n">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Team"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef><bpmn:flowNodeRef>j</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Leitung"><bpmn:flowNodeRef>t4</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>e</bpmn:flowNodeRef>
+</bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Auftrag da"/>
+    <bpmn:task id="t1" name="Auftrag prüfen"/>
+    <bpmn:exclusiveGateway id="g" name="Eilig?"/>
+    <bpmn:task id="t2" name="Sofort bearbeiten"/>
+    <bpmn:task id="t3" name="Einplanen"><bpmn:standardLoopCharacteristics id="lc"/></bpmn:task>
+    <bpmn:exclusiveGateway id="j"/>
+    <bpmn:task id="t4" name="Ergebnis freigeben"/>
+    <bpmn:endEvent id="e" name="Auftrag erledigt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="g"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="g" targetRef="t2" name="ja"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="g" targetRef="t3" name="nein"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="t2" targetRef="j"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="t3" targetRef="j"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="j" targetRef="t4"/>
+    <bpmn:sequenceFlow id="f8" sourceRef="t4" targetRef="e"/>
+    <bpmn:textAnnotation id="n1"><bpmn:text>Checkliste A verwenden</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a1" sourceRef="t1" targetRef="n1"/>
+    <bpmn:textAnnotation id="n2"><bpmn:text>Bei Großkunden zusätzlich Vertrag prüfen</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a2" sourceRef="t1" targetRef="n2"/>
+    <bpmn:textAnnotation id="n3"><bpmn:text>Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a3" sourceRef="n3" targetRef="g"/>
+    <bpmn:textAnnotation id="n4"><bpmn:text>Wöchentlich wiederholen</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a4" sourceRef="t3" targetRef="n4"/>
+    <bpmn:textAnnotation id="n5"><bpmn:text>Kunde per Mail informieren</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a5" sourceRef="e" targetRef="n5"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">
+      <bpmndi:BPMNShape id="L1_di" bpmnElement="L1" isHorizontal="true"><dc:Bounds x="30" y="-74" width="1152" height="342"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L2_di" bpmnElement="L2" isHorizontal="true"><dc:Bounds x="30" y="268" width="1152" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t1_di" bpmnElement="t1"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g" isMarkerVisible="true"><dc:Bounds x="378" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="358" y="28" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t2_di" bpmnElement="t2"><dc:Bounds x="476" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t3_di" bpmnElement="t3"><dc:Bounds x="476" y="156" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="j_di" bpmnElement="j" isMarkerVisible="true"><dc:Bounds x="644" y="47" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t4_di" bpmnElement="t4"><dc:Bounds x="742" y="300" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="934" y="322" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="907" y="362" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n1_di" bpmnElement="n1"><dc:Bounds x="355" y="-37" width="150" height="44"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n2_di" bpmnElement="n2"><dc:Bounds x="60" y="-62" width="200" height="44"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n3_di" bpmnElement="n3"><dc:Bounds x="143" y="147" width="250" height="119"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n4_di" bpmnElement="n4"><dc:Bounds x="646" y="206" width="150" height="44"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n5_di" bpmnElement="n5"><dc:Bounds x="1020" y="318" width="150" height="44"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="72"/><di:waypoint x="378" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="428" y="72"/><di:waypoint x="476" y="72"/><bpmndi:BPMNLabel><dc:Bounds x="438" y="53" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4"><di:waypoint x="403" y="97"/><di:waypoint x="403" y="196"/><di:waypoint x="476" y="196"/><bpmndi:BPMNLabel><dc:Bounds x="409" y="105" width="26" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5"><di:waypoint x="596" y="72"/><di:waypoint x="644" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f6_di" bpmnElement="f6"><di:waypoint x="596" y="196"/><di:waypoint x="669" y="196"/><di:waypoint x="669" y="97"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f7_di" bpmnElement="f7"><di:waypoint x="694" y="72"/><di:waypoint x="802" y="72"/><di:waypoint x="802" y="300"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f8_di" bpmnElement="f8"><di:waypoint x="862" y="340"/><di:waypoint x="934" y="340"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a1_di" bpmnElement="a1"><di:waypoint x="309" y="32"/><di:waypoint x="355" y="-15"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a2_di" bpmnElement="a2"><di:waypoint x="222" y="32"/><di:waypoint x="160" y="-18"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a3_di" bpmnElement="a3"><di:waypoint x="268" y="147"/><di:waypoint x="387" y="81"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a4_di" bpmnElement="a4"><di:waypoint x="596" y="228"/><di:waypoint x="646" y="228"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a5_di" bpmnElement="a5"><di:waypoint x="970" y="340"/><di:waypoint x="1020" y="340"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

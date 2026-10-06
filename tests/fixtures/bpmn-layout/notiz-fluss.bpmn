@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/n">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Kundendienst"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Technik"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Anfrage"/>
+    <bpmn:task id="t1" name="Anfrage aufnehmen"/>
+    <bpmn:exclusiveGateway id="g" name="Technisch?"/>
+    <bpmn:task id="t2" name="Fehler analysieren"/>
+    <bpmn:task id="t3" name="Antwort schreiben"/>
+    <bpmn:endEvent id="e" name="Beantwortet"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="g"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="g" targetRef="t2" name="ja"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="g" targetRef="t3" name="nein"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="t2" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="t3" targetRef="e"/>
+    <bpmn:textAnnotation id="n1"><bpmn:text>Innerhalb von 4 Stunden</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a1" sourceRef="f2" targetRef="n1"/>
+    <bpmn:textAnnotation id="n2"><bpmn:text>Ticket an Technik übergeben</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a2" sourceRef="n2" targetRef="f3"/>
+    <bpmn:textAnnotation id="n3"><bpmn:text>Mit Analyse-Protokoll</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a3" sourceRef="f5" targetRef="n3"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -92,5 +92,20 @@
   "node-outside-lane Gateway_Zusammen Lane_Sachbearbeitung"
  ],
  "angeheftet-stoerung": [],
- "demo-angeheftet-bahnen": []
+ "demo-angeheftet-bahnen": [],
+ "notiz-morgen": [
+  "node-outside-lane Ende Lane_Mama",
+  "node-outside-lane Join_Aufbruch Lane_Mama",
+  "node-outside-lane Split_Start Lane_Mama"
+ ],
+ "notiz-zwei": [
+  "node-outside-lane e L1"
+ ],
+ "notiz-fluss": [],
+ "notiz-pool": [],
+ "notiz-r12": [
+  "label-on-flow bt F4_g_a",
+  "label-on-node F4_g_a g"
+ ],
+ "demo-notizen": []
 }

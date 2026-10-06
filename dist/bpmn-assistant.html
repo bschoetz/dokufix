@@ -187,7 +187,10 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     DEFAULT_RULES: () => DEFAULT_RULES,
     LAYOUT_NOTHING: () => LAYOUT_NOTHING,
     MERMAID_LAYOUT_VERSION: () => MERMAID_LAYOUT_VERSION,
+    NOTE_ROUNDS: () => NOTE_ROUNDS,
+    NOTE_WIDTHS: () => NOTE_WIDTHS,
     appendDiagram: () => appendDiagram,
+    associationWay: () => associationWay,
     bestPlace: () => bestPlace,
     dedupe: () => dedupe,
     exitSide: () => exitSide,
@@ -202,8 +205,13 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     leftOutLine: () => leftOutLine,
     mermaidSource: () => mermaidSource,
     nearestOnFlow: () => nearestOnFlow,
+    notePlaces: () => notePlaces,
+    noteSize: () => noteSize,
     orthogonal: () => orthogonal,
-    readProcess: () => readProcess
+    readProcess: () => readProcess,
+    wayAlong: () => wayAlong,
+    wayHits: () => wayHits,
+    wayTouches: () => wayTouches
   });
   var MERMAID_LAYOUT_VERSION = "12.0.0";
   var ATTACH_CLEARANCE = 12;
@@ -236,6 +244,11 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   }
   var HOLDS_CONTENT = /* @__PURE__ */ new Set(["subProcess", "adHocSubProcess", "transaction"]);
   var LEFT_OUT = /* @__PURE__ */ new Set(["textAnnotation", "dataObject", "dataObjectReference", "dataStoreReference", "association", "group", "messageFlow"]);
+  var NOTED = /* @__PURE__ */ new Set(["textAnnotation", "association"]);
+  var noteText = (el) => {
+    const t = kids(el).find((k) => local(k) === "text");
+    return t ? t.textContent.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).join("\n").trim() : "";
+  };
   var LEFT_OUT_INSIDE = /* @__PURE__ */ new Set(["dataInputAssociation", "dataOutputAssociation"]);
   function readProcess(doc) {
     const root = doc && doc.documentElement;
@@ -246,12 +259,19 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const leftOut = [];
     const leave = (el, reason) => leftOut.push({ id: attr(el, "id"), tag: local(el), reason });
     const collaboration = participants.length ? participants[0].parentElement : null;
+    const noted = [];
+    const noteSlot = (el) => {
+      const slot = { id: attr(el, "id"), tag: local(el), reason: null };
+      leftOut.push(slot);
+      noted.push({ el, slot });
+    };
     const slots = /* @__PURE__ */ new Map();
     if (collaboration) for (const el of kids(collaboration)) {
       if (local(el) === "messageFlow") {
         slots.set(el, { id: attr(el, "id"), tag: "messageFlow", reason: null });
         leftOut.push(slots.get(el));
-      } else if (LEFT_OUT.has(local(el))) leave(el, "not laid out");
+      } else if (NOTED.has(local(el))) noteSlot(el);
+      else if (LEFT_OUT.has(local(el))) leave(el, "not laid out");
     }
     const procOf = (pa) => processes.find((p) => attr(p, "id") && attr(p, "id") === attr(pa, "processRef")) || null;
     const candidates = participants.length ? participants.map((pa) => ({ participant: pa, proc: procOf(pa) })) : processes.filter((proc) => attr(proc, "id") || (leave(proc, "has no id"), false)).map((proc) => ({ participant: null, proc }));
@@ -262,7 +282,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const byId = /* @__PURE__ */ new Map(), poolOfNode = /* @__PURE__ */ new Map();
     const blackBoxes = [];
     for (const { participant, proc } of candidates) {
-      const own = readPool(proc, participant, nodes, lanes, leave);
+      const own = readPool(proc, participant, nodes, lanes, leave, noteSlot);
       if (!own && participant && attr(participant, "id")) {
         pools.push({ id: attr(participant, "id"), name: clean(attr(participant, "name")), el: participant, proc, box: true });
         continue;
@@ -320,11 +340,47 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       else if (a.pool === b.pool) slot.reason = "a message flow within one pool";
       else messages.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")), ...a.frame ? { fromPool: a.pool } : {}, ...b.frame ? { toPool: b.pool } : {} });
     }
-    for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].tag === "messageFlow" && leftOut[i].reason === null) leftOut.splice(i, 1);
+    const { notes, associations } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages });
+    for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
     for (const p of pools) if (p.el && !attr(p.el, "id")) leave(p.el, "has no id; it is not drawn as a pool");
-    return { model: { pools: pools.map((p) => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, insert }, leftOut };
+    return { model: { pools: pools.map((p) => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, insert }, leftOut };
   }
-  function readPool(proc, participant, before, beforeLanes, leave) {
+  function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages }) {
+    const notes = [], associations = [];
+    const poolIndex = new Map(pools.map((p, i) => [p.id, i]).filter(([id]) => id));
+    const boundaryOf = new Map(boundaries.map((b) => [b.id, b]));
+    const flowOf = new Map(flows.map((f) => [f.id, f])), messageOf = new Map(messages.map((m) => [m.id, m]));
+    const texts = /* @__PURE__ */ new Map(), empty = /* @__PURE__ */ new Set();
+    for (const { el, slot } of noted) if (local(el) === "textAnnotation") {
+      if (!attr(el, "id")) slot.reason = "has no id";
+      else if (!noteText(el)) {
+        slot.reason = "has no text";
+        empty.add(attr(el, "id"));
+      } else texts.set(attr(el, "id"), { el, slot });
+    }
+    const partnerOf = (id) => byId.has(id) ? { kind: "node", pool: poolOfNode.get(id) } : boundaryOf.has(id) ? { kind: "boundary", pool: poolOfNode.get(boundaryOf.get(id).host) } : flowOf.has(id) ? { kind: "flow", pool: poolOfNode.get(flowOf.get(id).to) } : messageOf.has(id) ? { kind: "message", pool: null } : poolIndex.has(id) ? { kind: "pool", pool: poolIndex.get(id) } : null;
+    const linked = /* @__PURE__ */ new Map();
+    for (const { el, slot } of noted) {
+      if (local(el) !== "association") continue;
+      const id = attr(el, "id"), from = attr(el, "sourceRef"), to = attr(el, "targetRef");
+      const note = texts.has(from) && !texts.has(to) ? from : texts.has(to) && !texts.has(from) ? to : null;
+      const other = note === from ? to : from, partner = note && partnerOf(other);
+      if (!id) slot.reason = "has no id";
+      else if (!note && (empty.has(from) || empty.has(to))) slot.reason = "its text annotation " + (empty.has(from) ? from : to) + " has no text";
+      else if (!note) slot.reason = texts.has(from) ? "between two text annotations" : "has no text annotation at either end";
+      else if (!partner) slot.reason = "touches " + (other || "nothing") + ", which is not laid out";
+      else {
+        associations.push({ id, note, partner: other, kind: partner.kind, ...note === to ? { toNote: true } : {} });
+        if (!linked.has(note)) linked.set(note, partner.pool);
+      }
+    }
+    for (const [id, { el, slot }] of texts) {
+      if (!linked.has(id)) slot.reason = "has no association to anything laid out";
+      else notes.push({ id, text: noteText(el), pool: linked.get(id) });
+    }
+    return { notes, associations };
+  }
+  function readPool(proc, participant, before, beforeLanes, leave, note) {
     if (!proc) return null;
     const nodes = [];
     for (const el of kids(proc)) {
@@ -337,6 +393,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
         }
         for (const inner of descendants(el)) if (LEFT_OUT_INSIDE.has(local(inner))) leave(inner, "not laid out");
       } else if (type) leave(el, "has no id");
+      else if (NOTED.has(tag)) note(el);
       else if (LEFT_OUT.has(tag)) leave(el, "not laid out");
     }
     if (!nodes.length) {
@@ -508,7 +565,23 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   var CHAR = 6.6;
   var LINE = 15;
   var LABEL_WIDTH = 90;
-  function labelSize(text) {
+  var NOTE_WIDTHS = [100, 150, 200, 250];
+  function labelSize(text, width) {
+    if (width) {
+      let n = 0;
+      for (const para of String(text).split("\n")) {
+        let line2 = "";
+        n++;
+        for (const word of para.split(/\s+/).filter(Boolean)) {
+          const next = line2 ? line2 + " " + word : word;
+          if (line2 && next.length * CHAR > width - 14) {
+            n++;
+            line2 = word;
+          } else line2 = next;
+        }
+      }
+      return { w: width, h: Math.max(40, n * LINE + 14) };
+    }
     const lines = [];
     let line = "";
     for (const word of String(text).split(/\s+/).filter(Boolean)) {
@@ -583,6 +656,86 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       places.push([sx > 0 ? c.cx + c.w / 2 + 2 : c.cx - c.w / 2 - 2 - size.w, sy > 0 ? c.cy + c.h / 2 + 2 : c.cy - c.h / 2 - 2 - size.h, size.w, size.h]);
     }
     return places;
+  }
+  var NOTE_GAP = 50;
+  var NOTE_CLEAR = 6;
+  var NOTE_SIDES = ["rechts", "oben-rechts", "unten-rechts", "oben", "unten", "oben-links", "unten-links", "links"];
+  var NOTE_ROUNDS = [0, 25, 50, 100];
+  function noteSize(text, measure = labelSize) {
+    for (const w of NOTE_WIDTHS) {
+      const s = measure(text, w);
+      if (s.h <= w / 3 || w === NOTE_WIDTHS[NOTE_WIDTHS.length - 1]) return { w, h: Math.ceil(s.h) };
+    }
+  }
+  function notePlaces(c, size, far = 0) {
+    const { w, h } = size;
+    const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w, c.cx - w + 20, c.cx - 20], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
+    const d = NOTE_GAP / 2 + far;
+    const at = (side) => ({
+      "oben": xs.map((x) => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
+      "oben-rechts": [[c.cx + c.w / 2 + d, c.cy - c.h / 2 - d - h]],
+      "unten-rechts": [[c.cx + c.w / 2 + d, c.cy + c.h / 2 + d]],
+      "unten": xs.map((x) => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
+      "oben-links": [[c.cx - c.w / 2 - d - w, c.cy - c.h / 2 - d - h]],
+      "unten-links": [[c.cx - c.w / 2 - d - w, c.cy + c.h / 2 + d]],
+      "rechts": ys.map((y) => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
+      "links": ys.map((y) => [c.cx - c.w / 2 - NOTE_GAP - far - w, y])
+    })[side];
+    return NOTE_SIDES.flatMap((side) => at(side).map((p) => [...p.map(R), w, h]));
+  }
+  function outline(s, x, y) {
+    const dx = x - s.cx, dy = y - s.cy;
+    if (s.kind === "point" || !dx && !dy) return { x: s.cx, y: s.cy };
+    const t = s.kind === "circle" ? s.w / 2 / Math.hypot(dx, dy) : s.kind === "diamond" ? 1 / (Math.abs(dx) / (s.w / 2) + Math.abs(dy) / (s.h / 2)) : Math.min(dx ? s.w / 2 / Math.abs(dx) : Infinity, dy ? s.h / 2 / Math.abs(dy) : Infinity);
+    return { x: s.cx + dx * t, y: s.cy + dy * t };
+  }
+  function edgeAt(s, v, dir, across) {
+    const [c, oc, half, ohalf] = across ? [s.cy, s.cx, s.h / 2, s.w / 2] : [s.cx, s.cy, s.w / 2, s.h / 2];
+    const d = Math.abs(v - c);
+    const reach = s.kind === "point" ? 0 : s.kind === "circle" ? Math.sqrt(Math.max(0, half * half - d * d)) : s.kind === "diamond" ? Math.max(0, ohalf * (1 - d / half)) : ohalf;
+    return oc + dir * reach;
+  }
+  function associationWay(n, s) {
+    const [x, y, w, h] = n, mx = x + w / 2, my = y + h / 2;
+    const sx1 = s.cx - s.w / 2, sx2 = s.cx + s.w / 2, sy1 = s.cy - s.h / 2, sy2 = s.cy + s.h / 2;
+    if (x >= sx2 + 1) {
+      if (my >= sy1 && my <= sy2) {
+        const v = R(my);
+        return [[R(x), v], [Math.floor(edgeAt(s, v, 1, true)), v]];
+      }
+      const b2 = outline(s, x, my);
+      return [[x, my], [b2.x, b2.y]].map((p) => p.map(R));
+    }
+    const across = Math.min(x + w, sx2) - Math.max(x, sx1) > 0 || !(Math.min(y + h, sy2) - Math.max(y, sy1) > 0) && Math.abs(my - s.cy) - h / 2 >= Math.abs(mx - s.cx) - w / 2;
+    const a = across ? { x: mx, y: my < s.cy ? y + h : y } : { x: mx < s.cx ? x + w : x, y: my };
+    const clamp = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v));
+    const b = s.kind === "rect" ? across ? { x: clamp(a.x, sx1 + ATTACH_CLEARANCE, sx2 - ATTACH_CLEARANCE), y: my < s.cy ? sy1 : sy2 } : { x: mx < s.cx ? sx1 : sx2, y: clamp(a.y, sy1 + ATTACH_CLEARANCE, sy2 - ATTACH_CLEARANCE) } : outline(s, a.x, a.y);
+    return [[a.x, a.y], [b.x, b.y]].map((p) => p.map(R));
+  }
+  function wayTouches(way, segs) {
+    return wayHits(way, segs.map(([x, y, w, h]) => [x - 3, y - 3, w + 6, h + 6]));
+  }
+  function wayAlong(way, segs) {
+    for (let i = 1; i < way.length; i++) {
+      const [x1, y1] = way[i - 1], [x2, y2] = way[i];
+      const level = Math.abs(y1 - y2) < 1, upright = Math.abs(x1 - x2) < 1;
+      if (!level && !upright) continue;
+      for (const [sx, sy, sw, sh] of segs) {
+        if (level && sh === 0 && Math.abs(sy - y1) <= 3 && Math.min(Math.max(x1, x2), sx + sw) - Math.max(Math.min(x1, x2), sx) > 4) return true;
+        if (upright && sw === 0 && Math.abs(sx - x1) <= 3 && Math.min(Math.max(y1, y2), sy + sh) - Math.max(Math.min(y1, y2), sy) > 4) return true;
+      }
+    }
+    return false;
+  }
+  function wayHits(way, boxes) {
+    for (let i = 1; i < way.length; i++) {
+      const [x1, y1] = way[i - 1], [x2, y2] = way[i], n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 3));
+      for (let k = 0; k <= n; k++) {
+        const px = x1 + (x2 - x1) * k / n, py = y1 + (y2 - y1) * k / n;
+        if (boxes.some((b) => px > b[0] + 1 && px < b[0] + b[2] - 1 && py > b[1] + 1 && py < b[1] + b[3] - 1)) return true;
+      }
+    }
+    return false;
   }
   function layoutGeometry(model, raw, measure = labelSize, options = DEFAULT_RULES) {
     const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map((k) => [k, options[k] ?? DEFAULT_RULES[k]]));
@@ -2264,6 +2417,134 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       takenPool.push(poolOf.get(b.id));
       owners.push({ boxes: [place, di.labels[b.id]], anchor: box[b.id] });
     }
+    const notes = model.notes || [], assocs = model.associations || [];
+    const notePool = /* @__PURE__ */ new Map();
+    const aimOf = /* @__PURE__ */ new Map();
+    let stripes = false;
+    if (notes.length) {
+      di.notes = {};
+      di.associations = {};
+      const nodeOf = new Map([...model.nodes, ...boundaries].map((n) => [n.id, n]));
+      const routeOf = new Map(routes.map((r) => [r.f.id, r]));
+      const kindOf = (id) => {
+        const t = nodeOf.get(id).type;
+        return t === "task" ? "rect" : t === "gateway" ? "diamond" : "circle";
+      };
+      const lanesAll2 = () => model.lanes.map((l) => laneBox[l.key]);
+      const ay = (a) => "cy" in a ? a.cy : a.y;
+      const openStripe = (cut, d, extra, grow = null) => {
+        stripes = true;
+        const before = owners.map((o) => ay(o.anchor));
+        for (const b of lanesAll2()) {
+          if (b === grow) b[3] += d;
+          else if (b[1] >= cut) b[1] += d;
+          else if (b[1] + b[3] > cut) b[3] += d;
+        }
+        for (const c of Object.values(box)) if (c.cy >= cut) c.cy += d;
+        const moved = /* @__PURE__ */ new Set();
+        for (const o of routes) {
+          for (const q of o.pts) if (q.y >= cut && !moved.has(q)) {
+            moved.add(q);
+            q.y += d;
+          }
+          for (const ob of o.obstacles || []) if ((ob.y1 + ob.y2) / 2 >= cut && !moved.has(ob)) {
+            moved.add(ob);
+            ob.y1 += d;
+            ob.y2 += d;
+          }
+        }
+        for (const q of [...owners.map((o) => o.anchor).filter((a) => !("cy" in a)), ...extra]) if (q.y >= cut && !moved.has(q)) {
+          moved.add(q);
+          q.y += d;
+        }
+        owners.forEach((o, i) => {
+          const m = ay(o.anchor) - before[i];
+          if (m) for (const b of o.boxes) b[1] += m;
+        });
+        model.pools.forEach((p) => {
+          if (p.box && di.pools[p.id][1] >= cut) di.pools[p.id][1] += d;
+        });
+        for (const n of [...model.nodes, ...boundaries]) {
+          const { cx, cy, w, h } = box[n.id];
+          di.nodes[n.id][0] = R(cx - w / 2);
+          di.nodes[n.id][1] = R(cy - h / 2);
+        }
+        segments.length = 0;
+        segments.push(...routes.flatMap((r) => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
+      };
+      const add = (n, place, anchor) => {
+        di.notes[n.id] = place;
+        taken.push(place);
+        takenPool.push(n.pool ?? null);
+        owners.push({ boxes: [place], anchor });
+      };
+      for (const n of notes) {
+        notePool.set(n.id, n.pool ?? void 0);
+        const size = noteSize(n.text, measure), a = assocs.find((x) => x.note === n.id);
+        if (a.kind === "pool") continue;
+        const anchors2 = [];
+        if (a.kind === "flow" || a.kind === "message") {
+          const pts = routeOf.get(a.partner).pts;
+          const pieces = pts.slice(1).map((q, i) => ({ p: pts[i], q, len: Math.abs(pts[i].x - q.x) + Math.abs(pts[i].y - q.y), level: Math.abs(pts[i].y - q.y) < 1 })).sort((u, v) => v.level - u.level || v.len - u.len);
+          for (const pc of pieces) for (const t of pc.len > 160 ? [0.5, 0.25, 0.75] : [0.5]) anchors2.push({ x: R(pc.p.x + (pc.q.x - pc.p.x) * t), y: R(pc.p.y + (pc.q.y - pc.p.y) * t), level: pc.level });
+        } else anchors2.push(box[a.partner]);
+        const centre = (an) => "cy" in an ? an : { cx: an.x, cy: an.y, w: 0, h: 0 };
+        const shape = (an) => "cy" in an ? { kind: kindOf(a.partner), cx: an.cx, cy: an.cy, w: an.w, h: an.h } : { kind: "point", cx: an.x, cy: an.y, w: 0, h: 0 };
+        const others = () => [...symbols.filter((b) => !nodeOf.has(a.partner) || b !== di.nodes[a.partner]), ...taken];
+        const foreign = () => nodeOf.has(a.partner) ? segments : routes.filter((r) => r.f.id !== a.partner).flatMap((r) => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
+        const clear = (place2, an, crossing) => {
+          const way = associationWay(place2, shape(an));
+          return covered(place2, [...symbols, ...segments, ...taken], NOTE_CLEAR) === 0 && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign()));
+        };
+        let place = null, anchor = anchors2[0];
+        rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors2) {
+          place = notePlaces(centre(an), size, far).find((p) => clear(p, an, crossing));
+          if (place) {
+            anchor = an;
+            break rounds;
+          }
+        }
+        if (!place) {
+          const below = a.kind === "boundary";
+          let first = null, least = Infinity;
+          for (const down of [below, !below]) for (const an of anchors2) {
+            if (place) break;
+            const c = centre(an), lane = lanesAll2().find((b) => b[1] <= c.cy && c.cy <= b[1] + b[3]);
+            if (!lane) continue;
+            const cut = down ? lane[1] + lane[3] : lane[1];
+            const inLane = (b) => b[1] + b[3] / 2 >= lane[1] && b[1] + b[3] / 2 <= lane[1] + lane[3];
+            const step = size.w + 10;
+            const xs = [c.cx + c.w / 2 + 10, c.cx + 10, c.cx - size.w / 2, c.cx - 10 - size.w].concat([1, -1, 2, -2].map((k) => c.cx - size.w / 2 + k * step));
+            for (const x of xs) {
+              const p = [R(x), R(cut + NOTE_GAP / 2), size.w, size.h];
+              const try_ = { p, an, lane, cut, down };
+              const crossing = segments.some((sg) => sg[3] > 0 && sg[1] < cut && sg[1] + sg[3] > cut && sg[0] >= p[0] - 3 && sg[0] <= p[0] + p[2] + 3);
+              const onBox = taken.some((b) => b[1] < cut && b[1] + b[3] > cut && b[0] < p[0] + p[2] && b[0] + b[2] > p[0]);
+              const shifted = down ? p : [p[0], p[1] - size.h - NOTE_GAP, p[2], p[3]];
+              const way = associationWay(shifted, shape(an));
+              const faults = (onBox ? 5 : 0) + (crossing ? 1 : 0) + (wayHits(way, others().filter(inLane)) ? 1 : 0) + (wayAlong(way, foreign().filter(inLane)) ? 1 : 0);
+              if (!faults) {
+                place = try_;
+                break;
+              }
+              if (faults < least) {
+                least = faults;
+                first = try_;
+              }
+            }
+          }
+          const t = place || first;
+          if (t) {
+            anchor = t.an;
+            const d = size.h + NOTE_GAP;
+            openStripe(t.cut, d, "cy" in anchor ? [] : [anchor], t.lane);
+            place = t.p;
+          } else place = bestPlace(NOTE_ROUNDS.flatMap((far) => notePlaces(centre(anchor), size, far)), [...symbols, ...segments, ...taken]);
+        }
+        if (!("cy" in anchor)) aimOf.set(n.id, { dx: anchor.x - place[0], dy: anchor.y - place[1] });
+        add(n, place, anchor);
+      }
+    }
     const laneEdge = (j4, top) => {
       const ls = model.lanes.filter((l) => (l.pool ?? 0) === j4).map((l) => laneBox[l.key]);
       return top ? Math.min(...ls.map((b) => b[1])) : Math.max(...ls.map((b) => b[1] + b[3]));
@@ -2281,7 +2562,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       return { j: j4, top, d: di.pools[p.id][1] - laneEdge(j4, top) };
     });
     const room = labelRoom(owners, model.lanes.map((l) => laneBox[l.key]), box, routes);
-    if (room.up || room.down) {
+    if (room.up || room.down || stripes) {
       for (const n of [...model.nodes, ...boundaries]) {
         const { cx, cy, w, h } = box[n.id];
         di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h];
@@ -2323,6 +2604,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       const moves = (k, y) => k === void 0 ? y >= y0 : own(k);
       for (const [id, b] of [...Object.entries(di.nodes), ...Object.entries(di.labels)]) if (moves(poolOf.get(id), b[1])) b[1] += dy;
       for (const [id, b] of Object.entries(di.flowLabels)) if (moves(flowPool.get(id), b[1])) b[1] += dy;
+      for (const [id, b] of Object.entries(di.notes || {})) if (moves(notePool.get(id), b[1])) b[1] += dy;
       for (const l of model.lanes) if (own(l.pool ?? 0)) laneBox[l.key][1] += dy;
       model.pools.forEach((p, k) => {
         if (p.box && own(k)) di.pools[p.id][1] += dy;
@@ -2368,6 +2650,34 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       const pts = di.flows[m.id], [, y, , h] = di.pools[model.pools[m[k]].id];
       const end = pts.at(at), next = pts.at(at === 0 ? 1 : -2);
       end[1] = next[1] < y ? y : y + h;
+    }
+    if (notes.length) {
+      const below = /* @__PURE__ */ new Map();
+      for (const n of notes) {
+        const a = assocs.find((x2) => x2.note === n.id);
+        if (!a || a.kind !== "pool") continue;
+        const [x, y, w] = di.pools[a.partner], size = noteSize(n.text, measure), at = below.get(a.partner) ?? y;
+        di.notes[n.id] = [x + w + NOTE_GAP, at, size.w, size.h];
+        below.set(a.partner, at + size.h + 8);
+      }
+      const kindOf = (id) => {
+        const t = model.nodes.find((n) => n.id === id)?.type;
+        return t === "task" ? "rect" : t === "gateway" ? "diamond" : "circle";
+      };
+      for (const a of assocs) {
+        const nb = di.notes[a.note];
+        let s;
+        if (a.kind === "flow" || a.kind === "message") {
+          const aim = aimOf.get(a.note), at = aim && assocs.find((x) => x.note === a.note) === a ? [nb[0] + aim.dx, nb[1] + aim.dy] : [nb[0] + nb[2] / 2, nb[1] + nb[3] / 2];
+          const p = nearestOnFlow(di.flows[a.partner].map(([x, y]) => ({ x, y })), ...at);
+          s = { kind: "point", cx: p.x, cy: p.y, w: 0, h: 0 };
+        } else {
+          const [x, y, w, h] = a.kind === "pool" ? di.pools[a.partner] : di.nodes[a.partner];
+          s = { kind: a.kind === "pool" ? "rect" : kindOf(a.partner), cx: x + w / 2, cy: y + h / 2, w, h };
+        }
+        const way = associationWay(nb, s);
+        di.associations[a.id] = a.toNote ? way.reverse() : way;
+      }
     }
   }
   var esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -2456,11 +2766,15 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     for (const l of model.lanes) if (!l.synthetic) out += shape(l.id, di.lanes[l.id], ' isHorizontal="true"');
     for (const n of model.nodes) out += shape(n.id, di.nodes[n.id], n.tag === "exclusiveGateway" ? ' isMarkerVisible="true"' : "", di.labels[n.id]);
     for (const b2 of model.boundaries || []) out += shape(b2.id, di.nodes[b2.id], "", di.labels[b2.id]);
+    for (const n of model.notes || []) out += shape(n.id, di.notes[n.id]);
     for (const f of model.flows) {
       out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + "_di")) + '" bpmnElement="' + esc(f.id) + '">' + di.flows[f.id].map((p) => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join("") + label(di.flowLabels[f.id]) + "</bpmndi:BPMNEdge>\n";
     }
     for (const f of model.messages || []) {
       out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + "_di")) + '" bpmnElement="' + esc(f.id) + '">' + di.flows[f.id].map((p) => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join("") + label(di.flowLabels[f.id]) + "</bpmndi:BPMNEdge>\n";
+    }
+    for (const a of model.associations || []) {
+      out += '      <bpmndi:BPMNEdge id="' + esc(fresh(a.id + "_di")) + '" bpmnElement="' + esc(a.id) + '">' + di.associations[a.id].map((p) => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join("") + "</bpmndi:BPMNEdge>\n";
     }
     out += "    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n";
     return { xml: text.slice(0, at) + out + text.slice(at), diagram };
@@ -2511,20 +2825,25 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   }
   function labelMeasurer(viewer) {
     let renderer = null;
-    return (text) => {
+    return (text, width) => {
       try {
         if (!renderer) {
           const tr2 = viewer.get("textRenderer");
           renderer = { tr: tr2, style: tr2.getExternalStyle() };
         }
         const { tr, style } = renderer;
-        const lines = (width) => tr.createText(text, { box: { width, height: 30 }, style }).querySelectorAll("tspan").length;
+        if (width) {
+          const b = tr.getTextAnnotationBounds({ x: 0, y: 0, width, height: 30 }, text);
+          if (Number.isFinite(b.height) && b.height > 0) return { w: width, h: b.height };
+          return labelSize(text, width);
+        }
+        const lines = (width2) => tr.createText(text, { box: { width: width2, height: 30 }, style }).querySelectorAll("tspan").length;
         const imported = tr.getExternalLabelBounds({ x: 0, y: 0, width: 90, height: 30 }, text);
         const size = { w: imported.width, h: Math.ceil(imported.height / Math.max(1, lines(90)) * lines(imported.width)) };
         if (Number.isFinite(size.w) && Number.isFinite(size.h) && size.w >= 0 && size.h > 0) return size;
       } catch {
       }
-      return labelSize(text);
+      return labelSize(text, width);
     };
   }
   var layoutRuns = 0;
@@ -2639,6 +2958,13 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const out = /* @__PURE__ */ new Set();
     const add = (rule, ...ids) => out.add([rule, ...ids].join(" "));
     const di = readDiagram(xml);
+    const associations = model.associations || [], assocWays = {};
+    for (const a of associations) if (di.flows[a.id]) {
+      assocWays[a.id] = di.flows[a.id];
+      delete di.flows[a.id];
+    }
+    const known = new Set(model.flows.concat(model.messages || []).map((f) => f.id));
+    for (const id of Object.keys(di.flows)) if (!known.has(id)) delete di.flows[id];
     const boundaries = model.boundaries || [];
     const nodes = Object.fromEntries(model.nodes.concat(boundaries).map((n) => [n.id, di.shapes[n.id]]));
     const type = Object.fromEntries(model.nodes.map((n) => [n.id, n.type]).concat(boundaries.map((b) => [b.id, "inter"])));
@@ -2795,6 +3121,42 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       if (own.length && !own.some((ln) => within(l.box, ln))) add("label-outside-lane", l.id);
       const pool = poolBox(l.pool);
       if (pool && !within(l.box, pool)) add("label-outside-pool", l.id);
+    }
+    const notes = (model.notes || []).map((n) => ({ id: n.id, box: di.shapes[n.id] })).filter((n) => n.box);
+    const overlaps = ([x, y, w, h], [a, b, c, d]) => a < x + w && a + c > x && b < y + h && b + d > y;
+    for (const n of notes) {
+      const [x, y, w, h] = n.box;
+      for (const [nid, b] of Object.entries(nodes)) if (overlaps(n.box, b)) add("note-on-node", n.id, nid);
+      for (const sg of segs) {
+        const x1 = Math.min(sg.a[0], sg.b[0]), x2 = Math.max(sg.a[0], sg.b[0]), y1 = Math.min(sg.a[1], sg.b[1]), y2 = Math.max(sg.a[1], sg.b[1]);
+        if (x2 >= x - 2 && x1 <= x + w + 2 && y2 >= y - 2 && y1 <= y + h + 2) add("note-on-flow", n.id, sg.id);
+      }
+      for (const l of labels) if (overlaps(n.box, l.box)) add("note-on-label", n.id, l.id);
+      for (const m of notes) if (m !== n && overlaps(n.box, m.box)) add("note-on-note", ...[n.id, m.id].sort());
+    }
+    const noteBox = Object.fromEntries(notes.map((n) => [n.id, n.box]));
+    const passes = (w, [bx, by, bw, bh]) => {
+      for (let i = 1; i < w.length; i++) {
+        const [x1, y1] = w[i - 1], [x2, y2] = w[i], k = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2));
+        for (let j4 = 0; j4 <= k; j4++) {
+          const px = x1 + (x2 - x1) * j4 / k, py = y1 + (y2 - y1) * j4 / k;
+          if (px > bx + 1 && px < bx + bw - 1 && py > by + 1 && py < by + bh - 1) return true;
+        }
+      }
+      return false;
+    };
+    const onBox = (p, [x, y, w, h]) => onOutline(p, [x, y, w, h], "task");
+    const onWay = (p, w) => w.some((q, i) => i && Math.min(q[0], w[i - 1][0]) - 1 <= p[0] && p[0] <= Math.max(q[0], w[i - 1][0]) + 1 && Math.min(q[1], w[i - 1][1]) - 1 <= p[1] && p[1] <= Math.max(q[1], w[i - 1][1]) + 1);
+    for (const a of associations) {
+      const w = assocWays[a.id];
+      if (!w || !noteBox[a.note]) continue;
+      const [atNote, atPartner] = a.toNote ? [w.at(-1), w[0]] : [w[0], w.at(-1)];
+      if (!onBox(atNote, noteBox[a.note])) add("association-off", a.id, a.note);
+      const partnerOk = a.kind === "flow" || a.kind === "message" ? !!di.flows[a.partner] && onWay(atPartner, di.flows[a.partner]) : a.kind === "pool" ? !!di.shapes[a.partner] && onBox(atPartner, di.shapes[a.partner]) : !!nodes[a.partner] && onOutline(atPartner, nodes[a.partner], typeOf(a.partner));
+      if (!partnerOk) add("association-off", a.id, a.partner);
+      for (const [nid, b] of Object.entries(nodes)) if (nid !== a.partner && passes(w, b)) add("association-through", a.id, nid);
+      for (const l of labels) if (l.id !== a.partner && passes(w, l.box)) add("association-through", a.id, l.id);
+      for (const m of notes) if (m.id !== a.note && passes(w, m.box)) add("association-through", a.id, m.id);
     }
     return [...out].sort();
   }
@@ -2987,7 +3349,7 @@ THE SOFTWARE.
 <script>
 mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict', suppressErrorRendering: true, flowchart: { curve: 'basis' } });
 const BEISPIELE = [{"label":"Urlaubsantrag (Pool mit Bahnen)","xml":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Urlaub\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Urlaub\">\n    <bpmn:participant id=\"Pool_Urlaub\" name=\"Urlaubsantrag\" processRef=\"Process_Urlaub\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Urlaub\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Urlaub\">\n      <bpmn:lane id=\"Lane_MA\" name=\"Mitarbeiterin\">\n        <bpmn:flowNodeRef>Start_Geplant</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Stellen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Ueberarbeiten</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Vertretung</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_TL\" name=\"Teamleitung\">\n        <bpmn:flowNodeRef>Gateway_Merge</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Genehmigt</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_PA\" name=\"Personalabteilung\">\n        <bpmn:flowNodeRef>Task_Eintragen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Genehmigt</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Geplant\" name=\"Urlaub geplant\"/>\n    <bpmn:userTask id=\"Task_Stellen\" name=\"Antrag stellen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Merge\"/>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Antrag prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Genehmigt\" name=\"Genehmigt?\"/>\n    <bpmn:userTask id=\"Task_Ueberarbeiten\" name=\"Antrag überarbeiten\"/>\n    <bpmn:parallelGateway id=\"Gateway_Split\"/>\n    <bpmn:serviceTask id=\"Task_Eintragen\" name=\"Urlaub eintragen\"/>\n    <bpmn:sendTask id=\"Task_Vertretung\" name=\"Vertretung informieren\"/>\n    <bpmn:parallelGateway id=\"Gateway_Join\"/>\n    <bpmn:endEvent id=\"End_Genehmigt\" name=\"Urlaub genehmigt\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Geplant\" targetRef=\"Task_Stellen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Stellen\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Gateway_Merge\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Genehmigt\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" name=\"ja\" sourceRef=\"Gateway_Genehmigt\" targetRef=\"Gateway_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" name=\"nein\" sourceRef=\"Gateway_Genehmigt\" targetRef=\"Task_Ueberarbeiten\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Task_Ueberarbeiten\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Eintragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Vertretung\"/>\n    <bpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Task_Eintragen\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Task_Vertretung\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Gateway_Join\" targetRef=\"End_Genehmigt\"/>\n  </bpmn:process>\n</bpmn:definitions>\n"},{"label":"Onboarding","xml":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Onboarding\" targetNamespace=\"http://dokufix.example/onboarding\">\n  <bpmn:collaboration id=\"Collaboration_Onboarding\">\n    <bpmn:participant id=\"Participant_Onboarding\" name=\"Onboarding neuer Mitarbeiter\" processRef=\"Process_Onboarding\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Onboarding\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Onboarding\">\n      <bpmn:lane id=\"Lane_HR\" name=\"Personalabteilung\">\n        <bpmn:flowNodeRef>Start_Vertrag</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Stammdaten</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>GW_Split</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>GW_Join</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Timer_ErsterTag</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Beenden</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Beendet</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Uebernommen</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_IT\" name=\"IT\">\n        <bpmn:flowNodeRef>Task_Arbeitsplatz</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Zugaenge</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_FK\" name=\"Führungskraft\">\n        <bpmn:flowNodeRef>Task_Plan</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Gespraech</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>GW_Uebernahme</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Neu\" name=\"Neuer Mitarbeiter\">\n        <bpmn:flowNodeRef>Task_Einfuehrung</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Schulung</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Vertrag\" name=\"Vertrag unterschrieben\">\n      <bpmn:outgoing>Flow_1</bpmn:outgoing>\n    </bpmn:startEvent>\n    <bpmn:userTask id=\"Task_Stammdaten\" name=\"Stammdaten anlegen\">\n      <bpmn:incoming>Flow_1</bpmn:incoming>\n      <bpmn:outgoing>Flow_2</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:parallelGateway id=\"GW_Split\">\n      <bpmn:incoming>Flow_2</bpmn:incoming>\n      <bpmn:outgoing>Flow_3</bpmn:outgoing>\n      <bpmn:outgoing>Flow_4</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:userTask id=\"Task_Arbeitsplatz\" name=\"Arbeitsplatz einrichten\">\n      <bpmn:incoming>Flow_3</bpmn:incoming>\n      <bpmn:outgoing>Flow_5</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:serviceTask id=\"Task_Zugaenge\" name=\"Zugänge anlegen\">\n      <bpmn:incoming>Flow_5</bpmn:incoming>\n      <bpmn:outgoing>Flow_6</bpmn:outgoing>\n    </bpmn:serviceTask>\n    <bpmn:userTask id=\"Task_Plan\" name=\"Einarbeitungsplan erstellen\">\n      <bpmn:incoming>Flow_4</bpmn:incoming>\n      <bpmn:outgoing>Flow_7</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:parallelGateway id=\"GW_Join\">\n      <bpmn:incoming>Flow_6</bpmn:incoming>\n      <bpmn:incoming>Flow_7</bpmn:incoming>\n      <bpmn:outgoing>Flow_8</bpmn:outgoing>\n    </bpmn:parallelGateway>\n    <bpmn:intermediateCatchEvent id=\"Timer_ErsterTag\" name=\"Erster Arbeitstag\">\n      <bpmn:incoming>Flow_8</bpmn:incoming>\n      <bpmn:outgoing>Flow_9</bpmn:outgoing>\n      <bpmn:timerEventDefinition id=\"TimerDef_ErsterTag\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_Einfuehrung\" name=\"Einführungstag absolvieren\">\n      <bpmn:incoming>Flow_9</bpmn:incoming>\n      <bpmn:outgoing>Flow_10</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:userTask id=\"Task_Schulung\" name=\"Pflichtschulungen absolvieren\">\n      <bpmn:incoming>Flow_10</bpmn:incoming>\n      <bpmn:outgoing>Flow_11</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:userTask id=\"Task_Gespraech\" name=\"Probezeitgespräch führen\">\n      <bpmn:incoming>Flow_11</bpmn:incoming>\n      <bpmn:outgoing>Flow_12</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:exclusiveGateway id=\"GW_Uebernahme\" name=\"Übernahme?\">\n      <bpmn:incoming>Flow_12</bpmn:incoming>\n      <bpmn:outgoing>Flow_13</bpmn:outgoing>\n      <bpmn:outgoing>Flow_14</bpmn:outgoing>\n    </bpmn:exclusiveGateway>\n    <bpmn:endEvent id=\"End_Uebernommen\" name=\"Mitarbeiter übernommen\">\n      <bpmn:incoming>Flow_13</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:userTask id=\"Task_Beenden\" name=\"Arbeitsverhältnis beenden\">\n      <bpmn:incoming>Flow_14</bpmn:incoming>\n      <bpmn:outgoing>Flow_15</bpmn:outgoing>\n    </bpmn:userTask>\n    <bpmn:endEvent id=\"End_Beendet\" name=\"Arbeitsverhältnis beendet\">\n      <bpmn:incoming>Flow_15</bpmn:incoming>\n    </bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Vertrag\" targetRef=\"Task_Stammdaten\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Stammdaten\" targetRef=\"GW_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"GW_Split\" targetRef=\"Task_Arbeitsplatz\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"GW_Split\" targetRef=\"Task_Plan\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Arbeitsplatz\" targetRef=\"Task_Zugaenge\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Task_Zugaenge\" targetRef=\"GW_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Task_Plan\" targetRef=\"GW_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"GW_Join\" targetRef=\"Timer_ErsterTag\"/>\n    <bpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Timer_ErsterTag\" targetRef=\"Task_Einfuehrung\"/>\n    <bpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Task_Einfuehrung\" targetRef=\"Task_Schulung\"/>\n    <bpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Task_Schulung\" targetRef=\"Task_Gespraech\"/>\n    <bpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Task_Gespraech\" targetRef=\"GW_Uebernahme\"/>\n    <bpmn:sequenceFlow id=\"Flow_13\" name=\"ja\" sourceRef=\"GW_Uebernahme\" targetRef=\"End_Uebernommen\"/>\n    <bpmn:sequenceFlow id=\"Flow_14\" name=\"nein\" sourceRef=\"GW_Uebernahme\" targetRef=\"Task_Beenden\"/>\n    <bpmn:sequenceFlow id=\"Flow_15\" sourceRef=\"Task_Beenden\" targetRef=\"End_Beendet\"/>\n  </bpmn:process>\n</bpmn:definitions>\n"},{"label":"Bestellung (Bahnen ohne Pool)","xml":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Bestellung\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:process id=\"Process_Bestellung\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Bestellung\">\n      <bpmn:lane id=\"Lane_Kundin\" name=\"Kundin\">\n        <bpmn:flowNodeRef>Start_Bestellt</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Shop\" name=\"Shop\">\n        <bpmn:flowNodeRef>Task_Zahlung</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Zahlung</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Informieren</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Storniert</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Rechnung</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Lager\" name=\"Lager\">\n        <bpmn:flowNodeRef>Task_Packen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Versenden</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Versendet</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Bestellt\" name=\"Bestellung aufgegeben\"/>\n    <bpmn:serviceTask id=\"Task_Zahlung\" name=\"Zahlung prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Zahlung\" name=\"Zahlung in Ordnung?\"/>\n    <bpmn:sendTask id=\"Task_Informieren\" name=\"Kundin informieren\"/>\n    <bpmn:endEvent id=\"End_Storniert\" name=\"Bestellung storniert\"/>\n    <bpmn:parallelGateway id=\"Gateway_Split\"/>\n    <bpmn:manualTask id=\"Task_Packen\" name=\"Ware packen\"/>\n    <bpmn:sendTask id=\"Task_Rechnung\" name=\"Rechnung senden\"/>\n    <bpmn:parallelGateway id=\"Gateway_Join\"/>\n    <bpmn:manualTask id=\"Task_Versenden\" name=\"Paket versenden\"/>\n    <bpmn:endEvent id=\"End_Versendet\" name=\"Bestellung versendet\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Bestellt\" targetRef=\"Task_Zahlung\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Zahlung\" targetRef=\"Gateway_Zahlung\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" name=\"ja\" sourceRef=\"Gateway_Zahlung\" targetRef=\"Gateway_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" name=\"nein\" sourceRef=\"Gateway_Zahlung\" targetRef=\"Task_Informieren\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Informieren\" targetRef=\"End_Storniert\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Packen\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Rechnung\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Task_Packen\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Task_Rechnung\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Gateway_Join\" targetRef=\"Task_Versenden\"/>\n    <bpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Task_Versenden\" targetRef=\"End_Versendet\"/>\n  </bpmn:process>\n</bpmn:definitions>\n"},{"label":"Störung (ohne Pool und Bahnen)","xml":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Stoerung\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:process id=\"Process_Stoerung\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Gemeldet\" name=\"Störung gemeldet\"/>\n    <bpmn:userTask id=\"Task_Erfassen\" name=\"Störung erfassen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Merge\"/>\n    <bpmn:userTask id=\"Task_Loesen\" name=\"Lösung versuchen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Behoben\" name=\"Behoben?\"/>\n    <bpmn:sendTask id=\"Task_Melden\" name=\"Meldenden informieren\"/>\n    <bpmn:endEvent id=\"End_Behoben\" name=\"Störung behoben\"/>\n    <bpmn:userTask id=\"Task_Uebergeben\" name=\"An Fachteam übergeben\"/>\n    <bpmn:intermediateCatchEvent id=\"Timer_Rueckmeldung\" name=\"Eine Stunde\">\n      <bpmn:timerEventDefinition id=\"TimerDef_Rueckmeldung\"/>\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Gemeldet\" targetRef=\"Task_Erfassen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Erfassen\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Gateway_Merge\" targetRef=\"Task_Loesen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Loesen\" targetRef=\"Gateway_Behoben\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" name=\"ja\" sourceRef=\"Gateway_Behoben\" targetRef=\"Task_Melden\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Task_Melden\" targetRef=\"End_Behoben\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" name=\"nein\" sourceRef=\"Gateway_Behoben\" targetRef=\"Task_Uebergeben\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Task_Uebergeben\" targetRef=\"Timer_Rueckmeldung\"/>\n    <bpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Timer_Rueckmeldung\" targetRef=\"Gateway_Merge\"/>\n  </bpmn:process>\n</bpmn:definitions>\n"},{"label":"Bestellung (drei Pools mit Nachrichtenflüssen)","xml":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:bpmndi=\"http://www.omg.org/spec/BPMN/20100524/DI\" xmlns:dc=\"http://www.omg.org/spec/DD/20100524/DC\" xmlns:di=\"http://www.omg.org/spec/DD/20100524/DI\" id=\"Definitions_1\" targetNamespace=\"http://bpmn.io/schema/bpmn\">\n  <bpmn:collaboration id=\"Collaboration_1\">\n    <bpmn:participant id=\"Pool_Kunde\" name=\"Kunde\" processRef=\"Process_Kunde\" />\n    <bpmn:participant id=\"Pool_Shop\" name=\"Shop\" processRef=\"Process_Shop\" />\n    <bpmn:participant id=\"Pool_Lieferant\" name=\"Lieferant\" processRef=\"Process_Lieferant\" />\n    <bpmn:messageFlow id=\"M1\" name=\"Bestellung\" sourceRef=\"K_Bestellen\" targetRef=\"S_Start\" />\n    <bpmn:messageFlow id=\"M2\" name=\"Nachbestellung\" sourceRef=\"S_Nachbestellen\" targetRef=\"L_Start\" />\n    <bpmn:messageFlow id=\"M3\" name=\"Lieferung\" sourceRef=\"L_Liefern\" targetRef=\"S_Wareneingang\" />\n    <bpmn:messageFlow id=\"M4\" name=\"Paket\" sourceRef=\"S_Versenden\" targetRef=\"K_Paket\" />\n    <bpmn:messageFlow id=\"M5\" name=\"Absage\" sourceRef=\"S_Absagen\" targetRef=\"K_Absage\" />\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Kunde\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"K_Start\" name=\"Braucht Ware\" />\n    <bpmn:sendTask id=\"K_Bestellen\" name=\"Bestellen\" />\n    <bpmn:eventBasedGateway id=\"K_Warten\" />\n    <bpmn:intermediateCatchEvent id=\"K_Paket\" name=\"Paket erhalten\">\n      <bpmn:messageEventDefinition id=\"K_Paket_def\" />\n    </bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"K_Absage\" name=\"Absage erhalten\">\n      <bpmn:messageEventDefinition id=\"K_Absage_def\" />\n    </bpmn:intermediateCatchEvent>\n    <bpmn:endEvent id=\"K_Ende\" name=\"Versorgt\" />\n    <bpmn:endEvent id=\"K_Ende2\" name=\"Sucht woanders\" />\n    <bpmn:sequenceFlow id=\"K1\" sourceRef=\"K_Start\" targetRef=\"K_Bestellen\" />\n    <bpmn:sequenceFlow id=\"K2\" sourceRef=\"K_Bestellen\" targetRef=\"K_Warten\" />\n    <bpmn:sequenceFlow id=\"K3\" sourceRef=\"K_Warten\" targetRef=\"K_Paket\" />\n    <bpmn:sequenceFlow id=\"K4\" sourceRef=\"K_Warten\" targetRef=\"K_Absage\" />\n    <bpmn:sequenceFlow id=\"K5\" sourceRef=\"K_Paket\" targetRef=\"K_Ende\" />\n    <bpmn:sequenceFlow id=\"K6\" sourceRef=\"K_Absage\" targetRef=\"K_Ende2\" />\n  </bpmn:process>\n  <bpmn:process id=\"Process_Shop\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Shop\">\n      <bpmn:lane id=\"Lane_Vertrieb\" name=\"Vertrieb\">\n        <bpmn:flowNodeRef>S_Start</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Lieferbar</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Absagen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_EndeAbsage</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Lager\" name=\"Lager\">\n        <bpmn:flowNodeRef>S_Vorrat</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Nachbestellen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Wareneingang</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Versenden</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>S_Ende</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"S_Start\" name=\"Bestellung eingegangen\">\n      <bpmn:messageEventDefinition id=\"S_Start_def\" />\n    </bpmn:startEvent>\n    <bpmn:userTask id=\"S_Pruefen\" name=\"Bestellung prüfen\" />\n    <bpmn:exclusiveGateway id=\"S_Lieferbar\" name=\"Lieferbar?\" />\n    <bpmn:sendTask id=\"S_Absagen\" name=\"Absage senden\" />\n    <bpmn:endEvent id=\"S_EndeAbsage\" name=\"Abgesagt\" />\n    <bpmn:exclusiveGateway id=\"S_Vorrat\" name=\"Auf Lager?\" />\n    <bpmn:sendTask id=\"S_Nachbestellen\" name=\"Beim Lieferanten nachbestellen\" />\n    <bpmn:intermediateCatchEvent id=\"S_Wareneingang\" name=\"Ware eingetroffen\">\n      <bpmn:messageEventDefinition id=\"S_Wareneingang_def\" />\n    </bpmn:intermediateCatchEvent>\n    <bpmn:sendTask id=\"S_Versenden\" name=\"Paket versenden\" />\n    <bpmn:endEvent id=\"S_Ende\" name=\"Versendet\" />\n    <bpmn:sequenceFlow id=\"S1\" sourceRef=\"S_Start\" targetRef=\"S_Pruefen\" />\n    <bpmn:sequenceFlow id=\"S2\" sourceRef=\"S_Pruefen\" targetRef=\"S_Lieferbar\" />\n    <bpmn:sequenceFlow id=\"S3\" name=\"nein\" sourceRef=\"S_Lieferbar\" targetRef=\"S_Absagen\" />\n    <bpmn:sequenceFlow id=\"S4\" sourceRef=\"S_Absagen\" targetRef=\"S_EndeAbsage\" />\n    <bpmn:sequenceFlow id=\"S5\" name=\"ja\" sourceRef=\"S_Lieferbar\" targetRef=\"S_Vorrat\" />\n    <bpmn:sequenceFlow id=\"S6\" name=\"nein\" sourceRef=\"S_Vorrat\" targetRef=\"S_Nachbestellen\" />\n    <bpmn:sequenceFlow id=\"S7\" sourceRef=\"S_Nachbestellen\" targetRef=\"S_Wareneingang\" />\n    <bpmn:sequenceFlow id=\"S8\" sourceRef=\"S_Wareneingang\" targetRef=\"S_Versenden\" />\n    <bpmn:sequenceFlow id=\"S9\" name=\"ja\" sourceRef=\"S_Vorrat\" targetRef=\"S_Versenden\" />\n    <bpmn:sequenceFlow id=\"S10\" sourceRef=\"S_Versenden\" targetRef=\"S_Ende\" />\n  </bpmn:process>\n  <bpmn:process id=\"Process_Lieferant\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"L_Start\" name=\"Nachbestellung eingegangen\">\n      <bpmn:messageEventDefinition id=\"L_Start_def\" />\n    </bpmn:startEvent>\n    <bpmn:task id=\"L_Packen\" name=\"Ware packen\" />\n    <bpmn:sendTask id=\"L_Liefern\" name=\"Liefern\" />\n    <bpmn:endEvent id=\"L_Ende\" name=\"Geliefert\" />\n    <bpmn:sequenceFlow id=\"L1\" sourceRef=\"L_Start\" targetRef=\"L_Packen\" />\n    <bpmn:sequenceFlow id=\"L2\" sourceRef=\"L_Packen\" targetRef=\"L_Liefern\" />\n    <bpmn:sequenceFlow id=\"L3\" sourceRef=\"L_Liefern\" targetRef=\"L_Ende\" />\n  </bpmn:process>\n</bpmn:definitions>\n"},{"label":"Onlineshop (Pool mit zwei Black Boxes)","xml":"<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Bestellung\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Bestellung\">\n    <bpmn:participant id=\"Pool_Kunde\" name=\"Kunde\"/>\n    <bpmn:participant id=\"Pool_Shop\" name=\"Onlineshop\" processRef=\"Process_Shop\"/>\n    <bpmn:participant id=\"Pool_Paketdienst\" name=\"Paketdienst\"/>\n    <bpmn:messageFlow id=\"Message_Bestellung\" name=\"Bestellung\" sourceRef=\"Pool_Kunde\" targetRef=\"Start_Bestellung\"/>\n    <bpmn:messageFlow id=\"Message_Absage\" name=\"Absage\" sourceRef=\"Task_Absagen\" targetRef=\"Pool_Kunde\"/>\n    <bpmn:messageFlow id=\"Message_Bestaetigung\" name=\"Bestätigung\" sourceRef=\"Task_Bestaetigen\" targetRef=\"Pool_Kunde\"/>\n    <bpmn:messageFlow id=\"Message_Paket\" name=\"Paket\" sourceRef=\"Task_Uebergeben\" targetRef=\"Pool_Paketdienst\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Shop\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Shop\">\n      <bpmn:lane id=\"Lane_Vertrieb\" name=\"Vertrieb\">\n        <bpmn:flowNodeRef>Start_Bestellung</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Lieferbar</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Absagen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Abgesagt</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Bestaetigen</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Lager\" name=\"Lager\">\n        <bpmn:flowNodeRef>Task_Verpacken</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Uebergeben</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Versandt</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Bestellung\" name=\"Bestellung eingegangen\"><bpmn:messageEventDefinition id=\"Def_Bestellung\"/></bpmn:startEvent>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Bestellung prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Lieferbar\" name=\"Lieferbar?\"/>\n    <bpmn:sendTask id=\"Task_Bestaetigen\" name=\"Bestellung bestätigen\"/>\n    <bpmn:manualTask id=\"Task_Verpacken\" name=\"Ware verpacken\"/>\n    <bpmn:sendTask id=\"Task_Uebergeben\" name=\"Paket übergeben\"/>\n    <bpmn:endEvent id=\"End_Versandt\" name=\"Ware versandt\"/>\n    <bpmn:sendTask id=\"Task_Absagen\" name=\"Absage senden\"/>\n    <bpmn:endEvent id=\"End_Abgesagt\" name=\"Abgesagt\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Bestellung\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Lieferbar\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" name=\"ja\" sourceRef=\"Gateway_Lieferbar\" targetRef=\"Task_Bestaetigen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Bestaetigen\" targetRef=\"Task_Verpacken\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Verpacken\" targetRef=\"Task_Uebergeben\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Task_Uebergeben\" targetRef=\"End_Versandt\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" name=\"nein\" sourceRef=\"Gateway_Lieferbar\" targetRef=\"Task_Absagen\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Task_Absagen\" targetRef=\"End_Abgesagt\"/>\n  </bpmn:process>\n</bpmn:definitions>\n"}];
-const HANDREICHUNG = "# BPMN für dokufix schreiben: Handreichung für LLMs\n\nStand: 2026-10-06, dokufix nach Story 2.29, Pools ohne eigenen Prozess (Black Box) und Nachrichtenflüsse an einem Pool (Layout `src/app/bpmn-layout.js`, Mermaid 12.0.0, bpmn-js 18.31.0).\n\nDiese Handreichung sagt dir, welches BPMN-2.0-XML dokufix ohne Koordinaten zeichnet, was es weglässt und was es ablehnt. Halte dich an sie, wenn du auf Zuruf einen Prozess als BPMN in ein dokufix-Dokument schreibst.\n\n## 1. Das Wichtigste in fünf Regeln\n\n1. **Schreibe keine Koordinaten.** Kein `bpmndi:BPMNDiagram`, kein `BPMNShape`, kein `BPMNEdge`. dokufix ordnet das Diagramm selbst an. Geratene Koordinaten erzeugen Pfeile, die im Leeren beginnen und enden.\n2. **Ein Pool je Beteiligtem, eine Bahn je Rolle.** Arbeiten Rollen einer Organisation zusammen, sind sie Bahnen (`lane`) eines Pools. Tauschen eigenständige Beteiligte Nachrichten aus (Kunde und Firma, Firma und Lieferant), bekommt jeder einen eigenen Pool (`participant`). Kennst du den Ablauf eines Beteiligten, bekommt sein Pool einen eigenen `process`; kennst du ihn nicht, ist sein Pool eine Black Box: ein `participant` ohne `processRef`.\n3. **Mit Bahnen: jeder Knoten in genau einer Bahn.** Gibt es ein `laneSet`, muss jeder Flussknoten in einer `flowNodeRef` stehen. Sonst lehnt dokufix das Diagramm ab.\n4. **Jede Verzweigung über ein Gateway.** Eine Aufgabe oder ein Ereignis hat genau einen ausgehenden Sequenzfluss.\n5. **Flussknoten, Sequenzflüsse und Nachrichtenflüsse tragen den Ablauf.** Ein Sequenzfluss bleibt in seinem Pool; zwischen Pools läuft nur ein Nachrichtenfluss (`messageFlow`), von einem Flussknoten oder einem Pool zu einem Flussknoten oder Pool eines anderen Pools. Datenobjekte, Notizen und Assoziationen lässt dokufix weg (Abschnitt 4). Baue nichts, was ohne sie unverständlich wird.\n\n## 2. So steht BPMN im Dokument\n\nDas XML steht in einem eingezäunten Block mit der Sprache `bpmn`:\n\n````markdown\n## Urlaubsantrag\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions …>\n  …\n</bpmn:definitions>\n```\n````\n\n- **Titel:** Der Titel des Diagramms ist die letzte Überschrift vor dem Block. Setze deshalb eine passende Überschrift direkt davor.\n- **Ein Diagramm je Block:** Zusammenhängende Pools mit ihren Nachrichtenflüssen stehen in einem Block. Voneinander unabhängige Abläufe schreibst du als mehrere Blöcke, jeden unter einer eigenen Überschrift.\n- **Mit Koordinaten:** XML, das bereits ein `BPMNShape` enthält, zeichnet dokufix unverändert so, wie es ist. Dann gelten die Grenzen dieser Handreichung nicht. Schreibe Koordinaten trotzdem nur, wenn sie aus einem echten Modellierwerkzeug stammen, nie selbst gerechnet und nie nur für einen Teil der Elemente.\n\n## 3. Was dokufix anordnet und zeichnet\n\n| Struktur | XML-Elemente | Hinweise |\n|---|---|---|\n| Pool | ein `bpmn:collaboration` mit einem `bpmn:participant processRef=\"…\"` | optional; ohne Teilnehmer gibt es keinen Pool-Rahmen |\n| mehrere Pools | ein `bpmn:collaboration` mit einem `bpmn:participant` je Beteiligtem, mit `processRef` auf seinen eigenen `bpmn:process` | untereinander in der Reihenfolge der `participant`, mit Abstand; jeder Pool mit eigenen Bahnen oder ohne |\n| Pool ohne eigenen Prozess (Black Box) | `bpmn:participant` ohne `processRef` | ein schmaler Rahmen ohne Bahnen, so breit wie die anderen Pools, an seinem Platz in der Reihenfolge der `participant`; mindestens ein Pool braucht einen Prozess |\n| Nachrichtenfluss | `bpmn:messageFlow sourceRef=\"…\" targetRef=\"…\"` im `collaboration` | zwischen zwei Pools; jedes Ende ein Flussknoten oder die `id` eines `participant`; gestrichelt, senkrecht, an einem Pool bis an seinen Rand; `name` als Beschriftung |\n| Bahnen | `bpmn:laneSet` mit `bpmn:lane` und `bpmn:flowNodeRef` | Reihenfolge im `laneSet` = von oben nach unten; eine leere Bahn ist erlaubt und wird gezeichnet |\n| verschachtelte Bahnen | `bpmn:lane` mit `bpmn:childLaneSet` | nur die inneren Bahnen werden gezeichnet, die äußere nicht; besser vermeiden |\n| ohne Bahnen | Prozess ohne `laneSet` | erlaubt; alle Knoten stehen in einer Bahn ohne Rahmen, mit Teilnehmer im Pool |\n| Startereignis | `bpmn:startEvent` | mit oder ohne Definition (Zeit, Nachricht, Signal …) |\n| Endereignis | `bpmn:endEvent` | auch `terminateEventDefinition`, `errorEventDefinition` usw. |\n| Zwischenereignis | `bpmn:intermediateCatchEvent`, `bpmn:intermediateThrowEvent` | Zeit, Nachricht, Signal, Bedingung, Eskalation, Link; die Markierung zeichnet bpmn-js |\n| Aufgabe | `bpmn:task`, `userTask`, `manualTask`, `serviceTask`, `sendTask`, `receiveTask`, `scriptTask`, `businessRuleTask` | jede Art mit ihrem Symbol |\n| Aufruf | `bpmn:callActivity` | als Aufgabe angeordnet |\n| Teilprozess | `bpmn:subProcess`, `adHocSubProcess`, `transaction` | als **ein** Symbol, zugeklappt; sein Inhalt wird nicht angeordnet |\n| angeheftetes Ereignis | `bpmn:boundaryEvent attachedToRef=\"…\"` mit Definition (Zeit, Fehler, Eskalation, Nachricht …) | auf der Unterkante seiner Aufgabe oder seines Teilprozesses; unterbrechend, mit `cancelActivity=\"false\"` nicht (gestrichelt); mehrere an einer Aufgabe nebeneinander; der Ausnahmepfad steht eine Zeile darunter; Sequenzflüsse gehen von ihm aus, nie hinein |\n| Gateway | `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | jede Art; ein Gateway darf in jeder Bahn liegen |\n| Sequenzfluss | `bpmn:sequenceFlow sourceRef=\"…\" targetRef=\"…\"` | `name` wird als Beschriftung gezeichnet; Rückflüsse (Schleifen) sind erlaubt |\n| Namen | Attribut `name` | Leerraum wird zusammengezogen; ein Label ist bis 90 px breit, kurze Namen lesen sich am besten |\n\nNicht nötig, aber unschädlich: `bpmn:incoming` und `bpmn:outgoing` in den Knoten (dokufix liest die Flüsse aus `sourceRef` und `targetRef`), `conditionExpression`, `documentation`, `isExecutable`, eigene Präfixe oder ein Standard-Namensraum ohne Präfix.\n\n## 4. Was dokufix weglässt (das Diagramm erscheint ohne sie)\n\n| Element | Folge |\n|---|---|\n| `bpmn:boundaryEvent` an etwas, das keine Aufgabe und kein Teilprozess ist | fehlt samt seinen Flüssen |\n| Sequenzfluss in ein angeheftetes Ereignis, Nachrichtenfluss an einem | fehlt |\n| `bpmn:dataObject`, `dataObjectReference`, `dataStoreReference` | fehlen |\n| `dataInputAssociation`, `dataOutputAssociation` | fehlen |\n| `bpmn:textAnnotation`, `bpmn:association` | fehlen, auch eine Assoziation zwischen zwei Flussknoten (etwa Signal-Wurf → Signal-Fang) |\n| `bpmn:group` | fehlt |\n| `participant` ohne `id` | fehlt samt den Nachrichtenflüssen zu ihm; mit Prozess wird der Prozess ohne Pool-Rahmen gezeichnet |\n| `bpmn:messageFlow` innerhalb eines Pools | fehlt |\n| Inhalt eines Teilprozesses | fehlt; der Teilprozess steht als ein Symbol |\n| äußere Bahn verschachtelter Bahnen | fehlt; ihre inneren Bahnen stehen |\n| Sequenzfluss von einem Knoten zu sich selbst | fehlt |\n| Element oder Fluss ohne `id` | fehlt |\n| Fluss, der an einem weggelassenen Element hängt | fehlt |\n\nDaraus folgt für dein Modell:\n- **Zeitüberschreitung oder Fehler an einer Aufgabe:** ein angeheftetes Ereignis an der Aufgabe (`boundaryEvent` mit `timerEventDefinition` oder `errorEventDefinition`), von dem der Ausnahmepfad ausgeht; soll die Aufgabe weiterlaufen, mit `cancelActivity=\"false\"`. Eine Nachricht von einem anderen Pool empfängt besser eine Aufgabe oder ein Zwischenereignis als ein angeheftetes Ereignis: einen Nachrichtenfluss an einem angehefteten Ereignis lässt dokufix noch weg.\n- **Nachricht zwischen Beteiligten:** ein Nachrichtenfluss von der sendenden Aufgabe (`sendTask`) oder dem sendenden Ereignis zur empfangenden (`receiveTask`, Nachrichten-Start- oder Zwischenereignis) im anderen Pool. Einen Beteiligten, dessen Ablauf du nicht kennst, gib als Black Box an: ein `participant` ohne `processRef`; die Nachrichtenflüsse zu ihm und von ihm haben seine `id` als `targetRef` oder `sourceRef`. Erfinde für ihn keinen Ablauf.\n- **Signal zwischen Rollen eines Pools:** Wurf und Fang als Zwischenereignisse mit gleichem Namen, keine Linie dazwischen. Ein Nachrichtenfluss innerhalb eines Pools ist kein gültiges BPMN.\n- **Daten und Hinweise:** in den Text des Dokuments, nicht ins Diagramm.\n\n## 5. Was dokufix ablehnt (statt des Diagramms erscheint eine Warnung)\n\n| Fall | Meldung |\n|---|---|\n| kein Flussknoten, oder nur Pools ohne eigenen Prozess | „Das BPMN-XML enthält kein Element, das sich anordnen lässt.“ |\n| Bahnen vorhanden, aber ein Knoten in keiner Bahn | „Diese Elemente liegen in keiner Bahn: …“ |\n| XML nicht lesbar, oder die Wurzel ist nicht `definitions` | Warnung mit dem Grund |\n\nDer Rest des Dokuments und alle anderen Diagramme werden trotzdem gezeichnet.\n\nMehrere Prozesse ohne `collaboration` lehnt dokufix nicht ab: Es zeichnet jeden als Pool, untereinander, und fügt dafür eine `collaboration` mit einem `participant` je Prozess ins XML ein, benannt wie der Prozess. Schreibe die `collaboration` besser selbst, dann stehen die Namen der Pools fest.\n\n## 6. Modellierregeln (gültiges BPMN)\n\ndokufix prüft diese Regeln nicht, aber ein Diagramm, das sie bricht, ist falsches BPMN und wird schlechter angeordnet. Sie entsprechen `bpmnlint` (Empfehlungen) mit den Lockerungen, die für dokufix gelten.\n\n1. **Ein Startereignis**, jeder Pfad endet in einem **Endereignis**. Kein Knoten ohne Ausgang außer Endereignissen.\n2. **Keine implizite Verzweigung:** Eine Aufgabe oder ein Ereignis hat genau einen ausgehenden Fluss. Für mehrere Wege steht ein Gateway dahinter.\n3. **Ein Gateway verzweigt oder führt zusammen, nie beides.** Für beides zwei Gateways hintereinander.\n4. **Ein paralleler Split wird von einem parallelen Join geschlossen**, mit so vielen Eingängen wie der Split Ausgänge hat. Ein paralleler Join liegt nie auf einer Schleife.\n5. **Keine zwei Flüsse zwischen demselben Paar** von Knoten.\n6. **Nachrichtenflüsse nur zwischen Pools.** Ein Sequenzfluss verlässt seinen Pool nie; ein Nachrichtenfluss verbindet zwei verschiedene Pools, jedes Ende ein Flussknoten oder, bei einer Black Box, der `participant` selbst. Jeder Pool hat seinen eigenen Start und sein eigenes Ende; ein Prozess, der durch eine Nachricht beginnt, beginnt mit einem Nachrichten-Startereignis.\n7. **Eindeutige `id`s** für jedes Element, über alle Pools hinweg.\n8. **Schleifen** führen über ein exklusives Gateway zurück: entweder zu einem zusammenführenden Gateway vor dem Ziel (empfohlen) oder direkt zu einer Aufgabe. Mehrere Eingänge in eine Aufgabe sind erlaubt, ein Gateway davor liest sich klarer.\n9. **Beschriftung:**\n   - Aufgaben mit Verb und Objekt („Antrag prüfen“),\n   - Ereignisse als Zustand („Antrag eingegangen“),\n   - verzweigende exklusive Gateways als Frage („Genehmigt?“),\n   - ihre ausgehenden Flüsse mit den Antworten („ja“, „nein“).\n   - Zusammenführende und parallele Gateways brauchen keinen Namen.\n   - Nachrichtenflüsse mit dem, was übergeben wird („Anfrage“, „Angebot“).\n\n## 7. Für eine gute Anordnung\n\n- **Reihenfolge:** Schreibe die Knoten und die Flüsse in der Reihenfolge des Ablaufs, den Hauptweg zuerst. Die Reihenfolge im XML beeinflusst die Anordnung, etwa welcher Fluss als Rückfluss gilt.\n- **Gateways:** Lege ein Gateway in die Bahn des Knotens davor, also der Rolle, die die Entscheidung trifft oder den Ablauf teilt.\n- **Kurze Namen:** drei bis fünf Wörter. Lange Namen werden mehrzeilig und machen das Diagramm hoch.\n- **Größe:** Erprobt ist dokufix bis etwa 55 Flussknoten in fünf Bahnen. Größere Prozesse teilst du in mehrere Diagramme (Überblick plus Teilprozesse, je ein Block).\n- **Bahnen:** eine Bahn je Rolle, so wenige wie nötig. Knoten einer Rolle stehen in ihrer Bahn.\n- **Pools:** Die Reihenfolge der `participant` ist die Reihenfolge der Pools von oben nach unten, Black Boxes eingeschlossen. Lege Beteiligte, die viele Nachrichten tauschen, nebeneinander in diese Reihenfolge; eine Black Box, die nur mit einem Pool spricht, direkt über oder unter ihn (den Kunden meist oben, einen Lieferanten unten). Ein Nachrichtenfluss an einer Black Box läuft senkrecht vom Flussknoten bis an ihren Rand. Der Empfänger einer Nachricht steht frühestens in der Spalte des Senders, also direkt darunter oder darüber oder weiter rechts; schreibe Senden und Empfangen in beiden Prozessen an der passenden Stelle des Ablaufs.\n\n## 8. Vorlagen\n\nDrei vollständige, gültige Beispiele. Alle sind geprüft: bpmnlint ohne Fehler und Warnung, von dokufix ohne Bruch gezeichnet.\n\n### Ein Pool mit Bahnen, einer Schleife und einem parallelen Block\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Urlaub\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Urlaub\">\n    <bpmn:participant id=\"Pool_Urlaub\" name=\"Urlaubsantrag\" processRef=\"Process_Urlaub\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Urlaub\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Urlaub\">\n      <bpmn:lane id=\"Lane_MA\" name=\"Mitarbeiterin\">\n        <bpmn:flowNodeRef>Start_Geplant</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Stellen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Ueberarbeiten</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Vertretung</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_TL\" name=\"Teamleitung\">\n        <bpmn:flowNodeRef>Gateway_Merge</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Genehmigt</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_PA\" name=\"Personalabteilung\">\n        <bpmn:flowNodeRef>Task_Eintragen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Genehmigt</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Geplant\" name=\"Urlaub geplant\"/>\n    <bpmn:userTask id=\"Task_Stellen\" name=\"Antrag stellen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Merge\"/>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Antrag prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Genehmigt\" name=\"Genehmigt?\"/>\n    <bpmn:userTask id=\"Task_Ueberarbeiten\" name=\"Antrag überarbeiten\"/>\n    <bpmn:parallelGateway id=\"Gateway_Split\"/>\n    <bpmn:serviceTask id=\"Task_Eintragen\" name=\"Urlaub eintragen\"/>\n    <bpmn:sendTask id=\"Task_Vertretung\" name=\"Vertretung informieren\"/>\n    <bpmn:parallelGateway id=\"Gateway_Join\"/>\n    <bpmn:endEvent id=\"End_Genehmigt\" name=\"Urlaub genehmigt\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Geplant\" targetRef=\"Task_Stellen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Stellen\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Gateway_Merge\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Genehmigt\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" name=\"ja\" sourceRef=\"Gateway_Genehmigt\" targetRef=\"Gateway_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" name=\"nein\" sourceRef=\"Gateway_Genehmigt\" targetRef=\"Task_Ueberarbeiten\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Task_Ueberarbeiten\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Eintragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Vertretung\"/>\n    <bpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Task_Eintragen\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Task_Vertretung\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Gateway_Join\" targetRef=\"End_Genehmigt\"/>\n  </bpmn:process>\n</bpmn:definitions>\n```\n\n### Zwei Pools mit Nachrichtenflüssen\n\nKunde und Firma als zwei Pools; die Firma mit zwei Bahnen; drei Nachrichtenflüsse, Antwort oder Absage über ein ereignisbasiertes Gateway beim Kunden.\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Angebot\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Angebot\">\n    <bpmn:participant id=\"Pool_Kunde\" name=\"Kunde\" processRef=\"Process_Kunde\"/>\n    <bpmn:participant id=\"Pool_Firma\" name=\"Firma\" processRef=\"Process_Firma\"/>\n    <bpmn:messageFlow id=\"Message_Anfrage\" name=\"Anfrage\" sourceRef=\"Task_Anfragen\" targetRef=\"Start_Anfrage\"/>\n    <bpmn:messageFlow id=\"Message_Angebot\" name=\"Angebot\" sourceRef=\"Task_Senden\" targetRef=\"Event_Angebot\"/>\n    <bpmn:messageFlow id=\"Message_Absage\" name=\"Absage\" sourceRef=\"End_Absage\" targetRef=\"Event_Absage\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Kunde\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Bedarf\" name=\"Bedarf erkannt\"/>\n    <bpmn:sendTask id=\"Task_Anfragen\" name=\"Angebot anfragen\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_Antwort\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_Angebot\" name=\"Angebot erhalten\"><bpmn:messageEventDefinition id=\"Def_Angebot\"/></bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"Event_Absage\" name=\"Absage erhalten\"><bpmn:messageEventDefinition id=\"Def_Absage\"/></bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_Pruefen_Kunde\" name=\"Angebot prüfen\"/>\n    <bpmn:endEvent id=\"End_Kunde_Angebot\" name=\"Angebot liegt vor\"/>\n    <bpmn:endEvent id=\"End_Kunde_Absage\" name=\"Anderswo anfragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_K1\" sourceRef=\"Start_Bedarf\" targetRef=\"Task_Anfragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_K2\" sourceRef=\"Task_Anfragen\" targetRef=\"Gateway_Antwort\"/>\n    <bpmn:sequenceFlow id=\"Flow_K3\" sourceRef=\"Gateway_Antwort\" targetRef=\"Event_Angebot\"/>\n    <bpmn:sequenceFlow id=\"Flow_K4\" sourceRef=\"Gateway_Antwort\" targetRef=\"Event_Absage\"/>\n    <bpmn:sequenceFlow id=\"Flow_K5\" sourceRef=\"Event_Angebot\" targetRef=\"Task_Pruefen_Kunde\"/>\n    <bpmn:sequenceFlow id=\"Flow_K6\" sourceRef=\"Task_Pruefen_Kunde\" targetRef=\"End_Kunde_Angebot\"/>\n    <bpmn:sequenceFlow id=\"Flow_K7\" sourceRef=\"Event_Absage\" targetRef=\"End_Kunde_Absage\"/>\n  </bpmn:process>\n  <bpmn:process id=\"Process_Firma\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Firma\">\n      <bpmn:lane id=\"Lane_Vertrieb\" name=\"Vertrieb\">\n        <bpmn:flowNodeRef>Start_Anfrage</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Machbar</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Senden</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Gesendet</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Absage</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Technik\" name=\"Technik\">\n        <bpmn:flowNodeRef>Task_Kalkulieren</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Anfrage\" name=\"Anfrage eingegangen\"><bpmn:messageEventDefinition id=\"Def_Anfrage\"/></bpmn:startEvent>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Anfrage prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Machbar\" name=\"Lieferbar?\"/>\n    <bpmn:userTask id=\"Task_Kalkulieren\" name=\"Preis kalkulieren\"/>\n    <bpmn:sendTask id=\"Task_Senden\" name=\"Angebot senden\"/>\n    <bpmn:endEvent id=\"End_Gesendet\" name=\"Angebot gesendet\"/>\n    <bpmn:endEvent id=\"End_Absage\" name=\"Absage gesendet\"><bpmn:messageEventDefinition id=\"Def_Absage_Senden\"/></bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_F1\" sourceRef=\"Start_Anfrage\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_F2\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Machbar\"/>\n    <bpmn:sequenceFlow id=\"Flow_F3\" name=\"ja\" sourceRef=\"Gateway_Machbar\" targetRef=\"Task_Kalkulieren\"/>\n    <bpmn:sequenceFlow id=\"Flow_F4\" name=\"nein\" sourceRef=\"Gateway_Machbar\" targetRef=\"End_Absage\"/>\n    <bpmn:sequenceFlow id=\"Flow_F5\" sourceRef=\"Task_Kalkulieren\" targetRef=\"Task_Senden\"/>\n    <bpmn:sequenceFlow id=\"Flow_F6\" sourceRef=\"Task_Senden\" targetRef=\"End_Gesendet\"/>\n  </bpmn:process>\n</bpmn:definitions>\n```\n\n### Ein Pool mit zwei Black Boxes\n\nDer Onlineshop mit zwei Bahnen; Kunde und Paketdienst als Black Boxes, weil ihr Ablauf unbekannt ist: der Kunde oben, der Paketdienst unten. Vier Nachrichtenflüsse, jeder zwischen einem Flussknoten des Shops und dem Rahmen einer Black Box.\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Bestellung\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Bestellung\">\n    <bpmn:participant id=\"Pool_Kunde\" name=\"Kunde\"/>\n    <bpmn:participant id=\"Pool_Shop\" name=\"Onlineshop\" processRef=\"Process_Shop\"/>\n    <bpmn:participant id=\"Pool_Paketdienst\" name=\"Paketdienst\"/>\n    <bpmn:messageFlow id=\"Message_Bestellung\" name=\"Bestellung\" sourceRef=\"Pool_Kunde\" targetRef=\"Start_Bestellung\"/>\n    <bpmn:messageFlow id=\"Message_Absage\" name=\"Absage\" sourceRef=\"Task_Absagen\" targetRef=\"Pool_Kunde\"/>\n    <bpmn:messageFlow id=\"Message_Bestaetigung\" name=\"Bestätigung\" sourceRef=\"Task_Bestaetigen\" targetRef=\"Pool_Kunde\"/>\n    <bpmn:messageFlow id=\"Message_Paket\" name=\"Paket\" sourceRef=\"Task_Uebergeben\" targetRef=\"Pool_Paketdienst\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Shop\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Shop\">\n      <bpmn:lane id=\"Lane_Vertrieb\" name=\"Vertrieb\">\n        <bpmn:flowNodeRef>Start_Bestellung</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Lieferbar</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Absagen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Abgesagt</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Bestaetigen</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Lager\" name=\"Lager\">\n        <bpmn:flowNodeRef>Task_Verpacken</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Uebergeben</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Versandt</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Bestellung\" name=\"Bestellung eingegangen\"><bpmn:messageEventDefinition id=\"Def_Bestellung\"/></bpmn:startEvent>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Bestellung prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Lieferbar\" name=\"Lieferbar?\"/>\n    <bpmn:sendTask id=\"Task_Bestaetigen\" name=\"Bestellung bestätigen\"/>\n    <bpmn:manualTask id=\"Task_Verpacken\" name=\"Ware verpacken\"/>\n    <bpmn:sendTask id=\"Task_Uebergeben\" name=\"Paket übergeben\"/>\n    <bpmn:endEvent id=\"End_Versandt\" name=\"Ware versandt\"/>\n    <bpmn:sendTask id=\"Task_Absagen\" name=\"Absage senden\"/>\n    <bpmn:endEvent id=\"End_Abgesagt\" name=\"Abgesagt\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Bestellung\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Lieferbar\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" name=\"ja\" sourceRef=\"Gateway_Lieferbar\" targetRef=\"Task_Bestaetigen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Bestaetigen\" targetRef=\"Task_Verpacken\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Verpacken\" targetRef=\"Task_Uebergeben\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Task_Uebergeben\" targetRef=\"End_Versandt\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" name=\"nein\" sourceRef=\"Gateway_Lieferbar\" targetRef=\"Task_Absagen\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Task_Absagen\" targetRef=\"End_Abgesagt\"/>\n  </bpmn:process>\n</bpmn:definitions>\n```\n\n## 9. Prüfliste vor der Ausgabe\n\n- [ ] Kein `BPMNDiagram`, kein `BPMNShape`, kein `BPMNEdge`.\n- [ ] Ein `participant` je Pool; mit `processRef` auf seinen eigenen `process` mit Inhalt, oder ohne `processRef` als Black Box, wenn sein Ablauf unbekannt ist; mindestens ein Pool mit Prozess.\n- [ ] Jeder Flussknoten hat eine eindeutige `id` und, wo es Bahnen gibt, genau eine `flowNodeRef`.\n- [ ] Jeder Fluss hat `id`, `sourceRef` und `targetRef`, die auf vorhandene Flussknoten zeigen.\n- [ ] Sequenzflüsse bleiben in ihrem Pool; jeder Nachrichtenfluss verbindet zwei verschiedene Pools, an einer Black Box mit ihrer `participant`-`id`.\n- [ ] Je Pool ein Start, jeder Pfad endet in einem Ende.\n- [ ] Jede Verzweigung über ein Gateway; kein Gateway verzweigt und führt zugleich zusammen.\n- [ ] Jeder parallele Split hat seinen parallelen Join.\n- [ ] Keine Datenobjekte, Notizen, Assoziationen oder Gruppen, auf die der Ablauf angewiesen ist; jedes angeheftete Ereignis an einer Aufgabe oder einem Teilprozess, kein Fluss hinein, kein Nachrichtenfluss an ihm.\n- [ ] Eine Überschrift direkt vor dem Block nennt den Prozess.\n";
+const HANDREICHUNG = "# BPMN für dokufix schreiben: Handreichung für LLMs\n\nStand: 2026-10-06, dokufix nach Story 2.29, Pools ohne eigenen Prozess (Black Box) und Nachrichtenflüsse an einem Pool (Layout `src/app/bpmn-layout.js`, Mermaid 12.0.0, bpmn-js 18.31.0).\n\nDiese Handreichung sagt dir, welches BPMN-2.0-XML dokufix ohne Koordinaten zeichnet, was es weglässt und was es ablehnt. Halte dich an sie, wenn du auf Zuruf einen Prozess als BPMN in ein dokufix-Dokument schreibst.\n\n## 1. Das Wichtigste in fünf Regeln\n\n1. **Schreibe keine Koordinaten.** Kein `bpmndi:BPMNDiagram`, kein `BPMNShape`, kein `BPMNEdge`. dokufix ordnet das Diagramm selbst an. Geratene Koordinaten erzeugen Pfeile, die im Leeren beginnen und enden.\n2. **Ein Pool je Beteiligtem, eine Bahn je Rolle.** Arbeiten Rollen einer Organisation zusammen, sind sie Bahnen (`lane`) eines Pools. Tauschen eigenständige Beteiligte Nachrichten aus (Kunde und Firma, Firma und Lieferant), bekommt jeder einen eigenen Pool (`participant`). Kennst du den Ablauf eines Beteiligten, bekommt sein Pool einen eigenen `process`; kennst du ihn nicht, ist sein Pool eine Black Box: ein `participant` ohne `processRef`.\n3. **Mit Bahnen: jeder Knoten in genau einer Bahn.** Gibt es ein `laneSet`, muss jeder Flussknoten in einer `flowNodeRef` stehen. Sonst lehnt dokufix das Diagramm ab.\n4. **Jede Verzweigung über ein Gateway.** Eine Aufgabe oder ein Ereignis hat genau einen ausgehenden Sequenzfluss.\n5. **Flussknoten, Sequenzflüsse und Nachrichtenflüsse tragen den Ablauf.** Ein Sequenzfluss bleibt in seinem Pool; zwischen Pools läuft nur ein Nachrichtenfluss (`messageFlow`), von einem Flussknoten oder einem Pool zu einem Flussknoten oder Pool eines anderen Pools. Datenobjekte lässt dokufix weg (Abschnitt 4), Notizen zeichnet es neben ihr Ziel (Abschnitt 3). Baue nichts, was ohne Datenobjekte unverständlich wird.\n\n## 2. So steht BPMN im Dokument\n\nDas XML steht in einem eingezäunten Block mit der Sprache `bpmn`:\n\n````markdown\n## Urlaubsantrag\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions …>\n  …\n</bpmn:definitions>\n```\n````\n\n- **Titel:** Der Titel des Diagramms ist die letzte Überschrift vor dem Block. Setze deshalb eine passende Überschrift direkt davor.\n- **Ein Diagramm je Block:** Zusammenhängende Pools mit ihren Nachrichtenflüssen stehen in einem Block. Voneinander unabhängige Abläufe schreibst du als mehrere Blöcke, jeden unter einer eigenen Überschrift.\n- **Mit Koordinaten:** XML, das bereits ein `BPMNShape` enthält, zeichnet dokufix unverändert so, wie es ist. Dann gelten die Grenzen dieser Handreichung nicht. Schreibe Koordinaten trotzdem nur, wenn sie aus einem echten Modellierwerkzeug stammen, nie selbst gerechnet und nie nur für einen Teil der Elemente.\n\n## 3. Was dokufix anordnet und zeichnet\n\n| Struktur | XML-Elemente | Hinweise |\n|---|---|---|\n| Pool | ein `bpmn:collaboration` mit einem `bpmn:participant processRef=\"…\"` | optional; ohne Teilnehmer gibt es keinen Pool-Rahmen |\n| mehrere Pools | ein `bpmn:collaboration` mit einem `bpmn:participant` je Beteiligtem, mit `processRef` auf seinen eigenen `bpmn:process` | untereinander in der Reihenfolge der `participant`, mit Abstand; jeder Pool mit eigenen Bahnen oder ohne |\n| Pool ohne eigenen Prozess (Black Box) | `bpmn:participant` ohne `processRef` | ein schmaler Rahmen ohne Bahnen, so breit wie die anderen Pools, an seinem Platz in der Reihenfolge der `participant`; mindestens ein Pool braucht einen Prozess |\n| Nachrichtenfluss | `bpmn:messageFlow sourceRef=\"…\" targetRef=\"…\"` im `collaboration` | zwischen zwei Pools; jedes Ende ein Flussknoten oder die `id` eines `participant`; gestrichelt, senkrecht, an einem Pool bis an seinen Rand; `name` als Beschriftung |\n| Bahnen | `bpmn:laneSet` mit `bpmn:lane` und `bpmn:flowNodeRef` | Reihenfolge im `laneSet` = von oben nach unten; eine leere Bahn ist erlaubt und wird gezeichnet |\n| verschachtelte Bahnen | `bpmn:lane` mit `bpmn:childLaneSet` | nur die inneren Bahnen werden gezeichnet, die äußere nicht; besser vermeiden |\n| ohne Bahnen | Prozess ohne `laneSet` | erlaubt; alle Knoten stehen in einer Bahn ohne Rahmen, mit Teilnehmer im Pool |\n| Startereignis | `bpmn:startEvent` | mit oder ohne Definition (Zeit, Nachricht, Signal …) |\n| Endereignis | `bpmn:endEvent` | auch `terminateEventDefinition`, `errorEventDefinition` usw. |\n| Zwischenereignis | `bpmn:intermediateCatchEvent`, `bpmn:intermediateThrowEvent` | Zeit, Nachricht, Signal, Bedingung, Eskalation, Link; die Markierung zeichnet bpmn-js |\n| Aufgabe | `bpmn:task`, `userTask`, `manualTask`, `serviceTask`, `sendTask`, `receiveTask`, `scriptTask`, `businessRuleTask` | jede Art mit ihrem Symbol |\n| Aufruf | `bpmn:callActivity` | als Aufgabe angeordnet |\n| Teilprozess | `bpmn:subProcess`, `adHocSubProcess`, `transaction` | als **ein** Symbol, zugeklappt; sein Inhalt wird nicht angeordnet |\n| angeheftetes Ereignis | `bpmn:boundaryEvent attachedToRef=\"…\"` mit Definition (Zeit, Fehler, Eskalation, Nachricht …) | auf der Unterkante seiner Aufgabe oder seines Teilprozesses; unterbrechend, mit `cancelActivity=\"false\"` nicht (gestrichelt); mehrere an einer Aufgabe nebeneinander; der Ausnahmepfad steht eine Zeile darunter; Sequenzflüsse gehen von ihm aus, nie hinein |\n| Gateway | `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | jede Art; ein Gateway darf in jeder Bahn liegen |\n| Sequenzfluss | `bpmn:sequenceFlow sourceRef=\"…\" targetRef=\"…\"` | `name` wird als Beschriftung gezeichnet; Rückflüsse (Schleifen) sind erlaubt |\n| Notiz | `bpmn:textAnnotation` mit `<bpmn:text>…</bpmn:text>` und eine `bpmn:association` von oder zu ihr, im `process` oder im `collaboration` | Ziel: ein Flussknoten, ein angeheftetes Ereignis, ein Sequenz- oder Nachrichtenfluss oder ein `participant`; die Notiz steht neben ihrem Ziel, möglichst rechts davon, die Assoziation gepunktet; eine Notiz an einem Pool rechts neben dem Pool; Zeilenumbrüche im Text bleiben; kurze Notizen lesen sich am besten |\n| Namen | Attribut `name` | Leerraum wird zusammengezogen; ein Label ist bis 90 px breit, kurze Namen lesen sich am besten |\n\nNicht nötig, aber unschädlich: `bpmn:incoming` und `bpmn:outgoing` in den Knoten (dokufix liest die Flüsse aus `sourceRef` und `targetRef`), `conditionExpression`, `documentation`, `isExecutable`, eigene Präfixe oder ein Standard-Namensraum ohne Präfix.\n\n## 4. Was dokufix weglässt (das Diagramm erscheint ohne sie)\n\n| Element | Folge |\n|---|---|\n| `bpmn:boundaryEvent` an etwas, das keine Aufgabe und kein Teilprozess ist | fehlt samt seinen Flüssen |\n| Sequenzfluss in ein angeheftetes Ereignis, Nachrichtenfluss an einem | fehlt |\n| `bpmn:dataObject`, `dataObjectReference`, `dataStoreReference` | fehlen |\n| `dataInputAssociation`, `dataOutputAssociation` | fehlen |\n| `bpmn:textAnnotation` ohne Text oder ohne `association` | fehlt |\n| `bpmn:association` ohne Notiz an einem Ende | fehlt, etwa zwischen zwei Flussknoten (Signal-Wurf → Signal-Fang) oder zu einer Kompensationsaktivität |\n| `bpmn:group` | fehlt |\n| `participant` ohne `id` | fehlt samt den Nachrichtenflüssen zu ihm; mit Prozess wird der Prozess ohne Pool-Rahmen gezeichnet |\n| `bpmn:messageFlow` innerhalb eines Pools | fehlt |\n| Inhalt eines Teilprozesses | fehlt; der Teilprozess steht als ein Symbol |\n| äußere Bahn verschachtelter Bahnen | fehlt; ihre inneren Bahnen stehen |\n| Sequenzfluss von einem Knoten zu sich selbst | fehlt |\n| Element oder Fluss ohne `id` | fehlt |\n| Fluss, der an einem weggelassenen Element hängt | fehlt |\n\nDaraus folgt für dein Modell:\n- **Zeitüberschreitung oder Fehler an einer Aufgabe:** ein angeheftetes Ereignis an der Aufgabe (`boundaryEvent` mit `timerEventDefinition` oder `errorEventDefinition`), von dem der Ausnahmepfad ausgeht; soll die Aufgabe weiterlaufen, mit `cancelActivity=\"false\"`. Eine Nachricht von einem anderen Pool empfängt besser eine Aufgabe oder ein Zwischenereignis als ein angeheftetes Ereignis: einen Nachrichtenfluss an einem angehefteten Ereignis lässt dokufix noch weg.\n- **Nachricht zwischen Beteiligten:** ein Nachrichtenfluss von der sendenden Aufgabe (`sendTask`) oder dem sendenden Ereignis zur empfangenden (`receiveTask`, Nachrichten-Start- oder Zwischenereignis) im anderen Pool. Einen Beteiligten, dessen Ablauf du nicht kennst, gib als Black Box an: ein `participant` ohne `processRef`; die Nachrichtenflüsse zu ihm und von ihm haben seine `id` als `targetRef` oder `sourceRef`. Erfinde für ihn keinen Ablauf.\n- **Signal zwischen Rollen eines Pools:** Wurf und Fang als Zwischenereignisse mit gleichem Namen, keine Linie dazwischen. Ein Nachrichtenfluss innerhalb eines Pools ist kein gültiges BPMN.\n- **Hinweise zu einem Schritt:** eine kurze Notiz an ihm (`textAnnotation` mit `association`), etwa eine Frist oder eine Rechtsgrundlage; längere Erklärungen in den Text des Dokuments.\n- **Daten:** in den Text des Dokuments, nicht ins Diagramm.\n\n## 5. Was dokufix ablehnt (statt des Diagramms erscheint eine Warnung)\n\n| Fall | Meldung |\n|---|---|\n| kein Flussknoten, oder nur Pools ohne eigenen Prozess | „Das BPMN-XML enthält kein Element, das sich anordnen lässt.“ |\n| Bahnen vorhanden, aber ein Knoten in keiner Bahn | „Diese Elemente liegen in keiner Bahn: …“ |\n| XML nicht lesbar, oder die Wurzel ist nicht `definitions` | Warnung mit dem Grund |\n\nDer Rest des Dokuments und alle anderen Diagramme werden trotzdem gezeichnet.\n\nMehrere Prozesse ohne `collaboration` lehnt dokufix nicht ab: Es zeichnet jeden als Pool, untereinander, und fügt dafür eine `collaboration` mit einem `participant` je Prozess ins XML ein, benannt wie der Prozess. Schreibe die `collaboration` besser selbst, dann stehen die Namen der Pools fest.\n\n## 6. Modellierregeln (gültiges BPMN)\n\ndokufix prüft diese Regeln nicht, aber ein Diagramm, das sie bricht, ist falsches BPMN und wird schlechter angeordnet. Sie entsprechen `bpmnlint` (Empfehlungen) mit den Lockerungen, die für dokufix gelten.\n\n1. **Ein Startereignis**, jeder Pfad endet in einem **Endereignis**. Kein Knoten ohne Ausgang außer Endereignissen.\n2. **Keine implizite Verzweigung:** Eine Aufgabe oder ein Ereignis hat genau einen ausgehenden Fluss. Für mehrere Wege steht ein Gateway dahinter.\n3. **Ein Gateway verzweigt oder führt zusammen, nie beides.** Für beides zwei Gateways hintereinander.\n4. **Ein paralleler Split wird von einem parallelen Join geschlossen**, mit so vielen Eingängen wie der Split Ausgänge hat. Ein paralleler Join liegt nie auf einer Schleife.\n5. **Keine zwei Flüsse zwischen demselben Paar** von Knoten.\n6. **Nachrichtenflüsse nur zwischen Pools.** Ein Sequenzfluss verlässt seinen Pool nie; ein Nachrichtenfluss verbindet zwei verschiedene Pools, jedes Ende ein Flussknoten oder, bei einer Black Box, der `participant` selbst. Jeder Pool hat seinen eigenen Start und sein eigenes Ende; ein Prozess, der durch eine Nachricht beginnt, beginnt mit einem Nachrichten-Startereignis.\n7. **Eindeutige `id`s** für jedes Element, über alle Pools hinweg.\n8. **Schleifen** führen über ein exklusives Gateway zurück: entweder zu einem zusammenführenden Gateway vor dem Ziel (empfohlen) oder direkt zu einer Aufgabe. Mehrere Eingänge in eine Aufgabe sind erlaubt, ein Gateway davor liest sich klarer.\n9. **Beschriftung:**\n   - Aufgaben mit Verb und Objekt („Antrag prüfen“),\n   - Ereignisse als Zustand („Antrag eingegangen“),\n   - verzweigende exklusive Gateways als Frage („Genehmigt?“),\n   - ihre ausgehenden Flüsse mit den Antworten („ja“, „nein“).\n   - Zusammenführende und parallele Gateways brauchen keinen Namen.\n   - Nachrichtenflüsse mit dem, was übergeben wird („Anfrage“, „Angebot“).\n\n## 7. Für eine gute Anordnung\n\n- **Reihenfolge:** Schreibe die Knoten und die Flüsse in der Reihenfolge des Ablaufs, den Hauptweg zuerst. Die Reihenfolge im XML beeinflusst die Anordnung, etwa welcher Fluss als Rückfluss gilt.\n- **Gateways:** Lege ein Gateway in die Bahn des Knotens davor, also der Rolle, die die Entscheidung trifft oder den Ablauf teilt.\n- **Kurze Namen:** drei bis fünf Wörter. Lange Namen werden mehrzeilig und machen das Diagramm hoch.\n- **Größe:** Erprobt ist dokufix bis etwa 55 Flussknoten in fünf Bahnen. Größere Prozesse teilst du in mehrere Diagramme (Überblick plus Teilprozesse, je ein Block).\n- **Bahnen:** eine Bahn je Rolle, so wenige wie nötig. Knoten einer Rolle stehen in ihrer Bahn.\n- **Pools:** Die Reihenfolge der `participant` ist die Reihenfolge der Pools von oben nach unten, Black Boxes eingeschlossen. Lege Beteiligte, die viele Nachrichten tauschen, nebeneinander in diese Reihenfolge; eine Black Box, die nur mit einem Pool spricht, direkt über oder unter ihn (den Kunden meist oben, einen Lieferanten unten). Ein Nachrichtenfluss an einer Black Box läuft senkrecht vom Flussknoten bis an ihren Rand. Der Empfänger einer Nachricht steht frühestens in der Spalte des Senders, also direkt darunter oder darüber oder weiter rechts; schreibe Senden und Empfangen in beiden Prozessen an der passenden Stelle des Ablaufs.\n\n## 8. Vorlagen\n\nDrei vollständige, gültige Beispiele. Alle sind geprüft: bpmnlint ohne Fehler und Warnung, von dokufix ohne Bruch gezeichnet.\n\n### Ein Pool mit Bahnen, einer Schleife und einem parallelen Block\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Urlaub\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Urlaub\">\n    <bpmn:participant id=\"Pool_Urlaub\" name=\"Urlaubsantrag\" processRef=\"Process_Urlaub\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Urlaub\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Urlaub\">\n      <bpmn:lane id=\"Lane_MA\" name=\"Mitarbeiterin\">\n        <bpmn:flowNodeRef>Start_Geplant</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Stellen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Ueberarbeiten</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Vertretung</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_TL\" name=\"Teamleitung\">\n        <bpmn:flowNodeRef>Gateway_Merge</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Genehmigt</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_PA\" name=\"Personalabteilung\">\n        <bpmn:flowNodeRef>Task_Eintragen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Genehmigt</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Geplant\" name=\"Urlaub geplant\"/>\n    <bpmn:userTask id=\"Task_Stellen\" name=\"Antrag stellen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Merge\"/>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Antrag prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Genehmigt\" name=\"Genehmigt?\"/>\n    <bpmn:userTask id=\"Task_Ueberarbeiten\" name=\"Antrag überarbeiten\"/>\n    <bpmn:parallelGateway id=\"Gateway_Split\"/>\n    <bpmn:serviceTask id=\"Task_Eintragen\" name=\"Urlaub eintragen\"/>\n    <bpmn:sendTask id=\"Task_Vertretung\" name=\"Vertretung informieren\"/>\n    <bpmn:parallelGateway id=\"Gateway_Join\"/>\n    <bpmn:endEvent id=\"End_Genehmigt\" name=\"Urlaub genehmigt\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Geplant\" targetRef=\"Task_Stellen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Stellen\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" sourceRef=\"Gateway_Merge\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Genehmigt\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" name=\"ja\" sourceRef=\"Gateway_Genehmigt\" targetRef=\"Gateway_Split\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" name=\"nein\" sourceRef=\"Gateway_Genehmigt\" targetRef=\"Task_Ueberarbeiten\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" sourceRef=\"Task_Ueberarbeiten\" targetRef=\"Gateway_Merge\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Eintragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_9\" sourceRef=\"Gateway_Split\" targetRef=\"Task_Vertretung\"/>\n    <bpmn:sequenceFlow id=\"Flow_10\" sourceRef=\"Task_Eintragen\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_11\" sourceRef=\"Task_Vertretung\" targetRef=\"Gateway_Join\"/>\n    <bpmn:sequenceFlow id=\"Flow_12\" sourceRef=\"Gateway_Join\" targetRef=\"End_Genehmigt\"/>\n  </bpmn:process>\n</bpmn:definitions>\n```\n\n### Zwei Pools mit Nachrichtenflüssen\n\nKunde und Firma als zwei Pools; die Firma mit zwei Bahnen; drei Nachrichtenflüsse, Antwort oder Absage über ein ereignisbasiertes Gateway beim Kunden.\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Angebot\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Angebot\">\n    <bpmn:participant id=\"Pool_Kunde\" name=\"Kunde\" processRef=\"Process_Kunde\"/>\n    <bpmn:participant id=\"Pool_Firma\" name=\"Firma\" processRef=\"Process_Firma\"/>\n    <bpmn:messageFlow id=\"Message_Anfrage\" name=\"Anfrage\" sourceRef=\"Task_Anfragen\" targetRef=\"Start_Anfrage\"/>\n    <bpmn:messageFlow id=\"Message_Angebot\" name=\"Angebot\" sourceRef=\"Task_Senden\" targetRef=\"Event_Angebot\"/>\n    <bpmn:messageFlow id=\"Message_Absage\" name=\"Absage\" sourceRef=\"End_Absage\" targetRef=\"Event_Absage\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Kunde\" isExecutable=\"false\">\n    <bpmn:startEvent id=\"Start_Bedarf\" name=\"Bedarf erkannt\"/>\n    <bpmn:sendTask id=\"Task_Anfragen\" name=\"Angebot anfragen\"/>\n    <bpmn:eventBasedGateway id=\"Gateway_Antwort\"/>\n    <bpmn:intermediateCatchEvent id=\"Event_Angebot\" name=\"Angebot erhalten\"><bpmn:messageEventDefinition id=\"Def_Angebot\"/></bpmn:intermediateCatchEvent>\n    <bpmn:intermediateCatchEvent id=\"Event_Absage\" name=\"Absage erhalten\"><bpmn:messageEventDefinition id=\"Def_Absage\"/></bpmn:intermediateCatchEvent>\n    <bpmn:userTask id=\"Task_Pruefen_Kunde\" name=\"Angebot prüfen\"/>\n    <bpmn:endEvent id=\"End_Kunde_Angebot\" name=\"Angebot liegt vor\"/>\n    <bpmn:endEvent id=\"End_Kunde_Absage\" name=\"Anderswo anfragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_K1\" sourceRef=\"Start_Bedarf\" targetRef=\"Task_Anfragen\"/>\n    <bpmn:sequenceFlow id=\"Flow_K2\" sourceRef=\"Task_Anfragen\" targetRef=\"Gateway_Antwort\"/>\n    <bpmn:sequenceFlow id=\"Flow_K3\" sourceRef=\"Gateway_Antwort\" targetRef=\"Event_Angebot\"/>\n    <bpmn:sequenceFlow id=\"Flow_K4\" sourceRef=\"Gateway_Antwort\" targetRef=\"Event_Absage\"/>\n    <bpmn:sequenceFlow id=\"Flow_K5\" sourceRef=\"Event_Angebot\" targetRef=\"Task_Pruefen_Kunde\"/>\n    <bpmn:sequenceFlow id=\"Flow_K6\" sourceRef=\"Task_Pruefen_Kunde\" targetRef=\"End_Kunde_Angebot\"/>\n    <bpmn:sequenceFlow id=\"Flow_K7\" sourceRef=\"Event_Absage\" targetRef=\"End_Kunde_Absage\"/>\n  </bpmn:process>\n  <bpmn:process id=\"Process_Firma\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Firma\">\n      <bpmn:lane id=\"Lane_Vertrieb\" name=\"Vertrieb\">\n        <bpmn:flowNodeRef>Start_Anfrage</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Machbar</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Senden</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Gesendet</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Absage</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Technik\" name=\"Technik\">\n        <bpmn:flowNodeRef>Task_Kalkulieren</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Anfrage\" name=\"Anfrage eingegangen\"><bpmn:messageEventDefinition id=\"Def_Anfrage\"/></bpmn:startEvent>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Anfrage prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Machbar\" name=\"Lieferbar?\"/>\n    <bpmn:userTask id=\"Task_Kalkulieren\" name=\"Preis kalkulieren\"/>\n    <bpmn:sendTask id=\"Task_Senden\" name=\"Angebot senden\"/>\n    <bpmn:endEvent id=\"End_Gesendet\" name=\"Angebot gesendet\"/>\n    <bpmn:endEvent id=\"End_Absage\" name=\"Absage gesendet\"><bpmn:messageEventDefinition id=\"Def_Absage_Senden\"/></bpmn:endEvent>\n    <bpmn:sequenceFlow id=\"Flow_F1\" sourceRef=\"Start_Anfrage\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_F2\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Machbar\"/>\n    <bpmn:sequenceFlow id=\"Flow_F3\" name=\"ja\" sourceRef=\"Gateway_Machbar\" targetRef=\"Task_Kalkulieren\"/>\n    <bpmn:sequenceFlow id=\"Flow_F4\" name=\"nein\" sourceRef=\"Gateway_Machbar\" targetRef=\"End_Absage\"/>\n    <bpmn:sequenceFlow id=\"Flow_F5\" sourceRef=\"Task_Kalkulieren\" targetRef=\"Task_Senden\"/>\n    <bpmn:sequenceFlow id=\"Flow_F6\" sourceRef=\"Task_Senden\" targetRef=\"End_Gesendet\"/>\n  </bpmn:process>\n</bpmn:definitions>\n```\n\n### Ein Pool mit zwei Black Boxes\n\nDer Onlineshop mit zwei Bahnen; Kunde und Paketdienst als Black Boxes, weil ihr Ablauf unbekannt ist: der Kunde oben, der Paketdienst unten. Vier Nachrichtenflüsse, jeder zwischen einem Flussknoten des Shops und dem Rahmen einer Black Box.\n\n```bpmn\n<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<bpmn:definitions xmlns:bpmn=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" id=\"Definitions_Bestellung\" targetNamespace=\"http://example.org/dokufix\">\n  <bpmn:collaboration id=\"Collaboration_Bestellung\">\n    <bpmn:participant id=\"Pool_Kunde\" name=\"Kunde\"/>\n    <bpmn:participant id=\"Pool_Shop\" name=\"Onlineshop\" processRef=\"Process_Shop\"/>\n    <bpmn:participant id=\"Pool_Paketdienst\" name=\"Paketdienst\"/>\n    <bpmn:messageFlow id=\"Message_Bestellung\" name=\"Bestellung\" sourceRef=\"Pool_Kunde\" targetRef=\"Start_Bestellung\"/>\n    <bpmn:messageFlow id=\"Message_Absage\" name=\"Absage\" sourceRef=\"Task_Absagen\" targetRef=\"Pool_Kunde\"/>\n    <bpmn:messageFlow id=\"Message_Bestaetigung\" name=\"Bestätigung\" sourceRef=\"Task_Bestaetigen\" targetRef=\"Pool_Kunde\"/>\n    <bpmn:messageFlow id=\"Message_Paket\" name=\"Paket\" sourceRef=\"Task_Uebergeben\" targetRef=\"Pool_Paketdienst\"/>\n  </bpmn:collaboration>\n  <bpmn:process id=\"Process_Shop\" isExecutable=\"false\">\n    <bpmn:laneSet id=\"LaneSet_Shop\">\n      <bpmn:lane id=\"Lane_Vertrieb\" name=\"Vertrieb\">\n        <bpmn:flowNodeRef>Start_Bestellung</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Gateway_Lieferbar</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Absagen</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Abgesagt</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Bestaetigen</bpmn:flowNodeRef>\n      </bpmn:lane>\n      <bpmn:lane id=\"Lane_Lager\" name=\"Lager\">\n        <bpmn:flowNodeRef>Task_Verpacken</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>Task_Uebergeben</bpmn:flowNodeRef>\n        <bpmn:flowNodeRef>End_Versandt</bpmn:flowNodeRef>\n      </bpmn:lane>\n    </bpmn:laneSet>\n    <bpmn:startEvent id=\"Start_Bestellung\" name=\"Bestellung eingegangen\"><bpmn:messageEventDefinition id=\"Def_Bestellung\"/></bpmn:startEvent>\n    <bpmn:userTask id=\"Task_Pruefen\" name=\"Bestellung prüfen\"/>\n    <bpmn:exclusiveGateway id=\"Gateway_Lieferbar\" name=\"Lieferbar?\"/>\n    <bpmn:sendTask id=\"Task_Bestaetigen\" name=\"Bestellung bestätigen\"/>\n    <bpmn:manualTask id=\"Task_Verpacken\" name=\"Ware verpacken\"/>\n    <bpmn:sendTask id=\"Task_Uebergeben\" name=\"Paket übergeben\"/>\n    <bpmn:endEvent id=\"End_Versandt\" name=\"Ware versandt\"/>\n    <bpmn:sendTask id=\"Task_Absagen\" name=\"Absage senden\"/>\n    <bpmn:endEvent id=\"End_Abgesagt\" name=\"Abgesagt\"/>\n    <bpmn:sequenceFlow id=\"Flow_1\" sourceRef=\"Start_Bestellung\" targetRef=\"Task_Pruefen\"/>\n    <bpmn:sequenceFlow id=\"Flow_2\" sourceRef=\"Task_Pruefen\" targetRef=\"Gateway_Lieferbar\"/>\n    <bpmn:sequenceFlow id=\"Flow_3\" name=\"ja\" sourceRef=\"Gateway_Lieferbar\" targetRef=\"Task_Bestaetigen\"/>\n    <bpmn:sequenceFlow id=\"Flow_4\" sourceRef=\"Task_Bestaetigen\" targetRef=\"Task_Verpacken\"/>\n    <bpmn:sequenceFlow id=\"Flow_5\" sourceRef=\"Task_Verpacken\" targetRef=\"Task_Uebergeben\"/>\n    <bpmn:sequenceFlow id=\"Flow_6\" sourceRef=\"Task_Uebergeben\" targetRef=\"End_Versandt\"/>\n    <bpmn:sequenceFlow id=\"Flow_7\" name=\"nein\" sourceRef=\"Gateway_Lieferbar\" targetRef=\"Task_Absagen\"/>\n    <bpmn:sequenceFlow id=\"Flow_8\" sourceRef=\"Task_Absagen\" targetRef=\"End_Abgesagt\"/>\n  </bpmn:process>\n</bpmn:definitions>\n```\n\n## 9. Prüfliste vor der Ausgabe\n\n- [ ] Kein `BPMNDiagram`, kein `BPMNShape`, kein `BPMNEdge`.\n- [ ] Ein `participant` je Pool; mit `processRef` auf seinen eigenen `process` mit Inhalt, oder ohne `processRef` als Black Box, wenn sein Ablauf unbekannt ist; mindestens ein Pool mit Prozess.\n- [ ] Jeder Flussknoten hat eine eindeutige `id` und, wo es Bahnen gibt, genau eine `flowNodeRef`.\n- [ ] Jeder Fluss hat `id`, `sourceRef` und `targetRef`, die auf vorhandene Flussknoten zeigen.\n- [ ] Sequenzflüsse bleiben in ihrem Pool; jeder Nachrichtenfluss verbindet zwei verschiedene Pools, an einer Black Box mit ihrer `participant`-`id`.\n- [ ] Je Pool ein Start, jeder Pfad endet in einem Ende.\n- [ ] Jede Verzweigung über ein Gateway; kein Gateway verzweigt und führt zugleich zusammen.\n- [ ] Jeder parallele Split hat seinen parallelen Join.\n- [ ] Keine Datenobjekte oder Gruppen, auf die der Ablauf angewiesen ist; jede Notiz mit Text und einer Assoziation zu ihrem Ziel; jedes angeheftete Ereignis an einer Aufgabe oder einem Teilprozess, kein Fluss hinein, kein Nachrichtenfluss an ihm.\n- [ ] Eine Überschrift direkt vor dem Block nennt den Prozess.\n";
 const $ = id => document.getElementById(id);
 // Farben der Diagramme (Spike Dokufix BPMN Assistant): die Variablen, die
 // src/doc.css je Elementart setzt, in einem eigenen Stilblock nach den

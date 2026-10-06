@@ -179,3 +179,21 @@ test('a boundary event on its host\'s edge is no break; off the edge, or on anot
   // A piece of the event's flow along its host's edge is on its outline (review of 2.30, R4).
   assert.ok(check([182, 112, 36, 36], { A: [100, 50, 100, 80] }, [[200, 148], [200, 60], [300, 60], [300, 160]]).includes('on-outline FX A'));
 });
+
+// Story 2.31: a text annotation N at the task A, with its association AN from A; another, O, at the flow F1.
+test('text annotations: on a symbol, a flow, a label, one another; an association through a symbol or off its ends', () => {
+  const check = (n, way, extra = {}) => {
+    const shapes = { ...SHAPES, N: n, ...extra };
+    const model = { ...M, flows: [M.flows.find(f => f.id === 'F1')], notes: [{ id: 'N', text: 'n' }, ...('O' in extra ? [{ id: 'O', text: 'o' }] : [])], associations: [{ id: 'AN', note: 'N', partner: 'A', kind: 'node', toNote: true }] };
+    return breaksOf('<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+      '      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="220" y="90"/><di:waypoint x="300" y="90"/></bpmndi:BPMNEdge>\n' +
+      '      <bpmndi:BPMNEdge id="AN_di" bpmnElement="AN">' + way.map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>\n</x>', model, SIZES);
+  };
+  // Above A, its association from A's top to the note's lower side: nothing breaks, and the association is no flow.
+  assert.deepEqual(check([110, -10, 100, 40], [[160, 50], [160, 30]]), []);
+  assert.deepEqual(check([150, 60, 100, 40], [[160, 50], [160, 60]]), ['note-on-flow N F1', 'note-on-node N A']);
+  assert.deepEqual(check([230, 92, 60, 30], [[220, 100], [230, 100]]).filter(b => b.startsWith('note-on-flow')), ['note-on-flow N F1'], 'within 2 px of a flow');
+  assert.deepEqual(check([110, -10, 100, 40], [[160, 50], [160, 30]], { O: [180, 0, 100, 40] }), ['note-on-note N O']);
+  assert.deepEqual(check([400, 150, 100, 40], [[220, 90], [400, 170]]), ['association-through AN B']);
+  assert.deepEqual(check([110, -10, 100, 40], [[160, 55], [160, 25]]), ['association-off AN A', 'association-off AN N']);
+});

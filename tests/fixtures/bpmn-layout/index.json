@@ -17,7 +17,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:822"
+    "src/demo.md:884"
    ],
    "shows": [
     "25.2"
@@ -26,7 +26,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:862"
+    "src/demo.md:924"
    ]
   },
   "ereignis": {
@@ -281,6 +281,48 @@
    "note": "boundary events whose ways go into a lane below and a lane above, the latter in a row of its own facing the host's lane (review of 2.30, R7)",
    "shows": [
     "30"
+   ]
+  },
+  "notiz-morgen": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/ben/morgenroutine.bpmn",
+   "note": "Ben's morgenroutine written anew, small and lint-clean: three lanes, a parallel split and join, a signal thrown and caught; its three text annotations at a manual task, at a throw event with a label and at the last task of a lane",
+   "shows": [
+    "31"
+   ]
+  },
+  "notiz-zwei": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/notizen/nz01-zwei.bpmn",
+   "note": "two text annotations at one task, a long one at a gateway with a label, one at a task with a loop marker, one at an end event in another lane",
+   "shows": [
+    "31"
+   ]
+  },
+  "notiz-fluss": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/notizen/nz02-fluss.bpmn",
+   "note": "text annotations at sequence flows: a short horizontal one, a vertical one with a label, one between lanes",
+   "shows": [
+    "31"
+   ]
+  },
+  "notiz-pool": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/notizen/nz03-pool.bpmn",
+   "note": "a text annotation at a pool, at a black box and at a message flow, in the collaboration, and one at a task in a process",
+   "shows": [
+    "31"
+   ]
+  },
+  "notiz-r12": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/notizen/nz05-r12.bpmn",
+   "note": "r12 with a boundary event: text annotations at a task, at a flow back with a long label and at the boundary event with a long label; one of them finds no free place near and goes to the border of its lane, which grows",
+   "shows": [
+    "31"
+   ]
+  },
+  "demo-notizen": {
+   "source": "src/demo.md:822",
+   "note": "the demo text's section on text annotations: at a task (two), at a boundary event, at a sequence flow, at a message flow, at a pool and at a black box; one without text and one without an association left out",
+   "shows": [
+    "31"
    ]
   }
  }

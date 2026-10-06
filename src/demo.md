@@ -676,7 +676,7 @@ flowchart LR
 
 ### BPMN ohne Koordinaten: Pool ohne Bahnen
 
-Ein BPMN-Prozess ohne Koordinaten mit Sonderfällen: ein Pool ohne Bahnen; XML ohne Präfix, mit einem Kommentar nach dem Schluss-Tag; ids, die wie Mermaids Schlüsselwörter heißen (`end`, `subgraph`, `graph`); zwei Flüsse zwischen denselben beiden Knoten, die zwei eigene Wege bekommen; eine Notiz mit ihrer Verbindung, die dokufix nicht anordnet und weglässt. Sie sollten einen Pool „Verlängerung“ sehen, darin fünf Symbole und fünf Pfeile, „ja“ und „nein“ auf getrennten Wegen, und keine Notiz.
+Ein BPMN-Prozess ohne Koordinaten mit Sonderfällen: ein Pool ohne Bahnen; XML ohne Präfix, mit einem Kommentar nach dem Schluss-Tag; ids, die wie Mermaids Schlüsselwörter heißen (`end`, `subgraph`, `graph`); zwei Flüsse zwischen denselben beiden Knoten, die zwei eigene Wege bekommen; eine Notiz an einer Aufgabe. Sie sollten einen Pool „Verlängerung“ sehen, darin fünf Symbole und fünf Pfeile, „ja“ und „nein“ auf getrennten Wegen, und neben „Frist verlängern“ die Notiz „Höchstens zweimal“, gepunktet mit ihr verbunden.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -811,6 +811,68 @@ Ein Ausnahmepfad in eine andere Bahn: Sie sollten an „Gerät reparieren“ zwe
     <bpmn:sequenceFlow id="W6" sourceRef="W_Bestellen" targetRef="W_Bestellt"/>
     <bpmn:sequenceFlow id="W7" sourceRef="W_Dauer" targetRef="W_Nachfragen"/>
     <bpmn:sequenceFlow id="W8" sourceRef="W_Nachfragen" targetRef="W_Gefragt"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: Notizen
+
+Notizen neben dem, was sie kommentieren, jede gepunktet mit ihrem Ziel verbunden, die Linie möglichst auf die Klammer: Sie sollten zwei Notizen an „Fehler suchen und beheben“ sehen („Mit dem Diagnosegerät“, „Probefahrt nicht vergessen“), eine am Ereignis „Ein Tag“ („Ab Annahme gerechnet“), eine am Pfeil „behoben“ („Mit Protokoll der Messwerte“), eine am Nachrichtenfluss „Auftrag“ („Schriftlich, mit Unterschrift“) und rechts neben den Pools „Werkstatt“ und „Versicherung“ je eine („Meisterbetrieb seit 1987“, „Nur bei Unfallschäden“). Eine Notiz ohne Text und eine ohne Verbindung („Werkstattordnung, Stand 2026“) lässt dokufix weg; die Konsole nennt beide.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Notizen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="N_Zusammenarbeit">
+    <bpmn:participant id="N_Kundin" name="Kundin" processRef="N_Kundin_Prozess"/>
+    <bpmn:participant id="N_Werkstatt" name="Werkstatt" processRef="N_Werkstatt_Prozess"/>
+    <bpmn:participant id="N_Versicherung" name="Versicherung"/>
+    <bpmn:messageFlow id="N_Auftrag" name="Auftrag" sourceRef="N_Bringen" targetRef="N_Annehmen"/>
+    <bpmn:messageFlow id="N_Rechnung" name="Rechnung" sourceRef="N_Abrechnen" targetRef="N_Bezahlen"/>
+    <bpmn:messageFlow id="N_Meldung" sourceRef="N_Abrechnen" targetRef="N_Versicherung"/>
+    <bpmn:textAnnotation id="N_Notiz_Pool"><bpmn:text>Meisterbetrieb seit 1987</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zur_Pool" sourceRef="N_Werkstatt" targetRef="N_Notiz_Pool"/>
+    <bpmn:textAnnotation id="N_Notiz_Box"><bpmn:text>Nur bei Unfallschäden</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zur_Box" sourceRef="N_Notiz_Box" targetRef="N_Versicherung"/>
+    <bpmn:textAnnotation id="N_Notiz_Auftrag"><bpmn:text>Schriftlich, mit Unterschrift</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zum_Auftrag" sourceRef="N_Auftrag" targetRef="N_Notiz_Auftrag"/>
+  </bpmn:collaboration>
+  <bpmn:process id="N_Kundin_Prozess" isExecutable="false">
+    <bpmn:startEvent id="N_Start" name="Auto macht Geräusche"/>
+    <bpmn:task id="N_Bringen" name="Auto bringen"/>
+    <bpmn:task id="N_Bezahlen" name="Rechnung bezahlen"/>
+    <bpmn:endEvent id="N_Ende" name="Auto zurück"/>
+    <bpmn:sequenceFlow id="N_K1" sourceRef="N_Start" targetRef="N_Bringen"/>
+    <bpmn:sequenceFlow id="N_K2" sourceRef="N_Bringen" targetRef="N_Bezahlen"/>
+    <bpmn:sequenceFlow id="N_K3" sourceRef="N_Bezahlen" targetRef="N_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="N_Werkstatt_Prozess" isExecutable="false">
+    <bpmn:laneSet id="N_Bahnen">
+      <bpmn:lane id="N_Annahme" name="Annahme"><bpmn:flowNodeRef>N_Annehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Abrechnen</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Fertig</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Technik" name="Technik"><bpmn:flowNodeRef>N_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Frist</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Melden</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Gemeldet</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="N_Annehmen" name="Auftrag da"><bpmn:messageEventDefinition id="N_Annehmen_D"/></bpmn:startEvent>
+    <bpmn:task id="N_Pruefen" name="Fehler suchen und beheben"/>
+    <bpmn:boundaryEvent id="N_Frist" name="Ein Tag" cancelActivity="false" attachedToRef="N_Pruefen"><bpmn:timerEventDefinition id="N_Frist_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="N_Melden" name="Kundin anrufen"/>
+    <bpmn:endEvent id="N_Gemeldet" name="Angerufen"/>
+    <bpmn:task id="N_Abrechnen" name="Abrechnen"/>
+    <bpmn:endEvent id="N_Fertig" name="Erledigt"/>
+    <bpmn:sequenceFlow id="N_W1" sourceRef="N_Annehmen" targetRef="N_Pruefen"/>
+    <bpmn:sequenceFlow id="N_W2" sourceRef="N_Pruefen" targetRef="N_Abrechnen" name="behoben"/>
+    <bpmn:sequenceFlow id="N_W3" sourceRef="N_Abrechnen" targetRef="N_Fertig"/>
+    <bpmn:sequenceFlow id="N_W4" sourceRef="N_Frist" targetRef="N_Melden"/>
+    <bpmn:sequenceFlow id="N_W5" sourceRef="N_Melden" targetRef="N_Gemeldet"/>
+    <bpmn:textAnnotation id="N_Notiz_Pruefen"><bpmn:text>Mit dem Diagnosegerät</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zum_Pruefen" sourceRef="N_Pruefen" targetRef="N_Notiz_Pruefen"/>
+    <bpmn:textAnnotation id="N_Notiz_Probe"><bpmn:text>Probefahrt nicht vergessen</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zur_Probe" sourceRef="N_Notiz_Probe" targetRef="N_Pruefen"/>
+    <bpmn:textAnnotation id="N_Notiz_Frist"><bpmn:text>Ab Annahme gerechnet</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zur_Frist" sourceRef="N_Frist" targetRef="N_Notiz_Frist"/>
+    <bpmn:textAnnotation id="N_Notiz_Fluss"><bpmn:text>Mit Protokoll der Messwerte</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="N_Zum_Fluss" sourceRef="N_W2" targetRef="N_Notiz_Fluss"/>
+    <bpmn:textAnnotation id="N_Notiz_Leer"/>
+    <bpmn:association id="N_Zur_Leeren" sourceRef="N_Abrechnen" targetRef="N_Notiz_Leer"/>
+    <bpmn:textAnnotation id="N_Notiz_Allein"><bpmn:text>Werkstattordnung, Stand 2026</bpmn:text></bpmn:textAnnotation>
   </bpmn:process>
 </bpmn:definitions>
 ```

@@ -562,6 +562,8 @@ function judgeDiagrams(exp, wellFormed){
       ...(m.boundaries || []).map(b => ({ id: b.id, tag: 'boundaryEvent' })),
       ...m.flows.map(f => ({ id: f.id, tag: 'sequenceFlow' })),
       ...m.messages.map(f => ({ id: f.id, tag: 'messageFlow' })),
+      ...(m.notes || []).map(n => ({ id: n.id, tag: 'textAnnotation' })),
+      ...(m.associations || []).map(a => ({ id: a.id, tag: 'association' })),
     ] });
   });
   return exp;
@@ -3548,6 +3550,8 @@ const BPMN_AC2 = [
   // Story 2.20: a flow back within a row lay on the edges of its tasks, and a
   // gateway's label reached into its diamond or onto a flow.
   ['along', 'no piece of a flow runs along the outline of a symbol'],
+  // Story 2.31.
+  ['note', 'no text annotation lies on a symbol or a flow; every association runs from its text annotation to its partner, through no symbol'],
   ['label', 'no event or gateway label lies on a flow or a symbol'],
 ];
 // What is not clean in a laid-out drawing, one sentence per finding, each
@@ -3569,6 +3573,37 @@ function bpmnLayoutProblems(model, g){
     return Math.abs(Math.hypot(p[0] - cx, p[1] - cy) - w / 2) <= eps;
   };
   const fmt = p => p.map(v => Math.round(v)).join(',');
+  // A text annotation (story 2.31): its box off every symbol and every piece of a flow; its association from the box's
+  // edge to its partner (a symbol's outline, a flow, a pool's frame), through no other symbol.
+  const inside = (p, [x, y, w, h], m = 1) => p[0] > x + m && p[0] < x + w - m && p[1] > y + m && p[1] < y + h - m;
+  const symbolsOf = model.nodes.concat(model.boundaries || []);
+  for (const n of model.notes || []){
+    const box = g.shapes[n.id];
+    if (!box) continue;
+    for (const s of symbolsOf){ const b = g.shapes[s.id]; if (b && b[0] < box[0] + box[2] - 1 && box[0] < b[0] + b[2] - 1 && b[1] < box[1] + box[3] - 1 && box[1] < b[1] + b[3] - 1) out.push('note: ' + n.id + ' lies on ' + s.id); }
+    for (const fl of flows){
+      const pts = g.flows[fl.id] || [];
+      for (let i = 1; i < pts.length; i++){
+        const [p, q] = [pts[i - 1], pts[i]];
+        if (Math.max(p[0], q[0]) > box[0] + 1 && Math.min(p[0], q[0]) < box[0] + box[2] - 1 && Math.max(p[1], q[1]) > box[1] + 1 && Math.min(p[1], q[1]) < box[1] + box[3] - 1){ out.push('note: ' + n.id + ' lies on ' + fl.id); break; }
+      }
+    }
+  }
+  for (const a of model.associations || []){
+    const pts = g.flows[a.id], box = g.shapes[a.note];
+    if (!pts || pts.length < 2 || !box){ out.push('note: ' + a.id + ' is not drawn'); continue; }
+    const [atNote, atPartner] = a.toNote ? [pts[pts.length - 1], pts[0]] : [pts[0], pts[pts.length - 1]];
+    if (!onOutline(atNote, box, 'task')) out.push('note: ' + a.id + ' leaves its text annotation at ' + fmt(atNote) + ', off its box');
+    const onWay = (p, w) => (w || []).some((q, i) => i && Math.min(q[0], w[i - 1][0]) - eps <= p[0] && p[0] <= Math.max(q[0], w[i - 1][0]) + eps && Math.min(q[1], w[i - 1][1]) - eps <= p[1] && p[1] <= Math.max(q[1], w[i - 1][1]) + eps);
+    const ok = a.kind === 'flow' || a.kind === 'message' ? onWay(atPartner, g.flows[a.partner])
+      : g.shapes[a.partner] && onOutline(atPartner, g.shapes[a.partner], a.kind === 'pool' ? 'task' : a.kind === 'boundary' ? 'event' : type.get(a.partner));
+    if (!ok) out.push('note: ' + a.id + ' ends at ' + fmt(atPartner) + ', off ' + a.partner);
+    for (const s of symbolsOf){
+      if (s.id === a.partner || !g.shapes[s.id]) continue;
+      const [x1, y1] = pts[0], [x2, y2] = pts[pts.length - 1], k = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2));
+      for (let j = 0; j <= k; j++) if (inside([x1 + (x2 - x1) * j / k, y1 + (y2 - y1) * j / k], g.shapes[s.id])){ out.push('note: ' + a.id + ' runs through ' + s.id); break; }
+    }
+  }
   // A boundary event (story 2.30): its middle on its host's outline; a flow from it starts on its circle.
   for (const b of model.boundaries || []){
     const e = g.shapes[b.id], h = g.shapes[b.host];
@@ -3766,9 +3801,12 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
     const m = d.model, drawn = id => !!(g && (g.shapes[id] || g.flows[id]));
     // A boundary event (story 2.30) counts as a symbol.
     const symbols = m.nodes.concat(m.boundaries || []);
-    const counts = [m.pools.filter(p => p.id).length, m.lanes.filter(l => !l.synthetic).length, symbols.length, m.flows.length, m.messages.length];
-    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, symbols.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length];
-    check('BPMN laid out, "' + d.title + '": pools, lanes, symbols, flows and message flows drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
+    // Text annotations and their associations (story 2.31) are counted as well.
+    const notes = m.notes || [], assocs = m.associations || [];
+    const counts = [m.pools.filter(p => p.id).length, m.lanes.filter(l => !l.synthetic).length, symbols.length, m.flows.length, m.messages.length, notes.length, assocs.length];
+    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, symbols.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length,
+      notes.filter(n => drawn(n.id)).length, assocs.filter(a => drawn(a.id)).length];
+    check('BPMN laid out, "' + d.title + '": pools, lanes, symbols, flows, message flows, text annotations and associations drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
     const problems = g ? bpmnLayoutProblems(m, g) : ['no SVG'];
     for (const [key, text] of BPMN_AC2){
       const mine = problems.filter(p => p.startsWith(key + ':'));

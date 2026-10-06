@@ -1,0 +1,102 @@
+{
+ "Auftrag da": {
+  "w": 57,
+  "h": 15
+ },
+ "Eilig?": {
+  "w": 28,
+  "h": 15
+ },
+ "Auftrag erledigt": {
+  "w": 84,
+  "h": 15
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 23,
+  "h": 15
+ },
+ "note:100:Checkliste A verwenden": {
+  "w": 100,
+  "h": 43
+ },
+ "note:150:Checkliste A verwenden": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Checkliste A verwenden": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Checkliste A verwenden": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Bei Großkunden zusätzlich Vertrag prüfen": {
+  "w": 100,
+  "h": 57
+ },
+ "note:150:Bei Großkunden zusätzlich Vertrag prüfen": {
+  "w": 150,
+  "h": 43
+ },
+ "note:200:Bei Großkunden zusätzlich Vertrag prüfen": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Bei Großkunden zusätzlich Vertrag prüfen": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+  "w": 100,
+  "h": 259
+ },
+ "note:150:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+  "w": 150,
+  "h": 144
+ },
+ "note:200:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+  "w": 200,
+  "h": 115
+ },
+ "note:250:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+  "w": 250,
+  "h": 100
+ },
+ "note:100:Wöchentlich wiederholen": {
+  "w": 100,
+  "h": 43
+ },
+ "note:150:Wöchentlich wiederholen": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Wöchentlich wiederholen": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Wöchentlich wiederholen": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Kunde per Mail informieren": {
+  "w": 100,
+  "h": 43
+ },
+ "note:150:Kunde per Mail informieren": {
+  "w": 150,
+  "h": 43
+ },
+ "note:200:Kunde per Mail informieren": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Kunde per Mail informieren": {
+  "w": 250,
+  "h": 40
+ }
+}

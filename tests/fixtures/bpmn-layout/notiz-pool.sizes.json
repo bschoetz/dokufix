@@ -1,0 +1,90 @@
+{
+ "Bedarf": {
+  "w": 35,
+  "h": 15
+ },
+ "Erledigt": {
+  "w": 41,
+  "h": 15
+ },
+ "Bestellung da": {
+  "w": 72,
+  "h": 15
+ },
+ "Versendet": {
+  "w": 53,
+  "h": 15
+ },
+ "Bestellung": {
+  "w": 56,
+  "h": 15
+ },
+ "Lieferung": {
+  "w": 50,
+  "h": 15
+ },
+ "note:100:Rahmenvertrag 2026": {
+  "w": 100,
+  "h": 43
+ },
+ "note:150:Rahmenvertrag 2026": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Rahmenvertrag 2026": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Rahmenvertrag 2026": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Per EDI": {
+  "w": 100,
+  "h": 40
+ },
+ "note:150:Per EDI": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Per EDI": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Per EDI": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Nur SEPA": {
+  "w": 100,
+  "h": 40
+ },
+ "note:150:Nur SEPA": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Nur SEPA": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Nur SEPA": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Lager B": {
+  "w": 100,
+  "h": 40
+ },
+ "note:150:Lager B": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:Lager B": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Lager B": {
+  "w": 250,
+  "h": 40
+ }
+}

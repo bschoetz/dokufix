@@ -1,0 +1,86 @@
+{
+ "Eingang": {
+  "w": 43,
+  "h": 15
+ },
+ "Entscheidung tragfähig und begründet?": {
+  "w": 72,
+  "h": 59
+ },
+ "Erledigt": {
+  "w": 41,
+  "h": 15
+ },
+ "Verzögerung mitgeteilt": {
+  "w": 68,
+  "h": 29
+ },
+ "Nach zehn Arbeitstagen ohne Entscheidung": {
+  "w": 72,
+  "h": 58
+ },
+ "Frist verstrichen": {
+  "w": 84,
+  "h": 15
+ },
+ "Nein, weitere Unterlagen beim Antragsteller anfordern und erneut sichten": {
+  "w": 89,
+  "h": 72
+ },
+ "Teilweise: Begründung nachbessern lassen": {
+  "w": 66,
+  "h": 58
+ },
+ "Ja": {
+  "w": 11,
+  "h": 15
+ },
+ "note:100:Vier-Augen-Prinzip ab 5.000 Euro": {
+  "w": 100,
+  "h": 57
+ },
+ "note:150:Vier-Augen-Prinzip ab 5.000 Euro": {
+  "w": 150,
+  "h": 43
+ },
+ "note:200:Vier-Augen-Prinzip ab 5.000 Euro": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:Vier-Augen-Prinzip ab 5.000 Euro": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:Höchstens zweimal, danach Ablehnung": {
+  "w": 100,
+  "h": 72
+ },
+ "note:150:Höchstens zweimal, danach Ablehnung": {
+  "w": 150,
+  "h": 43
+ },
+ "note:200:Höchstens zweimal, danach Ablehnung": {
+  "w": 200,
+  "h": 43
+ },
+ "note:250:Höchstens zweimal, danach Ablehnung": {
+  "w": 250,
+  "h": 40
+ },
+ "note:100:§ 10 VwVfG": {
+  "w": 100,
+  "h": 40
+ },
+ "note:150:§ 10 VwVfG": {
+  "w": 150,
+  "h": 40
+ },
+ "note:200:§ 10 VwVfG": {
+  "w": 200,
+  "h": 40
+ },
+ "note:250:§ 10 VwVfG": {
+  "w": 250,
+  "h": 40
+ }
+}

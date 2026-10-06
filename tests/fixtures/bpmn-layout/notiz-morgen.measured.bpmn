@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Morgen" targetNamespace="http://example.org/bpmn/morgen">
+  <bpmn:signal id="Signal_BadFrei" name="Bad ist frei"/>
+  <bpmn:collaboration id="Collaboration_Morgen">
+    <bpmn:participant id="Participant_Familie" name="Familie, Werktagmorgen" processRef="Process_Morgen"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Morgen" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Familie">
+      <bpmn:lane id="Lane_Mama" name="Mama">
+        <bpmn:flowNodeRef>Start_Wecker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Mama_Duschen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Mama_Anziehen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kind" name="Kind">
+        <bpmn:flowNodeRef>Kind_Zaehne</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Kind_BadFrei</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Kind_Schulweg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ende</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Join_Aufbruch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Split_Start</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Papa" name="Papa">
+        <bpmn:flowNodeRef>Papa_Kaffee</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Papa_BadFrei</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Papa_FrischMachen</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Wecker" name="Wecker klingelt"/>
+    <bpmn:parallelGateway id="Split_Start"/>
+    <bpmn:manualTask id="Mama_Duschen" name="Duschen"/>
+    <bpmn:manualTask id="Mama_Anziehen" name="Anziehen"/>
+    <bpmn:manualTask id="Kind_Zaehne" name="Zähne putzen"/>
+    <bpmn:intermediateThrowEvent id="Kind_BadFrei" name="„Bad ist frei!“"><bpmn:signalEventDefinition id="SD1" signalRef="Signal_BadFrei"/></bpmn:intermediateThrowEvent>
+    <bpmn:manualTask id="Kind_Schulweg" name="Zur Schule gehen"/>
+    <bpmn:manualTask id="Papa_Kaffee" name="Kaffee kochen"/>
+    <bpmn:intermediateCatchEvent id="Papa_BadFrei" name="Bad frei"><bpmn:signalEventDefinition id="SD2" signalRef="Signal_BadFrei"/></bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Papa_FrischMachen" name="Frisch machen"/>
+    <bpmn:parallelGateway id="Join_Aufbruch"/>
+    <bpmn:endEvent id="Ende" name="Alle aus dem Haus"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_Wecker" targetRef="Split_Start"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="Split_Start" targetRef="Mama_Duschen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="Split_Start" targetRef="Kind_Zaehne"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="Split_Start" targetRef="Papa_Kaffee"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="Mama_Duschen" targetRef="Mama_Anziehen"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="Kind_Zaehne" targetRef="Kind_BadFrei"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="Kind_BadFrei" targetRef="Kind_Schulweg"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="Papa_Kaffee" targetRef="Papa_BadFrei"/>
+    <bpmn:sequenceFlow id="F9" sourceRef="Papa_BadFrei" targetRef="Papa_FrischMachen"/>
+    <bpmn:sequenceFlow id="F10" sourceRef="Mama_Anziehen" targetRef="Join_Aufbruch"/>
+    <bpmn:sequenceFlow id="F11" sourceRef="Kind_Schulweg" targetRef="Join_Aufbruch"/>
+    <bpmn:sequenceFlow id="F12" sourceRef="Papa_FrischMachen" targetRef="Join_Aufbruch"/>
+    <bpmn:sequenceFlow id="F13" sourceRef="Join_Aufbruch" targetRef="Ende"/>
+    <bpmn:textAnnotation id="Notiz_Taktung"><bpmn:text>Nicht trödeln: Papa wartet auf das freie Bad.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Taktung" sourceRef="Notiz_Taktung" targetRef="Kind_BadFrei"/>
+    <bpmn:textAnnotation id="Notiz_MamaBad"><bpmn:text>Mama belegt das Bad als Erste, fast eine halbe Stunde lang.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_MamaBad" sourceRef="Notiz_MamaBad" targetRef="Mama_Duschen"/>
+    <bpmn:textAnnotation id="Notiz_Kreuzung"><bpmn:text>An der Kreuzung trifft das Kind meist Klassenkameraden.</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Kreuzung" sourceRef="Notiz_Kreuzung" targetRef="Kind_Schulweg"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Morgen">
+      <bpmndi:BPMNShape id="Participant_Familie_di" bpmnElement="Participant_Familie" isHorizontal="true"><dc:Bounds x="0" y="-188" width="1101" height="620"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Mama_di" bpmnElement="Lane_Mama" isHorizontal="true"><dc:Bounds x="30" y="-188" width="1071" height="192"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kind_di" bpmnElement="Lane_Kind" isHorizontal="true"><dc:Bounds x="30" y="4" width="1071" height="284"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Papa_di" bpmnElement="Lane_Papa" isHorizontal="true"><dc:Bounds x="30" y="288" width="1071" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Wecker_di" bpmnElement="Start_Wecker"><dc:Bounds x="102" y="-86" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="-105" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Split_Start_di" bpmnElement="Split_Start"><dc:Bounds x="210" y="191" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Mama_Duschen_di" bpmnElement="Mama_Duschen"><dc:Bounds x="308" y="-108" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Mama_Anziehen_di" bpmnElement="Mama_Anziehen"><dc:Bounds x="476" y="-108" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Kind_Zaehne_di" bpmnElement="Kind_Zaehne"><dc:Bounds x="308" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Kind_BadFrei_di" bpmnElement="Kind_BadFrei"><dc:Bounds x="518" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="238" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Kind_Schulweg_di" bpmnElement="Kind_Schulweg"><dc:Bounds x="644" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Papa_Kaffee_di" bpmnElement="Papa_Kaffee"><dc:Bounds x="308" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Papa_BadFrei_di" bpmnElement="Papa_BadFrei"><dc:Bounds x="518" y="342" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="382" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Papa_FrischMachen_di" bpmnElement="Papa_FrischMachen"><dc:Bounds x="644" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Join_Aufbruch_di" bpmnElement="Join_Aufbruch"><dc:Bounds x="812" y="191" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Ende_di" bpmnElement="Ende"><dc:Bounds x="934" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="907" y="238" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Notiz_Taktung_di" bpmnElement="Notiz_Taktung"><dc:Bounds x="604" y="105" width="150" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Notiz_MamaBad_di" bpmnElement="Notiz_MamaBad"><dc:Bounds x="453" y="-176" width="200" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Notiz_Kreuzung_di" bpmnElement="Notiz_Kreuzung"><dc:Bounds x="889" y="8" width="200" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="120" y="-50"/><di:waypoint x="120" y="216"/><di:waypoint x="210" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="235" y="191"/><di:waypoint x="235" y="-68"/><di:waypoint x="308" y="-68"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="260" y="216"/><di:waypoint x="308" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="235" y="241"/><di:waypoint x="235" y="360"/><di:waypoint x="308" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="428" y="-68"/><di:waypoint x="476" y="-68"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="428" y="216"/><di:waypoint x="518" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="554" y="216"/><di:waypoint x="644" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8"><di:waypoint x="428" y="360"/><di:waypoint x="518" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9"><di:waypoint x="554" y="360"/><di:waypoint x="644" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10"><di:waypoint x="596" y="-68"/><di:waypoint x="837" y="-68"/><di:waypoint x="837" y="191"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11"><di:waypoint x="764" y="216"/><di:waypoint x="812" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F12_di" bpmnElement="F12"><di:waypoint x="764" y="360"/><di:waypoint x="837" y="360"/><di:waypoint x="837" y="241"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F13_di" bpmnElement="F13"><di:waypoint x="862" y="216"/><di:waypoint x="934" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_Taktung_di" bpmnElement="Assoc_Taktung"><di:waypoint x="604" y="127"/><di:waypoint x="547" y="202"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_MamaBad_di" bpmnElement="Assoc_MamaBad"><di:waypoint x="453" y="-154"/><di:waypoint x="407" y="-108"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_Kreuzung_di" bpmnElement="Assoc_Kreuzung"><di:waypoint x="889" y="30"/><di:waypoint x="744" y="176"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

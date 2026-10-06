@@ -228,7 +228,7 @@ export function labelMeasurer(viewer){
       const size = { w: imported.width, h: Math.ceil(imported.height / Math.max(1, lines(90)) * lines(imported.width)) };
       if (Number.isFinite(size.w) && Number.isFinite(size.h) && size.w >= 0 && size.h > 0) return size;
     } catch { /* the estimate below */ }
-    return labelSize(text);
+    return labelSize(text, width);
   };
 }
 

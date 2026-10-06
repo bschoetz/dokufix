@@ -276,6 +276,8 @@ function textStandIn({ fails = false, width = 40 } = {}){
     getExternalStyle: () => ({ fontSize: 12 }),
     getExternalLabelBounds: (bounds, text) => { if (fails) throw new Error('kein Text'); return { width: width, height: 14 * lines(text, bounds.width) }; },
     createText: (text, { box }) => ({ querySelectorAll: () => ({ length: lines(text, box.width) }) }),
+    // A text annotation: from the top left, 7 px in, at least 40 px high, as bpmn-js 18.31.
+    getTextAnnotationBounds: (bounds, text) => { if (fails) throw new Error('kein Text'); return { ...bounds, height: Math.max(40, 14 * lines(text, bounds.width - 14) + 14) }; },
   };
 }
 const labelHeight = (xml, id) => Number(new RegExp('bpmnElement="' + id + '"><dc:Bounds[^>]*/><bpmndi:BPMNLabel><dc:Bounds [^>]*height="([\\d.]+)"').exec(xml)[1]);
@@ -304,6 +306,15 @@ test('a label that cannot be measured keeps the estimate', async t => {
   const measure = labelMeasurer({ get: () => textStandIn({ width: 50 }) });
   assert.deepEqual(measure('Alle Zitzen gemolken?'), { w: 50, h: 42 }, '126 px of text: 2 lines in 90 px, 3 in 50 px');
   assert.deepEqual(labelMeasurer({ get: () => { throw new Error('x'); } })('ja'), labelSize('ja'));
+});
+
+test('a text annotation is measured in the width asked for, as bpmn-js lays out its text; else estimated (story 2.31)', () => {
+  const measure = labelMeasurer({ get: () => textStandIn() });
+  // 31 characters, 186 px: 3 lines in 86 px, 2 in 136 px.
+  assert.deepEqual(measure('Bei Großkunden Vertrag prüfen!!', 100), { w: 100, h: 56 });
+  assert.deepEqual(measure('Bei Großkunden Vertrag prüfen!!', 150), { w: 150, h: 42 });
+  assert.deepEqual(measure('kurz', 100), { w: 100, h: 40 });
+  assert.deepEqual(labelMeasurer({ get: () => textStandIn({ fails: true }) })('kurz', 100), labelSize('kurz', 100));
 });
 
 test('XML with coordinates is drawn as written, and Mermaid is not asked', async () => {
