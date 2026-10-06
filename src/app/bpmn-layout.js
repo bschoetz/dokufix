@@ -1981,7 +1981,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     return lanesUsed.length;
   };
   const chTracks = new Map(), gapTracks = new Map();
-  for (const ch of channels.concat(gaps)){
+  for (const ch of channels){
     const items = [];
     for (const r of routed) r.pieces.forEach((p, i) => {
       if (p.h !== ch) return;
@@ -1993,6 +1993,42 @@ function finishGrid(g, model, measure, rules, reroute = true){
     });
     const top = assign(items.filter(x => x.side === 'top'), 'top'), bottom = assign(items.filter(x => x.side === 'bottom'), 'bottom');
     chTracks.set(ch, { top, bottom });
+  }
+  // A gap between pools (story 2.12): its pieces in the order, from top to bottom, with the fewest crossings with the
+  // vertical pieces before and after them (Ben, 2026-10-06, p-miwg1: two message flows swapped, two crossings
+  // fewer). Start from the order the channels give (from above, the shorter span higher; then from below, the
+  // shorter span lower), then swap neighbours while that crosses less; the first as many as come from above stack from
+  // the top, the rest from the bottom, each on the first track beyond every piece before it that it overlaps.
+  for (const ch of gaps){
+    const items = [];
+    for (const r of routed) r.pieces.forEach((p, i) => {
+      if (p.h !== ch) return;
+      const before = r.pieces[i - 1], after = r.pieces[i + 1];
+      const ends = [];
+      if (before && before.v !== undefined) ends.push({ x: before.v, up: before.b1 < ch });
+      if (after && after.v !== undefined) ends.push({ x: after.v, up: after.b2 < ch });
+      const fromBand = before ? before.b1 : place.get(r.f.from).band;
+      items.push({ p, lo: Math.min(p.x1, p.x2), hi: Math.max(p.x1, p.x2), len: Math.abs(p.x2 - p.x1), fromAbove: fromBand < ch, ends });
+    });
+    // The crossings of a above b: a's verticals down through b, b's verticals up through a.
+    const cost = (a, b) => a.ends.filter(e => !e.up && b.lo < e.x && e.x < b.hi).length + b.ends.filter(e => e.up && a.lo < e.x && e.x < a.hi).length;
+    const order = [...items.filter(x => x.fromAbove).sort((a, b) => a.len - b.len), ...items.filter(x => !x.fromAbove).sort((a, b) => b.len - a.len)];
+    for (let swapped = true, n = 0; swapped && n < 50; n++){
+      swapped = false;
+      for (let i = 0; i + 1 < order.length; i++) if (cost(order[i + 1], order[i]) < cost(order[i], order[i + 1])){ [order[i], order[i + 1]] = [order[i + 1], order[i]]; swapped = true; }
+    }
+    // The first as many as come from above take tracks from the top, the rest from the bottom, as in a channel.
+    const k = items.filter(x => x.fromAbove).length;
+    const stack = (list, side) => {
+      let levels = 0;
+      list.forEach((it, j) => {
+        const i = Math.max(-1, ...list.slice(0, j).filter(o => overlap(o.lo, o.hi, it.lo, it.hi)).map(o => tracks.get(o.p).i)) + 1;
+        tracks.set(it.p, { side, i });
+        levels = Math.max(levels, i + 1);
+      });
+      return levels;
+    };
+    chTracks.set(ch, { top: stack(order.slice(0, k), 'top'), bottom: stack(order.slice(k).reverse(), 'bottom') });
   }
   for (let gx = 0; gx <= 2 * cols; gx += 2){
     const items = [];

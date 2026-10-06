@@ -874,3 +874,21 @@ test('two message flows back and forth between two symbols lie side by side, eac
   assert.equal(her.length, 2, JSON.stringify(her));
   assert.notEqual(hin[0][0], her[0][0], 'side by side');
 });
+
+test('the pieces of message flows in a gap take the order with the fewest crossings (Ben, 2026-10-06, p-miwg1)', () => {
+  const chain = p => [0, 1, 2, 3, 4].map(i => '<bpmn:task id="' + p + i + '"/>').join('') + [0, 1, 2, 3].map(i => '<bpmn:sequenceFlow id="' + p + 'F' + i + '" sourceRef="' + p + i + '" targetRef="' + p + (i + 1) + '"/>').join('');
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" processRef="QA"/><bpmn:participant id="PB" processRef="QB"/>' +
+    '<bpmn:messageFlow id="Ab" sourceRef="A0" targetRef="B1"/><bpmn:messageFlow id="Auf" sourceRef="B2" targetRef="A0"/></bpmn:collaboration>' +
+    '<bpmn:process id="QA">' + chain('A') + '</bpmn:process><bpmn:process id="QB">' + chain('B') + '</bpmn:process>');
+  const { model } = read(xml);
+  const di = layoutGeometry(model, rawOf(model, Object.fromEntries(model.nodes.map(n => [n.id, Number(n.id.slice(1)) * 100]))));
+  const pieces = f => di.flows[f].slice(1).map((q, i) => [di.flows[f][i], q]);
+  let crossings = 0;
+  for (const [p, q] of pieces('Ab')) for (const [r, s] of pieces('Auf')){
+    const ph = p[1] === q[1], rh = r[1] === s[1];
+    if (ph === rh) continue;
+    const [h1, h2, v1, v2] = ph ? [p, q, r, s] : [r, s, p, q];
+    if (Math.min(h1[0], h2[0]) < v1[0] && v1[0] < Math.max(h1[0], h2[0]) && Math.min(v1[1], v2[1]) < h1[1] && h1[1] < Math.max(v1[1], v2[1])) crossings++;
+  }
+  assert.equal(crossings, 0, JSON.stringify([di.flows.Ab, di.flows.Auf]));
+});
