@@ -247,7 +247,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   var NOTED = /* @__PURE__ */ new Set(["textAnnotation", "association"]);
   var noteText = (el) => {
     const t = kids(el).find((k) => local(k) === "text");
-    return t ? t.textContent.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).join("\n").trim() : "";
+    return t ? t.textContent : "";
   };
   var LEFT_OUT_INSIDE = /* @__PURE__ */ new Set(["dataInputAssociation", "dataOutputAssociation"]);
   function readProcess(doc) {
@@ -353,7 +353,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const texts = /* @__PURE__ */ new Map(), empty = /* @__PURE__ */ new Set();
     for (const { el, slot } of noted) if (local(el) === "textAnnotation") {
       if (!attr(el, "id")) slot.reason = "has no id";
-      else if (!noteText(el)) {
+      else if (!clean(noteText(el))) {
         slot.reason = "has no text";
         empty.add(attr(el, "id"));
       } else texts.set(attr(el, "id"), { el, slot });
@@ -569,12 +569,12 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   function labelSize(text, width) {
     if (width) {
       let n = 0;
-      for (const para of String(text).split("\n")) {
-        let line2 = "";
+      for (const para of String(text).split(/\r?\n/)) {
+        let line2 = /^\s*/.exec(para)[0], words = 0;
         n++;
         for (const word of para.split(/\s+/).filter(Boolean)) {
-          const next = line2 ? line2 + " " + word : word;
-          if (line2 && next.length * CHAR > width - 14) {
+          const next = words++ ? line2 + " " + word : line2 + word;
+          if (words > 1 && next.length * CHAR > width - 14) {
             n++;
             line2 = word;
           } else line2 = next;
@@ -659,7 +659,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   }
   var NOTE_GAP = 50;
   var NOTE_CLEAR = 6;
-  var NOTE_SIDES = ["rechts", "oben-rechts", "unten-rechts", "oben", "unten", "oben-links", "unten-links", "links"];
+  var NOTE_SIDES = ["right", "upRight", "downRight", "up", "down", "upLeft", "downLeft", "left"];
   var NOTE_ROUNDS = [0, 25, 50, 100];
   function noteSize(text, measure = labelSize) {
     for (const w of NOTE_WIDTHS) {
@@ -672,14 +672,14 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w, c.cx - w + 20, c.cx - 20], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
     const d = NOTE_GAP / 2 + far;
     const at = (side) => ({
-      "oben": xs.map((x) => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
-      "oben-rechts": [[c.cx + c.w / 2 + d, c.cy - c.h / 2 - d - h]],
-      "unten-rechts": [[c.cx + c.w / 2 + d, c.cy + c.h / 2 + d]],
-      "unten": xs.map((x) => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
-      "oben-links": [[c.cx - c.w / 2 - d - w, c.cy - c.h / 2 - d - h]],
-      "unten-links": [[c.cx - c.w / 2 - d - w, c.cy + c.h / 2 + d]],
-      "rechts": ys.map((y) => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
-      "links": ys.map((y) => [c.cx - c.w / 2 - NOTE_GAP - far - w, y])
+      up: xs.map((x) => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
+      upRight: [[c.cx + c.w / 2 + d, c.cy - c.h / 2 - d - h]],
+      downRight: [[c.cx + c.w / 2 + d, c.cy + c.h / 2 + d]],
+      down: xs.map((x) => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
+      upLeft: [[c.cx - c.w / 2 - d - w, c.cy - c.h / 2 - d - h]],
+      downLeft: [[c.cx - c.w / 2 - d - w, c.cy + c.h / 2 + d]],
+      right: ys.map((y) => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
+      left: ys.map((y) => [c.cx - c.w / 2 - NOTE_GAP - far - w, y])
     })[side];
     return NOTE_SIDES.flatMap((side) => at(side).map((p) => [...p.map(R), w, h]));
   }
@@ -739,7 +739,13 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   }
   function layoutGeometry(model, raw, measure = labelSize, options = DEFAULT_RULES) {
     const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map((k) => [k, options[k] ?? DEFAULT_RULES[k]]));
-    return layoutGrid(model, raw, measure, rules);
+    const sizes = /* @__PURE__ */ new Map();
+    const once = (text, width) => {
+      const key = (width ?? "") + ":" + text;
+      if (!sizes.has(key)) sizes.set(key, measure(text, width));
+      return sizes.get(key);
+    };
+    return layoutGrid(model, raw, once, rules);
   }
   var DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
     gatewayLane: true,
@@ -2257,7 +2263,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     }
     const portOf = /* @__PURE__ */ new Map();
     for (const [k, list] of ends) {
-      const [id, side] = k.split("|"), c = box[id];
+      const cut = k.lastIndexOf("|"), id = k.slice(0, cut), side = k.slice(cut + 1), c = box[id];
       const vertical = side === "top" || side === "bottom";
       const base = { x: side === "left" ? c.cx - c.w / 2 : side === "right" ? c.cx + c.w / 2 : c.cx, y: side === "top" ? c.cy - c.h / 2 : side === "bottom" ? c.cy + c.h / 2 : c.cy };
       const nearer = (a, b) => {
@@ -2371,7 +2377,8 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const message = new Set((model.messages || []).map((m) => m.id));
     const takenPool = [];
     const frames = Object.values(di.pools).sort((a, b) => a[1] - b[1]);
-    const edges = frames.flatMap(([x, y, w, h]) => [[x, y - 1, w, 2], [x, y + h - 1, w, 2], [x - 1, y, 2, h], [x + w - 1, y, 2, h]]);
+    const frameEdges = ([x, y, w, h]) => [[x, y - 1, w, 2], [x, y + h - 1, w, 2], [x - 1, y, 2, h], [x + w - 1, y, 2, h]];
+    const edges = frames.flatMap(frameEdges);
     const gapsY = frames.slice(1).map((b, i) => [frames[i][1] + frames[i][3], b[1]]).filter(([a, b]) => b > a);
     const inGaps = (pts, { w, h }) => {
       const out = [];
@@ -2464,6 +2471,13 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
         model.pools.forEach((p) => {
           if (p.box && di.pools[p.id][1] >= cut) di.pools[p.id][1] += d;
         });
+        model.pools.forEach((p, i) => {
+          if (!p.id || p.box) return;
+          const ls = model.lanes.filter((l) => (l.pool ?? 0) === i).map((l) => laneBox[l.key]), top = Math.min(...ls.map((b) => b[1]));
+          di.pools[p.id][1] = top;
+          di.pools[p.id][3] = Math.max(...ls.map((b) => b[1] + b[3])) - top;
+        });
+        edges.splice(0, edges.length, ...Object.values(di.pools).flatMap(frameEdges));
         for (const n of [...model.nodes, ...boundaries]) {
           const { cx, cy, w, h } = box[n.id];
           di.nodes[n.id][0] = R(cx - w / 2);
@@ -2492,9 +2506,14 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
         const shape = (an) => "cy" in an ? { kind: kindOf(a.partner), cx: an.cx, cy: an.cy, w: an.w, h: an.h } : { kind: "point", cx: an.x, cy: an.y, w: 0, h: 0 };
         const others = () => [...symbols.filter((b) => !nodeOf.has(a.partner) || b !== di.nodes[a.partner]), ...taken];
         const foreign = () => nodeOf.has(a.partner) ? segments : routes.filter((r) => r.f.id !== a.partner).flatMap((r) => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
+        const offFrames = n.pool != null ? () => true : (place2) => covered(place2, edges) === 0;
+        const borders = model.lanes.slice(1).flatMap((l, i) => {
+          const above = model.lanes[i];
+          return (above.pool ?? 0) === (l.pool ?? 0) && !(above.synthetic && l.synthetic) ? [[-1e6, laneBox[l.key][1] - 1, 2e6, 2]] : [];
+        });
         const clear = (place2, an, crossing) => {
           const way = associationWay(place2, shape(an));
-          return covered(place2, [...symbols, ...segments, ...taken], NOTE_CLEAR) === 0 && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign()));
+          return covered(place2, [...symbols, ...segments, ...taken, ...borders], NOTE_CLEAR) === 0 && offFrames(place2) && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign()));
         };
         let place = null, anchor = anchors2[0];
         rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors2) {
@@ -2602,9 +2621,19 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const flowPool = new Map(model.flows.map((f) => [f.id, poolOf.get(f.from)]));
     const shift = (dy, own, y0) => {
       const moves = (k, y) => k === void 0 ? y >= y0 : own(k);
+      const moved = /* @__PURE__ */ new Set();
       for (const [id, b] of [...Object.entries(di.nodes), ...Object.entries(di.labels)]) if (moves(poolOf.get(id), b[1])) b[1] += dy;
-      for (const [id, b] of Object.entries(di.flowLabels)) if (moves(flowPool.get(id), b[1])) b[1] += dy;
-      for (const [id, b] of Object.entries(di.notes || {})) if (moves(notePool.get(id), b[1])) b[1] += dy;
+      for (const [id, b] of Object.entries(di.flowLabels)) {
+        moved.add(b);
+        if (moves(flowPool.get(id), b[1])) b[1] += dy;
+      }
+      for (const [id, b] of Object.entries(di.notes || {})) {
+        moved.add(b);
+        if (moves(notePool.get(id), b[1])) b[1] += dy;
+      }
+      taken.forEach((b, k) => {
+        if (!moved.has(b) && moves(takenPool[k] ?? void 0, b[1])) b[1] += dy;
+      });
       for (const l of model.lanes) if (own(l.pool ?? 0)) laneBox[l.key][1] += dy;
       model.pools.forEach((p, k) => {
         if (p.box && own(k)) di.pools[p.id][1] += dy;
@@ -2652,13 +2681,13 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       end[1] = next[1] < y ? y : y + h;
     }
     if (notes.length) {
-      const below = /* @__PURE__ */ new Map();
-      for (const n of notes) {
-        const a = assocs.find((x2) => x2.note === n.id);
-        if (!a || a.kind !== "pool") continue;
-        const [x, y, w] = di.pools[a.partner], size = noteSize(n.text, measure), at = below.get(a.partner) ?? y;
+      const poolAt = (id) => model.pools.findIndex((p) => p.id === id);
+      const atPools = notes.map((n) => [n, assocs.find((x) => x.note === n.id)]).filter(([, a]) => a && a.kind === "pool").sort(([, a], [, b]) => poolAt(a.partner) - poolAt(b.partner));
+      let next = -Infinity;
+      for (const [n, a] of atPools) {
+        const [x, y, w] = di.pools[a.partner], size = noteSize(n.text, measure), at = Math.max(y, next);
         di.notes[n.id] = [x + w + NOTE_GAP, at, size.w, size.h];
-        below.set(a.partner, at + size.h + 8);
+        next = at + size.h + 8;
       }
       const kindOf = (id) => {
         const t = model.nodes.find((n) => n.id === id)?.type;
