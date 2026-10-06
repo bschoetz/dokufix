@@ -2941,15 +2941,19 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
 
   // A text annotation at a pool right of its frame, beside its top, several below each other; then every
-  // association from its text annotation to where its partner now stands.
+  // association from its text annotation to where its partner now stands. One stack over all pools, top to bottom,
+  // those of a pool in the order of the XML (review of 2.31): each starts beside its pool's top, or 8 px below the one
+  // placed before it where that reaches further down, so that those of two pools close together (two black boxes)
+  // never overlap.
   if (notes.length){
-    const below = new Map();
-    for (const n of notes){
-      const a = assocs.find(x => x.note === n.id);
-      if (!a || a.kind !== 'pool') continue;
-      const [x, y, w] = di.pools[a.partner], size = noteSize(n.text, measure), at = below.get(a.partner) ?? y;
+    const poolAt = id => model.pools.findIndex(p => p.id === id);
+    const atPools = notes.map(n => [n, assocs.find(x => x.note === n.id)]).filter(([, a]) => a && a.kind === 'pool')
+      .sort(([, a], [, b]) => poolAt(a.partner) - poolAt(b.partner));
+    let next = -Infinity;
+    for (const [n, a] of atPools){
+      const [x, y, w] = di.pools[a.partner], size = noteSize(n.text, measure), at = Math.max(y, next);
       di.notes[n.id] = [x + w + NOTE_GAP, at, size.w, size.h];
-      below.set(a.partner, at + size.h + 8);
+      next = at + size.h + 8;
     }
     const kindOf = id => { const t = model.nodes.find(n => n.id === id)?.type; return t === 'task' ? 'rect' : t === 'gateway' ? 'diamond' : 'circle'; };
     for (const a of assocs){

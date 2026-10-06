@@ -1329,6 +1329,19 @@ test('a text annotation at a pool stands right of its frame, its association lev
   assert.deepEqual(breaks, []);
 });
 
+test('text annotations at pools stand in one stack: two at one pool, those of two black boxes close together, none on another (review of 2.31)', () => {
+  const long = 'Rahmenvertrag mit Laufzeit bis Ende 2027, Kündigung mit drei Monaten Frist';
+  const collab = '<bpmn:collaboration id="K"><bpmn:participant id="PA" name="A" processRef="P"/><bpmn:participant id="PB" name="Bank"/><bpmn:participant id="PC" name="Amt"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="T" targetRef="PB"/><bpmn:messageFlow id="M2" sourceRef="PC" targetRef="E"/>' +
+    note('N1', long) + assoc('A1', 'PB', 'N1') + note('N2', long) + assoc('A2', 'N2', 'PB') + note('N3', long) + assoc('A3', 'PC', 'N3') + note('N4', 'Vertrag') + assoc('A4', 'PA', 'N4') +
+    '</bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>';
+  const { di, breaks } = notesLaid(null, LINE_COLS, collab);
+  const boxes = ['N4', 'N1', 'N2', 'N3'].map(id => bx(di.notes[id]));
+  assert.ok(boxes[0].y === bx(di.pools.PA).y && boxes[1].y === bx(di.pools.PB).y, 'beside the top of their pool');
+  for (let i = 1; i < boxes.length; i++) assert.ok(boxes[i].y >= boxes[i - 1].bottom + 8, 'below the one before: ' + JSON.stringify(boxes));
+  assert.deepEqual(breaks, []);
+});
+
 test('where nothing near is free, the lane grows at its border for the text annotation; the symbols keep their order (notiz-r12)', () => {
   const fx = readFixture('notiz-r12');
   const measure = (t, w) => (w ? fx.sizes['note:' + w + ':' + t] : fx.sizes[t]) || labelSize(t, w);
