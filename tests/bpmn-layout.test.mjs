@@ -1152,3 +1152,12 @@ test('boundary events: the rule R17 puts the way below; without it the way stays
   assert.ok(bx(on.nodes.M).cy > bx(on.nodes.T).cy);
   assert.equal(bx(off.nodes.M).cy, bx(off.nodes.T).cy);
 });
+
+test('a flow from a boundary event takes the straighter way: down and in from the side, across a flow back rather than beside it (Ben, 2026-10-06, r12)', () => {
+  const { di } = boundaryLaid('<bpmn:startEvent id="S"/><bpmn:task id="A"/><bpmn:task id="T"/><bpmn:exclusiveGateway id="G"/><bpmn:endEvent id="E"/>' +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="A"/><bpmn:sequenceFlow id="F2" sourceRef="A" targetRef="T"/><bpmn:sequenceFlow id="F3" sourceRef="T" targetRef="G"/>' +
+    '<bpmn:sequenceFlow id="F4" sourceRef="G" targetRef="A" name="Nein, weitere Unterlagen anfordern"/><bpmn:sequenceFlow id="F5" sourceRef="G" targetRef="T" name="Teilweise"/><bpmn:sequenceFlow id="F6" sourceRef="G" targetRef="E" name="Ja"/>' +
+    '<bpmn:boundaryEvent id="B" name="Nach zehn Arbeitstagen ohne Entscheidung" attachedToRef="T"/><bpmn:task id="M"/><bpmn:endEvent id="EM"/><bpmn:sequenceFlow id="FB" sourceRef="B" targetRef="M" name="Frist verstrichen"/><bpmn:sequenceFlow id="FM" sourceRef="M" targetRef="EM"/>',
+    { S: 0, A: 1, T: 2, G: 3, E: 4, M: 3, EM: 4 });
+  assert.equal(di.flows.FB.length, 3, 'one bend: ' + JSON.stringify(di.flows.FB));
+});

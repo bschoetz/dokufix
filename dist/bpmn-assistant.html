@@ -631,6 +631,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   var MARKER = 20;
   var BEND = 5e-3;
   var MSG_BEND = 0.5;
+  var EVENT_BEND = 1;
   function buildGrid(model, raw) {
     const laneOf = /* @__PURE__ */ new Map();
     model.lanes.forEach((l, i) => l.nodes.forEach((id) => laneOf.set(id, i)));
@@ -1642,7 +1643,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       const s = endAt(f, "from"), t = endAt(f, "to");
       const ahead = t.xo >= s.xo;
       const behind = ahead ? (typeOf(f.to) === "task" && sideOfLast(pieces[pieces.length - 1], t) === "right" ? 1 : 0) + (typeOf(f.from) === "task" && sideOfFirst(pieces[0], s) === "left" ? 1 : 0) : 0;
-      return cellsCrossed(pieces) * 1e3 + boundaryCost(f, pieces, s, t) + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : BEND);
+      return cellsCrossed(pieces) * 1e3 + boundaryCost(f, pieces, s, t) + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : f.event ? EVENT_BEND : BEND);
     };
     const templates = (s, t) => {
       const out = [];

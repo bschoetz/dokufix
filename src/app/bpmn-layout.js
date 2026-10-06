@@ -635,6 +635,7 @@ const PORT_STEP = 30;       // the distance of two ends on one side of a task
 const MARKER = 20;          // the room bpmn-js's marker takes in the middle of a sub-process's lower edge (story 2.30)
 const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
 const MSG_BEND = 0.5;       // the cost of a bend of a message flow: two cost as much as a crossing (Ben, 2026-10-06, p-rs1: needless bends)
+const EVENT_BEND = 1;       // the cost of a bend of a flow from a boundary event: as much as a crossing (Ben, 2026-10-06, on r12, llm-antrag, sonder-bahnen: the exception path straighter)
 
 // The grid from the model and Mermaid's raw positions:
 //   cells: id → { n, lane, row, col, pin }   lane index, row (a number, 0 the backbone, negative above it), column (Mermaid's rank)
@@ -1875,7 +1876,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     // bends (a gateway may be entered from the right, as Ben did in hund2).
     const ahead = t.xo >= s.xo;
     const behind = ahead ? (typeOf(f.to) === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (typeOf(f.from) === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
-    return cellsCrossed(pieces) * 1000 + boundaryCost(f, pieces, s, t) + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : BEND);
+    return cellsCrossed(pieces) * 1000 + boundaryCost(f, pieces, s, t) + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : f.event ? EVENT_BEND : BEND);
   };
   // The templates of a flow s→t.
   const templates = (s, t) => {
