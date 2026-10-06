@@ -684,7 +684,7 @@ const NOTE_CLEAR = 6;
 // The sides in the order they are tried: right of the partner first (Ben, 2026-10-06,
 // nz03-pool, nz06-hund2: "Kommentare rechts vom Ziel …; in manchen Diagrammen geht es einfach nicht, dann ist es schon
 // ok, wenn der Kommentar links vom Ziel steht").
-const NOTE_SIDES = ['rechts', 'oben-rechts', 'unten-rechts', 'oben', 'unten', 'oben-links', 'unten-links', 'links'];
+const NOTE_SIDES = ['right', 'upRight', 'downRight', 'up', 'down', 'upLeft', 'downLeft', 'left'];
 // How much further out each round of places lies than the first (Ben, 2026-10-06, nz20-ohne1: "Hätte näher an den
 // Knoten gepasst"; his notes 75 to 150 px from their partners): all sides near, then all a little further.
 export const NOTE_ROUNDS = [0, 25, 50, 100];
@@ -707,14 +707,14 @@ export function notePlaces(c, size, far = 0){
   const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w, c.cx - w + 20, c.cx - 20], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
   const d = NOTE_GAP / 2 + far;
   const at = side => ({
-    'oben': xs.map(x => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
-    'oben-rechts': [[c.cx + c.w / 2 + d, c.cy - c.h / 2 - d - h]],
-    'unten-rechts': [[c.cx + c.w / 2 + d, c.cy + c.h / 2 + d]],
-    'unten': xs.map(x => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
-    'oben-links': [[c.cx - c.w / 2 - d - w, c.cy - c.h / 2 - d - h]],
-    'unten-links': [[c.cx - c.w / 2 - d - w, c.cy + c.h / 2 + d]],
-    'rechts': ys.map(y => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
-    'links': ys.map(y => [c.cx - c.w / 2 - NOTE_GAP - far - w, y]),
+    up: xs.map(x => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
+    upRight: [[c.cx + c.w / 2 + d, c.cy - c.h / 2 - d - h]],
+    downRight: [[c.cx + c.w / 2 + d, c.cy + c.h / 2 + d]],
+    down: xs.map(x => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
+    upLeft: [[c.cx - c.w / 2 - d - w, c.cy - c.h / 2 - d - h]],
+    downLeft: [[c.cx - c.w / 2 - d - w, c.cy + c.h / 2 + d]],
+    right: ys.map(y => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
+    left: ys.map(y => [c.cx - c.w / 2 - NOTE_GAP - far - w, y]),
   })[side];
   return NOTE_SIDES.flatMap(side => at(side).map(p => [...p.map(R), w, h]));
 }
