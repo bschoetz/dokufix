@@ -14,7 +14,7 @@
 //      a page); only the positions are taken from its SVG, and the layout
 //      reads no more of them than the x of each node's middle
 //   4. layoutGeometry() puts the nodes on a grid: Mermaid's columns, the
-//      lanes, and rows within each lane. The rules R1–R16 give each node its
+//      lanes, and rows within each lane. The rules R1–R17 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
 //      the labels get their places, in the size the page measures for them
 //      (bpmn-js's text renderer) or, without a page, as estimated; the text
@@ -108,7 +108,7 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 
 // The pools and their processes, read from the parsed XML:
 //   { model, leftOut }
-//   model: { pools, plane, lanes, nodes, flows, messages, insert }
+//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, insert }
 //     pools: [{ id, name, box }], one per pool laid out, top to bottom in
 //            the order of the participants; id null where nothing is drawn as
 //            a pool: a process without a participant, a participant without
@@ -122,8 +122,10 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //            has no lanes, and a lane without an id; hold, the Mermaid id of
 //            the stand-in an empty lane holds (h1…); pool, the index of its
 //            pool in pools
-//     nodes: [{ id, name, type, tag, key }], type one of start, end, inter,
-//            gateway, task
+//     nodes: [{ id, name, type, tag, key, markers }], type one of start, end,
+//            inter, gateway, task; markers, only where there are any, how many
+//            markers bpmn-js draws in the middle of an activity's lower edge
+//            (story 2.30)
 //     flows: [{ id, from, to, name }], the sequence flows, each inside its
 //            pool; from may be a boundary event
 //     boundaries: [{ id, name, host, cancel }], the events on an activity's
@@ -144,8 +146,17 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
 //     key:   the id Mermaid gets for it (n1…, l1…)
-//   leftOut: [{ id, tag, reason }], in the order of the XML; reason says why,
-//            in English, for the console
+//   leftOut: [{ id, tag, reason }]; reason says why, in English, for the
+//            console. First what the collaboration holds, in its order (a
+//            message flow, a text annotation and an association keep their
+//            place there, whatever is decided about them later); then the
+//            processes no participant refers to (without a collaboration, the
+//            processes without an id); then per participant, in their order,
+//            what its process holds: its children in the order of the XML,
+//            then its boundary events, its lanes and its sequence flows; then,
+//            with nothing to lay out, the participants without an id and the
+//            processes without a collaboration; last the participants with a
+//            process but without an id
 // null when the document is no BPMN definitions: bpmn-js has its own message
 // for that. Throws with the reason where nothing can be laid out, or a node
 // stands in no lane although its process has lanes. A pool without a process
@@ -800,7 +811,7 @@ export function wayHits(way, boxes){
 // page gives one that asks bpmn-js's text renderer in the document's font
 // (src/app/bpmn.js), the tests and anything without a page keep the estimate
 // labelSize().
-// options: which of the rules R1–R16 apply, keyed as in DEFAULT_RULES; a key
+// options: which of the rules R1–R17 apply, keyed as in DEFAULT_RULES; a key
 // left out keeps its default, so { startAlign: false } leaves out R15 in this
 // call only. R7 and the router's second pass always apply.
 export function layoutGeometry(model, raw, measure = labelSize, options = DEFAULT_RULES){
@@ -1454,6 +1465,10 @@ function ruleBlockBox(g, model){
 // D4: R16 before R13 drops R16's result; R12 before R10 gives another one):
 //   R1   first: gateways and ends take their lane (and g.laneSplits, read by
 //        R7, the router and centreLaneSplits()); every later rule compares lanes
+//   R17  after R1, so that an end on the way after a boundary event has its
+//        lane; that way's nodes in the host's row take a row below it, those in
+//        another lane a row facing the host's; before R2, which then sees no
+//        two ways in the host's row (reads gridModel()'s flows from an event)
 //   R2   rows for the ways of a decision; leaves out the loop steps of R3
 //        (loopChain()); records its rows in g.pathRowGroups for R10
 //   R3   loop steps above their gateway, pinned to it
