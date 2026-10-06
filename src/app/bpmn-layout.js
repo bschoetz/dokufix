@@ -142,7 +142,9 @@ export function readProcess(doc){
 
   // Each participant with its process, or, without a collaboration, each process.
   const procOf = pa => processes.find(p => attr(p, 'id') && attr(p, 'id') === attr(pa, 'processRef')) || null;
-  const candidates = participants.length ? participants.map(pa => ({ participant: pa, proc: procOf(pa) })) : processes.map(proc => ({ participant: null, proc }));
+  // Without a collaboration a process without an id can be referred to by no participant: it is left out.
+  const candidates = participants.length ? participants.map(pa => ({ participant: pa, proc: procOf(pa) }))
+    : processes.filter(proc => attr(proc, 'id') || (leave(proc, 'has no id'), false)).map(proc => ({ participant: null, proc }));
   if (participants.length) for (const p of processes) if (!participants.some(pa => procOf(pa) === p)) leave(p, 'no participant refers to it');
 
   const nodes = [], lanes = [], flows = [], pools = [];
@@ -150,15 +152,18 @@ export function readProcess(doc){
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
     const own = readPool(proc, participant, nodes, lanes, leave);
-    if (!own){ blackBoxes.push(participant || proc); continue; }
+    if (!own){ blackBoxes.push({ participant, proc }); continue; }
     const index = pools.length;
     for (const l of own.lanes){ l.pool = index; lanes.push(l); }
     for (const n of own.nodes){ byId.set(n.id, n); poolOfNode.set(n.id, index); }
     flows.push(...own.flows);
-    pools.push({ id: participant && attr(participant, 'id') ? attr(participant, 'id') : null, name: participant ? clean(attr(participant, 'name')) : '', el: participant, proc });
+    pools.push({ id: participant && attr(participant, 'id') ? attr(participant, 'id') : null, name: participant ? clean(attr(participant, 'name')) : '', el: participant, proc, standIn: own.standIn });
   }
   if (!pools.length) throw new Error(LAYOUT_NOTHING);
-  if (pools.length > 1) for (const el of blackBoxes) if (el) leave(el, 'a pool without a process of its own beside pools with one');
+  for (const { participant, proc } of blackBoxes){
+    if (participant) leave(participant, 'a pool without a process of its own beside pools with one');
+    else leave(proc, 'a process with nothing to lay out');
+  }
 
   // Where processes have no collaboration, one is inserted with a participant per process.
   let insert = null;
@@ -172,7 +177,8 @@ export function readProcess(doc){
       p.name = clean(attr(p.proc, 'name'));
       insert.participants.push({ id: p.id, name: p.name, process: attr(p.proc, 'id') });
     });
-    for (const l of lanes) if (l.synthetic && !l.id) l.name = pools[l.pool].name;
+    // The one lane of a process without lanes is named as its pool, as a participant's would be.
+    for (const p of pools) if (p.standIn) p.standIn.name = p.name;
   }
   const plane = insert ? insert.id : collaboration ? attr(collaboration, 'id') : attr(pools[0].proc, 'id');
   if (!plane) throw new Error(LAYOUT_NOTHING);
@@ -195,8 +201,8 @@ export function readProcess(doc){
 }
 
 // The flow nodes, lanes and sequence flows of one pool's process, keyed on
-// from the nodes and lanes of the pools before it; null for a pool with
-// nothing to place. Throws where a node stands in no lane although the
+// from the nodes and lanes of the pools before it, and standIn, the one lane
+// of a process without lanes, or null; null for a pool with nothing to place. Throws where a node stands in no lane although the
 // process has lanes.
 function readPool(proc, participant, before, beforeLanes, leave){
   if (!proc) return null;
@@ -243,10 +249,11 @@ function readPool(proc, participant, before, beforeLanes, leave){
     refs.forEach(id => placed.add(id));
     laneOf.get(first).nodes.push(...refs);
   }
+  let standIn = null;
   if (lanes.length){
     const stray = nodes.filter(n => !placed.has(n.id));
     if (stray.length) throw new Error(layoutStrayText(stray.map(n => n.id)));
-  } else lanes.push({ id: '', name: participant ? clean(attr(participant, 'name')) : '', nodes: nodes.map(n => n.id), key: key(), synthetic: true });
+  } else lanes.push(standIn = { id: '', name: participant ? clean(attr(participant, 'name')) : '', nodes: nodes.map(n => n.id), key: key(), synthetic: true });
   // An empty lane holds a stand-in for Mermaid, or Mermaid draws it as a strip
   // of its own; the stand-in is not drawn, and the grid gives the lane its row.
   for (const l of lanes) if (!l.nodes.length) l.hold = 'h' + l.key.slice(1);
@@ -260,7 +267,7 @@ function readPool(proc, participant, before, beforeLanes, leave){
     else if (byId.has(from) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
     else leave(el, !attr(el, 'id') ? 'has no id' : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id)))].join(' and ') + ', which is not laid out');
   }
-  return { nodes, lanes, flows };
+  return { nodes, lanes, flows, standIn };
 }
 
 // One line per left-out element for the console.

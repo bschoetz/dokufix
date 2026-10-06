@@ -781,7 +781,7 @@ test('several pools: what is left out, each a line, in the order of the XML; a p
     'participant PX: a pool without a process of its own beside pools with one']);
   // One pool with a process beside a black box: one pool, as before, on the collaboration's plane.
   const one = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="B"/></bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>'));
-  assert.deepEqual([one.model.pools, one.model.plane, one.leftOut], [[{ id: 'A', name: '' }], 'K', []]);
+  assert.deepEqual([one.model.pools, one.model.plane, one.leftOut.map(leftOutLine)], [[{ id: 'A', name: '' }], 'K', ['participant B: a pool without a process of its own beside pools with one']]);
 });
 
 test('processes without a collaboration: drawn as pools, the collaboration inserted before the first process, nothing else of the XML changed', () => {
@@ -796,6 +796,13 @@ test('processes without a collaboration: drawn as pools, the collaboration inser
   assert.ok(out.includes('\n  <bpmn:collaboration id="dokufix_zusammenarbeit">\n    <bpmn:participant id="dokufix_pool_1_2" name="Kunde" processRef="P1"/>\n    <bpmn:participant id="dokufix_pool_2" processRef="P2"/>\n  </bpmn:collaboration>\n  <bpmn:process id="P1"'), out);
   assert.equal(out.replace(/\n  <bpmn:collaboration[\s\S]*?<\/bpmn:collaboration>/, '').replace(/  <bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>\n/, ''), xml);
   assert.ok(out.includes('bpmnElement="dokufix_zusammenarbeit"') && out.includes('bpmnElement="dokufix_pool_1_2" isHorizontal="true"'));
+  // A process without an id is left out, it could have no participant; a lane without an id keeps its name.
+  const odd = xmlOf('<bpmn:process name="Ohne"><bpmn:task id="Q"/></bpmn:process><bpmn:process id="P3" name="Drei"><bpmn:laneSet id="LS3"><bpmn:lane name="Theke"><bpmn:flowNodeRef>R</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet><bpmn:task id="R"/></bpmn:process>' +
+    '<bpmn:process id="P4" name="Vier"><bpmn:task id="U"/></bpmn:process><bpmn:process id="P5"/>');
+  const r = read(odd);
+  assert.deepEqual(r.model.insert.participants.map(p => [p.name, p.process]), [['Drei', 'P3'], ['Vier', 'P4']]);
+  assert.deepEqual(r.model.lanes.map(l => [l.name, l.synthetic]), [['Theke', true], ['Vier', true]]);
+  assert.deepEqual(r.leftOut.map(leftOutLine), ['process (no id): has no id', 'lane (no id): has no id; its row is laid out, the lane is not drawn', 'process P5: a process with nothing to lay out']);
   // The same with read again: the inserted collaboration is read as the author's would be.
   assert.deepEqual(read(out.replace(/<bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>/, '')).model.pools, model.pools);
 });
