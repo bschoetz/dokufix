@@ -2150,7 +2150,7 @@ function relane(text, model, di){
   for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b([^>]*?)(\/?)>/g)){
     if (m[1]){ const l = stack.pop(); if (l) l.close = m.index; continue; }
     const id = (/\sid\s*=\s*["']([^"']+)["']/.exec(m[3]) || [])[1];
-    const l = { id, prefix: m[2], open: m.index, openEnd: m.index + m[0].length, close: null, parent: stack[stack.length - 1] || null };
+    const l = { id, prefix: m[2], open: m.index, openEnd: m.index + m[0].length, close: null, parent: stack[stack.length - 1] || null, selfClosing: !!m[4] };
     lanes.push(l);
     if (!m[4]) stack.push(l); else l.close = l.openEnd;
   }
@@ -2158,7 +2158,7 @@ function relane(text, model, di){
   const inLane = i => lanes.filter(l => l.open < i && l.close !== null && i < l.close).sort((p, q) => q.open - p.open)[0] || null;
   const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\s*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
     .map(m => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3], lane: inLane(m.index) }));
-  const edits = [];
+  const edits = [], opened = new Map(); // an empty target lane → the ids it gets
   for (const n of model.nodes){
     const target = di.laneOf && Object.hasOwn(di.laneOf, n.id) ? di.laneOf[n.id] : null;
     const now = model.lanes.find(l => l.nodes.includes(n.id));
@@ -2168,7 +2168,9 @@ function relane(text, model, di){
     const mine = refs.filter(x => x.id === esc(n.id));
     for (const x of mine) if (!keep.has(x.lane)) edits.push({ at: x.start, end: x.end, put: '' });
     const t = byId.get(target);
-    if (!mine.some(x => x.lane === t) && t.close !== null && t.close > t.openEnd){
+    // An empty lane, <lane …/> or <lane …></lane>, gets the refs of all its nodes at once, between its tags.
+    if (t.close === t.openEnd){ opened.set(t, [...(opened.get(t) || []), n.id]); continue; }
+    if (!mine.some(x => x.lane === t) && t.close !== null){
       const sib = refs.find(x => x.lane === t);
       const indent = sib ? sib.indent : '';
       const pre = sib ? sib.prefix : t.prefix;
@@ -2177,6 +2179,11 @@ function relane(text, model, di){
       const at = /^[ \t]*$/.test(text.slice(lineStart, t.close)) ? lineStart : t.close;
       edits.push({ at, end: at, put: (at === lineStart ? '' : '\n') + indent + '<' + pre + 'flowNodeRef>' + esc(n.id) + '</' + pre + 'flowNodeRef>\n' });
     }
+  }
+  for (const [t, ids] of opened){
+    const put = ids.map(id => '<' + t.prefix + 'flowNodeRef>' + esc(id) + '</' + t.prefix + 'flowNodeRef>').join('');
+    if (t.selfClosing) edits.push({ at: t.openEnd - 2, end: t.openEnd, put: '>' + put + '</' + t.prefix + 'lane>' });
+    else edits.push({ at: t.close, end: t.close, put });
   }
   edits.sort((p, q) => q.at - p.at || q.end - p.end);
   let out = text;
