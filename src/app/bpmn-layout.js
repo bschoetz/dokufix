@@ -1403,40 +1403,46 @@ function ruleEndAlign(g, model, measure, rules){
   return best.di;
 }
 
-// Die Paare von Flüssen mit gemeinsamer Quelle oder gemeinsamem Ziel, deren Stücke
-// gleichläufig auf einer Linie liegen: [[flowId, flowId], …] (wie shared in gridQuality()).
-function sharedPieces(di, model){
-  const segs = [];
-  for (const f of model.flows){ const pts = di.flows[f.id] || []; for (let i = 1; i < pts.length; i++) segs.push({ f: f.id, a: pts[i - 1], b: pts[i] }); }
-  const flowOf = new Map(model.flows.map(f => [f.id, f]));
-  const out = [];
-  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
-    const p = segs[i], q = segs[j];
-    if (p.f === q.f) continue;
-    const A = flowOf.get(p.f), B = flowOf.get(q.f);
-    if (A.from !== B.from && A.to !== B.to) continue;
-    if (A.to === B.to && A.from !== B.from && model.nodes.find(n => n.id === A.to)?.type === 'gateway') continue;
-    let dp, dq;
-    if (p.a[1] === p.b[1] && q.a[1] === q.b[1] && p.a[1] === q.a[1] && Math.min(Math.max(p.a[0], p.b[0]), Math.max(q.a[0], q.b[0])) - Math.max(Math.min(p.a[0], p.b[0]), Math.min(q.a[0], q.b[0])) > 0){ dp = Math.sign(p.b[0] - p.a[0]); dq = Math.sign(q.b[0] - q.a[0]); }
-    else if (p.a[0] === p.b[0] && q.a[0] === q.b[0] && p.a[0] === q.a[0] && Math.min(Math.max(p.a[1], p.b[1]), Math.max(q.a[1], q.b[1])) - Math.max(Math.min(p.a[1], p.b[1]), Math.min(q.a[1], q.b[1])) > 0){ dp = Math.sign(p.b[1] - p.a[1]); dq = Math.sign(q.b[1] - q.a[1]); }
-    else continue;
-    if (dp === dq) out.push([p.f, q.f]);
-  }
-  return out;
-}
-
-// Kreuzungen zweier Flüsse (ein waagerechtes und ein senkrechtes Stück, die
-// sich im Inneren schneiden), Stücke durch fremde Knoten, überlappende Knoten,
-// Stücke zweier Flüsse auf einer Linie (gleiche Höhe oder Spalte, überlappend
-// oder Ende an Ende, etwa frontal in einen Punkt)
-// und Beschriftungen, durch die ein fremder Fluss läuft. Die Regelprüfung der
-// Tests steht hier nicht zur Verfügung; das ist ihr Kern für den Vergleich.
-function gridQuality(di, model){
+// The pieces of every flow: { f: flowId, a: [x, y], b: [x, y] }.
+function segmentsOf(di, model){
   const segs = [];
   for (const f of model.flows){
     const pts = di.flows[f.id] || [];
     for (let i = 1; i < pts.length; i++) segs.push({ f: f.id, a: pts[i - 1], b: pts[i] });
   }
+  return segs;
+}
+
+// Pieces of two flows on one line, touching end to end or overlapping. lines:
+// those running against each other (head on), and those running the same way
+// whose flows share no node; shared: [[flowId, flowId], …] per pair of pieces
+// running the same way whose flows share their source or their target, but not
+// two flows running together into a gateway (allowed, as in tests/bpmn-rules.mjs).
+// One count for R13 (sharedPieces()) and for gridQuality().
+function onOneLine(segs, model){
+  const flowOf = new Map(model.flows.map(f => [f.id, f]));
+  const isGateway = id => model.nodes.find(n => n.id === id)?.type === 'gateway';
+  let lines = 0;
+  const shared = [];
+  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
+    const p = segs[i], q = segs[j];
+    if (p.f === q.f) continue;
+    let dp, dq;
+    if (p.a[1] === p.b[1] && q.a[1] === q.b[1] && p.a[1] === q.a[1] && Math.min(Math.max(p.a[0], p.b[0]), Math.max(q.a[0], q.b[0])) - Math.max(Math.min(p.a[0], p.b[0]), Math.min(q.a[0], q.b[0])) >= 0){ dp = Math.sign(p.b[0] - p.a[0]); dq = Math.sign(q.b[0] - q.a[0]); }
+    else if (p.a[0] === p.b[0] && q.a[0] === q.b[0] && p.a[0] === q.a[0] && Math.min(Math.max(p.a[1], p.b[1]), Math.max(q.a[1], q.b[1])) - Math.max(Math.min(p.a[1], p.b[1]), Math.min(q.a[1], q.b[1])) >= 0){ dp = Math.sign(p.b[1] - p.a[1]); dq = Math.sign(q.b[1] - q.a[1]); }
+    else continue;
+    const A = flowOf.get(p.f), B = flowOf.get(q.f);
+    if (dp !== dq || (A.from !== B.from && A.to !== B.to)) lines++;
+    else if (!(A.to === B.to && isGateway(A.to))) shared.push([p.f, q.f]);
+  }
+  return { lines, shared };
+}
+
+// The pairs of flows whose pieces share a line (onOneLine()).
+const sharedPieces = (di, model) => onOneLine(segmentsOf(di, model), model).shared;
+
+function gridQuality(di, model){
+  const segs = segmentsOf(di, model);
   let crossings = 0;
   for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
     const p = segs[i], q = segs[j];
@@ -1462,29 +1468,13 @@ function gridQuality(di, model){
     const [ax, ay, aw, ah] = ns[i], [bx, by, bw, bh] = ns[j];
     if (Math.min(ax + aw, bx + bw) - Math.max(ax, bx) > 2 && Math.min(ay + ah, by + bh) - Math.max(ay, by) > 2) overlaps++;
   }
-  // Auf einer Linie zählen gegenläufige Stücke (frontal) und gleichläufige zweier Flüsse ohne gemeinsamen Knoten;
-  // gleichläufige mit gemeinsamer Quelle oder gemeinsamem Ziel sind ein gewolltes Zusammenlaufen.
-  const flowOf = new Map(model.flows.map(f => [f.id, f]));
-  const shared = (p, q) => { const a = flowOf.get(p.f), b = flowOf.get(q.f); return a.from === b.from || a.to === b.to; };
-  let lines = 0, sharedLines = 0;
-  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
-    const p = segs[i], q = segs[j];
-    if (p.f === q.f) continue;
-    let dp, dq;
-    if (p.a[1] === p.b[1] && q.a[1] === q.b[1] && p.a[1] === q.a[1] && Math.min(Math.max(p.a[0], p.b[0]), Math.max(q.a[0], q.b[0])) - Math.max(Math.min(p.a[0], p.b[0]), Math.min(q.a[0], q.b[0])) >= 0){ dp = Math.sign(p.b[0] - p.a[0]); dq = Math.sign(q.b[0] - q.a[0]); }
-    else if (p.a[0] === p.b[0] && q.a[0] === q.b[0] && p.a[0] === q.a[0] && Math.min(Math.max(p.a[1], p.b[1]), Math.max(q.a[1], q.b[1])) - Math.max(Math.min(p.a[1], p.b[1]), Math.min(q.a[1], q.b[1])) >= 0){ dp = Math.sign(p.b[1] - p.a[1]); dq = Math.sign(q.b[1] - q.a[1]); }
-    else continue;
-    // Zusammenlaufen in ein Gateway ist erlaubt (wie in tests/bpmn-rules.mjs), sonst zählt ein gleichläufiges Stück
-    // mit gemeinsamem Knoten als gemeinsames Stück.
-    if (dp !== dq || !shared(p, q)) lines++;
-    else if (!(flowOf.get(p.f).to === flowOf.get(q.f).to && model.nodes.find(n => n.id === flowOf.get(p.f).to)?.type === 'gateway')) sharedLines++;
-  }
+  const { lines, shared } = onOneLine(segs, model);
   let labels = 0;
   const hits = (box, own) => segs.some(sg => !own(sg.f) && Math.max(sg.a[0], sg.b[0]) > box[0] && Math.min(sg.a[0], sg.b[0]) < box[0] + box[2] && Math.max(sg.a[1], sg.b[1]) > box[1] && Math.min(sg.a[1], sg.b[1]) < box[1] + box[3]);
   for (const n of model.nodes){ const b = di.labels[n.id]; if (b && hits(b, f => model.flows.some(x => x.id === f && (x.from === n.id || x.to === n.id)))) labels++; }
   for (const f of model.flows){ const b = di.flowLabels[f.id]; if (b && hits(b, x => x === f.id)) labels++; }
   const bends = model.flows.reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
-  return { crossings, through, overlaps, lines, labels, shared: sharedLines, bends };
+  return { crossings, through, overlaps, lines, labels, shared: shared.length, bends };
 }
 
 // Ab R7 bis zum fertigen DI: Spalten schließen, Bänder, Router, Pixel, Labels.
