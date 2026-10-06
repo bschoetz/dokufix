@@ -491,7 +491,8 @@ export function layoutGeometry(model, raw, measure = labelSize, options = DEFAUL
 // channels between rows, the gaps between columns). The rules that can be left
 // out, all on by default; frozen, since every call starts from it. Marked
 // pure, so that no bundle that leaves it unused keeps the call (the reader
-// bundle reaches this module through src/app/diagrams.js).
+// bundle reaches this module through src/app/diagrams.js). Keyed in the order
+// of the rules' numbers; layoutGrid() gives the order they run in.
 export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   gatewayLane: true,  // R1  a gateway or end event stands in the lane of its nearest predecessor; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
   pathRows: true,     // R2  two ways of a decision that go on in one lane get rows of their own
@@ -500,14 +501,14 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   fan: true,          // R5  fan: the arms of a parallel block in other lanes take the row nearest the split; they leave the split and enter the join vertically, only the nearest arm horizontally by the east and west ports when none lies in the gateways' row
   jumpAbove: true,    // R6  the one step between the exit of a loop and a merge stands in the merge's column
   block: true,        // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join
-  rowProbe: true,     // R10 row trial: with crossings, each row R2 gives a way is tried on the other side; taken only with strictly fewer crossings
   firstColumn: true,  // R9  (spike 2.26, Ben) the first shapes of the arms of a parallel gateway are centred on one x, one above the other
-  crossProbe: true,   // R12 crossing trial: a way after an exclusive decision in an extra row, a merge in another lane; only with strictly fewer crossings
-  combProbe: true,    // R14 comb: for an exclusive split with three or more ways, the heads in different rows tried in one column (R9 as a trial)
-  stagger: true,      // R16 two gateways above each other in one column: one tried a column further
-  stepAside: true,    // R13 a successor in its predecessor's column, which the flow reaches with three or more bends, tried a column further; so is the nearer of two siblings on one side of a split
-  startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
+  rowProbe: true,     // R10 row trial: with crossings, each row R2 gives a way is tried on the other side; taken only with strictly fewer crossings
   endAlign: true,     // R11 ends aligned: an end event in the last column where its row is free up to it and the picture gets no worse; a soft recommendation
+  crossProbe: true,   // R12 crossing trial: a way after an exclusive decision in an extra row, a merge in another lane; only with strictly fewer crossings
+  stepAside: true,    // R13 a successor in its predecessor's column, which the flow reaches with three or more bends, tried a column further; so is the nearer of two siblings on one side of a split
+  combProbe: true,    // R14 comb: for an exclusive split with three or more ways, the heads in different rows tried in one column (R9 as a trial)
+  startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
+  stagger: true,      // R16 two gateways above each other in one column: one tried a column further
 });
 
 // The grid's measures.
@@ -1435,6 +1436,13 @@ function onOneLine(segs, model){
 // The pairs of flows whose pieces share a line (onOneLine()).
 const sharedPieces = (di, model) => onOneLine(segmentsOf(di, model), model).shared;
 
+// The quality of a laid-out picture, for the trials R10 to R16 and R11 and for
+// runGrid()'s choice between the router's passes: crossings of two flows (a
+// horizontal and a vertical piece cutting each other inside), flows through a
+// foreign node, overlapping nodes, pieces of two flows on one line (lines),
+// labels a foreign flow runs through, shared pieces (onOneLine()) and bends.
+// It stands in for the tests' rule check (tests/bpmn-rules.mjs), which is not
+// available here.
 function gridQuality(di, model){
   const segs = segmentsOf(di, model);
   let crossings = 0;
