@@ -710,9 +710,12 @@ function edgeAt(s, v, dir, across){
 // The waypoints of an association from a text annotation's box n ([x, y, w, h]) to its partner's shape s. A box
 // right of the partner: from the middle of its bracket, its left edge (Ben, 2026-10-06: "verbindungslinie auf die
 // Bracket gerichtet"), across where the partner reaches that height, else, line 'gerade', straight to the partner's
-// outline, or, 'winklig', across to above or below the partner's middle and down or up to it. Otherwise straight down,
-// up or across where the two overlap (at the partner's middle where the box reaches it), else from middle to middle
-// cut at both edges, or right-angled as above from the side facing the partner. [[x, y], …].
+// outline, or, 'winklig', across to above or below the partner's middle and down or up to it. Otherwise, line
+// 'gerade', from the middle of the box's side facing the partner (Ben, 2026-10-06, nz05-r12: "wenn wir nicht die
+// Bracket verbinden können, dann den Text möglichst mittig mit der Linie ansteuern") to the partner's nearest point:
+// on a task's facing side ATTACH_CLEARANCE from its corners where the side allows, on an event's or a gateway's
+// outline towards that middle; or, 'winklig', straight down, up or across where the two overlap, else right-angled as
+// above from the side facing the partner. [[x, y], …].
 export function associationWay(n, s, line = NOTES.line){
   const [x, y, w, h] = n, mx = x + w / 2, my = y + h / 2;
   const sx1 = s.cx - s.w / 2, sx2 = s.cx + s.w / 2, sy1 = s.cy - s.h / 2, sy2 = s.cy + s.h / 2;
@@ -721,6 +724,16 @@ export function associationWay(n, s, line = NOTES.line){
     if (line === 'winklig') return [[x, my], [s.cx, my], [s.cx, edgeAt(s, s.cx, my < s.cy ? -1 : 1, false)]].map(p => p.map(R));
     const b = outline(s, x, my);
     return [[x, my], [b.x, b.y]].map(p => p.map(R));
+  }
+  if (line !== 'winklig'){
+    // The side of the box facing the partner: above or below it where they overlap across, else beside it.
+    const across = Math.min(x + w, sx2) - Math.max(x, sx1) > 0 || !(Math.min(y + h, sy2) - Math.max(y, sy1) > 0) && Math.abs(my - s.cy) - h / 2 >= Math.abs(mx - s.cx) - w / 2;
+    const a = across ? { x: mx, y: my < s.cy ? y + h : y } : { x: mx < s.cx ? x + w : x, y: my };
+    const clamp = (v, lo, hi) => lo > hi ? (lo + hi) / 2 : Math.min(hi, Math.max(lo, v));
+    const b = s.kind === 'rect'
+      ? (across ? { x: clamp(a.x, sx1 + ATTACH_CLEARANCE, sx2 - ATTACH_CLEARANCE), y: my < s.cy ? sy1 : sy2 } : { x: mx < s.cx ? sx1 : sx2, y: clamp(a.y, sy1 + ATTACH_CLEARANCE, sy2 - ATTACH_CLEARANCE) })
+      : outline(s, a.x, a.y);
+    return [[a.x, a.y], [b.x, b.y]].map(p => p.map(R));
   }
   const pick = (a1, a2, b1, b2, c) => c >= a1 && c <= a2 ? c : (Math.max(a1, b1) + Math.min(a2, b2)) / 2;
   // Straight down or up where the two overlap by 10 px or more (a point: where the box reaches it).
