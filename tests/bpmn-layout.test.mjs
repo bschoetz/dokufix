@@ -3,7 +3,7 @@
 //   npm test          (node --test tests/*.test.mjs)
 //
 // src/app/bpmn-layout.js reads the XML into lanes, flow nodes and flows,
-// writes the Mermaid text, computes the coordinates from Mermaid's positions
+// writes the Mermaid text, lays the nodes out on a grid from Mermaid's columns
 // and writes them back as the diagram part. None of that needs a layout, so
 // all of it is checked here: the reading on XML parsed by linkedom, the
 // geometry on positions made up for the purpose. What Mermaid's rendering
@@ -18,9 +18,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
-  readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, axisMap, attach, nudge, detour, tidy, fanOut, spreadPorts, separateTwins,
-  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, exitSide, dedupe, unfold, orthogonal, loopBack, LEVEL_STEP,
-  portEnds, portCandidates, conflictScore, growLane, dockApart, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, DEFAULT_RULES,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, dedupe, orthogonal,
+  growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -184,491 +184,7 @@ const P = (x, y) => ({ x, y });
 const ptsOf = list => list.map(([x, y]) => P(x, y));
 const gateway = (cx, cy) => ({ ...node(cx, cy, 50, 50), gateway: true });
 
-test('the axis is scaled piecewise: each column to its size, each gap into 36 to 70 px, order kept', () => {
-  const map = axisMap([{ lo: 0, hi: 200, size: 120 }, { lo: 300, hi: 340, size: 36 }, { lo: 1000, hi: 1100, size: 50 }, { lo: 20, hi: 180, size: 50 }], 36, 70);
-  assert.equal(map(0), 0);
-  assert.equal(map(200), 120);
-  assert.equal(map(300), 180);            // 120 + gap min(70, max(36, 100 · 0.6))
-  assert.equal(map(340), 216);
-  assert.equal(map(1000), 286);           // the long gap is held at 70
-  assert.equal(map(1100), 336);
-  assert.equal(map(-10), -10);            // beyond the ends: unscaled
-  assert.equal(map(1110), 346);
-  const values = [-5, 0, 50, 199, 250, 320, 600, 1050, 1200].map(map);
-  assert.deepEqual(values, [...values].sort((a, b) => a - b), 'monotonic');
-});
-
-test('a flow end is docked on the outline: a task anywhere on its side, a circle and a diamond on their axis', () => {
-  const task = node(100, 100, 120, 80, true), circle = node(300, 100, 36, 36);
-  // Horizontal end into the left side of a task, 15 px off its centre: kept, on the side.
-  let pts = ptsOf([[0, 115], [50, 115]]);
-  attach(pts, false, task);
-  assert.deepEqual(pts.at(-1), P(40, 115));
-  // Closer than NEAR to the middle, 10 px off: at the middle; the flow turns halfway to get there.
-  pts = ptsOf([[0, 110], [50, 110]]);
-  attach(pts, false, task);
-  assert.deepEqual(pts.at(-1), P(40, 100));
-  assert.ok(pts.every((p, i) => !i || p.x === pts[i - 1].x || p.y === pts[i - 1].y), 'right angles kept');
-  pts = ptsOf([[0, 112], [50, 112]]);
-  attach(pts, false, task);
-  assert.deepEqual(pts.at(-1), P(40, 112), '12 px off is kept');
-  // Into a circle off its axis: a jog is put in, the end is on the axis.
-  pts = ptsOf([[200, 110], [250, 110]]);
-  attach(pts, false, circle);
-  assert.deepEqual(pts.at(-1), P(282, 100));
-  assert.ok(pts.every((p, i) => !i || p.x === pts[i - 1].x || p.y === pts[i - 1].y), 'right angles kept');
-  // An end that ran beside its node in Mermaid's positions docks from that side.
-  pts = ptsOf([[100, 300], [130, 300], [130, 160]]);
-  attach(pts, false, task, { axis: 'x', sign: 1 });
-  assert.deepEqual(pts.at(-1), P(160, 100));
-});
-
-test('a flow keeps 12 px to its own symbol before it turns: a run 1 px inside its task moves 12 px off it, the other end kept', () => {
-  const task = node(100, 100, 120, 80, true);
-  // Mermaid's run lies 1 px above the task's bottom once scaled (story 2.20, the dog's loop).
-  const pts = ptsOf([[130, 120], [130, 139], [300, 139], [300, 300]]);
-  attach(pts, true, task);
-  assert.deepEqual(pts, ptsOf([[130, 140], [130, 152], [300, 152], [300, 300]]));
-  // A run already 12 px or more off its side stays where it is.
-  const far = ptsOf([[130, 120], [130, 160], [300, 160], [300, 300]]);
-  attach(far, true, task);
-  assert.deepEqual(far, ptsOf([[130, 140], [130, 160], [300, 160], [300, 300]]));
-  // The same at the end of a flow, leaving by the side: the run moves, the start stays.
-  const end = ptsOf([[0, 300], [165, 300], [165, 85], [150, 85]]);
-  attach(end, false, task);
-  assert.deepEqual(end, ptsOf([[0, 300], [172, 300], [172, 85], [160, 85]]));
-  // At the end, with corners put in before it: the run beside the symbol is the one that moves.
-  const bent = ptsOf([[200, 300], [155, 150], [155, 138]]);
-  attach(bent, false, task);
-  assert.deepEqual(bent, ptsOf([[200, 300], [155, 150], [155, 152], [148, 152], [148, 140]]));
-});
-
-test('correction 1: an inner piece through a foreign symbol moves beside it', () => {
-  const pts = ptsOf([[0, 0], [0, 45], [100, 45], [100, 120]]);
-  nudge(pts, [{ x1: 40, y1: 30, x2: 80, y2: 70 }]);
-  assert.deepEqual(pts.map(p => p.y), [0, 18, 18, 120]);
-});
-
-test('correction 2: an end piece through a foreign symbol docks from the side and runs outside both', () => {
-  const c = node(100, 100, 120, 80, true);
-  const pts = ptsOf([[150, 140], [150, 300], [400, 300]]);
-  detour(pts, true, c, [{ x1: 130, y1: 180, x2: 250, y2: 260 }]);
-  assert.deepEqual(pts.slice(0, 3), [P(160, 100), P(262, 100), P(262, 300)]);
-});
-
-test('correction 3: steps of up to 5 px are smoothed, the ends stay, points on a line go', () => {
-  const pts = ptsOf([[0, 0], [50, 0], [50, 3], [100, 3], [100, 50]]);
-  tidy(pts);
-  assert.deepEqual(pts, ptsOf([[0, 0], [100, 0], [100, 50]]));
-  const untouched = ptsOf([[0, 0], [50, 0], [50, 30], [100, 30]]);
-  tidy(untouched);
-  assert.equal(untouched.length, 4);
-});
-
-test('correction 4: of two flows leaving a gateway at one corner, the one that turns takes the free corner', () => {
-  const box = { G: node(100, 100, 50, 50), A: node(300, 100, 120, 80, true), B: node(300, 300, 120, 80, true) };
-  const routes = [
-    { f: { from: 'G', to: 'A' }, pts: ptsOf([[125, 100], [240, 100]]), obstacles: [] },
-    { f: { from: 'G', to: 'B' }, pts: ptsOf([[125, 100], [150, 100], [150, 300], [240, 300]]), obstacles: [] },
-  ];
-  fanOut(routes, box, ['G']);
-  assert.deepEqual(routes[1].pts[0], P(100, 125), 'from the bottom corner');
-  assert.equal(exitSide(routes[1].pts), 'y+');
-  assert.equal(exitSide(routes[0].pts), 'x+');
-});
-
-test('correction 5: an arrow in and an arrow out at one place on a task move apart', () => {
-  const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true), C: node(300, 300, 120, 80, true) };
-  const routes = [
-    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 100], [240, 100]]) },
-    { f: { from: 'C', to: 'A' }, pts: ptsOf([[240, 300], [200, 300], [200, 104], [160, 104]]) },
-  ];
-  spreadPorts(routes, box);
-  assert.equal(routes[0].pts[0].y, 100);
-  assert.equal(routes[1].pts.at(-1).y, 118);
-  assert.equal(routes[1].pts.at(-2).y, 118);
-});
-
-test('correction 6: the second flow between one pair runs below both nodes, the third above; nodes one above the other, beside', () => {
-  const box = { G: node(100, 100, 50, 50), T: node(300, 100, 120, 80, true), U: node(100, 300, 120, 80, true) };
-  const same = () => ptsOf([[125, 100], [240, 100]]);
-  const routes = [1, 2, 3].map(() => ({ f: { from: 'G', to: 'T' }, pts: same(), obstacles: [] }));
-  separateTwins(routes, box);
-  assert.deepEqual(routes[0].pts, same());
-  assert.deepEqual(routes[1].pts, ptsOf([[100, 125], [100, 160], [300, 160], [300, 140]]));
-  assert.deepEqual(routes[2].pts, ptsOf([[100, 75], [100, 40], [300, 40], [300, 60]]));
-  const stacked = [1, 2].map(() => ({ f: { from: 'G', to: 'U' }, pts: ptsOf([[100, 125], [100, 260]]), obstacles: [] }));
-  separateTwins(stacked, box);
-  assert.deepEqual(stacked[1].pts, ptsOf([[125, 100], [180, 100], [180, 300], [160, 300]]));
-  // A way a foreign symbol blocks is not taken.
-  const blocked = [1, 2].map(() => ({ f: { from: 'G', to: 'T' }, pts: same(), obstacles: [{ x1: 180, y1: 150, x2: 220, y2: 170 }] }));
-  separateTwins(blocked, box);
-  assert.deepEqual(blocked[1].pts, same());
-});
-
-test('correction 6: the level of a twin lies 20 px beyond the tallest symbol of the row within its span, not 5 px under it', () => {
-  const box = { G1: node(100, 100, 50, 50), T: node(250, 100, 120, 80, true), G2: node(400, 100, 50, 50) };
-  const routes = [1, 2, 3].map(() => ({ f: { from: 'G1', to: 'G2' }, pts: ptsOf([[125, 100], [375, 100]]), obstacles: [{ x1: 190, y1: 60, x2: 310, y2: 140 }] }));
-  separateTwins(routes, box);
-  assert.deepEqual(routes[1].pts, ptsOf([[100, 125], [100, 160], [400, 160], [400, 125]]), 'below the task\'s bottom at 140, not the diamonds\' at 125');
-  assert.deepEqual(routes[2].pts, ptsOf([[100, 75], [100, 40], [400, 40], [400, 75]]), 'above the task\'s top at 60');
-});
-
-test('correction 6: a twin keeps off the first flow of its pair where Mermaid already ran it 20 px beyond the row', () => {
-  const box = { G1: gateway(100, 100), T: node(250, 100, 120, 80, true), G2: gateway(400, 100) };
-  const obstacles = [{ x1: 190, y1: 60, x2: 310, y2: 140 }];
-  const first = ptsOf([[100, 125], [100, 160], [400, 160], [400, 125]]);
-  const routes = [
-    { f: { from: 'G1', to: 'G2' }, pts: ptsOf([[100, 125], [100, 160], [400, 160], [400, 125]]), obstacles },
-    { f: { from: 'G1', to: 'G2' }, pts: ptsOf([[100, 125], [100, 162], [400, 162], [400, 125]]), obstacles },
-  ];
-  separateTwins(routes, box);
-  assert.deepEqual(routes[0].pts, first, 'the first keeps Mermaid\'s route');
-  assert.deepEqual(routes[1].pts, ptsOf([[100, 125], [100, 180], [400, 180], [400, 125]]), '20 px beyond the first, not on it');
-});
-
-// ---------- correction 7: flows back within a row (story 2.20) ----------
-test('correction 7: a flow back within a row runs around the row, four points, none in the row\'s band', () => {
-  const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true), G: node(450, 100, 50, 50) };
-  const routes = [
-    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 100], [240, 100]]), obstacles: [] },
-    { f: { from: 'B', to: 'G' }, pts: ptsOf([[360, 100], [425, 100]]), obstacles: [] },
-    // Mermaid's route, scaled: on the bottom edges of the tasks.
-    { f: { from: 'G', to: 'A' }, pts: ptsOf([[450, 125], [450, 141], [100, 141], [100, 140]]), obstacles: [], loopSide: 1 },
-  ];
-  assert.deepEqual(loopBack(routes, box), { up: 0, down: 0 });
-  assert.deepEqual(routes[2].pts, ptsOf([[450, 125], [450, 160], [100, 160], [100, 140]]), 'out of the diamond\'s bottom, 20 px under the tasks, into the task\'s bottom');
-  assert.ok(routes[2].pts.slice(1, 3).every(p => p.y > 140 || p.y < 60), 'no inner point in the row\'s band');
-  assert.deepEqual(routes[0].pts, ptsOf([[160, 100], [240, 100]]), 'a flow forward stays');
-});
-
-test('correction 7: nested flows back on one side take distinct levels, the shorter inside; disjoint spans share the innermost', () => {
-  const box = Object.fromEntries([1, 2, 3, 4, 5, 6].map(i => ['T' + i, node(i * 200 - 100, 100, 120, 80, true)]));
-  const back = (from, to) => ({ f: { from, to }, pts: ptsOf([[box[from].cx, 60], [box[from].cx, 50], [box[to].cx, 50], [box[to].cx, 60]]), obstacles: [], loopSide: -1 });
-  const routes = [back('T6', 'T1'), back('T4', 'T3'), back('T5', 'T2')];
-  loopBack(routes, box);
-  const level = r => r.pts[1].y;
-  assert.ok(routes.every(r => r.pts.length === 4 && level(r) < 60), 'all above the row: ' + JSON.stringify(routes.map(r => r.pts)));
-  assert.equal(level(routes[1]), 40, 'the shortest 20 px above the tasks');
-  assert.equal(level(routes[2]), 40 - LEVEL_STEP, 'around it: the next level');
-  assert.equal(level(routes[0]), 40 - 2 * LEVEL_STEP, 'the longest, around both, outermost');
-  assert.deepEqual(routes[0].pts, ptsOf([[1100, 60], [1100, 40 - 2 * LEVEL_STEP], [100, 40 - 2 * LEVEL_STEP], [100, 60]]));
-  const apart = [back('T2', 'T1'), back('T6', 'T5')];
-  loopBack(apart, box);
-  assert.deepEqual(apart.map(level), [40, 40], 'disjoint spans: one level');
-  // Spans that overlap only partly: on one side the outer would cross the
-  // inner, so the second takes the other side, 20 px below the tasks.
-  const staggered = [back('T3', 'T1'), back('T4', 'T2')];
-  loopBack(staggered, box);
-  assert.deepEqual(staggered.map(level), [40, 160], 'partly overlapping: one above, one below');
-  // Spans less than 12 px apart count as overlapping, 12 px or more apart do not.
-  const events = x => Object.fromEntries(x.map((cx, i) => ['E' + i, node(cx, 100, 36, 36)]));
-  const backOn = (b, from, to) => ({ f: { from, to }, pts: ptsOf([[b[from].cx, 82], [b[from].cx, 70], [b[to].cx, 70], [b[to].cx, 82]]), obstacles: [], loopSide: -1 });
-  for (const [gap, levels] of [[10, 2], [12, 1]]){
-    const b = events([100, 300, 300 + gap, 500]);
-    const two = [backOn(b, 'E1', 'E0'), backOn(b, 'E3', 'E2')];
-    loopBack(two, b);
-    assert.equal(new Set(two.map(level)).size, levels, gap + ' px apart: ' + JSON.stringify(two.map(level)));
-  }
-});
-
-test('correction 4 leaves a ring of correction 7 as it is: rebuilt from its pieces it would run through the row', () => {
-  const box = { A: node(100, 100, 120, 80, true), G: node(300, 100, 50, 50), B: node(300, 300, 120, 80, true) };
-  const ring = { f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]), obstacles: [], loop: true };
-  const down = { f: { from: 'G', to: 'B' }, pts: ptsOf([[300, 125], [300, 260]]), obstacles: [] };
-  const before = JSON.stringify(ring.pts);
-  fanOut([ring, down], box, new Set(['G']));
-  assert.equal(JSON.stringify(ring.pts), before);
-});
-
-test('correction 7: a flow back keeps off the ring of a twin, which separateTwins() routed before it and which it leaves alone', () => {
-  const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true) };
-  const routes = [
-    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 100], [240, 100]]), obstacles: [] },
-    { f: { from: 'A', to: 'B' }, pts: ptsOf([[160, 104], [240, 104]]), obstacles: [], loopSide: 1 },
-    { f: { from: 'B', to: 'A' }, pts: ptsOf([[300, 140], [300, 150], [100, 150], [100, 140]]), obstacles: [], loopSide: 1 },
-  ];
-  separateTwins(routes, box);
-  assert.deepEqual(routes[1].pts, ptsOf([[100, 140], [100, 160], [300, 160], [300, 140]]), 'the twin 20 px below');
-  loopBack(routes, box);
-  assert.deepEqual(routes[1].pts, ptsOf([[100, 140], [100, 160], [300, 160], [300, 140]]), 'the twin as it was');
-  // The middle of both bottoms taken: the corners away from the other end, so
-  // the flow back crosses nothing, one level farther out.
-  assert.deepEqual(routes[2].pts, ptsOf([[340, 140], [340, 160 + LEVEL_STEP], [60, 160 + LEVEL_STEP], [60, 140]]));
-});
-
-test('correction 7: at an event the flow back docks on the top or bottom centre; a port another flow uses counts as a conflict', () => {
-  const box = { E1: node(100, 100, 36, 36), T: node(300, 100, 120, 80, true), E2: node(500, 100, 36, 36), X: node(100, -100, 120, 80, true) };
-  const routes = [
-    { f: { from: 'X', to: 'E1' }, pts: ptsOf([[100, -60], [100, 82]]), obstacles: [] },
-    { f: { from: 'E1', to: 'T' }, pts: ptsOf([[118, 100], [240, 100]]), obstacles: [] },
-    { f: { from: 'T', to: 'E2' }, pts: ptsOf([[360, 100], [482, 100]]), obstacles: [] },
-    { f: { from: 'E2', to: 'E1' }, pts: ptsOf([[500, 82], [500, 70], [100, 70], [100, 82]]), obstacles: [], loopSide: -1 },
-  ];
-  loopBack(routes, box);
-  assert.deepEqual(routes[3].pts, ptsOf([[500, 118], [500, 160], [100, 160], [100, 118]]), 'below: the top of E1 is taken');
-});
-
-test('correction 7: a flow back in a middle lane stays in its lane, 12 px from the border; the lane grows and what lies beyond moves', () => {
-  const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
-  const box = { T1: node(100, 200, 120, 80, true), T2: node(300, 200, 120, 80, true), B: node(300, 320, 120, 80, true) };
-  const routes = [
-    { f: { from: 'T1', to: 'T2' }, pts: ptsOf([[160, 200], [240, 200]]), obstacles: [] },
-    { f: { from: 'T2', to: 'B' }, pts: ptsOf([[300, 240], [300, 280]]), obstacles: [{ x1: 240, y1: 280, x2: 360, y2: 360 }] },
-    { f: { from: 'T2', to: 'T1' }, pts: ptsOf([[300, 240], [300, 250], [100, 250], [100, 240]]), obstacles: [], loopSide: 1 },
-  ];
-  assert.deepEqual(loopBack(routes, box, lanes), { up: 0, down: 12 });
-  assert.deepEqual(routes[2].pts, ptsOf([[260, 240], [260, 260], [100, 260], [100, 240]]), 'beside the flow down, 20 px under the tasks');
-  assert.deepEqual(lanes, [[0, 0, 1000, 140], [0, 140, 1000, 132], [0, 272, 1000, 100]], 'the middle lane grew by 12 px, the lane below moved');
-  assert.equal(box.B.cy, 332, 'the symbol below moved');
-  assert.deepEqual(routes[1].pts, ptsOf([[300, 240], [300, 292]]), 'the flow down: its end moved, its start stayed');
-  assert.deepEqual(routes[1].obstacles[0], { x1: 240, y1: 292, x2: 360, y2: 372 });
-});
-
-// ---------- the seams of the routing (story 2.24) ----------
-test('portEnds: the ends of the flows at a symbol, in the order of the routes, the route\'s own points', () => {
-  const a = { f: { from: 'A', to: 'B' }, pts: ptsOf([[10, 0], [20, 0], [20, 30], [40, 30]]) };
-  const b = { f: { from: 'C', to: 'A' }, pts: ptsOf([[0, 50], [0, 20], [5, 20]]) };
-  const c = { f: { from: 'C', to: 'D' }, pts: ptsOf([[0, 50], [0, 90]]) };
-  const ends = portEnds([a, b, c], 'A');
-  assert.deepEqual(ends.map(e => [e.r === a ? 'a' : 'b', e.out]), [['a', true], ['b', false]]);
-  assert.ok(ends[0].p === a.pts[0] && ends[0].q === a.pts[1], 'a leaving flow: its first point and the one after');
-  assert.ok(ends[1].p === b.pts[2] && ends[1].q === b.pts[1], 'an arriving flow: its last point and the one before');
-  a.pts[0].y = 5;
-  assert.equal(ends[0].p.y, 5, 'live: what moves the route moves the end');
-  assert.deepEqual(portEnds([c], 'A'), []);
-});
-
-test('portCandidates: the middle of a side, or on a task with the middle taken the two points 20 px in from the corners, the one facing the other end first', () => {
-  const t = node(100, 100, 120, 80, true), g = node(300, 100, 50, 50);
-  assert.deepEqual(portCandidates(t, 1, 0, []), [P(100, 140)]);
-  assert.deepEqual(portCandidates(t, -1, 0, [P(100, 140)]), [P(100, 60)], 'the bottom middle taken does not touch the top');
-  assert.deepEqual(portCandidates(t, 1, 0, [P(110, 140)]), [P(60, 140), P(140, 140)], 'taken within 14 px of the middle; the other end lies left');
-  assert.deepEqual(portCandidates(t, 1, 500, [P(110, 140)]), [P(140, 140), P(60, 140)], 'the other end right');
-  assert.deepEqual(portCandidates(t, 1, 0, [P(114, 140)]), [P(100, 140)], '14 px off the middle is free');
-  assert.deepEqual(portCandidates(g, 1, 0, [P(300, 125)]), [P(300, 125)], 'a symbol of 50 px that is no gateway keeps its vertex: a used one is a conflict');
-});
-
-test('portCandidates on a gateway: its vertex while free; used, the side corners with a stub of 12 px, the one facing the other end first, then the one away, then the vertex', () => {
-  const g = gateway(300, 100);
-  assert.deepEqual(portCandidates(g, 1, 0, []), [P(300, 125)]);
-  assert.deepEqual(portCandidates(g, 1, 0, [P(300, 75)]), [P(300, 125)], 'the top used does not touch the bottom');
-  const left = { ...P(275, 100), stub: P(263, 100) }, right = { ...P(325, 100), stub: P(337, 100) };
-  assert.deepEqual(portCandidates(g, 1, 0, [P(301, 126)]), [left, { ...right, away: true }, P(300, 125)], 'the other end left');
-  assert.deepEqual(portCandidates(g, -1, 500, [P(300, 75)]), [right, { ...left, away: true }, P(300, 75)], 'the other end right');
-  assert.deepEqual(portCandidates(g, 1, 0, [P(300, 125), P(275, 100)]), [{ ...right, away: true }, P(300, 125)], 'the facing corner used: the one away');
-  assert.deepEqual(portCandidates(g, 1, 0, [P(300, 125), P(275, 100), P(325, 100)]), [P(300, 125)], 'all used: the vertex');
-});
-
-test('correction 7: a flow back from a gateway whose vertices flows forward use leaves a side corner, 12 px out, then to its level', () => {
-  const box = { A: node(100, 100, 120, 80, true), G: gateway(300, 100), D: node(300, 300, 120, 80, true), X: node(300, -100, 120, 80, true) };
-  const ring = () => ({ f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 150], [100, 150], [100, 140]]), obstacles: [], loopSide: 1 });
-  const routes = [
-    { f: { from: 'X', to: 'G' }, pts: ptsOf([[300, -60], [300, 75]]), obstacles: [] },
-    { f: { from: 'G', to: 'D' }, pts: ptsOf([[300, 125], [300, 260]]), obstacles: [] },
-    ring(),
-  ];
-  loopBack(routes, box);
-  assert.deepEqual(routes[2].pts, ptsOf([[275, 100], [263, 100], [263, 160], [100, 160], [100, 140]]), 'five points, from the corner facing A');
-  // The left corner taken as well: the right one, away from A, at one
-  // conflict more; the used bottom vertex would lie on the flow down.
-  routes[2] = ring();
-  routes.push({ f: { from: 'A', to: 'G' }, pts: ptsOf([[160, 100], [275, 100]]), obstacles: [] });
-  loopBack(routes, box);
-  assert.deepEqual(routes[2].pts, ptsOf([[325, 100], [337, 100], [337, 160], [100, 160], [100, 140]]), 'from the corner away from A, back under the gateway');
-});
-
-test('correction 7: of two flows back out of one gateway\'s top, the second leaves the corner away from its target where the facing one is taken', () => {
-  const box = { A: node(100, 100, 120, 80, true), B: node(300, 100, 120, 80, true), G: gateway(500, 100), D: node(500, 300, 120, 80, true) };
-  const back = to => ({ f: { from: 'G', to }, pts: ptsOf([[500, 75], [500, 50], [box[to].cx, 50], [box[to].cx, 60]]), obstacles: [], loopSide: -1 });
-  const routes = [
-    { f: { from: 'B', to: 'G' }, pts: ptsOf([[360, 100], [475, 100]]), obstacles: [] },
-    { f: { from: 'G', to: 'D' }, pts: ptsOf([[500, 125], [500, 260]]), obstacles: [] },
-    back('A'), back('B'),
-  ];
-  loopBack(routes, box);
-  assert.deepEqual(routes[3].pts, ptsOf([[500, 75], [500, 40], [300, 40], [300, 60]]), 'the shorter out of the top');
-  assert.deepEqual(routes[2].pts, ptsOf([[525, 100], [537, 100], [537, 40 - LEVEL_STEP], [100, 40 - LEVEL_STEP], [100, 60]]), 'the longer from the right corner, 12 px out, up and back over the gateway');
-});
-
-test('correction 8: an arrow arriving at a gateway\'s vertex another flow leaves by docks on a free vertex', () => {
-  const box = { U: node(100, -100, 120, 80, true), G: gateway(300, 100), C: node(560, 100, 120, 80, true), D: node(300, 460, 120, 80, true) };
-  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
-  // From above, its run before passing over the gateway: it turns down from there.
-  const over = { f: { from: 'U', to: 'G' }, pts: ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]), obstacles: [] };
-  dockApart([out(), over], box, ['G']);
-  assert.deepEqual(over.pts, ptsOf([[160, -100], [300, -100], [300, 75]]));
-  // Its run before not over the gateway: 12 px beyond the top vertex, then into it.
-  box.V = node(560, -100, 120, 80, true);
-  const beside = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, 60], [560, -30], [337, -30], [337, 100], [325, 100]]), obstacles: [] };
-  dockApart([out(), beside], box, ['G']);
-  assert.deepEqual(beside.pts, ptsOf([[560, 60], [560, -30], [337, -30], [337, 63], [300, 63], [300, 75]]));
-  const besideBlocked = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, 60], [560, -30], [380, -30], [380, 100], [325, 100]]), obstacles: [{ x1: 370, y1: 20, x2: 390, y2: 40 }] };
-  dockApart([out(), besideBlocked], box, ['G']);
-  assert.deepEqual(besideBlocked.pts, ptsOf([[560, 60], [560, -30], [380, -30], [380, 100], [325, 100]]), 'the piece on from its last corner blocked: the end stays');
-  // A vertical end at the bottom vertex: to the side corner it comes from.
-  const down = { f: { from: 'G', to: 'D' }, pts: ptsOf([[300, 125], [300, 420]]), obstacles: [] };
-  box.W = node(500, 340, 120, 80, true);
-  const up = { f: { from: 'W', to: 'G' }, pts: ptsOf([[500, 300], [500, 200], [300, 200], [300, 125]]), obstacles: [] };
-  dockApart([down, up], box, ['G']);
-  assert.deepEqual(up.pts, ptsOf([[500, 300], [500, 200], [337, 200], [337, 100], [325, 100]]));
-  // A way a foreign symbol blocks: the end stays.
-  const blockedWay = { f: { from: 'U', to: 'G' }, pts: ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]), obstacles: [{ x1: 280, y1: 0, x2: 320, y2: 40 }] };
-  dockApart([out(), blockedWay], box, ['G']);
-  assert.deepEqual(blockedWay.pts, ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]));
-  // A flow back leaving there is routed later by loopBack(): it is no clash.
-  box.L = node(100, 100, 120, 80, true);
-  const backOut = { f: { from: 'G', to: 'L' }, pts: ptsOf([[325, 100], [337, 100], [337, 160], [100, 160], [100, 140]]), obstacles: [] };
-  const stays = { f: { from: 'U', to: 'G' }, pts: ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]), obstacles: [] };
-  dockApart([backOut, stays], box, ['G']);
-  assert.deepEqual(stays.pts, ptsOf([[160, -100], [337, -100], [337, 100], [325, 100]]));
-});
-
-test('correction 8: an arrival whose free vertex lies only across the flow it leaves stays; an end moved counts at its new vertex; no point twice', () => {
-  const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), X: node(300, -100, 120, 80, true), V: node(560, -100, 120, 80, true), U: node(240, -40, 120, 80, true) };
-  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
-  // The top taken by a flow up, no arriving flow to join: the bottom vertex is reached only across the flow out.
-  const top = { f: { from: 'G', to: 'X' }, pts: ptsOf([[300, 75], [300, -60]]), obstacles: [] };
-  const across = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), obstacles: [] };
-  dockApart([out(), top, across], box, ['G']);
-  assert.deepEqual(across.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), 'the end stays');
-  // Two arrivals from above: the first takes the top; there it counts, and the second does not follow it.
-  const one = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]]), obstacles: [] };
-  const two = { f: { from: 'V', to: 'G' }, pts: ptsOf([[520, -60], [520, -20], [345, -20], [345, 100], [325, 100]]), obstacles: [] };
-  dockApart([out(), one, two], box, ['G']);
-  assert.deepEqual(one.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 63], [300, 63], [300, 75]]));
-  assert.deepEqual(two.pts, ptsOf([[520, -60], [520, -20], [345, -20], [345, 100], [325, 100]]), 'the top taken, the bottom across the flow out: it stays');
-  // The run before ends on the vertex's axis: the turn would be that point again and goes.
-  const axis = { f: { from: 'U', to: 'G' }, pts: ptsOf([[300, -40], [337, -40], [337, 100], [325, 100]]), obstacles: [] };
-  dockApart([out(), axis], box, ['G']);
-  assert.deepEqual(axis.pts, ptsOf([[300, -40], [300, 75]]));
-});
-
-test('correction 8: an arrival at the vertex a flow leaves by first joins another arriving flow\'s last run into its vertex, a merge; where that is blocked or crosses, a free vertex; else it stays', () => {
-  const box = { G: gateway(300, 100), U: node(300, -100, 120, 80, true), C: node(560, 100, 120, 80, true), V: node(560, -100, 120, 80, true) };
-  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
-  const down = () => ({ f: { from: 'U', to: 'G' }, pts: ptsOf([[300, -60], [300, 75]]), obstacles: [] });
-  // As hund2's Flow_53 at GW_Merge_Probe: from the upper right, its run at y 40 goes on to the flow down and into the top.
-  const e = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, 40], [337, 40], [337, 100], [325, 100]]), obstacles: [] };
-  const joined = down();
-  dockApart([out(), joined, e], box, ['G']);
-  assert.deepEqual(e.pts, ptsOf([[560, -60], [560, 40], [300, 40], [300, 75]]));
-  assert.deepEqual(joined.pts, ptsOf([[300, -60], [300, 75]]), 'the flow joined stays');
-  // Nearer than 12 px to the vertex no run joins: the free vertices as before.
-  const close = { f: { from: 'V', to: 'G' }, pts: ptsOf([[560, -60], [560, 66], [337, 66], [337, 100], [325, 100]]), obstacles: [] };
-  dockApart([out(), down(), close], box, ['G']);
-  assert.deepEqual(close.pts, ptsOf([[560, -60], [560, 66], [337, 66], [337, 100], [325, 100]]), 'the top used, the bottom across the flow out: it stays');
-  // The join crosses the flow out, which turns down 20 px beyond the gateway: the free top vertex instead.
-  const box2 = { G: gateway(300, 100), D: node(345, 340, 120, 80, true), B: node(300, 440, 120, 80, true), W: node(560, 340, 120, 80, true) };
-  const turning = () => ({ f: { from: 'G', to: 'D' }, pts: ptsOf([[325, 100], [345, 100], [345, 300]]), obstacles: [] });
-  const up = () => ({ f: { from: 'B', to: 'G' }, pts: ptsOf([[300, 400], [300, 125]]), obstacles: [] });
-  const w = list => ({ f: { from: 'W', to: 'G' }, pts: ptsOf(list), obstacles: [] });
-  const way = [[560, 300], [560, 200], [360, 200], [360, 100], [325, 100]];
-  const free = w(way);
-  dockApart([turning(), up(), free], box2, ['G']);
-  assert.deepEqual(free.pts, ptsOf([[560, 300], [560, 200], [360, 200], [360, 63], [300, 63], [300, 75]]));
-  // That way blocked as well: it stays.
-  const stays = w(way);
-  stays.obstacles = [{ x1: 320, y1: 55, x2: 330, y2: 70 }];
-  dockApart([turning(), up(), stays], box2, ['G']);
-  assert.deepEqual(stays.pts, ptsOf(way));
-});
-
-test('correction 8: a free vertex is refused where its new pieces would run beside a foreign flow closer than 12 px; a pair the flow had may grow longer', () => {
-  const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), V: node(560, -100, 120, 80, true), X: node(0, -300, 36, 36), Y: node(0, 300, 36, 36) };
-  const out = () => ({ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] });
-  const way = [[560, -60], [560, -30], [337, -30], [337, 100], [325, 100]];
-  // A foreign flow 6 px above the run into the top vertex: a new pair, refused; the bottom lies across the flow out.
-  const newPair = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
-  dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[200, 57], [320, 57]]), obstacles: [] }, newPair], box, ['G']);
-  assert.deepEqual(newPair.pts, ptsOf(way), 'it stays');
-  // The same foreign flow running also 6 px beside a piece the flow keeps: that pair says nothing about the new run, refused.
-  const kept = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
-  dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[450, -282], [450, -36], [200, -36], [200, 57], [320, 57]]), obstacles: [] }, kept], box, ['G']);
-  assert.deepEqual(kept.pts, ptsOf(way), 'it stays');
-  // A foreign flow 6 px beside the run it had: the pair grows, the way is taken.
-  const grows = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
-  dockApart([out(), { f: { from: 'X', to: 'Y' }, pts: ptsOf([[343, -20], [343, 50]]), obstacles: [] }, grows], box, ['G']);
-  assert.deepEqual(grows.pts, ptsOf([[560, -60], [560, -30], [337, -30], [337, 63], [300, 63], [300, 75]]));
-});
-
-test('correction 8: a free vertex that faces the target of a flow leaving the gateway is not taken', () => {
-  const box = { G: gateway(300, 100), C: node(560, 100, 120, 80, true), X: node(440, -100, 120, 80, true), V: node(600, -100, 120, 80, true) };
-  const routes = () => [
-    { f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] },
-    { f: { from: 'G', to: 'X' }, pts: ptsOf([[325, 100], [440, 100], [440, -60]]), obstacles: [] },
-  ];
-  const way = [[600, -60], [600, -30], [345, -30], [345, 100], [325, 100]];
-  const e = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
-  dockApart([...routes(), e], box, ['G']);
-  assert.deepEqual(e.pts, ptsOf(way), 'the top faces X, the bottom lies across the flows out: it stays');
-  // X below the row instead: the top is free and taken.
-  box.X = node(440, 300, 120, 80, true);
-  const f = { f: { from: 'V', to: 'G' }, pts: ptsOf(way), obstacles: [] };
-  dockApart([{ f: { from: 'G', to: 'C' }, pts: ptsOf([[325, 100], [500, 100]]), obstacles: [] }, { f: { from: 'G', to: 'X' }, pts: ptsOf([[325, 100], [440, 100], [440, 260]]), obstacles: [] }, f], box, ['G']);
-  assert.deepEqual(f.pts, ptsOf([[600, -60], [600, -30], [345, -30], [345, 63], [300, 63], [300, 75]]));
-});
-
-test('correction 7: a flow back leaves the vertex a flow forward uses that fanOut() moves to a free corner, and that flow moves now: no away corner, no crossing (u3)', () => {
-  const box = { A: node(100, 100, 120, 80, true), G: gateway(300, 100), X: node(300, -100, 120, 80, true), Y: node(480, 210, 36, 36) };
-  const routes = [
-    { f: { from: 'A', to: 'G' }, pts: ptsOf([[160, 100], [275, 100]]), obstacles: [] },
-    { f: { from: 'G', to: 'X' }, pts: ptsOf([[300, 75], [300, -60]]), obstacles: [] },
-    { f: { from: 'G', to: 'Y' }, pts: ptsOf([[300, 125], [300, 210], [462, 210]]), obstacles: [] },
-    { f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 150], [100, 150], [100, 140]]), obstacles: [], loopSide: 1 },
-  ];
-  loopBack(routes, box);
-  assert.deepEqual(routes[3].pts, ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]), 'out of the bottom vertex, 20 px under A');
-  assert.deepEqual(routes[2].pts, ptsOf([[325, 100], [480, 100], [480, 192]]), 'the flow to Y from the right corner, as fanOut() moves it');
-});
-
-test('correction 7: of two flows out of the vertex that turn the same way, only one could take the free corner: the vertex stays used, neither moves, the two do not end on one line', () => {
-  const box = { A: node(100, 100, 120, 80, true), G: gateway(300, 100), Y1: node(480, 180, 36, 36), Y2: node(600, 250, 36, 36) };
-  const routes = [
-    { f: { from: 'A', to: 'G' }, pts: ptsOf([[160, 100], [275, 100]]), obstacles: [] },
-    { f: { from: 'G', to: 'Y1' }, pts: ptsOf([[300, 125], [300, 180], [462, 180]]), obstacles: [] },
-    { f: { from: 'G', to: 'Y2' }, pts: ptsOf([[300, 125], [300, 250], [582, 250]]), obstacles: [] },
-    { f: { from: 'G', to: 'A' }, pts: ptsOf([[300, 125], [300, 150], [100, 150], [100, 140]]), obstacles: [{ x1: 180, y1: -300, x2: 260, y2: 50 }], loopSide: 1 },
-  ];
-  loopBack(routes, box);
-  fanOut(routes, box, ['G']);
-  assert.deepEqual(routes[1].pts, ptsOf([[300, 125], [300, 180], [462, 180]]));
-  assert.deepEqual(routes[2].pts, ptsOf([[300, 125], [300, 250], [582, 250]]));
-  assert.deepEqual(routes[3].pts, ptsOf([[325, 100], [337, 100], [337, 160], [100, 160], [100, 140]]), 'the ring from the right corner');
-});
-
-test('correction 7: at a gateway it flows back to, a vertex arriving flows use is no conflict: the ring merges there (u13); one that faces the target of a flow leaving is not taken', () => {
-  const box = { M: gateway(100, 100), S: node(400, 100, 120, 80, true), U: node(100, -100, 120, 80, true) };
-  const below = [{ x1: 40, y1: 150, x2: 460, y2: 175 }];
-  const routes = () => [
-    { f: { from: 'U', to: 'M' }, pts: ptsOf([[100, -60], [100, 75]]), obstacles: [] },
-    { f: { from: 'M', to: 'S' }, pts: ptsOf([[125, 100], [340, 100]]), obstacles: [] },
-    { f: { from: 'S', to: 'M' }, pts: ptsOf([[400, 60], [400, 50], [100, 50], [100, 75]]), obstacles: below, loopSide: -1 },
-  ];
-  const merge = routes();
-  loopBack(merge, box);
-  assert.deepEqual(merge[2].pts, ptsOf([[400, 60], [400, 40], [100, 40], [100, 75]]), 'into the top vertex, along the arriving flow');
-  // Without the arriving flow, and a flow out of M's right corner up to a symbol above: the top faces
-  // that symbol and is not taken; the right corner is used, the ring takes the left one.
-  box.X = node(300, -100, 120, 80, true);
-  const facing = routes().slice(1);
-  facing.push({ f: { from: 'M', to: 'X' }, pts: ptsOf([[125, 100], [180, 100], [180, -100], [240, -100]]), obstacles: [] });
-  loopBack(facing, box);
-  assert.deepEqual(facing[1].pts.at(-1), P(75, 100), 'the left corner, not the top vertex');
-});
-
-test('conflictScore: one per piece of another flow crossed, lain on or run beside closer than 12 px, one per used port of a gateway or an event', () => {
-  const ring = ptsOf([[300, 125], [300, 160], [100, 160], [100, 140]]);
-  const g = node(300, 100, 50, 50), t = node(100, 100, 120, 80, true);
-  const route = list => ({ pts: ptsOf(list) });
-  assert.equal(conflictScore(ring, [route([[200, 0], [200, 50]])], [[g, ring[0], []], [t, ring[3], []]]), 0);
-  assert.equal(conflictScore(ring, [route([[200, 100], [200, 300]])], [[g, ring[0], []], [t, ring[3], []]]), 1, 'crossed once');
-  assert.equal(conflictScore(ring, [route([[150, 170], [250, 170]])], [[g, ring[0], []], [t, ring[3], []]]), 1, '10 px beside its level');
-  assert.equal(conflictScore(ring, [route([[150, 172], [250, 172]])], [[g, ring[0], []], [t, ring[3], []]]), 0, '12 px beside: apart');
-  assert.equal(conflictScore(ring, [], [[g, ring[0], [P(301, 126)]], [t, ring[3], []]]), 1, 'the gateway\'s bottom used');
-  assert.equal(conflictScore(ring, [], [[g, ring[0], []], [t, ring[3], [P(100, 140)]]]), 0, 'a task\'s port is chosen by portCandidates(), not counted');
-});
-
+// ---------- a lane grows around what reaches across its border (story 2.24) ----------
 test('growLane: a ring closer than 12 px to the border with another lane makes its lane grow; what lies beyond moves, the ring stays; by an outer border nothing grows', () => {
   const lanes = [[0, 0, 1000, 140], [0, 140, 1000, 120], [0, 260, 1000, 100]];
   const box = { T: node(300, 200, 120, 80, true), B: node(300, 320, 120, 80, true) };
@@ -836,18 +352,18 @@ test('the geometry takes the label sizes from a given measure, the estimate with
   const { model, raw } = sample();
   const asked = [];
   const di = layoutGeometry(model, raw, text => { asked.push(text); return { w: 40, h: 44 }; });
-  assert.deepEqual(asked.sort(), ['Erledigt', 'Leserin fragt', 'Vorrätig?', 'ja', 'nein'].sort());
+  // Each trial picture of the rules (R10–R16) asks again.
+  assert.deepEqual([...new Set(asked)].sort(), ['Erledigt', 'Leserin fragt', 'Vorrätig?', 'ja', 'nein'].sort());
   for (const id of ['S', 'G', 'E']) assert.equal(di.labels[id][3], 44, id);
   for (const id of ['F2', 'F3']) assert.deepEqual(di.flowLabels[id].slice(2), [40, 44], id);
   const estimated = layoutGeometry(model, raw);
   assert.equal(estimated.labels.S[3], labelSize('Leserin fragt').h);
 });
 
-test('the geometry refuses positions that lack a node, a lane or a flow', () => {
+test('the geometry refuses positions that lack a node; Mermaid\'s lanes and flows it does not read', () => {
   const { model, raw } = sample();
   assert.throws(() => layoutGeometry(model, { ...raw, nodes: { ...raw.nodes, n3: undefined } }), /„A“ nicht angeordnet/);
-  assert.throws(() => layoutGeometry(model, { ...raw, lanes: { l1: raw.lanes.l1 } }), /„Magazin“ nicht angeordnet/);
-  assert.throws(() => layoutGeometry(model, { ...raw, edges: raw.edges.slice(0, 4) }), /„F5“ nicht angeordnet/);
+  assert.deepEqual(layoutGeometry(model, { nodes: raw.nodes }), layoutGeometry(model, raw));
 });
 
 test('without lanes no lane is written; without a participant no pool', () => {
@@ -865,7 +381,8 @@ test('without lanes no lane is written; without a participant no pool', () => {
 // ---------- the diagram part (AC3) ----------
 test('the diagram part is added before the closing definitions tag; the author\'s XML stays as written', () => {
   const { xml, model, raw } = sample();
-  const { xml: out, diagram } = appendDiagram(xml, model, layoutGeometry(model, raw));
+  // R1 off: the end stays in its lane, and the lane set as written.
+  const { xml: out, diagram } = appendDiagram(xml, model, layoutGeometry(model, raw, labelSize, { gatewayLane: false }));
   assert.equal(diagram, 'dokufix_diagram');
   const at = xml.lastIndexOf('</bpmn:definitions>');
   assert.equal(out.slice(0, at), xml.slice(0, at), 'everything before the tag unchanged');
@@ -913,10 +430,18 @@ test('the reference input end to end, with positions in the shape Mermaid gives:
     const a = at(f.from), b = at(f.to);
     raw.edges.push(a.cy === b.cy ? [P(a.cx + 70, a.cy), P(b.cx - 70, b.cy)] : [P(a.cx, a.cy + Math.sign(b.cy - a.cy) * 35), P(a.cx, (a.cy + b.cy) / 2), P(b.cx, (a.cy + b.cy) / 2), P(b.cx, b.cy - Math.sign(b.cy - a.cy) * 35)]);
   }
-  const out = appendDiagram(REFERENCE, model, layoutGeometry(model, raw)).xml;
+  const di = layoutGeometry(model, raw);
+  const out = appendDiagram(REFERENCE, model, di).xml;
   assert.equal((out.match(/<bpmndi:BPMNShape /g) || []).length, 1 + 4 + 16);
   assert.equal((out.match(/<bpmndi:BPMNEdge /g) || []).length, 17);
-  assert.equal(out.slice(0, REFERENCE.lastIndexOf('</bpmn:definitions>')), REFERENCE.slice(0, REFERENCE.lastIndexOf('</bpmn:definitions>')));
+  // Outside the lane set the XML stays as written; in it each node stands in the lane its symbol lies in.
+  const laneSet = x => /<bpmn:laneSet[\s\S]*?<\/bpmn:laneSet>/.exec(x)[0];
+  assert.equal(out.replace(laneSet(out), '').replace(/ {2}<bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>\n/, ''), REFERENCE.replace(laneSet(REFERENCE), ''));
+  const again = read(out).model;
+  for (const n of again.nodes){
+    const lane = again.lanes.find(l => l.nodes.includes(n.id)), [lx, ly, lw, lh] = di.lanes[lane.id], [x, y, w, h] = di.nodes[n.id];
+    assert.ok(x + w / 2 >= lx && x + w / 2 <= lx + lw && y + h / 2 >= ly && y + h / 2 <= ly + lh, n.id + ' in ' + lane.id);
+  }
 });
 
 // ---------- the findings of the review (pass 1) ----------
@@ -948,22 +473,6 @@ test('a node only an outer lane names stands in that lane\'s first inner lane', 
   assert.deepEqual(read(xml).model.lanes.map(l => [l.id, l.nodes]), [['I1', ['X', 'A']], ['I2', ['B']]]);
 });
 
-test('a slanted end piece is docked on the outline with a corner, so the flow has right angles only', () => {
-  const gateway = node(100, 100, 50, 50), task = node(300, 200, 120, 80, true);
-  // Mermaid ends on a diamond's slanted side.
-  let pts = ptsOf([[110, 115], [108, 160], [240, 160]]);
-  attach(pts, true, gateway);
-  assert.deepEqual(pts.slice(0, 2), [P(100, 125), P(100, 160)]);
-  // A flow back as a two-point diagonal: both ends docked, a corner between.
-  pts = ptsOf([[290, 165], [115, 110]]);
-  attach(pts, true, task);
-  attach(pts, false, gateway);
-  assert.ok(pts.every((p, i) => !i || p.x === pts[i - 1].x || p.y === pts[i - 1].y), 'right angles: ' + JSON.stringify(pts));
-  assert.deepEqual(pts[0], P(240, 172), 'on the left side of the task, as near the point before as its corners allow');
-  assert.deepEqual(pts.at(-1), P(125, 100), 'into the gateway\'s right corner');
-  assert.equal(pts.length, 4, 'two corners halfway');
-});
-
 test('the last safeguard: a slanted piece gets a corner in the direction of the piece before it; doubled points go', () => {
   const pts = ptsOf([[0, 0], [50, 0], [50, 0], [80, 40], [80, 60]]);
   orthogonal(pts);
@@ -978,25 +487,6 @@ test('the last safeguard: a slanted piece gets a corner in the direction of the 
   const after = ptsOf([[0, 0], [0.7, 0], [0.7, 50], [40, 50], [40.4, 50.6]]);
   dedupe(after);
   assert.deepEqual(after, ptsOf([[0, 0], [0.7, 50], [40.4, 50.6]]));
-});
-
-test('a way out and back goes before docking: the flow docks on the side it goes to, not through its own gateway', () => {
-  const pts = ptsOf([[100, 0], [80, 0], [300, 0]]);
-  unfold(pts);
-  assert.deepEqual(pts, ptsOf([[100, 0], [300, 0]]), 'the stub on the far side goes');
-  const down = ptsOf([[100, 0], [80, 0], [80, 50], [300, 50]]);
-  unfold(down);
-  assert.equal(down.length, 4, 'a stub that turns is a way, not a way back');
-  const inner = ptsOf([[0, 0], [50, 0], [50, 40], [50, 20], [90, 20]]);
-  unfold(inner);
-  assert.deepEqual(inner, ptsOf([[0, 0], [50, 0], [50, 20], [90, 20]]), 'out and back inside the route goes as well');
-  // The flow of the large example: a gateway at 1086..1136, Mermaid's stub 12 px left of it, the target right.
-  const gateway = { cx: 1111, cy: -59, w: 50, h: 50, task: false };
-  const flow = ptsOf([[1086, -59], [1074, -59], [1178, -59]]);
-  unfold(flow);
-  attach(flow, true, gateway);
-  assert.deepEqual(flow[0], P(1136, -59), 'from the right corner');
-  assert.ok(flow.every(p => p.x >= 1136), 'no piece in the gateway: ' + JSON.stringify(flow));
 });
 
 test('a point Mermaid gives twice does not turn the flow through its own source', () => {
@@ -1100,31 +590,97 @@ test('a lane without an id above a drawn lane in a pool: the drawn lane keeps it
   const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="Pool" processRef="P"/></bpmn:collaboration><bpmn:process id="P"><bpmn:laneSet id="LS">' +
     '<bpmn:lane name="X"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="Y" name="Y"><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' + LINE + '</bpmn:process>');
   const { model } = read(xml);
-  // F2 runs above the top row, so the lanes have to grow.
-  const raw = { nodes: { n1: { cx: 50, cy: 75, w: 60, h: 60 }, n2: { cx: 200, cy: 75, w: 120, h: 50 }, n3: { cx: 350, cy: 225, w: 60, h: 60 } },
-                lanes: { l1: { x1: 0, y1: 0, x2: 400, y2: 150 }, l2: { x1: 0, y1: 150, x2: 400, y2: 300 } },
-                edges: [[P(80, 75), P(140, 75)], [P(200, 50), P(200, -40), P(350, -40), P(350, 195)]] };
-  const di = layoutGeometry(model, raw);
-  const y = di.lanes.Y, [px, py, pw, ph] = di.pool, t = di.nodes.T, e = di.nodes.E;
-  assert.ok(y[1] >= t[1] + t[3], 'lane Y starts below the task of lane X: ' + JSON.stringify({ y, t }));
-  assert.ok(e[1] >= y[1] && e[1] + e[3] <= y[1] + y[3], 'E in lane Y');
-  assert.equal(py + ph, y[1] + y[3], 'the pool ends with the bottom lane');
-  assert.ok(py <= -40 - 12 && py > -40 - 30, 'the pool grew above the flow by the margin, once: ' + py);
-  assert.equal(px + pw, y[0] + y[2]);
-});
-
-test('a stub of 0.7 px at a task is no vertical end: the flow does not run inside its own source', () => {
-  const task = node(100, 100, 120, 80, true);
-  const pts = ptsOf([[160, 100], [160.7, 100], [160.7, 300], [400, 300]]);
-  dedupe(pts, true);
-  attach(pts, true, task);
-  assert.ok(pts.every((p, i) => !i || Math.abs(p.x - pts[i - 1].x) < 0.01 || Math.abs(p.y - pts[i - 1].y) < 0.01), 'right angles: ' + JSON.stringify(pts));
-  assert.ok(pts.every(p => !(p.x > 41 && p.x < 159 && p.y > 61 && p.y < 139)), 'no point inside the task: ' + JSON.stringify(pts));
-  // It ran beside the task in Mermaid's positions: it leaves by the side and keeps 12 px from it.
-  assert.deepEqual(pts.slice(0, 3), ptsOf([[160, 100], [172, 100], [172, 300]]));
+  const raw = { nodes: { n1: { cx: 50, cy: 75, w: 60, h: 60 }, n2: { cx: 200, cy: 75, w: 120, h: 50 }, n3: { cx: 350, cy: 225, w: 60, h: 60 } } };
+  // R1 off, the end stays in lane Y; with it, the end stands in its predecessor's lane X and Y keeps an empty row.
+  for (const [options, inY] of [[{ gatewayLane: false }, true], [{}, false]]){
+    const di = layoutGeometry(model, raw, labelSize, options);
+    const y = di.lanes.Y, [px, py, pw, ph] = di.pool, t = di.nodes.T, e = di.nodes.E;
+    assert.ok(y[1] >= t[1] + t[3], 'lane Y starts below the task of lane X: ' + JSON.stringify({ y, t }));
+    assert.equal(e[1] >= y[1] && e[1] + e[3] <= y[1] + y[3], inY, 'E in lane Y: ' + inY);
+    if (!inY) assert.equal(e[1] + e[3] / 2, t[1] + t[3] / 2, 'E in the row of T');
+    assert.equal(py, 0, 'the pool starts with the top lane');
+    assert.equal(py + ph, y[1] + y[3], 'the pool ends with the bottom lane');
+    assert.equal(px + pw, y[0] + y[2]);
+  }
 });
 
 test('a flow from a node to itself whose node is not laid out names it once', () => {
   const { leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="Z" attachedToRef="T"/><bpmn:sequenceFlow id="ZZ" sourceRef="Z" targetRef="Z"/></bpmn:process>'));
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'ZZ')), 'sequenceFlow ZZ: touches Z, which is not laid out');
+});
+
+// ---------- the rules of the grid (story 2.27) ----------
+// A process in one pool from a short description: per lane 'id:kind:column …'
+// (kind s start, e end, x exclusive gateway, p parallel gateway, t task, i
+// intermediate event; column Mermaid's), flows 'from>to …'. Mermaid's raw
+// positions are the columns alone: the grid reads no more. Returns per node
+// the middle of its symbol and its lane.
+const KIND = { s: 'startEvent', e: 'endEvent', x: 'exclusiveGateway', p: 'parallelGateway', t: 'task', i: 'intermediateCatchEvent' };
+function laidOut(lanes, flows, options){
+  const kinds = [], col = {};
+  let body = '<bpmn:laneSet id="LS">';
+  for (const [lane, spec] of lanes){
+    const ids = spec.split(' ').map(s => { const [id, kind, c] = s.split(':'); kinds.push([id, kind]); col[id] = +c; return id; });
+    body += '<bpmn:lane id="' + lane + '" name="' + lane + '">' + ids.map(id => '<bpmn:flowNodeRef>' + id + '</bpmn:flowNodeRef>').join('') + '</bpmn:lane>';
+  }
+  body += '</bpmn:laneSet>' + kinds.map(([id, kind]) => '<bpmn:' + KIND[kind] + ' id="' + id + '" name="' + id + '"/>').join('');
+  flows.split(' ').forEach((f, i) => { const [a, b] = f.split('>'); body += '<bpmn:sequenceFlow id="F' + i + '" sourceRef="' + a + '" targetRef="' + b + '"/>'; });
+  const { model } = read(xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>'));
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: col[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
+  const di = layoutGeometry(model, raw, labelSize, options);
+  const inLane = y => Object.keys(di.lanes).find(l => y >= di.lanes[l][1] && y <= di.lanes[l][1] + di.lanes[l][3]);
+  return Object.fromEntries(model.nodes.map(n => { const [x, y, w, h] = di.nodes[n.id]; return [n.id, { x: x + w / 2, y: y + h / 2, lane: inLane(y + h / 2) }]; }));
+}
+// Each rule's guarantee holds with the rule, and not with its switch off.
+const RULE_CASES = [
+  ['R1: a gateway stands in the lane of its nearest predecessor; the way changes lane after the decision', 'gatewayLane',
+    [['A', 'S:s:0 T:t:1'], ['B', 'G:x:2 U:t:3 V:t:3 E:e:4']], 'S>T T>G G>U G>V U>E V>E',
+    at => at.G.lane === 'A'],
+  ['R2: two ways of a decision that go on in one lane never share a row; the other one goes below', 'pathRows',
+    [['A', 'S:s:0 G:x:1 T1:t:2 T2:t:3 E1:e:4 U1:t:2 U2:t:3 E2:e:4']], 'S>G G>T1 T1>T2 T2>E1 G>U1 U1>U2 U2>E2',
+    at => at.T1.y === at.G.y && at.T2.y === at.G.y && at.U1.y === at.U2.y && at.U1.y > at.G.y],
+  ['R3: the step of a loop stands in the row above its gateway, in its column', 'loopAbove',
+    [['A', 'S:s:0 K:t:1 H:x:2 L:t:3 E:e:3']], 'S>K K>H H>L L>K H>E',
+    at => at.L.x === at.H.x && at.L.y < at.H.y],
+  ['R4: a step that leaves the lane while another way stays stands in the gateway\'s column, on the side of its target lane', 'branchBelow',
+    [['A', 'S:s:0 G:x:1 T:t:2 E:e:3 X:t:2'], ['B', 'Y:t:3 E2:e:4']], 'S>G G>T T>E G>X X>Y Y>E2',
+    at => at.X.x === at.G.x && at.X.y > at.G.y && at.T.y === at.G.y],
+  ['R5: an arm of a parallel block in another lane takes the row of that lane nearest the split', 'fan',
+    [['A', 'S:s:0 P:p:1 Y:t:2 J:p:4 E:e:5'], ['B', 'S2:s:0 K:t:1 H:x:2 L:t:3 X:t:2 E2:e:5']], 'S>P P>Y P>X Y>J X>J J>E S2>K K>H H>L L>K H>E2',
+    at => at.X.lane === 'B' && at.X.y < at.L.y && at.L.y < at.K.y],
+  ['R6: the one step between the exit of a loop and a merge further right stands in the merge\'s column', 'jumpAbove',
+    [['A', 'S:s:0 A1:t:1 G:x:2 X:t:3 L:t:3 Y:t:4 H:x:4 Z:t:5 N:t:5 W:t:6 M:x:7 E:e:8']], 'S>A1 A1>G G>X X>Y Y>Z Z>W W>M G>L L>H H>A1 H>N N>M M>E',
+    at => at.N.x === at.M.x && at.N.y < at.M.y],
+  ['R9: the first steps of the arms of a parallel gateway stand in one column', 'firstColumn',
+    [['A', 'S:s:0 P:p:1 X:t:2 J:p:5 E:e:6'], ['B', 'S2:s:0 Z:t:1 Z2:t:2 Y:t:3 E2:e:6']], 'S>P P>X X>J P>Y Y>J J>E S2>Z Z>Z2 Z2>E2',
+    at => at.X.x === at.Y.x],
+  ['R11: an end whose row is free to the right stands in the last column', 'endAlign',
+    [['A', 'S:s:0 G:x:1 T:t:2 E1:e:3 U:t:2 V:t:3 W:t:4 E2:e:5']], 'S>G G>T T>E1 G>U U>V V>W W>E2',
+    at => at.E1.x === at.E2.x && at.E1.y !== at.E2.y],
+  ['R15: the starts of a lane stand left-aligned, each in a row of its own', 'startAlign',
+    [['A', 'S1:s:0 S2:s:1 T:t:2 E:e:3']], 'S1>T S2>T T>E',
+    at => at.S1.x === at.S2.x && at.S1.y !== at.S2.y],
+];
+for (const [name, key, lanes, flows, holds] of RULE_CASES){
+  test(name, () => {
+    assert.equal(holds(laidOut(lanes, flows)), true, 'with the rule');
+    assert.equal(holds(laidOut(lanes, flows, { [key]: false })), false, 'with ' + key + ' off');
+  });
+}
+
+test('the rules are switched per call: one call without a rule leaves the next as the default lays out', () => {
+  const lanes = [['A', 'S1:s:0 S2:s:1 T:t:2 E:e:3']], flows = 'S1>T S2>T T>E';
+  const before = laidOut(lanes, flows);
+  assert.notDeepEqual(laidOut(lanes, flows, { startAlign: false }), before);
+  assert.deepEqual(laidOut(lanes, flows), before);
+  assert.deepEqual(laidOut(lanes, flows, {}), before);
+  assert.deepEqual(laidOut(lanes, flows, { startAlign: true, compact: false, reroute: false }), before, 'R7 and the second pass are no switches');
+});
+
+test('the default rules: R1–R16 but R7, all on, frozen', () => {
+  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'jumpAbove', 'loopAbove', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
+  assert.ok(Object.values(DEFAULT_RULES).every(v => v === true));
+  assert.ok(Object.isFrozen(DEFAULT_RULES));
+  assert.throws(() => { DEFAULT_RULES.startAlign = false; }, TypeError);
+  assert.equal(DEFAULT_RULES.startAlign, true);
 });

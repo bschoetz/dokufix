@@ -6,9 +6,11 @@
   <bpmn:process id="Process_1" isExecutable="false">
     <bpmn:laneSet id="LaneSet_1">
       <bpmn:lane id="Lane_Kunde" name="Kunde"><bpmn:flowNodeRef>Start</bpmn:flowNodeRef><bpmn:flowNodeRef>Weg</bpmn:flowNodeRef><bpmn:flowNodeRef>Antworten</bpmn:flowNodeRef></bpmn:lane>
-      <bpmn:lane id="Lane_Hofbuero" name="Hofbüro"><bpmn:flowNodeRef>Postfach</bpmn:flowNodeRef><bpmn:flowNodeRef>Art</bpmn:flowNodeRef><bpmn:flowNodeRef>Abwesenheit</bpmn:flowNodeRef><bpmn:flowNodeRef>Teilen</bpmn:flowNodeRef><bpmn:flowNodeRef>PersoenlichAntworten</bpmn:flowNodeRef><bpmn:flowNodeRef>Zusammen</bpmn:flowNodeRef><bpmn:flowNodeRef>AnTouren</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Hofbuero" name="Hofbüro"><bpmn:flowNodeRef>Postfach</bpmn:flowNodeRef><bpmn:flowNodeRef>Art</bpmn:flowNodeRef><bpmn:flowNodeRef>Abwesenheit</bpmn:flowNodeRef><bpmn:flowNodeRef>Teilen</bpmn:flowNodeRef><bpmn:flowNodeRef>PersoenlichAntworten</bpmn:flowNodeRef><bpmn:flowNodeRef>Zusammen</bpmn:flowNodeRef><bpmn:flowNodeRef>AnTouren</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>BeiTouren</bpmn:flowNodeRef>
+</bpmn:lane>
       <bpmn:lane id="Lane_Kundenkartei" name="Kundenkartei"><bpmn:flowNodeRef>Abmelden</bpmn:flowNodeRef><bpmn:flowNodeRef>Abgemeldet</bpmn:flowNodeRef><bpmn:flowNodeRef>Status</bpmn:flowNodeRef><bpmn:flowNodeRef>MailsEnden</bpmn:flowNodeRef></bpmn:lane>
-      <bpmn:lane id="Lane_Tourenplanung" name="Tourenplanung"><bpmn:flowNodeRef>AboAnfrage</bpmn:flowNodeRef><bpmn:flowNodeRef>BeiTouren</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Tourenplanung" name="Tourenplanung"><bpmn:flowNodeRef>AboAnfrage</bpmn:flowNodeRef></bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="Start" name="Reagiert auf eine Erinnerung"/>
     <bpmn:exclusiveGateway id="Weg" name="Wie meldet er sich?"/>
@@ -46,44 +48,44 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_1">
-      <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="Participant_1" isHorizontal="true"><dc:Bounds x="-137" y="-135" width="1797" height="572"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Kunde_di" bpmnElement="Lane_Kunde" isHorizontal="true"><dc:Bounds x="-107" y="-135" width="1767" height="146"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Hofbuero_di" bpmnElement="Lane_Hofbuero" isHorizontal="true"><dc:Bounds x="-107" y="11" width="1767" height="140"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Kundenkartei_di" bpmnElement="Lane_Kundenkartei" isHorizontal="true"><dc:Bounds x="-107" y="151" width="1767" height="140"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Tourenplanung_di" bpmnElement="Lane_Tourenplanung" isHorizontal="true"><dc:Bounds x="-107" y="291" width="1767" height="146"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="-37" y="-77" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-64" y="-37" width="90" height="45"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Weg_di" bpmnElement="Weg" isMarkerVisible="true"><dc:Bounds x="93" y="-84" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="73" y="-118" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Antworten_di" bpmnElement="Antworten"><dc:Bounds x="339" y="-99" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Postfach_di" bpmnElement="Postfach"><dc:Bounds x="381" y="63" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="354" y="103" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Art_di" bpmnElement="Art" isMarkerVisible="true"><dc:Bounds x="529" y="56" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="509" y="22" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Abwesenheit_di" bpmnElement="Abwesenheit"><dc:Bounds x="950" y="63" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="923" y="29" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Teilen_di" bpmnElement="Teilen"><dc:Bounds x="1115" y="56" width="50" height="50"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="PersoenlichAntworten_di" bpmnElement="PersoenlichAntworten"><dc:Bounds x="1245" y="41" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Zusammen_di" bpmnElement="Zusammen"><dc:Bounds x="1411" y="56" width="50" height="50"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AnTouren_di" bpmnElement="AnTouren"><dc:Bounds x="1531" y="41" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Abmelden_di" bpmnElement="Abmelden"><dc:Bounds x="615" y="181" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Abgemeldet_di" bpmnElement="Abgemeldet"><dc:Bounds x="796" y="203" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="769" y="243" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Status_di" bpmnElement="Status"><dc:Bounds x="1080" y="181" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="MailsEnden_di" bpmnElement="MailsEnden"><dc:Bounds x="1245" y="181" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="AboAnfrage_di" bpmnElement="AboAnfrage"><dc:Bounds x="181" y="321" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="BeiTouren_di" bpmnElement="BeiTouren"><dc:Bounds x="1573" y="343" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1546" y="383" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="-1" y="-59"/><di:waypoint x="93" y="-59"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="143" y="-59"/><di:waypoint x="339" y="-59"/><bpmndi:BPMNLabel><dc:Bounds x="153" y="-78" width="46" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="118" y="-34"/><di:waypoint x="118" y="361"/><di:waypoint x="181" y="361"/><bpmndi:BPMNLabel><dc:Bounds x="124" y="-26" width="53" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="399" y="-19"/><di:waypoint x="399" y="63"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="417" y="81"/><di:waypoint x="529" y="81"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="579" y="81"/><di:waypoint x="950" y="81"/><bpmndi:BPMNLabel><dc:Bounds x="589" y="62" width="73" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="554" y="106"/><di:waypoint x="554" y="221"/><di:waypoint x="615" y="221"/><bpmndi:BPMNLabel><dc:Bounds x="560" y="156" width="59" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="735" y="221"/><di:waypoint x="796" y="221"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="554" y="106"/><di:waypoint x="554" y="127"/><di:waypoint x="1050" y="127"/><di:waypoint x="1050" y="81"/><di:waypoint x="1115" y="81"/><bpmndi:BPMNLabel><dc:Bounds x="779" y="108" width="46" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="1165" y="81"/><di:waypoint x="1245" y="81"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="1140" y="106"/><di:waypoint x="1140" y="181"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1200" y="221"/><di:waypoint x="1245" y="221"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13"><di:waypoint x="1365" y="81"/><di:waypoint x="1411" y="81"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14"><di:waypoint x="1365" y="221"/><di:waypoint x="1377" y="221"/><di:waypoint x="1377" y="81"/><di:waypoint x="1411" y="81"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15"><di:waypoint x="1461" y="81"/><di:waypoint x="1531" y="81"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_16_di" bpmnElement="Flow_16"><di:waypoint x="1591" y="121"/><di:waypoint x="1591" y="343"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_17_di" bpmnElement="Flow_17"><di:waypoint x="301" y="361"/><di:waypoint x="1573" y="361"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Participant_1_di" bpmnElement="Participant_1" isHorizontal="true"><dc:Bounds x="0" y="0" width="1678" height="700"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kunde_di" bpmnElement="Lane_Kunde" isHorizontal="true"><dc:Bounds x="30" y="0" width="1648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Hofbuero_di" bpmnElement="Lane_Hofbuero" isHorizontal="true"><dc:Bounds x="30" y="144" width="1648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kundenkartei_di" bpmnElement="Lane_Kundenkartei" isHorizontal="true"><dc:Bounds x="30" y="288" width="1648" height="268"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Tourenplanung_di" bpmnElement="Lane_Tourenplanung" isHorizontal="true"><dc:Bounds x="30" y="556" width="1648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_di" bpmnElement="Start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="45"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Weg_di" bpmnElement="Weg" isMarkerVisible="true"><dc:Bounds x="245" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="13" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Antworten_di" bpmnElement="Antworten"><dc:Bounds x="378" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Postfach_di" bpmnElement="Postfach"><dc:Bounds x="420" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="238" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Art_di" bpmnElement="Art" isMarkerVisible="true"><dc:Bounds x="546" y="191" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="473" y="243" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abwesenheit_di" bpmnElement="Abwesenheit"><dc:Bounds x="686" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="659" y="238" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Teilen_di" bpmnElement="Teilen"><dc:Bounds x="829" y="191" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PersoenlichAntworten_di" bpmnElement="PersoenlichAntworten"><dc:Bounds x="944" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Zusammen_di" bpmnElement="Zusammen"><dc:Bounds x="1280" y="191" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AnTouren_di" bpmnElement="AnTouren"><dc:Bounds x="1378" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abmelden_di" bpmnElement="Abmelden"><dc:Bounds x="644" y="444" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Abgemeldet_di" bpmnElement="Abgemeldet"><dc:Bounds x="836" y="466" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="809" y="506" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Status_di" bpmnElement="Status"><dc:Bounds x="944" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="MailsEnden_di" bpmnElement="MailsEnden"><dc:Bounds x="1112" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="AboAnfrage_di" bpmnElement="AboAnfrage"><dc:Bounds x="210" y="588" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="BeiTouren_di" bpmnElement="BeiTouren"><dc:Bounds x="1570" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1543" y="164" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="72"/><di:waypoint x="245" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="295" y="72"/><di:waypoint x="378" y="72"/><bpmndi:BPMNLabel><dc:Bounds x="305" y="53" width="46" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="270" y="97"/><di:waypoint x="270" y="588"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="105" width="53" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="438" y="112"/><di:waypoint x="438" y="198"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="456" y="216"/><di:waypoint x="546" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="596" y="216"/><di:waypoint x="686" y="216"/><bpmndi:BPMNLabel><dc:Bounds x="606" y="197" width="73" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="571" y="241"/><di:waypoint x="571" y="484"/><di:waypoint x="644" y="484"/><bpmndi:BPMNLabel><dc:Bounds x="577" y="249" width="59" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="764" y="484"/><di:waypoint x="836" y="484"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="571" y="191"/><di:waypoint x="571" y="164"/><di:waypoint x="854" y="164"/><di:waypoint x="854" y="191"/><bpmndi:BPMNLabel><dc:Bounds x="577" y="168" width="46" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="879" y="216"/><di:waypoint x="944" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="854" y="241"/><di:waypoint x="854" y="360"/><di:waypoint x="944" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1064" y="360"/><di:waypoint x="1112" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13"><di:waypoint x="1064" y="216"/><di:waypoint x="1280" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14"><di:waypoint x="1232" y="360"/><di:waypoint x="1305" y="360"/><di:waypoint x="1305" y="241"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15"><di:waypoint x="1330" y="216"/><di:waypoint x="1378" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16_di" bpmnElement="Flow_16"><di:waypoint x="1498" y="216"/><di:waypoint x="1570" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17_di" bpmnElement="Flow_17"><di:waypoint x="330" y="628"/><di:waypoint x="1588" y="628"/><di:waypoint x="1588" y="234"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

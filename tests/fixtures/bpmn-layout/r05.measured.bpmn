@@ -3,8 +3,10 @@
   <bpmn:collaboration id="C"><bpmn:participant id="P" name="Pool" processRef="Proc"/></bpmn:collaboration>
   <bpmn:process id="Proc" isExecutable="false">
     <bpmn:laneSet id="LS">
-      <bpmn:lane id="Lane_1" name="Oben"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef></bpmn:lane>
-      <bpmn:lane id="Lane_2" name="Mitte"><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_1" name="Oben"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>g</bpmn:flowNodeRef>
+</bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Mitte"><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>c</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
       <bpmn:lane id="Lane_3" name="Unten"><bpmn:flowNodeRef>d</bpmn:flowNodeRef></bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="s"/>
@@ -26,26 +28,26 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C">
-      <bpmndi:BPMNShape id="P_di" bpmnElement="P" isHorizontal="true"><dc:Bounds x="-72" y="-68" width="982" height="452"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_1_di" bpmnElement="Lane_1" isHorizontal="true"><dc:Bounds x="-42" y="-68" width="952" height="151"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_2_di" bpmnElement="Lane_2" isHorizontal="true"><dc:Bounds x="-42" y="83" width="952" height="150"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_3_di" bpmnElement="Lane_3" isHorizontal="true"><dc:Bounds x="-42" y="233" width="952" height="151"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="28" y="-10" width="36" height="36"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="a_di" bpmnElement="a"><dc:Bounds x="142" y="-32" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="b_di" bpmnElement="b"><dc:Bounds x="142" y="118" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="g_di" bpmnElement="g" isMarkerVisible="true"><dc:Bounds x="332" y="133" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="364" y="116" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="c_di" bpmnElement="c"><dc:Bounds x="642" y="118" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="z_di" bpmnElement="z"><dc:Bounds x="840" y="140" width="36" height="36"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="d_di" bpmnElement="d"><dc:Bounds x="452" y="268" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="F1_s_a_di" bpmnElement="F1_s_a"><di:waypoint x="64" y="8"/><di:waypoint x="142" y="8"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F2_a_g_di" bpmnElement="F2_a_g"><di:waypoint x="262" y="8"/><di:waypoint x="274" y="8"/><di:waypoint x="274" y="158"/><di:waypoint x="332" y="158"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F3_b_g_di" bpmnElement="F3_b_g"><di:waypoint x="262" y="158"/><di:waypoint x="332" y="158"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F4_g_b_di" bpmnElement="F4_g_b"><di:waypoint x="357" y="133"/><di:waypoint x="357" y="98"/><di:waypoint x="242" y="98"/><di:waypoint x="242" y="118"/><bpmndi:BPMNLabel><dc:Bounds x="314" y="102" width="33" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F5_g_c_di" bpmnElement="F5_g_c"><di:waypoint x="382" y="158"/><di:waypoint x="642" y="158"/><bpmndi:BPMNLabel><dc:Bounds x="392" y="139" width="18" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F6_g_d_di" bpmnElement="F6_g_d"><di:waypoint x="357" y="183"/><di:waypoint x="357" y="308"/><di:waypoint x="452" y="308"/><bpmndi:BPMNLabel><dc:Bounds x="363" y="191" width="44" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F7_d_c_di" bpmnElement="F7_d_c"><di:waypoint x="512" y="268"/><di:waypoint x="512" y="158"/><di:waypoint x="642" y="158"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F8_c_z_di" bpmnElement="F8_c_z"><di:waypoint x="762" y="158"/><di:waypoint x="840" y="158"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F9_a_b_di" bpmnElement="F9_a_b"><di:waypoint x="202" y="48"/><di:waypoint x="202" y="118"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="P_di" bpmnElement="P" isHorizontal="true"><dc:Bounds x="0" y="0" width="846" height="432"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1_di" bpmnElement="Lane_1" isHorizontal="true"><dc:Bounds x="30" y="0" width="816" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_2_di" bpmnElement="Lane_2" isHorizontal="true"><dc:Bounds x="30" y="144" width="816" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_3_di" bpmnElement="Lane_3" isHorizontal="true"><dc:Bounds x="30" y="288" width="816" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="54" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a_di" bpmnElement="a"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b_di" bpmnElement="b"><dc:Bounds x="378" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="g_di" bpmnElement="g" isMarkerVisible="true"><dc:Bounds x="413" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="28" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="c_di" bpmnElement="c"><dc:Bounds x="546" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="z_di" bpmnElement="z"><dc:Bounds x="738" y="198" width="36" height="36"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d_di" bpmnElement="d"><dc:Bounds x="546" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="F1_s_a_di" bpmnElement="F1_s_a"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_a_g_di" bpmnElement="F2_a_g"><di:waypoint x="330" y="72"/><di:waypoint x="413" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_b_g_di" bpmnElement="F3_b_g"><di:waypoint x="408" y="176"/><di:waypoint x="408" y="164"/><di:waypoint x="366" y="164"/><di:waypoint x="366" y="72"/><di:waypoint x="413" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_g_b_di" bpmnElement="F4_g_b"><di:waypoint x="438" y="97"/><di:waypoint x="438" y="176"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="105" width="33" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_g_c_di" bpmnElement="F5_g_c"><di:waypoint x="463" y="72"/><di:waypoint x="606" y="72"/><di:waypoint x="606" y="176"/><bpmndi:BPMNLabel><dc:Bounds x="526" y="53" width="18" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F6_g_d_di" bpmnElement="F6_g_d"><di:waypoint x="463" y="72"/><di:waypoint x="510" y="72"/><di:waypoint x="510" y="360"/><di:waypoint x="546" y="360"/><bpmndi:BPMNLabel><dc:Bounds x="465" y="53" width="44" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F7_d_c_di" bpmnElement="F7_d_c"><di:waypoint x="606" y="320"/><di:waypoint x="606" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F8_c_z_di" bpmnElement="F8_c_z"><di:waypoint x="666" y="216"/><di:waypoint x="738" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F9_a_b_di" bpmnElement="F9_a_b"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="216"/><di:waypoint x="378" y="216"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

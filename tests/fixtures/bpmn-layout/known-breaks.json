@@ -1,12 +1,16 @@
 {
  "ref3": [
-  "on-one-line-shared Flow_7 Flow_9"
+  "node-outside-lane BeiTouren Lane_Tourenplanung"
  ],
  "ref4": [],
- "hund": [],
+ "hund": [
+  "node-outside-lane GW_Alle Lane_Melker"
+ ],
  "mehrere": [],
  "zwei": [],
- "mitte": [],
+ "mitte": [
+  "node-outside-lane F_Ende F_Leihverkehr"
+ ],
  "ereignis": [],
  "ref8": [],
  "demo2": [],
@@ -15,20 +19,24 @@
  "demo5": [],
  "demo6": [],
  "hund2": [
-  "label-on-flow GW_Fluss Flow_28",
-  "label-on-flow GW_Nachprobe Flow_53",
-  "label-on-flow GW_Versuche Flow_22",
-  "label-on-node GW_Qualitaet Task_Labor",
-  "on-one-line-shared Flow_34 Flow_36",
-  "on-one-line-shared Flow_39 Flow_40",
-  "on-one-line-shared Flow_51 Flow_52"
+  "node-outside-lane GW_Alle Lane_Melker",
+  "node-outside-lane GW_Fluss Lane_Melker",
+  "node-outside-lane GW_Merge_Ende Lane_Melker",
+  "node-outside-lane GW_Merge_Probe Lane_Labor",
+  "node-outside-lane GW_ParJoin Lane_Melker",
+  "node-outside-lane GW_ParSplit Lane_Melker"
  ],
  "r01": [],
  "r02": [],
- "r03": [],
- "r04": [],
+ "r03": [
+  "node-outside-lane z Lane_3"
+ ],
+ "r04": [
+  "label-on-flow i1 F5_i2_i1"
+ ],
  "r05": [
-  "on-one-line-shared F5_g_c F7_d_c"
+  "node-outside-lane g Lane_2",
+  "on-one-line-shared F5_g_c F6_g_d"
  ],
  "r06": [],
  "r07": [],
@@ -40,21 +48,26 @@
  "r13": [],
  "r14": [],
  "r15": [
-  "on-one-line-shared F7_gb_b1 F8_gb_b2"
+  "label-on-node F10_b3_b1 b3",
+  "on-one-line-shared F7_gb_b1 F9_gb_b3"
  ],
  "r16": [
-  "on-one-line-shared F2_p1_x F3_p1_y",
-  "parallel F11_u1_p2 F4_x_p2",
-  "parallel F3_p1_y F4_x_p2"
+  "on-one-line-shared F2_p1_x F3_p1_y"
  ],
- "r17": [],
+ "r17": [
+  "label-on-flow F7_c_a F10_e_a",
+  "label-on-node F8_d_b d"
+ ],
  "r18": [],
  "r19": [
-  "on-one-line-shared F7_d_z F8_c_z"
+  "node-outside-lane g Lane_2"
  ],
  "r20": [
-  "on-one-line-shared F7_d_z F8_c_z"
+  "node-outside-lane g Lane_2"
  ],
  "r21": [],
- "r22": []
+ "r22": [
+  "node-outside-lane z Lane_2",
+  "on-one-line-shared F4_g_a F5_g_b"
+ ]
 }

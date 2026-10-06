@@ -1,20 +1,23 @@
 // --- BPMN without coordinates ------------------------------------------------
 // A fenced `bpmn` block whose XML holds only the process (lanes, steps, flows)
-// and no diagram part is laid out before bpmn-js draws it. Mermaid is the
-// layout engine, not the writing format and not what draws:
+// and no diagram part is laid out before bpmn-js draws it. Mermaid gives the
+// order of the columns, not the picture, and is not the writing format:
 //
 //   1. readProcess() reads the XML into one pool's lanes, flow nodes and
 //      sequence flows, or refuses with the reason
 //   2. mermaidSource() writes that as Mermaid swimlane-beta text, with ids
 //      of its own (n1…, l1…), so that Mermaid never sees the author's ids
 //   3. Mermaid renders it off-screen (src/app/bpmn.js, the one part that needs
-//      a page); only the positions are taken from its SVG
-//   4. layoutGeometry() scales those positions down to BPMN sizes, docks the
-//      flows on the smaller symbols, corrects what Mermaid routes untidily
-//      and gives the labels their places, in the size the page measures
-//      for them (bpmn-js's text renderer) or, without a page, as estimated
+//      a page); only the positions are taken from its SVG, and the layout
+//      reads no more of them than the middle of each node
+//   4. layoutGeometry() puts the nodes on a grid: Mermaid's columns, the
+//      lanes, and rows within each lane. The rules R1–R16 give each node its
+//      lane, row and column, a router draws every flow on the grid anew, and
+//      the labels get their places, in the size the page measures for them
+//      (bpmn-js's text renderer) or, without a page, as estimated
 //   5. appendDiagram() writes the result as a diagram part (BPMN-DI) into the
-//      author's XML, before its closing definitions tag; nothing else changes
+//      author's XML, before its closing definitions tag; a node a rule put in
+//      another lane moves there in the lane set too, nothing else changes
 //
 // Mermaid's picture never reaches the document. bpmn-js draws the XML from
 // step 5 exactly as it draws XML that came with coordinates.
@@ -31,9 +34,8 @@
 // browser reports "laneSet", and finds nothing by namespace.
 // tests/bpmn-layout.test.mjs runs all of it in Node.
 //
-// The routing corrections are the spike's (spikes/komponenten-aus-markdown/
-// src/bpmn.js), ported with their behaviour; src/README.md, Diagrams, has the
-// limits of Mermaid's arrangement.
+// The grid, its rules and its router come from spike 2.26 (variant A2, Ben,
+// 2026-10-06); src/README.md, Diagrams, describes them.
 
 // The Mermaid version the layout and its checks are made with. src/index.html
 // pins the same one; tests/licences.test.mjs fails when the two differ, so a
@@ -41,32 +43,19 @@
 // (tests/vergleich.mjs on tests/referenz.md).
 export const MERMAID_LAYOUT_VERSION = '12.0.0';
 
-// The distances the layout keeps (the geometry, below), 12 px but the last,
-// each by what it is for:
-// STUB              where a flow docks: the piece that leaves its symbol runs
-//                   this far before it turns (attach(), dockApart(), a ring
-//                   from a gateway's corner in loopBack())
+// The distances the layout keeps besides the grid's (below), 12 px but the
+// last, each by what it is for:
 // ATTACH_CLEARANCE  an end on a task's side keeps this far from a corner
-//                   (attach())
-// OBSTACLE_OFFSET   a run moved off a foreign symbol lies this far beside it
-//                   (nudge(), detour())
-// FAN_ROOM          a flow from a gateway's corner needs this much between the
-//                   gateway's middle and its target's side (fanOut())
-// NEAR              two parallel runs closer than this read as one (near(),
-//                   the conflicts of a ring in loopBack()); an end on a
-//                   task's side closer than this to its middle docks at the
-//                   middle (attach())
-// SPAN_TOLERANCE    the spans of two rings closer than this count as
-//                   overlapping, and the rings take distinct levels (loopBack())
-// RING_CLEARANCE    a ring keeps this far from the border with another lane;
-//                   nearer, its lane grows (growLane())
+//                   (the ports in finishGrid())
+// RING_CLEARANCE    a lane that grows for a label (growLane()) grows until
+//                   the label keeps this far less LABEL_GAP from the border
 // FRAME_MARGIN      every waypoint and label keeps this far from the edge of
-//                   the outer lanes and the pool (layoutGeometry())
+//                   the outer lanes and the pool (finishLabelsAndFrame())
 // LABEL_GAP         4 px: a label across the border of its owner's lane with
 //                   another lane lies this far inside once that lane has
 //                   grown (labelRoom()), as far as a flow's label keeps from
 //                   its piece
-const STUB = 12, ATTACH_CLEARANCE = 12, OBSTACLE_OFFSET = 12, FAN_ROOM = 12, NEAR = 12, SPAN_TOLERANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12, LABEL_GAP = 4;
+const ATTACH_CLEARANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12, LABEL_GAP = 4;
 // They stand among the module's first declarations: esbuild writes such a
 // constant's value in place of its name only before the first declaration
 // that is no such constant, and so the built page carries no names for them.
@@ -232,199 +221,14 @@ const EVENT_LABEL = 84;
 const HEAD = 30;
 const R = n => Math.round(n);
 
-// Mermaid decides the arrangement, the layout the sizes: Mermaid's nodes are
-// large (text in a circle, wide boxes), BPMN symbols small. The axis is
-// scaled piecewise linearly: each column to the size of its largest BPMN
-// symbol, each gap to a fixed range. Orders and right angles are kept.
-// items: [{ lo, hi, size }] along one axis. Returns the map of a coordinate.
-export function axisMap(items, minGap, maxGap){
-  const ranks = [];
-  for (const it of [...items].sort((a, b) => a.lo - b.lo)){
-    const last = ranks[ranks.length - 1];
-    if (last && it.lo < last.hi - 1){ last.hi = Math.max(last.hi, it.hi); last.size = Math.max(last.size, it.size); }
-    else ranks.push({ lo: it.lo, hi: it.hi, size: it.size });
-  }
-  let cur = ranks[0].lo;
-  ranks.forEach((r, i) => {
-    r.nlo = cur; r.nhi = cur + r.size;
-    const next = ranks[i + 1];
-    if (next) cur = r.nhi + Math.min(maxGap, Math.max(minGap, (next.lo - r.hi) * 0.6));
-  });
-  return v => {
-    const first = ranks[0], last = ranks[ranks.length - 1];
-    if (v <= first.lo) return first.nlo - (first.lo - v);
-    if (v >= last.hi) return last.nhi + (v - last.hi);
-    for (let i = 0; i < ranks.length; i++){
-      const r = ranks[i], n = ranks[i + 1];
-      if (v <= r.hi) return r.nlo + (v - r.lo) / (r.hi - r.lo || 1) * (r.nhi - r.nlo);
-      if (v < n.lo) return r.nhi + (v - r.hi) / (n.lo - r.hi) * (n.nlo - r.nhi);
-    }
-    return v;
-  };
-}
-
-// Brings one end of a flow to its BPMN symbol (c: { cx, cy, w, h, task }). A
-// circle and a diamond are met on their axis, a task anywhere on its side;
-// an end Mermaid docked closer than NEAR to the middle of a task's side
-// docks at the middle, where an offset of a few pixels would give a small
-// step and a run beside another flow's.
-// side: where the end ran beside its node in Mermaid's unscaled positions;
-// then the flow docks from that side with a short stub, instead of being
-// pulled through the symbol and its neighbours in the same column. A slanted
-// end piece (Mermaid ends a flow on a diamond's slanted side, and draws a
-// flow back as a diagonal) docks on the side that faces the point before it,
-// with a corner put in, so that the piece is horizontal or vertical; a flow
-// of two points, a diagonal from end to end, gets two corners halfway, so
-// that neither lies in the symbol at the other end. The piece that leaves
-// the symbol keeps STUB before the flow turns: a run Mermaid
-// laid just beside its own, larger node lies on the edge of the BPMN symbol
-// once scaled, or inside it; the run moves that far off the side, the other
-// end left where it is.
-export function attach(pts, atStart, c, side){
-  const i = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2, k = atStart ? 2 : pts.length - 3;
-  const p = pts[i], q = pts[j];
-  const ins = (...extra) => pts.splice(atStart ? 1 : pts.length - 1, 0, ...(atStart ? extra : extra.reverse()));
-  const aim = (v, mid, half) => c.task && Math.abs(v - mid) >= NEAR ? Math.min(mid + half - ATTACH_CLEARANCE, Math.max(mid - half + ATTACH_CLEARANCE, v)) : mid;
-  const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
-  // The end and its neighbour are read anew: ins() may have put corners in.
-  const clear = (axis, dir) => {
-    if (pts.length < 3) return;
-    const e = atStart ? 0 : pts.length - 1, j = atStart ? 1 : pts.length - 2;
-    const edge = pts[e][axis], need = edge + dir * STUB, run = pts[j][axis];
-    if ((run - need) * dir >= 0) return;
-    for (let n = j; n > 0 && n < pts.length - 1 && Math.abs(pts[n][axis] - run) < 0.5; n += atStart ? 1 : -1) pts[n][axis] = need;
-  };
-  if (!side && Math.abs(p.x - q.x) >= 1 && Math.abs(p.y - q.y) >= 1){
-    const dx = (q.x - c.cx) / (c.w / 2), dy = (q.y - c.cy) / (c.h / 2);
-    if (Math.abs(dx) <= 1 && Math.abs(dy) <= 1) return;                // the point before lies in the symbol
-    const diagonal = pts.length === 2;
-    if (Math.abs(dx) > 1 && (Math.abs(dy) <= 1 || Math.abs(dx) >= Math.abs(dy))){
-      const y = aim(q.y, c.cy, c.h / 2);
-      p.x = c.cx + Math.sign(dx) * c.w / 2; p.y = y;
-      const mx = (p.x + q.x) / 2;
-      if (Math.abs(y - q.y) >= 1) ins(...(diagonal ? [{ x: mx, y }, { x: mx, y: q.y }] : [{ x: q.x, y }]));
-    } else {
-      const x = aim(q.x, c.cx, c.w / 2);
-      p.x = x; p.y = c.cy + Math.sign(dy) * c.h / 2;
-      const my = (p.y + q.y) / 2;
-      if (Math.abs(x - q.x) >= 1) ins(...(diagonal ? [{ x, y: my }, { x: q.x, y: my }] : [{ x, y: q.y }]));
-    }
-    return;
-  }
-  if (side && side.axis === 'x'){ p.x = q.x = c.cx + side.sign * (c.w / 2 + STUB); p.y = c.cy; dock({ x: c.cx + side.sign * c.w / 2, y: c.cy }); return; }
-  if (side && side.axis === 'y'){ p.y = q.y = c.cy + side.sign * (c.h / 2 + STUB); p.x = c.cx; dock({ x: c.cx, y: c.cy + side.sign * c.h / 2 }); return; }
-  // An end piece beside the symbol keeps STUB from its side, as one docked by side does: Mermaid runs it a pixel off.
-  if (Math.abs(p.x - q.x) < 1 && Math.abs(p.x - c.cx) > c.w / 2 + 0.5){
-    const sign = Math.sign(p.x - c.cx);
-    p.x = q.x = c.cx + sign * Math.max(Math.abs(p.x - c.cx), c.w / 2 + STUB); p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy }); return;
-  }
-  if (Math.abs(p.y - q.y) < 1 && Math.abs(p.y - c.cy) > c.h / 2 + 0.5){
-    const sign = Math.sign(p.y - c.cy);
-    p.y = q.y = c.cy + sign * Math.max(Math.abs(p.y - c.cy), c.h / 2 + STUB); p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 }); return;
-  }
-  if (Math.abs(p.x - q.x) < 1){                                   // a vertical end
-    const dir = Math.sign(q.y - c.cy) || 1, tx = aim(p.x, c.cx, c.w / 2);
-    if (Math.abs(p.x - tx) > 1){
-      if (pts[k] && Math.abs(pts[k].y - q.y) < 1) q.x = tx;          // the piece before runs across: move the end
-      else { const my = (p.y + q.y) / 2; ins({ x: tx, y: my }, { x: q.x, y: my }); }
-    }
-    p.x = tx; p.y = c.cy + dir * c.h / 2;
-    clear('y', dir);
-  } else if (Math.abs(p.y - q.y) < 1){                            // a horizontal end
-    const dir = Math.sign(q.x - c.cx) || 1, ty = aim(p.y, c.cy, c.h / 2);
-    if (Math.abs(p.y - ty) > 1){
-      if (pts[k] && Math.abs(pts[k].x - q.x) < 1) q.y = ty;
-      else { const mx = (p.x + q.x) / 2; ins({ x: mx, y: ty }, { x: mx, y: q.y }); }
-    }
-    p.y = ty; p.x = c.cx + dir * c.w / 2;
-    clear('x', dir);
-  }
-}
-
-// Correction 1. Mermaid routes flows past its own, larger nodes. Once scaled,
-// an inner piece of a flow can lie on or in a foreign symbol; it moves beside
-// that symbol's nearest side. obstacles: [{ x1, y1, x2, y2 }].
-export function nudge(pts, obstacles){
-  for (let i = 1; i < pts.length - 2; i++){
-    const a = pts[i], b = pts[i + 1];
-    if (Math.abs(a.x - b.x) < 1){
-      const lo = Math.min(a.y, b.y), hi = Math.max(a.y, b.y);
-      for (const o of obstacles) if (a.x > o.x1 - 8 && a.x < o.x2 + 8 && hi > o.y1 && lo < o.y2) a.x = b.x = (a.x - o.x1 < o.x2 - a.x) ? o.x1 - OBSTACLE_OFFSET : o.x2 + OBSTACLE_OFFSET;
-    } else if (Math.abs(a.y - b.y) < 1){
-      const lo = Math.min(a.x, b.x), hi = Math.max(a.x, b.x);
-      for (const o of obstacles) if (a.y > o.y1 - 8 && a.y < o.y2 + 8 && hi > o.x1 && lo < o.x2) a.y = b.y = (a.y - o.y1 < o.y2 - a.y) ? o.y1 - OBSTACLE_OFFSET : o.y2 + OBSTACLE_OFFSET;
-    }
-  }
-}
-
-// Correction 2. Mermaid likes to run a flow just inside the side of a
-// neighbouring node. Where an end piece runs through a foreign symbol that
-// way, the flow docks from the side instead and runs outside both.
-export function detour(pts, atStart, c, obstacles){
-  if (pts.length < 3) return;
-  const p = pts[atStart ? 0 : pts.length - 1], q = pts[atStart ? 1 : pts.length - 2];
-  const dock = pt => pts.splice(atStart ? 0 : pts.length, 0, pt);
-  if (Math.abs(p.x - q.x) < 1){
-    const lo = Math.min(p.y, q.y), hi = Math.max(p.y, q.y);
-    const hit = obstacles.filter(o => p.x > o.x1 - 2 && p.x < o.x2 + 2 && hi > o.y1 && lo < o.y2);
-    if (!hit.length) return;
-    const sign = p.x >= c.cx ? 1 : -1;
-    const x = sign > 0 ? Math.max(c.cx + c.w / 2, ...hit.map(o => o.x2)) + OBSTACLE_OFFSET : Math.min(c.cx - c.w / 2, ...hit.map(o => o.x1)) - OBSTACLE_OFFSET;
-    p.x = q.x = x; p.y = c.cy; dock({ x: c.cx + sign * c.w / 2, y: c.cy });
-  } else if (Math.abs(p.y - q.y) < 1){
-    const lo = Math.min(p.x, q.x), hi = Math.max(p.x, q.x);
-    const hit = obstacles.filter(o => p.y > o.y1 - 2 && p.y < o.y2 + 2 && hi > o.x1 && lo < o.x2);
-    if (!hit.length) return;
-    const sign = p.y >= c.cy ? 1 : -1;
-    const y = sign > 0 ? Math.max(c.cy + c.h / 2, ...hit.map(o => o.y2)) + OBSTACLE_OFFSET : Math.min(c.cy - c.h / 2, ...hit.map(o => o.y1)) - OBSTACLE_OFFSET;
-    p.y = q.y = y; p.x = c.cx; dock({ x: c.cx, y: c.cy + sign * c.h / 2 });
-  }
-}
-
-// Correction 3. Mermaid offsets flows that share a port by a few pixels; once
-// scaled, steps of 1 to 5 px are left. They are smoothed without moving the
-// ends of the flow, and points on a straight line go.
-export function tidy(pts){
-  const same = (a, b, k) => Math.abs(a[k] - b[k]) < 0.5;
-  for (let i = 0; i < pts.length - 1; i++){
-    const a = pts[i], b = pts[i + 1];
-    const k = same(a, b, 'y') ? 'x' : same(a, b, 'x') ? 'y' : null;        // the axis the step lies on
-    if (!k || Math.abs(a[k] - b[k]) > 5 || same(a, b, k)) continue;
-    let hi = i + 1, lo = i;
-    while (hi + 1 < pts.length && same(pts[hi + 1], b, k)) hi++;
-    while (lo > 0 && same(pts[lo - 1], a, k)) lo--;
-    if (hi < pts.length - 1){ const v = a[k]; for (let j = i + 1; j <= hi; j++) pts[j][k] = v; }
-    else if (lo > 0){ const v = b[k]; for (let j = lo; j <= i; j++) pts[j][k] = v; }
-  }
-  for (let i = pts.length - 2; i > 0; i--){
-    const a = pts[i - 1], b = pts[i], c = pts[i + 1];
-    if ((same(a, b, 'x') && same(b, c, 'x')) || (same(a, b, 'y') && same(b, c, 'y'))) pts.splice(i, 1);
-  }
-}
-
-// Consecutive points closer than a pixel on both axes become one, the
-// threshold attach() reads an end's axis by: a stub Mermaid draws 1.2 px long
-// is 0.7 px once scaled, and would be read as a vertical end. A flow keeps
-// at least its two ends. inner: of a pair at an end the inner point stays,
-// which carries the direction of the piece after it (before docking, when
-// the end is placed anew); otherwise the end stays.
+// Consecutive points closer than a pixel on both axes become one: a corner
+// the router puts where two pieces meet at an end. A flow keeps at least its
+// two ends. inner: of a pair at an end the inner point stays, which carries
+// the direction of the piece after it; otherwise the end stays.
 export function dedupe(pts, inner = false){
   for (let i = pts.length - 1; i > 0 && pts.length > 2; i--){
     if (Math.abs(pts[i].x - pts[i - 1].x) >= 1 || Math.abs(pts[i].y - pts[i - 1].y) >= 1) continue;
     pts.splice(i === pts.length - 1 ? (inner ? i : i - 1) : (i === 1 && inner ? 0 : i), 1);
-  }
-}
-
-// A point on one line with its two neighbours but outside them, a way out
-// and back: it adds nothing to the route, and as an end's neighbour it is
-// read as the end's direction. Mermaid starts a flow with 20 px on the far
-// side of a diamond, the side then read to dock on, and runs out and back on
-// a detour. Each such point goes; the ends stay.
-export function unfold(pts){
-  for (let i = pts.length - 2; i > 0 && pts.length > 2; i--){
-    const a = pts[i - 1], b = pts[i], c = pts[i + 1];
-    const back = (u, v) => Math.abs(a[v] - b[v]) < 0.5 && Math.abs(b[v] - c[v]) < 0.5 && (b[u] - a[u]) * (c[u] - b[u]) < 0;
-    if (back('x', 'y') || back('y', 'x')){ pts.splice(i, 1); if (i < pts.length - 1) i++; }
   }
 }
 
@@ -446,456 +250,6 @@ export function orthogonal(pts){
 
 // The side a flow leaves by: 'x+', 'x-', 'y+', 'y-', or '' for a slanted start.
 export const exitSide = pts => Math.abs(pts[0].y - pts[1].y) < 0.5 ? (pts[1].x > pts[0].x ? 'x+' : 'x-') : Math.abs(pts[0].x - pts[1].x) < 0.5 ? (pts[1].y > pts[0].y ? 'y+' : 'y-') : '';
-const blocked = (a, b, obstacles) => obstacles.some(o => Math.max(a.x, b.x) > o.x1 - 2 && Math.min(a.x, b.x) < o.x2 + 2 && Math.max(a.y, b.y) > o.y1 - 2 && Math.min(a.y, b.y) < o.y2 + 2);
-
-// The ends of the flows at one symbol, read where they lie when asked, in the
-// order of routes: [{ r, p, q, out }], the route, its end point at the
-// symbol, the point next to it, and whether the flow leaves there. p and q
-// are the route's own points: what moves them moves the flow. The corrections
-// that ask which ports are used read them here (fanOut(), spreadPorts(),
-// loopBack()), each at its own moment and on its own routes.
-export function portEnds(routes, id){
-  const ends = [];
-  for (const r of routes){
-    const pts = r.pts;
-    if (r.f.from === id) ends.push({ r, p: pts[0], q: pts[1], out: true });
-    if (r.f.to === id) ends.push({ r, p: pts[pts.length - 1], q: pts[pts.length - 2], out: false });
-  }
-  return ends;
-}
-
-// Correction 4. Two flows that leave a gateway at the same corner lie on top
-// of each other on their first piece. Where one of them turns at once, it
-// takes the free corner in its direction instead. And a flow that leaves on
-// the side where a flow arrives looks as if it branched before the gateway;
-// it starts at the corner in its direction instead, sharing a short piece
-// with another flow there if need be. A ring of loopBack() (r.loop) keeps
-// its route: rebuilt from its pieces it would run through the row.
-// routes: [{ f, pts, obstacles }]; box: node id → { cx, cy, w, h }.
-export function fanOut(routes, box, gateways){
-  for (const id of gateways){
-    const c = box[id], outs = routes.filter(r => r.f.from === id);
-    const used = new Set(portEnds(routes, id).map(e => exitSide([e.p, e.q])));
-    for (const r of outs){
-      if (!outs.some(o => o !== r && exitSide(o.pts) === exitSide(r.pts))) continue;
-      const way = fanWay(r, c, box, used);
-      if (!way) continue;
-      r.pts.splice(0, r.pts.length, ...way.next);
-      used.add(way.corner);
-    }
-    const arriving = new Set(portEnds(routes, id).filter(e => !e.out).map(e => exitSide([e.p, e.q])));
-    for (const r of outs){
-      const pts = r.pts, side = exitSide(pts);
-      if (r.loop || pts.length < 4 || !side || !arriving.has(side)) continue;
-      const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h';
-      if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) continue;
-      const dir = Math.sign(pts[2][v] - pts[1][v]);
-      const start = { [u]: c[cu], [v]: c[cv] + dir * c[sv] / 2 }, stem = start[v] + dir * 14;
-      if (!dir || (pts[2][v] - stem) * dir <= 0) continue;
-      const next = [start, { [u]: c[cu], [v]: stem }, { [u]: pts[1][u], [v]: stem }];
-      if (blocked(next[0], next[1], r.obstacles) || blocked(next[1], next[2], r.obstacles) || blocked(next[2], pts[2], r.obstacles)) continue;
-      pts.splice(0, 2, ...next);
-    }
-  }
-}
-
-// The way fanOut() gives the flow r out of the gateway c where another flow
-// leaves by its corner too: { next, corner }, the new points and the corner
-// it takes, or null where it stays (a ring, a flow that does not turn at
-// once, the corner in its direction used, no room, a way a foreign symbol
-// blocks). used: the sides the ends at c lie on, as exitSide() names them.
-// loopBack() asks it as well: such a flow does not keep its vertex.
-export function fanWay(r, c, box, used){
-  const pts = r.pts, side = exitSide(pts);
-  if (r.loop || pts.length < 3 || !side) return null;
-  const u = side[0], v = u === 'x' ? 'y' : 'x', cu = 'c' + u, cv = 'c' + v, sv = v === 'x' ? 'w' : 'h', su = u === 'x' ? 'w' : 'h';
-  if (Math.abs(pts[1][u] - pts[2][u]) > 0.5) return null;                 // the second piece has to turn
-  const dir = Math.sign(pts[2][v] - pts[1][v]), corner = v + (dir > 0 ? '+' : '-');
-  if (!dir || used.has(corner)) return null;
-  const start = { [u]: c[cu], [v]: c[cv] + dir * c[sv] / 2 };
-  let next;
-  if (pts.length === 3){                                                  // ended in the target from above or below: now from the side
-    const t = box[r.f.to], du = Math.sign(pts[1][u] - pts[0][u]), edge = t[cu] - du * t[su] / 2;
-    if ((edge - c[cu]) * du < FAN_ROOM) return null;
-    next = [start, { [u]: c[cu], [v]: t[cv] }, { [u]: edge, [v]: t[cv] }];
-  } else {
-    if (Math.abs(pts[2][v] - pts[3][v]) > 0.5) return null;
-    next = [start, { [u]: c[cu], [v]: pts[2][v] }, ...pts.slice(3)];
-  }
-  if (blocked(next[0], next[1], r.obstacles) || blocked(next[1], next[2], r.obstacles)) return null;
-  return { next, corner };
-}
-
-// Correction 5. Where a flow arrives at the same side of a task as another
-// leaves it, the two look like one double-headed arrow; the one that can
-// move goes aside.
-export function spreadPorts(routes, box){
-  const ends = [];
-  // Ends only meet ends at the same task, so the tasks are read one by one.
-  for (const [id, c] of Object.entries(box)) if (c.task) for (const { r, p, q, out } of portEnds(routes, id)){
-    const vertical = Math.abs(p.x - q.x) < 1;
-    if (!vertical && Math.abs(p.y - q.y) >= 1) continue;
-    ends.push({ p, q, c, vertical, out, side: vertical ? (p.y < c.cy ? 'top' : 'bottom') : (p.x < c.cx ? 'left' : 'right'), movable: r.pts.length >= 3 });
-  }
-  for (const a of ends) for (const b of ends){
-    if (a === b || a.c !== b.c || a.side !== b.side || a.out === b.out) continue;
-    const va = a.vertical ? a.p.x : a.p.y, vb = b.vertical ? b.p.x : b.p.y;
-    if (Math.abs(va - vb) >= 14) continue;
-    const m = a.movable ? a : b.movable ? b : null;
-    if (!m) continue;
-    const other = m === a ? vb : va, mid = m.vertical ? m.c.cx : m.c.cy, half = (m.vertical ? m.c.w : m.c.h) / 2 - 10;
-    let v = other + (other <= mid ? 18 : -18);
-    v = Math.min(mid + half, Math.max(mid - half, v));
-    if (m.vertical) m.p.x = m.q.x = v; else m.p.y = m.q.y = v;
-  }
-}
-
-// Correction 6, not the spike's. Two flows between the same two nodes:
-// Mermaid draws them a few pixels apart, and scaled they lie almost on top of
-// each other. Each after the first runs around both nodes instead: the second
-// below them, out of the bottom of its source and into the bottom of its
-// target, the third above, the fourth further below, and so on; for nodes one
-// above the other, right and left. The first level lies 20 px beyond the
-// outermost edge of the two nodes, of every symbol of their row within the
-// span and of every point of an earlier flow of the pair that keeps
-// Mermaid's route (Mermaid may run the first one 20 px beyond the row
-// already), each further one 20 px farther. A way that a foreign symbol
-// blocks is not taken.
-export function separateTwins(routes, box){
-  const seen = new Map();
-  for (const r of routes){
-    const pair = r.f.from + '\u0000' + r.f.to;
-    const earlier = seen.get(pair) || [];
-    const n = earlier.length;
-    seen.set(pair, [...earlier, r]);
-    if (!n) continue;
-    const s = box[r.f.from], t = box[r.f.to], dir = n % 2 ? 1 : -1, ring = 20 * Math.ceil(n / 2);
-    const [u, v, su, sv] = Math.abs(s.cx - t.cx) >= 1 ? ['y', 'x', 'h', 'w'] : ['x', 'y', 'w', 'h'];
-    const edge = c => c['c' + u] + dir * c[su] / 2;
-    const lo = Math.min(s['c' + v], t['c' + v]), hi = Math.max(s['c' + v], t['c' + v]);
-    const row = Object.values(box).filter(c => (Math.abs(c['c' + u] - s['c' + u]) < 1 || Math.abs(c['c' + u] - t['c' + u]) < 1) && c['c' + v] + c[sv] / 2 > lo && c['c' + v] - c[sv] / 2 < hi);
-    const edges = [s, t, ...row].map(edge).concat(earlier.filter(o => !o.twin).flatMap(o => o.pts.map(p => p[u])));
-    const out = dir > 0 ? Math.max(...edges) + ring : Math.min(...edges) - ring;
-    const at = (c, w) => ({ [u]: w, [v]: c['c' + v] });
-    const next = [at(s, edge(s)), at(s, out), at(t, out), at(t, edge(t))];
-    if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
-    r.pts.splice(0, r.pts.length, ...next);
-    r.twin = true;
-  }
-}
-
-// The vertices of the gateway c that face the symbol d: each on a side
-// beyond whose edge d lies clear of c.
-const facingVertices = (c, d) => [
-  ...(d.cy + d.h / 2 < c.cy - c.h / 2 ? [{ x: c.cx, y: c.cy - c.h / 2 }] : []),
-  ...(d.cy - d.h / 2 > c.cy + c.h / 2 ? [{ x: c.cx, y: c.cy + c.h / 2 }] : []),
-  ...(d.cx + d.w / 2 < c.cx - c.w / 2 ? [{ x: c.cx - c.w / 2, y: c.cy }] : []),
-  ...(d.cx - d.w / 2 > c.cx + c.w / 2 ? [{ x: c.cx + c.w / 2, y: c.cy }] : []),
-];
-
-// A flow back of loopBack(): within one row, its target left of its source
-// at the same height; a twin separateTwins() routed is none.
-const flowBack = (r, box) => {
-  const s = box[r.f.from], t = box[r.f.to];
-  return !r.twin && Math.abs(s.cy - t.cy) < 1 && t.cx + t.w / 2 < s.cx - s.w / 2;
-};
-
-// Correction 8, not the spike's (story 2.21). A flow that arrives at the
-// vertex of a gateway another flow leaves by looks like one double-headed
-// arrow. The arriving one moves (Ben, 2026-10-04: a crossing beside the
-// gateway and a double-headed arrow are both bad):
-//   - first it joins another arriving flow, as a merge drawn by hand: one of
-//     its runs that meets the other flow's last piece at least STUB from the
-//     vertex goes on to that piece, and the flow runs along it into the
-//     vertex the other flow docks on (one no flow leaves by);
-//   - otherwise it docks on a free vertex: the vertex on the side its piece
-//     before the end comes from, otherwise the opposite one; it runs STUB
-//     beyond the vertex and turns into it, or, where its run before already
-//     passes the vertex on that side, turns into it from there;
-//   - otherwise it stays.
-// A way a foreign symbol blocks, one whose new pieces cross or lie on another
-// flow (on the joined flow, only along its last piece) or run beside one
-// closer than NEAR where the flow did not before (a pair it had may grow
-// longer), or one that would leave its source backwards, is not taken; nor
-// a free vertex that faces the target of a flow leaving the gateway (Ben,
-// 2026-10-04). An end moved counts at its new vertex for the arrivals after
-// it. The flows back are left out on both
-// sides, as arriving, as leaving and as flows to keep off: loopBack() routes
-// them afterwards, from Mermaid's route their ends say nothing, and they keep
-// off the vertices used then.
-export function dockApart(routes, box, gateways){
-  const at = (p, q) => Math.abs(p.x - q.x) < 3 && Math.abs(p.y - q.y) < 3;
-  const same = (p, q) => Math.abs(p.x - q.x) < 0.5 && Math.abs(p.y - q.y) < 0.5;
-  const forward = routes.filter(r => !flowBack(r, box));
-  // Whether one of the pieces meets a piece of route o; skip: the index of a
-  // piece of o left out (the last piece of the flow joined).
-  const crosses = (pieces, o, skip = -1) => pieces.some(([u, v]) => o.pts.slice(1).some((w, i) => i !== skip && meets(u, v, o.pts[i], w)));
-  // Whether one of the pieces runs beside a piece of route o, closer than
-  // NEAR and not on its line: a pair the rule check calls parallel.
-  const beside = (pieces, o, skip = -1) => pieces.some(([u, v]) => o.pts.slice(1).some((w, i) => {
-    const flat = Math.abs(u.y - v.y) < 0.5, k = flat ? 'y' : 'x';
-    return i !== skip && near(u, v, o.pts[i], w) && Math.abs(u[k] - o.pts[i][k]) >= 1;
-  }));
-  const piecesOf = pts => pts.slice(1).map((q, i) => [pts[i], q]);
-  // A new pair is refused; a pair the pieces replaced or extended had (old,
-  // the flow's points from the first of them on) may grow longer.
-  const newPair = (pieces, old, e, skipOf = () => -1) => forward.some(o => o !== e.r && !beside(piecesOf(old), o) && beside(pieces, o, skipOf(o)));
-  for (const id of gateways){
-    const c = box[id];
-    const ends = portEnds(forward, id);
-    // The join into the vertex of another arriving end o: true where taken.
-    const join = e => {
-      const pts = e.r.pts;
-      for (const o of ends){
-        if (o === e || o.out || at(o.p, e.p) || ends.some(x => x.out && at(x.p, o.p))) continue;
-        const v = o.p, w = o.q;
-        // u: the axis the last piece of o keeps; t: the one it runs along.
-        const u = Math.abs(v.x - w.x) < 0.5 ? 'x' : Math.abs(v.y - w.y) < 0.5 ? 'y' : null;
-        if (!u) continue;
-        const t = u === 'x' ? 'y' : 'x';
-        for (let i = pts.length - 2; i >= 0; i--){
-          const a = pts[i], b = pts[i + 1];
-          if (Math.abs(a[t] - b[t]) >= 0.5) continue;                           // a run across the last piece of o
-          const level = a[t];
-          if (Math.abs(level - v[t]) < STUB || (level - w[t]) * (level - v[t]) > 0) continue;
-          if (!i && Math.sign(v[u] - a[u]) !== Math.sign(b[u] - a[u])) continue;  // not backwards out of the source
-          const next = pts.slice(0, i + 1), meet = { [u]: v[u], [t]: level };
-          if (!same(meet, a)) next.push(meet);
-          next.push({ x: v.x, y: v.y });
-          const pieces = next.slice(i + 1).map((pt, k) => [next[i + k], pt]);
-          if (pieces.some(([p, q]) => blocked(p, q, e.r.obstacles))) continue;
-          if (forward.some(r => r !== e.r && crosses(pieces, r, r === o.r ? r.pts.length - 2 : -1))) continue;
-          if (newPair(pieces, pts.slice(i), e, r => r === o.r ? r.pts.length - 2 : -1)) continue;
-          // Nor across its own pieces kept, but the one it goes on from.
-          if (crosses(pieces, { pts: next.slice(0, i) })) continue;
-          pts.splice(0, pts.length, ...next);
-          e.p = pts[pts.length - 1];
-          e.q = pts[pts.length - 2];
-          return true;
-        }
-      }
-      return false;
-    };
-    for (const e of ends){
-      const pts = e.r.pts, n = pts.length;
-      if (e.out || n < 3 || !ends.some(o => o.out && at(o.p, e.p))) continue;
-      if (join(e)) continue;
-      const p = pts[n - 1], q = pts[n - 2], k = pts[n - 3], m = pts[n - 4];
-      // a: the axis of the end piece; the free vertices lie on the other, b.
-      const a = Math.abs(p.y - q.y) < 1 ? 'x' : Math.abs(p.x - q.x) < 1 ? 'y' : null;
-      if (!a) continue;
-      const b = a === 'x' ? 'y' : 'x', ca = 'c' + a, cb = 'c' + b, half = c[b === 'x' ? 'w' : 'h'] / 2;
-      const dir = Math.sign(k[b] - c[cb]);
-      const vertexOn = d => ({ [a]: c[ca], [b]: c[cb] + d * half });
-      const facing = forward.filter(o => o.f.from === id).flatMap(o => facingVertices(c, box[o.f.to]));
-      const free = d => !ends.some(o => o !== e && at(o.p, vertexOn(d))) && !facing.some(f => at(f, vertexOn(d)));
-      const d = !dir ? 0 : free(dir) ? dir : free(-dir) ? -dir : 0;
-      if (!d) continue;
-      const vertex = vertexOn(d);
-      // head: the points kept; tail: the new ones, the turn into the vertex
-      // and the vertex, or the run STUB beyond it before.
-      let head, tail;
-      if (m && d === dir && Math.abs(m[b] - k[b]) < 1 && (k[b] - vertex[b]) * d >= STUB && Math.min(m[a], k[a]) <= c[ca] && c[ca] <= Math.max(m[a], k[a])){
-        head = pts.slice(0, n - 3);
-        tail = [{ [a]: c[ca], [b]: k[b] }, vertex];
-      } else {
-        const level = c[cb] + d * (half + STUB);
-        if (!m && Math.sign(level - k[b]) !== Math.sign(q[b] - k[b])) continue;
-        head = pts.slice(0, n - 2);
-        tail = [{ [a]: k[a], [b]: level }, { [a]: c[ca], [b]: level }, vertex];
-      }
-      // No point twice: a turn on the point before it goes.
-      const next = head.slice();
-      for (const pt of tail) if (!same(pt, next[next.length - 1])) next.push(pt);
-      // The new pieces: from the turn into the vertex, or from k on.
-      const from = tail.length === 2 ? next.length - 2 : head.length - 1;
-      const pieces = next.slice(from + 1).map((pt, i) => [next[from + i], pt]);
-      if (pieces.some(([u, v]) => blocked(u, v, e.r.obstacles))) continue;
-      if (forward.some(o => o !== e.r && crosses(pieces, o))) continue;
-      if (newPair(pieces, pts.slice(tail.length === 2 ? n - 4 : n - 3), e)) continue;
-      pts.splice(0, n, ...next);
-      e.p = pts[pts.length - 1];
-      e.q = pts[pts.length - 2];
-    }
-  }
-}
-
-// Two pieces, each horizontal or vertical, that cross or lie on each other.
-function meets(a, b, c, d){
-  const flat = (p, q) => Math.abs(p.y - q.y) < 0.5;
-  const lo = (p, q, k) => Math.min(p[k], q[k]) - 0.5, hi = (p, q, k) => Math.max(p[k], q[k]) + 0.5;
-  if (flat(a, b) && flat(c, d)) return Math.abs(a.y - c.y) < 1 && lo(a, b, 'x') < hi(c, d, 'x') && lo(c, d, 'x') < hi(a, b, 'x');
-  if (!flat(a, b) && !flat(c, d)) return Math.abs(a.x - c.x) < 1 && lo(a, b, 'y') < hi(c, d, 'y') && lo(c, d, 'y') < hi(a, b, 'y');
-  const [h, v] = flat(a, b) ? [[a, b], [c, d]] : [[c, d], [a, b]];
-  return v[0].x > lo(h[0], h[1], 'x') && v[0].x < hi(h[0], h[1], 'x') && h[0].y > lo(v[0], v[1], 'y') && h[0].y < hi(v[0], v[1], 'y');
-}
-
-// Two parallel pieces that run less than NEAR apart and side by side.
-function near(a, b, c, d){
-  const flat = (p, q) => Math.abs(p.y - q.y) < 0.5;
-  if (flat(a, b) !== flat(c, d)) return false;
-  const [u, v] = flat(a, b) ? ['y', 'x'] : ['x', 'y'];
-  return Math.abs(a[u] - c[u]) < NEAR && Math.min(a[v], b[v]) < Math.max(c[v], d[v]) && Math.min(c[v], d[v]) < Math.max(a[v], b[v]);
-}
-
-// The distance between two levels of flows back on one side of a row,
-// measured on a process with many (story 2.20): the smallest at which the
-// lines and their labels read apart.
-export const LEVEL_STEP = 16;
-
-// Correction 7, not the spike's (story 2.20). A flow back within one row, its
-// target left of its source at the same height: Mermaid routes it through
-// the row, and scaled it lies on the symbols' edges or ties a knot at its
-// gateway. It runs around the row instead: out of the top or the bottom of
-// its source, along a level beyond the row's symbols, into the top or the
-// bottom of its target.
-//   - The level: 20 px beyond the outermost edge of the row's symbols within
-//     the flow's span; a flow back on the same side whose span overlaps
-//     (less than SPAN_TOLERANCE apart) takes the next level out, LEVEL_STEP
-//     farther. The flows back are taken shortest first, so a nested one lies
-//     inside; those with disjoint spans share the innermost level. Where a
-//     level out, up to three, has fewer conflicts, the ring takes that one.
-//   - The side: the one with fewer conflicts at its level (conflictScore());
-//     at a tie, the side Mermaid's route kept to (r.loopSide: 1 below, -1
-//     above). A way a foreign symbol blocks is not taken.
-//   - The ports (portCandidates()): a circle and a diamond on their top or
-//     bottom; a diamond whose vertex there another flow uses on a side
-//     corner instead, STUB out and then to the level, the corner facing the
-//     other end first, the one away from it at one conflict more; a task at
-//     the middle of the side, or, when another flow docks at the middle,
-//     20 px in from a corner: the one with fewer conflicts, at a tie the one
-//     facing the other end. The level spans from the stub of a side corner.
-//     The side is chosen with every end counted as using its port; the
-//     ports on it with the ends that stay (below).
-//   - A twin separateTwins() routed (r.twin) is left as it is; it runs
-//     before, so its ring is one of the flows a flow back keeps off.
-//   - lanes: the boxes [x, y, w, h] of every lane. A ring that comes closer
-//     than RING_CLEARANCE to the border with another lane makes its lane grow
-//     there (growLane()). Beyond the outer lanes the growth at the end of
-//     layoutGeometry() makes room.
-// Returns { up, down }: by how much the lanes grew upwards and downwards.
-export function loopBack(routes, box, lanes = []){
-  const grown = { up: 0, down: 0 };
-  const back = routes.filter(r => flowBack(r, box)).sort((p, q) => Math.abs(box[p.f.from].cx - box[p.f.to].cx) - Math.abs(box[q.f.from].cx - box[q.f.to].cx));
-  if (!back.length) return grown;
-  const fixed = routes.filter(r => !back.includes(r));
-  const placed = [];
-  for (const r of back){
-    const s = box[r.f.from], t = box[r.f.to];
-    // The flows a ring keeps off: all but the flows back not yet placed.
-    const others = fixed.concat(placed.map(p => p.r));
-    const at = (p, q) => Math.abs(p.x - q.x) < 2 && Math.abs(p.y - q.y) < 2;
-    // The best way on the side dir, or null: used, the end points of the
-    // other flows taken as used at s and at t; othersFrom(a), the flows a
-    // ring from the port a keeps off.
-    const wayOn = (dir, usedS, usedT, othersFrom, banned = []) => {
-      let side = null;
-      for (const a of portCandidates(s, dir, t.cx, usedS)) for (const b of portCandidates(t, dir, s.cx, usedT.concat(banned)).filter(b => !banned.some(f => at(f, b)))){
-        // A ring from a gateway's corner runs its stub out first: its level
-        // spans from there.
-        const ax = a.stub ? a.stub.x : a.x, bx = b.stub ? b.stub.x : b.x;
-        const lo = Math.min(ax, bx), hi = Math.max(ax, bx);
-        const row = Object.values(box).filter(c => Math.abs(c.cy - s.cy) < 1 && c.cx + c.w / 2 > lo && c.cx - c.w / 2 < hi);
-        let y = (dir > 0 ? Math.max(...row.map(c => c.cy + c.h / 2)) : Math.min(...row.map(c => c.cy - c.h / 2))) + dir * 20;
-        for (const p of placed){
-          if (p.dir !== dir || Math.abs(p.cy - s.cy) >= 1 || p.lo >= hi + SPAN_TOLERANCE || lo >= p.hi + SPAN_TOLERANCE) continue;
-          y = dir > 0 ? Math.max(y, p.y + LEVEL_STEP) : Math.min(y, p.y - LEVEL_STEP);
-        }
-        // The level, or up to three farther out where that has fewer conflicts.
-        for (let k = 0; k < 4 && !(side && !side.conflicts); k++){
-          const out = y + dir * k * LEVEL_STEP;
-          const next = [{ x: a.x, y: a.y }, ...(a.stub ? [{ ...a.stub }] : []), { x: ax, y: out }, { x: bx, y: out }, ...(b.stub ? [{ ...b.stub }] : []), { x: b.x, y: b.y }];
-          if (next.slice(1).some((q, i) => blocked(next[i], q, r.obstacles))) continue;
-          // The corner away from the other end counts one conflict more.
-          const conflicts = conflictScore(next, othersFrom(a), [[s, a, usedS], [t, b, usedT]]) + (a.away ? 1 : 0) + (b.away ? 1 : 0);
-          if (!side || conflicts < side.conflicts) side = { next, conflicts, dir, y: out, lo, hi, a };
-        }
-      }
-      return side;
-    };
-    // The side: every end at s and at t counts as using its port (entry 22
-    // changes how the side is chosen).
-    const endsS = portEnds(others, r.f.from), endsT = portEnds(others, r.f.to);
-    let best = null;
-    const mermaid = r.loopSide || -1;
-    for (const dir of [mermaid, -mermaid]){
-      const side = wayOn(dir, endsS.map(e => e.p), endsT.map(e => e.p), () => others);
-      if (side && (!best || side.conflicts < best.conflicts)) best = side;
-    }
-    if (!best) continue;
-    // The ports on that side (Ben, 2026-10-04): a vertex is used by an end
-    // that stays there. At the source not by a flow out that fanOut() moves
-    // to a free corner once the ring leaves by its vertex too, on a way that
-    // crosses and lies on no other flow; from that vertex the ring keeps off
-    // the flow's new way; at most one such flow a corner. At a gateway the
-    // ring flows back to, its vertex on the ring's side is used by flows out
-    // only, since arriving ones merge with the ring there; its side corners
-    // stay used by arriving flows as well. A vertex of that gateway that
-    // faces the target of a flow leaving it is not taken, except where no
-    // other port of the target is free: then the ring takes it after all
-    // (the side chosen above, with its port).
-    const sides = new Set(endsS.map(e => exitSide([e.p, e.q])));
-    const clear = (way, own) => !others.some(o => o !== own && o.pts.slice(1).some((q, i) => way.slice(1).some((w, k) => meets(way[k], w, o.pts[i], q))));
-    // At most one flow to a corner, as in fanOut().
-    const leaving = [];
-    if (s.gateway) for (const e of endsS.filter(e => e.out)){
-      const way = fanWay(e.r, s, box, sides);
-      if (way && clear(way.next, e.r)){ leaving.push({ e, way }); sides.add(way.corner); }
-    }
-    const movedBy = a => leaving.filter(m => at(m.e.p, a));
-    const othersFrom = a => movedBy(a).length ? others.map(o => { const m = movedBy(a).find(x => x.e.r === o); return m ? { ...o, pts: m.way.next } : o; }) : others;
-    const vertexT = { x: t.cx, y: t.cy + best.dir * t.h / 2 };
-    best = wayOn(best.dir, endsS.filter(e => !leaving.some(m => m.e === e)).map(e => e.p), endsT.filter(e => e.out || !t.gateway || !at(e.p, vertexT)).map(e => e.p), othersFrom,
-      t.gateway ? endsT.filter(e => e.out).flatMap(e => facingVertices(t, box[e.r.f.to])) : []) || best;
-    if (!best) continue;
-    r.pts.splice(0, r.pts.length, ...best.next);
-    r.loop = true;
-    // The flow out the ring takes the vertex of moves to its corner now, as
-    // fanOut() would move it, so that the rings after this one see it there.
-    for (const m of movedBy(best.a)) m.e.r.pts.splice(0, m.e.r.pts.length, ...m.way.next);
-    const ring = { r, dir: best.dir, y: best.y, lo: best.lo, hi: best.hi, cy: s.cy };
-    placed.push(ring);
-    const need = growLane(ring, lanes, box, routes, placed);
-    if (ring.dir > 0) grown.down += need; else grown.up += need;
-  }
-  return grown;
-}
-
-// The ports a ring may take on one side of the symbol c (dir: 1 its bottom,
-// -1 its top): the middle; on a task where another flow docks at the middle
-// (used: the end points of the other flows at c), 20 px in from either
-// corner, the one facing the ring's other end (toward: its x) first. On a
-// gateway whose vertex there another flow uses, its free side corners
-// first, each with a stub STUB out (stub: { x, y }), from where the ring
-// turns to its level: the one facing the other end, then the one away from
-// it (away: true, one conflict more in loopBack()), then the used vertex,
-// which conflictScore() counts. An event keeps its vertex.
-export function portCandidates(c, dir, toward, used){
-  const y = c.cy + dir * c.h / 2;
-  const taken = p => used.some(q => Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2);
-  if (c.gateway && taken({ x: c.cx, y })){
-    const facing = Math.sign(toward - c.cx) || 1;
-    const corners = [facing, -facing].map(sign => ({ x: c.cx + sign * c.w / 2, y: c.cy, stub: { x: c.cx + sign * (c.w / 2 + STUB), y: c.cy }, ...(sign !== facing ? { away: true } : {}) }));
-    return [...corners.filter(k => !taken(k)), { x: c.cx, y }];
-  }
-  if (!c.task || !used.some(p => Math.abs(p.y - y) < 1 && Math.abs(p.x - c.cx) < 14)) return [{ x: c.cx, y }];
-  const facing = Math.sign(toward - c.cx) || 1;
-  return [facing, -facing].map(sign => ({ x: c.cx + sign * (c.w / 2 - 20), y }));
-}
-
-// The conflicts of a ring's way next ([{ x, y }, …]) with the flows others:
-// one per piece of another flow it crosses, lies on or runs beside closer
-// than NEAR, per piece of its own; and one per port of the ring on a gateway
-// or an event that another flow uses. ports: [[c, port, used]], the ring's
-// two ends, each with its symbol and the end points of the other flows there.
-export function conflictScore(next, others, ports){
-  let conflicts = 0;
-  for (const o of others) for (let i = 1; i < o.pts.length; i++) for (let j = 1; j < next.length; j++){
-    if (meets(next[j - 1], next[j], o.pts[i - 1], o.pts[i]) || near(next[j - 1], next[j], o.pts[i - 1], o.pts[i])) conflicts++;
-  }
-  for (const [c, p, used] of ports) if (!c.task && used.some(q => Math.abs(q.x - p.x) < 2 && Math.abs(q.y - p.y) < 2)) conflicts++;
-  return conflicts;
-}
 
 // The lane of a ring grows where the ring comes closer than RING_CLEARANCE
 // to the border with another lane: everything beyond the border moves away
@@ -942,10 +296,10 @@ export function growLane(ring, lanes, box, routes, placed){
 // border (a growth can bring a label that lay wholly in the next lane across
 // the border that moved), so that the order of the labels does not change
 // the result. A label beyond an outer lane's outer border grows nothing
-// here: the frame grows at the end of layoutGeometry(). labels: [{ boxes,
+// here: the frame grows afterwards (finishLabelsAndFrame()). labels: [{ boxes,
 // anchor }], boxes the arrays [x, y, w, h] that move together, the first
-// the label's text, which is checked; lanes: the boxes of every lane, as for
-// loopBack(). Returns { up, down }: by how much the lanes grew upwards and
+// the label's text, which is checked; lanes: the boxes of every lane.
+// Returns { up, down }: by how much the lanes grew upwards and
 // downwards.
 export function labelRoom(labels, lanes, box, routes){
   const grown = { up: 0, down: 0 };
@@ -1104,100 +458,1597 @@ export function labelPlaces(c, size, gateway){
   return places;
 }
 
-// Mermaid's positions as the diagram part's coordinates.
-// raw: what Mermaid's SVG says, in its own units:
-//   nodes: { key: { cx, cy, w, h } }   the centre and size of each node, and
-//                                      of the stand-in of each empty lane
-//   lanes: { key: { x1, y1, x2, y2 } } the box of each lane, title included
-//   edges: [[{ x, y }, …]]             the points of each flow, in the order of model.flows
+// The diagram part's coordinates: the nodes on the grid, the flows routed on
+// it, the labels placed.
+// raw: what Mermaid's SVG says, in its own units; read is only
+//   nodes: { key: { cx, … } }   the centre of each node: centres less than a
+//                               unit apart share a column, and the columns
+//                               keep Mermaid's order
 // Returns { pool, lanes, nodes, labels, flows, flowLabels }: the pool's box or
 // null, and per element id its box [x, y, w, h], its label box, or the
-// waypoints of a flow [[x, y], …]. Throws where raw lacks a node, a lane or a
-// flow of the model.
+// waypoints of a flow [[x, y], …]. Throws where raw lacks a node of the model.
 // measure: the size { w, h } a label's text takes as bpmn-js draws it; the
 // page gives one that asks bpmn-js's text renderer in the document's font
 // (src/app/bpmn.js), the tests and anything without a page keep the estimate
 // labelSize().
-export function layoutGeometry(model, raw, measure = labelSize){
-  const rawOf = {};
+// options: which of the rules R1–R16 apply, keyed as in DEFAULT_RULES; a key
+// left out keeps its default, so { startAlign: false } leaves out R15 in this
+// call only. R7 and the router's second pass always apply.
+export function layoutGeometry(model, raw, measure = labelSize, options = DEFAULT_RULES){
+  const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, options[k] ?? DEFAULT_RULES[k]]));
+  return layoutGrid(model, raw, measure, rules);
+}
+
+// ---------- the grid: Mermaid's columns, rows in each lane, routes in channels ----------
+// Mermaid gives the order of the columns and each node's lane; the rules give
+// nodes rows above and below the backbone of their lane and gateways the lane
+// of their predecessor; a router draws every flow on the grid (cells, the
+// channels between rows, the gaps between columns). The rules that can be left
+// out, all on by default; frozen, since every call starts from it. Marked
+// pure, so that no bundle that leaves it unused keeps the call (the reader
+// bundle reaches this module through src/app/diagrams.js).
+export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
+  gatewayLane: true,  // R1  ein Gateway oder End-Ereignis steht in der Bahn seines nächsten Vorgängers; ein paralleler Join in der seines Splits; ein paralleler Split mit Armen in drei oder mehr Bahnen in der mittleren
+  pathRows: true,     // R2  zwei Zweige einer Entscheidung, die in einer Bahn weiterlaufen, bekommen eigene Zeilen
+  loopAbove: true,    // R3  die Schritte einer Schleife stehen in der Zeile über ihrem Gateway, von dort nach links
+  branchBelow: true,  // R4  ein Schritt, der die Bahn verlässt, während ein anderer Zweig in der Zeile bleibt, steht in der Spalte des Gateways auf der Seite der Zielbahn
+  fan: true,          // R5  Fächer: die Zweige eines parallelen Blocks nehmen in anderen Bahnen die Zeile, die dem Split am nächsten liegt; sie verlassen den Split senkrecht und gehen senkrecht in den Join, nur der nächste Arm waagerecht über Ost- und Westport, wenn keiner in der Zeile der Gateways liegt
+  jumpAbove: true,    // R6  der eine Schritt zwischen dem Ausgang einer Schleife und einem Merge steht in der Spalte des Merge
+  block: true,        // R8  ein paralleler Block ist so breit wie der Raum zwischen seinen Gateways: jedes Zweigelement steht waagerecht zwischen Split und Join, kein fremder Knoten darin, fremde Flüsse möglichst außen herum; der Knoten davor und der danach nie in der Spalte von Split bzw. Join
+  rowProbe: true,     // R10 Zeilenprobe: bei Kreuzungen jede Zeile, die R2 einem Zweig gibt, auf der Gegenseite probieren; nur übernehmen, wenn es echt weniger Kreuzungen werden
+  firstColumn: true,  // R9  (Spike 2.26, Ben) „die jeweils ersten Shapes der Äste eines parallelen Gateways liegen zentriert auf derselben X-Koordinate, sind also untereinander“
+  crossProbe: true,   // R12 Kreuzungsprobe: ein Zweig nach einer exklusiven Entscheidung in eine zusätzliche Zeile, ein Merge in eine andere Bahn; nur bei echt weniger Kreuzungen
+  combProbe: true,    // R14 Kamm: bei einer exklusiven Verzweigung mit drei oder mehr Zweigen die Köpfe in verschiedenen Zeilen probeweise in eine Spalte (R9 als Probe)
+  stagger: true,      // R16 zwei Gateways übereinander in einer Spalte: eines probeweise eine Spalte weiter
+  stepAside: true,    // R13 ein Nachfolger in der Spalte seines Vorgängers, zu dem der Fluss drei oder mehr Knicke braucht, probeweise eine Spalte weiter; ebenso der nahe von zwei Geschwistern auf derselben Seite einer Verzweigung
+  startAlign: true,   // R15 Start-Ereignisse in der ersten Spalte, jedes in einer eigenen Zeile, um ihren Nachfolger verteilt
+  endAlign: true,     // R11 Enden ausrichten: ein End-Ereignis in die letzte Spalte, wenn seine Zeile dorthin frei ist und das Bild nicht schlechter wird; weiche Empfehlung
+});
+
+// Maße des Rasters.
+const GAP_BASE = 48;        // eine Spaltenlücke ohne Strecken
+const CHANNEL_BASE = 44;    // ein Kanal zwischen zwei Zeilen ohne Strecken
+const EDGE_BASE = 32;       // der Kanal am Rand einer Bahn ohne Strecken
+const TRACK = 16;           // Abstand zweier Strecken in einem Kanal
+const TRACK_MARGIN = 12;    // Rand eines Kanals neben seiner äußersten Strecke
+const EMPTY_ROW = 40;       // die Zeile einer leeren Bahn
+const PORT_STEP = 30;       // Abstand zweier Enden an einer Seite einer Task
+const BEND = 0.005;         // Kosten eines Knicks im Router: ein halber Rasterschritt (Länge / 100)
+
+// Das Raster aus Modell und Mermaids Rohpositionen:
+//   cells: id → { n, lane, row, col, pin }   Bahnindex, Zeile (Zahl, 0 das Rückgrat, negativ darüber), Spalte (Mermaids Rang)
+//   fwdOut, fwdIn: id → [flow]  Vorwärtsflüsse (Rückkanten per Tiefensuche ausgenommen); back: Set der Rückkanten-Ids
+function buildGrid(model, raw){
+  const laneOf = new Map();
+  model.lanes.forEach((l, i) => l.nodes.forEach(id => laneOf.set(id, i)));
+  const xs = [];
   for (const n of model.nodes){
     const r = raw.nodes[n.key];
     if (!r) throw new Error('Mermaid hat das Element „' + n.id + '“ nicht angeordnet.');
-    const event = n.type === 'start' || n.type === 'end' || n.type === 'inter';
-    rawOf[n.id] = { ...r, size: SIZE[n.type], reserveX: event ? EVENT_LABEL : SIZE[n.type][0] };
+    if (!xs.some(x => Math.abs(x - r.cx) < 1)) xs.push(r.cx);
   }
-  const all = Object.values(rawOf);
-  const mapX = axisMap(all.map(r => ({ lo: r.cx - r.w / 2, hi: r.cx + r.w / 2, size: r.reserveX })), 36, 70);
-  // The stand-in of an empty lane keeps a row of 40 px.
-  const holds = model.lanes.filter(l => l.hold && raw.nodes[l.hold]).map(l => raw.nodes[l.hold]);
-  const mapY = axisMap(all.map(r => ({ lo: r.cy - r.h / 2, hi: r.cy + r.h / 2, size: r.size[1] }))
-    .concat(holds.map(r => ({ lo: r.cy - r.h / 2, hi: r.cy + r.h / 2, size: 40 }))), 36, 70);
+  xs.sort((a, b) => a - b);
+  const cells = new Map();
+  for (const n of model.nodes){
+    const r = raw.nodes[n.key];
+    cells.set(n.id, { n, lane: laneOf.get(n.id) ?? 0, row: 0, col: xs.findIndex(x => Math.abs(x - r.cx) < 1), pin: null });
+  }
+  const out = new Map(model.nodes.map(n => [n.id, []]));
+  for (const f of model.flows) out.get(f.from).push(f);
+  // Rückkanten: Tiefensuche von den Startknoten aus, in der Reihenfolge der Flüsse.
+  const state = new Map(), back = new Set();
+  const visit = id => {
+    state.set(id, 1);
+    for (const f of out.get(id)){
+      const s = state.get(f.to);
+      if (s === 1) back.add(f.id); else if (!s) visit(f.to);
+    }
+    state.set(id, 2);
+  };
+  const hasIn = new Set(model.flows.map(f => f.to));
+  for (const n of model.nodes) if (!hasIn.has(n.id) && !state.has(n.id)) visit(n.id);
+  for (const n of model.nodes) if (!state.has(n.id)) visit(n.id);
+  const fwdOut = new Map(model.nodes.map(n => [n.id, []])), fwdIn = new Map(model.nodes.map(n => [n.id, []]));
+  for (const f of model.flows){
+    if (back.has(f.id)) continue;
+    fwdOut.get(f.from).push(f); fwdIn.get(f.to).push(f);
+  }
+  const reach = new Map();
+  const reachable = id => {
+    if (reach.has(id)) return reach.get(id);
+    const seen = new Set(); const stack = [id];
+    while (stack.length){ const x = stack.pop(); for (const f of fwdOut.get(x)) if (!seen.has(f.to)){ seen.add(f.to); stack.push(f.to); } }
+    reach.set(id, seen);
+    return seen;
+  };
+  const at = (lane, row, col) => { for (const c of cells.values()) if (c.lane === lane && c.row === row && c.col === col) return c; return null; };
+  // Die nächste Zeile von base aus in Richtung dir (−1 darüber, 1 darunter), deren Zelle in col frei ist:
+  // die nächste vorhandene Zeile, oder eine neue dazwischen, wo deren Zelle besetzt ist.
+  const rowsOf = lane => [...new Set([...cells.values()].filter(c => c.lane === lane).map(c => c.row))].sort((a, b) => a - b);
+  const newRow = (lane, base, dir, col) => {
+    const rows = rowsOf(lane);
+    const next = dir < 0 ? rows.filter(r => r < base).pop() : rows.find(r => r > base);
+    if (next === undefined) return base + dir;
+    if (!at(lane, next, col)) return next;
+    let r = (base + next) / 2;
+    while (at(lane, r, col)) r = (base + r) / 2;
+    return r;
+  };
+  // Eine neue Zeile direkt neben base in Richtung dir, immer eine eigene (für Stapel).
+  const freshRow = (lane, base, dir) => {
+    const rows = rowsOf(lane);
+    const next = dir < 0 ? rows.filter(r => r < base).pop() : rows.find(r => r > base);
+    return next === undefined ? base + dir : (base + next) / 2;
+  };
+  const isSplit = id => fwdOut.get(id).length >= 2;
+  return { cells, fwdOut, fwdIn, back, reachable, at, rowsOf, newRow, freshRow, isSplit, lanes: model.lanes.length };
+}
 
-  const di = { pool: null, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {} };
-  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
-  // Every lane's box, the synthetic ones too, which are not written.
-  const laneBox = {};
-  for (const l of model.lanes){
-    const r = raw.lanes[l.key];
-    if (!r) throw new Error('Mermaid hat die Bahn „' + (l.name || l.id) + '“ nicht angeordnet.');
-    const a = mapX(r.x1), b = mapY(r.y1), c = mapX(r.x2), d = mapY(r.y2);
-    laneBox[l.key] = [R(a), R(b), R(c - a), R(d - b)];
-    if (!l.synthetic) di.lanes[l.id] = laneBox[l.key];
-    x1 = Math.min(x1, a); y1 = Math.min(y1, b); x2 = Math.max(x2, c); y2 = Math.max(y2, d);
+const byCol = (g, ids) => [...ids].sort((p, q) => g.cells.get(p).col - g.cells.get(q).col);
+
+// R1. Ein Gateway oder ein End-Ereignis steht in der Bahn seines nächsten
+// Vorwärtsvorgängers (der mit der größten Spalte vor ihm); ein paralleler
+// Join in der Bahn des parallelen Splits, von dem aus alle seine Vorgänger
+// erreichbar sind. End-Ereignisse immer (Ben, 2026-10-05: „das Ende ist ein
+// Event, keine Eigenschaft einer Rolle“). Garantie: der Fluss vom Vorgänger
+// ins Gateway oder ins Ende wechselt die Bahn nicht; der Weg wechselt die
+// Bahn erst nach der Entscheidung. In Spaltenfolge, so steht der Vorgänger
+// eines Endes schon fest, wenn er ein Gateway ist. Ausnahme (Ben, 2026-10-05,
+// morgenroutine: „Bei 3 Lanes bietet sich eine Zentrierung der parallelen Gateways
+// an“): ein paralleler Split, dessen Arme in drei oder mehr Bahnen beginnen, steht
+// in der mittleren dieser Bahnen (bei gerader Zahl der oberen der beiden mittleren);
+// so hat jeder Arm einen eigenen Port. Sein Join folgt ihm. Zwischenereignisse
+// bleiben in ihrer Bahn (Ben: sie gehören der Rolle, vor allem Throw und Catch).
+function ruleGatewayLane(g, model){
+  for (const id of byCol(g, model.nodes.filter(n => n.type === 'gateway' || n.tag === 'endEvent').map(n => n.id))){
+    const c = g.cells.get(id), preds = g.fwdIn.get(id);
+    if (c.n.tag === 'parallelGateway' && g.isSplit(id)){
+      const armLanes = [...new Set(g.fwdOut.get(id).map(f => g.cells.get(f.to).lane))].sort((a, b) => a - b);
+      if (armLanes.length >= 3){ c.lane = armLanes[Math.floor((armLanes.length - 1) / 2)]; continue; }
+    }
+    if (!preds.length) continue;
+    let from = null;
+    if (c.n.tag === 'parallelGateway' && preds.length >= 2){
+      const splits = model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id) && g.cells.get(n.id).col < c.col && preds.every(p => p.from === n.id || g.reachable(n.id).has(p.from)));
+      if (splits.length) from = byCol(g, splits.map(n => n.id)).pop();
+    }
+    if (!from) from = preds.reduce((m, p) => g.cells.get(p.from).col > g.cells.get(m).col ? p.from : m, preds[0].from);
+    c.lane = g.cells.get(from).lane;
+    // In die Bahn seiner Zweige (Ben, 2026-10-05, x-tm1: „Gateways zentriert“, x-rg3: „Ereignisbasiertes Gateway
+    // zentriert.“): ein Split, dessen drei oder mehr Zweige alle in derselben anderen Bahn beginnen, steht in dieser
+    // Bahn; R9 setzt ihn in die mittlere Zeile seiner Zweige. Nur Köpfe, deren Bahn feststeht (keine Gateways, keine
+    // Enden); ein Gateway darf in jeder Bahn liegen, Zwischenereignisse wechseln sie nie.
+    const heads = g.fwdOut.get(id).map(f => g.cells.get(f.to));
+    if (c.n.type === 'gateway' && heads.length >= 3 && heads.every(h => h.n.type !== 'gateway' && h.n.tag !== 'endEvent') && heads.every(h => h.lane === heads[0].lane) && heads[0].lane !== c.lane){
+      c.lane = heads[0].lane;
+      (g.laneSplits ||= new Set()).add(id);
+    }
   }
-  if (model.pool) di.pool = [R(x1 - HEAD), R(y1), R(x2 - x1 + HEAD), R(y2 - y1)];
+}
+
+// Die Zweige einer Verzweigung G: je Ausgang die vorwärts erreichbaren
+// Knoten ohne die, die auch ein anderer Zweig erreicht (den Merge und alles danach).
+function branchRegions(g, id){
+  const regions = g.fwdOut.get(id).map(f => new Set([f.to, ...g.reachable(f.to)]));
+  const count = new Map();
+  for (const r of regions) for (const x of r) count.set(x, (count.get(x) || 0) + 1);
+  return regions.map((r, i) => ({ flow: g.fwdOut.get(id)[i], nodes: [...r].filter(x => count.get(x) === 1) }));
+}
+
+// Die parallelen Blöcke: je paralleler Split P der nächste parallele Join J,
+// von P aus sind alle seine Vorgänger erreichbar; inner: die Knoten der
+// Zweige zwischen beiden. [{ P, J, inner: Set }]
+function parallelBlocks(g, model){
+  const out = [];
+  for (const n of model.nodes){
+    if (n.tag !== 'parallelGateway' || !g.isSplit(n.id)) continue;
+    const joins = model.nodes.filter(m => m.tag === 'parallelGateway' && g.fwdIn.get(m.id).length >= 2 && g.cells.get(m.id).col > g.cells.get(n.id).col && g.fwdIn.get(m.id).every(f => f.from === n.id || g.reachable(n.id).has(f.from)));
+    if (!joins.length) continue;
+    const J = byCol(g, joins.map(m => m.id))[0];
+    const inner = new Set(branchRegions(g, n.id).flatMap(r => r.nodes).filter(x => x !== J && !g.reachable(J).has(x)));
+    out.push({ P: n.id, J, inner });
+  }
+  return out;
+}
+
+// R2. Zwei Zweige einer Entscheidung, die beide in einer Bahn weiterlaufen
+// (je mindestens zwei Knoten dort, Schleifenschritte nach R3 nicht gezählt),
+// bekommen dort eigene Zeilen: es bleibt der Zweig, aus dem eine Rückkante in
+// die Zeile der Bahn führt, sonst der mit den meisten Knoten in der Bahn,
+// sonst der erste; jeder weitere nimmt eine Zeile auf der Seite, die der Bahn
+// des Gateways zugewandt ist (in der eigenen Bahn: darunter). Garantie: zwei
+// Wege einer Entscheidung stehen nie in einer Zeile.
+function rulePathRows(g, model){
+  const loopSteps = new Set();
+  for (const f of model.flows) if (g.back.has(f.id)){ const ch = loopChain(g, f); if (ch) ch.steps.forEach(s => loopSteps.add(s)); }
+  for (const id of byCol(g, model.nodes.filter(n => g.isSplit(n.id)).map(n => n.id))){
+    const G = g.cells.get(id), regions = branchRegions(g, id);
+    for (let lane = 0; lane < g.lanes; lane++){
+      const here = regions.map(r => ({ all: r.nodes, nodes: r.nodes.filter(x => { const c = g.cells.get(x); return c.lane === lane && c.row === 0 && !loopSteps.has(x); }) })).filter(r => r.nodes.length >= 2);
+      if (here.length < 2) continue;
+      // Der Zweig, aus dem eine Rückkante in die Zeile der Bahn führt (auch aus einem Schleifenschritt), bleibt.
+      const loops = here.map(r => r.all.some(x => model.flows.some(f => g.back.has(f.id) && f.from === x && g.cells.get(f.to).lane === lane && g.cells.get(f.to).row === 0 && !r.all.includes(f.to))));
+      let stay = loops.indexOf(true);
+      if (stay < 0) stay = here.reduce((m, r, i) => r.nodes.length > here[m].nodes.length ? i : m, 0);
+      const dir = lane === G.lane ? 1 : G.lane > lane ? 1 : -1;
+      let k = 0;
+      here.forEach((r, i) => {
+        if (i === stay) return;
+        k++;
+        for (const x of r.nodes) g.cells.get(x).row = dir * k;
+        // Für R10: die Zeile, die R2 hier angelegt hat, mit ihren Knoten.
+        (g.pathRowGroups = g.pathRowGroups || []).push({ lane, row: dir * k, ids: r.nodes.slice() });
+      });
+    }
+  }
+}
+
+// Die Schleife einer Rückkante u→v: die Kette von u rückwärts über eindeutige
+// Vorwärtsvorgänger bis zur Verzweigung G, die sie öffnet; { G, steps } mit
+// den Schritten in Flussrichtung, oder null (keine Verzweigung, keine Task darin).
+function loopChain(g, f){
+  const steps = [];
+  let x = f.from;
+  while (!g.isSplit(x)){
+    if (steps.includes(x) || x === f.to) return null;
+    steps.unshift(x);
+    const preds = g.fwdIn.get(x);
+    if (preds.length !== 1) return null;
+    x = preds[0].from;
+  }
+  // Ein Schritt ist eine Task oder ein Zwischenereignis (Ben, 2026-10-05, ereignis: „Pfad der zu End-Event führt
+  // sollte für Ost-Gate präferiert werden“; die Warteschleife über einen Timer geht aus der Zeile, der Weg zum Ende
+  // bleibt gerade). Eine Kette nur aus Gateways ist keine Schleife.
+  if (!steps.some(s => ['task', 'inter'].includes(g.cells.get(s).n.type))) return null;
+  // Führt der Zweig der Kette hinter ihr zu einem Ende, das kein anderer Zweig
+  // von G erreicht, ist die Kette der Weg dorthin, keine Schleife.
+  const others = new Set(g.fwdOut.get(x).filter(o => o.to !== steps[0]).flatMap(o => [o.to, ...g.reachable(o.to)]));
+  const beyond = [...g.reachable(steps[0])].filter(y => !steps.includes(y) && !others.has(y));
+  if (beyond.some(y => g.cells.get(y).n.type === 'end')) return null;
+  return { G: x, steps };
+}
+
+// R3. Die Schritte einer Schleife stehen in der Zeile über ihrem Gateway: der
+// erste in dessen Spalte, jeder weitere eine Spalte weiter links, bis zur
+// Spalte nach dem Ziel der Rückkante; was nicht mehr hineinpasst, in der
+// Zeile darüber wieder von der Spalte des Gateways aus. Nur Schritte in der
+// Bahn des Gateways. Garantie: ein Schleifenschritt kostet keine Spalte des
+// Rückgrats; die Schleife ist ein Rechteck über ihrer Zeile.
+function ruleLoopAbove(g, model){
+  for (const f of model.flows){
+    if (!g.back.has(f.id)) continue;
+    const chain = loopChain(g, f);
+    if (!chain) continue;
+    const G = g.cells.get(chain.G), target = g.cells.get(f.to);
+    // Die Zeile über der des Gateways in dessen Bahn, über der des Ziels in dessen Bahn.
+    const baseOf = lane => lane === G.lane ? G : lane === target.lane ? target : null;
+    const rows = new Map(), colAt = new Map();
+    for (const s of chain.steps){
+      const c = g.cells.get(s), base = baseOf(c.lane);
+      if (!base || c.row !== base.row || c.pin) continue;
+      if (!rows.has(c.lane)){ rows.set(c.lane, g.newRow(c.lane, base.row, -1, G.col)); colAt.set(c.lane, G.col); }
+      let row = rows.get(c.lane), col = colAt.get(c.lane);
+      while (col > target.col && g.at(c.lane, row, col)) col--;                      // eine zweite Schleife desselben Gateways: weiter links in derselben Zeile
+      if (col <= target.col){ col = G.col; row = g.newRow(c.lane, row, -1, col); rows.set(c.lane, row); }
+      c.row = row; c.col = col; c.pin = { anchor: chain.G, dx: col - G.col };
+      colAt.set(c.lane, col - 1);
+    }
+  }
+}
+
+// R4. Ein Schritt, mit dem ein Zweig die Bahn verlässt (eine Task, deren
+// einziger Nachfolger in einer anderen Bahn liegt), während ein anderer Zweig
+// in der Zeile des Gateways bleibt, steht in der Spalte des Gateways, in der
+// Zeile auf der Seite der Zielbahn. Garantie: die Übergabe bleibt eine
+// senkrechte Spalte; der Ausnahmeschritt kostet keine Spalte des Rückgrats.
+function ruleBranchBelow(g, model){
+  for (const id of byCol(g, model.nodes.filter(n => g.isSplit(n.id)).map(n => n.id))){
+    const G = g.cells.get(id), firsts = g.fwdOut.get(id).map(f => g.cells.get(f.to));
+    const stays = firsts.filter(c => c.lane === G.lane && c.row === G.row && !c.pin);
+    for (const c of firsts){
+      if (c.n.type !== 'task' || c.lane !== G.lane || c.row !== G.row || c.pin || g.fwdOut.get(c.n.id).length !== 1) continue;
+      const succ = g.cells.get(g.fwdOut.get(c.n.id)[0].to);
+      if (succ.lane === G.lane || !stays.some(s => s !== c)) continue;
+      const dir = succ.lane > G.lane ? 1 : -1;
+      c.row = g.newRow(G.lane, G.row, dir, G.col); c.col = G.col; c.pin = { anchor: id, dx: 0 };
+    }
+  }
+}
+
+// R5. Fächer. Die Zweige eines parallelen Blocks, die in einer anderen Bahn
+// als der Split liegen, nehmen dort die vorhandene Zeile, die der Bahn des
+// Splits am nächsten liegt (die unterste einer Bahn darüber, die oberste
+// einer Bahn darunter); ist deren Zelle besetzt, die nächste nach außen. Die
+// Arme verlassen den Split senkrecht und biegen dann nach rechts ab, und sie
+// kommen von links in die Höhe des Joins und gehen senkrecht in ihn (im
+// Router: fanCost()). Garantie: die Arme des Fächers sind so kurz wie die
+// Bahnen es zulassen; der Fächer öffnet und schließt sich senkrecht.
+function ruleFan(g, model){
+  for (const id of byCol(g, model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id)).map(n => n.id))){
+    const P = g.cells.get(id);
+    for (const r of branchRegions(g, id)) for (const x of r.nodes){
+      const c = g.cells.get(x);
+      if (c.lane === P.lane || c.row !== 0 || c.pin) continue;
+      const rows = g.rowsOf(c.lane), dir = P.lane > c.lane ? 1 : -1;
+      let row = dir > 0 ? rows[rows.length - 1] : rows[0];
+      while (g.at(c.lane, row, c.col) && g.at(c.lane, row, c.col) !== c) row = g.newRow(c.lane, row, dir, c.col);
+      c.row = row;
+    }
+  }
+}
+
+// R6. Der eine Schritt zwischen dem Ausgang einer Schleife (einem
+// Schleifenschritt nach R3) und einem Merge weiter rechts steht in der
+// Spalte des Merge, in der Zeile seines Vorgängers, wo die frei ist, sonst
+// eine weiter außen; der Fluss fällt senkrecht in den Merge. Garantie: ein
+// langer Sprung kostet keine Spalte und endet senkrecht in seinem Merge.
+function ruleJumpAbove(g, model){
+  for (const n of model.nodes){
+    const c = g.cells.get(n.id);
+    if (n.type !== 'task' || c.pin || g.fwdIn.get(n.id).length !== 1 || g.fwdOut.get(n.id).length !== 1) continue;
+    const P = g.cells.get(g.fwdIn.get(n.id)[0].from), M = g.cells.get(g.fwdOut.get(n.id)[0].to);
+    if (!P.pin || M.n.type !== 'gateway' || g.fwdIn.get(M.n.id).length < 2 || M.col < c.col + 2) continue;
+    const dir = P.row < 0 ? -1 : 1;
+    let row = P.row;
+    const between = r => [...g.cells.values()].some(o => o !== c && o.lane === c.lane && o.row === r && o.col > P.col && o.col <= M.col);
+    while (between(row)) row = g.newRow(c.lane, row, dir, M.col);
+    c.row = row; c.col = M.col; c.pin = { anchor: M.n.id, dx: 0, late: true };
+  }
+}
+
+// R9 (Spike 2.26, Ben, 2026-10-05): „die jeweils ersten Shapes der Äste
+// eines parallelen Gateways liegen zentriert auf derselben X-Koordinate, sind
+// also untereinander.“ Lesart: je parallelem Split die ersten Knoten seiner
+// Zweige (nicht ein Join, auf den ein Zweig direkt führt, nicht ein schon
+// angehefteter Knoten); zwei davon in derselben Zeile einer Bahn: der zweite
+// Zweig nimmt mit seinen Knoten dieser Zeile die nächste Zeile darunter. Die
+// Gruppe kommt nach g.columnGroups; R7 setzt sie in eine Spalte.
+// Ebenso ein exklusiver Block (Ben, 2026-10-05, x-wv6: „Das Problem war, dass die
+// intermediate events verstreut waren, obwohl sie vom selben Gateway abgingen. Ich
+// habe sie zwischen den beiden gateways gestackt“): eine Verzweigung, die kein
+// paralleles Gateway ist, mit drei oder mehr Zweigen, die alle an einem Merge wieder
+// zusammenlaufen.
+function exclusiveBlock(g, model, id, min = 3){
+  if (g.fwdOut.get(id).length < min) return null;
+  const G = g.cells.get(id);
+  const merges = model.nodes.filter(m => m.type === 'gateway' && m.tag !== 'parallelGateway' && m.id !== id && g.fwdIn.get(m.id).length >= 2 && g.cells.get(m.id).col > G.col
+    && g.fwdOut.get(id).every(f => f.to === m.id || g.reachable(f.to).has(m.id)) && g.fwdIn.get(m.id).every(f => f.from === id || g.reachable(id).has(f.from)));
+  return merges.length ? byCol(g, merges.map(m => m.id))[0] : null;
+}
+function ruleFirstColumn(g, model){
+  g.columnGroups = [];
+  // Zwei Alternativen untereinander (Ben, 2026-10-05, krankheit: „Ich habe die Alternativen bei ‚Notfall?‘ lesbarer
+  // gemacht“): eine Verzweigung, die kein paralleles Gateway ist, mit genau zwei Zweigen, die an einem Merge wieder
+  // zusammenlaufen, beide Köpfe noch in ihrer Zeile (keiner direkt im Merge, keiner angeheftet).
+  const pair = n => {
+    if (n.type !== 'gateway' || n.tag === 'parallelGateway' || g.fwdOut.get(n.id).length !== 2 || !exclusiveBlock(g, model, n.id, 2)) return false;
+    const P = g.cells.get(n.id);
+    return g.fwdOut.get(n.id).every(f => { const c = g.cells.get(f.to); return c.n.type !== 'gateway' && !c.pin && c.lane === P.lane && c.row === P.row; });
+  };
+  const fans = n => g.isSplit(n.id) && (n.tag === 'parallelGateway' || (n.type === 'gateway' && exclusiveBlock(g, model, n.id)) || pair(n));
+  for (const id of byCol(g, model.nodes.filter(fans).map(n => n.id))){
+    const P = g.cells.get(id), regions = branchRegions(g, id);
+    const firsts = [];
+    for (const r of regions){
+      const x = r.flow.to, c = g.cells.get(x);
+      if (c.pin || (c.n.type === 'gateway' && g.fwdIn.get(x).length >= 2) || firsts.some(f => f.x === x)) continue;
+      firsts.push({ x, c, r });
+    }
+    if (firsts.length < 2) continue;
+    // Der Zweig in der Zeile des Splits bleibt dort.
+    firsts.sort((a, b) => (b.c.lane === P.lane && b.c.row === P.row) - (a.c.lane === P.lane && a.c.row === P.row));
+    // Drei oder mehr Köpfe in der Zeile des Splits verteilen sich um sie (Ben, 2026-10-05, x-dg2: „Ich habe die
+    // ersten Schritte nach dem Start zentriert“): der mittlere (in der Reihenfolge der Flüsse) bleibt, die davor
+    // gehen nach oben, die danach nach unten; so steht der Split in der Mitte seiner Arme und das Rückgrat läuft
+    // gerade durch. Ergänzt die Zentrierung des Splits unten, die greift, wo die Arme anders verteilt sind.
+    const own = firsts.filter(f => f.c.lane === P.lane && f.c.row === P.row);
+    const done = new Set();
+    if (own.length >= 3){
+      const mid = Math.floor((own.length - 1) / 2), row0 = P.row;
+      const move = (f, row) => { for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === P.lane && c.row === row0 && !c.pin) c.row = row; } done.add(f); };
+      // Je Arm eine neue Zeile direkt neben der vorigen (Ben, 2026-10-05, x-wv6: „du stackst die intermediate events
+      // nicht“): keine vorhandene Zeile weiter weg, in der anderswo schon Knoten stehen.
+      let row = row0;
+      for (let i = mid - 1; i >= 0; i--){ row = g.freshRow(P.lane, row, -1); move(own[i], row); }
+      row = row0;
+      for (let i = mid + 1; i < own.length; i++){ row = g.freshRow(P.lane, row, 1); move(own[i], row); }
+    }
+    // Zwei Alternativen (Ben, 2026-10-05, krankheit: „Bei einem exklusiven block mit 2 tasks ist der zweite block
+    // mittig nach unten gestackt.“; drei Zeilen, einer darüber und einer darunter, waren „sehr unelegant“): der erste
+    // Zweig bleibt gerade in der Zeile von Split und Merge, der zweite geht in eine neue Zeile direkt darunter, in
+    // dieselbe Spalte.
+    else if (own.length === 2 && P.n.tag !== 'parallelGateway' && g.fwdOut.get(id).length === 2){
+      const row0 = P.row, move = (f, row) => { for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === P.lane && c.row === row0 && !c.pin) c.row = row; } done.add(f); };
+      move(own[1], g.freshRow(P.lane, row0, 1));
+      done.add(own[0]);
+    }
+    for (let i = 1; i < firsts.length; i++){
+      const f = firsts[i];
+      if (done.has(f)) continue;
+      if (!firsts.slice(0, i).some(o => o.c.lane === f.c.lane && o.c.row === f.c.row)) continue;
+      const lane = f.c.lane, row0 = f.c.row;
+      let row = g.newRow(lane, row0, 1, f.c.col);
+      while (firsts.slice(0, i).some(o => o.c.lane === lane && o.c.row === row)) row = g.newRow(lane, row, 1, f.c.col);
+      for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === lane && c.row === row0 && !c.pin) c.row = row; }
+    }
+    g.columnGroups.push(firsts.map(f => f.x));
+    // In der Bahn zentriert (Ben, 2026-10-05, x-dg2: „Ich habe die parallelen gateways zentriert“; wie R1 über
+    // Bahnen): beginnen die Arme in der Bahn des Splits in drei oder mehr Zeilen, stehen Split und Join in der
+    // mittleren davon (bei gerader Zahl der oberen der beiden mittleren); so hat jeder Arm einen eigenen Port.
+    const armRows = [...new Set(g.fwdOut.get(id).map(f => g.cells.get(f.to)).filter(c => c.lane === P.lane).map(c => c.row))].sort((a, b) => a - b);
+    if (armRows.length >= 3){
+      const mid = armRows[Math.floor((armRows.length - 1) / 2)];
+      P.row = mid;
+      const blk = parallelBlocks(g, model).find(b => b.P === id), J = blk && g.cells.get(blk.J);
+      if (J && J.lane === P.lane && !J.pin) J.row = mid;
+    }
+    // Der Join eines Blocks (parallel oder exklusiv) steht in der Zeile seines Splits (Ben, 2026-10-05, x-wv6: Split
+    // und Join des Blocks gehören in eine Zeile; ein Join, der nur Starts bündelt, und ein Split, der nur in Enden
+    // auffächert, bilden keinen Block).
+    const Jid = P.n.tag === 'parallelGateway' ? parallelBlocks(g, model).find(b => b.P === id)?.J : exclusiveBlock(g, model, id, 2);
+    const Jc = Jid && g.cells.get(Jid);
+    if (Jc && Jc.lane === P.lane && !Jc.pin) Jc.row = P.row;
+  }
+}
+
+// Ein Split, den R1 in die Bahn seiner Zweige gesetzt hat und der keinen Block bildet (x-rg3), steht ebenso in der
+// mittleren Zeile seiner Zweige; zu Beginn jedes Laufs ab R7, damit er auch nach einer Probe (R10, R12), die Zeilen
+// der Zweige verschiebt, in der Mitte steht.
+function centreLaneSplits(g, model){
+  for (const id of g.laneSplits || []){
+    const P = g.cells.get(id);
+    if (P.n.tag === 'parallelGateway' || exclusiveBlock(g, model, id)) continue;
+    const armRows = [...new Set(g.fwdOut.get(id).map(f => g.cells.get(f.to)).filter(c => c.lane === P.lane).map(c => c.row))].sort((a, b) => a - b);
+    if (armRows.length >= 3) P.row = armRows[Math.floor((armRows.length - 1) / 2)];
+  }
+}
+
+// R15. Start-Ereignisse links bündig (Ben, 2026-10-05, x-wv6: „Der Schlamassel geht
+// schon damit los, dass die startevent nicht left aligned sind. das habe ich
+// nachgezogen und sie dann sinnvoll an das parallele gateway angedockt. den vierten
+// startevent habe ich nach oben verlegt, da dort sein flow stattfindet.“). Stehen
+// zwei oder mehr Start-Ereignisse in einer Zeile einer Bahn, bekommt jedes eine
+// eigene: die Starts mit demselben Nachfolger verteilen sich um dessen Zeile (der
+// mittlere bleibt, die davor nach oben, die danach nach unten, wie die Arme nach
+// Vorschlag 7); die größte Gruppe bleibt in der Zeile, jede weitere geht in neue
+// Zeilen darüber. R7 setzt dann jeden Start in die erste Spalte, weil ihm in seiner
+// Zeile nichts mehr vorangeht. Garantie: alle Starts einer Bahn stehen links bündig.
+function ruleStartAlign(g, model){
+  const starts = model.nodes.filter(n => n.tag === 'startEvent' && !g.fwdIn.get(n.id).length).map(n => g.cells.get(n.id));
+  const rowsSeen = new Set(starts.map(c => c.lane + '|' + c.row));
+  for (const key of rowsSeen){
+    const here = starts.filter(c => c.lane + '|' + c.row === key && !c.pin);
+    if (here.length < 2) continue;
+    const lane = here[0].lane, row0 = here[0].row;
+    const bySucc = new Map();
+    for (const c of here){
+      const f = g.fwdOut.get(c.n.id)[0], k = f ? f.to : c.n.id;
+      (bySucc.get(k) || bySucc.set(k, []).get(k)).push(c);
+    }
+    const groups = [...bySucc.values()].sort((a, b) => b.length - a.length);
+    let top = row0;
+    groups.forEach((grp, gi) => {
+      const succ = g.cells.get(g.fwdOut.get(grp[0].n.id)[0]?.to);
+      let base = gi === 0 ? (succ && succ.lane === lane ? succ.row : row0) : (top = g.newRow(lane, top, -1, 0));
+      const mid = Math.floor((grp.length - 1) / 2);
+      grp[mid].row = base;
+      let r = base;
+      for (let i = mid - 1; i >= 0; i--){ r = g.newRow(lane, r, -1, 0); grp[i].row = r; }
+      if (gi === 0) top = Math.min(top, r);
+      r = base;
+      for (let i = mid + 1; i < grp.length; i++){ r = g.newRow(lane, r, 1, 0); grp[i].row = r; }
+    });
+    // Der einzige Nachfolger eines Starts, der so eine eigene Zeile bekommen hat, folgt ihm, wenn er keinen anderen
+    // Vorgänger hat; ist er der Split eines Blocks, mit seinem Join (Ben, 2026-10-05, x-wv6: „den vierten startevent
+    // habe ich nach oben verlegt, da dort sein flow stattfindet“).
+    for (const c of here){
+      if (c.row === row0) continue;
+      const out = g.fwdOut.get(c.n.id);
+      if (out.length !== 1) continue;
+      const t = g.cells.get(out[0].to);
+      if (t.lane !== lane || t.pin || g.fwdIn.get(t.n.id).length !== 1) continue;
+      const blk = parallelBlocks(g, model).find(b => b.P === t.n.id), J = blk && g.cells.get(blk.J);
+      if (J && J.lane === lane && J.row === t.row && !J.pin) J.row = c.row;
+      t.row = c.row;
+    }
+  }
+}
+
+// Nach der Box: Starts mit demselben Nachfolger in seiner Bahn stehen wieder um
+// dessen Zeile, in neuen Zeilen direkt daneben. Gibt zurück, ob sich etwas bewegt hat.
+function redockStarts(g, model){
+  const bySucc = new Map();
+  for (const n of model.nodes){
+    if (n.tag !== 'startEvent' || g.fwdIn.get(n.id).length) continue;
+    const out = g.fwdOut.get(n.id);
+    if (out.length !== 1) continue;
+    const c = g.cells.get(n.id), t = g.cells.get(out[0].to);
+    if (c.pin || t.lane !== c.lane) continue;
+    (bySucc.get(t) || bySucc.set(t, []).get(t)).push(c);
+  }
+  let moved = false;
+  for (const [t, grp] of bySucc){
+    if (grp.length < 2) continue;
+    grp.sort((a, b) => a.row - b.row);
+    const mid = Math.floor((grp.length - 1) / 2);
+    if (grp[mid].row === t.row) continue;
+    for (const c of grp) c.row = NaN;
+    grp[mid].row = t.row;
+    let r = t.row;
+    for (let i = mid - 1; i >= 0; i--){ r = g.freshRow(t.lane, r, -1); grp[i].row = r; }
+    r = t.row;
+    for (let i = mid + 1; i < grp.length; i++){ r = g.freshRow(t.lane, r, 1); grp[i].row = r; }
+    moved = true;
+  }
+  return moved;
+}
+
+// R7. Spalten schließen: jede Spalte ist der längste Weg in Mermaids
+// Reihenfolge; ein Nachfolger in einer anderen Zeile darf die Spalte seines
+// Vorgängers teilen, einer in derselben Zeile steht eine weiter rechts, und
+// die Reihenfolge jeder Zeile bleibt die Mermaids. Angeheftete Knoten (R3,
+// R4, R6) behalten ihren Abstand zu ihrem Anker. Garantie: keine Spalte ohne
+// Knoten; die Ordnung von links nach rechts ist Mermaids.
+function ruleCompact(g, model, rules){
+  // Mermaids Reihenfolge, aber kein Knoten vor einem seiner Vorwärtsvorgänger.
+  const byMermaid = (a, b) => a.col - b.col || a.lane - b.lane || a.row - b.row;
+  const waiting = [...g.cells.values()].sort(byMermaid), order = [];
+  const done = new Set();
+  while (waiting.length){
+    let i = waiting.findIndex(c => g.fwdIn.get(c.n.id).every(f => done.has(f.from)));
+    if (i < 0) i = 0;
+    const c = waiting.splice(i, 1)[0];
+    done.add(c.n.id); order.push(c);
+  }
+  const placed = new Map();
+  const blocks = parallelBlocks(g, model);
+  // Parallele Splits ohne Join: der Knoten davor steht auch dort nie in ihrer Spalte (Ben, 2026-10-05, morgenroutine).
+  const lonePar = new Set(model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id) && !blocks.some(b => b.P === n.id)).map(n => n.id));
+  const isPlaced = c => placed.get(c.lane + '|' + c.row + '|' + c.col) === c;
+  const pos = c => c.lane * 1e6 + c.row, between = (o, a, b) => (pos(o) - pos(a)) * (pos(o) - pos(b)) < 0;
+  const lastInRow = new Map();
+  // Senkrechte Übergaben in einer Spalte (Vorgänger und Nachfolger in derselben Spalte) halten die Zellen dazwischen frei.
+  const spans = [];
+  const put = (c, col) => {
+    const rowKey = c.lane + '|' + c.row;
+    while (placed.has(c.lane + '|' + c.row + '|' + col) || spans.some(sp => sp.col === col && between(c, sp.a, sp.b))) col++;
+    placed.set(c.lane + '|' + c.row + '|' + col, c); c.col = col;
+    lastInRow.set(rowKey, Math.max(lastInRow.get(rowKey) ?? -1, col));
+  };
+  const late = [];
+  for (const c of order){
+    if (c.pin) continue;
+    let col = 0;
+    for (const f of g.fwdIn.get(c.n.id)){
+      const p = g.cells.get(f.from);
+      // Ein angehefteter Vorgänger zählt mit der Spalte seines Ankers, sobald der steht.
+      const pc = p.pin ? (!p.pin.late && isPlaced(g.cells.get(p.pin.anchor)) ? g.cells.get(p.pin.anchor).col + p.pin.dx : null) : isPlaced(p) ? p.col : null;
+      if (pc === null) continue;
+      // Dieselbe Spalte wie der Vorgänger nur, wo die Übergabe senkrecht frei ist: keine Zelle dazwischen besetzt.
+      const sameRow = p.lane === c.lane && p.row === c.row;
+      const blocked = !sameRow && [...placed.values()].some(o => o.col === pc && o !== p && between(o, p, c));
+      // R8: ein Zweigelement steht nie in der Spalte des Splits, der Join nie in der eines Zweigelements.
+      // Ebenso (Ben, 2026-10-05, x-wv3): der Knoten vor einem parallelen Split und der nach einem parallelen Join
+      // stehen nie in der Spalte des Gateways, auch in einer anderen Zeile nicht, sondern links bzw. rechts versetzt.
+      const edge = rules.block && blocks.some(b => (p.n.id === b.P && b.inner.has(c.n.id)) || (c.n.id === b.J && b.inner.has(p.n.id))
+        || (c.n.id === b.P && !b.inner.has(p.n.id)) || (p.n.id === b.J && !b.inner.has(c.n.id) && c.n.id !== b.P))
+        || (rules.block && lonePar.has(c.n.id))
+        // Ebenso vor einem Split, den R1 in die Bahn seiner Zweige gesetzt hat (Ben, 2026-10-05, x-rg3): er braucht
+        // Nord- und Südport für die Zweige; stünde der Knoten davor in seiner Spalte, käme der Fluss senkrecht.
+        || (g.laneSplits?.has(c.n.id) ?? false);
+      col = Math.max(col, pc + (sameRow || blocked || edge ? 1 : 0));
+    }
+    const last = lastInRow.get(c.lane + '|' + c.row);
+    if (last !== undefined) col = Math.max(col, last + 1);
+    // R8: ein fremder Knoten steht nicht in einem geschlossenen parallelen Block (Split und Join schon gesetzt).
+    if (rules.block) for (const b of blocks){
+      if (b.inner.has(c.n.id) || c.n.id === b.P || c.n.id === b.J) continue;
+      const P = g.cells.get(b.P), J = g.cells.get(b.J);
+      if (!isPlaced(P) || !isPlaced(J)) continue;
+      const lanes = [b.P, b.J, ...b.inner].map(id => g.cells.get(id).lane);
+      if (c.lane >= Math.min(...lanes) && c.lane <= Math.max(...lanes) && col > P.col && col < J.col) col = J.col + 1;
+    }
+    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0);
+    put(c, col);
+    for (const f of g.fwdIn.get(c.n.id)){ const p = g.cells.get(f.from); if (isPlaced(p) && p.col === c.col && (p.lane !== c.lane || p.row !== c.row)) spans.push({ col: c.col, a: p, b: c }); }
+  }
+  // Angeheftete Knoten nach ihrem Anker; die an einen späteren Merge zuletzt.
+  for (const c of order){
+    if (!c.pin) continue;
+    if (c.pin.late){ late.push(c); continue; }
+    put(c, g.cells.get(c.pin.anchor).col + c.pin.dx);
+  }
+  for (const c of late) put(c, g.cells.get(c.pin.anchor).col + c.pin.dx);
+}
+
+// R8, Abstand zur Box (Ben, 2026-10-05, x-dg2: „Das Problem war, dass das
+// ‚insurance'-x-gateway keinen Abstand zur Box des parallelen flow hatte. wenn man
+// es eine zeile darunter bewegt, klappt es besser.“). Die Box eines parallelen
+// Blocks: von der Spalte des Splits bis zu der des Joins, je Bahn über die Zeilen,
+// die seine Knoten dort belegen. Ein fremder Knoten darin, der nicht
+// angeheftet ist, rückt in die nächste Zeile außerhalb: darunter, wenn er in der
+// unteren Hälfte der Box steht, sonst darüber; mit ihm die Knoten seiner Zeile
+// rechts von ihm bis zur Spalte des Joins nicht. Nach R7, R7 läuft danach neu.
+// Gibt zurück, ob ein Knoten bewegt wurde.
+function ruleBlockBox(g, model){
+  let moved = false;
+  for (const b of parallelBlocks(g, model)){
+    const ids = [b.P, b.J, ...b.inner], cs = ids.map(id => g.cells.get(id));
+    const P = g.cells.get(b.P), J = g.cells.get(b.J);
+    // Je Bahn reicht die Box über die Zeilen, die der Block dort belegt (Ben, 2026-10-05, x-wv6: ein Block über
+    // drei Bahnen; über alle Bahnen gerechnet käme ein fremder Knoten der mittleren Bahn nie aus der Box). Die
+    // fremden Knoten einer Bahn gehen gemeinsam auf eine Seite, die der Mehrheit, und behalten ihre Reihenfolge
+    // (sonst riss die Box einen Stapel auseinander).
+    for (let lane = 0; lane < g.lanes; lane++){
+      const mine = cs.filter(o => o.lane === lane).map(o => o.row);
+      if (mine.length < 2) continue;
+      const lo = Math.min(...mine), hi = Math.max(...mine);
+      const inside = [...g.cells.values()].filter(c => c.lane === lane && !ids.includes(c.n.id) && !c.pin && c.col >= P.col && c.col <= J.col && c.row >= lo && c.row <= hi);
+      if (!inside.length) continue;
+      const down = inside.filter(c => c.row - lo >= hi - c.row).length * 2 >= inside.length;
+      const rows = [...new Set(inside.map(c => c.row))].sort((a, b) => down ? a - b : b - a);
+      const to = new Map();
+      let edge = down ? hi : lo;
+      for (const r of rows){ edge = g.freshRow(lane, edge, down ? 1 : -1); to.set(r, edge); }
+      for (const c of inside) c.row = to.get(c.row);
+      moved = true;
+    }
+  }
+  return moved;
+}
+
+// Das Raster in Pixel, die Flüsse auf dem Raster geroutet: das fertige DI.
+//
+// The order of the rules, and which needs which. They share the grid g and
+// some of its fields, so the order is part of the result (code review of A2,
+// D4: R16 before R13 drops R16's result; R12 before R10 gives another one):
+//   R1   first: gateways and ends take their lane (and g.laneSplits, read by
+//        R7, the router and centreLaneSplits()); every later rule compares lanes
+//   R2   rows for the ways of a decision; leaves out the loop steps of R3
+//        (loopChain()); records its rows in g.pathRowGroups for R10
+//   R3   loop steps above their gateway, pinned to it
+//   R4   a step leaving the lane, pinned to its gateway; skips R3's pins
+//   R5   the arms of a parallel block in the nearest row; only unpinned nodes
+//        still in the backbone, so after R2–R4
+//   R6   needs R3's pins: the step after a loop's exit, pinned to its merge
+//   R9   starts g.columnGroups anew (R14 adds to it, R7 reads it); reads the
+//        rows R2 and R5 gave, skips pins
+//   R15  the starts, after R9, whose rows it may move with the start's
+//        successor
+// From here each rule is a trial: it lays the picture out to the end (runGrid():
+// R7, R8, the router; finishGrid()) and keeps a change only where the picture
+// gets no worse.
+//   R10  only with g.pathRowGroups (R2)
+//   R12  after R10
+//   R14  after R12, which with R2 and R10 puts the ways on their rows; adds to
+//        R9's g.columnGroups
+//   R13  starts g.asideCol anew, so before R16, which adds to it
+//   R16  after R13
+//   R11  last, on the picture all others give; returns it
+// R7 and R8 run in finishGrid(), on every trial and on the picture returned.
+function layoutGrid(model, raw, measure, rules){
+  const g = buildGrid(model, raw);
+  if (rules.gatewayLane) ruleGatewayLane(g, model);
+  if (rules.pathRows) rulePathRows(g, model);
+  if (rules.loopAbove) ruleLoopAbove(g, model);
+  if (rules.branchBelow) ruleBranchBelow(g, model);
+  if (rules.fan) ruleFan(g, model);
+  if (rules.jumpAbove) ruleJumpAbove(g, model);
+  if (rules.firstColumn) ruleFirstColumn(g, model);
+  if (rules.startAlign) ruleStartAlign(g, model);
+  if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
+  if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
+  if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
+  if (rules.stepAside) ruleStepAside(g, model, measure, rules);
+  if (rules.stagger) ruleStagger(g, model, measure, rules);
+  if (rules.endAlign) return ruleEndAlign(g, model, measure, rules);
+  return finishGrid(g, model, measure, rules);
+}
+
+// Ein Probelauf ab R7: das fertige DI, seine Güte und die Spalten, die R7
+// vergeben hat; danach stehen die Zellen wieder wie vorher (R10, R11).
+function runGrid(g, model, measure, rules){
+  const once = reroute => {
+    const before = new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
+    const di = finishGrid(g, model, measure, rules, reroute);
+    const cols = new Map([...g.cells.values()].map(c => [c, c.col]));
+    for (const [c, v] of before) Object.assign(c, v);
+    return { di, q: gridQuality(di, model), cols, last: Math.max(...cols.values()) };
+  };
+  // Der zweite Durchgang des Routers macht jeden Fluss billiger, das Bild nicht immer besser: beide rechnen, das
+  // bessere nehmen (Kreuzungen, Flüsse durch Knoten, Überlappung, Linien, Beschriftungen, gemeinsame Stücke, Knicke).
+  const a = once(true);
+  const b = once(false);
+  for (const k of ['crossings', 'through', 'overlaps', 'lines', 'labels', 'shared', 'bends']){
+    if (a.q[k] < b.q[k]) return a;
+    if (b.q[k] < a.q[k]) return b;
+  }
+  return b;
+}
+
+// R10. Zeilenprobe (Ben, 2026-10-05: „bei Überschneidungen probieren, ob es
+// hilft, die Zeilen zu vertauschen“). Hat das Bild Kreuzungen, wird für jede
+// Zeile, die R2 einem Zweig gegeben hat, die Gegenseite probiert (+k → −k),
+// eine nach der anderen; Knoten, die eine spätere Regel versetzt oder
+// angeheftet hat (R3, R4, R5, R6, R9), bleiben, wo sie sind. Übernommen wird
+// eine Probe nur bei echt weniger Kreuzungen, ohne mehr Flüsse durch fremde
+// Knoten und ohne überlappende Knoten; sonst bleibt R2. Garantie: die Probe
+// macht das Bild nie schlechter. Bens Maßgabe (2026-10-05, nach x-rg2 und
+// x-wv4): kein Tausch bei mehr Brüchen, kein Tausch bei mehr Kreuzungen. Die Bahn wird danach von selbst wieder
+// schmaler, weil die Bänder aus den belegten Zeilen entstehen.
+function ruleRowProbe(g, model, measure, rules){
+  const snap = () => new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
+  const restore = m => { for (const [c, v] of m) Object.assign(c, v); };
+  const run = () => runGrid(g, model, measure, rules);
+  let best = run();
+  for (const grp of g.pathRowGroups){
+    if (!best.q.crossings) break;
+    const cells = grp.ids.map(x => g.cells.get(x)).filter(c => c.lane === grp.lane && c.row === grp.row && !c.pin);
+    if (!cells.length) continue;
+    const keep = snap();
+    for (const c of cells) c.row = -c.row;
+    const t = run();
+    if (t.q.crossings < best.q.crossings && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
+    else restore(keep);
+  }
+  return best;
+}
+
+// R12. Kreuzungsprobe (Ben, 2026-10-05, reklamation: „Bei vielen Überkreuzungen
+// nach X-Gates in einer lane prüfen, ob eine zusätzliche Zeile hilft. Bei vielen
+// Überkreuzungen prüfen ob Merge Gate in andere Lane wechseln sollte“). Nach R10,
+// solange das Bild Kreuzungen hat. Proben: (a) je Verzweigung, die kein paralleles
+// Gateway ist, und je Zweig, der in der Zeile des Gateways weiterläuft, während ein
+// anderer es auch tut: die Knoten des Zweigs in dieser Zeile in eine neue Zeile
+// gleich darüber oder darunter; (b) je Merge, der kein paralleles Gateway ist: jede
+// andere Bahn zwischen der obersten und der untersten Bahn seiner Vorgänger und
+// Nachfolger, dort in der Zeile eines Vorgängers oder Nachfolgers, sonst im Rückgrat.
+// Je Runde wird jede Probe einzeln gerechnet und die beste übernommen, wenn sie echt
+// weniger Kreuzungen hat und sonst nichts schlechter macht (wie R10); bis keine mehr
+// hilft. Garantie: die Probe macht das Bild nie schlechter.
+function ruleCrossProbe(g, model, measure, rules){
+  let best = runGrid(g, model, measure, rules);
+  const probes = () => {
+    const out = [];
+    for (const n of model.nodes){
+      if (n.type !== 'gateway' || n.tag === 'parallelGateway') continue;
+      const G = g.cells.get(n.id);
+      if (g.isSplit(n.id)){
+        const inRow = branchRegions(g, n.id).map(r => r.nodes.map(x => g.cells.get(x)).filter(c => c.lane === G.lane && c.row === G.row && !c.pin));
+        if (inRow.filter(cs => cs.length).length >= 2) for (const cs of inRow) if (cs.length) for (const dir of [-1, 1])
+          out.push({ go(){ const row = g.freshRow(G.lane, G.row, dir); for (const c of cs) c.row = row; } });
+      }
+      if (g.fwdIn.get(n.id).length >= 2){
+        const near = [...g.fwdIn.get(n.id).map(f => g.cells.get(f.from)), ...g.fwdOut.get(n.id).map(f => g.cells.get(f.to))];
+        const lanes = near.map(c => c.lane), lo = Math.min(...lanes), hi = Math.max(...lanes);
+        for (let l = lo; l <= hi; l++){
+          if (l === G.lane || G.pin) continue;
+          out.push({ go(){ const c = near.find(x => x.lane === l); G.lane = l; G.row = c ? c.row : 0; } });
+        }
+      }
+    }
+    return out;
+  };
+  const snap = () => new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
+  const restore = m => { for (const [c, v] of m) Object.assign(c, v); };
+  for (let round = 0; round < 6 && best.q.crossings; round++){
+    let pick = null;
+    for (const p of probes()){
+      const keep = snap();
+      p.go();
+      const t = runGrid(g, model, measure, rules);
+      const ok = t.q.crossings < best.q.crossings && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps;
+      if (ok && (!pick || t.q.crossings < pick.t.q.crossings)) pick = { p, t, after: snap() };
+      restore(keep);
+    }
+    if (!pick) break;
+    restore(pick.after);
+    best = pick.t;
+  }
+}
+
+// R14. Kamm (Ben, 2026-10-05, u13: A und C eine Spalte weiter, alle Zweige von
+// „Was?“ beginnen in einer Spalte). R9 als Probe für Verzweigungen, die kein
+// paralleles Gateway sind, mit drei oder mehr Vorwärtszweigen; nach R12, weil erst
+// R2, R10 und R12 die Zweige auf Zeilen verteilen. Die Köpfe der Zweige (der erste
+// Knoten jedes Zweigs, nicht angeheftet, kein Merge), je Zeile der am weitesten
+// links, kommen probeweise in eine Spalte (g.columnGroups, R7 wie bei R9). Neue
+// Zeilen legt die Probe nicht an. Übernommen nur, wenn keine Kennzahl der Güte
+// steigt. Bei zwei Zweigen bleibt die senkrechte Übergabe in der Spalte des Gateways.
+function ruleCombProbe(g, model, measure, rules){
+  let best = runGrid(g, model, measure, rules);
+  const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
+  for (const n of model.nodes){
+    if (n.type !== 'gateway' || n.tag === 'parallelGateway' || g.fwdOut.get(n.id).length < 3) continue;
+    const heads = new Map();
+    for (const f of g.fwdOut.get(n.id)){
+      const c = g.cells.get(f.to);
+      if (c.pin || g.fwdIn.get(f.to).length >= 2) continue;
+      const k = c.lane + '|' + c.row, o = heads.get(k);
+      if (!o || best.cols.get(c) < best.cols.get(o)) heads.set(k, c);
+    }
+    const grp = [...heads.values()];
+    if (grp.length < 2 || grp.every(c => best.cols.get(c) === best.cols.get(grp[0]))) continue;
+    (g.columnGroups = g.columnGroups || []).push(grp.map(c => c.n.id));
+    const t = runGrid(g, model, measure, rules);
+    const ok = keys.every(k => t.q[k] <= best.q[k]);
+    if (ok) best = t; else g.columnGroups.pop();
+  }
+}
+
+// R13. Eine Spalte weiter (Ben, 2026-10-05, x-rg2: „Danach Abstand bei ‚Wir
+// schreiben keine Briefe' auf die selbe Weise erhöht, um Knicke zu reduzieren“).
+// Nach R12: ein Nachfolger, der in der Spalte seines Vorgängers steht (R7 lässt das
+// in einer anderen Zeile zu), zu dem der Vorwärtsfluss aber drei oder mehr Knicke
+// braucht (der senkrechte Weg ist versperrt, der Fluss geht hinaus und zurück),
+// rückt probeweise eine Spalte nach rechts (Mindestspalte in R7). Übernommen nur,
+// wenn der Fluss weniger Knicke hat und keine Kennzahl der Güte steigt. Garantie:
+// ein Übergang in eine andere Zeile ist ein gerades Stück oder ein L, wo das geht.
+function ruleStepAside(g, model, measure, rules){
+  g.asideCol = new Map();
+  let best = runGrid(g, model, measure, rules);
+  const bends = (di, f) => Math.max(0, (di.flows[f.id] || []).length - 2);
+  const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
+  // Teilt der Fluss ein Stück mit einem anderen (Ben, 2026-10-05, r22 und r15: „Spalte eingefügt, um durch den
+  // Versatz einen Ausgang freizumachen“; der Eingang oben am Nachfolger wird auch von einem zweiten Fluss
+  // gebraucht), rückt der Nachfolger ebenso probeweise eine Spalte weiter; übernommen, wenn es weniger gemeinsame
+  // Stücke werden und keine Kennzahl der Güte steigt.
+  const sharedOf = (di, f) => sharedPieces(di, model).filter(pair => pair.includes(f.id)).length;
+  for (const f of model.flows){
+    if (g.back.has(f.id)) continue;
+    const a = g.cells.get(f.from), b = g.cells.get(f.to);
+    if (b.pin || best.cols.get(a) !== best.cols.get(b)) continue;
+    const many = bends(best.di, f) >= 3, shares = sharedOf(best.di, f) > 0;
+    if (!many && !shares) continue;
+    g.asideCol.set(b.n.id, best.cols.get(b) + 1);
+    const t = runGrid(g, model, measure, rules);
+    const ok = keys.every(k => t.q[k] <= best.q[k]) && ((many && bends(t.di, f) < bends(best.di, f)) || (shares && t.q.shared < best.q.shared));
+    if (ok) best = t; else g.asideCol.delete(b.n.id);
+  }
+  // Geschwister (Ben, 2026-10-05, x-tm1: „Task in nächste Spalte verschoben, damit Nordausgang und Ostausgang des
+  // Gates genutzt werden können.“; reklamation: „hier habe ich kreuzungen eliminiert“): steht ein Nachfolger einer
+  // Verzweigung in ihrer Spalte und liegt ein anderer Nachfolger auf derselben Seite weiter weg, rückt der nahe
+  // probeweise eine Spalte weiter; der fernere bekommt den Port in seine Richtung, der nahe den Ostport. Übernommen
+  // bei weniger Kreuzungen oder Knicken, wenn keine Kennzahl der Güte steigt.
+  const pos = c => c.lane * 1e6 + c.row;
+  for (const n of model.nodes){
+    if (n.type !== 'gateway' || !g.isSplit(n.id)) continue;
+    const G = g.cells.get(n.id), succ = g.fwdOut.get(n.id).map(f => g.cells.get(f.to));
+    for (const b of succ){
+      if (b.pin || best.cols.get(b) !== best.cols.get(G) || pos(b) === pos(G)) continue;
+      const side = Math.sign(pos(b) - pos(G));
+      if (!succ.some(o => o !== b && Math.sign(pos(o) - pos(G)) === side && Math.abs(pos(o) - pos(G)) > Math.abs(pos(b) - pos(G)))) continue;
+      const was = g.asideCol.get(b.n.id);
+      g.asideCol.set(b.n.id, best.cols.get(b) + 1);
+      const t = runGrid(g, model, measure, rules);
+      const ok = keys.every(k => t.q[k] <= best.q[k]) && t.q.shared <= best.q.shared && (t.q.crossings < best.q.crossings || t.q.bends < best.q.bends);
+      if (ok) best = t; else if (was === undefined) g.asideCol.delete(b.n.id); else g.asideCol.set(b.n.id, was);
+    }
+  }
+}
+
+// R16. Gateways versetzen (Ben, 2026-10-05, x-wv6: „Wenn wir mehrere x-gateways
+// übereinander haben, kann es helfen sie in verschiedene spalten zu verschieben, da
+// dann die süd/nord-ausgänge häufiger frei sind.“). Nach R13: stehen zwei Gateways
+// einer Bahn in derselben Spalte, rückt probeweise eines eine Spalte nach rechts
+// (Mindestspalte in R7; was nach ihm kommt, rückt mit), erst das untere, dann das
+// obere. Übernommen wird die beste Probe, wenn keine Kennzahl der Güte steigt und
+// das Bild weniger gemeinsame Stücke oder weniger Knicke hat.
+function ruleStagger(g, model, measure, rules){
+  g.asideCol = g.asideCol || new Map();
+  let best = runGrid(g, model, measure, rules);
+  const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
+  const better = (t, b) => keys.every(k => t.q[k] <= b.q[k]) && (t.q.shared < b.q.shared || (t.q.shared === b.q.shared && t.q.bends < b.q.bends));
+  for (let round = 0; round < 4; round++){
+    // Auch ein Gateway über oder unter einem anderen Knoten derselben Spalte, in jeder Bahn (Ben, 2026-10-05, r09:
+    // „Eine Spalte puffer einfügen, um den südausgang von wohin zu öffnen“); dann rückt das Gateway.
+    const all = [...g.cells.values()].filter(c => !c.pin);
+    const pos = c => c.lane * 1e6 + c.row;
+    let pick = null;
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++){
+      const a = all[i], b = all[j];
+      if (pos(a) === pos(b) || best.cols.get(a) !== best.cols.get(b)) continue;
+      const ga = a.n.type === 'gateway', gb = b.n.type === 'gateway';
+      if (!ga && !gb) continue;
+      const movers = ga && gb ? (pos(a) > pos(b) ? [a, b] : [b, a]) : [ga ? a : b];
+      for (const c of movers){
+        const was = g.asideCol.get(c.n.id);
+        g.asideCol.set(c.n.id, best.cols.get(c) + 1);
+        const t = runGrid(g, model, measure, rules);
+        if (better(t, pick ? pick.t : best)) pick = { c, col: best.cols.get(c) + 1, t };
+        if (was === undefined) g.asideCol.delete(c.n.id); else g.asideCol.set(c.n.id, was);
+      }
+    }
+    if (!pick) break;
+    g.asideCol.set(pick.c.n.id, pick.col);
+    best = pick.t;
+  }
+}
+
+// R11. Enden ausrichten (Ben, 2026-10-05: Enden ausrichten ist „eine weiche
+// Empfehlung, meine Stilpräferenz“; sie darf keine andere Regel überstimmen).
+// Nach R10, auf dem Bild, das alle anderen Regeln ergeben: ein End-Ereignis,
+// das nicht in der letzten Spalte steht, wird probeweise dorthin gesetzt (R7
+// gibt ihm die letzte Spalte als Mindestspalte; Bahn und Zeile bleiben, gleiche
+// Spalte heißt gleiches x). Nicht, wenn rechts von ihm in seiner Zeile ein
+// Knoten steht, und nicht für ein angeheftetes Ende. Eines nach dem anderen,
+// das der letzten Spalte nächste zuerst. Übernommen wird eine Probe nur, wenn
+// das Bild nicht breiter wird und keine Kennzahl der Güte steigt (Kreuzungen,
+// Flüsse durch Knoten, Überlappung, Stücke auf einer Linie, Beschriftungen auf
+// Flüssen); bei Gleichstand gewinnt die Ausrichtung. Garantie: die Ausrichtung
+// macht das Bild nie schlechter; was nicht passt, bleibt, wo die Regeln es setzen.
+function ruleEndAlign(g, model, measure, rules){
+  g.alignCol = new Map();
+  let best = runGrid(g, model, measure, rules);
+  const ends = model.nodes.filter(n => n.tag === 'endEvent').map(n => g.cells.get(n.id)).filter(c => !c.pin);
+  ends.sort((a, b) => best.cols.get(b) - best.cols.get(a));
+  const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
+  for (const c of ends){
+    const col = best.cols.get(c), last = best.last;
+    if (col === last) continue;
+    if ([...g.cells.values()].some(o => o !== c && o.lane === c.lane && o.row === c.row && best.cols.get(o) > col)) continue;
+    g.alignCol.set(c.n.id, last);
+    const t = runGrid(g, model, measure, rules);
+    const ok = t.last === last && t.cols.get(c) === last && keys.every(k => t.q[k] <= best.q[k]);
+    if (ok) best = t; else g.alignCol.delete(c.n.id);
+  }
+  return best.di;
+}
+
+// Die Paare von Flüssen mit gemeinsamer Quelle oder gemeinsamem Ziel, deren Stücke
+// gleichläufig auf einer Linie liegen: [[flowId, flowId], …] (wie shared in gridQuality()).
+function sharedPieces(di, model){
+  const segs = [];
+  for (const f of model.flows){ const pts = di.flows[f.id] || []; for (let i = 1; i < pts.length; i++) segs.push({ f: f.id, a: pts[i - 1], b: pts[i] }); }
+  const flowOf = new Map(model.flows.map(f => [f.id, f]));
+  const out = [];
+  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
+    const p = segs[i], q = segs[j];
+    if (p.f === q.f) continue;
+    const A = flowOf.get(p.f), B = flowOf.get(q.f);
+    if (A.from !== B.from && A.to !== B.to) continue;
+    if (A.to === B.to && A.from !== B.from && model.nodes.find(n => n.id === A.to)?.type === 'gateway') continue;
+    let dp, dq;
+    if (p.a[1] === p.b[1] && q.a[1] === q.b[1] && p.a[1] === q.a[1] && Math.min(Math.max(p.a[0], p.b[0]), Math.max(q.a[0], q.b[0])) - Math.max(Math.min(p.a[0], p.b[0]), Math.min(q.a[0], q.b[0])) > 0){ dp = Math.sign(p.b[0] - p.a[0]); dq = Math.sign(q.b[0] - q.a[0]); }
+    else if (p.a[0] === p.b[0] && q.a[0] === q.b[0] && p.a[0] === q.a[0] && Math.min(Math.max(p.a[1], p.b[1]), Math.max(q.a[1], q.b[1])) - Math.max(Math.min(p.a[1], p.b[1]), Math.min(q.a[1], q.b[1])) > 0){ dp = Math.sign(p.b[1] - p.a[1]); dq = Math.sign(q.b[1] - q.a[1]); }
+    else continue;
+    if (dp === dq) out.push([p.f, q.f]);
+  }
+  return out;
+}
+
+// Kreuzungen zweier Flüsse (ein waagerechtes und ein senkrechtes Stück, die
+// sich im Inneren schneiden), Stücke durch fremde Knoten, überlappende Knoten,
+// Stücke zweier Flüsse auf einer Linie (gleiche Höhe oder Spalte, überlappend
+// oder Ende an Ende, etwa frontal in einen Punkt)
+// und Beschriftungen, durch die ein fremder Fluss läuft. Die Regelprüfung der
+// Tests steht hier nicht zur Verfügung; das ist ihr Kern für den Vergleich.
+function gridQuality(di, model){
+  const segs = [];
+  for (const f of model.flows){
+    const pts = di.flows[f.id] || [];
+    for (let i = 1; i < pts.length; i++) segs.push({ f: f.id, a: pts[i - 1], b: pts[i] });
+  }
+  let crossings = 0;
+  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
+    const p = segs[i], q = segs[j];
+    if (p.f === q.f) continue;
+    const ph = p.a[1] === p.b[1], qh = q.a[1] === q.b[1];
+    if (ph === qh) continue;
+    const [h, v] = ph ? [p, q] : [q, p];
+    const x = v.a[0], y = h.a[1];
+    if (x > Math.min(h.a[0], h.b[0]) && x < Math.max(h.a[0], h.b[0]) && y > Math.min(v.a[1], v.b[1]) && y < Math.max(v.a[1], v.b[1])) crossings++;
+  }
+  let through = 0;
+  for (const f of model.flows) for (const n of model.nodes){
+    if (n.id === f.from || n.id === f.to) continue;
+    const [x, y, w, h] = di.nodes[n.id], pts = di.flows[f.id] || [];
+    for (let i = 1; i < pts.length; i++){
+      const [x1, y1] = pts[i - 1], [x2, y2] = pts[i];
+      if (Math.max(x1, x2) > x && Math.min(x1, x2) < x + w && Math.max(y1, y2) > y && Math.min(y1, y2) < y + h){ through++; break; }
+    }
+  }
+  let overlaps = 0;
+  const ns = model.nodes.map(n => di.nodes[n.id]);
+  for (let i = 0; i < ns.length; i++) for (let j = i + 1; j < ns.length; j++){
+    const [ax, ay, aw, ah] = ns[i], [bx, by, bw, bh] = ns[j];
+    if (Math.min(ax + aw, bx + bw) - Math.max(ax, bx) > 2 && Math.min(ay + ah, by + bh) - Math.max(ay, by) > 2) overlaps++;
+  }
+  // Auf einer Linie zählen gegenläufige Stücke (frontal) und gleichläufige zweier Flüsse ohne gemeinsamen Knoten;
+  // gleichläufige mit gemeinsamer Quelle oder gemeinsamem Ziel sind ein gewolltes Zusammenlaufen.
+  const flowOf = new Map(model.flows.map(f => [f.id, f]));
+  const shared = (p, q) => { const a = flowOf.get(p.f), b = flowOf.get(q.f); return a.from === b.from || a.to === b.to; };
+  let lines = 0, sharedLines = 0;
+  for (let i = 0; i < segs.length; i++) for (let j = i + 1; j < segs.length; j++){
+    const p = segs[i], q = segs[j];
+    if (p.f === q.f) continue;
+    let dp, dq;
+    if (p.a[1] === p.b[1] && q.a[1] === q.b[1] && p.a[1] === q.a[1] && Math.min(Math.max(p.a[0], p.b[0]), Math.max(q.a[0], q.b[0])) - Math.max(Math.min(p.a[0], p.b[0]), Math.min(q.a[0], q.b[0])) >= 0){ dp = Math.sign(p.b[0] - p.a[0]); dq = Math.sign(q.b[0] - q.a[0]); }
+    else if (p.a[0] === p.b[0] && q.a[0] === q.b[0] && p.a[0] === q.a[0] && Math.min(Math.max(p.a[1], p.b[1]), Math.max(q.a[1], q.b[1])) - Math.max(Math.min(p.a[1], p.b[1]), Math.min(q.a[1], q.b[1])) >= 0){ dp = Math.sign(p.b[1] - p.a[1]); dq = Math.sign(q.b[1] - q.a[1]); }
+    else continue;
+    // Zusammenlaufen in ein Gateway ist erlaubt (wie in tests/bpmn-rules.mjs), sonst zählt ein gleichläufiges Stück
+    // mit gemeinsamem Knoten als gemeinsames Stück.
+    if (dp !== dq || !shared(p, q)) lines++;
+    else if (!(flowOf.get(p.f).to === flowOf.get(q.f).to && model.nodes.find(n => n.id === flowOf.get(p.f).to)?.type === 'gateway')) sharedLines++;
+  }
+  let labels = 0;
+  const hits = (box, own) => segs.some(sg => !own(sg.f) && Math.max(sg.a[0], sg.b[0]) > box[0] && Math.min(sg.a[0], sg.b[0]) < box[0] + box[2] && Math.max(sg.a[1], sg.b[1]) > box[1] && Math.min(sg.a[1], sg.b[1]) < box[1] + box[3]);
+  for (const n of model.nodes){ const b = di.labels[n.id]; if (b && hits(b, f => model.flows.some(x => x.id === f && (x.from === n.id || x.to === n.id)))) labels++; }
+  for (const f of model.flows){ const b = di.flowLabels[f.id]; if (b && hits(b, x => x === f.id)) labels++; }
+  const bends = model.flows.reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
+  return { crossings, through, overlaps, lines, labels, shared: sharedLines, bends };
+}
+
+// Ab R7 bis zum fertigen DI: Spalten schließen, Bänder, Router, Pixel, Labels.
+// Verändert die Spalten der Zellen (R7); R10 sichert und stellt sie zurück.
+function finishGrid(g, model, measure, rules, reroute = true){
+  centreLaneSplits(g, model);
+  // R9: R7 so oft, bis jede Gruppe erster Zweigknoten in einer Spalte steht;
+  // jede Runde von Mermaids Spalten aus, die Mindestspalten wachsen nur.
+  const orig = new Map([...g.cells.values()].map(c => [c, c.col]));
+  const compactAll = () => {
+    g.minCol = new Map();
+    for (let round = 0; round < 8; round++){
+      for (const [c, col] of orig) c.col = col;
+      ruleCompact(g, model, rules);
+      let settled = true;
+      for (const grp of g.columnGroups || []){
+        const cols = grp.map(x => g.cells.get(x).col), max = Math.max(...cols);
+        if (cols.every(c => c === max)) continue;
+        settled = false;
+        for (const x of grp) g.minCol.set(x, max);
+      }
+      if (settled) break;
+    }
+  };
+  compactAll();
+  let boxed = false;
+  for (let round = 0; rules.block && round < 3 && ruleBlockBox(g, model); round++){ boxed = true; compactAll(); }
+  // Hat die Box Zeilen verschoben, docken die Starts wieder an ihren Nachfolger an (R15).
+  if (boxed && rules.startAlign && redockStarts(g, model)) compactAll();
+
+  // Zeilen je Bahn durchnummeriert; Bänder (Kanal, Zeile, Kanal, …) von oben
+  // nach unten über alle Bahnen; Spalten und Lücken von links nach rechts.
+  const laneRows = [];
+  for (let l = 0; l < g.lanes; l++){
+    const rows = g.rowsOf(l);
+    laneRows.push(rows.length ? rows : [0]);
+  }
+  const bands = [];           // { kind: 'ch'|'row', lane, row }
+  const rowBand = new Map();  // lane|rowIndex → band index
+  for (let l = 0; l < g.lanes; l++){
+    bands.push({ kind: 'ch', lane: l, edge: 'top' });
+    laneRows[l].forEach((r, i) => {
+      if (i) bands.push({ kind: 'ch', lane: l });
+      rowBand.set(l + '|' + i, bands.length);
+      bands.push({ kind: 'row', lane: l, row: i });
+    });
+    bands.push({ kind: 'ch', lane: l, edge: 'bottom' });
+  }
+  const cols = Math.max(...[...g.cells.values()].map(c => c.col)) + 1;
+  const place = new Map();    // id → { band, xo } (xo: 2*col+1; Lücke g: 2*g)
+  const cellAt = new Map();   // band|xo → id
+  for (const c of g.cells.values()){
+    const band = rowBand.get(c.lane + '|' + laneRows[c.lane].indexOf(c.row));
+    place.set(c.n.id, { band, xo: 2 * c.col + 1, cell: c });
+    cellAt.set(band + '|' + (2 * c.col + 1), c.n.id);
+  }
+  const free = (band, xo) => !cellAt.has(band + '|' + xo);
+  const channels = bands.map((b, i) => i).filter(i => bands[i].kind === 'ch');
+
+  // ---- Router ----
+  // Ein Weg ist eine Folge von Stücken, waagerecht { h: band, x1, x2 } oder
+  // senkrecht { v: xo, b1, b2 }; die Enden nennen die Seite am Symbol. Je
+  // Fluss werden die Schablonen gebildet, die auf dem Raster möglich sind,
+  // und die mit den wenigsten Konflikten genommen: durchquerte Zellen 1000,
+  // ein Port eines Gateways oder Ereignisses, den ein Fluss der anderen
+  // Richtung nutzt, 100, ein Stück auf einer Linie mit einem fremden Stück
+  // in einer Zeile oder Spalte 3, eine Kreuzung 1, Länge in Rasterschritten /100.
+  const routed = [];          // { f, pieces, sides: [sideS, sideT], back }
+  const portUse = new Map();  // id|side → { in, out }
+  const H = (h, x1, x2) => ({ h, x1, x2 }), V = (v, b1, b2) => ({ v, b1, b2 });
+  const sideOfFirst = (p, from) => p.h !== undefined ? (p.x2 > from.xo || (p.x2 === from.xo && p.x1 < from.xo) ? 'right' : 'left') : (p.b2 > from.band ? 'bottom' : 'top');
+  const sideOfLast = (p, to) => p.h !== undefined ? (p.x1 < to.xo ? 'left' : 'right') : (p.b1 < to.band ? 'top' : 'bottom');
+  const cellsCrossed = pieces => {
+    let n = 0;
+    // Eine Ecke zwischen zwei Stücken liegt in einer Zelle einer Zeile: die muss frei sein.
+    for (let i = 0; i + 1 < pieces.length; i++){
+      const a = pieces[i], b = pieces[i + 1];
+      const h = a.h !== undefined ? a : b, v = a.h !== undefined ? b : a;
+      if (h.h !== undefined && v.v !== undefined && bands[h.h].kind === 'row' && v.v % 2 && !free(h.h, v.v)) n++;
+    }
+    for (const p of pieces){
+      if (p.h !== undefined){ if (bands[p.h].kind === 'row') for (let x = Math.min(p.x1, p.x2) + 1; x < Math.max(p.x1, p.x2); x++) if (!free(p.h, x)) n++; }
+      else if (p.v % 2) for (let b = Math.min(p.b1, p.b2) + 1; b < Math.max(p.b1, p.b2); b++) if (!free(b, p.v)) n++;
+    }
+    return n;
+  };
+  const overlap = (a1, a2, b1, b2) => Math.min(Math.max(a1, a2), Math.max(b1, b2)) > Math.max(Math.min(a1, a2), Math.min(b1, b2));
+  // Ein Endstück an einer Task kann an der Seite versetzt werden (Ports nebeneinander):
+  // auf einer Linie mit einem anderen zählt es wenig; an einem Gateway oder Ereignis voll.
+  // Ein Fluss aus einem Stück, der an einer Task beginnt und in ein Ereignis geht, zählt dort voll (Ben, 2026-10-05,
+  // x-rg1: „Ich habe aber mal 2 Knicke entfernt.“ Der Fluss von „Geldeingang“ teilte die Linie in den Westport des
+  // Endes mit dem geraden Fluss von „Geld eintreiben“, und das kostete nur 0,5, weil dessen Stück an einer Task
+  // beginnt). In ein Gateway nicht: dort laufen Flüsse zusammen.
+  const endWeight = (f, pieces, i) => {
+    const id = i === 0 ? f.from : i === pieces.length - 1 ? f.to : null;
+    if (pieces.length === 1 && !['task', 'gateway'].includes(g.cells.get(f.to).n.type)) return 3;
+    return id && g.cells.get(id).n.type === 'task' ? 0.5 : 3;
+  };
+  const laneOfBand = b => bands[b].lane;
+  // R8: der Raum eines parallelen Blocks in Bändern und Spalten; ein Stück
+  // eines fremden Flusses darin kostet 6: mehr als ein Stück auf fremder Linie
+  // (3) und als die ein bis drei Kreuzungen, die der Weg außen herum meist
+  // kostet; eine Kostenstelle, kein Verbot (Ben: „es klappt nicht immer“).
+  const blockRooms = rules.block ? parallelBlocks(g, model).map(b => {
+    const ids = [b.P, b.J, ...b.inner], bs = ids.map(id => place.get(id).band);
+    return { ids: new Set(ids), x1: place.get(b.P).xo, x2: place.get(b.J).xo, b1: Math.min(...bs), b2: Math.max(...bs) };
+  }) : [];
+  // R5: ein Arm des Fächers in eine andere Zeile verlässt den Split senkrecht und geht senkrecht in den Join; ein waagerechtes Stück dort kostet 1.
+  // Ausnahme (Ben, 2026-10-05, zuerst nur für parallele Blöcke): liegt kein Arm in der Zeile des Splits, verlässt
+  // ihn der nächste Arm (der kleinste Abstand der Zeilen, nur wenn er eindeutig ist) waagerecht über den Ostport;
+  // ein senkrechter Anfang kostet ihn 1. Am Join gespiegelt: liegt kein Arm in seiner Zeile, kommt der nächste
+  // waagerecht über den Westport hinein. Die übrigen Arme wie bisher. Garantie: der nächste Arm kreuzt die
+  // ferneren nicht, die Arme bilden ineinander liegende L.
+  const fanBlocks = rules.fan ? parallelBlocks(g, model) : [];
+  const lonePar = new Set(model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id) && !fanBlocks.some(b => b.P === n.id)).map(n => n.id));
+  // Der Abstand eines Arms: Zeilen und Spalten zusammen (Ben, 2026-10-05, x-wv4: ein Shape, das waagerecht viel
+  // weiter weg ist, tritt für den Ost- oder Westport hinter das nähere zurück). Ein Arm in der Zeile des
+  // Gateways schaltet die Ausnahme ab wie bisher.
+  const nearestArm = (gw, arms, end) => {
+    const gp = place.get(gw);
+    if (arms.some(f => place.get(f[end]).band === gp.band)) return null;
+    const d = arms.map(f => ({ f, d: Math.abs(place.get(f[end]).band - gp.band) + Math.abs(place.get(f[end]).xo - gp.xo) }));
+    if (!d.length) return null;
+    const min = Math.min(...d.map(x => x.d)), near = d.filter(x => x.d === min);
+    return near.length === 1 ? near[0].f.id : null;
+  };
+  const fanNear = new Map(fanBlocks.map(b => [b.P, {
+    out: nearestArm(b.P, model.flows.filter(f => f.from === b.P && b.inner.has(f.to)), 'to'),
+    in: nearestArm(b.J, model.flows.filter(f => f.to === b.J && b.inner.has(f.from)), 'from'),
+  }]));
+  const fanCost = (pieces, own) => {
+    let n = 0;
+    const sameBand = place.get(own.from).band === place.get(own.to).band;   // der Arm in der Zeile der Gateways geht gerade
+    for (const b of fanBlocks){
+      if (sameBand) break;
+      const near = fanNear.get(b.P);
+      if (own.from === b.P && b.inner.has(own.to)) n += own.id === near.out ? (pieces[0].v !== undefined ? 1 : 0) : (pieces[0].h !== undefined ? 1 : 0);
+      if (own.to === b.J && b.inner.has(own.from)){ const last = pieces[pieces.length - 1]; n += own.id === near.in ? (last.v !== undefined ? 1 : 0) : (last.h !== undefined ? 1 : 0); }
+      // Der Fluss aus dem Join geht waagerecht hinaus, der in den Split waagerecht hinein (Ben, 2026-10-05, x-wv3:
+      // der Knoten danach steht rechts versetzt, der Ausgang nach unten nähme den Port, den ein Arm braucht).
+      if (own.from === b.J && !b.inner.has(own.to) && pieces[0].v !== undefined) n += 1;
+      if (own.to === b.P && !b.inner.has(own.from) && pieces[pieces.length - 1].v !== undefined) n += 1;
+    }
+    // Ebenso in einen parallelen Split ohne Join (Ben, 2026-10-05, morgenroutine: der Split ist zentriert, seine
+    // Arme brauchen Nord-, Ost- und Südport).
+    if (!sameBand && rules.fan && lonePar.has(own.to) && pieces[pieces.length - 1].v !== undefined) n += 1;
+    // Und in einen Split in der Bahn seiner Zweige (x-rg3).
+    if (!sameBand && g.laneSplits?.has(own.to) && pieces[pieces.length - 1].v !== undefined) n += 1;
+    return n;
+  };
+  const blockCost = (pieces, own) => {
+    let n = fanCost(pieces, own);
+    for (const r of blockRooms){
+      if (r.ids.has(own.from) && r.ids.has(own.to)) continue;
+      for (const p of pieces){
+        if (p.h !== undefined){ if (p.h >= r.b1 && p.h <= r.b2 && Math.min(p.x1, p.x2) < r.x2 && Math.max(p.x1, p.x2) > r.x1) n += 6; }
+        else if (p.v > r.x1 && p.v < r.x2 && Math.min(p.b1, p.b2) <= r.b2 && Math.max(p.b1, p.b2) >= r.b1) n += 6;
+      }
+    }
+    return n;
+  };
+  const conflicts = (pieces, own) => {
+    let n = blockCost(pieces, own);
+    // Ein waagerechtes Stück in einem Kanal einer fremden Bahn: der Rückfluss gehört in die eigene.
+    const ownLanes = new Set([g.cells.get(own.from).lane, g.cells.get(own.to).lane]);
+    for (const p of pieces) if (p.h !== undefined && bands[p.h].kind === 'ch' && !ownLanes.has(laneOfBand(p.h))) n += 2;
+    for (const r of routed){
+      if (r.f === own || r.off) continue;
+      // Frontal in denselben Port (Ben, 2026-10-05, x-wv4): zwei Flüsse in dasselbe Ziel, deren letzte Stücke auf
+      // einer Linie liegen und deren Stücke davor in derselben Spalte (oder Zeile) von entgegengesetzten Seiten
+      // kommen (ein ⊤, kein Zusammenlaufen); kostet wie ein Stück auf einer Linie. Der eine nimmt dann den Port
+      // auf seiner Seite.
+      if (r.f.to === own.to && pieces.length > 1 && r.pieces.length > 1){
+        const a1 = pieces[pieces.length - 1], a0 = pieces[pieces.length - 2], b1 = r.pieces[r.pieces.length - 1], b0 = r.pieces[r.pieces.length - 2];
+        if (a1.h !== undefined && b1.h !== undefined && a1.h === b1.h && a0.v !== undefined && b0.v !== undefined && a0.v === b0.v && Math.sign(a0.b2 - a0.b1) === -Math.sign(b0.b2 - b0.b1)) n += 3;
+        if (a1.v !== undefined && b1.v !== undefined && a1.v === b1.v && a0.h !== undefined && b0.h !== undefined && a0.h === b0.h && Math.sign(a0.x2 - a0.x1) === -Math.sign(b0.x2 - b0.x1)) n += 3;
+      }
+      pieces.forEach((p, i) => r.pieces.forEach((q, j) => {
+        if (p.h !== undefined && q.h !== undefined){
+          if (p.h === q.h && overlap(p.x1, p.x2, q.x1, q.x2)) n += bands[p.h].kind === 'row' ? Math.min(endWeight(own, pieces, i), endWeight(r.f, r.pieces, j)) : 0.3;
+        } else if (p.v !== undefined && q.v !== undefined){
+          if (p.v === q.v && overlap(p.b1, p.b2, q.b1, q.b2)) n += p.v % 2 ? Math.min(endWeight(own, pieces, i), endWeight(r.f, r.pieces, j)) : 0.3;
+        } else {
+          const [h, v] = p.h !== undefined ? [p, q] : [q, p];
+          if (Math.min(h.x1, h.x2) < v.v && v.v < Math.max(h.x1, h.x2) && Math.min(v.b1, v.b2) < h.h && h.h < Math.max(v.b1, v.b2)) n += 1;
+        }
+      }));
+    }
+    return n;
+  };
+  const length = pieces => pieces.reduce((s, p) => s + (p.h !== undefined ? Math.abs(p.x2 - p.x1) : Math.abs(p.b2 - p.b1)), 0);
+  const portPenalty = (id, side, out) => {
+    const c = g.cells.get(id);
+    if (c.n.type === 'task') return 0;
+    const u = portUse.get(id + '|' + side);
+    return u && (out ? u.in : u.out) ? 100 : 0;
+  };
+  const score = (f, pieces) => {
+    const s = place.get(f.from), t = place.get(f.to);
+    // Ein Knick kostet einen halben Rasterschritt (Ben, 2026-10-05, hund2: „Anderen Ausgang prüfen, um Linienknicke
+    // zu mindern“): bei gleicher Länge und gleichen Konflikten gewinnt der Weg mit weniger Knicken, etwa seitlich
+    // hinaus statt unten hinaus und gleich wieder zur Seite. Damit kein Knick gespart wird, indem ein Fluss nach rechts
+    // eine Task von hinten nimmt: liegt das Ziel rechts der Quelle oder in ihrer Spalte, kostet es zwei Knicke, von rechts in eine Task zu
+    // gehen oder sie nach links zu verlassen (ein Gateway darf von rechts genommen werden, wie Ben es in hund2 tat).
+    const ahead = t.xo >= s.xo;
+    const behind = ahead ? (g.cells.get(f.to).n.type === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (g.cells.get(f.from).n.type === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
+    return cellsCrossed(pieces) * 1000 + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * BEND;
+  };
+  // Die Schablonen eines Flusses s→t.
+  const templates = (s, t) => {
+    const out = [];
+    const ys = s.band, yt = t.band, xs = s.xo, xt = t.xo;
+    if (ys === yt){
+      out.push([H(ys, xs, xt)]);
+      for (const ch of channels) out.push([V(xs, ys, ch), H(ch, xs, xt), V(xt, ch, yt)]);
+      return out;
+    }
+    if (xs === xt){
+      const d = Math.sign(yt - ys);
+      out.push([V(xs, ys, yt)]);
+      for (const gx of [xs - 1, xs + 1]){
+        out.push([V(xs, ys, ys + d), H(ys + d, xs, gx), V(gx, ys + d, yt), H(yt, gx, xt)]);          // hinaus über den Kanal, seitlich hinein
+        out.push([V(xs, ys, ys - d), H(ys - d, xs, gx), V(gx, ys - d, yt), H(yt, gx, xt)]);          // hinaus auf der anderen Seite, seitlich hinein
+        out.push([H(ys, xs, gx), V(gx, ys, yt - d), H(yt - d, gx, xt), V(xt, yt - d, yt)]);          // seitlich hinaus, über den Kanal hinein
+        out.push([H(ys, xs, gx), V(gx, ys, yt), H(yt, gx, xt)]);                                    // seitlich hinaus und hinein
+      }
+      return out;
+    }
+    if (xt < xs){
+      out.push([H(ys, xs, xt), V(xt, ys, yt)]);                                   // L nach links: erst waagerecht in der Zeile, dann senkrecht ins Ziel
+      out.push([V(xs, ys, yt), H(yt, xs, xt)]);                                   // L nach links: erst senkrecht, dann in der Zielzeile
+    }
+    if (xt > xs){
+      out.push([V(xs, ys, yt), H(yt, xs, xt)]);                                   // L: erst senkrecht
+      out.push([H(ys, xs, xt), V(xt, ys, yt)]);                                   // L: erst waagerecht
+      out.push([H(ys, xs, xs + 1), V(xs + 1, ys, yt), H(yt, xs + 1, xt)]);        // Z über die Lücke rechts der Quelle
+      out.push([H(ys, xs, xt - 1), V(xt - 1, ys, yt), H(yt, xt - 1, xt)]);        // Z über die Lücke links des Ziels
+      const d = Math.sign(yt - ys);
+      out.push([V(xs, ys, yt - d), H(yt - d, xs, xt), V(xt, yt - d, yt)]);        // Z über den Kanal am Ziel
+      out.push([V(xs, ys, ys + d), H(ys + d, xs, xt), V(xt, ys + d, yt)]);        // Z über den Kanal an der Quelle
+      for (const ch of channels) out.push([H(ys, xs, xs + 1), V(xs + 1, ys, ch), H(ch, xs + 1, xt - 1), V(xt - 1, ch, yt), H(yt, xt - 1, xt)]);
+      // Über einen Kanal und senkrecht ins Ziel, auch von der Seite, die von der Quelle abgewandt ist (Ben,
+      // 2026-10-05, x-wv4: unten herum in den Südport, statt frontal auf einen anderen Fluss im Westport).
+      for (const ch of channels){
+        if (ch === yt) continue;
+        out.push([V(xs, ys, ch), H(ch, xs, xt), V(xt, ch, yt)]);
+        out.push([H(ys, xs, xs + 1), V(xs + 1, ys, ch), H(ch, xs + 1, xt), V(xt, ch, yt)]);
+      }
+      return out;
+    }
+    // Rückwärts über Zeilen: Kanal, senkrecht an Quelle und Ziel; sonst seitlich hinaus über eine Lücke, seitlich hinein oder von oben/unten.
+    for (const ch of channels) out.push([V(xs, ys, ch), H(ch, xs, xt), V(xt, ch, yt)]);
+    for (const ch of channels) for (const gs of [xs - 1, xs + 1]){
+      out.push([H(ys, xs, gs), V(gs, ys, ch), H(ch, gs, xt), V(xt, ch, yt)]);
+      out.push([V(xs, ys, ch), H(ch, xs, gs === xs - 1 ? xt + 1 : xt - 1), V(gs === xs - 1 ? xt + 1 : xt - 1, ch, yt), H(yt, gs === xs - 1 ? xt + 1 : xt - 1, xt)]);
+      for (const gt of [xt - 1, xt + 1]) out.push([H(ys, xs, gs), V(gs, ys, ch), H(ch, gs, gt), V(gt, ch, yt), H(yt, gt, xt)]);
+    }
+    return out;
+  };
+  const clean = pieces => pieces.filter(p => p.h !== undefined ? p.x1 !== p.x2 : p.b1 !== p.b2);
+  const flowOrder = [...model.flows].sort((a, b) => {
+    const ba = g.back.has(a.id), bb = g.back.has(b.id);
+    if (ba !== bb) return ba ? 1 : -1;
+    const la = Math.abs(place.get(a.to).xo - place.get(a.from).xo) + Math.abs(place.get(a.to).band - place.get(a.from).band);
+    const lb = Math.abs(place.get(b.to).xo - place.get(b.from).xo) + Math.abs(place.get(b.to).band - place.get(b.from).band);
+    return la - lb;
+  });
+  for (const f of flowOrder){
+    const s = place.get(f.from), t = place.get(f.to);
+    let best = null;
+    for (const raw of templates(s, t)){
+      const pieces = clean(raw);
+      if (!pieces.length) continue;
+      const sc = score(f, pieces);
+      if (!best || sc < best.sc) best = { pieces, sc };
+    }
+    const sideS = sideOfFirst(best.pieces[0], s), sideT = sideOfLast(best.pieces[best.pieces.length - 1], t);
+    const use = (id, side, out) => { const k = id + '|' + side; const u = portUse.get(k) || { in: 0, out: 0 }; u[out ? 'out' : 'in']++; portUse.set(k, u); };
+    use(f.from, sideS, true); use(f.to, sideT, false);
+    routed.push({ f, pieces: best.pieces, sides: [sideS, sideT], back: g.back.has(f.id) });
+  }
+  // Paarprobe (Ben, 2026-10-05, x-rg1: „Ich habe aber mal 2 Knicke entfernt.“): je zwei Flüsse in dasselbe Ereignis werden
+  // herausgenommen und in beiden Reihenfolgen neu gelegt, jeder auf seinem billigsten Weg; das Paar mit der kleineren
+  // Summe bleibt. Einzeln findet der Router keinen Tausch: in x-rg1 nahm „Geldeingang“ im ersten Durchgang den freien
+  // Südport des Endes, bevor der längere Fluss „kein Regress“ gelegt war, und der musste oben herum. Vor dem zweiten
+  // Durchgang, damit der die getauschten Wege schon sieht (sonst blieb ein Umweg, der dem alten Weg auswich).
+  if (reroute){
+    const portAdd = (id, side, out, d) => { const k = id + '|' + side; const u = portUse.get(k) || { in: 0, out: 0 }; u[out ? 'out' : 'in'] += d; portUse.set(k, u); };
+    const lift = r => { portAdd(r.f.from, r.sides[0], true, -1); portAdd(r.f.to, r.sides[1], false, -1); r.off = true; };
+    const lay = (r, pieces) => {
+      const s = place.get(r.f.from), t = place.get(r.f.to);
+      r.pieces = pieces; r.sides = [sideOfFirst(pieces[0], s), sideOfLast(pieces[pieces.length - 1], t)]; r.off = false;
+      portAdd(r.f.from, r.sides[0], true, 1); portAdd(r.f.to, r.sides[1], false, 1);
+    };
+    const cheapest = f => {
+      let best = null;
+      for (const raw of templates(place.get(f.from), place.get(f.to))){
+        const pieces = clean(raw);
+        if (!pieces.length) continue;
+        const sc = score(f, pieces);
+        if (!best || sc < best.sc) best = { pieces, sc };
+      }
+      return best.pieces;
+    };
+    // Nur in ein Ereignis: es hat vier Ports und keinen Versatz; an einer Task liegen die Enden nebeneinander, in ein
+    // Gateway laufen Flüsse zusammen.
+    for (const n of model.nodes){
+      if (['task', 'gateway'].includes(n.type)) continue;
+      const into = routed.filter(r => r.f.to === n.id);
+      for (let i = 0; i < into.length; i++) for (let j = i + 1; j < into.length; j++){
+        const a = into[i], b = into[j];
+        const sum = () => score(a.f, a.pieces) + score(b.f, b.pieces);
+        let best = { sc: sum(), p: [a.pieces, b.pieces] };
+        for (const [x, y] of [[a, b], [b, a]]){
+          lift(a); lift(b);
+          lay(x, cheapest(x.f)); lay(y, cheapest(y.f));
+          const sc = sum();
+          if (sc < best.sc - 1e-9) best = { sc, p: [a.pieces, b.pieces] };
+        }
+        lift(a); lift(b); lay(a, best.p[0]); lay(b, best.p[1]);
+      }
+    }
+  }
+
+  // Zweiter Durchgang (Ben, 2026-10-05, r22: „Spalte eingefügt, um durch den Versatz einen Ausgang
+  // freizumachen“): jeder Fluss wird noch einmal gelegt, jetzt mit allen anderen im Bild (die Rückflüsse kamen im
+  // ersten Durchgang erst zuletzt); er wechselt nur, wenn ein Weg echt billiger ist als sein bisheriger. Bis zu drei
+  // Runden, solange ein Fluss wechselt (Ben, 2026-10-05, x-tm1: ein Fluss, der vor einem anderen neu gelegt wurde,
+  // sah dessen alten Port noch belegt und blieb auf dem Umweg).
+  for (let round = 0, moved = true; reroute && moved && round < 3; round++){ moved = false; for (const f of flowOrder){
+    const i = routed.findIndex(r => r.f === f), old = routed[i];
+    const s = place.get(f.from), t = place.get(f.to);
+    const unuse = (id, side, out) => { const u = portUse.get(id + '|' + side); if (u) u[out ? 'out' : 'in']--; };
+    unuse(f.from, old.sides[0], true); unuse(f.to, old.sides[1], false);
+    let best = { pieces: old.pieces, sc: score(f, old.pieces) };
+    for (const raw of templates(s, t)){
+      const pieces = clean(raw);
+      if (!pieces.length) continue;
+      const sc = score(f, pieces);
+      if (sc < best.sc - 1e-9) best = { pieces, sc };
+    }
+    const sideS = sideOfFirst(best.pieces[0], s), sideT = sideOfLast(best.pieces[best.pieces.length - 1], t);
+    const use = (id, side, out) => { const k = id + '|' + side; const u = portUse.get(k) || { in: 0, out: 0 }; u[out ? 'out' : 'in']++; portUse.set(k, u); };
+    use(f.from, sideS, true); use(f.to, sideT, false);
+    if (best.pieces !== old.pieces) moved = true;
+    routed[i] = { f, pieces: best.pieces, sides: [sideS, sideT], back: old.back };
+  } }
+  // ---- Strecken in Kanälen und Lücken ----
+  // Je Kanal die waagerechten Stücke in ihm, nach der Seite, von der ihr
+  // Fluss kommt (von oben, von unten), kürzere Spannen innen; je Lücke die
+  // senkrechten ebenso (von links, von rechts).
+  const tracks = new Map(); // piece → { side, i }
+  const assign = (items, side) => {
+    const sorted = [...items].sort((a, b) => a.len - b.len);
+    const lanesUsed = [];
+    for (const it of sorted){
+      let i = 0;
+      while (lanesUsed[i] && lanesUsed[i].some(o => overlap(o.lo, o.hi, it.lo, it.hi))) i++;
+      (lanesUsed[i] ||= []).push(it);
+      tracks.set(it.p, { side, i });
+    }
+    return lanesUsed.length;
+  };
+  const chTracks = new Map(), gapTracks = new Map();
+  for (const ch of channels){
+    const items = [];
+    for (const r of routed) r.pieces.forEach((p, i) => {
+      if (p.h !== ch) return;
+      // Von welcher Seite der Fluss in den Kanal kommt: das Band des Stücks davor oder danach.
+      const before = r.pieces[i - 1];
+      const fromBand = before ? before.b1 : place.get(r.f.from).band;
+      const side = (fromBand < ch ? 'top' : 'bottom');
+      items.push({ p, lo: Math.min(p.x1, p.x2), hi: Math.max(p.x1, p.x2), len: Math.abs(p.x2 - p.x1), side });
+    });
+    const top = assign(items.filter(x => x.side === 'top'), 'top'), bottom = assign(items.filter(x => x.side === 'bottom'), 'bottom');
+    chTracks.set(ch, { top, bottom });
+  }
+  for (let gx = 0; gx <= 2 * cols; gx += 2){
+    const items = [];
+    for (const r of routed) r.pieces.forEach((p, i) => {
+      if (p.v !== gx) return;
+      const before = r.pieces[i - 1];
+      const fromX = before ? before.x1 : place.get(r.f.from).xo;
+      items.push({ p, lo: Math.min(p.b1, p.b2), hi: Math.max(p.b1, p.b2), len: Math.abs(p.b2 - p.b1), side: fromX < gx ? 'left' : 'right' });
+    });
+    const left = assign(items.filter(x => x.side === 'left'), 'left'), right = assign(items.filter(x => x.side === 'right'), 'right');
+    gapTracks.set(gx, { left, right });
+  }
+
+  // ---- Pixel ----
+  const widthOf = n => n.type === 'task' ? SIZE.task[0] : n.type === 'gateway' ? SIZE.gateway[0] : EVENT_LABEL;
+  const colW = Array.from({ length: cols }, () => 0), rowH = bands.map(() => 0);
+  for (const c of g.cells.values()){
+    colW[c.col] = Math.max(colW[c.col], widthOf(c.n));
+    const b = place.get(c.n.id).band;
+    rowH[b] = Math.max(rowH[b], SIZE[c.n.type][1]);
+  }
+  for (let b = 0; b < bands.length; b++){
+    if (bands[b].kind === 'row'){ if (!rowH[b]) rowH[b] = EMPTY_ROW; continue; }
+    const t = chTracks.get(b), n = t.top + t.bottom;
+    const base = bands[b].edge ? EDGE_BASE : CHANNEL_BASE;
+    rowH[b] = Math.max(base, n ? 2 * TRACK_MARGIN + (n - 1) * TRACK + (bands[b].edge ? 0 : 8) : 0);
+  }
+  const gapW = [];
+  for (let gx = 0; gx <= 2 * cols; gx += 2){
+    const t = gapTracks.get(gx), n = t.left + t.right;
+    gapW[gx / 2] = Math.max(GAP_BASE, n ? 2 * TRACK_MARGIN + (n - 1) * TRACK + 12 : 0);
+  }
+  // Platz für die Beschriftung (Ben, 2026-10-05, demo5 und x-rg2: „Bei Textkollision prüfen, ob Bruch verschwindet
+  // wenn h-Abstand erhöht wird“): ein benannter Fluss, der gerade von einer Spalte in die nächste geht, bekommt
+  // eine Lücke, in der seine Beschriftung zwischen den beiden Symbolen Platz hat; hinter einem Gateway 10 px nach
+  // dessen Spitze (wie flowLabelPlaces()), sonst 6 px, und 6 px vor dem Ziel. Garantie: die Beschriftung eines
+  // geraden Flusses liegt auf keinem seiner Knoten.
+  for (const r of routed){
+    if (!r.f.name || r.pieces.length !== 1 || r.pieces[0].h === undefined || bands[r.pieces[0].h].kind !== 'row') continue;
+    const p = r.pieces[0];
+    if (Math.abs(p.x2 - p.x1) !== 2) continue;
+    const a = g.cells.get(r.f.from), b = g.cells.get(r.f.to), [l, rt] = p.x1 < p.x2 ? [a, b] : [b, a];
+    const spare = (colW[l.col] - SIZE[l.n.type][0]) / 2 + (colW[rt.col] - SIZE[rt.n.type][0]) / 2;
+    const need = (a.n.type === 'gateway' ? 10 : 6) + measure(r.f.name).w + 6;
+    const k = Math.max(l.col, rt.col);
+    gapW[k] = Math.max(gapW[k], Math.ceil(need - spare));
+  }
+  // Platz für den Namen eines Gateways (Ben, 2026-10-05, r01: „Abstand zwischen gateway und folgennode leicht erhöhen,
+  // dann verschwindet die kollision.“): nehmen Flüsse den Port oben und unten, findet der Name weder darüber noch
+  // darunter Platz und geht in eine Ecke (labelPlaces()); passt er weder rechts noch links zwischen das Gateway und den
+  // Nachbarn seiner Zeile, wird die Lücke rechts so breit, dass er dort 2 px nach der Spitze und 6 px vor dem nächsten
+  // Knoten steht, wie bei Vorschlag 1.
+  for (const c of g.cells.values()){
+    if (c.n.type !== 'gateway' || !c.n.name) continue;
+    const at = side => routed.some(r => (r.f.from === c.n.id && r.sides[0] === side) || (r.f.to === c.n.id && r.sides[1] === side));
+    if (!at('top') || !at('bottom')) continue;
+    const band = place.get(c.n.id).band, need = 2 + measure(c.n.name).w + 6;
+    // Wie viel fehlt zwischen dem Gateway und seinem Nachbarn in Spalte col + d; die Lücke dazwischen hat den Index k.
+    // Nur eine Task reicht so hoch, dass sie die Ecke über oder unter dem Gateway erreicht.
+    const short = d => {
+      const id = cellAt.get(band + '|' + (2 * (c.col + d) + 1));
+      if (!id || g.cells.get(id).n.type !== 'task') return 0;
+      const nc = g.cells.get(id), k = d > 0 ? nc.col : c.col;
+      return need - (colW[c.col] - SIZE.gateway[0]) / 2 - (colW[nc.col] - SIZE[nc.n.type][0]) / 2 - gapW[k];
+    };
+    const right = short(1);
+    if (right <= 0 || short(-1) <= 0) continue;
+    gapW[c.col + 1] += Math.ceil(right);
+  }
+  const colX = [], gapX = [];
+  let x = HEAD;
+  for (let c = 0; c <= cols; c++){
+    gapX[c] = x; x += gapW[c];
+    if (c < cols){ colX[c] = x; x += colW[c]; }
+  }
+  const totalW = x;
+  const bandY = [];
+  let y = 0;
+  for (let b = 0; b < bands.length; b++){ bandY[b] = y; y += rowH[b]; }
+  const totalH = y;
 
   const box = {};
-  for (const n of model.nodes){
-    const r = rawOf[n.id], cx = mapX(r.cx), cy = mapY(r.cy), [w, h] = r.size;
-    di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h];
-    box[n.id] = { cx, cy, w, h, task: n.type === 'task', gateway: n.type === 'gateway' };
+  for (const c of g.cells.values()){
+    const b = place.get(c.n.id).band, [w, h] = SIZE[c.n.type];
+    box[c.n.id] = { cx: colX[c.col] + colW[c.col] / 2, cy: bandY[b] + rowH[b] / 2, w, h, task: c.n.type === 'task', gateway: c.n.type === 'gateway' };
   }
-  const rect = c => ({ x1: c.cx - c.w / 2, x2: c.cx + c.w / 2, y1: c.cy - c.h / 2, y2: c.cy + c.h / 2 });
+  const trackY = p => {
+    const t = tracks.get(p), b = p.h, h = rowH[b];
+    return t.side === 'top' ? bandY[b] + TRACK_MARGIN + t.i * TRACK + (bands[b].edge ? 0 : 4) : bandY[b] + h - TRACK_MARGIN - t.i * TRACK - (bands[b].edge ? 0 : 4);
+  };
+  const trackX = p => {
+    const t = tracks.get(p), gx = p.v / 2, w = gapW[gx];
+    return t.side === 'left' ? gapX[gx] + TRACK_MARGIN + t.i * TRACK : gapX[gx] + w - TRACK_MARGIN - t.i * TRACK;
+  };
+
+  // Ports: an einer Task mehrere Enden je Seite nebeneinander, sortiert nach
+  // dem Stück danach, damit sie sich nicht kreuzen; ein Gateway und ein Ereignis
+  // an ihrer Spitze.
+  // Reihenfolge der Enden (Ben, 2026-10-05, r09: „außerdem habe ich eine Kreuzung gelöst, in dem ich die reihenfolge
+  // der Flows die zu B2 gehen geändert habe“): das Stück danach kommt von einer Seite (von links oder rechts an
+  // einer oberen oder unteren Seite, von oben oder unten an einer linken oder rechten); je näher es am Symbol liegt,
+  // desto weiter steht sein Ende auf dieser Seite, der fernere Fluss geht innen daran vorbei. Ein gerader Fluss
+  // behält die Mitte. Vorher nur nach der Lage des Stücks, ohne die Seite; von links oder oben kreuzten sie sich.
+  const ends = new Map(); // id|side → [{ r, out, far }]
+  for (const r of routed){
+    const farOf = (atStart) => {
+      const n = r.pieces.length;
+      if (n === 1) return 0;
+      const [p, q] = atStart ? [r.pieces[0], r.pieces[1]] : [r.pieces[n - 1], r.pieces[n - 2]];
+      const own = place.get(atStart ? r.f.from : r.f.to);
+      // q liegt quer zu p: sein Abstand zum Symbol und die Seite, von der er kommt (−1 links/oben, +1 rechts/unten).
+      if (p.h !== undefined){
+        const far = atStart ? q.b2 : q.b1, d = Math.abs(q.v - own.xo);
+        return Math.sign(far - own.band) / (d || 0.5);
+      }
+      const far = atStart ? q.x2 : q.x1, d = Math.abs(q.h - own.band);
+      return Math.sign(far - own.xo) / (d || 0.5);
+    };
+    const add = (id, side, out, far) => { const k = id + '|' + side; (ends.get(k) || ends.set(k, []).get(k)).push({ r, out, far }); };
+    add(r.f.from, r.sides[0], true, farOf(true));
+    add(r.f.to, r.sides[1], false, farOf(false));
+  }
+  const portOf = new Map(); // r|out → { x, y }
+  for (const [k, list] of ends){
+    const [id, side] = k.split('|'), c = box[id];
+    const vertical = side === 'top' || side === 'bottom';
+    const base = { x: side === 'left' ? c.cx - c.w / 2 : side === 'right' ? c.cx + c.w / 2 : c.cx, y: side === 'top' ? c.cy - c.h / 2 : side === 'bottom' ? c.cy + c.h / 2 : c.cy };
+    const sorted = [...list].sort((a, b) => a.far - b.far || (a.out === b.out ? 0 : a.out ? 1 : -1));
+    const n = sorted.length, room = (vertical ? c.w : c.h) - 2 * ATTACH_CLEARANCE;
+    const step = c.task && n > 1 ? Math.min(PORT_STEP, room / (n - 1)) : 0;
+    // Ein Fluss aus einem Stück (gerade zum Nachbarn) behält die Mitte der Seite; die anderen stehen daneben, auf der Seite, von der sie kommen.
+    const straight = c.task && n > 1 ? sorted.filter(e => e.r.pieces.length === 1) : [];
+    const offsets = new Map();
+    if (straight.length === 1){
+      const m = straight[0];
+      offsets.set(m, 0);
+      let lo = 0, hi = 0;
+      for (const e of sorted){ if (e === m) continue; if (e.far < m.far || (e.far === m.far && lo === 0 && hi > 0)) offsets.set(e, -step * ++lo); else offsets.set(e, step * ++hi); }
+    } else sorted.forEach((e, i) => offsets.set(e, step * (i - (n - 1) / 2)));
+    for (const e of sorted){
+      const off = Math.max(-room / 2, Math.min(room / 2, offsets.get(e)));
+      portOf.set(e.r.f.id + '|' + e.out, { x: base.x + (vertical ? off : 0), y: base.y + (vertical ? 0 : off) });
+    }
+  }
 
   const routes = [];
-  model.flows.forEach((f, i) => {
-    const orig = raw.edges[i];
-    if (!orig || orig.length < 2) throw new Error('Mermaid hat den Fluss „' + f.id + '“ nicht angeordnet.');
-    const beside = (o, o2, r) =>
-      Math.abs(o.x - o2.x) < 1 && Math.abs(o.x - r.cx) > r.w / 2 + 0.5 ? { axis: 'x', sign: Math.sign(o.x - r.cx) } :
-      Math.abs(o.y - o2.y) < 1 && Math.abs(o.y - r.cy) > r.h / 2 + 0.5 ? { axis: 'y', sign: Math.sign(o.y - r.cy) } : null;
-    const sideFrom = beside(orig[0], orig[1], rawOf[f.from]), sideTo = beside(orig[orig.length - 1], orig[orig.length - 2], rawOf[f.to]);
-    const pts = orig.map(p => ({ x: mapX(p.x), y: mapY(p.y) }));
-    // A point Mermaid gives twice, a stub under a pixel, or a way out and
-    // back would read as an end of no direction or of the wrong one.
-    dedupe(pts, true);
-    unfold(pts);
-    attach(pts, true, box[f.from], sideFrom);
-    attach(pts, false, box[f.to], sideTo);
-    const obstacles = model.nodes.filter(n => n.id !== f.from && n.id !== f.to).map(n => rect(box[n.id]));
-    detour(pts, true, box[f.from], obstacles);
-    detour(pts, false, box[f.to], obstacles);
-    nudge(pts, obstacles);
-    tidy(pts);
-    // The side of the row Mermaid's route keeps to: where its farthest point lies.
-    const rc = rawOf[f.from].cy, far = orig.reduce((m, p) => Math.abs(p.y - rc) > Math.abs(m) ? p.y - rc : m, 0);
-    routes.push({ f, pts, obstacles, loopSide: far > 0 ? 1 : -1 });
-  });
-  // The twins first, so that a flow back keeps off their rings; a twin
-  // routed there is no flow back of loopBack()'s. A middle lane a flow back
-  // needs room in grows, and what lies beyond it moves.
-  separateTwins(routes, box);
-  const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
-  dockApart(routes, box, gateways);
-  const grown = loopBack(routes, box, model.lanes.map(l => laneBox[l.key]));
-  if (grown.up || grown.down){
-    for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
-    if (di.pool){ di.pool[1] -= grown.up; di.pool[3] += grown.up + grown.down; }
+  for (const r of routed){
+    const p0 = portOf.get(r.f.id + '|true'), pn = portOf.get(r.f.id + '|false');
+    const n = r.pieces.length;
+    // Die feste Koordinate jedes Stücks: am Anfang der Port, am Ende der Port, dazwischen die Strecke.
+    const fixed = r.pieces.map((p, i) => {
+      if (p.h !== undefined) return i === 0 ? p0.y : i === n - 1 ? pn.y : (bands[p.h].kind === 'ch' ? trackY(p) : p0.y);
+      return i === 0 ? p0.x : i === n - 1 ? pn.x : (p.v % 2 === 0 ? trackX(p) : p0.x);
+    });
+    const pts = [{ ...p0 }];
+    for (let i = 0; i + 1 < n; i++){
+      const a = r.pieces[i];
+      pts.push(a.h !== undefined ? { x: fixed[i + 1], y: fixed[i] } : { x: fixed[i], y: fixed[i + 1] });
+    }
+    pts.push({ ...pn });
+    // Ein Stück, dessen beide Enden verschieden liegen (Ports mit Versatz), bekommt einen Knick in der Mitte.
+    for (let i = pts.length - 2; i >= 0; i--){
+      const a = pts[i], b = pts[i + 1];
+      if (Math.abs(a.x - b.x) >= 0.5 && Math.abs(a.y - b.y) >= 0.5){
+        const piece = r.pieces[Math.min(i, n - 1)];
+        if (piece.h !== undefined){ const mx = (a.x + b.x) / 2; pts.splice(i + 1, 0, { x: mx, y: a.y }, { x: mx, y: b.y }); }
+        else { const my = (a.y + b.y) / 2; pts.splice(i + 1, 0, { x: a.x, y: my }, { x: b.x, y: my }); }
+      }
+    }
+    dedupe(pts);
+    const obstacles = model.nodes.filter(m => m.id !== r.f.from && m.id !== r.f.to).map(m => { const c = box[m.id]; return { x1: c.cx - c.w / 2, x2: c.cx + c.w / 2, y1: c.cy - c.h / 2, y2: c.cy + c.h / 2 }; });
+    routes.push({ f: r.f, pts, obstacles, loop: r.back });
   }
-  fanOut(routes, box, gateways);
-  spreadPorts(routes, box);
+
+  // Bahnen, Pool, Knoten.
+  const di = { pool: null, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {} };
+  const laneBox = {};
+  model.lanes.forEach((l, i) => {
+    const first = bands.findIndex(b => b.lane === i), last = bands.length - 1 - [...bands].reverse().findIndex(b => b.lane === i);
+    laneBox[l.key] = [R(HEAD), R(bandY[first]), R(totalW - HEAD), R(bandY[last] + rowH[last] - bandY[first])];
+    if (!l.synthetic) di.lanes[l.id] = laneBox[l.key];
+  });
+  if (model.pool) di.pool = [0, 0, R(totalW), R(totalH)];
+  for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
   for (const { pts } of routes) orthogonal(pts);
   for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
+  const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
+  finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways);
+  return di;
+}
 
-  // The labels keep off every symbol, every piece of a flow and every label
-  // placed before them: first the flows' labels, then those of events and
-  // gateways; where every place is taken, the one covered least.
+// The labels and the frame of the routed picture. The labels keep off every
+// symbol, every piece of a flow and every label placed before them: first the
+// flows' labels, then those of events and gateways; where every place is
+// taken, the one covered least.
+function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways){
   const segments = routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
   const symbols = model.nodes.map(n => di.nodes[n.id]);
   const taken = [], owners = [];
@@ -1229,7 +2080,7 @@ export function layoutGeometry(model, raw, measure = labelSize){
     if (di.pool){ di.pool[1] -= room.up; di.pool[3] += room.up + room.down; }
   }
 
-  // Flows routed around a row, and labels, can lie beyond Mermaid's lanes:
+  // Flows routed in the outer channels, and labels, can lie beyond the lanes:
   // the outer lanes and the pool grow until every waypoint and every label
   // lies inside, FRAME_MARGIN from the edge (the top lane up, the bottom lane down,
   // every lane and the pool left and right). The frame is every lane, the
@@ -1252,7 +2103,6 @@ export function layoutGeometry(model, raw, measure = labelSize){
     }
     if (di.pool){ di.pool[1] -= up; di.pool[3] += up + down; di.pool[0] -= west; di.pool[2] += west + east; }
   }
-  return di;
 }
 
 // ---------- the diagram part ----------
@@ -1265,8 +2115,60 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 // XML. di: what layoutGeometry() returned. Returns { xml, diagram }: the XML
 // and the id of the inserted BPMNDiagram, which bpmn-js is told to open, since
 // it opens the first diagram, and that may be an empty one of the author's.
+// Die Bahnzugehörigkeit im laneSet nach der Lage im Bild (Spike 2.26, Ben,
+// 2026-10-05): setzt eine Regel einen Knoten in eine andere Bahn (R1 ein
+// Gateway), stand er im XML bisher weiter in der alten. Je Knoten gilt die
+// innerste gezeichnete Bahn, in deren Rechteck seine Mitte liegt; weicht sie
+// von der Eingabe ab, verliert jede Bahn außer ihr und ihren äußeren Bahnen
+// den flowNodeRef, und sie bekommt ihn vor ihrem schließenden Tag. Sonst
+// bleibt der Text unverändert. Kommentare und CDATA zählen nicht.
+function relane(text, model, di){
+  const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
+  // Bahnen im Text: Id, Präfix, Bereich [Öffnen, Schließen] und äußere Bahn.
+  const lanes = [], stack = [];
+  for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b([^>]*?)(\/?)>/g)){
+    if (m[1]){ const l = stack.pop(); if (l) l.close = m.index; continue; }
+    const id = (/\sid\s*=\s*["']([^"']+)["']/.exec(m[3]) || [])[1];
+    const l = { id, prefix: m[2], open: m.index, openEnd: m.index + m[0].length, close: null, parent: stack[stack.length - 1] || null };
+    lanes.push(l);
+    if (!m[4]) stack.push(l); else l.close = l.openEnd;
+  }
+  const byId = new Map(lanes.filter(l => l.id).map(l => [l.id, l]));
+  const inLane = i => lanes.filter(l => l.open < i && l.close !== null && i < l.close).sort((p, q) => q.open - p.open)[0] || null;
+  const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\s*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
+    .map(m => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3], lane: inLane(m.index) }));
+  const drawn = model.lanes.filter(l => !l.synthetic && di.lanes[l.id]);
+  const edits = [];
+  for (const n of model.nodes){
+    const r = di.nodes[n.id];
+    if (!r) continue;
+    const cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
+    const target = drawn.find(l => { const [x, y, w, h] = di.lanes[l.id]; return cx >= x && cx <= x + w && cy >= y && cy <= y + h; });
+    const now = model.lanes.find(l => l.nodes.includes(n.id));
+    if (!target || (now && now.id === target.id) || !byId.has(target.id)) continue;
+    const keep = new Set();
+    for (let l = byId.get(target.id); l; l = l.parent) keep.add(l);
+    const mine = refs.filter(x => x.id === esc(n.id));
+    for (const x of mine) if (!keep.has(x.lane)) edits.push({ at: x.start, end: x.end, put: '' });
+    const t = byId.get(target.id);
+    if (!mine.some(x => x.lane === t) && t.close !== null && t.close > t.openEnd){
+      const sib = refs.find(x => x.lane === t);
+      const indent = sib ? sib.indent : '';
+      const pre = sib ? sib.prefix : t.prefix;
+      // Vor dem schließenden Tag, auf eigener Zeile, eingerückt wie die anderen flowNodeRefs der Bahn.
+      const lineStart = text.lastIndexOf('\n', t.close - 1) + 1;
+      const at = /^[ \t]*$/.test(text.slice(lineStart, t.close)) ? lineStart : t.close;
+      edits.push({ at, end: at, put: (at === lineStart ? '' : '\n') + indent + '<' + pre + 'flowNodeRef>' + esc(n.id) + '</' + pre + 'flowNodeRef>\n' });
+    }
+  }
+  edits.sort((p, q) => q.at - p.at || q.end - p.end);
+  let out = text;
+  for (const e of edits) out = out.slice(0, e.at) + e.put + out.slice(e.end);
+  return out;
+}
+
 export function appendDiagram(xml, model, di){
-  const text = String(xml);
+  const text = relane(String(xml), model, di);
   // Comments and CDATA sections are blanked out first: a closing tag or an id
   // written in one is not the XML's.
   const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));

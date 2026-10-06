@@ -28,26 +28,26 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Zusammenarbeit">
-      <bpmndi:BPMNShape id="Bibliothek_di" bpmnElement="Bibliothek" isHorizontal="true"><dc:Bounds x="-133" y="-129" width="960" height="442"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Leserin_di" bpmnElement="Leserin" isHorizontal="true"><dc:Bounds x="-103" y="-129" width="930" height="146"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Theke_di" bpmnElement="Theke" isHorizontal="true"><dc:Bounds x="-103" y="17" width="930" height="145"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Magazin_di" bpmnElement="Magazin" isHorizontal="true"><dc:Bounds x="-103" y="162" width="930" height="151"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Start_di" bpmnElement="V_Start"><dc:Bounds x="-15" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="-42" y="-90" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Aufnehmen_di" bpmnElement="V_Aufnehmen"><dc:Bounds x="-57" y="47" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Frage_di" bpmnElement="V_Frage" isMarkerVisible="true"><dc:Bounds x="133" y="62" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="113" y="43" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Holen_di" bpmnElement="V_Holen"><dc:Bounds x="236" y="197" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Fernleihe_di" bpmnElement="V_Fernleihe"><dc:Bounds x="397" y="47" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Benachrichtigen_di" bpmnElement="V_Benachrichtigen"><dc:Bounds x="558" y="47" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Abholen_di" bpmnElement="V_Abholen"><dc:Bounds x="558" y="-93" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Ende_di" bpmnElement="V_Ende"><dc:Bounds x="757" y="-71" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="730" y="-31" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="V1_di" bpmnElement="V1"><di:waypoint x="3" y="-35"/><di:waypoint x="3" y="47"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V2_di" bpmnElement="V2"><di:waypoint x="63" y="87"/><di:waypoint x="133" y="87"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V3_di" bpmnElement="V3"><di:waypoint x="158" y="112"/><di:waypoint x="158" y="237"/><di:waypoint x="236" y="237"/><bpmndi:BPMNLabel><dc:Bounds x="164" y="120" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V4_di" bpmnElement="V4"><di:waypoint x="183" y="87"/><di:waypoint x="397" y="87"/><bpmndi:BPMNLabel><dc:Bounds x="193" y="68" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V5_di" bpmnElement="V5"><di:waypoint x="356" y="237"/><di:waypoint x="618" y="237"/><di:waypoint x="618" y="127"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V6_di" bpmnElement="V6"><di:waypoint x="517" y="87"/><di:waypoint x="558" y="87"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V7_di" bpmnElement="V7"><di:waypoint x="618" y="47"/><di:waypoint x="618" y="-13"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V8_di" bpmnElement="V8"><di:waypoint x="678" y="-53"/><di:waypoint x="757" y="-53"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Bibliothek_di" bpmnElement="Bibliothek" isHorizontal="true"><dc:Bounds x="0" y="0" width="882" height="432"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Leserin_di" bpmnElement="Leserin" isHorizontal="true"><dc:Bounds x="30" y="0" width="852" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Theke_di" bpmnElement="Theke" isHorizontal="true"><dc:Bounds x="30" y="144" width="852" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Magazin_di" bpmnElement="Magazin" isHorizontal="true"><dc:Bounds x="30" y="288" width="852" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Start_di" bpmnElement="V_Start"><dc:Bounds x="120" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="93" y="35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Aufnehmen_di" bpmnElement="V_Aufnehmen"><dc:Bounds x="78" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Frage_di" bpmnElement="V_Frage" isMarkerVisible="true"><dc:Bounds x="281" y="191" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="261" y="172" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Holen_di" bpmnElement="V_Holen"><dc:Bounds x="246" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Fernleihe_di" bpmnElement="V_Fernleihe"><dc:Bounds x="414" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Benachrichtigen_di" bpmnElement="V_Benachrichtigen"><dc:Bounds x="582" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Abholen_di" bpmnElement="V_Abholen"><dc:Bounds x="582" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Ende_di" bpmnElement="V_Ende"><dc:Bounds x="774" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="747" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="V1_di" bpmnElement="V1"><di:waypoint x="138" y="90"/><di:waypoint x="138" y="176"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V2_di" bpmnElement="V2"><di:waypoint x="198" y="216"/><di:waypoint x="281" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V3_di" bpmnElement="V3"><di:waypoint x="306" y="241"/><di:waypoint x="306" y="320"/><bpmndi:BPMNLabel><dc:Bounds x="312" y="249" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V4_di" bpmnElement="V4"><di:waypoint x="331" y="216"/><di:waypoint x="414" y="216"/><bpmndi:BPMNLabel><dc:Bounds x="341" y="197" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V5_di" bpmnElement="V5"><di:waypoint x="366" y="360"/><di:waypoint x="642" y="360"/><di:waypoint x="642" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V6_di" bpmnElement="V6"><di:waypoint x="534" y="216"/><di:waypoint x="582" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V7_di" bpmnElement="V7"><di:waypoint x="642" y="176"/><di:waypoint x="642" y="112"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V8_di" bpmnElement="V8"><di:waypoint x="702" y="72"/><di:waypoint x="774" y="72"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

@@ -3913,13 +3913,16 @@ async function assertDiagramsWithoutScripts(browser, file, check, exp){
 const downloadNames = exp => diagramFileNames(exp.diagrams.map(d => d.title));
 // What a downloaded source has to hold: the block's text as marked hands it
 // on, with its line feed at the end; for BPMN laid out by dokufix the
-// author's XML with the diagram part dokufix put in.
+// author's XML with the diagram part dokufix put in, and a node a rule put in
+// another lane (R1, story 2.27) referenced by that lane: the lanes' node
+// references aside, the rest is the author's.
 const LAID_OUT_PART = /  <bpmndi:BPMNDiagram xmlns:bpmndi="http:\/\/www\.omg\.org\/spec\/BPMN\/20100524\/DI"[\s\S]*?<\/bpmndi:BPMNDiagram>\n/;
+const NODE_REFS = /\s*<((?:[\w.-]+:)?)flowNodeRef\s*>[^<]*<\/\1flowNodeRef\s*>\s*/g;
 function sourceProblem(d, got){
   const want = d.source + '\n';
   if (!d.laidOut) return got === want ? '' : 'differs from the block\'s text at ' + [...want].findIndex((c, i) => got[i] !== c);
   if (!/<bpmndi:BPMNShape\b/.test(got)) return 'no BPMNShape';
-  return got.replace(LAID_OUT_PART, '') === want ? '' : 'without its diagram part not the author\'s XML';
+  return got.replace(LAID_OUT_PART, '').replace(NODE_REFS, '') === want.replace(NODE_REFS, '') ? '' : 'without its diagram part and the lanes\' node references not the author\'s XML';
 }
 // The picture button where a script runs: the editor file, schlank and kompakt.
 const PICTURED = new Set(['mit-editor', 'schlank', 'kompakt']);
