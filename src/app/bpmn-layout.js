@@ -98,8 +98,11 @@ const HOLDS_CONTENT = new Set(['subProcess', 'adHocSubProcess', 'transaction']);
 // read (story 2.31), but inside a sub-process.
 const LEFT_OUT = new Set(['textAnnotation', 'dataObject', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
 const NOTED = new Set(['textAnnotation', 'association']);
-// A text annotation's text: its <text> child, the line breaks the author wrote kept, blanks around each line taken off.
-const noteText = el => { const t = kids(el).find(k => local(k) === 'text'); return t ? t.textContent.split(/\r?\n/).map(l => l.replace(/\s+/g, ' ').trim()).join('\n').trim() : ''; };
+// A text annotation's text: its <text> child as written, every blank and line break kept. bpmn-js draws it so: moddle
+// keeps the text node verbatim, and diagram-js's layoutText() splits it at each line break and keeps empty and
+// indented lines; a pretty-printed <text> is drawn a line lower and indented, and its box is measured for that
+// (review of 2.31). Whether it has text at all is asked of it with the blanks taken off.
+const noteText = el => { const t = kids(el).find(k => local(k) === 'text'); return t ? t.textContent : ''; };
 // What a flow node may hold that is drawn and left out with it.
 const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation']);
 
@@ -131,7 +134,8 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //            participant; fromPool, toPool: where an end is a participant,
 //            the index of its pool
 //     notes: [{ id, text, pool }], the text annotations (story 2.31): text,
-//            their text, the author's line breaks kept; pool, the index of the
+//            their text as written, blanks and line breaks kept, as bpmn-js
+//            draws it; pool, the index of the
 //            pool of their first association's partner, null at a message flow
 //     associations: [{ id, note, partner, kind, toNote }], each from a text
 //            annotation to its partner: kind node, boundary, flow, message or
@@ -248,7 +252,7 @@ function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages
   for (const { el, slot } of noted) if (local(el) === 'textAnnotation'){
     if (!attr(el, 'id')) slot.reason = 'has no id';
     // A text annotation without text is no comment (Ben, 2026-10-06, nz13-rg1: Signavio's IT-system markers).
-    else if (!noteText(el)){ slot.reason = 'has no text'; empty.add(attr(el, 'id')); }
+    else if (!clean(noteText(el))){ slot.reason = 'has no text'; empty.add(attr(el, 'id')); }
     else texts.set(attr(el, 'id'), { el, slot });
   }
   // The other end: its kind and the pool it lies in (a message flow in none).
@@ -544,16 +548,17 @@ const CHAR = 6.6, LINE = 15, LABEL_WIDTH = 90;
 // The widths a text annotation may take, the narrowest first (story 2.31); the page measures each.
 export const NOTE_WIDTHS = [100, 150, 200, 250];
 // With a width, the size of a text annotation that wide (story 2.31): bpmn-js writes its text from the top left,
-// 7 px inside, wrapped at blanks and at the author's line breaks, and makes it at least 40 px high.
+// 7 px inside, wrapped at blanks and at the author's line breaks, and makes it at least 40 px high. As diagram-js's
+// layoutText(), an empty line counts as a line, and a line keeps its leading blanks; only what wraps is trimmed.
 export function labelSize(text, width){
   if (width){
     let n = 0;
-    for (const para of String(text).split('\n')){
-      let line = '';
+    for (const para of String(text).split(/\r?\n/)){
+      let line = /^\s*/.exec(para)[0], words = 0;
       n++;
       for (const word of para.split(/\s+/).filter(Boolean)){
-        const next = line ? line + ' ' + word : word;
-        if (line && next.length * CHAR > width - 14){ n++; line = word; }
+        const next = words++ ? line + ' ' + word : line + word;
+        if (words > 1 && next.length * CHAR > width - 14){ n++; line = word; }
         else line = next;
       }
     }

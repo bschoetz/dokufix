@@ -1232,7 +1232,8 @@ test('text annotations are read with their text, line breaks kept; an associatio
   const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/>' +
     '<bpmn:textAnnotation id="N1"><bpmn:text>  erste Zeile  \n  zweite   Zeile </bpmn:text></bpmn:textAnnotation>' + note('N2', 'am Fluss') + note('N3', 'am Ereignis') +
     assoc('A1', 'T', 'N1') + assoc('A2', 'N2', 'F1') + assoc('A3', 'N3', 'B') + '</bpmn:process>'));
-  assert.deepEqual(model.notes, [{ id: 'N1', text: 'erste Zeile\nzweite Zeile', pool: 0 }, { id: 'N2', text: 'am Fluss', pool: 0 }, { id: 'N3', text: 'am Ereignis', pool: 0 }]);
+  // The text as written, every blank and line break kept: bpmn-js draws it so (review of 2.31).
+  assert.deepEqual(model.notes, [{ id: 'N1', text: '  erste Zeile  \n  zweite   Zeile ', pool: 0 }, { id: 'N2', text: 'am Fluss', pool: 0 }, { id: 'N3', text: 'am Ereignis', pool: 0 }]);
   assert.deepEqual(model.associations, [
     { id: 'A1', note: 'N1', partner: 'T', kind: 'node', toNote: true }, { id: 'A2', note: 'N2', partner: 'F1', kind: 'flow' }, { id: 'A3', note: 'N3', partner: 'B', kind: 'boundary' }]);
   assert.deepEqual(leftOut, []);
@@ -1247,6 +1248,15 @@ test('in a collaboration: a text annotation at a pool, at a black box, at a mess
   assert.deepEqual(model.notes.map(n => [n.id, n.pool]), [['N1', 0], ['N2', 1], ['N3', null]]);
   const plain = read(xmlOf(collab.replace(/<bpmn:textAnnotation[^]*?<\/bpmn:textAnnotation>|<bpmn:association [^>]*\/>/g, ''))).model;
   assert.equal(mermaidSource(model), mermaidSource(plain));
+});
+
+test('a pretty-printed text annotation is measured as bpmn-js draws it: the empty line and the indentation count (review of 2.31)', () => {
+  const { model } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:textAnnotation id="N">\n  <bpmn:text>\n        Bitte prüfen\n      </bpmn:text>\n</bpmn:textAnnotation>' + assoc('A', 'T', 'N') + '</bpmn:process>'));
+  assert.equal(model.notes[0].text, '\n        Bitte prüfen\n      ');
+  assert.equal(labelSize(model.notes[0].text, 100).h, 4 * 15 + 14, 'the empty first line, the indented one wrapped, the blank last line');
+  assert.ok(noteSize(model.notes[0].text).h > noteSize('Bitte prüfen').h);
+  // Blanks alone are no text.
+  assert.deepEqual(read(xmlOf('<bpmn:process id="P">' + LINE + note('L', '\n   ') + assoc('A', 'T', 'L') + '</bpmn:process>')).model.notes, []);
 });
 
 test('what is no comment is left out, saying why: no text, no association, an association between two annotations or none', () => {
@@ -1337,6 +1347,10 @@ test('the size of a text annotation: the narrowest width a third as high as wide
   assert.deepEqual(NOTE_WIDTHS, [100, 150, 200, 250]);
   assert.deepEqual(labelSize('kurz', 100), { w: 100, h: 40 });
   assert.equal(labelSize('eins\nzwei\ndrei', 100).h, 3 * 15 + 14, 'the author\'s line breaks count');
+  // As diagram-js lays the text out: an empty line is a line, a line keeps its leading blanks (review of 2.31).
+  assert.equal(labelSize('\n\neins', 100).h, 3 * 15 + 14, 'empty lines count');
+  assert.equal(labelSize('          Bitte prüfen', 150).h, 2 * 15 + 14, 'the indentation counts');
+  assert.equal(labelSize('Bitte prüfen', 150).h, 40);
   assert.deepEqual(noteSize('kurz'), { w: 150, h: 40 }, '40 px is more than a third of 100');
   const long = 'Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel nachfragen.';
   assert.equal(noteSize(long).w, 250);
