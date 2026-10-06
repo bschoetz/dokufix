@@ -654,7 +654,10 @@ export function labelPlaces(c, size, gateway){
 // A text annotation keeps NOTE_GAP from its partner, room for its association that the eye can follow (Ben,
 // 2026-10-06, nz02-fluss: "Zeile muss höher sein, damit genug platz ist für die Verbindung"; bpmn-js keeps 50 too).
 const NOTE_GAP = 50;
-const NOTE_SIDES = ['oben', 'oben-rechts', 'unten', 'rechts', 'links'];
+// The sides in the order they are tried after the one NOTES.place names: right of the partner first (Ben, 2026-10-06,
+// nz03-pool, nz06-hund2: "Kommentare rechts vom Ziel …; in manchen Diagrammen geht es einfach nicht, dann ist es schon
+// ok, wenn der Kommentar links vom Ziel steht").
+const NOTE_SIDES = ['rechts', 'oben-rechts', 'unten-rechts', 'oben', 'unten', 'links'];
 
 // The size of a text annotation: the narrowest of NOTE_WIDTHS whose text stays at most half as high as it is wide,
 // else the widest. measure(text, width), as labelSize().
@@ -674,7 +677,8 @@ export function notePlaces(c, size, first = NOTES.place){
   const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
   const at = (side, far) => ({
     'oben': xs.map(x => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
-    'oben-rechts': [[c.cx + c.w / 2 + 10 + far, c.cy - c.h / 2 - NOTE_GAP - far - h]],
+    'oben-rechts': [[c.cx + c.w / 2 + NOTE_GAP / 2 + far, c.cy - c.h / 2 - NOTE_GAP / 2 - far - h]],
+    'unten-rechts': [[c.cx + c.w / 2 + NOTE_GAP / 2 + far, c.cy + c.h / 2 + NOTE_GAP / 2 + far]],
     'unten': xs.map(x => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
     'rechts': ys.map(y => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
     'links': ys.map(y => [c.cx - c.w / 2 - NOTE_GAP - far - w, y]),
@@ -703,13 +707,21 @@ function edgeAt(s, v, dir, across){
   return oc + dir * reach;
 }
 
-// The waypoints of an association from a text annotation's box n ([x, y, w, h]) to its partner's shape s: straight
-// down, up or across where the two overlap (at the partner's middle where the box reaches it), else, line
-// 'gerade', from middle to middle cut at both edges, or, 'winklig', from the side of the box facing the partner
-// across to the partner's middle and down or up to it. [[x, y], …].
+// The waypoints of an association from a text annotation's box n ([x, y, w, h]) to its partner's shape s. A box
+// right of the partner: from the middle of its bracket, its left edge (Ben, 2026-10-06: "verbindungslinie auf die
+// Bracket gerichtet"), across where the partner reaches that height, else, line 'gerade', straight to the partner's
+// outline, or, 'winklig', across to above or below the partner's middle and down or up to it. Otherwise straight down,
+// up or across where the two overlap (at the partner's middle where the box reaches it), else from middle to middle
+// cut at both edges, or right-angled as above from the side facing the partner. [[x, y], …].
 export function associationWay(n, s, line = NOTES.line){
   const [x, y, w, h] = n, mx = x + w / 2, my = y + h / 2;
   const sx1 = s.cx - s.w / 2, sx2 = s.cx + s.w / 2, sy1 = s.cy - s.h / 2, sy2 = s.cy + s.h / 2;
+  if (x >= sx2 + 1){
+    if (my >= sy1 && my <= sy2) return [[x, my], [edgeAt(s, my, 1, true), my]].map(p => p.map(R));
+    if (line === 'winklig') return [[x, my], [s.cx, my], [s.cx, edgeAt(s, s.cx, my < s.cy ? -1 : 1, false)]].map(p => p.map(R));
+    const b = outline(s, x, my);
+    return [[x, my], [b.x, b.y]].map(p => p.map(R));
+  }
   const pick = (a1, a2, b1, b2, c) => c >= a1 && c <= a2 ? c : (Math.max(a1, b1) + Math.min(a2, b2)) / 2;
   // Straight down or up where the two overlap by 10 px or more (a point: where the box reaches it).
   const reach = s.kind === 'point' ? 0 : 10;
@@ -800,9 +812,9 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
 
 // The text annotations (story 2.31), for Ben's choice on the feedback page: room 'suchen' (a free place near the
 // partner, else beyond its lane's border, which grows) or 'streifen' (the place chosen, a stripe opened across the
-// pool where it is taken); place 'oben', 'oben-rechts' (as bpmn-js places one), 'unten', 'rechts'; line 'gerade'
+// pool where it is taken); place 'rechts' (Ben, 2026-10-06), 'oben-rechts' (as bpmn-js places one), 'unten-rechts', 'oben', 'unten'; line 'gerade'
 // (straight, slanted where it must) or 'winklig' (right angles); lone 'weglassen' or 'oben-links' (top left in its pool).
-export const NOTES = { room: 'suchen', place: 'oben', line: 'gerade', lone: 'weglassen' };
+export const NOTES = { room: 'suchen', place: 'rechts', line: 'gerade', lone: 'weglassen' };
 
 // The grid's measures.
 const GAP_BASE = 48;        // a gap between columns without tracks
@@ -2806,7 +2818,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
           const cut = down ? lane[1] + lane[3] : lane[1];
           const inLane = b => b[1] + b[3] / 2 >= lane[1] && b[1] + b[3] / 2 <= lane[1] + lane[3];
           const step = size.w + 10;
-          const xs = (NOTES.place === 'oben-rechts' ? [c.cx + c.w / 2 + 10, c.cx + 10, c.cx - size.w / 2, c.cx - 10 - size.w] : [c.cx - size.w / 2, c.cx + 10, c.cx - 10 - size.w, c.cx + c.w / 2 + 10])
+          const xs = (NOTES.place === 'oben-rechts' || NOTES.place === 'rechts' ? [c.cx + c.w / 2 + 10, c.cx + 10, c.cx - size.w / 2, c.cx - 10 - size.w] : [c.cx - size.w / 2, c.cx + 10, c.cx - 10 - size.w, c.cx + c.w / 2 + 10])
             .concat([1, -1, 2, -2].map(k => c.cx - size.w / 2 + k * step));
           for (const x of xs){
             // In the stripe, NOTE_GAP / 2 below the border.
