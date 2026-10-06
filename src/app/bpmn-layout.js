@@ -493,36 +493,36 @@ export function layoutGeometry(model, raw, measure = labelSize, options = DEFAUL
 // pure, so that no bundle that leaves it unused keeps the call (the reader
 // bundle reaches this module through src/app/diagrams.js).
 export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
-  gatewayLane: true,  // R1  ein Gateway oder End-Ereignis steht in der Bahn seines nächsten Vorgängers; ein paralleler Join in der seines Splits; ein paralleler Split mit Armen in drei oder mehr Bahnen in der mittleren
-  pathRows: true,     // R2  zwei Zweige einer Entscheidung, die in einer Bahn weiterlaufen, bekommen eigene Zeilen
-  loopAbove: true,    // R3  die Schritte einer Schleife stehen in der Zeile über ihrem Gateway, von dort nach links
-  branchBelow: true,  // R4  ein Schritt, der die Bahn verlässt, während ein anderer Zweig in der Zeile bleibt, steht in der Spalte des Gateways auf der Seite der Zielbahn
-  fan: true,          // R5  Fächer: die Zweige eines parallelen Blocks nehmen in anderen Bahnen die Zeile, die dem Split am nächsten liegt; sie verlassen den Split senkrecht und gehen senkrecht in den Join, nur der nächste Arm waagerecht über Ost- und Westport, wenn keiner in der Zeile der Gateways liegt
-  jumpAbove: true,    // R6  der eine Schritt zwischen dem Ausgang einer Schleife und einem Merge steht in der Spalte des Merge
-  block: true,        // R8  ein paralleler Block ist so breit wie der Raum zwischen seinen Gateways: jedes Zweigelement steht waagerecht zwischen Split und Join, kein fremder Knoten darin, fremde Flüsse möglichst außen herum; der Knoten davor und der danach nie in der Spalte von Split bzw. Join
-  rowProbe: true,     // R10 Zeilenprobe: bei Kreuzungen jede Zeile, die R2 einem Zweig gibt, auf der Gegenseite probieren; nur übernehmen, wenn es echt weniger Kreuzungen werden
-  firstColumn: true,  // R9  (Spike 2.26, Ben) „die jeweils ersten Shapes der Äste eines parallelen Gateways liegen zentriert auf derselben X-Koordinate, sind also untereinander“
-  crossProbe: true,   // R12 Kreuzungsprobe: ein Zweig nach einer exklusiven Entscheidung in eine zusätzliche Zeile, ein Merge in eine andere Bahn; nur bei echt weniger Kreuzungen
-  combProbe: true,    // R14 Kamm: bei einer exklusiven Verzweigung mit drei oder mehr Zweigen die Köpfe in verschiedenen Zeilen probeweise in eine Spalte (R9 als Probe)
-  stagger: true,      // R16 zwei Gateways übereinander in einer Spalte: eines probeweise eine Spalte weiter
-  stepAside: true,    // R13 ein Nachfolger in der Spalte seines Vorgängers, zu dem der Fluss drei oder mehr Knicke braucht, probeweise eine Spalte weiter; ebenso der nahe von zwei Geschwistern auf derselben Seite einer Verzweigung
-  startAlign: true,   // R15 Start-Ereignisse in der ersten Spalte, jedes in einer eigenen Zeile, um ihren Nachfolger verteilt
-  endAlign: true,     // R11 Enden ausrichten: ein End-Ereignis in die letzte Spalte, wenn seine Zeile dorthin frei ist und das Bild nicht schlechter wird; weiche Empfehlung
+  gatewayLane: true,  // R1  a gateway or end event stands in the lane of its nearest predecessor; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
+  pathRows: true,     // R2  two ways of a decision that go on in one lane get rows of their own
+  loopAbove: true,    // R3  the steps of a loop stand in the row above their gateway, from there to the left
+  branchBelow: true,  // R4  a step that leaves the lane while another way stays in the row stands in the gateway's column, on the side of its target lane
+  fan: true,          // R5  fan: the arms of a parallel block in other lanes take the row nearest the split; they leave the split and enter the join vertically, only the nearest arm horizontally by the east and west ports when none lies in the gateways' row
+  jumpAbove: true,    // R6  the one step between the exit of a loop and a merge stands in the merge's column
+  block: true,        // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join
+  rowProbe: true,     // R10 row trial: with crossings, each row R2 gives a way is tried on the other side; taken only with strictly fewer crossings
+  firstColumn: true,  // R9  (spike 2.26, Ben) the first shapes of the arms of a parallel gateway are centred on one x, one above the other
+  crossProbe: true,   // R12 crossing trial: a way after an exclusive decision in an extra row, a merge in another lane; only with strictly fewer crossings
+  combProbe: true,    // R14 comb: for an exclusive split with three or more ways, the heads in different rows tried in one column (R9 as a trial)
+  stagger: true,      // R16 two gateways above each other in one column: one tried a column further
+  stepAside: true,    // R13 a successor in its predecessor's column, which the flow reaches with three or more bends, tried a column further; so is the nearer of two siblings on one side of a split
+  startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
+  endAlign: true,     // R11 ends aligned: an end event in the last column where its row is free up to it and the picture gets no worse; a soft recommendation
 });
 
-// Maße des Rasters.
-const GAP_BASE = 48;        // eine Spaltenlücke ohne Strecken
-const CHANNEL_BASE = 44;    // ein Kanal zwischen zwei Zeilen ohne Strecken
-const EDGE_BASE = 32;       // der Kanal am Rand einer Bahn ohne Strecken
-const TRACK = 16;           // Abstand zweier Strecken in einem Kanal
-const TRACK_MARGIN = 12;    // Rand eines Kanals neben seiner äußersten Strecke
-const EMPTY_ROW = 40;       // die Zeile einer leeren Bahn
-const PORT_STEP = 30;       // Abstand zweier Enden an einer Seite einer Task
-const BEND = 0.005;         // Kosten eines Knicks im Router: ein halber Rasterschritt (Länge / 100)
+// The grid's measures.
+const GAP_BASE = 48;        // a gap between columns without tracks
+const CHANNEL_BASE = 44;    // a channel between two rows without tracks
+const EDGE_BASE = 32;       // the channel at the edge of a lane without tracks
+const TRACK = 16;           // the distance of two tracks in a channel
+const TRACK_MARGIN = 12;    // the margin of a channel beside its outermost track
+const EMPTY_ROW = 40;       // the row of an empty lane
+const PORT_STEP = 30;       // the distance of two ends on one side of a task
+const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
 
-// Das Raster aus Modell und Mermaids Rohpositionen:
-//   cells: id → { n, lane, row, col, pin }   Bahnindex, Zeile (Zahl, 0 das Rückgrat, negativ darüber), Spalte (Mermaids Rang)
-//   fwdOut, fwdIn: id → [flow]  Vorwärtsflüsse (Rückkanten per Tiefensuche ausgenommen); back: Set der Rückkanten-Ids
+// The grid from the model and Mermaid's raw positions:
+//   cells: id → { n, lane, row, col, pin }   lane index, row (a number, 0 the backbone, negative above it), column (Mermaid's rank)
+//   fwdOut, fwdIn: id → [flow]  forward flows (back edges by depth-first search left out); back: the set of back edge ids
 function buildGrid(model, raw){
   const laneOf = new Map();
   model.lanes.forEach((l, i) => l.nodes.forEach(id => laneOf.set(id, i)));
@@ -540,7 +540,7 @@ function buildGrid(model, raw){
   }
   const out = new Map(model.nodes.map(n => [n.id, []]));
   for (const f of model.flows) out.get(f.from).push(f);
-  // Rückkanten: Tiefensuche von den Startknoten aus, in der Reihenfolge der Flüsse.
+  // Back edges: a depth-first search from the start nodes, in the order of the flows.
   const state = new Map(), back = new Set();
   const visit = id => {
     state.set(id, 1);
@@ -567,10 +567,11 @@ function buildGrid(model, raw){
     return seen;
   };
   const at = (lane, row, col) => { for (const c of cells.values()) if (c.lane === lane && c.row === row && c.col === col) return c; return null; };
-  // Die nächste Zeile von base aus in Richtung dir (−1 darüber, 1 darunter), deren Zelle in col frei ist:
-  // die nächste vorhandene Zeile, oder eine neue dazwischen, wo deren Zelle besetzt ist.
-  // Rows set to NaN, while starts are docked again (redockStarts()), are left out: sorted with the others they upset the order.
+  // The rows of a lane, in order. Rows set to NaN, while starts are docked again (redockStarts()), are left out: sorted
+  // with the others they upset the order.
   const rowsOf = lane => [...new Set([...cells.values()].filter(c => c.lane === lane).map(c => c.row))].filter(r => !Number.isNaN(r)).sort((a, b) => a - b);
+  // The next row from base in direction dir (−1 above, 1 below) whose cell in col is free: the next existing row, or
+  // a new one between, where its cell is taken.
   const newRow = (lane, base, dir, col) => {
     const rows = rowsOf(lane);
     const next = dir < 0 ? rows.filter(r => r < base).pop() : rows.find(r => r > base);
@@ -580,7 +581,7 @@ function buildGrid(model, raw){
     while (at(lane, r, col)) r = (base + r) / 2;
     return r;
   };
-  // Eine neue Zeile direkt neben base in Richtung dir, immer eine eigene (für Stapel).
+  // A new row right beside base in direction dir, always one of its own (for stacks).
   const freshRow = (lane, base, dir) => {
     const rows = rowsOf(lane);
     const next = dir < 0 ? rows.filter(r => r < base).pop() : rows.find(r => r > base);
@@ -592,19 +593,19 @@ function buildGrid(model, raw){
 
 const byCol = (g, ids) => [...ids].sort((p, q) => g.cells.get(p).col - g.cells.get(q).col);
 
-// R1. Ein Gateway oder ein End-Ereignis steht in der Bahn seines nächsten
-// Vorwärtsvorgängers (der mit der größten Spalte vor ihm); ein paralleler
-// Join in der Bahn des parallelen Splits, von dem aus alle seine Vorgänger
-// erreichbar sind. End-Ereignisse immer (Ben, 2026-10-05: „das Ende ist ein
-// Event, keine Eigenschaft einer Rolle“). Garantie: der Fluss vom Vorgänger
-// ins Gateway oder ins Ende wechselt die Bahn nicht; der Weg wechselt die
-// Bahn erst nach der Entscheidung. In Spaltenfolge, so steht der Vorgänger
-// eines Endes schon fest, wenn er ein Gateway ist. Ausnahme (Ben, 2026-10-05,
-// morgenroutine: „Bei 3 Lanes bietet sich eine Zentrierung der parallelen Gateways
-// an“): ein paralleler Split, dessen Arme in drei oder mehr Bahnen beginnen, steht
-// in der mittleren dieser Bahnen (bei gerader Zahl der oberen der beiden mittleren);
-// so hat jeder Arm einen eigenen Port. Sein Join folgt ihm. Zwischenereignisse
-// bleiben in ihrer Bahn (Ben: sie gehören der Rolle, vor allem Throw und Catch).
+// R1. A gateway or an end event stands in the lane of its nearest forward
+// predecessor (the one with the greatest column before it); a parallel join
+// in the lane of the parallel split from which all its predecessors can be
+// reached. End events always (Ben, 2026-10-05: the end is an event, not a
+// property of a role). Guarantee: the flow from the predecessor into the
+// gateway or the end does not change lane; the way changes lane only after
+// the decision. In column order, so the predecessor of an end is settled when
+// it is a gateway. Exception (Ben, 2026-10-05, morgenroutine: with three lanes
+// the parallel gateways are best centred): a parallel split whose arms begin
+// in three or more lanes stands in the middle one of them (with an even number
+// the upper of the two in the middle), so each arm has a port of its own; its
+// join follows it. Intermediate events stay in their lane (Ben: they belong to
+// the role, throw and catch above all).
 function ruleGatewayLane(g, model){
   for (const id of byCol(g, model.nodes.filter(n => n.type === 'gateway' || n.tag === 'endEvent').map(n => n.id))){
     const c = g.cells.get(id), preds = g.fwdIn.get(id);
@@ -620,10 +621,9 @@ function ruleGatewayLane(g, model){
     }
     if (!from) from = preds.reduce((m, p) => g.cells.get(p.from).col > g.cells.get(m).col ? p.from : m, preds[0].from);
     c.lane = g.cells.get(from).lane;
-    // In die Bahn seiner Zweige (Ben, 2026-10-05, x-tm1: „Gateways zentriert“, x-rg3: „Ereignisbasiertes Gateway
-    // zentriert.“): ein Split, dessen drei oder mehr Zweige alle in derselben anderen Bahn beginnen, steht in dieser
-    // Bahn; R9 setzt ihn in die mittlere Zeile seiner Zweige. Nur Köpfe, deren Bahn feststeht (keine Gateways, keine
-    // Enden); ein Gateway darf in jeder Bahn liegen, Zwischenereignisse wechseln sie nie.
+    // Into the lane of its ways (Ben, 2026-10-05, x-tm1 and x-rg3: gateways centred): a split whose three or more ways
+    // all begin in one other lane stands in that lane; R9 puts it in the middle row of its ways. Only heads whose lane
+    // is settled (no gateways, no ends); a gateway may lie in any lane, intermediate events never change theirs.
     const heads = g.fwdOut.get(id).map(f => g.cells.get(f.to));
     if (c.n.type === 'gateway' && heads.length >= 3 && heads.every(h => h.n.type !== 'gateway' && h.n.tag !== 'endEvent') && heads.every(h => h.lane === heads[0].lane) && heads[0].lane !== c.lane){
       c.lane = heads[0].lane;
@@ -632,8 +632,8 @@ function ruleGatewayLane(g, model){
   }
 }
 
-// Die Zweige einer Verzweigung G: je Ausgang die vorwärts erreichbaren
-// Knoten ohne die, die auch ein anderer Zweig erreicht (den Merge und alles danach).
+// The ways of a split G: per exit the nodes reachable forward, without those
+// another way reaches too (the merge and everything after it).
 function branchRegions(g, id){
   const regions = g.fwdOut.get(id).map(f => new Set([f.to, ...g.reachable(f.to)]));
   const count = new Map();
@@ -641,9 +641,9 @@ function branchRegions(g, id){
   return regions.map((r, i) => ({ flow: g.fwdOut.get(id)[i], nodes: [...r].filter(x => count.get(x) === 1) }));
 }
 
-// Die parallelen Blöcke: je paralleler Split P der nächste parallele Join J,
-// von P aus sind alle seine Vorgänger erreichbar; inner: die Knoten der
-// Zweige zwischen beiden. [{ P, J, inner: Set }]
+// The parallel blocks: per parallel split P the nearest parallel join J from
+// which P reaches all predecessors; inner: the nodes of the arms between
+// them. [{ P, J, inner: Set }]
 function parallelBlocks(g, model){
   const out = [];
   for (const n of model.nodes){
@@ -657,13 +657,12 @@ function parallelBlocks(g, model){
   return out;
 }
 
-// R2. Zwei Zweige einer Entscheidung, die beide in einer Bahn weiterlaufen
-// (je mindestens zwei Knoten dort, Schleifenschritte nach R3 nicht gezählt),
-// bekommen dort eigene Zeilen: es bleibt der Zweig, aus dem eine Rückkante in
-// die Zeile der Bahn führt, sonst der mit den meisten Knoten in der Bahn,
-// sonst der erste; jeder weitere nimmt eine Zeile auf der Seite, die der Bahn
-// des Gateways zugewandt ist (in der eigenen Bahn: darunter). Garantie: zwei
-// Wege einer Entscheidung stehen nie in einer Zeile.
+// R2. Two ways of a decision that both go on in one lane (at least two nodes
+// there each, loop steps after R3 not counted) get rows of their own there:
+// the way from which a back edge leads into the lane's row stays, else the
+// one with the most nodes in the lane, else the first; each other takes a row
+// on the side facing the gateway's lane (in its own lane: below). Guarantee:
+// two ways of a decision never share a row.
 function rulePathRows(g, model){
   const loopSteps = new Set();
   for (const f of model.flows) if (g.back.has(f.id)){ const ch = loopChain(g, f); if (ch) ch.steps.forEach(s => loopSteps.add(s)); }
@@ -672,7 +671,7 @@ function rulePathRows(g, model){
     for (let lane = 0; lane < g.lanes; lane++){
       const here = regions.map(r => ({ all: r.nodes, nodes: r.nodes.filter(x => { const c = g.cells.get(x); return c.lane === lane && c.row === 0 && !loopSteps.has(x); }) })).filter(r => r.nodes.length >= 2);
       if (here.length < 2) continue;
-      // Der Zweig, aus dem eine Rückkante in die Zeile der Bahn führt (auch aus einem Schleifenschritt), bleibt.
+      // The way from which a back edge leads into the lane's row (from a loop step too) stays.
       const loops = here.map(r => r.all.some(x => model.flows.some(f => g.back.has(f.id) && f.from === x && g.cells.get(f.to).lane === lane && g.cells.get(f.to).row === 0 && !r.all.includes(f.to))));
       let stay = loops.indexOf(true);
       if (stay < 0) stay = here.reduce((m, r, i) => r.nodes.length > here[m].nodes.length ? i : m, 0);
@@ -682,16 +681,16 @@ function rulePathRows(g, model){
         if (i === stay) return;
         k++;
         for (const x of r.nodes) g.cells.get(x).row = dir * k;
-        // Für R10: die Zeile, die R2 hier angelegt hat, mit ihren Knoten.
+        // For R10: the row R2 made here, with its nodes.
         (g.pathRowGroups = g.pathRowGroups || []).push({ lane, row: dir * k, ids: r.nodes.slice() });
       });
     }
   }
 }
 
-// Die Schleife einer Rückkante u→v: die Kette von u rückwärts über eindeutige
-// Vorwärtsvorgänger bis zur Verzweigung G, die sie öffnet; { G, steps } mit
-// den Schritten in Flussrichtung, oder null (keine Verzweigung, keine Task darin).
+// The loop of a back edge u→v: the chain from u backwards over single forward
+// predecessors up to the split G that opens it; { G, steps } with the steps in
+// the direction of flow, or null (no split, no task in it).
 function loopChain(g, f){
   const steps = [];
   let x = f.from;
@@ -702,31 +701,31 @@ function loopChain(g, f){
     if (preds.length !== 1) return null;
     x = preds[0].from;
   }
-  // Ein Schritt ist eine Task oder ein Zwischenereignis (Ben, 2026-10-05, ereignis: „Pfad der zu End-Event führt
-  // sollte für Ost-Gate präferiert werden“; die Warteschleife über einen Timer geht aus der Zeile, der Weg zum Ende
-  // bleibt gerade). Eine Kette nur aus Gateways ist keine Schleife.
+  // A step is a task or an intermediate event (Ben, 2026-10-05, ereignis: the way that leads to the end event should
+  // have the gateway's east port; the waiting loop over a timer leaves the row, the way to the end stays straight).
+  // A chain of gateways only is no loop.
   if (!steps.some(s => ['task', 'inter'].includes(g.cells.get(s).n.type))) return null;
-  // Führt der Zweig der Kette hinter ihr zu einem Ende, das kein anderer Zweig
-  // von G erreicht, ist die Kette der Weg dorthin, keine Schleife.
+  // Where the chain's way leads on to an end no other way of G reaches, the
+  // chain is the way there, not a loop.
   const others = new Set(g.fwdOut.get(x).filter(o => o.to !== steps[0]).flatMap(o => [o.to, ...g.reachable(o.to)]));
   const beyond = [...g.reachable(steps[0])].filter(y => !steps.includes(y) && !others.has(y));
   if (beyond.some(y => g.cells.get(y).n.type === 'end')) return null;
   return { G: x, steps };
 }
 
-// R3. Die Schritte einer Schleife stehen in der Zeile über ihrem Gateway: der
-// erste in dessen Spalte, jeder weitere eine Spalte weiter links, bis zur
-// Spalte nach dem Ziel der Rückkante; was nicht mehr hineinpasst, in der
-// Zeile darüber wieder von der Spalte des Gateways aus. Nur Schritte in der
-// Bahn des Gateways. Garantie: ein Schleifenschritt kostet keine Spalte des
-// Rückgrats; die Schleife ist ein Rechteck über ihrer Zeile.
+// R3. The steps of a loop stand in the row above their gateway: the first in
+// its column, each further one a column to the left, up to the column after
+// the back edge's target; what does not fit goes into the row above, again
+// from the gateway's column. Only steps in the gateway's lane (or the
+// target's). Guarantee: a loop step costs no column of the backbone; the loop
+// is a rectangle above its row.
 function ruleLoopAbove(g, model){
   for (const f of model.flows){
     if (!g.back.has(f.id)) continue;
     const chain = loopChain(g, f);
     if (!chain) continue;
     const G = g.cells.get(chain.G), target = g.cells.get(f.to);
-    // Die Zeile über der des Gateways in dessen Bahn, über der des Ziels in dessen Bahn.
+    // The row above the gateway's in its lane, above the target's in the target's lane.
     const baseOf = lane => lane === G.lane ? G : lane === target.lane ? target : null;
     const rows = new Map(), colAt = new Map();
     for (const s of chain.steps){
@@ -734,7 +733,7 @@ function ruleLoopAbove(g, model){
       if (!base || c.row !== base.row || c.pin) continue;
       if (!rows.has(c.lane)){ rows.set(c.lane, g.newRow(c.lane, base.row, -1, G.col)); colAt.set(c.lane, G.col); }
       let row = rows.get(c.lane), col = colAt.get(c.lane);
-      while (col > target.col && g.at(c.lane, row, col)) col--;                      // eine zweite Schleife desselben Gateways: weiter links in derselben Zeile
+      while (col > target.col && g.at(c.lane, row, col)) col--;                      // a second loop of the same gateway: further left in the same row
       if (col <= target.col){ col = G.col; row = g.newRow(c.lane, row, -1, col); rows.set(c.lane, row); }
       c.row = row; c.col = col; c.pin = { anchor: chain.G, dx: col - G.col };
       colAt.set(c.lane, col - 1);
@@ -742,11 +741,11 @@ function ruleLoopAbove(g, model){
   }
 }
 
-// R4. Ein Schritt, mit dem ein Zweig die Bahn verlässt (eine Task, deren
-// einziger Nachfolger in einer anderen Bahn liegt), während ein anderer Zweig
-// in der Zeile des Gateways bleibt, steht in der Spalte des Gateways, in der
-// Zeile auf der Seite der Zielbahn. Garantie: die Übergabe bleibt eine
-// senkrechte Spalte; der Ausnahmeschritt kostet keine Spalte des Rückgrats.
+// R4. A step with which a way leaves the lane (a task whose one successor
+// lies in another lane), while another way stays in the gateway's row, stands
+// in the gateway's column, in the row on the side of the target lane.
+// Guarantee: the hand-over stays one vertical column; the exceptional step
+// costs no column of the backbone.
 function ruleBranchBelow(g, model){
   for (const id of byCol(g, model.nodes.filter(n => g.isSplit(n.id)).map(n => n.id))){
     const G = g.cells.get(id), firsts = g.fwdOut.get(id).map(f => g.cells.get(f.to));
@@ -761,14 +760,13 @@ function ruleBranchBelow(g, model){
   }
 }
 
-// R5. Fächer. Die Zweige eines parallelen Blocks, die in einer anderen Bahn
-// als der Split liegen, nehmen dort die vorhandene Zeile, die der Bahn des
-// Splits am nächsten liegt (die unterste einer Bahn darüber, die oberste
-// einer Bahn darunter); ist deren Zelle besetzt, die nächste nach außen. Die
-// Arme verlassen den Split senkrecht und biegen dann nach rechts ab, und sie
-// kommen von links in die Höhe des Joins und gehen senkrecht in ihn (im
-// Router: fanCost()). Garantie: die Arme des Fächers sind so kurz wie die
-// Bahnen es zulassen; der Fächer öffnet und schließt sich senkrecht.
+// R5. Fan. The arms of a parallel block that lie in another lane than the
+// split take there the existing row nearest the split's lane (the lowest of a
+// lane above, the highest of a lane below); where its cell is taken, the next
+// one outwards. The arms leave the split vertically and then turn right, and
+// they come from the left to the join's height and enter it vertically (in
+// the router: fanCost()). Guarantee: the fan's arms are as short as the lanes
+// allow; the fan opens and closes vertically.
 function ruleFan(g, model){
   for (const id of byCol(g, model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id)).map(n => n.id))){
     const P = g.cells.get(id);
@@ -783,11 +781,11 @@ function ruleFan(g, model){
   }
 }
 
-// R6. Der eine Schritt zwischen dem Ausgang einer Schleife (einem
-// Schleifenschritt nach R3) und einem Merge weiter rechts steht in der
-// Spalte des Merge, in der Zeile seines Vorgängers, wo die frei ist, sonst
-// eine weiter außen; der Fluss fällt senkrecht in den Merge. Garantie: ein
-// langer Sprung kostet keine Spalte und endet senkrecht in seinem Merge.
+// R6. The one step between the exit of a loop (a loop step after R3) and a
+// merge further right stands in the merge's column, in its predecessor's row
+// where that is free, else one further out; the flow drops vertically into
+// the merge. Guarantee: a long jump costs no column and ends vertically in
+// its merge.
 function ruleJumpAbove(g, model){
   for (const n of model.nodes){
     const c = g.cells.get(n.id);
@@ -802,18 +800,17 @@ function ruleJumpAbove(g, model){
   }
 }
 
-// R9 (Spike 2.26, Ben, 2026-10-05): „die jeweils ersten Shapes der Äste
-// eines parallelen Gateways liegen zentriert auf derselben X-Koordinate, sind
-// also untereinander.“ Lesart: je parallelem Split die ersten Knoten seiner
-// Zweige (nicht ein Join, auf den ein Zweig direkt führt, nicht ein schon
-// angehefteter Knoten); zwei davon in derselben Zeile einer Bahn: der zweite
-// Zweig nimmt mit seinen Knoten dieser Zeile die nächste Zeile darunter. Die
-// Gruppe kommt nach g.columnGroups; R7 setzt sie in eine Spalte.
-// Ebenso ein exklusiver Block (Ben, 2026-10-05, x-wv6: „Das Problem war, dass die
-// intermediate events verstreut waren, obwohl sie vom selben Gateway abgingen. Ich
-// habe sie zwischen den beiden gateways gestackt“): eine Verzweigung, die kein
-// paralleles Gateway ist, mit drei oder mehr Zweigen, die alle an einem Merge wieder
-// zusammenlaufen.
+// R9 (spike 2.26, Ben, 2026-10-05): the first shapes of the arms of a
+// parallel gateway are centred on one x, one above the other. Read as: per
+// parallel split the first nodes of its ways (not a join a way leads to
+// directly, not a node already pinned); two of them in one row of a lane: the
+// second way takes the next row below with its nodes of that row. The group
+// goes to g.columnGroups; R7 puts it in one column.
+// So does an exclusive block (Ben, 2026-10-05, x-wv6: the intermediate events
+// lay scattered though they left the same gateway; he stacked them between the
+// two gateways): a split that is no parallel gateway, with three or more ways
+// that all run together again at one merge. exclusiveBlock() gives that merge,
+// or null.
 function exclusiveBlock(g, model, id, min = 3){
   if (g.fwdOut.get(id).length < min) return null;
   const G = g.cells.get(id);
@@ -823,9 +820,9 @@ function exclusiveBlock(g, model, id, min = 3){
 }
 function ruleFirstColumn(g, model){
   g.columnGroups = [];
-  // Zwei Alternativen untereinander (Ben, 2026-10-05, krankheit: „Ich habe die Alternativen bei ‚Notfall?‘ lesbarer
-  // gemacht“): eine Verzweigung, die kein paralleles Gateway ist, mit genau zwei Zweigen, die an einem Merge wieder
-  // zusammenlaufen, beide Köpfe noch in ihrer Zeile (keiner direkt im Merge, keiner angeheftet).
+  // Two alternatives one above the other (Ben, 2026-10-05, krankheit: he made the alternatives at "Notfall?" easier
+  // to read): a split that is no parallel gateway, with exactly two ways that run together again at a merge, both
+  // heads still in its row (none directly the merge, none pinned).
   const pair = n => {
     if (n.type !== 'gateway' || n.tag === 'parallelGateway' || g.fwdOut.get(n.id).length !== 2 || !exclusiveBlock(g, model, n.id, 2)) return false;
     const P = g.cells.get(n.id);
@@ -841,28 +838,27 @@ function ruleFirstColumn(g, model){
       firsts.push({ x, c, r });
     }
     if (firsts.length < 2) continue;
-    // Der Zweig in der Zeile des Splits bleibt dort.
+    // The way in the split's row stays there.
     firsts.sort((a, b) => (b.c.lane === P.lane && b.c.row === P.row) - (a.c.lane === P.lane && a.c.row === P.row));
-    // Drei oder mehr Köpfe in der Zeile des Splits verteilen sich um sie (Ben, 2026-10-05, x-dg2: „Ich habe die
-    // ersten Schritte nach dem Start zentriert“): der mittlere (in der Reihenfolge der Flüsse) bleibt, die davor
-    // gehen nach oben, die danach nach unten; so steht der Split in der Mitte seiner Arme und das Rückgrat läuft
-    // gerade durch. Ergänzt die Zentrierung des Splits unten, die greift, wo die Arme anders verteilt sind.
+    // Three or more heads in the split's row spread around it (Ben, 2026-10-05, x-dg2: he centred the first steps
+    // after the start): the middle one (in the order of the flows) stays, those before go up, those after down; so
+    // the split stands in the middle of its arms and the backbone runs straight through. Adds to the centring of the
+    // split below, which applies where the arms are spread otherwise.
     const own = firsts.filter(f => f.c.lane === P.lane && f.c.row === P.row);
     const done = new Set();
     if (own.length >= 3){
       const mid = Math.floor((own.length - 1) / 2), row0 = P.row;
       const move = (f, row) => { for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === P.lane && c.row === row0 && !c.pin) c.row = row; } done.add(f); };
-      // Je Arm eine neue Zeile direkt neben der vorigen (Ben, 2026-10-05, x-wv6: „du stackst die intermediate events
-      // nicht“): keine vorhandene Zeile weiter weg, in der anderswo schon Knoten stehen.
+      // Per arm a new row right beside the one before (Ben, 2026-10-05, x-wv6: the intermediate events were not
+      // stacked): no existing row further away in which nodes already stand elsewhere.
       let row = row0;
       for (let i = mid - 1; i >= 0; i--){ row = g.freshRow(P.lane, row, -1); move(own[i], row); }
       row = row0;
       for (let i = mid + 1; i < own.length; i++){ row = g.freshRow(P.lane, row, 1); move(own[i], row); }
     }
-    // Zwei Alternativen (Ben, 2026-10-05, krankheit: „Bei einem exklusiven block mit 2 tasks ist der zweite block
-    // mittig nach unten gestackt.“; drei Zeilen, einer darüber und einer darunter, waren „sehr unelegant“): der erste
-    // Zweig bleibt gerade in der Zeile von Split und Merge, der zweite geht in eine neue Zeile direkt darunter, in
-    // dieselbe Spalte.
+    // Two alternatives (Ben, 2026-10-05, krankheit: in an exclusive block with two tasks the second is stacked below,
+    // centred; three rows, one above and one below, were very inelegant): the first way stays straight in the row of
+    // split and merge, the second goes into a new row right below, in the same column.
     else if (own.length === 2 && P.n.tag !== 'parallelGateway' && g.fwdOut.get(id).length === 2){
       const row0 = P.row, move = (f, row) => { for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === P.lane && c.row === row0 && !c.pin) c.row = row; } done.add(f); };
       move(own[1], g.freshRow(P.lane, row0, 1));
@@ -878,9 +874,9 @@ function ruleFirstColumn(g, model){
       for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === lane && c.row === row0 && !c.pin) c.row = row; }
     }
     g.columnGroups.push(firsts.map(f => f.x));
-    // In der Bahn zentriert (Ben, 2026-10-05, x-dg2: „Ich habe die parallelen gateways zentriert“; wie R1 über
-    // Bahnen): beginnen die Arme in der Bahn des Splits in drei oder mehr Zeilen, stehen Split und Join in der
-    // mittleren davon (bei gerader Zahl der oberen der beiden mittleren); so hat jeder Arm einen eigenen Port.
+    // Centred in the lane (Ben, 2026-10-05, x-dg2: he centred the parallel gateways; as R1 does across lanes): where
+    // the arms begin in three or more rows of the split's lane, split and join stand in the middle one of them (with
+    // an even number the upper of the two in the middle); so each arm has a port of its own.
     const armRows = [...new Set(g.fwdOut.get(id).map(f => g.cells.get(f.to)).filter(c => c.lane === P.lane).map(c => c.row))].sort((a, b) => a - b);
     if (armRows.length >= 3){
       const mid = armRows[Math.floor((armRows.length - 1) / 2)];
@@ -888,18 +884,18 @@ function ruleFirstColumn(g, model){
       const blk = parallelBlocks(g, model).find(b => b.P === id), J = blk && g.cells.get(blk.J);
       if (J && J.lane === P.lane && !J.pin) J.row = mid;
     }
-    // Der Join eines Blocks (parallel oder exklusiv) steht in der Zeile seines Splits (Ben, 2026-10-05, x-wv6: Split
-    // und Join des Blocks gehören in eine Zeile; ein Join, der nur Starts bündelt, und ein Split, der nur in Enden
-    // auffächert, bilden keinen Block).
+    // The join of a block (parallel or exclusive) stands in its split's row (Ben, 2026-10-05, x-wv6: split and join
+    // of a block belong in one row; a join that only gathers starts and a split that only fans out into ends make no
+    // block).
     const Jid = P.n.tag === 'parallelGateway' ? parallelBlocks(g, model).find(b => b.P === id)?.J : exclusiveBlock(g, model, id, 2);
     const Jc = Jid && g.cells.get(Jid);
     if (Jc && Jc.lane === P.lane && !Jc.pin) Jc.row = P.row;
   }
 }
 
-// Ein Split, den R1 in die Bahn seiner Zweige gesetzt hat und der keinen Block bildet (x-rg3), steht ebenso in der
-// mittleren Zeile seiner Zweige; zu Beginn jedes Laufs ab R7, damit er auch nach einer Probe (R10, R12), die Zeilen
-// der Zweige verschiebt, in der Mitte steht.
+// A split R1 put in the lane of its ways and that makes no block (x-rg3) stands likewise in the middle row of its
+// ways; at the start of each run from R7 on, so that it stands in the middle after a trial (R10, R12) that moves the
+// ways' rows too.
 function centreLaneSplits(g, model){
   for (const id of g.laneSplits || []){
     const P = g.cells.get(id);
@@ -909,16 +905,15 @@ function centreLaneSplits(g, model){
   }
 }
 
-// R15. Start-Ereignisse links bündig (Ben, 2026-10-05, x-wv6: „Der Schlamassel geht
-// schon damit los, dass die startevent nicht left aligned sind. das habe ich
-// nachgezogen und sie dann sinnvoll an das parallele gateway angedockt. den vierten
-// startevent habe ich nach oben verlegt, da dort sein flow stattfindet.“). Stehen
-// zwei oder mehr Start-Ereignisse in einer Zeile einer Bahn, bekommt jedes eine
-// eigene: die Starts mit demselben Nachfolger verteilen sich um dessen Zeile (der
-// mittlere bleibt, die davor nach oben, die danach nach unten, wie die Arme nach
-// Vorschlag 7); die größte Gruppe bleibt in der Zeile, jede weitere geht in neue
-// Zeilen darüber. R7 setzt dann jeden Start in die erste Spalte, weil ihm in seiner
-// Zeile nichts mehr vorangeht. Garantie: alle Starts einer Bahn stehen links bündig.
+// R15. Start events left-aligned (Ben, 2026-10-05, x-wv6: the start events were
+// not left-aligned; he aligned them, docked them to the parallel gateway, and
+// moved the fourth one up, where its flow runs). Where two or more start events
+// stand in one row of a lane, each gets one of its own: the starts with the
+// same successor spread around its row (the middle one stays, those before go
+// up, those after down, as the arms after proposal 7); the largest group stays
+// in the row, each further one goes into new rows above. R7 then puts each
+// start in the first column, since nothing precedes it in its row any more.
+// Guarantee: all starts of a lane stand left-aligned.
 function ruleStartAlign(g, model){
   const starts = model.nodes.filter(n => n.tag === 'startEvent' && !g.fwdIn.get(n.id).length).map(n => g.cells.get(n.id));
   const rowsSeen = new Set(starts.map(c => c.lane + '|' + c.row));
@@ -944,9 +939,9 @@ function ruleStartAlign(g, model){
       r = base;
       for (let i = mid + 1; i < grp.length; i++){ r = g.newRow(lane, r, 1, 0); grp[i].row = r; }
     });
-    // Der einzige Nachfolger eines Starts, der so eine eigene Zeile bekommen hat, folgt ihm, wenn er keinen anderen
-    // Vorgänger hat; ist er der Split eines Blocks, mit seinem Join (Ben, 2026-10-05, x-wv6: „den vierten startevent
-    // habe ich nach oben verlegt, da dort sein flow stattfindet“).
+    // The one successor of a start that got a row of its own this way follows it, where it has no other
+    // predecessor; where it is the split of a block, with its join (Ben, 2026-10-05, x-wv6: he moved the fourth
+    // start event up, where its flow runs).
     for (const c of here){
       if (c.row === row0) continue;
       const out = g.fwdOut.get(c.n.id);
@@ -960,8 +955,9 @@ function ruleStartAlign(g, model){
   }
 }
 
-// Nach der Box: Starts mit demselben Nachfolger in seiner Bahn stehen wieder um
-// dessen Zeile, in neuen Zeilen direkt daneben. Gibt zurück, ob sich etwas bewegt hat.
+// After the box (R8): starts with the same successor in its lane stand around
+// its row again, in new rows right beside it (R15). Returns whether anything
+// moved.
 function redockStarts(g, model){
   const bySucc = new Map();
   for (const n of model.nodes){
@@ -989,14 +985,13 @@ function redockStarts(g, model){
   return moved;
 }
 
-// R7. Spalten schließen: jede Spalte ist der längste Weg in Mermaids
-// Reihenfolge; ein Nachfolger in einer anderen Zeile darf die Spalte seines
-// Vorgängers teilen, einer in derselben Zeile steht eine weiter rechts, und
-// die Reihenfolge jeder Zeile bleibt die Mermaids. Angeheftete Knoten (R3,
-// R4, R6) behalten ihren Abstand zu ihrem Anker. Garantie: keine Spalte ohne
-// Knoten; die Ordnung von links nach rechts ist Mermaids.
+// R7. Close the columns: each column is the longest way in Mermaid's order; a
+// successor in another row may share its predecessor's column, one in the same
+// row stands one further right, and the order of each row stays Mermaid's.
+// Pinned nodes (R3, R4, R6) keep their distance to their anchor. Guarantee: no
+// column without a node; the order from left to right is Mermaid's.
 function ruleCompact(g, model, rules){
-  // Mermaids Reihenfolge, aber kein Knoten vor einem seiner Vorwärtsvorgänger.
+  // Mermaid's order, but no node before one of its forward predecessors.
   const byMermaid = (a, b) => a.col - b.col || a.lane - b.lane || a.row - b.row;
   const waiting = [...g.cells.values()].sort(byMermaid), order = [];
   const done = new Set();
@@ -1008,12 +1003,12 @@ function ruleCompact(g, model, rules){
   }
   const placed = new Map();
   const blocks = parallelBlocks(g, model);
-  // Parallele Splits ohne Join: der Knoten davor steht auch dort nie in ihrer Spalte (Ben, 2026-10-05, morgenroutine).
+  // Parallel splits without a join: there too the node before never stands in their column (Ben, 2026-10-05, morgenroutine).
   const lonePar = new Set(model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id) && !blocks.some(b => b.P === n.id)).map(n => n.id));
   const isPlaced = c => placed.get(c.lane + '|' + c.row + '|' + c.col) === c;
   const pos = c => c.lane * 1e6 + c.row, between = (o, a, b) => (pos(o) - pos(a)) * (pos(o) - pos(b)) < 0;
   const lastInRow = new Map();
-  // Senkrechte Übergaben in einer Spalte (Vorgänger und Nachfolger in derselben Spalte) halten die Zellen dazwischen frei.
+  // Vertical hand-overs in a column (predecessor and successor in the same column) keep the cells between them free.
   const spans = [];
   const put = (c, col) => {
     const rowKey = c.lane + '|' + c.row;
@@ -1027,26 +1022,26 @@ function ruleCompact(g, model, rules){
     let col = 0;
     for (const f of g.fwdIn.get(c.n.id)){
       const p = g.cells.get(f.from);
-      // Ein angehefteter Vorgänger zählt mit der Spalte seines Ankers, sobald der steht.
+      // A pinned predecessor counts with its anchor's column, once that is placed.
       const pc = p.pin ? (!p.pin.late && isPlaced(g.cells.get(p.pin.anchor)) ? g.cells.get(p.pin.anchor).col + p.pin.dx : null) : isPlaced(p) ? p.col : null;
       if (pc === null) continue;
-      // Dieselbe Spalte wie der Vorgänger nur, wo die Übergabe senkrecht frei ist: keine Zelle dazwischen besetzt.
+      // The predecessor's column only where the vertical hand-over is free: no cell between them taken.
       const sameRow = p.lane === c.lane && p.row === c.row;
       const blocked = !sameRow && [...placed.values()].some(o => o.col === pc && o !== p && between(o, p, c));
-      // R8: ein Zweigelement steht nie in der Spalte des Splits, der Join nie in der eines Zweigelements.
-      // Ebenso (Ben, 2026-10-05, x-wv3): der Knoten vor einem parallelen Split und der nach einem parallelen Join
-      // stehen nie in der Spalte des Gateways, auch in einer anderen Zeile nicht, sondern links bzw. rechts versetzt.
+      // R8: an element of an arm never stands in the split's column, the join never in that of an arm's element.
+      // Likewise (Ben, 2026-10-05, x-wv3): the node before a parallel split and the one after a parallel join never
+      // stand in the gateway's column, in another row neither, but one to the left or right.
       const edge = rules.block && blocks.some(b => (p.n.id === b.P && b.inner.has(c.n.id)) || (c.n.id === b.J && b.inner.has(p.n.id))
         || (c.n.id === b.P && !b.inner.has(p.n.id)) || (p.n.id === b.J && !b.inner.has(c.n.id) && c.n.id !== b.P))
         || (rules.block && lonePar.has(c.n.id))
-        // Ebenso vor einem Split, den R1 in die Bahn seiner Zweige gesetzt hat (Ben, 2026-10-05, x-rg3): er braucht
-        // Nord- und Südport für die Zweige; stünde der Knoten davor in seiner Spalte, käme der Fluss senkrecht.
+        // Likewise before a split R1 put in the lane of its ways (Ben, 2026-10-05, x-rg3): it needs its north and
+        // south ports for the ways; with the node before in its column, the flow would come in vertically.
         || (g.laneSplits?.has(c.n.id) ?? false);
       col = Math.max(col, pc + (sameRow || blocked || edge ? 1 : 0));
     }
     const last = lastInRow.get(c.lane + '|' + c.row);
     if (last !== undefined) col = Math.max(col, last + 1);
-    // R8: ein fremder Knoten steht nicht in einem geschlossenen parallelen Block (Split und Join schon gesetzt).
+    // R8: a foreign node does not stand in a closed parallel block (split and join placed already).
     if (rules.block) for (const b of blocks){
       if (b.inner.has(c.n.id) || c.n.id === b.P || c.n.id === b.J) continue;
       const P = g.cells.get(b.P), J = g.cells.get(b.J);
@@ -1058,7 +1053,7 @@ function ruleCompact(g, model, rules){
     put(c, col);
     for (const f of g.fwdIn.get(c.n.id)){ const p = g.cells.get(f.from); if (isPlaced(p) && p.col === c.col && (p.lane !== c.lane || p.row !== c.row)) spans.push({ col: c.col, a: p, b: c }); }
   }
-  // Angeheftete Knoten nach ihrem Anker; die an einen späteren Merge zuletzt.
+  // Pinned nodes after their anchor; those pinned to a later merge last.
   for (const c of order){
     if (!c.pin) continue;
     if (c.pin.late){ late.push(c); continue; }
@@ -1067,24 +1062,23 @@ function ruleCompact(g, model, rules){
   for (const c of late) put(c, g.cells.get(c.pin.anchor).col + c.pin.dx);
 }
 
-// R8, Abstand zur Box (Ben, 2026-10-05, x-dg2: „Das Problem war, dass das
-// ‚insurance'-x-gateway keinen Abstand zur Box des parallelen flow hatte. wenn man
-// es eine zeile darunter bewegt, klappt es besser.“). Die Box eines parallelen
-// Blocks: von der Spalte des Splits bis zu der des Joins, je Bahn über die Zeilen,
-// die seine Knoten dort belegen. Ein fremder Knoten darin, der nicht
-// angeheftet ist, rückt in die nächste Zeile außerhalb: darunter, wenn er in der
-// unteren Hälfte der Box steht, sonst darüber; mit ihm die Knoten seiner Zeile
-// rechts von ihm bis zur Spalte des Joins nicht. Nach R7, R7 läuft danach neu.
-// Gibt zurück, ob ein Knoten bewegt wurde.
+// R8, distance to the box (Ben, 2026-10-05, x-dg2: the "insurance" gateway had
+// no distance to the box of the parallel flow; one row below it worked
+// better). The box of a parallel block: from the split's column to the join's,
+// in each lane where the block holds two or more nodes over the rows they take
+// there. The foreign nodes inside a lane's box that are not pinned leave it
+// together, to one side: below when at least half of them stand in its lower
+// half, else above. Each of their rows becomes a new row beyond the box's edge,
+// in their order, so a stack stays whole. After R7; R7 runs again after it.
+// Returns whether a node moved.
 function ruleBlockBox(g, model){
   let moved = false;
   for (const b of parallelBlocks(g, model)){
     const ids = [b.P, b.J, ...b.inner], cs = ids.map(id => g.cells.get(id));
     const P = g.cells.get(b.P), J = g.cells.get(b.J);
-    // Je Bahn reicht die Box über die Zeilen, die der Block dort belegt (Ben, 2026-10-05, x-wv6: ein Block über
-    // drei Bahnen; über alle Bahnen gerechnet käme ein fremder Knoten der mittleren Bahn nie aus der Box). Die
-    // fremden Knoten einer Bahn gehen gemeinsam auf eine Seite, die der Mehrheit, und behalten ihre Reihenfolge
-    // (sonst riss die Box einen Stapel auseinander).
+    // The box spans in each lane the rows the block takes there (Ben, 2026-10-05, x-wv6: a block over three lanes;
+    // reckoned over all lanes, a foreign node in the middle lane would never leave the box). A lane's foreign nodes
+    // go to one side together, the majority's, and keep their order (else the box tore a stack apart).
     for (let lane = 0; lane < g.lanes; lane++){
       const mine = cs.filter(o => o.lane === lane).map(o => o.row);
       if (mine.length < 2) continue;
@@ -1103,7 +1097,8 @@ function ruleBlockBox(g, model){
   return moved;
 }
 
-// Das Raster in Pixel, die Flüsse auf dem Raster geroutet: das fertige DI.
+// The rules on the grid, then the grid in pixels with the flows routed on it:
+// the finished DI.
 //
 // The order of the rules, and which needs which. They share the grid g and
 // some of its fields, so the order is part of the result (code review of A2,
@@ -1151,8 +1146,8 @@ function layoutGrid(model, raw, measure, rules){
   return finishGrid(g, model, measure, rules);
 }
 
-// Ein Probelauf ab R7: das fertige DI, seine Güte und die Spalten, die R7
-// vergeben hat; danach stehen die Zellen wieder wie vorher (R10, R11).
+// A trial run from R7 on, for the trials R10 to R16 and R11: the finished DI,
+// its quality and the columns R7 gave; afterwards the cells stand as before.
 function runGrid(g, model, measure, rules){
   const once = reroute => {
     const before = new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
@@ -1161,8 +1156,8 @@ function runGrid(g, model, measure, rules){
     for (const [c, v] of before) Object.assign(c, v);
     return { di, q: gridQuality(di, model), cols, last: Math.max(...cols.values()) };
   };
-  // Der zweite Durchgang des Routers macht jeden Fluss billiger, das Bild nicht immer besser: beide rechnen, das
-  // bessere nehmen (Kreuzungen, Flüsse durch Knoten, Überlappung, Linien, Beschriftungen, gemeinsame Stücke, Knicke).
+  // The router's second pass makes each flow cheaper, the picture not always better: both are reckoned, the better
+  // one taken (crossings, flows through nodes, overlaps, lines, labels, shared pieces, bends).
   const a = once(true);
   const b = once(false);
   for (const k of ['crossings', 'through', 'overlaps', 'lines', 'labels', 'shared', 'bends']){
@@ -1172,16 +1167,16 @@ function runGrid(g, model, measure, rules){
   return b;
 }
 
-// R10. Zeilenprobe (Ben, 2026-10-05: „bei Überschneidungen probieren, ob es
-// hilft, die Zeilen zu vertauschen“). Hat das Bild Kreuzungen, wird für jede
-// Zeile, die R2 einem Zweig gegeben hat, die Gegenseite probiert (+k → −k),
-// eine nach der anderen; Knoten, die eine spätere Regel versetzt oder
-// angeheftet hat (R3, R4, R5, R6, R9), bleiben, wo sie sind. Übernommen wird
-// eine Probe nur bei echt weniger Kreuzungen, ohne mehr Flüsse durch fremde
-// Knoten und ohne überlappende Knoten; sonst bleibt R2. Garantie: die Probe
-// macht das Bild nie schlechter. Bens Maßgabe (2026-10-05, nach x-rg2 und
-// x-wv4): kein Tausch bei mehr Brüchen, kein Tausch bei mehr Kreuzungen. Die Bahn wird danach von selbst wieder
-// schmaler, weil die Bänder aus den belegten Zeilen entstehen.
+// R10. Row trial (Ben, 2026-10-05: with crossings, try whether swapping the
+// rows helps). Where the picture has crossings, each row R2 gave a way is
+// tried on the other side (+k → −k), one after the other; nodes a later rule
+// moved or pinned (R3, R4, R5, R6, R9) stay where they are. A trial is taken
+// only with strictly fewer crossings, without more flows through foreign
+// nodes, lines or labels on flows, and without overlapping nodes; else R2's
+// row stays. Guarantee: the trial never makes the picture worse. Ben's rule
+// (2026-10-05, after x-rg2 and x-wv4): no swap with more breaks, no swap with
+// more crossings. The lane gets narrower again by itself, since the bands come
+// from the rows taken.
 function ruleRowProbe(g, model, measure, rules){
   const snap = () => new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
   const restore = m => { for (const [c, v] of m) Object.assign(c, v); };
@@ -1200,18 +1195,18 @@ function ruleRowProbe(g, model, measure, rules){
   return best;
 }
 
-// R12. Kreuzungsprobe (Ben, 2026-10-05, reklamation: „Bei vielen Überkreuzungen
-// nach X-Gates in einer lane prüfen, ob eine zusätzliche Zeile hilft. Bei vielen
-// Überkreuzungen prüfen ob Merge Gate in andere Lane wechseln sollte“). Nach R10,
-// solange das Bild Kreuzungen hat. Proben: (a) je Verzweigung, die kein paralleles
-// Gateway ist, und je Zweig, der in der Zeile des Gateways weiterläuft, während ein
-// anderer es auch tut: die Knoten des Zweigs in dieser Zeile in eine neue Zeile
-// gleich darüber oder darunter; (b) je Merge, der kein paralleles Gateway ist: jede
-// andere Bahn zwischen der obersten und der untersten Bahn seiner Vorgänger und
-// Nachfolger, dort in der Zeile eines Vorgängers oder Nachfolgers, sonst im Rückgrat.
-// Je Runde wird jede Probe einzeln gerechnet und die beste übernommen, wenn sie echt
-// weniger Kreuzungen hat und sonst nichts schlechter macht (wie R10); bis keine mehr
-// hilft. Garantie: die Probe macht das Bild nie schlechter.
+// R12. Crossing trial (Ben, 2026-10-05, reklamation: with many crossings after
+// exclusive gateways in a lane, check whether an extra row helps; with many
+// crossings, check whether a merge gateway should change lane). After R10, as
+// long as the picture has crossings. Trials: (a) per split that is no parallel
+// gateway, and per way that goes on in the gateway's row while another does
+// too: the way's nodes in that row into a new row right above or below; (b)
+// per merge that is no parallel gateway: each other lane between the highest
+// and the lowest lane of its predecessors and successors, there in the row of
+// a predecessor or successor, else in the backbone. Each round reckons every
+// trial on its own and takes the best where it has strictly fewer crossings
+// and makes nothing else worse (as R10); until none helps. Guarantee: the
+// trial never makes the picture worse.
 function ruleCrossProbe(g, model, measure, rules){
   let best = runGrid(g, model, measure, rules);
   const probes = () => {
@@ -1253,14 +1248,14 @@ function ruleCrossProbe(g, model, measure, rules){
   }
 }
 
-// R14. Kamm (Ben, 2026-10-05, u13: A und C eine Spalte weiter, alle Zweige von
-// „Was?“ beginnen in einer Spalte). R9 als Probe für Verzweigungen, die kein
-// paralleles Gateway sind, mit drei oder mehr Vorwärtszweigen; nach R12, weil erst
-// R2, R10 und R12 die Zweige auf Zeilen verteilen. Die Köpfe der Zweige (der erste
-// Knoten jedes Zweigs, nicht angeheftet, kein Merge), je Zeile der am weitesten
-// links, kommen probeweise in eine Spalte (g.columnGroups, R7 wie bei R9). Neue
-// Zeilen legt die Probe nicht an. Übernommen nur, wenn keine Kennzahl der Güte
-// steigt. Bei zwei Zweigen bleibt die senkrechte Übergabe in der Spalte des Gateways.
+// R14. Comb (Ben, 2026-10-05, u13: A and C one column further, all ways of
+// "Was?" begin in one column). R9 as a trial for splits that are no parallel
+// gateway, with three or more forward ways; after R12, since only R2, R10 and
+// R12 spread the ways over rows. The heads of the ways (each way's first node,
+// not pinned, no merge), per row the one furthest left, are tried in one
+// column (g.columnGroups, R7 as for R9). The trial makes no new rows. Taken
+// only where no measure of quality rises. With two ways the vertical hand-over
+// stays in the gateway's column.
 function ruleCombProbe(g, model, measure, rules){
   let best = runGrid(g, model, measure, rules);
   const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
@@ -1282,23 +1277,22 @@ function ruleCombProbe(g, model, measure, rules){
   }
 }
 
-// R13. Eine Spalte weiter (Ben, 2026-10-05, x-rg2: „Danach Abstand bei ‚Wir
-// schreiben keine Briefe' auf die selbe Weise erhöht, um Knicke zu reduzieren“).
-// Nach R12: ein Nachfolger, der in der Spalte seines Vorgängers steht (R7 lässt das
-// in einer anderen Zeile zu), zu dem der Vorwärtsfluss aber drei oder mehr Knicke
-// braucht (der senkrechte Weg ist versperrt, der Fluss geht hinaus und zurück),
-// rückt probeweise eine Spalte nach rechts (Mindestspalte in R7). Übernommen nur,
-// wenn der Fluss weniger Knicke hat und keine Kennzahl der Güte steigt. Garantie:
-// ein Übergang in eine andere Zeile ist ein gerades Stück oder ein L, wo das geht.
+// R13. One column further (Ben, 2026-10-05, x-rg2: he widened the distance at
+// "Wir schreiben keine Briefe" the same way, to cut bends). After R14: a
+// successor that stands in its predecessor's column (R7 allows that in another
+// row), but which the forward flow reaches only with three or more bends (the
+// vertical way is blocked, the flow goes out and back), is tried one column to
+// the right (a minimum column in R7). Taken only where the flow has fewer
+// bends and no measure of quality rises. Guarantee: a change of row is a
+// straight piece or an L where that can be.
 function ruleStepAside(g, model, measure, rules){
   g.asideCol = new Map();
   let best = runGrid(g, model, measure, rules);
   const bends = (di, f) => Math.max(0, (di.flows[f.id] || []).length - 2);
   const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
-  // Teilt der Fluss ein Stück mit einem anderen (Ben, 2026-10-05, r22 und r15: „Spalte eingefügt, um durch den
-  // Versatz einen Ausgang freizumachen“; der Eingang oben am Nachfolger wird auch von einem zweiten Fluss
-  // gebraucht), rückt der Nachfolger ebenso probeweise eine Spalte weiter; übernommen, wenn es weniger gemeinsame
-  // Stücke werden und keine Kennzahl der Güte steigt.
+  // Where the flow shares a piece with another (Ben, 2026-10-05, r22 and r15: he inserted a column so the offset
+  // frees an exit; the successor's top entry is needed by a second flow too), the successor is likewise tried a
+  // column further; taken where the shared pieces get fewer and no measure of quality rises.
   const sharedOf = (di, f) => sharedPieces(di, model).filter(pair => pair.includes(f.id)).length;
   for (const f of model.flows){
     if (g.back.has(f.id)) continue;
@@ -1313,11 +1307,11 @@ function ruleStepAside(g, model, measure, rules){
     const ok = keys.every(k => t.q[k] <= best.q[k]) && ((many && bends(t.di, f) < bends(best.di, f)) || (shares && t.q.shared < best.q.shared));
     if (ok) best = t; else if (was === undefined) g.asideCol.delete(b.n.id); else g.asideCol.set(b.n.id, was);
   }
-  // Geschwister (Ben, 2026-10-05, x-tm1: „Task in nächste Spalte verschoben, damit Nordausgang und Ostausgang des
-  // Gates genutzt werden können.“; reklamation: „hier habe ich kreuzungen eliminiert“): steht ein Nachfolger einer
-  // Verzweigung in ihrer Spalte und liegt ein anderer Nachfolger auf derselben Seite weiter weg, rückt der nahe
-  // probeweise eine Spalte weiter; der fernere bekommt den Port in seine Richtung, der nahe den Ostport. Übernommen
-  // bei weniger Kreuzungen oder Knicken, wenn keine Kennzahl der Güte steigt.
+  // Siblings (Ben, 2026-10-05, x-tm1: he moved a task to the next column so the gateway's north and east exits can
+  // both be used; reklamation: there he removed crossings): where a successor of a split stands in its column and
+  // another successor lies further away on the same side, the near one is tried a column further; the far one gets
+  // the port towards it, the near one the east port. Taken with fewer crossings or bends, where no measure of
+  // quality rises.
   const pos = c => c.lane * 1e6 + c.row;
   for (const n of model.nodes){
     if (n.type !== 'gateway' || !g.isSplit(n.id)) continue;
@@ -1335,21 +1329,22 @@ function ruleStepAside(g, model, measure, rules){
   }
 }
 
-// R16. Gateways versetzen (Ben, 2026-10-05, x-wv6: „Wenn wir mehrere x-gateways
-// übereinander haben, kann es helfen sie in verschiedene spalten zu verschieben, da
-// dann die süd/nord-ausgänge häufiger frei sind.“). Nach R13: stehen zwei Gateways
-// einer Bahn in derselben Spalte, rückt probeweise eines eine Spalte nach rechts
-// (Mindestspalte in R7; was nach ihm kommt, rückt mit), erst das untere, dann das
-// obere. Übernommen wird die beste Probe, wenn keine Kennzahl der Güte steigt und
-// das Bild weniger gemeinsame Stücke oder weniger Knicke hat.
+// R16. Stagger gateways (Ben, 2026-10-05, x-wv6: with several exclusive
+// gateways above each other it can help to move them into different columns,
+// since their south and north exits are then free more often). After R13:
+// where two gateways stand in one column, one is tried a column to the right
+// (a minimum column in R7; what comes after it moves along), first the lower,
+// then the upper. Per round the best trial is taken where no measure of
+// quality rises and the picture has fewer shared pieces, or as many and fewer
+// bends; up to four rounds.
 function ruleStagger(g, model, measure, rules){
   g.asideCol = g.asideCol || new Map();
   let best = runGrid(g, model, measure, rules);
   const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels'];
   const better = (t, b) => keys.every(k => t.q[k] <= b.q[k]) && (t.q.shared < b.q.shared || (t.q.shared === b.q.shared && t.q.bends < b.q.bends));
   for (let round = 0; round < 4; round++){
-    // Auch ein Gateway über oder unter einem anderen Knoten derselben Spalte, in jeder Bahn (Ben, 2026-10-05, r09:
-    // „Eine Spalte puffer einfügen, um den südausgang von wohin zu öffnen“); dann rückt das Gateway.
+    // A gateway above or below another node of its column too, in any lane (Ben, 2026-10-05, r09: he inserted a
+    // buffer column to open the south exit of "wohin"); then the gateway moves.
     const all = [...g.cells.values()].filter(c => !c.pin);
     const pos = c => c.lane * 1e6 + c.row;
     let pick = null;
@@ -1373,18 +1368,17 @@ function ruleStagger(g, model, measure, rules){
   }
 }
 
-// R11. Enden ausrichten (Ben, 2026-10-05: Enden ausrichten ist „eine weiche
-// Empfehlung, meine Stilpräferenz“; sie darf keine andere Regel überstimmen).
-// Nach R10, auf dem Bild, das alle anderen Regeln ergeben: ein End-Ereignis,
-// das nicht in der letzten Spalte steht, wird probeweise dorthin gesetzt (R7
-// gibt ihm die letzte Spalte als Mindestspalte; Bahn und Zeile bleiben, gleiche
-// Spalte heißt gleiches x). Nicht, wenn rechts von ihm in seiner Zeile ein
-// Knoten steht, und nicht für ein angeheftetes Ende. Eines nach dem anderen,
-// das der letzten Spalte nächste zuerst. Übernommen wird eine Probe nur, wenn
-// das Bild nicht breiter wird und keine Kennzahl der Güte steigt (Kreuzungen,
-// Flüsse durch Knoten, Überlappung, Stücke auf einer Linie, Beschriftungen auf
-// Flüssen); bei Gleichstand gewinnt die Ausrichtung. Garantie: die Ausrichtung
-// macht das Bild nie schlechter; was nicht passt, bleibt, wo die Regeln es setzen.
+// R11. Align the ends (Ben, 2026-10-05: aligning the ends is a soft
+// recommendation, his preference of style; it may overrule no other rule).
+// Last, on the picture all other rules give: an end event that does not stand
+// in the last column is tried there (R7 gives it the last column as its
+// minimum; lane and row stay, the same column means the same x). Not where a
+// node stands right of it in its row, and not for a pinned end. One after the
+// other, the one nearest the last column first. A trial is taken only where
+// the picture gets no wider and no measure of quality rises (crossings, flows
+// through nodes, overlaps, pieces on one line, labels on flows); on a tie the
+// alignment wins. Guarantee: the alignment never makes the picture worse; what
+// does not fit stays where the rules put it.
 function ruleEndAlign(g, model, measure, rules){
   g.alignCol = new Map();
   let best = runGrid(g, model, measure, rules);
@@ -1477,12 +1471,14 @@ function gridQuality(di, model){
   return { crossings, through, overlaps, lines, labels, shared: shared.length, bends };
 }
 
-// Ab R7 bis zum fertigen DI: Spalten schließen, Bänder, Router, Pixel, Labels.
-// Verändert die Spalten der Zellen (R7); R10 sichert und stellt sie zurück.
+// From R7 to the finished DI: close the columns, bands, router, pixels, labels.
+// Changes the cells' columns (R7) and rows (R8, R15); runGrid() saves and
+// restores them. reroute: whether the router runs its pair trial and second
+// pass.
 function finishGrid(g, model, measure, rules, reroute = true){
   centreLaneSplits(g, model);
-  // R9: R7 so oft, bis jede Gruppe erster Zweigknoten in einer Spalte steht;
-  // jede Runde von Mermaids Spalten aus, die Mindestspalten wachsen nur.
+  // R9: R7 until each group of first nodes of ways stands in one column; each
+  // round from Mermaid's columns, the minimum columns only grow.
   const orig = new Map([...g.cells.values()].map(c => [c, c.col]));
   const compactAll = () => {
     g.minCol = new Map();
@@ -1502,11 +1498,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
   compactAll();
   let boxed = false;
   for (let round = 0; rules.block && round < 3 && ruleBlockBox(g, model); round++){ boxed = true; compactAll(); }
-  // Hat die Box Zeilen verschoben, docken die Starts wieder an ihren Nachfolger an (R15).
+  // Where the box moved rows, the starts dock to their successor again (R15).
   if (boxed && rules.startAlign && redockStarts(g, model)) compactAll();
 
-  // Zeilen je Bahn durchnummeriert; Bänder (Kanal, Zeile, Kanal, …) von oben
-  // nach unten über alle Bahnen; Spalten und Lücken von links nach rechts.
+  // The rows of each lane numbered; bands (channel, row, channel, …) from top
+  // to bottom over all lanes; columns and gaps from left to right.
   const laneRows = [];
   for (let l = 0; l < g.lanes; l++){
     const rows = g.rowsOf(l);
@@ -1524,7 +1520,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     bands.push({ kind: 'ch', lane: l, edge: 'bottom' });
   }
   const cols = Math.max(...[...g.cells.values()].map(c => c.col)) + 1;
-  const place = new Map();    // id → { band, xo } (xo: 2*col+1; Lücke g: 2*g)
+  const place = new Map();    // id → { band, xo } (xo: 2*col+1; gap g: 2*g)
   const cellAt = new Map();   // band|xo → id
   for (const c of g.cells.values()){
     const band = rowBand.get(c.lane + '|' + laneRows[c.lane].indexOf(c.row));
@@ -1535,13 +1531,12 @@ function finishGrid(g, model, measure, rules, reroute = true){
   const channels = bands.map((b, i) => i).filter(i => bands[i].kind === 'ch');
 
   // ---- Router ----
-  // Ein Weg ist eine Folge von Stücken, waagerecht { h: band, x1, x2 } oder
-  // senkrecht { v: xo, b1, b2 }; die Enden nennen die Seite am Symbol. Je
-  // Fluss werden die Schablonen gebildet, die auf dem Raster möglich sind,
-  // und die mit den wenigsten Konflikten genommen: durchquerte Zellen 1000,
-  // ein Port eines Gateways oder Ereignisses, den ein Fluss der anderen
-  // Richtung nutzt, 100, ein Stück auf einer Linie mit einem fremden Stück
-  // in einer Zeile oder Spalte 3, eine Kreuzung 1, Länge in Rasterschritten /100.
+  // A way is a sequence of pieces, horizontal { h: band, x1, x2 } or vertical
+  // { v: xo, b1, b2 }; the ends name the side at the symbol. Per flow the
+  // templates possible on the grid are made, and the one with the fewest
+  // conflicts is taken: cells crossed 1000, a port of a gateway or event that
+  // a flow of the other direction uses 100, a piece on one line with a foreign
+  // piece in a row or column 3, a crossing 1, the length in grid steps / 100.
   const routed = [];          // { f, pieces, sides: [sideS, sideT], back }
   const portUse = new Map();  // id|side → { in, out }
   const H = (h, x1, x2) => ({ h, x1, x2 }), V = (v, b1, b2) => ({ v, b1, b2 });
@@ -1549,7 +1544,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   const sideOfLast = (p, to) => p.h !== undefined ? (p.x1 < to.xo ? 'left' : 'right') : (p.b1 < to.band ? 'top' : 'bottom');
   const cellsCrossed = pieces => {
     let n = 0;
-    // Eine Ecke zwischen zwei Stücken liegt in einer Zelle einer Zeile: die muss frei sein.
+    // A corner between two pieces lies in a cell of a row: that must be free.
     for (let i = 0; i + 1 < pieces.length; i++){
       const a = pieces[i], b = pieces[i + 1];
       const h = a.h !== undefined ? a : b, v = a.h !== undefined ? b : a;
@@ -1562,37 +1557,36 @@ function finishGrid(g, model, measure, rules, reroute = true){
     return n;
   };
   const overlap = (a1, a2, b1, b2) => Math.min(Math.max(a1, a2), Math.max(b1, b2)) > Math.max(Math.min(a1, a2), Math.min(b1, b2));
-  // Ein Endstück an einer Task kann an der Seite versetzt werden (Ports nebeneinander):
-  // auf einer Linie mit einem anderen zählt es wenig; an einem Gateway oder Ereignis voll.
-  // Ein Fluss aus einem Stück, der an einer Task beginnt und in ein Ereignis geht, zählt dort voll (Ben, 2026-10-05,
-  // x-rg1: „Ich habe aber mal 2 Knicke entfernt.“ Der Fluss von „Geldeingang“ teilte die Linie in den Westport des
-  // Endes mit dem geraden Fluss von „Geld eintreiben“, und das kostete nur 0,5, weil dessen Stück an einer Task
-  // beginnt). In ein Gateway nicht: dort laufen Flüsse zusammen.
+  // An end piece at a task can be offset along the side (ports beside each other): on one line with another it
+  // counts little; at a gateway or event in full. A flow of one piece that begins at a task and goes into an event
+  // counts in full there (Ben, 2026-10-05, x-rg1: he removed two bends; the flow from "Geldeingang" shared the line
+  // into the end's west port with the straight flow from "Geld eintreiben", and that cost only 0.5, since its piece
+  // begins at a task). Not into a gateway: flows run together there.
   const endWeight = (f, pieces, i) => {
     const id = i === 0 ? f.from : i === pieces.length - 1 ? f.to : null;
     if (pieces.length === 1 && !['task', 'gateway'].includes(g.cells.get(f.to).n.type)) return 3;
     return id && g.cells.get(id).n.type === 'task' ? 0.5 : 3;
   };
   const laneOfBand = b => bands[b].lane;
-  // R8: der Raum eines parallelen Blocks in Bändern und Spalten; ein Stück
-  // eines fremden Flusses darin kostet 6: mehr als ein Stück auf fremder Linie
-  // (3) und als die ein bis drei Kreuzungen, die der Weg außen herum meist
-  // kostet; eine Kostenstelle, kein Verbot (Ben: „es klappt nicht immer“).
+  // R8: the room of a parallel block in bands and columns; a piece of a
+  // foreign flow in it costs 6: more than a piece on a foreign line (3) and
+  // than the one to three crossings the way around it mostly costs; a cost, no
+  // ban (Ben: it does not always work).
   const blockRooms = rules.block ? parallelBlocks(g, model).map(b => {
     const ids = [b.P, b.J, ...b.inner], bs = ids.map(id => place.get(id).band);
     return { ids: new Set(ids), x1: place.get(b.P).xo, x2: place.get(b.J).xo, b1: Math.min(...bs), b2: Math.max(...bs) };
   }) : [];
-  // R5: ein Arm des Fächers in eine andere Zeile verlässt den Split senkrecht und geht senkrecht in den Join; ein waagerechtes Stück dort kostet 1.
-  // Ausnahme (Ben, 2026-10-05, zuerst nur für parallele Blöcke): liegt kein Arm in der Zeile des Splits, verlässt
-  // ihn der nächste Arm (der kleinste Abstand der Zeilen, nur wenn er eindeutig ist) waagerecht über den Ostport;
-  // ein senkrechter Anfang kostet ihn 1. Am Join gespiegelt: liegt kein Arm in seiner Zeile, kommt der nächste
-  // waagerecht über den Westport hinein. Die übrigen Arme wie bisher. Garantie: der nächste Arm kreuzt die
-  // ferneren nicht, die Arme bilden ineinander liegende L.
+  // R5: an arm of the fan into another row leaves the split vertically and enters the join vertically; a horizontal
+  // piece there costs 1. Exception (Ben, 2026-10-05, at first for parallel blocks only): where no arm lies in the
+  // split's row, the nearest arm (the least distance, only where it is unique) leaves it horizontally by the east
+  // port; a vertical start costs it 1. Mirrored at the join: where no arm lies in its row, the nearest enters
+  // horizontally by the west port. The other arms as before. Guarantee: the nearest arm crosses none further away;
+  // the arms make Ls lying one inside the other.
   const fanBlocks = rules.fan ? parallelBlocks(g, model) : [];
   const lonePar = new Set(model.nodes.filter(n => n.tag === 'parallelGateway' && g.isSplit(n.id) && !fanBlocks.some(b => b.P === n.id)).map(n => n.id));
-  // Der Abstand eines Arms: Zeilen und Spalten zusammen (Ben, 2026-10-05, x-wv4: ein Shape, das waagerecht viel
-  // weiter weg ist, tritt für den Ost- oder Westport hinter das nähere zurück). Ein Arm in der Zeile des
-  // Gateways schaltet die Ausnahme ab wie bisher.
+  // An arm's distance: rows and columns together (Ben, 2026-10-05, x-wv4: a shape much further away horizontally
+  // gives way to the nearer one for the east or west port). An arm in the gateway's row turns the exception off,
+  // as before.
   const nearestArm = (gw, arms, end) => {
     const gp = place.get(gw);
     if (arms.some(f => place.get(f[end]).band === gp.band)) return null;
@@ -1607,21 +1601,21 @@ function finishGrid(g, model, measure, rules, reroute = true){
   }]));
   const fanCost = (pieces, own) => {
     let n = 0;
-    const sameBand = place.get(own.from).band === place.get(own.to).band;   // der Arm in der Zeile der Gateways geht gerade
+    const sameBand = place.get(own.from).band === place.get(own.to).band;   // the arm in the gateways' row goes straight
     for (const b of fanBlocks){
       if (sameBand) break;
       const near = fanNear.get(b.P);
       if (own.from === b.P && b.inner.has(own.to)) n += own.id === near.out ? (pieces[0].v !== undefined ? 1 : 0) : (pieces[0].h !== undefined ? 1 : 0);
       if (own.to === b.J && b.inner.has(own.from)){ const last = pieces[pieces.length - 1]; n += own.id === near.in ? (last.v !== undefined ? 1 : 0) : (last.h !== undefined ? 1 : 0); }
-      // Der Fluss aus dem Join geht waagerecht hinaus, der in den Split waagerecht hinein (Ben, 2026-10-05, x-wv3:
-      // der Knoten danach steht rechts versetzt, der Ausgang nach unten nähme den Port, den ein Arm braucht).
+      // The flow out of the join leaves horizontally, the one into the split enters horizontally (Ben, 2026-10-05,
+      // x-wv3: the node after stands offset to the right; the exit downwards would take the port an arm needs).
       if (own.from === b.J && !b.inner.has(own.to) && pieces[0].v !== undefined) n += 1;
       if (own.to === b.P && !b.inner.has(own.from) && pieces[pieces.length - 1].v !== undefined) n += 1;
     }
-    // Ebenso in einen parallelen Split ohne Join (Ben, 2026-10-05, morgenroutine: der Split ist zentriert, seine
-    // Arme brauchen Nord-, Ost- und Südport).
+    // Likewise into a parallel split without a join (Ben, 2026-10-05, morgenroutine: the split is centred, its arms
+    // need the north, east and south ports).
     if (!sameBand && rules.fan && lonePar.has(own.to) && pieces[pieces.length - 1].v !== undefined) n += 1;
-    // Und in einen Split in der Bahn seiner Zweige (x-rg3).
+    // And into a split in the lane of its ways (x-rg3).
     if (!sameBand && g.laneSplits?.has(own.to) && pieces[pieces.length - 1].v !== undefined) n += 1;
     return n;
   };
@@ -1638,15 +1632,14 @@ function finishGrid(g, model, measure, rules, reroute = true){
   };
   const conflicts = (pieces, own) => {
     let n = blockCost(pieces, own);
-    // Ein waagerechtes Stück in einem Kanal einer fremden Bahn: der Rückfluss gehört in die eigene.
+    // A horizontal piece in a channel of a foreign lane: the flow back belongs in its own.
     const ownLanes = new Set([g.cells.get(own.from).lane, g.cells.get(own.to).lane]);
     for (const p of pieces) if (p.h !== undefined && bands[p.h].kind === 'ch' && !ownLanes.has(laneOfBand(p.h))) n += 2;
     for (const r of routed){
       if (r.f === own || r.off) continue;
-      // Frontal in denselben Port (Ben, 2026-10-05, x-wv4): zwei Flüsse in dasselbe Ziel, deren letzte Stücke auf
-      // einer Linie liegen und deren Stücke davor in derselben Spalte (oder Zeile) von entgegengesetzten Seiten
-      // kommen (ein ⊤, kein Zusammenlaufen); kostet wie ein Stück auf einer Linie. Der eine nimmt dann den Port
-      // auf seiner Seite.
+      // Head on into one port (Ben, 2026-10-05, x-wv4): two flows into one target whose last pieces lie on one line
+      // and whose pieces before come from opposite sides in one column (or row) (a ⊤, no running together); costs
+      // as a piece on one line. One of them then takes the port on its side.
       if (r.f.to === own.to && pieces.length > 1 && r.pieces.length > 1){
         const a1 = pieces[pieces.length - 1], a0 = pieces[pieces.length - 2], b1 = r.pieces[r.pieces.length - 1], b0 = r.pieces[r.pieces.length - 2];
         if (a1.h !== undefined && b1.h !== undefined && a1.h === b1.h && a0.v !== undefined && b0.v !== undefined && a0.v === b0.v && Math.sign(a0.b2 - a0.b1) === -Math.sign(b0.b2 - b0.b1)) n += 3;
@@ -1674,16 +1667,16 @@ function finishGrid(g, model, measure, rules, reroute = true){
   };
   const score = (f, pieces) => {
     const s = place.get(f.from), t = place.get(f.to);
-    // Ein Knick kostet einen halben Rasterschritt (Ben, 2026-10-05, hund2: „Anderen Ausgang prüfen, um Linienknicke
-    // zu mindern“): bei gleicher Länge und gleichen Konflikten gewinnt der Weg mit weniger Knicken, etwa seitlich
-    // hinaus statt unten hinaus und gleich wieder zur Seite. Damit kein Knick gespart wird, indem ein Fluss nach rechts
-    // eine Task von hinten nimmt: liegt das Ziel rechts der Quelle oder in ihrer Spalte, kostet es zwei Knicke, von rechts in eine Task zu
-    // gehen oder sie nach links zu verlassen (ein Gateway darf von rechts genommen werden, wie Ben es in hund2 tat).
+    // A bend costs half a grid step (Ben, 2026-10-05, hund2: try another exit to cut the bends of a line): with the
+    // same length and conflicts the way with fewer bends wins, say out sideways rather than out below and at once to
+    // the side. So that no bend is saved by a flow to the right taking a task from behind: where the target lies
+    // right of the source or in its column, entering a task from the right or leaving it to the left costs two
+    // bends (a gateway may be entered from the right, as Ben did in hund2).
     const ahead = t.xo >= s.xo;
     const behind = ahead ? (g.cells.get(f.to).n.type === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (g.cells.get(f.from).n.type === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
     return cellsCrossed(pieces) * 1000 + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * BEND;
   };
-  // Die Schablonen eines Flusses s→t.
+  // The templates of a flow s→t.
   const templates = (s, t) => {
     const out = [];
     const ys = s.band, yt = t.band, xs = s.xo, xt = t.xo;
@@ -1696,28 +1689,28 @@ function finishGrid(g, model, measure, rules, reroute = true){
       const d = Math.sign(yt - ys);
       out.push([V(xs, ys, yt)]);
       for (const gx of [xs - 1, xs + 1]){
-        out.push([V(xs, ys, ys + d), H(ys + d, xs, gx), V(gx, ys + d, yt), H(yt, gx, xt)]);          // hinaus über den Kanal, seitlich hinein
-        out.push([V(xs, ys, ys - d), H(ys - d, xs, gx), V(gx, ys - d, yt), H(yt, gx, xt)]);          // hinaus auf der anderen Seite, seitlich hinein
-        out.push([H(ys, xs, gx), V(gx, ys, yt - d), H(yt - d, gx, xt), V(xt, yt - d, yt)]);          // seitlich hinaus, über den Kanal hinein
-        out.push([H(ys, xs, gx), V(gx, ys, yt), H(yt, gx, xt)]);                                    // seitlich hinaus und hinein
+        out.push([V(xs, ys, ys + d), H(ys + d, xs, gx), V(gx, ys + d, yt), H(yt, gx, xt)]);          // out over the channel, in from the side
+        out.push([V(xs, ys, ys - d), H(ys - d, xs, gx), V(gx, ys - d, yt), H(yt, gx, xt)]);          // out on the other side, in from the side
+        out.push([H(ys, xs, gx), V(gx, ys, yt - d), H(yt - d, gx, xt), V(xt, yt - d, yt)]);          // out sideways, in over the channel
+        out.push([H(ys, xs, gx), V(gx, ys, yt), H(yt, gx, xt)]);                                    // out and in sideways
       }
       return out;
     }
     if (xt < xs){
-      out.push([H(ys, xs, xt), V(xt, ys, yt)]);                                   // L nach links: erst waagerecht in der Zeile, dann senkrecht ins Ziel
-      out.push([V(xs, ys, yt), H(yt, xs, xt)]);                                   // L nach links: erst senkrecht, dann in der Zielzeile
+      out.push([H(ys, xs, xt), V(xt, ys, yt)]);                                   // L to the left: first horizontal in the row, then vertical into the target
+      out.push([V(xs, ys, yt), H(yt, xs, xt)]);                                   // L to the left: first vertical, then in the target's row
     }
     if (xt > xs){
-      out.push([V(xs, ys, yt), H(yt, xs, xt)]);                                   // L: erst senkrecht
-      out.push([H(ys, xs, xt), V(xt, ys, yt)]);                                   // L: erst waagerecht
-      out.push([H(ys, xs, xs + 1), V(xs + 1, ys, yt), H(yt, xs + 1, xt)]);        // Z über die Lücke rechts der Quelle
-      out.push([H(ys, xs, xt - 1), V(xt - 1, ys, yt), H(yt, xt - 1, xt)]);        // Z über die Lücke links des Ziels
+      out.push([V(xs, ys, yt), H(yt, xs, xt)]);                                   // L: first vertical
+      out.push([H(ys, xs, xt), V(xt, ys, yt)]);                                   // L: first horizontal
+      out.push([H(ys, xs, xs + 1), V(xs + 1, ys, yt), H(yt, xs + 1, xt)]);        // Z over the gap right of the source
+      out.push([H(ys, xs, xt - 1), V(xt - 1, ys, yt), H(yt, xt - 1, xt)]);        // Z over the gap left of the target
       const d = Math.sign(yt - ys);
-      out.push([V(xs, ys, yt - d), H(yt - d, xs, xt), V(xt, yt - d, yt)]);        // Z über den Kanal am Ziel
-      out.push([V(xs, ys, ys + d), H(ys + d, xs, xt), V(xt, ys + d, yt)]);        // Z über den Kanal an der Quelle
+      out.push([V(xs, ys, yt - d), H(yt - d, xs, xt), V(xt, yt - d, yt)]);        // Z over the channel at the target
+      out.push([V(xs, ys, ys + d), H(ys + d, xs, xt), V(xt, ys + d, yt)]);        // Z over the channel at the source
       for (const ch of channels) out.push([H(ys, xs, xs + 1), V(xs + 1, ys, ch), H(ch, xs + 1, xt - 1), V(xt - 1, ch, yt), H(yt, xt - 1, xt)]);
-      // Über einen Kanal und senkrecht ins Ziel, auch von der Seite, die von der Quelle abgewandt ist (Ben,
-      // 2026-10-05, x-wv4: unten herum in den Südport, statt frontal auf einen anderen Fluss im Westport).
+      // Over a channel and vertically into the target, from the side facing away from the source too (Ben,
+      // 2026-10-05, x-wv4: round below into the south port, rather than head on against another flow in the west port).
       for (const ch of channels){
         if (ch === yt) continue;
         out.push([V(xs, ys, ch), H(ch, xs, xt), V(xt, ch, yt)]);
@@ -1725,7 +1718,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
       }
       return out;
     }
-    // Rückwärts über Zeilen: Kanal, senkrecht an Quelle und Ziel; sonst seitlich hinaus über eine Lücke, seitlich hinein oder von oben/unten.
+    // Backwards across rows: a channel, vertical at source and target; else out sideways over a gap, in sideways or from above or below.
     for (const ch of channels) out.push([V(xs, ys, ch), H(ch, xs, xt), V(xt, ch, yt)]);
     for (const ch of channels) for (const gs of [xs - 1, xs + 1]){
       out.push([H(ys, xs, gs), V(gs, ys, ch), H(ch, gs, xt), V(xt, ch, yt)]);
@@ -1772,11 +1765,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
     use(f.from, sideS, true); use(f.to, sideT, false);
     routed.push({ f, pieces: best.pieces, sides: [sideS, sideT], back: g.back.has(f.id) });
   }
-  // Paarprobe (Ben, 2026-10-05, x-rg1: „Ich habe aber mal 2 Knicke entfernt.“): je zwei Flüsse in dasselbe Ereignis werden
-  // herausgenommen und in beiden Reihenfolgen neu gelegt, jeder auf seinem billigsten Weg; das Paar mit der kleineren
-  // Summe bleibt. Einzeln findet der Router keinen Tausch: in x-rg1 nahm „Geldeingang“ im ersten Durchgang den freien
-  // Südport des Endes, bevor der längere Fluss „kein Regress“ gelegt war, und der musste oben herum. Vor dem zweiten
-  // Durchgang, damit der die getauschten Wege schon sieht (sonst blieb ein Umweg, der dem alten Weg auswich).
+  // Pair trial (Ben, 2026-10-05, x-rg1: he removed two bends): each two flows into one event are taken out and laid
+  // again in both orders, each on its cheapest way; the pair with the smaller sum stays. One at a time the router
+  // finds no swap: in x-rg1 "Geldeingang" took the end's free south port in the first pass, before the longer flow
+  // "kein Regress" was laid, and that one had to go round above. Before the second pass, so that it sees the swapped
+  // ways already (else a detour stayed that avoided the old way).
   if (reroute){
     const portAdd = (id, side, out, d) => { const k = id + '|' + side; const u = portUse.get(k) || { in: 0, out: 0 }; u[out ? 'out' : 'in'] += d; portUse.set(k, u); };
     const lift = r => { portAdd(r.f.from, r.sides[0], true, -1); portAdd(r.f.to, r.sides[1], false, -1); r.off = true; };
@@ -1795,8 +1788,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
       }
       return best.pieces;
     };
-    // Nur in ein Ereignis: es hat vier Ports und keinen Versatz; an einer Task liegen die Enden nebeneinander, in ein
-    // Gateway laufen Flüsse zusammen.
+    // Only into an event: it has four ports and no offset; at a task the ends lie beside each other, into a gateway
+    // flows run together.
     for (const n of model.nodes){
       if (['task', 'gateway'].includes(n.type)) continue;
       const into = routed.filter(r => r.f.to === n.id);
@@ -1815,11 +1808,10 @@ function finishGrid(g, model, measure, rules, reroute = true){
     }
   }
 
-  // Zweiter Durchgang (Ben, 2026-10-05, r22: „Spalte eingefügt, um durch den Versatz einen Ausgang
-  // freizumachen“): jeder Fluss wird noch einmal gelegt, jetzt mit allen anderen im Bild (die Rückflüsse kamen im
-  // ersten Durchgang erst zuletzt); er wechselt nur, wenn ein Weg echt billiger ist als sein bisheriger. Bis zu drei
-  // Runden, solange ein Fluss wechselt (Ben, 2026-10-05, x-tm1: ein Fluss, der vor einem anderen neu gelegt wurde,
-  // sah dessen alten Port noch belegt und blieb auf dem Umweg).
+  // Second pass (Ben, 2026-10-05, r22: he inserted a column so the offset frees an exit): each flow is laid once more,
+  // now with all others in the picture (the flows back came last in the first pass); it changes only where a way is
+  // strictly cheaper than its present one. Up to three rounds, as long as a flow changes (Ben, 2026-10-05, x-tm1: a
+  // flow laid again before another still saw that one's old port taken and stayed on the detour).
   for (let round = 0, moved = true; reroute && moved && round < 3; round++){ moved = false; for (const f of flowOrder){
     const i = routed.findIndex(r => r.f === f), old = routed[i];
     const s = place.get(f.from), t = place.get(f.to);
@@ -1838,10 +1830,10 @@ function finishGrid(g, model, measure, rules, reroute = true){
     if (best.pieces !== old.pieces) moved = true;
     routed[i] = { f, pieces: best.pieces, sides: [sideS, sideT], back: old.back };
   } }
-  // ---- Strecken in Kanälen und Lücken ----
-  // Je Kanal die waagerechten Stücke in ihm, nach der Seite, von der ihr
-  // Fluss kommt (von oben, von unten), kürzere Spannen innen; je Lücke die
-  // senkrechten ebenso (von links, von rechts).
+  // ---- Tracks in channels and gaps ----
+  // Per channel the horizontal pieces in it, by the side their flow comes
+  // from (from above, from below), shorter spans inside; per gap the vertical
+  // ones likewise (from the left, from the right).
   const tracks = new Map(); // piece → { side, i }
   const assign = (items, side) => {
     const sorted = [...items].sort((a, b) => a.len - b.len);
@@ -1859,7 +1851,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const items = [];
     for (const r of routed) r.pieces.forEach((p, i) => {
       if (p.h !== ch) return;
-      // Von welcher Seite der Fluss in den Kanal kommt: das Band des Stücks davor oder danach.
+      // The side from which the flow comes into the channel: the band of the piece before, or the source's.
       const before = r.pieces[i - 1];
       const fromBand = before ? before.b1 : place.get(r.f.from).band;
       const side = (fromBand < ch ? 'top' : 'bottom');
@@ -1899,11 +1891,10 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const t = gapTracks.get(gx), n = t.left + t.right;
     gapW[gx / 2] = Math.max(GAP_BASE, n ? 2 * TRACK_MARGIN + (n - 1) * TRACK + 12 : 0);
   }
-  // Platz für die Beschriftung (Ben, 2026-10-05, demo5 und x-rg2: „Bei Textkollision prüfen, ob Bruch verschwindet
-  // wenn h-Abstand erhöht wird“): ein benannter Fluss, der gerade von einer Spalte in die nächste geht, bekommt
-  // eine Lücke, in der seine Beschriftung zwischen den beiden Symbolen Platz hat; hinter einem Gateway 10 px nach
-  // dessen Spitze (wie flowLabelPlaces()), sonst 6 px, und 6 px vor dem Ziel. Garantie: die Beschriftung eines
-  // geraden Flusses liegt auf keinem seiner Knoten.
+  // Room for the label (Ben, 2026-10-05, demo5 and x-rg2: where a text collides, check whether the break goes when
+  // the horizontal distance grows): a named flow that goes straight from one column to the next gets a gap in which
+  // its label fits between the two symbols; behind a gateway 10 px after its tip (as flowLabelPlaces()), else 6 px,
+  // and 6 px before the target. Guarantee: the label of a straight flow lies on none of its nodes.
   for (const r of routed){
     if (!r.f.name || r.pieces.length !== 1 || r.pieces[0].h === undefined || bands[r.pieces[0].h].kind !== 'row') continue;
     const p = r.pieces[0];
@@ -1914,18 +1905,18 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const k = Math.max(l.col, rt.col);
     gapW[k] = Math.max(gapW[k], Math.ceil(need - spare));
   }
-  // Platz für den Namen eines Gateways (Ben, 2026-10-05, r01: „Abstand zwischen gateway und folgennode leicht erhöhen,
-  // dann verschwindet die kollision.“): nehmen Flüsse den Port oben und unten, findet der Name weder darüber noch
-  // darunter Platz und geht in eine Ecke (labelPlaces()); passt er weder rechts noch links zwischen das Gateway und den
-  // Nachbarn seiner Zeile, wird die Lücke rechts so breit, dass er dort 2 px nach der Spitze und 6 px vor dem nächsten
-  // Knoten steht, wie bei Vorschlag 1.
+  // Room for a gateway's name (Ben, 2026-10-05, r01: widen the distance between the gateway and the next node a
+  // little, and the collision goes): where flows take the top and bottom ports, the name finds no room above or
+  // below and goes to a corner (labelPlaces()); where it fits neither right nor left between the gateway and the
+  // neighbour in its row, the gap on the right gets so wide that it stands there 2 px after the tip and 6 px before
+  // the next node, as the flow labels above.
   for (const c of g.cells.values()){
     if (c.n.type !== 'gateway' || !c.n.name) continue;
     const at = side => routed.some(r => (r.f.from === c.n.id && r.sides[0] === side) || (r.f.to === c.n.id && r.sides[1] === side));
     if (!at('top') || !at('bottom')) continue;
     const band = place.get(c.n.id).band, need = 2 + measure(c.n.name).w + 6;
-    // Wie viel fehlt zwischen dem Gateway und seinem Nachbarn in Spalte col + d; die Lücke dazwischen hat den Index k.
-    // Nur eine Task reicht so hoch, dass sie die Ecke über oder unter dem Gateway erreicht.
+    // How much is missing between the gateway and its neighbour in column col + d; the gap between them has index k.
+    // Only a task reaches so high that it meets the corner above or below the gateway.
     const short = d => {
       const id = cellAt.get(band + '|' + (2 * (c.col + d) + 1));
       if (!id || g.cells.get(id).n.type !== 'task') return 0;
@@ -1962,14 +1953,14 @@ function finishGrid(g, model, measure, rules, reroute = true){
     return t.side === 'left' ? gapX[gx] + TRACK_MARGIN + t.i * TRACK : gapX[gx] + w - TRACK_MARGIN - t.i * TRACK;
   };
 
-  // Ports: an einer Task mehrere Enden je Seite nebeneinander, sortiert nach
-  // dem Stück danach, damit sie sich nicht kreuzen; ein Gateway und ein Ereignis
-  // an ihrer Spitze.
-  // Reihenfolge der Enden (Ben, 2026-10-05, r09: „außerdem habe ich eine Kreuzung gelöst, in dem ich die reihenfolge
-  // der Flows die zu B2 gehen geändert habe“): das Stück danach kommt von einer Seite (von links oder rechts an
-  // einer oberen oder unteren Seite, von oben oder unten an einer linken oder rechten); je näher es am Symbol liegt,
-  // desto weiter steht sein Ende auf dieser Seite, der fernere Fluss geht innen daran vorbei. Ein gerader Fluss
-  // behält die Mitte. Vorher nur nach der Lage des Stücks, ohne die Seite; von links oder oben kreuzten sie sich.
+  // Ports: at a task several ends per side beside each other, sorted by the
+  // piece after them, so that they do not cross; a gateway and an event at
+  // their tip.
+  // The order of the ends (Ben, 2026-10-05, r09: he resolved a crossing by changing the order of the flows into B2):
+  // the piece after an end comes from one side (from left or right at a top or bottom side, from above or below at
+  // a left or right one); the nearer it lies to the symbol, the further out its end stands on that side, and the
+  // flow further away passes inside it. A straight flow keeps the middle. Sorting by the piece's place alone,
+  // without its side, let ends from the left or from above cross.
   const ends = new Map(); // id|side → [{ r, out, far }]
   for (const r of routed){
     const farOf = (atStart) => {
@@ -1977,7 +1968,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
       if (n === 1) return 0;
       const [p, q] = atStart ? [r.pieces[0], r.pieces[1]] : [r.pieces[n - 1], r.pieces[n - 2]];
       const own = place.get(atStart ? r.f.from : r.f.to);
-      // q liegt quer zu p: sein Abstand zum Symbol und die Seite, von der er kommt (−1 links/oben, +1 rechts/unten).
+      // q lies across p: its distance to the symbol and the side it comes from (−1 left or above, +1 right or below).
       if (p.h !== undefined){
         const far = atStart ? q.b2 : q.b1, d = Math.abs(q.v - own.xo);
         return Math.sign(far - own.band) / (d || 0.5);
@@ -1997,7 +1988,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const sorted = [...list].sort((a, b) => a.far - b.far || (a.out === b.out ? 0 : a.out ? 1 : -1));
     const n = sorted.length, room = (vertical ? c.w : c.h) - 2 * ATTACH_CLEARANCE;
     const step = c.task && n > 1 ? Math.min(PORT_STEP, room / (n - 1)) : 0;
-    // Ein Fluss aus einem Stück (gerade zum Nachbarn) behält die Mitte der Seite; die anderen stehen daneben, auf der Seite, von der sie kommen.
+    // A flow of one piece (straight to the neighbour) keeps the middle of the side; the others stand beside it, on the side they come from.
     const straight = c.task && n > 1 ? sorted.filter(e => e.r.pieces.length === 1) : [];
     const offsets = new Map();
     if (straight.length === 1){
@@ -2016,7 +2007,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   for (const r of routed){
     const p0 = portOf.get(r.f.id + '|true'), pn = portOf.get(r.f.id + '|false');
     const n = r.pieces.length;
-    // Die feste Koordinate jedes Stücks: am Anfang der Port, am Ende der Port, dazwischen die Strecke.
+    // The fixed coordinate of each piece: at the start the port, at the end the port, between them the track.
     const fixed = r.pieces.map((p, i) => {
       if (p.h !== undefined) return i === 0 ? p0.y : i === n - 1 ? pn.y : (bands[p.h].kind === 'ch' ? trackY(p) : p0.y);
       return i === 0 ? p0.x : i === n - 1 ? pn.x : (p.v % 2 === 0 ? trackX(p) : p0.x);
@@ -2027,7 +2018,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
       pts.push(a.h !== undefined ? { x: fixed[i + 1], y: fixed[i] } : { x: fixed[i], y: fixed[i + 1] });
     }
     pts.push({ ...pn });
-    // Ein Stück, dessen beide Enden verschieden liegen (Ports mit Versatz), bekommt einen Knick in der Mitte.
+    // A piece whose two ends lie apart (ports with an offset) gets a bend in its middle.
     for (let i = pts.length - 2; i >= 0; i--){
       const a = pts[i], b = pts[i + 1];
       if (Math.abs(a.x - b.x) >= 0.5 && Math.abs(a.y - b.y) >= 0.5){
@@ -2041,7 +2032,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     routes.push({ f: r.f, pts, obstacles, loop: r.back });
   }
 
-  // Bahnen, Pool, Knoten.
+  // Lanes, pool, nodes.
   const di = { pool: null, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {}, laneOf: {} };
   for (const n of model.nodes){ const l = model.lanes[g.cells.get(n.id).lane]; if (!l.synthetic) di.laneOf[n.id] = l.id; }
   const laneBox = {};
@@ -2123,22 +2114,16 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
 // ---------- the diagram part ----------
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// The author's XML with the diagram part inserted before its last closing
-// definitions tag, whatever its prefix; everything else, and whatever
-// follows that tag, stays as written. The BPMNDiagram declares the bpmndi, dc
-// and di namespaces itself. Its ids are made unique against every id of the
-// XML. di: what layoutGeometry() returned. Returns { xml, diagram }: the XML
-// and the id of the inserted BPMNDiagram, which bpmn-js is told to open, since
-// it opens the first diagram, and that may be an empty one of the author's.
 // The lane set as the layout placed the nodes (spike 2.26, Ben, 2026-10-05): a
 // node a rule put in another lane (R1, R12) would otherwise stay in the
 // author's. Per node the lane di.laneOf names, the one it stands in on the
 // grid; where that differs from the author's, every lane but it and its outer
-// lanes loses the node's flowNodeRef, and it gets one before its closing tag.
-// Otherwise the text stays as written. Comments and CDATA do not count.
+// lanes loses the node's flowNodeRef, and it gets one before its closing tag
+// (an empty lane between its tags, a self-closing one opened). Otherwise the
+// text stays as written. Comments and CDATA do not count.
 function relane(text, model, di){
   const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
-  // Bahnen im Text: Id, Präfix, Bereich [Öffnen, Schließen] und äußere Bahn.
+  // The lanes in the text: id, prefix, range [open, close] and outer lane.
   const lanes = [], stack = [];
   // A tag's attributes: a quoted value may hold ">".
   for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>/g)){
@@ -2168,7 +2153,7 @@ function relane(text, model, di){
       const sib = refs.find(x => x.lane === t);
       const indent = sib ? sib.indent : '';
       const pre = sib ? sib.prefix : t.prefix;
-      // Vor dem schließenden Tag, auf eigener Zeile, eingerückt wie die anderen flowNodeRefs der Bahn.
+      // Before the closing tag, on a line of its own, indented as the lane's other flowNodeRefs.
       const lineStart = text.lastIndexOf('\n', t.close - 1) + 1;
       const at = /^[ \t]*$/.test(text.slice(lineStart, t.close)) ? lineStart : t.close;
       edits.push({ at, end: at, put: (at === lineStart ? '' : '\n') + indent + '<' + pre + 'flowNodeRef>' + esc(n.id) + '</' + pre + 'flowNodeRef>\n' });
@@ -2185,6 +2170,15 @@ function relane(text, model, di){
   return out;
 }
 
+// The author's XML with the diagram part inserted before its last closing
+// definitions tag, whatever its prefix; everything else, and whatever
+// follows that tag, stays as written, but for the lane set where a node
+// stands in another lane on the grid (relane()). The BPMNDiagram declares
+// the bpmndi, dc and di namespaces itself. Its ids are made unique against
+// every id of the XML. di: what layoutGeometry() returned. Returns { xml,
+// diagram }: the XML and the id of the inserted BPMNDiagram, which bpmn-js is
+// told to open, since it opens the first diagram, and that may be an empty
+// one of the author's.
 export function appendDiagram(xml, model, di){
   const text = relane(String(xml), model, di);
   // Comments and CDATA sections are blanked out first: a closing tag or an id
