@@ -88,6 +88,8 @@
  "blackbox-werkstatt": [],
  "demo-angeheftet": [],
  "angeheftet-rechnung": [],
- "angeheftet-antrag": [],
+ "angeheftet-antrag": [
+  "node-outside-lane Gateway_Zusammen Lane_Sachbearbeitung"
+ ],
  "angeheftet-stoerung": []
 }

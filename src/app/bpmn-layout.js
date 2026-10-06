@@ -618,7 +618,7 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   combProbe: true,    // R14 comb: for an exclusive split with three or more ways, the heads in different rows tried in one column (R9 as a trial)
   startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
   stagger: true,      // R16 two gateways above each other in one column: one tried a column further
-  boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host (story 2.30)
+  boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
 });
 
 // The grid's measures.
@@ -1286,8 +1286,10 @@ function gridModel(model){
 // an exception path does in a modeler: the nodes of that way (reached by no
 // other way of the host) in the host's lane and row take a row of their own
 // below it, one per event's way; R7 puts the first a column right of the host.
-// After R1, so that an end has its lane; before R2, which then sees no two ways
-// in one row.
+// In another lane, where other nodes stand in its row too, they take a row of
+// their own on the side facing the host's lane (Ben, 2026-10-06, sonder-bahnen),
+// as the arms of R5 do. After R1, so that an end has its lane; before R2, which
+// then sees no two ways in one row.
 function ruleBoundaryBelow(g, model){
   const hosts = [...new Set(model.flows.filter(f => f.event).map(f => f.from))];
   for (const id of byCol(g, hosts)){
@@ -1296,9 +1298,19 @@ function ruleBoundaryBelow(g, model){
     for (const r of branchRegions(g, id)){
       if (!r.flow.event) continue;
       const mine = r.nodes.filter(x => { const c = g.cells.get(x); return c.lane === H.lane && c.row === H.row && !c.pin; });
-      if (!mine.length) continue;
-      row = g.freshRow(H.lane, row, 1);
-      for (const x of mine) g.cells.get(x).row = row;
+      if (mine.length){
+        row = g.freshRow(H.lane, row, 1);
+        for (const x of mine) g.cells.get(x).row = row;
+      }
+      for (let lane = 0; lane < g.lanes; lane++){
+        if (lane === H.lane || g.poolOfLane[lane] !== g.poolOfLane[H.lane]) continue;
+        const there = r.nodes.filter(x => { const c = g.cells.get(x); return c.lane === lane && c.row === 0 && !c.pin; });
+        const rest = [...g.cells.values()].some(c => c.lane === lane && c.row === 0 && !r.nodes.includes(c.n.id));
+        if (!there.length || !rest) continue;
+        const dir = lane < H.lane ? 1 : -1, rows = g.rowsOf(lane);
+        const to = g.freshRow(lane, dir > 0 ? rows[rows.length - 1] : rows[0], dir);
+        for (const x of there) g.cells.get(x).row = to;
+      }
     }
   }
 }

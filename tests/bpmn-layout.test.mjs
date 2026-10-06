@@ -1161,3 +1161,19 @@ test('a flow from a boundary event takes the straighter way: down and in from th
     { S: 0, A: 1, T: 2, G: 3, E: 4, M: 3, EM: 4 });
   assert.equal(di.flows.FB.length, 3, 'one bend: ' + JSON.stringify(di.flows.FB));
 });
+
+test('R17 in another lane: the way of a boundary event takes a row of its own there, on the side facing the host\'s lane (Ben, 2026-10-06, sonder-bahnen)', () => {
+  const body = '<bpmn:laneSet id="LS"><bpmn:lane id="Oben"><bpmn:flowNodeRef>F</bpmn:flowNodeRef><bpmn:flowNodeRef>FE</bpmn:flowNodeRef><bpmn:flowNodeRef>N</bpmn:flowNodeRef><bpmn:flowNodeRef>NE</bpmn:flowNodeRef></bpmn:lane>' +
+    '<bpmn:lane id="Unten"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef><bpmn:flowNodeRef>U</bpmn:flowNodeRef><bpmn:flowNodeRef>B</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    '<bpmn:startEvent id="S"/><bpmn:task id="T"/><bpmn:task id="U"/><bpmn:task id="F"/><bpmn:endEvent id="FE"/><bpmn:task id="N"/><bpmn:endEvent id="NE"/>' +
+    '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="U"/>' +
+    '<bpmn:sequenceFlow id="F3" sourceRef="U" targetRef="F"/><bpmn:sequenceFlow id="F4" sourceRef="F" targetRef="FE"/><bpmn:sequenceFlow id="FB" sourceRef="B" targetRef="N"/><bpmn:sequenceFlow id="F5" sourceRef="N" targetRef="NE"/>';
+  const xml = xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>');
+  const { model } = read(xml);
+  const cols = { S: 0, T: 1, U: 2, F: 3, FE: 4, N: 2, NE: 3 };
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: cols[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
+  const on = layoutGeometry(model, raw), off = layoutGeometry(model, raw, labelSize, { boundaryBelow: false });
+  assert.ok(bx(on.nodes.N).cy > bx(on.nodes.F).cy, 'below the lane\'s other row, toward the host');
+  assert.equal(bx(on.nodes.NE).cy, bx(on.nodes.N).cy);
+  assert.ok(bx(off.nodes.N).cy <= bx(off.nodes.F).cy, 'without R17 R2 puts it in the row or above, away from the host');
+});
