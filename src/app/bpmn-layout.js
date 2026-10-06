@@ -2912,11 +2912,16 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // Moves down by dy what belongs to a pool own() names, and what belongs to no pool (the message flows) at or
   // below y0: symbols, labels, lanes, the points of every flow.
   const flowPool = new Map(model.flows.map(f => [f.id, poolOf.get(f.from)]));
+  // The places of the labels of events and gateways kept in taken, which pointsOf() reads, are arrays of their own
+  // beside di.labels and move with them; a flow's label and a text annotation share their array with taken and move
+  // once (review of 2.31: a pool further down grew for where its labels had been).
   const shift = (dy, own, y0) => {
     const moves = (k, y) => k === undefined ? y >= y0 : own(k);
+    const moved = new Set();
     for (const [id, b] of [...Object.entries(di.nodes), ...Object.entries(di.labels)]) if (moves(poolOf.get(id), b[1])) b[1] += dy;
-    for (const [id, b] of Object.entries(di.flowLabels)) if (moves(flowPool.get(id), b[1])) b[1] += dy;
-    for (const [id, b] of Object.entries(di.notes || {})) if (moves(notePool.get(id), b[1])) b[1] += dy;
+    for (const [id, b] of Object.entries(di.flowLabels)){ moved.add(b); if (moves(flowPool.get(id), b[1])) b[1] += dy; }
+    for (const [id, b] of Object.entries(di.notes || {})){ moved.add(b); if (moves(notePool.get(id), b[1])) b[1] += dy; }
+    taken.forEach((b, k) => { if (!moved.has(b) && moves(takenPool[k] ?? undefined, b[1])) b[1] += dy; });
     for (const l of model.lanes) if (own(l.pool ?? 0)) laneBox[l.key][1] += dy;
     model.pools.forEach((p, k) => { if (p.box && own(k)) di.pools[p.id][1] += dy; });
     for (const [id, way] of Object.entries(di.flows)) for (const p of way) if (moves(flowPool.get(id), p[1])) p[1] += dy;

@@ -901,6 +901,17 @@ const boxedFixture = (name, order) => {
 };
 const gapsOf = frames => frames.slice(1).map(([, f], i) => f[1] - (frames[i][1][1] + frames[i][1][3]));
 
+test('a pool below one that grows down keeps its height: its labels move with it, where they are and where they were kept (review of 2.31)', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="A" processRef="P"/><bpmn:participant id="PB" name="B" processRef="Q"/></bpmn:collaboration>' +
+    '<bpmn:process id="P"><bpmn:startEvent id="S" name="Los"/><bpmn:task id="T" name="Tun"/><bpmn:endEvent id="E" name="Ende"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="E"/></bpmn:process>' +
+    '<bpmn:process id="Q"><bpmn:startEvent id="S2" name="Auch"/><bpmn:task id="X" name="Annehmen"/><bpmn:sequenceFlow id="G" sourceRef="S2" targetRef="X"/></bpmn:process>');
+  const { model } = read(xml);
+  const raw = rawOf(model, { S: 0, T: 1, E: 2, S2: 0, X: 1 });
+  // The end's label below it, as tall as given: pool A grows down by it, and pool B moves down.
+  const heights = [15, 100, 200].map(h => layoutGeometry(model, raw, (t, w) => t === 'Ende' ? { w: 90, h } : labelSize(t, w)).pools.PB[3]);
+  assert.deepEqual(heights, [144, 144, 144]);
+});
+
 test('a black box on top of a pool whose lanes grow upward: the pool moves down, the box keeps its gap (review of story 2.29)', () => {
   // r12's top lane grows for its labels; hund2's lanes grow for labels across a border (labelRoom()).
   for (const name of ['r12', 'hund2']) assert.deepEqual(gapsOf(boxedFixture(name, ['B', 'P'])), [40], name);

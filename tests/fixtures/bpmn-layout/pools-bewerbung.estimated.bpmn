@@ -91,7 +91,7 @@
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Bewerbung">
       <bpmndi:BPMNShape id="Participant_Bewerberin_di" bpmnElement="Participant_Bewerberin" isHorizontal="true"><dc:Bounds x="0" y="0" width="1014" height="238"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_Unternehmen_di" bpmnElement="Participant_Unternehmen" isHorizontal="true"><dc:Bounds x="0" y="286" width="1014" height="281"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Unternehmen_di" bpmnElement="Participant_Unternehmen" isHorizontal="true"><dc:Bounds x="0" y="286" width="1014" height="268"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Start_StelleGefunden_di" bpmnElement="Start_StelleGefunden"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_BewerbungSenden_di" bpmnElement="Task_BewerbungSenden"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_AntwortAbwarten_di" bpmnElement="Gateway_AntwortAbwarten"><dc:Bounds x="413" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="13" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
@@ -99,28 +99,28 @@
       <bpmndi:BPMNShape id="Catch_AbsageErhalten_di" bpmnElement="Catch_AbsageErhalten"><dc:Bounds x="588" y="156" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="122" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_ZumGespraechEingeladen_di" bpmnElement="End_ZumGespraechEingeladen"><dc:Bounds x="906" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="94" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="End_Abgesagt_di" bpmnElement="End_Abgesagt"><dc:Bounds x="906" y="156" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="196" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_BewerbungEingegangen_di" bpmnElement="Start_BewerbungEingegangen"><dc:Bounds x="252" y="353" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="393" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_BewerbungPruefen_di" bpmnElement="Task_BewerbungPruefen"><dc:Bounds x="378" y="331" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_Geeignet_di" bpmnElement="Gateway_Geeignet" isMarkerVisible="true"><dc:Bounds x="581" y="346" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="312" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_EinladungSenden_di" bpmnElement="Task_EinladungSenden"><dc:Bounds x="714" y="331" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_AbsageSenden_di" bpmnElement="Task_AbsageSenden"><dc:Bounds x="546" y="455" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Eingeladen_di" bpmnElement="End_Eingeladen"><dc:Bounds x="906" y="353" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="393" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_AbsageVersandt_di" bpmnElement="End_AbsageVersandt"><dc:Bounds x="906" y="477" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="517" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_BewerbungEingegangen_di" bpmnElement="Start_BewerbungEingegangen"><dc:Bounds x="252" y="340" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="380" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BewerbungPruefen_di" bpmnElement="Task_BewerbungPruefen"><dc:Bounds x="378" y="318" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Geeignet_di" bpmnElement="Gateway_Geeignet" isMarkerVisible="true"><dc:Bounds x="581" y="333" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="299" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EinladungSenden_di" bpmnElement="Task_EinladungSenden"><dc:Bounds x="714" y="318" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AbsageSenden_di" bpmnElement="Task_AbsageSenden"><dc:Bounds x="546" y="442" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Eingeladen_di" bpmnElement="End_Eingeladen"><dc:Bounds x="906" y="340" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="380" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AbsageVersandt_di" bpmnElement="End_AbsageVersandt"><dc:Bounds x="906" y="464" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="504" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_B1_di" bpmnElement="Flow_B1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_B2_di" bpmnElement="Flow_B2"><di:waypoint x="330" y="72"/><di:waypoint x="413" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_B3_di" bpmnElement="Flow_B3"><di:waypoint x="463" y="72"/><di:waypoint x="756" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_B4_di" bpmnElement="Flow_B4"><di:waypoint x="438" y="97"/><di:waypoint x="438" y="174"/><di:waypoint x="588" y="174"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_B5_di" bpmnElement="Flow_B5"><di:waypoint x="792" y="72"/><di:waypoint x="906" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_B6_di" bpmnElement="Flow_B6"><di:waypoint x="624" y="174"/><di:waypoint x="906" y="174"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_U1_di" bpmnElement="Flow_U1"><di:waypoint x="288" y="371"/><di:waypoint x="378" y="371"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_U2_di" bpmnElement="Flow_U2"><di:waypoint x="498" y="371"/><di:waypoint x="581" y="371"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_U3_di" bpmnElement="Flow_U3"><di:waypoint x="631" y="371"/><di:waypoint x="714" y="371"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="352" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_U4_di" bpmnElement="Flow_U4"><di:waypoint x="606" y="396"/><di:waypoint x="606" y="455"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="404" width="26" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_U5_di" bpmnElement="Flow_U5"><di:waypoint x="834" y="371"/><di:waypoint x="906" y="371"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_U6_di" bpmnElement="Flow_U6"><di:waypoint x="666" y="495"/><di:waypoint x="906" y="495"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Bewerbung_di" bpmnElement="MessageFlow_Bewerbung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="353"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="254.5" width="59.4" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Einladung_di" bpmnElement="MessageFlow_Einladung"><di:waypoint x="774" y="331"/><di:waypoint x="774" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="254.5" width="59.4" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Absage_di" bpmnElement="MessageFlow_Absage"><di:waypoint x="576" y="455"/><di:waypoint x="576" y="439"/><di:waypoint x="534" y="439"/><di:waypoint x="534" y="262"/><di:waypoint x="606" y="262"/><di:waypoint x="606" y="192"/><bpmndi:BPMNLabel><dc:Bounds x="488.4" y="254.5" width="39.599999999999994" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U1_di" bpmnElement="Flow_U1"><di:waypoint x="288" y="358"/><di:waypoint x="378" y="358"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U2_di" bpmnElement="Flow_U2"><di:waypoint x="498" y="358"/><di:waypoint x="581" y="358"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U3_di" bpmnElement="Flow_U3"><di:waypoint x="631" y="358"/><di:waypoint x="714" y="358"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="339" width="13" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U4_di" bpmnElement="Flow_U4"><di:waypoint x="606" y="383"/><di:waypoint x="606" y="442"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="391" width="26" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U5_di" bpmnElement="Flow_U5"><di:waypoint x="834" y="358"/><di:waypoint x="906" y="358"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U6_di" bpmnElement="Flow_U6"><di:waypoint x="666" y="482"/><di:waypoint x="906" y="482"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Bewerbung_di" bpmnElement="MessageFlow_Bewerbung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="340"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="254.5" width="59.4" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Einladung_di" bpmnElement="MessageFlow_Einladung"><di:waypoint x="774" y="318"/><di:waypoint x="774" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="254.5" width="59.4" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Absage_di" bpmnElement="MessageFlow_Absage"><di:waypoint x="576" y="442"/><di:waypoint x="576" y="426"/><di:waypoint x="534" y="426"/><di:waypoint x="534" y="262"/><di:waypoint x="606" y="262"/><di:waypoint x="606" y="192"/><bpmndi:BPMNLabel><dc:Bounds x="488.4" y="254.5" width="39.599999999999994" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
