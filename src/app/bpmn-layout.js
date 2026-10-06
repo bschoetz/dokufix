@@ -601,6 +601,7 @@ const POOL_GAP = 40;        // the gap between two pools without tracks (story 2
 const GAP_TRACK = 20;       // in a gap the distance of two tracks and the margin beside the outermost (Ben, 2026-10-06: more room where message flows run)
 const PORT_STEP = 30;       // the distance of two ends on one side of a task
 const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
+const MSG_BEND = 0.5;       // the cost of a bend of a message flow: two cost as much as a crossing (Ben, 2026-10-06, p-rs1: needless bends)
 
 // The grid from the model and Mermaid's raw positions:
 //   cells: id → { n, lane, row, col, pin }   lane index, row (a number, 0 the backbone, negative above it), column (Mermaid's rank)
@@ -1731,6 +1732,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     }
     return n;
   };
+  const msgIds = new Set((model.messages || []).map(m => m.id));
   const conflicts = (pieces, own) => {
     let n = blockCost(pieces, own);
     // A horizontal piece in a channel of a foreign lane: the flow back belongs in its own.
@@ -1775,7 +1777,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     // bends (a gateway may be entered from the right, as Ben did in hund2).
     const ahead = t.xo >= s.xo;
     const behind = ahead ? (g.cells.get(f.to).n.type === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (g.cells.get(f.from).n.type === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
-    return cellsCrossed(pieces) * 1000 + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * BEND;
+    return cellsCrossed(pieces) * 1000 + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : BEND);
   };
   // The templates of a flow s→t.
   const templates = (s, t) => {

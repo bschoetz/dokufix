@@ -892,3 +892,14 @@ test('the pieces of message flows in a gap take the order with the fewest crossi
   }
   assert.equal(crossings, 0, JSON.stringify([di.flows.Ab, di.flows.Auf]));
 });
+
+test('a message flow takes no needless bends: straight up across a flow that jumps over its source, not around (Ben, 2026-10-06, p-rs1)', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" processRef="QA"/><bpmn:participant id="PB" processRef="QB"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="B1" targetRef="A2"/></bpmn:collaboration>' +
+    '<bpmn:process id="QA"><bpmn:task id="A0"/><bpmn:task id="A1"/><bpmn:task id="A2"/><bpmn:task id="A3"/><bpmn:sequenceFlow id="F1" sourceRef="A0" targetRef="A1"/><bpmn:sequenceFlow id="F2" sourceRef="A1" targetRef="A2"/><bpmn:sequenceFlow id="F3" sourceRef="A2" targetRef="A3"/></bpmn:process>' +
+    '<bpmn:process id="QB"><bpmn:task id="B0"/><bpmn:exclusiveGateway id="G" name="Gut?"/><bpmn:task id="B1"/><bpmn:task id="B2"/><bpmn:sequenceFlow id="G1" sourceRef="B0" targetRef="G"/>' +
+    '<bpmn:sequenceFlow id="G2" sourceRef="G" targetRef="B1" name="nein"/><bpmn:sequenceFlow id="G3" sourceRef="B1" targetRef="B2"/><bpmn:sequenceFlow id="G4" sourceRef="G" targetRef="B2" name="ja"/></bpmn:process>');
+  const { model } = read(xml);
+  const di = layoutGeometry(model, rawOf(model, { A0: 0, A1: 100, A2: 300, A3: 400, B0: 0, G: 100, B1: 200, B2: 300 }));
+  assert.equal(di.flows.M.length, 2, 'straight: ' + JSON.stringify(di.flows.M));
+});
