@@ -1739,7 +1739,23 @@ function finishGrid(g, model, measure, rules, reroute = true){
     }
     return out;
   };
-  const clean = pieces => pieces.filter(p => p.h !== undefined ? p.x1 !== p.x2 : p.b1 !== p.b2);
+  // A template without its pieces of length 0, and two neighbours of one
+  // direction merged into one piece, until none is left: the tracks, the
+  // conflicts and the waypoints take H and V in turn (the middle H of a Z with
+  // xt = xs + 2 has length 0, and its two V would give a waypoint an x for a y).
+  const clean = raw => {
+    for (let pieces = raw;;){
+      const out = [];
+      for (const p of pieces){
+        if (p.h !== undefined ? p.x1 === p.x2 : p.b1 === p.b2) continue;
+        const q = out[out.length - 1];
+        if (q && (q.h !== undefined) === (p.h !== undefined)) out[out.length - 1] = q.h !== undefined ? H(q.h, q.x1, p.x2) : V(q.v, q.b1, p.b2);
+        else out.push(p);
+      }
+      if (out.length === pieces.length) return out;
+      pieces = out;
+    }
+  };
   const flowOrder = [...model.flows].sort((a, b) => {
     const ba = g.back.has(a.id), bb = g.back.has(b.id);
     if (ba !== bb) return ba ? 1 : -1;

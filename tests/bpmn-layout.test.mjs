@@ -675,3 +675,17 @@ test('the default rules: R1–R16 but R7, all on, frozen', () => {
   assert.throws(() => { DEFAULT_RULES.startAlign = false; }, TypeError);
   assert.equal(DEFAULT_RULES.startAlign, true);
 });
+
+test('the router merges two pieces of one direction: a Z whose middle piece has length 0 runs straight between its ends, no waypoint takes an x for a y', () => {
+  // With every rule off, r03 and r09 each lay one flow over a Z from the gap
+  // right of its source to the gap left of its target, two columns apart; its
+  // middle piece has length 0. Taken as two vertical pieces, the corner
+  // between them took the second one's x as its y, below the target's row.
+  const off = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, false]));
+  for (const [name, id] of [['r03', 'F4_k1_c'], ['r09', 'F8_t2_b1']]){
+    const fx = readFixture(name), { model } = readModel(fx.xml);
+    const pts = layoutGeometry(model, fx.raw, t => fx.sizes[t] || labelSize(t), off).flows[id];
+    const [lo, hi] = [pts[0][1], pts[pts.length - 1][1]].sort((a, b) => a - b);
+    assert.ok(pts.every(([, y]) => y >= lo && y <= hi), name + ' ' + id + ': ' + JSON.stringify(pts));
+  }
+});
