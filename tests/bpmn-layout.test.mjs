@@ -1386,6 +1386,14 @@ test('no text annotation lies on the border between two lanes: each keeps 6 px o
   }
 });
 
+test('each text is measured once per width, however many trials lay the labels out (review of 2.31)', () => {
+  const fx = readFixture('notiz-r12');
+  const { model } = readModel(fx.xml), calls = new Map();
+  const di = layoutGeometry(model, fx.raw, (t, w) => { const k = w + ':' + t; calls.set(k, (calls.get(k) || 0) + 1); return measureOf(fx.sizes, 'measured')(t, w); });
+  assert.ok(Object.keys(di.notes).length && calls.size > 1);
+  assert.deepEqual([...calls].filter(([, n]) => n > 1), []);
+});
+
 test('where nothing near is free, the lane grows at its border for the text annotation; the symbols keep their order (notiz-r12)', () => {
   const fx = readFixture('notiz-r12');
   const measure = (t, w) => (w ? fx.sizes['note:' + w + ':' + t] : fx.sizes[t]) || labelSize(t, w);

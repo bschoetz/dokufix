@@ -805,7 +805,15 @@ export function wayHits(way, boxes){
 // call only. R7 and the router's second pass always apply.
 export function layoutGeometry(model, raw, measure = labelSize, options = DEFAULT_RULES){
   const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, options[k] ?? DEFAULT_RULES[k]]));
-  return layoutGrid(model, raw, measure, rules);
+  // Each text measured once per width (none for a label): every trial of the rules lays the labels out again, and the
+  // page measures each through bpmn-js's text renderer, a text annotation in up to four widths (review of 2.31).
+  const sizes = new Map();
+  const once = (text, width) => {
+    const key = (width ?? '') + ':' + text;
+    if (!sizes.has(key)) sizes.set(key, measure(text, width));
+    return sizes.get(key);
+  };
+  return layoutGrid(model, raw, once, rules);
 }
 
 // ---------- the grid: Mermaid's columns, rows in each lane, routes in channels ----------
