@@ -1306,10 +1306,12 @@ function ruleStepAside(g, model, measure, rules){
     if (b.pin || best.cols.get(a) !== best.cols.get(b)) continue;
     const many = bends(best.di, f) >= 3, shares = sharedOf(best.di, f) > 0;
     if (!many && !shares) continue;
+    // A node a flow before has already moved keeps that shift when this trial fails, as in the loop below.
+    const was = g.asideCol.get(b.n.id);
     g.asideCol.set(b.n.id, best.cols.get(b) + 1);
     const t = runGrid(g, model, measure, rules);
     const ok = keys.every(k => t.q[k] <= best.q[k]) && ((many && bends(t.di, f) < bends(best.di, f)) || (shares && t.q.shared < best.q.shared));
-    if (ok) best = t; else g.asideCol.delete(b.n.id);
+    if (ok) best = t; else if (was === undefined) g.asideCol.delete(b.n.id); else g.asideCol.set(b.n.id, was);
   }
   // Geschwister (Ben, 2026-10-05, x-tm1: „Task in nächste Spalte verschoben, damit Nordausgang und Ostausgang des
   // Gates genutzt werden können.“; reklamation: „hier habe ich kreuzungen eliminiert“): steht ein Nachfolger einer
