@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Reklamation"
+                  targetNamespace="http://example.org/bpmn/reklamation">
+  <bpmn:collaboration id="Collaboration_Reklamation">
+    <bpmn:participant id="Participant_Kunde" name="Kunde" />
+    <bpmn:participant id="Participant_Haendler" name="Onlinehändler" processRef="Process_Reklamation" />
+    <bpmn:messageFlow id="MF_Reklamation" name="Reklamation" sourceRef="Participant_Kunde" targetRef="Start_Reklamation" />
+    <bpmn:messageFlow id="MF_Ruecksendung" name="Rücksendung" sourceRef="Participant_Kunde" targetRef="Task_WareEmpfangen" />
+    <bpmn:messageFlow id="MF_Ersatz" name="Ersatz" sourceRef="Task_ErsatzMitteilen" targetRef="Participant_Kunde" />
+    <bpmn:messageFlow id="MF_Gutschrift" name="Gutschrift" sourceRef="Task_GutschriftMitteilen" targetRef="Participant_Kunde" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Reklamation" name="Reklamation bearbeiten" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Haendler">
+      <bpmn:lane id="Lane_Kundenservice" name="Kundenservice">
+        <bpmn:flowNodeRef>Start_Reklamation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReklamationPruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ErsatzMitteilen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GutschriftMitteilen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Zusammenfuehren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abgeschlossen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Lager" name="Lager">
+        <bpmn:flowNodeRef>Task_WareEmpfangen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WarePruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Ergebnis</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Reklamation" name="Reklamation eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Reklamation" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ReklamationPruefen" name="Reklamation prüfen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="Task_WareEmpfangen" name="Zurückgeschickte Ware empfangen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_WarePruefen" name="Ware prüfen">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Ergebnis" name="Ersatz oder Gutschrift?">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ersatz</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gutschrift</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ErsatzMitteilen" name="Ersatz mitteilen">
+      <bpmn:incoming>Flow_Ersatz</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_GutschriftMitteilen" name="Gutschrift mitteilen">
+      <bpmn:incoming>Flow_Gutschrift</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_Zusammenfuehren">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Abgeschlossen" name="Reklamation abgeschlossen">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Reklamation" targetRef="Task_ReklamationPruefen" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ReklamationPruefen" targetRef="Task_WareEmpfangen" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_WareEmpfangen" targetRef="Task_WarePruefen" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_WarePruefen" targetRef="Gateway_Ergebnis" />
+    <bpmn:sequenceFlow id="Flow_Ersatz" name="Ersatz" sourceRef="Gateway_Ergebnis" targetRef="Task_ErsatzMitteilen" />
+    <bpmn:sequenceFlow id="Flow_Gutschrift" name="Gutschrift" sourceRef="Gateway_Ergebnis" targetRef="Task_GutschriftMitteilen" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_ErsatzMitteilen" targetRef="Gateway_Zusammenfuehren" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_GutschriftMitteilen" targetRef="Gateway_Zusammenfuehren" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Gateway_Zusammenfuehren" targetRef="End_Abgeschlossen" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Reklamation">
+      <bpmndi:BPMNShape id="Participant_Kunde_di" bpmnElement="Participant_Kunde" isHorizontal="true"><dc:Bounds x="0" y="0" width="1112" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Haendler_di" bpmnElement="Participant_Haendler" isHorizontal="true"><dc:Bounds x="0" y="100" width="1112" height="288"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kundenservice_di" bpmnElement="Lane_Kundenservice" isHorizontal="true"><dc:Bounds x="30" y="100" width="1082" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Lager_di" bpmnElement="Lane_Lager" isHorizontal="true"><dc:Bounds x="30" y="244" width="1082" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Reklamation_di" bpmnElement="Start_Reklamation"><dc:Bounds x="102" y="154" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="194" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ReklamationPruefen_di" bpmnElement="Task_ReklamationPruefen"><dc:Bounds x="210" y="132" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_WareEmpfangen_di" bpmnElement="Task_WareEmpfangen"><dc:Bounds x="210" y="276" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_WarePruefen_di" bpmnElement="Task_WarePruefen"><dc:Bounds x="378" y="276" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Ergebnis_di" bpmnElement="Gateway_Ergebnis" isMarkerVisible="true"><dc:Bounds x="581" y="291" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="345" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ErsatzMitteilen_di" bpmnElement="Task_ErsatzMitteilen"><dc:Bounds x="546" y="132" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_GutschriftMitteilen_di" bpmnElement="Task_GutschriftMitteilen"><dc:Bounds x="714" y="132" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Zusammenfuehren_di" bpmnElement="Gateway_Zusammenfuehren" isMarkerVisible="true"><dc:Bounds x="882" y="147" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Abgeschlossen_di" bpmnElement="End_Abgeschlossen"><dc:Bounds x="1004" y="154" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="977" y="194" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="172"/><di:waypoint x="210" y="172"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="270" y="212"/><di:waypoint x="270" y="276"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="330" y="316"/><di:waypoint x="378" y="316"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="498" y="316"/><di:waypoint x="581" y="316"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Ersatz_di" bpmnElement="Flow_Ersatz"><di:waypoint x="606" y="291"/><di:waypoint x="606" y="212"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="268" width="40" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Gutschrift_di" bpmnElement="Flow_Gutschrift"><di:waypoint x="631" y="316"/><di:waypoint x="774" y="316"/><di:waypoint x="774" y="212"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="297" width="66" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="636" y="132"/><di:waypoint x="636" y="120"/><di:waypoint x="907" y="120"/><di:waypoint x="907" y="147"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="834" y="172"/><di:waypoint x="882" y="172"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="932" y="172"/><di:waypoint x="1004" y="172"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Reklamation_di" bpmnElement="MF_Reklamation"><di:waypoint x="120" y="60"/><di:waypoint x="120" y="154"/><bpmndi:BPMNLabel><dc:Bounds x="126" y="72.5" width="72.6" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Ruecksendung_di" bpmnElement="MF_Ruecksendung"><di:waypoint x="342" y="60"/><di:waypoint x="342" y="256"/><di:waypoint x="300" y="256"/><di:waypoint x="300" y="276"/><bpmndi:BPMNLabel><dc:Bounds x="348" y="72.5" width="72.6" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Ersatz_di" bpmnElement="MF_Ersatz"><di:waypoint x="606" y="132"/><di:waypoint x="606" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="72.5" width="39.599999999999994" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_Gutschrift_di" bpmnElement="MF_Gutschrift"><di:waypoint x="774" y="132"/><di:waypoint x="774" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="72.5" width="66" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

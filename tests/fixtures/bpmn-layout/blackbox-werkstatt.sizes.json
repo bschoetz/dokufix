@@ -1,0 +1,54 @@
+{
+ "Reparaturauftrag eingegangen": {
+  "w": 83,
+  "h": 44
+ },
+ "Freigabe erhalten": {
+  "w": 46,
+  "h": 29
+ },
+ "Ersatzteile vorrätig?": {
+  "w": 54,
+  "h": 44
+ },
+ "Ersatzteile geliefert": {
+  "w": 54,
+  "h": 29
+ },
+ "Reparatur abgeschlossen": {
+  "w": 78,
+  "h": 29
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 23,
+  "h": 15
+ },
+ "Reparaturauftrag": {
+  "w": 90,
+  "h": 15
+ },
+ "Kostenvoranschlag": {
+  "w": 84,
+  "h": 29
+ },
+ "Freigabe": {
+  "w": 46,
+  "h": 15
+ },
+ "Bestellung": {
+  "w": 56,
+  "h": 15
+ },
+ "Lieferung": {
+  "w": 50,
+  "h": 15
+ },
+ "Fertigmeldung": {
+  "w": 78,
+  "h": 15
+ }
+}

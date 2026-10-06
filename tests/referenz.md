@@ -988,7 +988,7 @@ Ein Rückfluss von einem Zwischenereignis zurück zu einem anderen: er dockt obe
 
 ### Mehrere Pools
 
-Zwei Pools ohne Koordinaten mit Nachrichtenflüssen: oben „Leser“ ohne Bahnen, darunter „Bibliothek“ mit den Bahnen „Theke“ und „Magazin“. Die Nachrichtenflüsse „Bestellung“ und „Abholbereit“ laufen gestrichelt senkrecht zwischen den Pools. Der Pool „Verlag“ hat keinen eigenen Prozess; dokufix lässt ihn weg, mit dem Nachrichtenfluss „Nachbestellung“ zu ihm.
+Zwei Pools ohne Koordinaten mit Nachrichtenflüssen: oben „Leser“ ohne Bahnen, darunter „Bibliothek“ mit den Bahnen „Theke“ und „Magazin“. Die Nachrichtenflüsse „Bestellung“ und „Abholbereit“ laufen gestrichelt senkrecht zwischen den Pools. Der Pool „Verlag“ hat keinen eigenen Prozess: dokufix zeichnet ihn als schmalen Rahmen ohne Bahnen unter der „Bibliothek“, und der Nachrichtenfluss „Nachbestellung“ läuft senkrecht bis an seinen Rand.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>

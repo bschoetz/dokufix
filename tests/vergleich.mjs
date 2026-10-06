@@ -3556,13 +3556,15 @@ function bpmnLayoutProblems(model, g){
   const out = [];
   // Message flows (story 2.12) as the sequence flows: on the outlines, through no symbol, their labels apart.
   const flows = model.flows.concat(model.messages || []);
-  const type = new Map(model.nodes.map(n => [n.id, n.type]));
+  const type = new Map([...model.nodes.map(n => [n.id, n.type]), ...model.pools.filter(p => p.id).map(p => [p.id, 'pool'])]);
   const eps = 1.5;
   const onOutline = (p, box, kind) => {
     const [x, y, w, h] = box, cx = x + w / 2, cy = y + h / 2;
     if (kind === 'gateway') return Math.abs(Math.abs(p[0] - cx) / (w / 2) + Math.abs(p[1] - cy) / (h / 2) - 1) * Math.min(w, h) / 2 <= eps;
     if (kind === 'task') return p[0] >= x - eps && p[0] <= x + w + eps && p[1] >= y - eps && p[1] <= y + h + eps &&
       Math.min(Math.abs(p[0] - x), Math.abs(p[0] - x - w), Math.abs(p[1] - y), Math.abs(p[1] - y - h)) <= eps;
+    // A message flow's end at a pool (story 2.29): on the top or bottom edge of its frame.
+    if (kind === 'pool') return p[0] >= x - eps && p[0] <= x + w + eps && (Math.abs(p[1] - y) <= eps || Math.abs(p[1] - y - h) <= eps);
     return Math.abs(Math.hypot(p[0] - cx, p[1] - cy) - w / 2) <= eps;
   };
   const fmt = p => p.map(v => Math.round(v)).join(',');

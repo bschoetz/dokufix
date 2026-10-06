@@ -95,10 +95,11 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 // The pools and their processes, read from the parsed XML:
 //   { model, leftOut }
 //   model: { pools, plane, lanes, nodes, flows, messages, insert }
-//     pools: [{ id, name }], one per pool laid out, top to bottom in the
-//            order of the participants; id null where nothing is drawn as a
-//            pool: a process without a participant, a participant without an
-//            id
+//     pools: [{ id, name, box }], one per pool laid out, top to bottom in
+//            the order of the participants; id null where nothing is drawn as
+//            a pool: a process without a participant, a participant without
+//            an id; box true for a participant without a process of its own
+//            (a black box, story 2.29), which has no lanes
 //     plane: the id the diagram part refers to: the collaboration, or the process
 //     lanes: [{ id, name, nodes: [node ids], key, synthetic, hold, pool }],
 //            the lanes of all pools, those of one pool next to each other; a
@@ -110,8 +111,10 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //     nodes: [{ id, name, type, tag, key }], type one of start, end, inter,
 //            gateway, task
 //     flows: [{ id, from, to, name }], the sequence flows, each inside its pool
-//     messages: [{ id, from, to, name }], the message flows between flow
-//            nodes of two pools laid out
+//     messages: [{ id, from, to, name, fromPool, toPool }], the message
+//            flows between two pools laid out, each end a flow node or a
+//            participant; fromPool, toPool: where an end is a participant,
+//            the index of its pool
 //     insert: null, or where processes have no collaboration (Ben,
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
@@ -121,9 +124,8 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 // null when the document is no BPMN definitions: bpmn-js has its own message
 // for that. Throws with the reason where nothing can be laid out, or a node
 // stands in no lane although its process has lanes. A pool without a process
-// of its own beside pools with one is left out, with its message flows (Ben,
-// 2026-10-06), until such pools are laid out (backlog); alone it ends in
-// "nothing to place".
+// of its own beside pools with one is a black box (story 2.29); black boxes
+// alone end in "nothing to place".
 export function readProcess(doc){
   const root = doc && doc.documentElement;
   if (!root || local(root) !== 'definitions') return null;
@@ -152,6 +154,8 @@ export function readProcess(doc){
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
     const own = readPool(proc, participant, nodes, lanes, leave);
+    // A participant without a process of its own (a black box) is a pool without lanes (story 2.29).
+    if (!own && participant && attr(participant, 'id')){ pools.push({ id: attr(participant, 'id'), name: clean(attr(participant, 'name')), el: participant, proc, box: true }); continue; }
     if (!own){ blackBoxes.push({ participant, proc }); continue; }
     const index = pools.length;
     for (const l of own.lanes){ l.pool = index; lanes.push(l); }
@@ -159,9 +163,9 @@ export function readProcess(doc){
     flows.push(...own.flows);
     pools.push({ id: participant && attr(participant, 'id') ? attr(participant, 'id') : null, name: participant ? clean(attr(participant, 'name')) : '', el: participant, proc, standIn: own.standIn });
   }
-  if (!pools.length) throw new Error(LAYOUT_NOTHING);
+  if (!pools.some(p => !p.box)) throw new Error(LAYOUT_NOTHING);
   for (const { participant, proc } of blackBoxes){
-    if (participant) leave(participant, 'a pool without a process of its own beside pools with one');
+    if (participant) leave(participant, 'has no id; it is not drawn as a pool');
     else leave(proc, 'a process with nothing to lay out');
   }
 
@@ -183,21 +187,22 @@ export function readProcess(doc){
   const plane = insert ? insert.id : collaboration ? attr(collaboration, 'id') : attr(pools[0].proc, 'id');
   if (!plane) throw new Error(LAYOUT_NOTHING);
 
-  // Message flows between flow nodes of two pools laid out; the rest is left out.
+  // Message flows between two pools laid out, each end a flow node or a pool's frame (story 2.29); the rest is
+  // left out.
   const messages = [];
+  const poolIndex = new Map(pools.map((p, i) => [p.id, i]).filter(([id]) => id));
+  const end = id => byId.has(id) ? { pool: poolOfNode.get(id) } : poolIndex.has(id) ? { pool: poolIndex.get(id), frame: true } : null;
   for (const [el, slot] of slots){
-    const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef');
-    const pool = id => participants.some(pa => attr(pa, 'id') === id);
+    const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef'), a = end(from), b = end(to);
     if (!attr(el, 'id')) slot.reason = 'has no id';
-    else if (pool(from) || pool(to)) slot.reason = 'attached to a pool, not to a flow node';
-    else if (!byId.has(from) || !byId.has(to)) slot.reason = 'touches ' + [...new Set([from, to].filter(id => !byId.has(id)))].join(' and ') + ', which is not laid out';
-    else if (poolOfNode.get(from) === poolOfNode.get(to)) slot.reason = 'a message flow within one pool';
-    else messages.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
+    else if (!a || !b) slot.reason = 'touches ' + [...new Set([from, to].filter(id => !end(id)))].join(' and ') + ', which is not laid out';
+    else if (a.pool === b.pool) slot.reason = 'a message flow within one pool';
+    else messages.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...(a.frame ? { fromPool: a.pool } : {}), ...(b.frame ? { toPool: b.pool } : {}) });
   }
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].tag === 'messageFlow' && leftOut[i].reason === null) leftOut.splice(i, 1);
   // A participant without an id gets no pool shape.
   for (const p of pools) if (p.el && !attr(p.el, 'id')) leave(p.el, 'has no id; it is not drawn as a pool');
-  return { model: { pools: pools.map(p => ({ id: p.id, name: p.name })), plane, lanes, nodes, flows, messages, insert }, leftOut };
+  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, messages, insert }, leftOut };
 }
 
 // The flow nodes, lanes and sequence flows of one pool's process, keyed on
@@ -598,6 +603,7 @@ const TRACK = 16;           // the distance of two tracks in a channel
 const TRACK_MARGIN = 12;    // the margin of a channel beside its outermost track
 const EMPTY_ROW = 40;       // the row of an empty lane
 const POOL_GAP = 40;        // the gap between two pools without tracks (story 2.12)
+const BOX_H = 60;           // the height of a pool without a process of its own (story 2.29)
 const GAP_TRACK = 20;       // in a gap the distance of two tracks and the margin beside the outermost (Ben, 2026-10-06: more room where message flows run)
 const PORT_STEP = 30;       // the distance of two ends on one side of a task
 const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
@@ -674,7 +680,7 @@ function buildGrid(model, raw){
   // Per lane its pool; per node the message flows into it.
   const poolOfLane = model.lanes.map(l => l.pool ?? 0);
   const msgIn = new Map(model.nodes.map(n => [n.id, []]));
-  for (const m of model.messages || []) msgIn.get(m.to).push(m);
+  for (const m of model.messages || []) if (m.fromPool === undefined && m.toPool === undefined) msgIn.get(m.to).push(m);
   return { cells, fwdOut, fwdIn, back, reachable, at, rowsOf, newRow, freshRow, isSplit, lanes: model.lanes.length, poolOfLane, msgIn };
 }
 
@@ -1604,18 +1610,23 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const rows = g.rowsOf(l);
     laneRows.push(rows.length ? rows : [0]);
   }
-  const bands = [];           // { kind: 'ch'|'row'|'gap', lane, row }; a gap stands between two pools, above the second
+  // A gap stands between two pools, above the second; a black box is a band of its own, without lanes (story 2.29).
+  const bands = [];           // { kind: 'ch'|'row'|'gap'|'box', lane, row, pool }
   const rowBand = new Map();  // lane|rowIndex → band index
-  for (let l = 0; l < g.lanes; l++){
-    if (l && g.poolOfLane[l] !== g.poolOfLane[l - 1]) bands.push({ kind: 'gap' });
-    bands.push({ kind: 'ch', lane: l, edge: 'top' });
-    laneRows[l].forEach((r, i) => {
-      if (i) bands.push({ kind: 'ch', lane: l });
-      rowBand.set(l + '|' + i, bands.length);
-      bands.push({ kind: 'row', lane: l, row: i });
-    });
-    bands.push({ kind: 'ch', lane: l, edge: 'bottom' });
-  }
+  model.pools.forEach((p, k) => {
+    if (bands.length) bands.push({ kind: 'gap' });
+    if (p.box){ bands.push({ kind: 'box', pool: k }); return; }
+    for (let l = 0; l < g.lanes; l++){
+      if (g.poolOfLane[l] !== k) continue;
+      bands.push({ kind: 'ch', lane: l, edge: 'top', pool: k });
+      laneRows[l].forEach((r, i) => {
+        if (i) bands.push({ kind: 'ch', lane: l, pool: k });
+        rowBand.set(l + '|' + i, bands.length);
+        bands.push({ kind: 'row', lane: l, row: i, pool: k });
+      });
+      bands.push({ kind: 'ch', lane: l, edge: 'bottom', pool: k });
+    }
+  });
   const cols = Math.max(...[...g.cells.values()].map(c => c.col)) + 1;
   const place = new Map();    // id → { band, xo } (xo: 2*col+1; gap g: 2*g)
   const cellAt = new Map();   // band|xo → id
@@ -1628,9 +1639,27 @@ function finishGrid(g, model, measure, rules, reroute = true){
   const channels = bands.map((b, i) => i).filter(i => bands[i].kind === 'ch');
   const gaps = bands.map((b, i) => i).filter(i => bands[i].kind === 'gap');
   // A sequence flow keeps to the channels of its pool.
-  const poolOfBand = b => g.poolOfLane[bands[b].lane];
+  const poolOfBand = b => bands[b].pool;
   const channelsOf = new Map();
   for (const ch of channels) (channelsOf.get(poolOfBand(ch)) || channelsOf.set(poolOfBand(ch), []).get(poolOfBand(ch))).push(ch);
+
+  // A message flow's end at a pool's frame (story 2.29) is a place of its own: the band of a black box, or the outer
+  // channel of a pool with lanes on the side facing the other end; its column is the other end's.
+  const msgEnds = new Map();  // message id → { from, to }, the places of its ends at a frame
+  const endAt = (f, k) => msgEnds.get(f.id)?.[k] || place.get(f[k]);
+  const typeOf = id => g.cells.get(id)?.n.type ?? 'pool';
+  const poolBands = k => bands.map((b, i) => i).filter(i => bands[i].pool === k);
+  const facing = (k, band) => { const own = poolBands(k); return band < own[0] ? own[0] : own[own.length - 1]; };
+  for (const m of model.messages || []){
+    if (m.fromPool === undefined && m.toPool === undefined) continue;
+    const e = {};
+    if (m.fromPool !== undefined && m.toPool !== undefined){
+      e.from = { band: facing(m.fromPool, poolBands(m.toPool)[0]), xo: -1 };
+      e.to = { band: facing(m.toPool, poolBands(m.fromPool)[0]), xo: -1 };
+    } else if (m.toPool !== undefined){ const s = place.get(m.from); e.to = { band: facing(m.toPool, s.band), xo: s.xo }; }
+    else { const t = place.get(m.to); e.from = { band: facing(m.fromPool, t.band), xo: t.xo }; }
+    msgEnds.set(m.id, e);
+  }
 
   // ---- Router ----
   // A way is a sequence of pieces, horizontal { h: band, x1, x2 } or vertical
@@ -1666,8 +1695,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
   // begins at a task). Not into a gateway: flows run together there.
   const endWeight = (f, pieces, i) => {
     const id = i === 0 ? f.from : i === pieces.length - 1 ? f.to : null;
-    if (pieces.length === 1 && !['task', 'gateway'].includes(g.cells.get(f.to).n.type)) return 3;
-    return id && g.cells.get(id).n.type === 'task' ? 0.5 : 3;
+    if (pieces.length === 1 && !['task', 'gateway'].includes(typeOf(f.to))) return 3;
+    return id && typeOf(id) === 'task' ? 0.5 : 3;
   };
   const laneOfBand = b => bands[b].lane;
   // R8: the room of a parallel block in bands and columns; a piece of a
@@ -1703,7 +1732,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   }]));
   const fanCost = (pieces, own) => {
     let n = 0;
-    const sameBand = place.get(own.from).band === place.get(own.to).band;   // the arm in the gateways' row goes straight
+    const sameBand = endAt(own, 'from').band === endAt(own, 'to').band;   // the arm in the gateways' row goes straight
     for (const b of fanBlocks){
       if (sameBand) break;
       const near = fanNear.get(b.P);
@@ -1736,7 +1765,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   const conflicts = (pieces, own) => {
     let n = blockCost(pieces, own);
     // A horizontal piece in a channel of a foreign lane: the flow back belongs in its own.
-    const ownLanes = new Set([g.cells.get(own.from).lane, g.cells.get(own.to).lane]);
+    const ownLanes = new Set([g.cells.get(own.from)?.lane, g.cells.get(own.to)?.lane]);
     for (const p of pieces) if (p.h !== undefined && bands[p.h].kind === 'ch' && !ownLanes.has(laneOfBand(p.h))) n += 2;
     for (const r of routed){
       if (r.f === own || r.off) continue;
@@ -1764,19 +1793,19 @@ function finishGrid(g, model, measure, rules, reroute = true){
   const length = pieces => pieces.reduce((s, p) => s + (p.h !== undefined ? Math.abs(p.x2 - p.x1) : Math.abs(p.b2 - p.b1)), 0);
   const portPenalty = (id, side, out) => {
     const c = g.cells.get(id);
-    if (c.n.type === 'task') return 0;
+    if (!c || c.n.type === 'task') return 0;
     const u = portUse.get(id + '|' + side);
     return u && (out ? u.in : u.out) ? 100 : 0;
   };
   const score = (f, pieces) => {
-    const s = place.get(f.from), t = place.get(f.to);
+    const s = endAt(f, 'from'), t = endAt(f, 'to');
     // A bend costs half a grid step (Ben, 2026-10-05, hund2: try another exit to cut the bends of a line): with the
     // same length and conflicts the way with fewer bends wins, say out sideways rather than out below and at once to
     // the side. So that no bend is saved by a flow to the right taking a task from behind: where the target lies
     // right of the source or in its column, entering a task from the right or leaving it to the left costs two
     // bends (a gateway may be entered from the right, as Ben did in hund2).
     const ahead = t.xo >= s.xo;
-    const behind = ahead ? (g.cells.get(f.to).n.type === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (g.cells.get(f.from).n.type === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
+    const behind = ahead ? (typeOf(f.to) === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (typeOf(f.from) === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
     return cellsCrossed(pieces) * 1000 + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : BEND);
   };
   // The templates of a flow s→t.
@@ -1952,18 +1981,36 @@ function finishGrid(g, model, measure, rules, reroute = true){
     }
     return out;
   };
-  const span = f => Math.abs(place.get(f.to).xo - place.get(f.from).xo) + Math.abs(place.get(f.to).band - place.get(f.from).band);
+  // To a frame (story 2.29): vertical from the node straight to the frame, or out beside it, over the channel next
+  // to it or a gap between pools, into a gap between columns; from a frame the same way back; from frame to frame
+  // vertical in a gap between columns.
+  const toFrame = (xs, ys, B) => {
+    const out = [[V(xs, ys, B)]], d = Math.sign(B - ys);
+    const between = gaps.filter(G => (G - ys) * (G - B) < 0);
+    for (const gx of [xs - 1, xs + 1]){
+      out.push([V(xs, ys, ys + d), H(ys + d, xs, gx), V(gx, ys + d, B)]);
+      for (const G of between) out.push([V(xs, ys, G), H(G, xs, gx), V(gx, G, B)]);
+    }
+    return out;
+  };
+  const reverse = pieces => [...pieces].reverse().map(p => p.h !== undefined ? H(p.h, p.x2, p.x1) : V(p.v, p.b2, p.b1));
+  const frameTemplates = (m, s, t) => {
+    const e = msgEnds.get(m.id);
+    if (e.from && e.to){ const out = []; for (let gx = 0; gx <= 2 * cols; gx += 2) out.push([V(gx, s.band, t.band)]); return out; }
+    return e.to ? toFrame(s.xo, s.band, t.band) : toFrame(t.xo, t.band, s.band).map(reverse);
+  };
+  const span = f => Math.abs(endAt(f, 'to').xo - endAt(f, 'from').xo) + Math.abs(endAt(f, 'to').band - endAt(f, 'from').band);
   for (const m of [...(model.messages || [])].sort((a, b) => span(a) - span(b))){
-    const s = place.get(m.from), t = place.get(m.to);
+    const s = endAt(m, 'from'), t = endAt(m, 'to');
     let best = null;
-    for (const raw of msgTemplates(s, t)){
+    for (const raw of msgEnds.has(m.id) ? frameTemplates(m, s, t) : msgTemplates(s, t)){
       const pieces = clean(raw);
       if (!pieces.length) continue;
       const sc = score(m, pieces);
       if (!best || sc < best.sc) best = { pieces, sc };
     }
     const sideS = sideOfFirst(best.pieces[0], s), sideT = sideOfLast(best.pieces[best.pieces.length - 1], t);
-    for (const [id, side, out] of [[m.from, sideS, true], [m.to, sideT, false]]){ const k = id + '|' + side; const u = portUse.get(k) || { in: 0, out: 0 }; u[out ? 'out' : 'in']++; portUse.set(k, u); }
+    for (const [id, side, out] of [[m.from, sideS, true], [m.to, sideT, false]]){ if (!g.cells.has(id)) continue; const k = id + '|' + side; const u = portUse.get(k) || { in: 0, out: 0 }; u[out ? 'out' : 'in']++; portUse.set(k, u); }
     routed.push({ f: m, pieces: best.pieces, sides: [sideS, sideT], back: false, message: true });
   }
 
@@ -1990,7 +2037,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
       if (p.h !== ch) return;
       // The side from which the flow comes into the channel: the band of the piece before, or the source's.
       const before = r.pieces[i - 1];
-      const fromBand = before ? before.b1 : place.get(r.f.from).band;
+      const fromBand = before ? before.b1 : endAt(r.f, 'from').band;
       const side = (fromBand < ch ? 'top' : 'bottom');
       items.push({ p, lo: Math.min(p.x1, p.x2), hi: Math.max(p.x1, p.x2), len: Math.abs(p.x2 - p.x1), side });
     });
@@ -2010,7 +2057,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
       const ends = [];
       if (before && before.v !== undefined) ends.push({ x: before.v, up: before.b1 < ch });
       if (after && after.v !== undefined) ends.push({ x: after.v, up: after.b2 < ch });
-      const fromBand = before ? before.b1 : place.get(r.f.from).band;
+      const fromBand = before ? before.b1 : endAt(r.f, 'from').band;
       items.push({ p, lo: Math.min(p.x1, p.x2), hi: Math.max(p.x1, p.x2), len: Math.abs(p.x2 - p.x1), fromAbove: fromBand < ch, ends });
     });
     // The crossings of a above b: a's verticals down through b, b's verticals up through a.
@@ -2038,7 +2085,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     for (const r of routed) r.pieces.forEach((p, i) => {
       if (p.v !== gx) return;
       const before = r.pieces[i - 1];
-      const fromX = before ? before.x1 : place.get(r.f.from).xo;
+      const fromX = before ? before.x1 : endAt(r.f, 'from').xo;
       items.push({ p, lo: Math.min(p.b1, p.b2), hi: Math.max(p.b1, p.b2), len: Math.abs(p.b2 - p.b1), side: fromX < gx ? 'left' : 'right' });
     });
     const left = assign(items.filter(x => x.side === 'left'), 'left'), right = assign(items.filter(x => x.side === 'right'), 'right');
@@ -2055,13 +2102,14 @@ function finishGrid(g, model, measure, rules, reroute = true){
   }
   for (let b = 0; b < bands.length; b++){
     if (bands[b].kind === 'row'){ if (!rowH[b]) rowH[b] = EMPTY_ROW; continue; }
+    if (bands[b].kind === 'box'){ rowH[b] = BOX_H; continue; }
     const t = chTracks.get(b), n = t.top + t.bottom;
     const base = bands[b].kind === 'gap' ? POOL_GAP : bands[b].edge ? EDGE_BASE : CHANNEL_BASE;
     const [margin, step] = bands[b].kind === 'gap' ? [GAP_TRACK, GAP_TRACK] : [TRACK_MARGIN, TRACK];
     rowH[b] = Math.max(base, n ? 2 * margin + (n - 1) * step + (bands[b].edge ? 0 : 8) : 0);
     // A gap is as tall as the tallest label of a message flow across it, 6 px clear of either pool (story 2.12).
     if (bands[b].kind === 'gap') for (const m of model.messages || []){
-      const s = place.get(m.from).band, e = place.get(m.to).band;
+      const s = endAt(m, 'from').band, e = endAt(m, 'to').band;
       if (m.name && (b - s) * (b - e) < 0) rowH[b] = Math.max(rowH[b], measure(m.name).h + 12);
     }
   }
@@ -2157,8 +2205,9 @@ function finishGrid(g, model, measure, rules, reroute = true){
       return Math.sign(far - own.xo) / (d || 0.5);
     };
     const add = (id, side, out, far) => { const k = id + '|' + side; (ends.get(k) || ends.set(k, []).get(k)).push({ r, out, far }); };
-    add(r.f.from, r.sides[0], true, farOf(true));
-    add(r.f.to, r.sides[1], false, farOf(false));
+    const e = msgEnds.get(r.f.id);
+    if (!e?.from) add(r.f.from, r.sides[0], true, farOf(true));
+    if (!e?.to) add(r.f.to, r.sides[1], false, farOf(false));
   }
   const portOf = new Map(); // r|out → { x, y }
   for (const [k, list] of ends){
@@ -2183,6 +2232,21 @@ function finishGrid(g, model, measure, rules, reroute = true){
     for (const e of sorted){
       const off = Math.max(-room / 2, Math.min(room / 2, offsets.get(e)));
       portOf.set(e.r.f.id + '|' + e.out, { x: base.x + (vertical ? off : 0), y: base.y + (vertical ? 0 : off) });
+    }
+  }
+
+  // An end at a frame (story 2.29) lies on the line of its piece, a vertical one: in a gap between columns on its
+  // track, in a column at the other end's port; on the edge of its band facing the other end.
+  for (const r of routed){
+    const e = msgEnds.get(r.f.id);
+    if (!e) continue;
+    const n = r.pieces.length;
+    for (const [out, k, p] of [[true, 'from', r.pieces[0]], [false, 'to', r.pieces[n - 1]]]){
+      if (!e[k]) continue;
+      const B = e[k].band, other = out ? Math.max(p.b1, p.b2) > B : Math.min(p.b1, p.b2) < B;
+      const x = p.v % 2 === 0 ? trackX(p) : n === 1 ? portOf.get(r.f.id + '|' + !out).x : colX[(p.v - 1) / 2] + colW[(p.v - 1) / 2] / 2;
+      // other: the rest of the way lies below the frame's band (from a frame) or above it (to a frame).
+      portOf.set(r.f.id + '|' + out, { x, y: out ? (other ? bandY[B] + rowH[B] : bandY[B]) : (other ? bandY[B] : bandY[B] + rowH[B]) });
     }
   }
 
@@ -2320,7 +2384,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     taken.forEach(([x, y, w, h], k) => { if (takenPool[k] === i){ xs.push(x, x + w); ys.push(y, y + h); } });
     return { xs, ys };
   };
-  const pools = model.pools.map((p, i) => i).filter(framed);
+  const pools = model.pools.map((p, i) => i).filter(i => framed(i) && !model.pools[i].box);
   let west = 0, east = 0;
   for (const i of pools){
     const { xs } = pointsOf(i), frame = lanesOf(i);
@@ -2335,6 +2399,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     for (const [id, b] of [...Object.entries(di.nodes), ...Object.entries(di.labels)]) if (moves(poolOf.get(id), b[1])) b[1] += dy;
     for (const [id, b] of Object.entries(di.flowLabels)) if (moves(flowPool.get(id), b[1])) b[1] += dy;
     for (const l of model.lanes) if (own(l.pool ?? 0)) laneBox[l.key][1] += dy;
+    model.pools.forEach((p, k) => { if (p.box && own(k)) di.pools[p.id][1] += dy; });
     for (const [id, way] of Object.entries(di.flows)) for (const p of way) if (moves(flowPool.get(id), p[1])) p[1] += dy;
   };
   for (const i of pools){
@@ -2350,13 +2415,28 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
   if (pools.length) for (const b of Object.values(laneBox)){ b[0] -= west; b[2] += west + east; }
   // Each pool around its lanes, its head left of them.
+  // A black box as wide as the lanes, with a head as theirs; it keeps its band's height (story 2.29).
+  const lanesAll = Object.values(laneBox);
   model.pools.forEach((p, i) => {
     if (!p.id) return;
+    if (p.box){
+      const left = Math.min(...lanesAll.map(b => b[0])) - HEAD, right = Math.max(...lanesAll.map(b => b[0] + b[2]));
+      di.pools[p.id] = [left, di.pools[p.id][1], right - left, di.pools[p.id][3]];
+      return;
+    }
     const frame = lanesOf(i);
     const top = Math.min(...frame.map(b => b[1])), bottom = Math.max(...frame.map(b => b[1] + b[3]));
     const left = Math.min(...frame.map(b => b[0])) - HEAD, right = Math.max(...frame.map(b => b[0] + b[2]));
     di.pools[p.id] = [left, top, right - left, bottom - top];
   });
+  // A message flow's end at a pool lies on the edge of its frame facing the way (story 2.29), however the pools grew
+  // and moved.
+  for (const m of model.messages || []) for (const [k, at] of [['fromPool', 0], ['toPool', -1]]){
+    if (m[k] === undefined) continue;
+    const pts = di.flows[m.id], [, y, , h] = di.pools[model.pools[m[k]].id];
+    const end = pts.at(at), next = pts.at(at === 0 ? 1 : -2);
+    end[1] = next[1] < y ? y : y + h;
+  }
 }
 
 // ---------- the diagram part ----------

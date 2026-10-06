@@ -10,7 +10,9 @@
 //   small-step                an inner piece of 8 px or less
 //   start-off-outline,        the first or last waypoint not on its symbol's
 //   end-off-outline           outline (task: its box; gateway: its diamond;
-//                             event: its circle; 1 px tolerance)
+//                             event: its circle; a pool, the end of a message
+//                             flow at it: the top or bottom edge of its frame,
+//                             story 2.29; 1 px tolerance)
 //   through, through-own      a piece through a foreign symbol, or through its
 //                             own source or target
 //   on-outline                a piece along the side of a foreign symbol
@@ -138,12 +140,15 @@ export function breaksOf(xml, model, sizes = {}){
     const cx = x + w / 2, cy = y + h / 2, eps = 1;
     if (t === 'task') return p[0] >= x - eps && p[0] <= x + w + eps && p[1] >= y - eps && p[1] <= y + h + eps && Math.min(Math.abs(p[0] - x), Math.abs(p[0] - x - w), Math.abs(p[1] - y), Math.abs(p[1] - y - h)) <= eps;
     if (t === 'gateway') return Math.abs(Math.abs(p[0] - cx) / (w / 2) + Math.abs(p[1] - cy) / (h / 2) - 1) * (w / 2) <= eps;
+    // A message flow's end at a pool (story 2.29): on the top or bottom edge of its frame.
+    if (t === 'pool') return p[0] >= x && p[0] <= x + w && (Math.abs(p[1] - y) <= eps || Math.abs(p[1] - y - h) <= eps);
     return Math.abs(Math.hypot(p[0] - cx, p[1] - cy) - w / 2) <= eps;
   };
+  const shapeOf = id => nodes[id] || di.shapes[id], typeOf = id => type[id] || 'pool';
   for (const [id, w] of Object.entries(di.flows)){
     const f = flowOf[id];
-    if (!onOutline(w[0], nodes[f.from], type[f.from])) add('start-off-outline', id, f.from);
-    if (!onOutline(w.at(-1), nodes[f.to], type[f.to])) add('end-off-outline', id, f.to);
+    if (!onOutline(w[0], shapeOf(f.from), typeOf(f.from))) add('start-off-outline', id, f.from);
+    if (!onOutline(w.at(-1), shapeOf(f.to), typeOf(f.to))) add('end-off-outline', id, f.to);
   }
 
   for (const s of segs){

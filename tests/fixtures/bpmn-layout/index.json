@@ -226,6 +226,27 @@
    "shows": [
     "12"
    ]
+  },
+  "blackbox-kredit": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/blackbox/llm-kredit.bpmn",
+   "note": "a bank with a black box on top (customer) and one below (credit agency), five message flows at their frames; written by an LLM given only the task \"a bank handles a loan application, asks a credit agency, the customer gets an offer or a refusal; how customer and agency work inside is unknown\" and the rule \"BPMN 2.0 XML without coordinates\"",
+   "shows": [
+    "29"
+   ]
+  },
+  "blackbox-reklamation": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/blackbox/llm-reklamation.bpmn",
+   "note": "a shop with two lanes and a black box on top (customer), four message flows at its frame; written by an LLM given only the task \"an online shop handles a complaint, the customer gets a replacement or a credit note; how the customer works inside is unknown\" and the rule",
+   "shows": [
+    "29"
+   ]
+  },
+  "blackbox-werkstatt": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/blackbox/llm-werkstatt.bpmn",
+   "note": "a garage with a black box on top (customer) and one below (wholesaler), six message flows at their frames; written by an LLM given only the task \"a garage takes a repair order, waits for the customer's approval of the estimate, orders parts from a wholesaler, repairs and reports; how customer and wholesaler work inside is unknown\" and the rule",
+   "shows": [
+    "29"
+   ]
   }
  }
 }

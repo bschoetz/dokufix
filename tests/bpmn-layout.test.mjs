@@ -771,17 +771,122 @@ test('several pools: one per participant in its order, the lanes of each next to
   assert.ok(!/n2 --> n5|n7 --> n3/.test(mermaidSource(model)));
 });
 
-test('several pools: what is left out, each a line, in the order of the XML; a pool without a process beside pools with one is one of them', () => {
-  const xml = POOLS.replace('<bpmn:messageFlow id="M1"', '<bpmn:participant id="PX" name="Bank"/><bpmn:messageFlow id="MX" sourceRef="B" targetRef="PX"/>' +
-    '<bpmn:messageFlow id="MI" sourceRef="S2" targetRef="C"/><bpmn:messageFlow id="M1"');
+test('several pools: what is left out, each a line, in the order of the XML', () => {
+  const xml = POOLS.replace('<bpmn:messageFlow id="M1"', '<bpmn:messageFlow id="MI" sourceRef="S2" targetRef="C"/><bpmn:messageFlow id="MY" sourceRef="B" targetRef="NIX"/>' +
+    '<bpmn:messageFlow sourceRef="B" targetRef="PK"/><bpmn:messageFlow id="MP" sourceRef="C" targetRef="PF"/><bpmn:messageFlow id="M1"');
   const { model, leftOut } = read(xml);
   assert.deepEqual(model.pools.map(p => p.id), ['PK', 'PF']);
   assert.deepEqual(model.messages.map(m => m.id), ['M1', 'M2']);
-  assert.deepEqual(leftOut.map(leftOutLine), ['messageFlow MX: attached to a pool, not to a flow node', 'messageFlow MI: a message flow within one pool',
-    'participant PX: a pool without a process of its own beside pools with one']);
-  // One pool with a process beside a black box: one pool, as before, on the collaboration's plane.
-  const one = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="B"/></bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>'));
-  assert.deepEqual([one.model.pools, one.model.plane, one.leftOut.map(leftOutLine)], [[{ id: 'A', name: '' }], 'K', ['participant B: a pool without a process of its own beside pools with one']]);
+  assert.deepEqual(leftOut.map(leftOutLine), ['messageFlow MI: a message flow within one pool', 'messageFlow MY: touches NIX, which is not laid out',
+    'messageFlow (no id): has no id', 'messageFlow MP: a message flow within one pool']);
+});
+
+// Story 2.29: a pool without a process of its own (a black box) beside pools with one.
+const BOXES = (order, flows) => xmlOf('<bpmn:collaboration id="K">' + order.map(id => id === 'PF' ? '<bpmn:participant id="PF" name="Firma" processRef="P2"/>' : '<bpmn:participant id="' + id + '" name="' + id + '"/>').join('') + flows + '</bpmn:collaboration>' +
+  '<bpmn:process id="P2"><bpmn:laneSet id="LS"><bpmn:lane id="L1" name="Eingang"><bpmn:flowNodeRef>S2</bpmn:flowNodeRef><bpmn:flowNodeRef>B</bpmn:flowNodeRef></bpmn:lane>' +
+  '<bpmn:lane id="L2" name="Versand"><bpmn:flowNodeRef>C</bpmn:flowNodeRef><bpmn:flowNodeRef>E2</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+  '<bpmn:startEvent id="S2"/><bpmn:task id="B" name="Prüfen"/><bpmn:sendTask id="C" name="Antworten"/><bpmn:endEvent id="E2"/>' +
+  '<bpmn:sequenceFlow id="G1" sourceRef="S2" targetRef="B"/><bpmn:sequenceFlow id="G2" sourceRef="B" targetRef="C"/><bpmn:sequenceFlow id="G3" sourceRef="C" targetRef="E2"/></bpmn:process>');
+const RAW_BOXES = { S2: 0, B: 100, C: 200, E2: 300 };
+const layBoxes = xml => { const { model, leftOut } = read(xml); const di = layoutGeometry(model, rawOf(model, RAW_BOXES)); return { model, leftOut, di, xml: appendDiagram(xml, model, di).xml }; };
+// A message flow's end at a pool: vertical, on the top or bottom edge of its frame, inside it from left to right.
+const atFrame = (w, k, frame) => {
+  const [p, q] = k === 'from' ? [w[0], w[1]] : [w.at(-1), w.at(-2)];
+  assert.equal(p[0], q[0], 'vertical at the frame');
+  assert.ok(p[1] === frame[1] || p[1] === frame[1] + frame[3], 'on the top or bottom edge: ' + JSON.stringify({ p, frame }));
+  assert.ok(p[0] > frame[0] && p[0] < frame[0] + frame[2], 'within the frame');
+  return p[1] === frame[1] ? 'top' : 'bottom';
+};
+const noSymbolCrossed = (w, di, model, except) => {
+  for (let i = 1; i < w.length; i++){
+    const [x1, x2, y1, y2] = [Math.min(w[i - 1][0], w[i][0]), Math.max(w[i - 1][0], w[i][0]), Math.min(w[i - 1][1], w[i][1]), Math.max(w[i - 1][1], w[i][1])];
+    for (const n of model.nodes) if (!except.includes(n.id)){ const [x, y, bw, bh] = di.nodes[n.id]; assert.ok(!(x2 > x && x1 < x + bw && y2 > y && y1 < y + bh), 'through ' + n.id + ': ' + JSON.stringify(w)); }
+  }
+};
+
+test('a black box below: a pool of its own without lanes, 60 px high, as wide as the others; message flows straight from their node to its top edge', () => {
+  const { model, leftOut, di, xml } = layBoxes(BOXES(['PF', 'Kunde'], '<bpmn:messageFlow id="M1" name="Anfrage" sourceRef="Kunde" targetRef="S2"/><bpmn:messageFlow id="M2" name="Antwort" sourceRef="C" targetRef="Kunde"/>'));
+  assert.deepEqual([model.pools, leftOut], [[{ id: 'PF', name: 'Firma' }, { id: 'Kunde', name: 'Kunde', box: true }], []]);
+  assert.deepEqual(model.messages, [{ id: 'M1', from: 'Kunde', to: 'S2', name: 'Anfrage', fromPool: 1 }, { id: 'M2', from: 'C', to: 'Kunde', name: 'Antwort', toPool: 1 }]);
+  assert.ok(!mermaidSource(model).includes('Kunde'), 'Mermaid sees no black box');
+  const [pf, box] = [di.pools.PF, di.pools.Kunde];
+  assert.equal(box[3], 60);
+  assert.deepEqual([box[0], box[2]], [pf[0], pf[2]], 'as wide');
+  assert.ok(box[1] >= pf[1] + pf[3] + 40, 'below, with a gap');
+  assert.equal(atFrame(di.flows.M1, 'from', box), 'top');
+  assert.equal(atFrame(di.flows.M2, 'to', box), 'top');
+  // Straight: one piece from the node's bottom to the frame.
+  assert.equal(di.flows.M2.length, 2, JSON.stringify(di.flows.M2));
+  assert.equal(di.flows.M2[0][1], di.nodes.C[1] + di.nodes.C[3]);
+  for (const m of ['M1', 'M2']){ noSymbolCrossed(di.flows[m], di, model, ['S2', 'C']); assert.ok(di.flowLabels[m], m + ' has its label'); }
+  assert.ok(xml.includes('bpmnElement="Kunde" isHorizontal="true"') && xml.includes('bpmnElement="M1">') && xml.includes('bpmnElement="M2">'));
+});
+
+test('a black box on top and one between two pools: in the participants\' order, a gap on either side', () => {
+  const top = layBoxes(BOXES(['Kunde', 'PF'], '<bpmn:messageFlow id="M1" sourceRef="Kunde" targetRef="S2"/>'));
+  const [box, pf] = [top.di.pools.Kunde, top.di.pools.PF];
+  assert.ok(pf[1] >= box[1] + box[3] + 40, 'the box above, with a gap');
+  assert.equal(atFrame(top.di.flows.M1, 'from', box), 'bottom');
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="P1" processRef="Q1"/><bpmn:participant id="Bank"/><bpmn:participant id="P3" processRef="Q3"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="A" targetRef="C"/><bpmn:messageFlow id="N" sourceRef="A" targetRef="Bank"/></bpmn:collaboration>' +
+    '<bpmn:process id="Q1"><bpmn:startEvent id="S1"/><bpmn:task id="A"/><bpmn:sequenceFlow id="F1" sourceRef="S1" targetRef="A"/></bpmn:process>' +
+    '<bpmn:process id="Q3"><bpmn:startEvent id="C"/><bpmn:task id="D"/><bpmn:sequenceFlow id="F4" sourceRef="C" targetRef="D"/></bpmn:process>');
+  const { model } = read(xml);
+  assert.deepEqual(model.lanes.map(l => l.pool), [0, 2]);
+  const di = layoutGeometry(model, rawOf(model, { S1: 0, A: 100, C: 0, D: 100 }));
+  const [p1, bank, p3] = [di.pools.P1, di.pools.Bank, di.pools.P3];
+  assert.ok(bank[1] >= p1[1] + p1[3] + 40 && p3[1] >= bank[1] + bank[3] + 40, JSON.stringify({ p1, bank, p3 }));
+  assert.equal(atFrame(di.flows.N, 'to', bank), 'top');
+  // M from the first pool to the third crosses the black box.
+  const w = di.flows.M;
+  assert.ok(w.slice(1).some(([, y], i) => Math.min(y, w[i][1]) < bank[1] && Math.max(y, w[i][1]) > bank[1] + bank[3]), 'it crosses the box');
+});
+
+test('a message flow at a pool with lanes ends on the edge of its frame facing the node; one between two pools runs in a gap between columns', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="P1" processRef="Q1"/><bpmn:participant id="Bank"/><bpmn:participant id="P3" processRef="Q3"/>' +
+    '<bpmn:messageFlow id="N" sourceRef="A" targetRef="P3"/><bpmn:messageFlow id="O" sourceRef="Bank" targetRef="P1"/><bpmn:messageFlow id="Q" sourceRef="P3" targetRef="Bank"/></bpmn:collaboration>' +
+    '<bpmn:process id="Q1"><bpmn:startEvent id="S1"/><bpmn:task id="A"/><bpmn:sequenceFlow id="F1" sourceRef="S1" targetRef="A"/></bpmn:process>' +
+    '<bpmn:process id="Q3"><bpmn:laneSet id="LS3"><bpmn:lane id="L3" name="Eins"><bpmn:flowNodeRef>C</bpmn:flowNodeRef><bpmn:flowNodeRef>D</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    '<bpmn:startEvent id="C"/><bpmn:task id="D"/><bpmn:sequenceFlow id="F4" sourceRef="C" targetRef="D"/></bpmn:process>');
+  const { model, leftOut } = read(xml);
+  assert.deepEqual([model.messages.map(m => [m.id, m.fromPool, m.toPool]), leftOut], [[['N', undefined, 2], ['O', 1, 0], ['Q', 2, 1]], []]);
+  const di = layoutGeometry(model, rawOf(model, { S1: 0, A: 100, C: 0, D: 100 }));
+  assert.equal(atFrame(di.flows.N, 'to', di.pools.P3), 'top');
+  assert.equal(atFrame(di.flows.O, 'from', di.pools.Bank), 'top');
+  assert.equal(atFrame(di.flows.O, 'to', di.pools.P1), 'bottom');
+  assert.equal(atFrame(di.flows.Q, 'from', di.pools.P3), 'top');
+  assert.equal(atFrame(di.flows.Q, 'to', di.pools.Bank), 'bottom');
+  for (const m of ['O', 'Q']){
+    assert.equal(di.flows[m].length, 2, m + ' straight: ' + JSON.stringify(di.flows[m]));
+    const x = di.flows[m][0][0];
+    for (const n of model.nodes){ const [nx, , nw] = di.nodes[n.id]; assert.ok(x < nx || x > nx + nw, m + ' in a gap between columns, not at ' + n.id); }
+  }
+  noSymbolCrossed(di.flows.N, di, model, ['A']);
+});
+
+test('a message flow to a black box whose way down its column a symbol blocks goes beside it, through no symbol', () => {
+  // A in the first pool and B2 in the second stand in one column; the way from A down to the box passes beside B2.
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="P1" processRef="Q1"/><bpmn:participant id="P2" processRef="Q2"/><bpmn:participant id="Bank"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="A" targetRef="Bank"/></bpmn:collaboration>' +
+    '<bpmn:process id="Q1"><bpmn:startEvent id="S1"/><bpmn:task id="A"/><bpmn:sequenceFlow id="F1" sourceRef="S1" targetRef="A"/></bpmn:process>' +
+    '<bpmn:process id="Q2"><bpmn:task id="B1"/><bpmn:task id="B2"/><bpmn:task id="B3"/><bpmn:sequenceFlow id="F2" sourceRef="B1" targetRef="B2"/><bpmn:sequenceFlow id="F3" sourceRef="B2" targetRef="B3"/></bpmn:process>');
+  const { model } = read(xml);
+  const di = layoutGeometry(model, rawOf(model, { S1: 0, A: 100, B1: 0, B2: 100, B3: 200 }));
+  const cx = id => di.nodes[id][0] + di.nodes[id][2] / 2;
+  assert.equal(cx('A'), cx('B2'), 'A above B2');
+  assert.ok(di.flows.M.length > 2, 'not straight: ' + JSON.stringify(di.flows.M));
+  atFrame(di.flows.M, 'to', di.pools.Bank);
+  noSymbolCrossed(di.flows.M, di, model, ['A']);
+});
+
+test('a black box without message flows is drawn; black boxes alone are nothing to place; a participant without an id and without a process is left out', () => {
+  const { model, di, xml } = layBoxes(BOXES(['PF', 'Kunde'], ''));
+  assert.equal(model.messages.length, 0);
+  assert.equal(di.pools.Kunde[3], 60);
+  assert.ok(xml.includes('bpmnElement="Kunde" isHorizontal="true"'));
+  assert.throws(() => read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A"/><bpmn:participant id="B"/><bpmn:messageFlow id="M" sourceRef="A" targetRef="B"/></bpmn:collaboration>')), { message: LAYOUT_NOTHING });
+  const noId = read(BOXES(['PF'], '').replace('</bpmn:collaboration>', '<bpmn:participant name="Ohne"/></bpmn:collaboration>'));
+  assert.deepEqual([noId.model.pools.map(p => p.id), noId.leftOut.map(leftOutLine)], [['PF'], ['participant (no id): has no id; it is not drawn as a pool']]);
 });
 
 test('processes without a collaboration: drawn as pools, the collaboration inserted before the first process, nothing else of the XML changed', () => {

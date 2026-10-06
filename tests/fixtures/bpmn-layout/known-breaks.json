@@ -80,5 +80,10 @@
  ],
  "pools-angebot": [],
  "pools-bewerbung": [],
- "pools-wasserschaden": []
+ "pools-wasserschaden": [],
+ "blackbox-kredit": [],
+ "blackbox-reklamation": [
+  "node-outside-lane Gateway_Ergebnis Lane_Kundenservice"
+ ],
+ "blackbox-werkstatt": []
 }

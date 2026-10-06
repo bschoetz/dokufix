@@ -810,17 +810,19 @@ Ein Rückfluss in der mittleren von drei Bahnen: Sie sollten ihn innerhalb seine
 
 ### BPMN ohne Koordinaten: Pool ohne Prozess daneben
 
-Zwei Pools mit Prozess und einer ohne: dokufix lässt den Pool „Verlag“ weg, der keinen eigenen Prozess hat, mit dem Nachrichtenfluss zu ihm, und ebenso einen Nachrichtenfluss innerhalb eines Pools. Sie sollten zwei Pools sehen, „Leser“ und „Bibliothek“, und einen Nachrichtenfluss „Bestellung“ zwischen ihnen, keinen „Verlag“.
+Zwei Pools mit Prozess und einer ohne, eine Black Box: dokufix zeichnet den „Verlag“ als schmalen Rahmen ohne Bahnen, an seinem Platz in der Reihenfolge der Teilnehmer, hier zwischen „Leser“ und „Bibliothek“. Nachrichtenflüsse an ihm laufen senkrecht bis an seinen Rand, „Nachdruck“ hin und „Lieferung“ zurück; „Rechnung“ läuft vom Rahmen des Verlags an den Rahmen des Lesers, von Pool zu Pool; „Bestellung“ kreuzt den Verlag auf dem Weg vom Leser zur Bibliothek. Einen Nachrichtenfluss innerhalb eines Pools lässt dokufix weg. Sie sollten drei Pools sehen, „Leser“, „Verlag“ und „Bibliothek“, und vier Nachrichtenflüsse, keine „Notiz“.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
 <bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
   <bpmn:collaboration id="Zusammenarbeit">
     <bpmn:participant id="Leser" name="Leser" processRef="Prozess_Leser"/>
-    <bpmn:participant id="Bib" name="Bibliothek" processRef="Prozess_Bib"/>
     <bpmn:participant id="Verlag" name="Verlag"/>
+    <bpmn:participant id="Bib" name="Bibliothek" processRef="Prozess_Bib"/>
     <bpmn:messageFlow id="V_Bestellung" name="Bestellung" sourceRef="V_Bestellen" targetRef="V_Eingang"/>
     <bpmn:messageFlow id="V_Nachdruck" name="Nachdruck" sourceRef="V_Pruefen" targetRef="Verlag"/>
+    <bpmn:messageFlow id="V_Lieferung" name="Lieferung" sourceRef="Verlag" targetRef="V_Erhalten"/>
+    <bpmn:messageFlow id="V_Rechnung" name="Rechnung" sourceRef="Verlag" targetRef="Leser"/>
     <bpmn:messageFlow id="V_Intern" name="Notiz" sourceRef="V_Eingang" targetRef="V_Pruefen"/>
   </bpmn:collaboration>
   <bpmn:process id="Prozess_Leser" isExecutable="false">
@@ -833,9 +835,11 @@ Zwei Pools mit Prozess und einer ohne: dokufix lässt den Pool „Verlag“ weg,
   <bpmn:process id="Prozess_Bib" isExecutable="false">
     <bpmn:startEvent id="V_Eingang" name="Bestellung da"><bpmn:messageEventDefinition id="V_Eingang_Def"/></bpmn:startEvent>
     <bpmn:task id="V_Pruefen" name="Bestand prüfen"/>
+    <bpmn:intermediateCatchEvent id="V_Erhalten" name="Nachdruck da"><bpmn:messageEventDefinition id="V_Erhalten_Def"/></bpmn:intermediateCatchEvent>
     <bpmn:endEvent id="V_Fertig" name="Geprüft"/>
     <bpmn:sequenceFlow id="V3" sourceRef="V_Eingang" targetRef="V_Pruefen"/>
-    <bpmn:sequenceFlow id="V4" sourceRef="V_Pruefen" targetRef="V_Fertig"/>
+    <bpmn:sequenceFlow id="V4" sourceRef="V_Pruefen" targetRef="V_Erhalten"/>
+    <bpmn:sequenceFlow id="V5" sourceRef="V_Erhalten" targetRef="V_Fertig"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

@@ -121,6 +121,17 @@ test('several pools: a message flow docks vertically and is in no lane; pools ne
     ['point-outside-lanes F1', 'sequence-outside-pool F1']);
 });
 
+// Story 2.29: a black box Q below P, without lanes, and a message flow from B to its frame.
+test('a message flow\'s end at a pool lies on the top or bottom edge of its frame', () => {
+  const shapes = { ...SHAPES, Q: [0, 440, 1000, 60] };
+  const model = { ...M, pools: [{ id: 'P' }, { id: 'Q', box: true }], lanes: M.lanes.map(l => ({ ...l, pool: 0 })), flows: [], messages: [{ id: 'N1', from: 'B', to: 'Q', toPool: 1 }] };
+  const check = w => breaksOf('<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+    '      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1">' + w.map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>\n</x>', model, SIZES);
+  assert.deepEqual(check([[360, 130], [360, 440]]), []);
+  assert.deepEqual(check([[360, 130], [360, 470]]), ['end-off-outline N1 Q']);
+  assert.deepEqual(check([[360, 130], [360, 430]]), ['end-off-outline N1 Q']);
+});
+
 test('two flows that arrive at one gateway and run together into one docking point are a merge, not a break; at a task they are', () => {
   const ways = {
     F3: [[160, 50], [160, 30], [525, 30], [525, 65]],                 // from A over the row into G's top
