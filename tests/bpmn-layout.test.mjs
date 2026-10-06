@@ -861,3 +861,16 @@ test('three pools: a message flow from the first to the third crosses the second
   }
   assert.ok(w.slice(1).some(([, y], i) => Math.min(y, w[i][1]) < di.pools.P2[1] && Math.max(y, w[i][1]) > di.pools.P2[1] + di.pools.P2[3]), 'it crosses the second pool');
 });
+
+test('two message flows back and forth between two symbols lie side by side, each straight, and do not cross (Ben, 2026-10-06, p-rs2)', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" processRef="QA"/><bpmn:participant id="PB" processRef="QB"/>' +
+    '<bpmn:messageFlow id="Hin" sourceRef="A" targetRef="B"/><bpmn:messageFlow id="Her" sourceRef="B" targetRef="A"/></bpmn:collaboration>' +
+    '<bpmn:process id="QA"><bpmn:startEvent id="S"/><bpmn:task id="A"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="A"/></bpmn:process>' +
+    '<bpmn:process id="QB"><bpmn:startEvent id="T"/><bpmn:task id="B"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="B"/></bpmn:process>');
+  const { model } = read(xml);
+  const di = layoutGeometry(model, rawOf(model, { S: 0, A: 100, T: 0, B: 100 }));
+  const [hin, her] = [di.flows.Hin, di.flows.Her];
+  assert.equal(hin.length, 2, JSON.stringify(hin));
+  assert.equal(her.length, 2, JSON.stringify(her));
+  assert.notEqual(hin[0][0], her[0][0], 'side by side');
+});

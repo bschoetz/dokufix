@@ -2124,7 +2124,10 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const [id, side] = k.split('|'), c = box[id];
     const vertical = side === 'top' || side === 'bottom';
     const base = { x: side === 'left' ? c.cx - c.w / 2 : side === 'right' ? c.cx + c.w / 2 : c.cx, y: side === 'top' ? c.cy - c.h / 2 : side === 'bottom' ? c.cy + c.h / 2 : c.cy };
-    const sorted = [...list].sort((a, b) => a.far - b.far || (a.out === b.out ? 0 : a.out ? 1 : -1));
+    // Two message flows that come from one side alike take their places by their ids, the same at both ends, so that
+    // two flows back and forth between two symbols lie side by side and do not cross (Ben, 2026-10-06, p-rs2);
+    // in or out would swap their places from one end to the other.
+    const sorted = [...list].sort((a, b) => a.far - b.far || (a.r.message && b.r.message ? (a.r.f.id < b.r.f.id ? -1 : a.r.f.id > b.r.f.id ? 1 : 0) : 0) || (a.out === b.out ? 0 : a.out ? 1 : -1));
     const n = sorted.length, room = (vertical ? c.w : c.h) - 2 * ATTACH_CLEARANCE;
     const step = c.task && n > 1 ? Math.min(PORT_STEP, room / (n - 1)) : 0;
     // A flow of one piece (straight to the neighbour) keeps the middle of the side; the others stand beside it, on the side they come from.
