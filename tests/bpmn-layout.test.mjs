@@ -1342,6 +1342,21 @@ test('text annotations at pools stand in one stack: two at one pool, those of tw
   assert.deepEqual(breaks, []);
 });
 
+test('a text annotation at a message flow keeps off the pools\' frames (review of 2.31)', () => {
+  const collab = '<bpmn:collaboration id="K"><bpmn:participant id="PA" name="A" processRef="P"/><bpmn:participant id="PB" name="B" processRef="Q"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="E" targetRef="X"/>' + note('N', 'Per Kurier mit Empfangsbestätigung und Kopie an die Buchhaltung') + assoc('A', 'M', 'N') +
+    '</bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process><bpmn:process id="Q"><bpmn:task id="X" name="Annehmen"/><bpmn:task id="Y" name="Weiter"/><bpmn:sequenceFlow id="G" sourceRef="X" targetRef="Y"/></bpmn:process>';
+  const { di, breaks } = notesLaid(null, { ...LINE_COLS, X: 1, Y: 2 }, collab);
+  const n = bx(di.notes.N);
+  for (const p of ['PA', 'PB']){
+    const f = bx(di.pools[p]);
+    const across = (lo, hi, v) => lo < v && v < hi;
+    const inside = n.right > f.x && n.x < f.right && n.bottom > f.y && n.y < f.bottom;
+    assert.ok(!(inside && (across(n.y, n.bottom, f.y) || across(n.y, n.bottom, f.bottom) || across(n.x, n.right, f.x) || across(n.x, n.right, f.right))), 'across the frame of ' + p + ': ' + JSON.stringify([n, f]));
+  }
+  assert.deepEqual(breaks, []);
+});
+
 test('where nothing near is free, the lane grows at its border for the text annotation; the symbols keep their order (notiz-r12)', () => {
   const fx = readFixture('notiz-r12');
   const measure = (t, w) => (w ? fx.sizes['note:' + w + ':' + t] : fx.sizes[t]) || labelSize(t, w);

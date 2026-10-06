@@ -2681,7 +2681,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // first in a gap between two pools, beside each vertical piece that passes the gap's middle, right and then left of it,
   // then where any flow's label goes (story 2.12).
   const frames = Object.values(di.pools).sort((a, b) => a[1] - b[1]);
-  const edges = frames.flatMap(([x, y, w, h]) => [[x, y - 1, w, 2], [x, y + h - 1, w, 2], [x - 1, y, 2, h], [x + w - 1, y, 2, h]]);
+  const frameEdges = ([x, y, w, h]) => [[x, y - 1, w, 2], [x, y + h - 1, w, 2], [x - 1, y, 2, h], [x + w - 1, y, 2, h]];
+  const edges = frames.flatMap(frameEdges);
   const gapsY = frames.slice(1).map((b, i) => [frames[i][1] + frames[i][3], b[1]]).filter(([a, b]) => b > a);
   const inGaps = (pts, { w, h }) => {
     const out = [];
@@ -2767,6 +2768,13 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       for (const q of [...owners.map(o => o.anchor).filter(a => !('cy' in a)), ...extra]) if (q.y >= cut && !moved.has(q)){ moved.add(q); q.y += d; }
       owners.forEach((o, i) => { const m = ay(o.anchor) - before[i]; if (m) for (const b of o.boxes) b[1] += m; });
       model.pools.forEach(p => { if (p.box && di.pools[p.id][1] >= cut) di.pools[p.id][1] += d; });
+      // A pool with lanes is as high as its lanes, and the edges the text annotations keep off follow its frame.
+      model.pools.forEach((p, i) => {
+        if (!p.id || p.box) return;
+        const ls = model.lanes.filter(l => (l.pool ?? 0) === i).map(l => laneBox[l.key]), top = Math.min(...ls.map(b => b[1]));
+        di.pools[p.id][1] = top; di.pools[p.id][3] = Math.max(...ls.map(b => b[1] + b[3])) - top;
+      });
+      edges.splice(0, edges.length, ...Object.values(di.pools).flatMap(frameEdges));
       for (const n of [...model.nodes, ...boundaries]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id][0] = R(cx - w / 2); di.nodes[n.id][1] = R(cy - h / 2); }
       segments.length = 0;
       segments.push(...routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
@@ -2797,7 +2805,10 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       const foreign = () => nodeOf.has(a.partner) ? segments : routes.filter(r => r.f.id !== a.partner).flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
       // Free: the box NOTE_CLEAR off everything (its bracket on a flow's line reads as one line with it), its association
       // through no symbol, label or text annotation and along no flow; crossing none, where the round has such a place.
-      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken], NOTE_CLEAR) === 0 && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
+      // One at a message flow belongs to no pool, and no frame grows around it: it keeps off the pools' frames, as a
+      // message flow's label (review of 2.31: one lay across two frames); the frame of a pool grows around its own.
+      const offFrames = n.pool != null ? () => true : place => covered(place, edges) === 0;
+      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken], NOTE_CLEAR) === 0 && offFrames(place) && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
       let place = null, anchor = anchors[0];
       rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors){
         place = notePlaces(centre(an), size, far).find(p => clear(p, an, crossing));
