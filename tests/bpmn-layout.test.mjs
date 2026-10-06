@@ -434,6 +434,19 @@ test('a node the grid moves into an empty lane gets its flowNodeRef there, a sel
   }
 });
 
+test('the lane set is read with attributes: a flowNodeRef with an id is found and moved, a lane with ">" in a quoted value is read', () => {
+  const xml = xmlOf('<bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1" name="Eins"><bpmn:flowNodeRef>A</bpmn:flowNodeRef>' +
+    '<bpmn:flowNodeRef id="r1">B</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="L2" name="a > b"/><bpmn:lane id="L3" name="c > d">' +
+    '<bpmn:flowNodeRef>C</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    '<bpmn:task id="A"/><bpmn:task id="B"/><bpmn:task id="C"/><bpmn:sequenceFlow id="F1" sourceRef="A" targetRef="B"/><bpmn:sequenceFlow id="F2" sourceRef="B" targetRef="C"/></bpmn:process>');
+  const { model } = read(xml);
+  const di = { pool: null, lanes: { L1: [0, 0, 500, 100], L2: [0, 100, 500, 100], L3: [0, 200, 500, 100] }, nodes: { A: [10, 10, 100, 80], B: [200, 110, 100, 80], C: [350, 210, 100, 80] },
+    labels: {}, flows: { F1: [[110, 50], [200, 150]], F2: [[300, 150], [350, 250]] }, flowLabels: {}, laneOf: { A: 'L1', B: 'L2', C: 'L3' } };
+  const out = appendDiagram(xml, model, di).xml;
+  assert.deepEqual(read(out).model.lanes.map(l => [l.id, l.nodes]), [['L1', ['A']], ['L2', ['B']], ['L3', ['C']]]);
+  assert.equal((out.match(/<bpmn:flowNodeRef\b/g) || []).length, 3);
+});
+
 test('what follows the closing tag stays, a closing tag in a comment is not the one, and the diagram\'s ids are free', () => {
   const body = '<process id="P">' + LINE.replace(/bpmn:/g, '') + '<task id="S_di" name="Schon da"/></process>';
   const xml = '<?xml version="1.0"?>\n<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="dokufix_diagram">' + body + '</definitions>\n<!-- nicht </definitions> -->\n';

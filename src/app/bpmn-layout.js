@@ -2147,7 +2147,8 @@ function relane(text, model, di){
   const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
   // Bahnen im Text: Id, Präfix, Bereich [Öffnen, Schließen] und äußere Bahn.
   const lanes = [], stack = [];
-  for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b([^>]*?)(\/?)>/g)){
+  // A tag's attributes: a quoted value may hold ">".
+  for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>/g)){
     if (m[1]){ const l = stack.pop(); if (l) l.close = m.index; continue; }
     const id = (/\sid\s*=\s*["']([^"']+)["']/.exec(m[3]) || [])[1];
     const l = { id, prefix: m[2], open: m.index, openEnd: m.index + m[0].length, close: null, parent: stack[stack.length - 1] || null, selfClosing: !!m[4] };
@@ -2156,7 +2157,7 @@ function relane(text, model, di){
   }
   const byId = new Map(lanes.filter(l => l.id).map(l => [l.id, l]));
   const inLane = i => lanes.filter(l => l.open < i && l.close !== null && i < l.close).sort((p, q) => q.open - p.open)[0] || null;
-  const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\s*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
+  const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\b(?:"[^"]*"|'[^']*'|[^'">/])*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
     .map(m => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3], lane: inLane(m.index) }));
   const edits = [], opened = new Map(); // an empty target lane → the ids it gets
   for (const n of model.nodes){
