@@ -357,9 +357,10 @@ const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, 
 
 // ---------- the copy of src/ with two passes more ----------
 // The diagrams of the demo text: five of Mermaid (two of them the special
-// cases of the large view, one that of the downloads), nine of BPMN (two with
-// coordinates, seven without, three of them the loop process and the two loop
-// special cases of story 2.20).
+// cases of the large view, one that of the downloads), twelve of BPMN (two
+// with coordinates, ten without, three of them the loop process and the two
+// loop special cases of story 2.20, three those of several pools of story
+// 2.12).
 const DEMO_DIAGRAMS = 17;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
