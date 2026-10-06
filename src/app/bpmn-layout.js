@@ -598,6 +598,7 @@ const TRACK = 16;           // the distance of two tracks in a channel
 const TRACK_MARGIN = 12;    // the margin of a channel beside its outermost track
 const EMPTY_ROW = 40;       // the row of an empty lane
 const POOL_GAP = 40;        // the gap between two pools without tracks (story 2.12)
+const GAP_TRACK = 20;       // in a gap the distance of two tracks and the margin beside the outermost (Ben, 2026-10-06: more room where message flows run)
 const PORT_STEP = 30;       // the distance of two ends on one side of a task
 const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
 
@@ -2054,7 +2055,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
     if (bands[b].kind === 'row'){ if (!rowH[b]) rowH[b] = EMPTY_ROW; continue; }
     const t = chTracks.get(b), n = t.top + t.bottom;
     const base = bands[b].kind === 'gap' ? POOL_GAP : bands[b].edge ? EDGE_BASE : CHANNEL_BASE;
-    rowH[b] = Math.max(base, n ? 2 * TRACK_MARGIN + (n - 1) * TRACK + (bands[b].edge ? 0 : 8) : 0);
+    const [margin, step] = bands[b].kind === 'gap' ? [GAP_TRACK, GAP_TRACK] : [TRACK_MARGIN, TRACK];
+    rowH[b] = Math.max(base, n ? 2 * margin + (n - 1) * step + (bands[b].edge ? 0 : 8) : 0);
     // A gap is as tall as the tallest label of a message flow across it, 6 px clear of either pool (story 2.12).
     if (bands[b].kind === 'gap') for (const m of model.messages || []){
       const s = place.get(m.from).band, e = place.get(m.to).band;
@@ -2121,7 +2123,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
   }
   const trackY = p => {
     const t = tracks.get(p), b = p.h, h = rowH[b];
-    return t.side === 'top' ? bandY[b] + TRACK_MARGIN + t.i * TRACK + (bands[b].edge ? 0 : 4) : bandY[b] + h - TRACK_MARGIN - t.i * TRACK - (bands[b].edge ? 0 : 4);
+    const [margin, step] = bands[b].kind === 'gap' ? [GAP_TRACK, GAP_TRACK] : [TRACK_MARGIN, TRACK];
+    return t.side === 'top' ? bandY[b] + margin + t.i * step + (bands[b].edge ? 0 : 4) : bandY[b] + h - margin - t.i * step - (bands[b].edge ? 0 : 4);
   };
   const trackX = p => {
     const t = tracks.get(p), gx = p.v / 2, w = gapW[gx];
