@@ -879,6 +879,36 @@ test('a message flow to a black box whose way down its column a symbol blocks go
   noSymbolCrossed(di.flows.M, di, model, ['A']);
 });
 
+// A fixture's process as a pool beside black boxes, from the participants' order: 'B' a black box, 'P' the fixture's
+// process, 'Q' a small process of its own (Review of story 2.29).
+const boxedFixture = (name, order) => {
+  const fx = readFixture(name);
+  const proc = /<(?:\w+:)?process\b[^>]*\bid="([^"]+)"/.exec(fx.xml)[1];
+  const parts = order.map((k, i) => k === 'B' ? '<bpmn:participant id="BX' + i + '" name="Box"/>' : k === 'P' ? '<bpmn:participant id="PX" processRef="' + proc + '"/>' : '<bpmn:participant id="QX" processRef="QP"/>').join('');
+  const xml = fx.xml.replace(/<(?:\w+:)?collaboration\b[\s\S]*?<\/(?:\w+:)?collaboration>\s*/, '').replace(/(<(?:\w+:)?process\b)/, '<bpmn:collaboration id="KX" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">' + parts + '</bpmn:collaboration>$1')
+    .replace(/(<\/(?:\w+:)?definitions>)/, '<bpmn:process id="QP" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:startEvent id="QS"/><bpmn:task id="QT"/><bpmn:sequenceFlow id="QF" sourceRef="QS" targetRef="QT"/></bpmn:process>$1');
+  const { model } = readModel(xml);
+  // The fixture's raw positions by id, under the keys the nodes get here; Q's nodes from column 0.
+  const own = new Map(readModel(fx.xml).model.nodes.map(n => [n.id, fx.raw.nodes[n.key]]));
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, own.get(n.id) || { cx: n.id === 'QS' ? 0 : 100, cy: 0, w: 50, h: 50 }])) };
+  const di = layoutGeometry(model, raw, t => fx.sizes[t] || labelSize(t));
+  return model.pools.map(p => [p.id, di.pools[p.id]]);
+};
+const gapsOf = frames => frames.slice(1).map(([, f], i) => f[1] - (frames[i][1][1] + frames[i][1][3]));
+
+test('a black box on top of a pool whose lanes grow upward: the pool moves down, the box keeps its gap (review of story 2.29)', () => {
+  // r12's top lane grows for its labels; hund2's lanes grow for labels across a border (labelRoom()).
+  for (const name of ['r12', 'hund2']) assert.deepEqual(gapsOf(boxedFixture(name, ['B', 'P'])), [40], name);
+});
+
+test('a black box between two pools and below one whose lanes grow keeps its gaps (review of story 2.29)', () => {
+  for (const name of ['r12', 'hund2']){
+    assert.deepEqual(gapsOf(boxedFixture(name, ['P', 'B'])), [40], name + ' box below');
+    assert.deepEqual(gapsOf(boxedFixture(name, ['P', 'B', 'Q'])), [40, 40], name + ' box between');
+    assert.deepEqual(gapsOf(boxedFixture(name, ['Q', 'B', 'P'])), [40, 40], name + ' box between, the growing pool below');
+  }
+});
+
 test('a black box without message flows is drawn; black boxes alone are nothing to place; a participant without an id and without a process is left out', () => {
   const { model, di, xml } = layBoxes(BOXES(['PF', 'Kunde'], ''));
   assert.equal(model.messages.length, 0);

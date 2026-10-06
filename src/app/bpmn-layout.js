@@ -3,8 +3,9 @@
 // and no diagram part is laid out before bpmn-js draws it. Mermaid gives the
 // order of the columns, not the picture, and is not the writing format:
 //
-//   1. readProcess() reads the XML into one pool's lanes, flow nodes and
-//      sequence flows, or refuses with the reason
+//   1. readProcess() reads the XML into its pools, each with its lanes, flow
+//      nodes and sequence flows, a black box without lanes (story 2.29), and
+//      the message flows between pools, or refuses with the reason
 //   2. mermaidSource() writes that as Mermaid swimlane-beta text, with ids
 //      of its own (n1…, l1…), so that Mermaid never sees the author's ids
 //   3. Mermaid renders it off-screen (src/app/bpmn.js, the one part that needs
@@ -2361,10 +2362,20 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
   // A lane a label reaches out of grows, and what lies beyond moves, each
   // label with its owner.
+  // A black box keeps its distance to the lanes of the pool below it, or, with none below, of the pool above, while
+  // lanes grow for labels (story 2.29): growLane() moves lanes, symbols and flows, not a box's frame.
+  const laneEdge = (j, top) => { const ls = model.lanes.filter(l => (l.pool ?? 0) === j).map(l => laneBox[l.key]); return top ? Math.min(...ls.map(b => b[1])) : Math.max(...ls.map(b => b[1] + b[3])); };
+  const anchors = model.pools.map((p, k) => {
+    if (!p.box) return null;
+    let j = model.pools.findIndex((q, i) => i > k && !q.box), top = true;
+    if (j < 0){ top = false; for (let i = k - 1; i >= 0; i--) if (!model.pools[i].box){ j = i; break; } }
+    return { j, top, d: di.pools[p.id][1] - laneEdge(j, top) };
+  });
   const room = labelRoom(owners, model.lanes.map(l => laneBox[l.key]), box, routes);
   if (room.up || room.down){
     for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
     for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
+    model.pools.forEach((p, k) => { const a = anchors[k]; if (a) di.pools[p.id][1] = laneEdge(a.j, a.top) + a.d; });
   }
 
   // Flows routed in the outer channels, and labels, can lie beyond the lanes:
@@ -2385,6 +2396,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     return { xs, ys };
   };
   const pools = model.pools.map((p, i) => i).filter(i => framed(i) && !model.pools[i].box);
+  // The top pool may be a black box, which does not grow; a pool below it moves down as any other (story 2.29).
+  const topmost = model.pools.findIndex((p, i) => framed(i));
   let west = 0, east = 0;
   for (const i of pools){
     const { xs } = pointsOf(i), frame = lanesOf(i);
@@ -2407,11 +2420,11 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     const top = Math.min(...frame.map(b => b[1])), bottom = Math.max(...frame.map(b => b[1] + b[3]));
     const up = Math.max(0, R(top - (Math.min(...ys) - M))), down = Math.max(0, R(Math.max(...ys) + M - bottom));
     // The top lane grows up; below the top pool, this pool and those below move down by as much instead.
-    if (up && i !== pools[0]) shift(up, k => k >= i, top);
-    const now = i !== pools[0] ? top + up : top;
+    if (up && i !== topmost) shift(up, k => k >= i, top);
+    const now = i !== topmost ? top + up : top;
     if (up) for (const b of frame) if (b[1] === now){ b[1] -= up; b[3] += up; }
     // The bottom lane grows down; what lies below moves down.
-    if (down){ shift(down, k => k > i, bottom + (i !== pools[0] ? up : 0)); for (const b of frame) if (b[1] + b[3] === bottom + (i !== pools[0] ? up : 0)) b[3] += down; }
+    if (down){ shift(down, k => k > i, bottom + (i !== topmost ? up : 0)); for (const b of frame) if (b[1] + b[3] === bottom + (i !== topmost ? up : 0)) b[3] += down; }
   }
   if (pools.length) for (const b of Object.values(laneBox)){ b[0] -= west; b[2] += west + east; }
   // Each pool around its lanes, its head left of them.
