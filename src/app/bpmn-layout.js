@@ -651,8 +651,9 @@ export function labelPlaces(c, size, gateway){
 }
 
 // ---------- text annotations (story 2.31) ----------
-// A text annotation keeps NOTE_GAP from its partner, room for its association.
-const NOTE_GAP = 24;
+// A text annotation keeps NOTE_GAP from its partner, room for its association that the eye can follow (Ben,
+// 2026-10-06, nz02-fluss: "Zeile muss höher sein, damit genug platz ist für die Verbindung"; bpmn-js keeps 50 too).
+const NOTE_GAP = 50;
 const NOTE_SIDES = ['oben', 'oben-rechts', 'unten', 'rechts', 'links'];
 
 // The size of a text annotation: the narrowest of NOTE_WIDTHS whose text stays at most half as high as it is wide,
@@ -2709,6 +2710,9 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // top left of its pool's first lane.
   const notes = model.notes || [], assocs = model.associations || [];
   const notePool = new Map();
+  // Per text annotation at a flow the point it was placed for, relative to its box: the association ends on the flow
+  // nearest that point, wherever lanes and pools have moved the two since.
+  const aimOf = new Map();
   let stripes = false;
   if (notes.length){
     di.notes = {}; di.associations = {};
@@ -2829,6 +2833,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
           place = t.p;
         } else place = bestPlace(notePlaces(centre(anchor), size), [...symbols, ...segments, ...taken]);
       }
+      if (!('cy' in anchor)) aimOf.set(n.id, { dx: anchor.x - place[0], dy: anchor.y - place[1] });
       add(n, place, anchor);
     }
   }
@@ -2941,7 +2946,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       const nb = di.notes[a.note];
       let s;
       if (a.kind === 'flow' || a.kind === 'message'){
-        const p = nearestOnFlow(di.flows[a.partner].map(([x, y]) => ({ x, y })), nb[0] + nb[2] / 2, nb[1] + nb[3] / 2);
+        const aim = aimOf.get(a.note), at = aim && assocs.find(x => x.note === a.note) === a ? [nb[0] + aim.dx, nb[1] + aim.dy] : [nb[0] + nb[2] / 2, nb[1] + nb[3] / 2];
+        const p = nearestOnFlow(di.flows[a.partner].map(([x, y]) => ({ x, y })), ...at);
         s = { kind: 'point', cx: p.x, cy: p.y, w: 0, h: 0 };
       } else {
         const [x, y, w, h] = a.kind === 'pool' ? di.pools[a.partner] : di.nodes[a.partner];
