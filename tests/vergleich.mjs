@@ -3917,12 +3917,23 @@ const downloadNames = exp => diagramFileNames(exp.diagrams.map(d => d.title));
 // another lane (R1, story 2.27) referenced by that lane: the lanes' node
 // references aside, the rest is the author's.
 const LAID_OUT_PART = /  <bpmndi:BPMNDiagram xmlns:bpmndi="http:\/\/www\.omg\.org\/spec\/BPMN\/20100524\/DI"[\s\S]*?<\/bpmndi:BPMNDiagram>\n/;
+// The moved references themselves: every node the author's lanes reference
+// is referenced in the download, once where the author referenced it once
+// (an outer lane of nested lanes may keep a second), and no other id.
 const NODE_REFS = /\s*<((?:[\w.-]+:)?)flowNodeRef\s*>[^<]*<\/\1flowNodeRef\s*>\s*/g;
+const refCounts = xml => {
+  const n = new Map();
+  for (const m of xml.matchAll(/<((?:[\w.-]+:)?)flowNodeRef\s*>\s*([^<]*?)\s*<\/\1flowNodeRef\s*>/g)) n.set(m[2], (n.get(m[2]) || 0) + 1);
+  return n;
+};
 function sourceProblem(d, got){
   const want = d.source + '\n';
   if (!d.laidOut) return got === want ? '' : 'differs from the block\'s text at ' + [...want].findIndex((c, i) => got[i] !== c);
   if (!/<bpmndi:BPMNShape\b/.test(got)) return 'no BPMNShape';
-  return got.replace(LAID_OUT_PART, '').replace(NODE_REFS, '') === want.replace(NODE_REFS, '') ? '' : 'without its diagram part and the lanes\' node references not the author\'s XML';
+  if (got.replace(LAID_OUT_PART, '').replace(NODE_REFS, '') !== want.replace(NODE_REFS, '')) return 'without its diagram part and the lanes\' node references not the author\'s XML';
+  const had = refCounts(want), has = refCounts(got);
+  const wrong = [...new Set([...had.keys(), ...has.keys()])].filter(id => !had.has(id) || !has.has(id) || has.get(id) > had.get(id) || (had.get(id) === 1 && has.get(id) !== 1));
+  return wrong.length ? 'lane references not one per node: ' + wrong.map(id => id + ' ' + (had.get(id) || 0) + ' → ' + (has.get(id) || 0)).join(', ') : '';
 }
 // The picture button where a script runs: the editor file, schlank and kompakt.
 const PICTURED = new Set(['mit-editor', 'schlank', 'kompakt']);

@@ -9,7 +9,7 @@
 //      of its own (n1…, l1…), so that Mermaid never sees the author's ids
 //   3. Mermaid renders it off-screen (src/app/bpmn.js, the one part that needs
 //      a page); only the positions are taken from its SVG, and the layout
-//      reads no more of them than the middle of each node
+//      reads no more of them than the x of each node's middle
 //   4. layoutGeometry() puts the nodes on a grid: Mermaid's columns, the
 //      lanes, and rows within each lane. The rules R1–R16 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
@@ -176,7 +176,7 @@ export function readProcess(doc){
     if (stray.length) throw new Error(layoutStrayText(stray.map(n => n.id)));
   } else lanes.push({ id: '', name: participant ? clean(attr(participant, 'name')) : '', nodes: nodes.map(n => n.id), key: 'l1', synthetic: true });
   // An empty lane holds a stand-in for Mermaid, or Mermaid draws it as a strip
-  // of its own; the stand-in keeps the lane's row and is not drawn.
+  // of its own; the stand-in is not drawn, and the grid gives the lane its row.
   for (const l of lanes) if (!l.nodes.length) l.hold = 'h' + l.key.slice(1);
 
   const flows = [];
@@ -251,14 +251,16 @@ export function orthogonal(pts){
 // The side a flow leaves by: 'x+', 'x-', 'y+', 'y-', or '' for a slanted start.
 export const exitSide = pts => Math.abs(pts[0].y - pts[1].y) < 0.5 ? (pts[1].x > pts[0].x ? 'x+' : 'x-') : Math.abs(pts[0].x - pts[1].x) < 0.5 ? (pts[1].y > pts[0].y ? 'y+' : 'y-') : '';
 
-// The lane of a ring grows where the ring comes closer than RING_CLEARANCE
-// to the border with another lane: everything beyond the border moves away
-// by what the ring needs (the lanes, the symbols in box, the flows' points
-// and obstacles, and the levels of the rings placed before). The ring itself
-// stays: the lane grows around it. ring: { r, dir, y, cy }, its route, its
-// side (1 below the row, -1 above), its level and the row's middle. A ring
-// in no lane, or by an outer lane's outer border, grows nothing. Returns by
-// how much the lane grew: 0 where it did not.
+// A lane grows where a line comes closer than RING_CLEARANCE to its border
+// with another lane: everything beyond the border moves away by what the
+// line needs (the lanes, the symbols in box, the flows' points and obstacles,
+// and the levels in placed). Its one caller is labelRoom(), which hands it a
+// stand-in for the edge of a label (a ring of a flow back once, the name
+// stays): ring: { r, dir, y, cy }, r with the points that stay ({ pts: [] }),
+// the side (1 the bottom border, -1 the top), the level y and the middle cy
+// of the lane it lies in; placed, the levels that move with it ([]). In no
+// lane, or by an outer lane's outer border, nothing grows. Returns by how
+// much the lane grew: 0 where it did not.
 export function growLane(ring, lanes, box, routes, placed){
   const { r, dir, y, cy } = ring;
   const lane = lanes.find(b => b[1] <= cy && cy <= b[1] + b[3]);
@@ -461,9 +463,10 @@ export function labelPlaces(c, size, gateway){
 // The diagram part's coordinates: the nodes on the grid, the flows routed on
 // it, the labels placed.
 // raw: what Mermaid's SVG says, in its own units; read is only
-//   nodes: { key: { cx, … } }   the centre of each node: centres less than a
-//                               unit apart share a column, and the columns
-//                               keep Mermaid's order
+//   nodes: { key: { cx, … } }   the x of each node's centre: nodes less than
+//                               a unit apart share a column, and the columns
+//                               keep Mermaid's order; an empty lane's stand-in
+//                               is not read, its row is EMPTY_ROW
 // Returns { pool, lanes, nodes, labels, flows, flowLabels }: the pool's box or
 // null, and per element id its box [x, y, w, h], its label box, or the
 // waypoints of a flow [[x, y], …]. Throws where raw lacks a node of the model.

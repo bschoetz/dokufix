@@ -22,6 +22,7 @@ import {
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, dedupe, orthogonal,
   growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
+import { readFixture, readModel } from './bpmn-fixtures.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The reference input of story 2.8: 1 pool, 4 lanes, 16 symbols, 17 flows.
@@ -489,30 +490,20 @@ test('the last safeguard: a slanted piece gets a corner in the direction of the 
   assert.deepEqual(after, ptsOf([[0, 0], [0.7, 50], [40.4, 50.6]]));
 });
 
-test('a point Mermaid gives twice does not turn the flow through its own source', () => {
-  const { model, raw } = sample();
-  // F4, from the task A rightwards, its first point doubled.
-  raw.edges[3] = [P(600, 100), P(600, 100), P(760, 100), P(760, 280)];
-  const di = layoutGeometry(model, raw), a = di.nodes.A, way = di.flows.F4;
-  assert.equal(way[0][0], a[0] + a[2], 'leaves A by its right side: ' + JSON.stringify(way));
-  assert.ok(way.every(p => p[0] >= a[0] + a[2] || p[1] < a[1] || p[1] > a[1] + a[3]), 'no point inside A');
-});
-
 test('the lanes and the pool grow until every waypoint and every label lies inside, 12 px from the edge', () => {
-  const { model, raw } = sample();
-  // F5 runs around below the bottom lane and right beyond both.
-  raw.edges[4] = [P(520, 350), P(520, 470), P(900, 470), P(900, 320), P(800, 320)];
-  model.flows[4].name = 'außen herum';
-  const di = layoutGeometry(model, raw);
-  const [px, py, pw, ph] = di.pool, l1 = di.lanes.L1, l2 = di.lanes.L2;
-  const inside = ([x, y]) => x >= l1[0] + 12 && x <= l1[0] + l1[2] - 12 && y >= py + 12 && y <= py + ph - 12;
+  // Review input r06, one lane: the grid's lane ends 1 px above a label and 1 px below the lowest one; the frame
+  // grows 11 px up and 11 px down.
+  const fx = readFixture('r06'), { model } = readModel(fx.xml);
+  const di = layoutGeometry(model, fx.raw);
+  const [px, py, pw, ph] = di.pool, lane = di.lanes.Lane_1;
+  const inside = ([x, y]) => x >= lane[0] + 12 && x <= lane[0] + lane[2] - 12 && y >= py + 12 && y <= py + ph - 12;
   for (const way of Object.values(di.flows)) for (const p of way) assert.ok(inside(p), JSON.stringify(p) + ' outside ' + JSON.stringify(di.pool));
   for (const [x, y, w, h] of Object.values(di.flowLabels)) assert.ok(inside([x, y]) && inside([x + w, y + h]), 'label ' + JSON.stringify([x, y, w, h]));
-  assert.equal(l2[1] + l2[3], py + ph, 'the bottom lane grew with the pool');
-  assert.equal(l1[1], py);
-  assert.deepEqual([l1[0], l1[2]], [l2[0], l2[2]]);
-  assert.equal(px + 30, l1[0]);
-  assert.equal(px + pw, l1[0] + l1[2]);
+  for (const [, y, , h] of Object.values(di.labels)) assert.ok(y >= py + 12 && y + h <= py + ph - 12, 'label at ' + y);
+  assert.ok(py < 0, 'the frame grew upwards: ' + py);
+  assert.deepEqual([lane[1], lane[3]], [py, ph], 'the lane grew with the pool');
+  assert.equal(px + 30, lane[0]);
+  assert.equal(px + pw, lane[0] + lane[2]);
 });
 
 test('flow labels keep off other labels, flows and symbols, the own gateway included; with no free place the least covered', () => {
