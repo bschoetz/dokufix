@@ -94,8 +94,8 @@ function nodeType(tag){
   return null;
 }
 const HOLDS_CONTENT = new Set(['subProcess', 'adHocSubProcess', 'transaction']);
-// What a process or a collaboration may hold that the layout leaves out; a text annotation and an association are
-// read (story 2.31), but inside a sub-process.
+// What a process or a collaboration may hold that the layout leaves out. A text annotation and an association are
+// read since story 2.31 (NOTED), and left out only inside a sub-process.
 const LEFT_OUT = new Set(['textAnnotation', 'dataObject', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
 const NOTED = new Set(['textAnnotation', 'association']);
 // A text annotation's text: its <text> child as written, every blank and line break kept. bpmn-js draws it so: moddle
