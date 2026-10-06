@@ -55,7 +55,7 @@ export function readModel(xml){
 
 // The measure of a mode: the sizes the page measured, a text it did not
 // measure estimated as the page does; or the estimate alone.
-export const measureOf = (sizes, mode) => mode === 'measured' ? text => sizes[text] || labelSize(text) : labelSize;
+export const measureOf = (sizes, mode) => mode === 'measured' ? (text, width) => (width ? sizes['note:' + width + ':' + text] : sizes[text]) || labelSize(text, width) : labelSize;
 
 // The laid-out XML of an input in a mode, as the page lays it out: readProcess
 // → layoutGeometry → appendDiagram on the author's XML.

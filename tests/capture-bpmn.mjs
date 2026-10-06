@@ -30,6 +30,7 @@ import * as esbuild from 'esbuild';
 import { chromium } from 'playwright-core';
 import { prepareLibraries } from './cdn.mjs';
 import { readModel } from './bpmn-fixtures.mjs';
+import { NOTE_WIDTHS } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(here, '../dist/dokufix.html');
@@ -49,7 +50,10 @@ export async function captureBundle(){
 // outside comments and CDATA sections.
 export const hasDiagram = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
 
-// The texts the layout measures, in the order it may ask for them, each once.
+// The texts the layout measures, in the order it may ask for them, each once;
+// a text annotation's in each width it may take, keyed note:<width>:<text>
+// (noteTexts()).
+export const noteTexts = model => (model.notes || []).flatMap(n => NOTE_WIDTHS.map(w => ({ key: 'note:' + w + ':' + n.text, text: n.text, width: w })));
 export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat((model.boundaries || []).map(b => b.name).filter(Boolean), model.flows.concat(model.messages || []).map(f => f.name).filter(Boolean)))];
 
 function parseArgs(argv){
@@ -94,7 +98,7 @@ async function main(argv){
     if (args.out) fs.mkdirSync(args.out, { recursive: true });
     let n = 0;
     for (const input of inputs){
-      const { raw, sizes } = await page.evaluate(async ({ model, texts, index }) => {
+      const { raw, sizes } = await page.evaluate(async ({ model, texts, notes, index }) => {
         const { mermaidPositions, labelMeasurer, BPMN_VIEWER_CONFIG } = window.dokufixCapture;
         const raw = await mermaidPositions(model, document, index);
         const host = document.createElement('div');
@@ -103,9 +107,9 @@ async function main(argv){
         const viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
         try {
           const measure = labelMeasurer(viewer);
-          return { raw, sizes: Object.fromEntries(texts.map(t => [t, measure(t)])) };
+          return { raw, sizes: Object.fromEntries(texts.map(t => [t, measure(t)]).concat(notes.map(n => [n.key, measure(n.text, n.width)]))) };
         } finally { viewer.destroy(); host.remove(); }
-      }, { model: input.model, texts: labelTexts(input.model), index: 'capture-' + (++n) });
+      }, { model: input.model, texts: labelTexts(input.model), notes: noteTexts(input.model), index: 'capture-' + (++n) });
       // A flow from a boundary event back into its host is no edge of Mermaid's (mermaidSource()).
       const hostOf = new Map((input.model.boundaries || []).map(b => [b.id, b.host]));
       const missing = input.model.nodes.filter(m => !raw.nodes[m.key]).map(m => m.id).concat(input.model.flows.filter((f, i) => !raw.edges[i] && (hostOf.get(f.from) ?? f.from) !== f.to).map(f => f.id));

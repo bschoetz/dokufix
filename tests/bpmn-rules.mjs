@@ -47,6 +47,19 @@
 //                             its target other than vertically
 //   label-on-pool-edge        a message flow's label across the frame of a
 //                             pool: <label's flow> <pool>
+// and with text annotations (story 2.31), each its box, each association its
+// waypoints:
+//   note-on-node, note-on-flow, a text annotation on a symbol, on a piece of a
+//   note-on-label, note-on-note flow, on a label, on another text annotation:
+//                             <annotation> <what it lies on>
+//   association-through       an association through a symbol or a label not
+//                             its partner's: <association> <what it passes>
+//   association-off           an association whose end at its text annotation
+//                             is not on the annotation's box, or whose other
+//                             end is not on its partner (a symbol's outline, a
+//                             piece of a flow, a pool's frame): <association>
+//                             <the end's element>
+// An association is no flow for any other rule; a text annotation no symbol.
 // A message flow counts as a flow for every rule but point-outside-lanes;
 // its label is in no lane and no pool. A boundary event (story 2.30) counts as
 // a symbol, an event, for every rule; that it lies across its host's outline
@@ -119,6 +132,9 @@ export function breaksOf(xml, model, sizes = {}){
   const out = new Set();
   const add = (rule, ...ids) => out.add([rule, ...ids].join(' '));
   const di = readDiagram(xml);
+  // The associations' edges are no flows (story 2.31).
+  const associations = model.associations || [], assocWays = {};
+  for (const a of associations) if (di.flows[a.id]){ assocWays[a.id] = di.flows[a.id]; delete di.flows[a.id]; }
   const boundaries = model.boundaries || [];
   const nodes = Object.fromEntries(model.nodes.concat(boundaries).map(n => [n.id, di.shapes[n.id]]));
   const type = Object.fromEntries(model.nodes.map(n => [n.id, n.type]).concat(boundaries.map(b => [b.id, 'inter'])));
@@ -278,6 +294,44 @@ export function breaksOf(xml, model, sizes = {}){
     if (own.length && !own.some(ln => within(l.box, ln))) add('label-outside-lane', l.id);
     const pool = poolBox(l.pool);
     if (pool && !within(l.box, pool)) add('label-outside-pool', l.id);
+  }
+
+  // Text annotations (story 2.31).
+  const notes = (model.notes || []).map(n => ({ id: n.id, box: di.shapes[n.id] })).filter(n => n.box);
+  const overlaps = ([x, y, w, h], [a, b, c, d]) => a < x + w && a + c > x && b < y + h && b + d > y;
+  for (const n of notes){
+    const [x, y, w, h] = n.box;
+    for (const [nid, b] of Object.entries(nodes)) if (overlaps(n.box, b)) add('note-on-node', n.id, nid);
+    for (const sg of segs){
+      const x1 = Math.min(sg.a[0], sg.b[0]), x2 = Math.max(sg.a[0], sg.b[0]), y1 = Math.min(sg.a[1], sg.b[1]), y2 = Math.max(sg.a[1], sg.b[1]);
+      if (x2 > x && x1 < x + w && y2 > y && y1 < y + h) add('note-on-flow', n.id, sg.id);
+    }
+    for (const l of labels) if (overlaps(n.box, l.box)) add('note-on-label', n.id, l.id);
+    for (const m of notes) if (m !== n && overlaps(n.box, m.box)) add('note-on-note', ...[n.id, m.id].sort());
+  }
+  const noteBox = Object.fromEntries(notes.map(n => [n.id, n.box]));
+  // A point of a way strictly inside a box (1 px in), the way sampled every 2 px.
+  const passes = (w, [bx, by, bw, bh]) => {
+    for (let i = 1; i < w.length; i++){
+      const [x1, y1] = w[i - 1], [x2, y2] = w[i], k = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 2));
+      for (let j = 0; j <= k; j++){ const px = x1 + (x2 - x1) * j / k, py = y1 + (y2 - y1) * j / k; if (px > bx + 1 && px < bx + bw - 1 && py > by + 1 && py < by + bh - 1) return true; }
+    }
+    return false;
+  };
+  const onBox = (p, [x, y, w, h]) => onOutline(p, [x, y, w, h], 'task');
+  const onWay = (p, w) => w.some((q, i) => i && Math.min(q[0], w[i - 1][0]) - 1 <= p[0] && p[0] <= Math.max(q[0], w[i - 1][0]) + 1 && Math.min(q[1], w[i - 1][1]) - 1 <= p[1] && p[1] <= Math.max(q[1], w[i - 1][1]) + 1);
+  for (const a of associations){
+    const w = assocWays[a.id];
+    if (!w || !noteBox[a.note]) continue;
+    const [atNote, atPartner] = a.toNote ? [w.at(-1), w[0]] : [w[0], w.at(-1)];
+    if (!onBox(atNote, noteBox[a.note])) add('association-off', a.id, a.note);
+    const partnerOk = a.kind === 'flow' || a.kind === 'message' ? !!di.flows[a.partner] && onWay(atPartner, di.flows[a.partner])
+      : a.kind === 'pool' ? !!di.shapes[a.partner] && onBox(atPartner, di.shapes[a.partner])
+      : !!nodes[a.partner] && onOutline(atPartner, nodes[a.partner], typeOf(a.partner));
+    if (!partnerOk) add('association-off', a.id, a.partner);
+    for (const [nid, b] of Object.entries(nodes)) if (nid !== a.partner && passes(w, b)) add('association-through', a.id, nid);
+    for (const l of labels) if (l.id !== a.partner && passes(w, l.box)) add('association-through', a.id, l.id);
+    for (const m of notes) if (m.id !== a.note && passes(w, m.box)) add('association-through', a.id, m.id);
   }
   return [...out].sort();
 }

@@ -210,12 +210,19 @@ async function drawBpmn(diagram){
 // again in that width, which can take a line more. A label that cannot be
 // measured, the renderer missing or throwing or a size that is no finite
 // number, keeps the layout's estimate, labelSize().
+// With a width, the size of a text annotation that wide (story 2.31): the
+// renderer's own bounds for it, the text written from the top left, 7 px in.
 export function labelMeasurer(viewer){
   let renderer = null;
-  return text => {
+  return (text, width) => {
     try {
       if (!renderer){ const tr = viewer.get('textRenderer'); renderer = { tr, style: tr.getExternalStyle() }; }
       const { tr, style } = renderer;
+      if (width){
+        const b = tr.getTextAnnotationBounds({ x: 0, y: 0, width, height: 30 }, text);
+        if (Number.isFinite(b.height) && b.height > 0) return { w: width, h: b.height };
+        return labelSize(text, width);
+      }
       const lines = width => tr.createText(text, { box: { width, height: 30 }, style }).querySelectorAll('tspan').length;
       const imported = tr.getExternalLabelBounds({ x: 0, y: 0, width: 90, height: 30 }, text);
       const size = { w: imported.width, h: Math.ceil(imported.height / Math.max(1, lines(90)) * lines(imported.width)) };
