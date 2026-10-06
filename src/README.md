@@ -73,6 +73,8 @@ Two distinct concepts, deliberately separated. Each lives in a data block of the
 
 A block holds `{"text": "…"}` or `{"gz": "…"}` (gzip, then base64), and the init reads either. The build writes the demo text as `{"text": …}` from `src/demo.md`; a save writes both blocks as `{"gz": …}`.
 
+`dist/bpmn-assistant.html` is the BPMN Assistant (Ben, 2026-10-06: the built assistant lies in `dist` too): paste or upload BPMN XML, and it shows the original with its own coordinates, where it has any, and dokufix's layout of the same XML with the product's module, its breaks, the large view, the downloads `.bpmn` and `.svg`, colour templates, the guide for language models to copy, and five examples, one of them three pools with message flows. It is no part of the build: the store's `spike-2-26/testtool/bauen.mjs` bundles it from `src/app/bpmn.js`, `src/app/bpmn-layout.js`, `src/app/diagram-downloads.js` and `tests/bpmn-rules.mjs` and writes it there and here; it loads Mermaid 12.0.0 and bpmn-js 18.31.0 from the CDN, as the editor variant does. Build it anew after a change of the layout.
+
 The showcase, `dist/dokufix-showcase.html`, carries its own demo text: `src/showcase.md`, short, each core feature once, without special cases, for a newcomer. It is the same page with that text in `#dokufix-demo`, so "Demo zurücksetzen" in it restores the showcase text. `src/demo.md` stays the text of the regression checks, with every variant and special case. The two files do not share a draft: without a UUID baked into the file each keys its storage by its own location (see *Per-document identity* above).
 
 Loading order on open: IndexedDB doc record (live draft) > `#dokufix-source` (file's baked content) > `#dokufix-demo`.

@@ -95,10 +95,11 @@ Mehr Marken gibt es nicht: `cards`, `steps`, `facets <Spalte>` und `filter`. Ein
 
 **1. Ohne Koordinaten** (empfohlen; dokufix ordnet das Diagramm an). Das XML enthält kein `bpmndi:BPMNShape`. Dabei gilt:
 
-- **Höchstens ein Pool:** ein `participant` mit `processRef` auf genau einen `process`, oder gar kein Pool. **Mehrere Pools oder mehrere Prozesse gehen ohne Koordinaten nicht**, das ergibt die Warnung „Mehrere Pools lassen sich ohne Koordinaten noch nicht anordnen.“ Wenn es mehrere Beteiligte gibt, stell sie als **Bahnen (`lane`) in einem Pool** dar oder teile den Ablauf auf **mehrere Diagramme mit je einem Pool** auf.
-- **Keine Nachrichtenflüsse** (`messageFlow`). Sie werden ohne Hinweis weggelassen. Eine Übergabe zwischen Beteiligten ist ein `sequenceFlow` zwischen Bahnen.
-- **Angeordnet wird:** `startEvent`, `endEvent`, `intermediateCatchEvent`, `intermediateThrowEvent`, alle `*Gateway`, `task` und alle `*Task`, `callActivity`, `subProcess` (nur zugeklappt, sein Inhalt fehlt), `sequenceFlow` mit `name`, `laneSet`/`lane`/`flowNodeRef`.
-- **Ohne Hinweis weggelassen:** Randereignisse (`boundaryEvent`), Textanmerkungen, Datenobjekte und Datenspeicher, Assoziationen, Gruppen, Nachrichtenflüsse, der Inhalt von Teilprozessen sowie jeder Fluss, der eines dieser Elemente berührt. Bau den Ablauf ohne diese Elemente.
+- **Pools und Bahnen:** Rollen einer Organisation sind **Bahnen (`lane`) eines Pools**; eine Übergabe zwischen ihnen ist ein `sequenceFlow`. Eigenständige Beteiligte, die Nachrichten tauschen (Kunde und Firma), sind **mehrere Pools**: ein `collaboration` mit einem `participant` je Beteiligtem, jeder mit `processRef` auf seinen eigenen `process`. dokufix stellt die Pools in der Reihenfolge der `participant` untereinander.
+- **Nachrichtenflüsse** (`messageFlow` im `collaboration`) verbinden einen Flussknoten eines Pools mit einem Flussknoten eines anderen, etwa eine `sendTask` mit einem Nachrichten-Startereignis. Ein Sequenzfluss verlässt seinen Pool nie. Ein Nachrichtenfluss an einem Pool statt an einem Flussknoten, oder innerhalb eines Pools, wird weggelassen. Ein Pool ohne eigenen Prozess neben Pools mit Prozess wird samt seinen Nachrichtenflüssen weggelassen; gib jedem Beteiligten einen kurzen eigenen Prozess.
+- **Mehrere Prozesse ohne `collaboration`** zeichnet dokufix als Pools und fügt die `collaboration` selbst ein. Schreib sie besser selbst, dann stehen die Namen der Pools fest.
+- **Angeordnet wird:** `participant` als Pool, `startEvent`, `endEvent`, `intermediateCatchEvent`, `intermediateThrowEvent`, alle `*Gateway`, `task` und alle `*Task`, `callActivity`, `subProcess` (nur zugeklappt, sein Inhalt fehlt), `sequenceFlow` und `messageFlow` mit `name`, `laneSet`/`lane`/`flowNodeRef`.
+- **Ohne Hinweis weggelassen:** Randereignisse (`boundaryEvent`), Textanmerkungen, Datenobjekte und Datenspeicher, Assoziationen, Gruppen, der Inhalt von Teilprozessen sowie jeder Fluss, der eines dieser Elemente berührt. Bau den Ablauf ohne diese Elemente.
 - **Bahnen:** Jeder Knoten muss in genau einer Bahn stehen (`flowNodeRef`), sonst gibt es die Warnung „Diese Elemente liegen in keiner Bahn“. Zweige einer Verzweigung bekommen innerhalb einer Bahn eigene Zeilen; parallele Zweige dürfen also in derselben Bahn stehen. Gateways und Endereignisse darf dokufix in eine andere Bahn stellen als die, der du sie zuordnest, meist in die ihres Vorgängers; im heruntergeladenen XML stehen sie dann dort.
 - **Ids** sind gültige XML-Namen: mit einem Buchstaben anfangen, keine Leerzeichen. Jeder Knoten und Fluss braucht eine `id`. Gib Knoten und Flüssen einen `name`, das ist ihre Beschriftung.
 - **Gut lesbar bleibt es**, wenn ein Gateway wenige Ausgänge hat (2 bis 3), Schleifen zurück sparsam sind und keine Flüsse von einem Knoten zu sich selbst führen.
@@ -132,7 +133,41 @@ Mehr Marken gibt es nicht: `cards`, `steps`, `facets <Spalte>` und `filter`. Ein
 </bpmn:definitions>
 ```
 
-**2. Mit Koordinaten:** Enthält das XML einen vollständigen `bpmndi:BPMNDiagram` mit Lagen für jedes Element, etwa aus dem Camunda Modeler, wird es genau so gezeichnet. Dann sind auch mehrere Pools und Nachrichtenflüsse möglich. Erfinde Koordinaten nicht selbst. Schon ein einziges `BPMNShape` schaltet die automatische Anordnung ab; was dann ohne Lage ist, fehlt im Bild.
+Zwei Beteiligte als Pools, mit Nachrichtenflüssen zwischen ihnen:
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Def" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Pool_Leserin" name="Leserin" processRef="P_Leserin"/>
+    <bpmn:participant id="Pool_Bibliothek" name="Bibliothek" processRef="P_Bibliothek"/>
+    <bpmn:messageFlow id="N1" name="Vormerkung" sourceRef="Vormerken" targetRef="Eingang"/>
+    <bpmn:messageFlow id="N2" name="Abholbereit" sourceRef="Melden" targetRef="Bereit"/>
+  </bpmn:collaboration>
+  <bpmn:process id="P_Leserin" isExecutable="false">
+    <bpmn:startEvent id="L_Start" name="Buch verliehen"/>
+    <bpmn:sendTask id="Vormerken" name="Buch vormerken"/>
+    <bpmn:intermediateCatchEvent id="Bereit" name="Abholbereit"><bpmn:messageEventDefinition id="Bereit_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:manualTask id="Abholen" name="Buch abholen"/>
+    <bpmn:endEvent id="L_Ende" name="Buch da"/>
+    <bpmn:sequenceFlow id="L1" sourceRef="L_Start" targetRef="Vormerken"/>
+    <bpmn:sequenceFlow id="L2" sourceRef="Vormerken" targetRef="Bereit"/>
+    <bpmn:sequenceFlow id="L3" sourceRef="Bereit" targetRef="Abholen"/>
+    <bpmn:sequenceFlow id="L4" sourceRef="Abholen" targetRef="L_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="P_Bibliothek" isExecutable="false">
+    <bpmn:startEvent id="Eingang" name="Vormerkung da"><bpmn:messageEventDefinition id="Eingang_Def"/></bpmn:startEvent>
+    <bpmn:manualTask id="Zurueck" name="Buch zurücklegen"/>
+    <bpmn:sendTask id="Melden" name="Leserin benachrichtigen"/>
+    <bpmn:endEvent id="B_Ende" name="Benachrichtigt"/>
+    <bpmn:sequenceFlow id="B1" sourceRef="Eingang" targetRef="Zurueck"/>
+    <bpmn:sequenceFlow id="B2" sourceRef="Zurueck" targetRef="Melden"/>
+    <bpmn:sequenceFlow id="B3" sourceRef="Melden" targetRef="B_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+**2. Mit Koordinaten:** Enthält das XML einen vollständigen `bpmndi:BPMNDiagram` mit Lagen für jedes Element, etwa aus dem Camunda Modeler, wird es genau so gezeichnet. Erfinde Koordinaten nicht selbst. Schon ein einziges `BPMNShape` schaltet die automatische Anordnung ab; was dann ohne Lage ist, fehlt im Bild.
 
 ## Stil
 
