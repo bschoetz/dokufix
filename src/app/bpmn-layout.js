@@ -2571,7 +2571,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
   }
   const portOf = new Map(); // r|out → { x, y }
   for (const [k, list] of ends){
-    const [id, side] = k.split('|'), c = box[id];
+    // Split at the last "|": an author's id may hold one (review of 2.31), a side never does.
+    const cut = k.lastIndexOf('|'), id = k.slice(0, cut), side = k.slice(cut + 1), c = box[id];
     const vertical = side === 'top' || side === 'bottom';
     const base = { x: side === 'left' ? c.cx - c.w / 2 : side === 'right' ? c.cx + c.w / 2 : c.cx, y: side === 'top' ? c.cy - c.h / 2 : side === 'bottom' ? c.cy + c.h / 2 : c.cy };
     // Two message flows that come from one side alike take their places by their ids, the same at both ends, so that

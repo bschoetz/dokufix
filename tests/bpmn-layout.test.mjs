@@ -638,6 +638,16 @@ test('a lane without an id above a drawn lane in a pool: the drawn lane keeps it
   }
 });
 
+test('an id with a "|" in it is laid out as any other (review of 2.31)', () => {
+  const xml = xmlOf('<bpmn:process id="P"><bpmn:startEvent id="a|b"/><bpmn:task id="T|1" name="Tun"/><bpmn:endEvent id="E"/>' +
+    '<bpmn:sequenceFlow id="F|1" sourceRef="a|b" targetRef="T|1"/><bpmn:sequenceFlow id="F2" sourceRef="T|1" targetRef="E"/></bpmn:process>');
+  const { model } = read(xml);
+  const di = layoutGeometry(model, rawOf(model, { 'a|b': 0, 'T|1': 1, E: 2 }));
+  const [x, y, w, h] = di.nodes['T|1'], [px, py] = di.flows['F|1'].at(-1);
+  assert.ok(px === x && py > y && py < y + h, 'the flow ends on the task\'s left side: ' + JSON.stringify([di.flows['F|1'], di.nodes['T|1']]));
+  assert.match(appendDiagram(xml, model, di).xml, /bpmnElement="a\|b"/);
+});
+
 test('a flow from a node to itself whose node is not laid out names it once', () => {
   const { leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:dataStoreReference id="Z"/><bpmn:sequenceFlow id="ZZ" sourceRef="Z" targetRef="Z"/></bpmn:process>'));
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'ZZ')), 'sequenceFlow ZZ: touches Z, which is not laid out');
