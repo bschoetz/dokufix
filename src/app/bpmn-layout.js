@@ -237,6 +237,8 @@ function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages
   const texts = new Map();
   for (const { el, pool, slot } of noted) if (local(el) === 'textAnnotation'){
     if (!attr(el, 'id')) slot.reason = 'has no id';
+    // A text annotation without text is no comment (Ben, 2026-10-06, nz13-rg1: Signavio's IT-system markers).
+    else if (!noteText(el)) slot.reason = 'has no text';
     else texts.set(attr(el, 'id'), { el, pool, slot });
   }
   // The other end: its kind and the pool it lies in (a message flow in none).
@@ -657,34 +659,40 @@ const NOTE_GAP = 50;
 // The sides in the order they are tried after the one NOTES.place names: right of the partner first (Ben, 2026-10-06,
 // nz03-pool, nz06-hund2: "Kommentare rechts vom Ziel …; in manchen Diagrammen geht es einfach nicht, dann ist es schon
 // ok, wenn der Kommentar links vom Ziel steht").
-const NOTE_SIDES = ['rechts', 'oben-rechts', 'unten-rechts', 'oben', 'unten', 'links'];
+const NOTE_SIDES = ['rechts', 'oben-rechts', 'unten-rechts', 'oben', 'unten', 'oben-links', 'unten-links', 'links'];
+// How much further out each round of places lies than the first (Ben, 2026-10-06, nz20-ohne1: "Hätte näher an den
+// Knoten gepasst"; his notes 75 to 150 px from their partners): all sides near, then all a little further.
+export const NOTE_ROUNDS = [0, 25, 50, 100];
 
-// The size of a text annotation: the narrowest of NOTE_WIDTHS whose text stays at most half as high as it is wide,
-// else the widest. measure(text, width), as labelSize().
+// The size of a text annotation: the narrowest of NOTE_WIDTHS whose text stays at most a third as high as it is wide
+// (Ben, 2026-10-06, nz06-hund2: wider and flatter), else the widest. measure(text, width), as labelSize().
 export function noteSize(text, measure = labelSize){
   for (const w of NOTE_WIDTHS){
     const s = measure(text, w);
-    if (s.h <= w / 2 || w === NOTE_WIDTHS[NOTE_WIDTHS.length - 1]) return { w, h: Math.ceil(s.h) };
+    if (s.h <= w / 3 || w === NOTE_WIDTHS[NOTE_WIDTHS.length - 1]) return { w, h: Math.ceil(s.h) };
   }
 }
 
 // The places a text annotation of size { w, h } may take beside c ({ cx, cy, w, h }, a symbol or, w and h 0, a point
-// on a flow), in the order they are tried: the side NOTES.place names first, then the others, then all of them 20 px
-// further out; above and below centred first, then moved right and left, so that the association can stand beside
-// a flow's end in the middle. Each [x, y, w, h].
-export function notePlaces(c, size, first = NOTES.place){
+// on a flow), far px further out than the nearest, in the order they are tried: the side NOTES.place names first, then
+// the others; above and below centred first, then moved right and left, beside right and left level first, then
+// moved down and up, so that the association can stand beside a flow's end in the middle. Each [x, y, w, h].
+export function notePlaces(c, size, first = NOTES.place, far = 0){
   const { w, h } = size;
-  const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
-  const at = (side, far) => ({
+  const xs = [c.cx - w / 2, c.cx + 10, c.cx - 10 - w, c.cx - w + 20, c.cx - 20], ys = [c.cy - h / 2, c.cy + 10, c.cy - 10 - h];
+  const d = NOTE_GAP / 2 + far;
+  const at = side => ({
     'oben': xs.map(x => [x, c.cy - c.h / 2 - NOTE_GAP - far - h]),
-    'oben-rechts': [[c.cx + c.w / 2 + NOTE_GAP / 2 + far, c.cy - c.h / 2 - NOTE_GAP / 2 - far - h]],
-    'unten-rechts': [[c.cx + c.w / 2 + NOTE_GAP / 2 + far, c.cy + c.h / 2 + NOTE_GAP / 2 + far]],
+    'oben-rechts': [[c.cx + c.w / 2 + d, c.cy - c.h / 2 - d - h]],
+    'unten-rechts': [[c.cx + c.w / 2 + d, c.cy + c.h / 2 + d]],
     'unten': xs.map(x => [x, c.cy + c.h / 2 + NOTE_GAP + far]),
+    'oben-links': [[c.cx - c.w / 2 - d - w, c.cy - c.h / 2 - d - h]],
+    'unten-links': [[c.cx - c.w / 2 - d - w, c.cy + c.h / 2 + d]],
     'rechts': ys.map(y => [c.cx + c.w / 2 + NOTE_GAP + far, y]),
     'links': ys.map(y => [c.cx - c.w / 2 - NOTE_GAP - far - w, y]),
   })[side];
   const order = [first, ...NOTE_SIDES.filter(x => x !== first)];
-  return [0, 20].flatMap(far => order.flatMap(side => at(side, far).map(p => [...p.map(R), w, h])));
+  return order.flatMap(side => at(side).map(p => [...p.map(R), w, h]));
 }
 
 // The shape of an association's partner: { kind: 'rect' | 'circle' | 'diamond' | 'point', cx, cy, w, h }.
@@ -720,7 +728,8 @@ export function associationWay(n, s, line = NOTES.line){
   const [x, y, w, h] = n, mx = x + w / 2, my = y + h / 2;
   const sx1 = s.cx - s.w / 2, sx2 = s.cx + s.w / 2, sy1 = s.cy - s.h / 2, sy2 = s.cy + s.h / 2;
   if (x >= sx2 + 1){
-    if (my >= sy1 && my <= sy2) return [[x, my], [edgeAt(s, my, 1, true), my]].map(p => p.map(R));
+    // The height rounded first, the end towards the partner's middle, so that it lies on the outline, not beside it.
+    if (my >= sy1 && my <= sy2){ const v = R(my); return [[R(x), v], [Math.floor(edgeAt(s, v, 1, true)), v]]; }
     if (line === 'winklig') return [[x, my], [s.cx, my], [s.cx, edgeAt(s, s.cx, my < s.cy ? -1 : 1, false)]].map(p => p.map(R));
     const b = outline(s, x, my);
     return [[x, my], [b.x, b.y]].map(p => p.map(R));
@@ -758,6 +767,20 @@ export function associationWay(n, s, line = NOTES.line){
 // Whether a way [[x, y], …] comes within 2 px of a piece of a flow (segmentBox(): [x, y, w, h], one of w, h 0).
 export function wayTouches(way, segs){
   return wayHits(way, segs.map(([x, y, w, h]) => [x - 3, y - 3, w + 6, h + 6]));
+}
+// Whether a way runs along a piece of a flow: a horizontal or vertical piece of it within 3 px of one of the flow's
+// on more than 4 px. Crossing a flow is no running along (Ben, 2026-10-06: his associations cross flows).
+export function wayAlong(way, segs){
+  for (let i = 1; i < way.length; i++){
+    const [x1, y1] = way[i - 1], [x2, y2] = way[i];
+    const level = Math.abs(y1 - y2) < 1, upright = Math.abs(x1 - x2) < 1;
+    if (!level && !upright) continue;
+    for (const [sx, sy, sw, sh] of segs){
+      if (level && sh === 0 && Math.abs(sy - y1) <= 3 && Math.min(Math.max(x1, x2), sx + sw) - Math.max(Math.min(x1, x2), sx) > 4) return true;
+      if (upright && sw === 0 && Math.abs(sx - x1) <= 3 && Math.min(Math.max(y1, y2), sy + sh) - Math.max(Math.min(y1, y2), sy) > 4) return true;
+    }
+  }
+  return false;
 }
 // Whether a way [[x, y], …] passes through one of the boxes [x, y, w, h] (1 px in from their edges).
 export function wayHits(way, boxes){
@@ -2795,11 +2818,13 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       const others = () => [...symbols.filter(b => !nodeOf.has(a.partner) || b !== di.nodes[a.partner]), ...taken];
       // A flow's own pieces are where its association ends.
       const foreign = () => nodeOf.has(a.partner) ? segments : routes.filter(r => r.f.id !== a.partner).flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
-      const clear = (place, an) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken]) === 0 && !wayHits(way, others()) && !wayTouches(way, foreign()); };
+      // Free: the box on nothing, its association through no symbol, label or text annotation and along no flow;
+      // crossing none, where the round has such a place.
+      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken]) === 0 && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
       let place = null, anchor = anchors[0];
-      for (const an of anchors){
-        place = notePlaces(centre(an), size).find(p => clear(p, an));
-        if (place){ anchor = an; break; }
+      rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors){
+        place = notePlaces(centre(an), size, NOTES.place, far).find(p => clear(p, an, crossing));
+        if (place){ anchor = an; break rounds; }
       }
       const own = di.labels[a.partner];
       const flat = anchors.find(an => 'cy' in an || an.level);
@@ -2815,7 +2840,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
         const right = NOTES.place === 'oben-rechts' || NOTES.place === 'rechts';
         const xs = right ? [c.cx + c.w / 2 + 10, c.cx - size.w / 2, c.cx - c.w / 2 - 10 - size.w] : [c.cx - size.w / 2, c.cx + c.w / 2 + 10, c.cx - c.w / 2 - 10 - size.w];
         const tries = xs.map(x => [R(x), y, size.w, size.h]);
-        place = tries.find(p => clear(p, anchor)) || tries[0];
+        place = tries.find(p => clear(p, anchor, true)) || tries[0];
       }
       // At the border of the partner's lane, which grows there by a stripe across the pools (everything beyond moves
       // away): above first, below first for NOTES.place 'unten' and an event on an activity's lower edge. The first
@@ -2845,7 +2870,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
             const shifted = down ? p : [p[0], p[1] - size.h - NOTE_GAP, p[2], p[3]];
             const way = associationWay(shifted, shape(an));
             // Lying on a label or a text annotation is worst.
-            const faults = (onBox ? 5 : 0) + (crossing ? 1 : 0) + (wayHits(way, others().filter(inLane)) ? 1 : 0) + (wayTouches(way, foreign().filter(inLane)) ? 1 : 0);
+            const faults = (onBox ? 5 : 0) + (crossing ? 1 : 0) + (wayHits(way, others().filter(inLane)) ? 1 : 0) + (wayAlong(way, foreign().filter(inLane)) ? 1 : 0);
             if (!faults){ place = try_; break; }
             if (faults < least){ least = faults; first = try_; }
           }
@@ -2856,7 +2881,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
           const d = size.h + NOTE_GAP;
           openStripe(t.cut, d, 'cy' in anchor ? [] : [anchor], t.lane);
           place = t.p;
-        } else place = bestPlace(notePlaces(centre(anchor), size), [...symbols, ...segments, ...taken]);
+        } else place = bestPlace(NOTE_ROUNDS.flatMap(far => notePlaces(centre(anchor), size, NOTES.place, far)), [...symbols, ...segments, ...taken]);
       }
       if (!('cy' in anchor)) aimOf.set(n.id, { dx: anchor.x - place[0], dy: anchor.y - place[1] });
       add(n, place, anchor);
