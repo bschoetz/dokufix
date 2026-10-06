@@ -403,6 +403,22 @@ test('the diagram part is added before the closing definitions tag; the author\'
   assert.deepEqual(after.slice(before.length), ['dokufix_diagram', 'dokufix_plane', 'Pool_di', 'L1_di', 'L2_di', 'S_di', 'G_di', 'A_di', 'B_di', 'E_di', 'F1_di', 'F2_di', 'F3_di', 'F4_di', 'F5_di']);
 });
 
+test('the lane set follows the grid: the layout names each node\'s lane in laneOf, and that lane gets its flowNodeRef, not the one its box lies in', () => {
+  const { xml, model, raw } = sample();
+  const di = layoutGeometry(model, raw);
+  assert.deepEqual(Object.keys(di.laneOf).sort(), ['A', 'B', 'E', 'G', 'S']);
+  assert.ok(Object.values(di.laneOf).every(id => id === 'L1' || id === 'L2'));
+  const lanesOf = out => Object.fromEntries(read(out).model.lanes.flatMap(l => l.nodes.map(id => [id, l.id])));
+  assert.deepEqual(lanesOf(appendDiagram(xml, model, di).xml), di.laneOf, 'as laid out');
+  // The grid moved G to L2, its box still in L1: G goes to L2.
+  const moved = { ...di, laneOf: { ...di.laneOf, G: 'L2' } };
+  assert.equal(lanesOf(appendDiagram(xml, model, moved).xml).G, 'L2');
+  // A's box in L2, the grid's lane L1, the author's: the lane set stays.
+  const [, ly] = di.lanes.L2, [ax, , aw, ah] = di.nodes.A;
+  const boxed = { ...di, nodes: { ...di.nodes, A: [ax, ly + 10, aw, ah] }, laneOf: { ...di.laneOf, A: 'L1' } };
+  assert.equal(lanesOf(appendDiagram(xml, model, boxed).xml).A, 'L1');
+});
+
 test('what follows the closing tag stays, a closing tag in a comment is not the one, and the diagram\'s ids are free', () => {
   const body = '<process id="P">' + LINE.replace(/bpmn:/g, '') + '<task id="S_di" name="Schon da"/></process>';
   const xml = '<?xml version="1.0"?>\n<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="dokufix_diagram">' + body + '</definitions>\n<!-- nicht </definitions> -->\n';

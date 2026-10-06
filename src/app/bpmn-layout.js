@@ -467,9 +467,11 @@ export function labelPlaces(c, size, gateway){
 //                               a unit apart share a column, and the columns
 //                               keep Mermaid's order; an empty lane's stand-in
 //                               is not read, its row is EMPTY_ROW
-// Returns { pool, lanes, nodes, labels, flows, flowLabels }: the pool's box or
-// null, and per element id its box [x, y, w, h], its label box, or the
-// waypoints of a flow [[x, y], …]. Throws where raw lacks a node of the model.
+// Returns { pool, lanes, nodes, labels, flows, flowLabels, laneOf }: the
+// pool's box or null, and per element id its box [x, y, w, h], its label box,
+// or the waypoints of a flow [[x, y], …]; laneOf: per node the id of the lane
+// it stands in on the grid, which a rule may have changed (R1, R12), for
+// nodes in a lane with an id. Throws where raw lacks a node of the model.
 // measure: the size { w, h } a label's text takes as bpmn-js draws it; the
 // page gives one that asks bpmn-js's text renderer in the document's font
 // (src/app/bpmn.js), the tests and anything without a page keep the estimate
@@ -2047,7 +2049,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
   }
 
   // Bahnen, Pool, Knoten.
-  const di = { pool: null, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {} };
+  const di = { pool: null, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {}, laneOf: {} };
+  for (const n of model.nodes){ const l = model.lanes[g.cells.get(n.id).lane]; if (!l.synthetic) di.laneOf[n.id] = l.id; }
   const laneBox = {};
   model.lanes.forEach((l, i) => {
     const first = bands.findIndex(b => b.lane === i), last = bands.length - 1 - [...bands].reverse().findIndex(b => b.lane === i);
@@ -2134,13 +2137,12 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 // XML. di: what layoutGeometry() returned. Returns { xml, diagram }: the XML
 // and the id of the inserted BPMNDiagram, which bpmn-js is told to open, since
 // it opens the first diagram, and that may be an empty one of the author's.
-// Die Bahnzugehörigkeit im laneSet nach der Lage im Bild (Spike 2.26, Ben,
-// 2026-10-05): setzt eine Regel einen Knoten in eine andere Bahn (R1 ein
-// Gateway), stand er im XML bisher weiter in der alten. Je Knoten gilt die
-// innerste gezeichnete Bahn, in deren Rechteck seine Mitte liegt; weicht sie
-// von der Eingabe ab, verliert jede Bahn außer ihr und ihren äußeren Bahnen
-// den flowNodeRef, und sie bekommt ihn vor ihrem schließenden Tag. Sonst
-// bleibt der Text unverändert. Kommentare und CDATA zählen nicht.
+// The lane set as the layout placed the nodes (spike 2.26, Ben, 2026-10-05): a
+// node a rule put in another lane (R1, R12) would otherwise stay in the
+// author's. Per node the lane di.laneOf names, the one it stands in on the
+// grid; where that differs from the author's, every lane but it and its outer
+// lanes loses the node's flowNodeRef, and it gets one before its closing tag.
+// Otherwise the text stays as written. Comments and CDATA do not count.
 function relane(text, model, di){
   const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
   // Bahnen im Text: Id, Präfix, Bereich [Öffnen, Schließen] und äußere Bahn.
@@ -2156,20 +2158,16 @@ function relane(text, model, di){
   const inLane = i => lanes.filter(l => l.open < i && l.close !== null && i < l.close).sort((p, q) => q.open - p.open)[0] || null;
   const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\s*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
     .map(m => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3], lane: inLane(m.index) }));
-  const drawn = model.lanes.filter(l => !l.synthetic && di.lanes[l.id]);
   const edits = [];
   for (const n of model.nodes){
-    const r = di.nodes[n.id];
-    if (!r) continue;
-    const cx = r[0] + r[2] / 2, cy = r[1] + r[3] / 2;
-    const target = drawn.find(l => { const [x, y, w, h] = di.lanes[l.id]; return cx >= x && cx <= x + w && cy >= y && cy <= y + h; });
+    const target = di.laneOf && Object.hasOwn(di.laneOf, n.id) ? di.laneOf[n.id] : null;
     const now = model.lanes.find(l => l.nodes.includes(n.id));
-    if (!target || (now && now.id === target.id) || !byId.has(target.id)) continue;
+    if (!target || (now && now.id === target) || !byId.has(target)) continue;
     const keep = new Set();
-    for (let l = byId.get(target.id); l; l = l.parent) keep.add(l);
+    for (let l = byId.get(target); l; l = l.parent) keep.add(l);
     const mine = refs.filter(x => x.id === esc(n.id));
     for (const x of mine) if (!keep.has(x.lane)) edits.push({ at: x.start, end: x.end, put: '' });
-    const t = byId.get(target.id);
+    const t = byId.get(target);
     if (!mine.some(x => x.lane === t) && t.close !== null && t.close > t.openEnd){
       const sib = refs.find(x => x.lane === t);
       const indent = sib ? sib.indent : '';
