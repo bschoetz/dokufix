@@ -720,6 +720,20 @@ test('the default rules: R1–R16 but R7, all on, frozen', () => {
   assert.equal(DEFAULT_RULES.startAlign, true);
 });
 
+test('starts docked again after the block box stand in neighbouring rows: no other row lies between two of them', () => {
+  // The block box moves Q off the block's row; the four starts into Q dock to
+  // it again (R15). While they are moved their rows are NaN; sorted with the
+  // others, in this order of the nodes, a NaN left the lane's rows out of
+  // order, and X1 went above A10's row instead of next to X3.
+  const at = laidOut([['L0', 'A10:t:2 X1:s:2 J:p:3 X3:s:2 A00:t:2 Q:t:3 E:e:4 S:s:0 P:p:1 Z:e:6 R:t:4 X2:s:2 X0:s:2']],
+    'S>P P>A00 A00>J P>A10 A10>J J>E Q>R R>Z X0>Q X1>Q X2>Q X3>Q');
+  const starts = ['X0', 'X1', 'X2', 'X3'].map(id => at[id].y).sort((a, b) => a - b);
+  const others = Object.entries(at).filter(([id]) => !/^X/.test(id)).map(([, p]) => p.y);
+  for (let i = 1; i < starts.length; i++){
+    assert.ok(!others.some(y => y > starts[i - 1] && y < starts[i]), 'a row between ' + starts[i - 1] + ' and ' + starts[i] + ': ' + JSON.stringify(at));
+  }
+});
+
 test('the router merges two pieces of one direction: a Z whose middle piece has length 0 runs straight between its ends, no waypoint takes an x for a y', () => {
   // With every rule off, r03 and r09 each lay one flow over a Z from the gap
   // right of its source to the gap left of its target, two columns apart; its

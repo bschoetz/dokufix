@@ -569,7 +569,8 @@ function buildGrid(model, raw){
   const at = (lane, row, col) => { for (const c of cells.values()) if (c.lane === lane && c.row === row && c.col === col) return c; return null; };
   // Die nächste Zeile von base aus in Richtung dir (−1 darüber, 1 darunter), deren Zelle in col frei ist:
   // die nächste vorhandene Zeile, oder eine neue dazwischen, wo deren Zelle besetzt ist.
-  const rowsOf = lane => [...new Set([...cells.values()].filter(c => c.lane === lane).map(c => c.row))].sort((a, b) => a - b);
+  // Rows set to NaN, while starts are docked again (redockStarts()), are left out: sorted with the others they upset the order.
+  const rowsOf = lane => [...new Set([...cells.values()].filter(c => c.lane === lane).map(c => c.row))].filter(r => !Number.isNaN(r)).sort((a, b) => a - b);
   const newRow = (lane, base, dir, col) => {
     const rows = rowsOf(lane);
     const next = dir < 0 ? rows.filter(r => r < base).pop() : rows.find(r => r > base);
