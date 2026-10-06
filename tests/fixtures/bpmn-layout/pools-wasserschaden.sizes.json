@@ -1,0 +1,38 @@
+{
+ "Wasserschaden entdeckt": {
+  "w": 82,
+  "h": 29
+ },
+ "Schaden gemeldet": {
+  "w": 51,
+  "h": 29
+ },
+ "Schadensmeldung erhalten": {
+  "w": 84,
+  "h": 29
+ },
+ "Rechnung erhalten": {
+  "w": 53,
+  "h": 29
+ },
+ "Auftrag erhalten": {
+  "w": 87,
+  "h": 15
+ },
+ "Auftrag erledigt": {
+  "w": 84,
+  "h": 15
+ },
+ "Schadensmeldung": {
+  "w": 84,
+  "h": 29
+ },
+ "Auftrag": {
+  "w": 40,
+  "h": 15
+ },
+ "Rechnung": {
+  "w": 53,
+  "h": 15
+ }
+}

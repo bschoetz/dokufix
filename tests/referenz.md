@@ -986,17 +986,9 @@ Ein Rückfluss von einem Zwischenereignis zurück zu einem anderen: er dockt obe
 </bpmn:definitions>
 ```
 
-### BPMN ohne Wirkung
+### Mehrere Pools
 
-Die drei Blöcke werden zu je einer Warnung mit dem Grund, die Diagramme davor bleiben gezeichnet.
-
-#### Kaputtes XML
-
-```bpmn
-<bpmn:definitions>kein BPMN
-```
-
-#### Mehrere Pools
+Zwei Pools ohne Koordinaten mit Nachrichtenflüssen: oben „Leser“ ohne Bahnen, darunter „Bibliothek“ mit den Bahnen „Theke“ und „Magazin“. Die Nachrichtenflüsse „Bestellung“ und „Abholbereit“ laufen gestrichelt senkrecht zwischen den Pools. Der Pool „Verlag“ hat keinen eigenen Prozess; dokufix lässt ihn weg, mit dem Nachrichtenfluss „Nachbestellung“ zu ihm.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1004,14 +996,83 @@ Die drei Blöcke werden zu je einer Warnung mit dem Grund, die Diagramme davor b
   <bpmn:collaboration id="Zusammenarbeit">
     <bpmn:participant id="Leser" name="Leser" processRef="Prozess_Leser"/>
     <bpmn:participant id="Bib" name="Bibliothek" processRef="Prozess_Bib"/>
+    <bpmn:participant id="Verlag" name="Verlag"/>
+    <bpmn:messageFlow id="N_Bestellung" name="Bestellung" sourceRef="P_Bestellen" targetRef="P_Eingang"/>
+    <bpmn:messageFlow id="N_Abholbereit" name="Abholbereit" sourceRef="P_Melden" targetRef="P_Bereit"/>
+    <bpmn:messageFlow id="N_Nachbestellung" name="Nachbestellung" sourceRef="P_Nachbestellen" targetRef="Verlag"/>
   </bpmn:collaboration>
   <bpmn:process id="Prozess_Leser" isExecutable="false">
-    <bpmn:task id="Bestellen" name="Buch bestellen"/>
+    <bpmn:startEvent id="P_Start" name="Buch gesucht"/>
+    <bpmn:sendTask id="P_Bestellen" name="Buch bestellen"/>
+    <bpmn:intermediateCatchEvent id="P_Bereit" name="Abholbereit"><bpmn:messageEventDefinition id="P_Bereit_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="P_Abholen" name="Buch abholen"/>
+    <bpmn:endEvent id="P_Ende" name="Buch da"/>
+    <bpmn:sequenceFlow id="P1" sourceRef="P_Start" targetRef="P_Bestellen"/>
+    <bpmn:sequenceFlow id="P2" sourceRef="P_Bestellen" targetRef="P_Bereit"/>
+    <bpmn:sequenceFlow id="P3" sourceRef="P_Bereit" targetRef="P_Abholen"/>
+    <bpmn:sequenceFlow id="P4" sourceRef="P_Abholen" targetRef="P_Ende"/>
   </bpmn:process>
   <bpmn:process id="Prozess_Bib" isExecutable="false">
-    <bpmn:task id="Liefern" name="Buch bereitlegen"/>
+    <bpmn:laneSet id="Bahnen_Bib">
+      <bpmn:lane id="Theke" name="Theke">
+        <bpmn:flowNodeRef>P_Eingang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Frage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Melden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Fertig</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Magazin" name="Magazin">
+        <bpmn:flowNodeRef>P_Holen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>P_Nachbestellen</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="P_Eingang" name="Bestellung da"><bpmn:messageEventDefinition id="P_Eingang_Def"/></bpmn:startEvent>
+    <bpmn:exclusiveGateway id="P_Frage" name="Im Bestand?"/>
+    <bpmn:task id="P_Holen" name="Buch holen"/>
+    <bpmn:sendTask id="P_Nachbestellen" name="Beim Verlag nachbestellen"/>
+    <bpmn:sendTask id="P_Melden" name="Abholbereit melden"/>
+    <bpmn:endEvent id="P_Fertig" name="Gemeldet"/>
+    <bpmn:sequenceFlow id="Q1" sourceRef="P_Eingang" targetRef="P_Frage"/>
+    <bpmn:sequenceFlow id="Q2" sourceRef="P_Frage" targetRef="P_Holen" name="ja"/>
+    <bpmn:sequenceFlow id="Q3" sourceRef="P_Frage" targetRef="P_Nachbestellen" name="nein"/>
+    <bpmn:sequenceFlow id="Q4" sourceRef="P_Nachbestellen" targetRef="P_Holen"/>
+    <bpmn:sequenceFlow id="Q5" sourceRef="P_Holen" targetRef="P_Melden"/>
+    <bpmn:sequenceFlow id="Q6" sourceRef="P_Melden" targetRef="P_Fertig"/>
   </bpmn:process>
 </bpmn:definitions>
+```
+
+### Zwei Prozesse ohne Zusammenarbeit
+
+Zwei Prozesse ohne Pools: dokufix zeichnet sie als zwei Pools untereinander, „Ausleihe“ und darunter einen ohne Namen; im heruntergeladenen XML steht die Zusammenarbeit, die dokufix dafür einfügt.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Ausleihe" name="Ausleihe" isExecutable="false">
+    <bpmn:startEvent id="Z_Start" name="Buch gewünscht"/>
+    <bpmn:task id="Z_Verbuchen" name="Ausleihe verbuchen"/>
+    <bpmn:endEvent id="Z_Ende" name="Ausgeliehen"/>
+    <bpmn:sequenceFlow id="Z1" sourceRef="Z_Start" targetRef="Z_Verbuchen"/>
+    <bpmn:sequenceFlow id="Z2" sourceRef="Z_Verbuchen" targetRef="Z_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Mahnung" isExecutable="false">
+    <bpmn:startEvent id="Y_Start" name="Frist um"/>
+    <bpmn:task id="Y_Mahnen" name="Mahnung schicken"/>
+    <bpmn:endEvent id="Y_Ende" name="Gemahnt"/>
+    <bpmn:sequenceFlow id="Y1" sourceRef="Y_Start" targetRef="Y_Mahnen"/>
+    <bpmn:sequenceFlow id="Y2" sourceRef="Y_Mahnen" targetRef="Y_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Wirkung
+
+Die zwei Blöcke werden zu je einer Warnung mit dem Grund, die Diagramme davor bleiben gezeichnet.
+
+#### Kaputtes XML
+
+```bpmn
+<bpmn:definitions>kein BPMN
 ```
 
 #### Element ohne Bahn

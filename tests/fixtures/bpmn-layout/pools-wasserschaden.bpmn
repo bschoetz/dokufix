@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Wasserschaden"
+                  targetNamespace="http://example.org/bpmn/wasserschaden">
+  <bpmn:collaboration id="Collaboration_Wasserschaden">
+    <bpmn:participant id="Participant_Mieter" name="Mieter" processRef="Process_Mieter" />
+    <bpmn:participant id="Participant_Hausverwaltung" name="Hausverwaltung" processRef="Process_Hausverwaltung" />
+    <bpmn:participant id="Participant_Handwerker" name="Handwerker" processRef="Process_Handwerker" />
+    <bpmn:messageFlow id="MessageFlow_Meldung" name="Schadensmeldung" sourceRef="Task_SchadenMelden" targetRef="StartEvent_MeldungErhalten" />
+    <bpmn:messageFlow id="MessageFlow_Auftrag" name="Auftrag" sourceRef="Task_HandwerkerBeauftragen" targetRef="StartEvent_AuftragErhalten" />
+    <bpmn:messageFlow id="MessageFlow_Rechnung" name="Rechnung" sourceRef="Task_RechnungSenden" targetRef="Task_RechnungEmpfangen" />
+  </bpmn:collaboration>
+
+  <bpmn:message id="Message_Schadensmeldung" name="Schadensmeldung" />
+  <bpmn:message id="Message_Auftrag" name="Auftrag" />
+  <bpmn:message id="Message_Rechnung" name="Rechnung" />
+
+  <bpmn:process id="Process_Mieter" name="Mieter" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_SchadenEntdeckt" name="Wasserschaden entdeckt">
+      <bpmn:outgoing>Flow_M1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SchadenMelden" name="Wasserschaden melden" messageRef="Message_Schadensmeldung">
+      <bpmn:incoming>Flow_M1</bpmn:incoming>
+      <bpmn:outgoing>Flow_M2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_SchadenGemeldet" name="Schaden gemeldet">
+      <bpmn:incoming>Flow_M2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_M1" sourceRef="StartEvent_SchadenEntdeckt" targetRef="Task_SchadenMelden" />
+    <bpmn:sequenceFlow id="Flow_M2" sourceRef="Task_SchadenMelden" targetRef="EndEvent_SchadenGemeldet" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Hausverwaltung" name="Hausverwaltung" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_MeldungErhalten" name="Schadensmeldung erhalten">
+      <bpmn:outgoing>Flow_H1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Meldung" messageRef="Message_Schadensmeldung" />
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_HandwerkerBeauftragen" name="Handwerker beauftragen" messageRef="Message_Auftrag">
+      <bpmn:incoming>Flow_H1</bpmn:incoming>
+      <bpmn:outgoing>Flow_H2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_RechnungEmpfangen" name="Rechnung empfangen" messageRef="Message_Rechnung">
+      <bpmn:incoming>Flow_H2</bpmn:incoming>
+      <bpmn:outgoing>Flow_H3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="EndEvent_RechnungErhalten" name="Rechnung erhalten">
+      <bpmn:incoming>Flow_H3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_H1" sourceRef="StartEvent_MeldungErhalten" targetRef="Task_HandwerkerBeauftragen" />
+    <bpmn:sequenceFlow id="Flow_H2" sourceRef="Task_HandwerkerBeauftragen" targetRef="Task_RechnungEmpfangen" />
+    <bpmn:sequenceFlow id="Flow_H3" sourceRef="Task_RechnungEmpfangen" targetRef="EndEvent_RechnungErhalten" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Handwerker" name="Handwerker" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_AuftragErhalten" name="Auftrag erhalten">
+      <bpmn:outgoing>Flow_W1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Auftrag" messageRef="Message_Auftrag" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_SchadenBeheben" name="Schaden beheben">
+      <bpmn:incoming>Flow_W1</bpmn:incoming>
+      <bpmn:outgoing>Flow_W2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_RechnungSenden" name="Rechnung senden" messageRef="Message_Rechnung">
+      <bpmn:incoming>Flow_W2</bpmn:incoming>
+      <bpmn:outgoing>Flow_W3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_AuftragErledigt" name="Auftrag erledigt">
+      <bpmn:incoming>Flow_W3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_W1" sourceRef="StartEvent_AuftragErhalten" targetRef="Task_SchadenBeheben" />
+    <bpmn:sequenceFlow id="Flow_W2" sourceRef="Task_SchadenBeheben" targetRef="Task_RechnungSenden" />
+    <bpmn:sequenceFlow id="Flow_W3" sourceRef="Task_RechnungSenden" targetRef="EndEvent_AuftragErledigt" />
+  </bpmn:process>
+</bpmn:definitions>

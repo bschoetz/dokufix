@@ -69,5 +69,16 @@
  "r22": [
   "node-outside-lane z Lane_2",
   "on-one-line-shared F4_g_a F5_g_b"
- ]
+ ],
+ "pools-abo": [
+  "node-outside-lane F_Ende Lane_Formular",
+  "node-outside-lane F_Teilen Lane_Formular",
+  "node-outside-lane F_Zusammen Lane_Formular"
+ ],
+ "pools-bestellung": [
+  "node-outside-lane S_Vorrat Lane_Lager"
+ ],
+ "pools-angebot": [],
+ "pools-bewerbung": [],
+ "pools-wasserschaden": []
 }

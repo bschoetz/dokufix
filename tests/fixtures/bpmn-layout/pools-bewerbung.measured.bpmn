@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Bewerbung"
+                  targetNamespace="http://example.org/bpmn/bewerbung">
+
+  <bpmn:message id="Message_Bewerbung" name="Bewerbung" />
+  <bpmn:message id="Message_Einladung" name="Einladung zum Gespräch" />
+  <bpmn:message id="Message_Absage" name="Absage" />
+
+  <bpmn:collaboration id="Collaboration_Bewerbung">
+    <bpmn:participant id="Participant_Bewerberin" name="Bewerberin" processRef="Process_Bewerberin" />
+    <bpmn:participant id="Participant_Unternehmen" name="Unternehmen" processRef="Process_Unternehmen" />
+    <bpmn:messageFlow id="MessageFlow_Bewerbung" name="Bewerbung" sourceRef="Task_BewerbungSenden" targetRef="Start_BewerbungEingegangen" messageRef="Message_Bewerbung" />
+    <bpmn:messageFlow id="MessageFlow_Einladung" name="Einladung" sourceRef="Task_EinladungSenden" targetRef="Catch_EinladungErhalten" messageRef="Message_Einladung" />
+    <bpmn:messageFlow id="MessageFlow_Absage" name="Absage" sourceRef="Task_AbsageSenden" targetRef="Catch_AbsageErhalten" messageRef="Message_Absage" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Bewerberin" name="Bewerberin" isExecutable="false">
+    <bpmn:startEvent id="Start_StelleGefunden" name="Stelle gefunden">
+      <bpmn:outgoing>Flow_B1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_BewerbungSenden" name="Bewerbung senden" messageRef="Message_Bewerbung">
+      <bpmn:incoming>Flow_B1</bpmn:incoming>
+      <bpmn:outgoing>Flow_B2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:eventBasedGateway id="Gateway_AntwortAbwarten" name="Antwort abwarten">
+      <bpmn:incoming>Flow_B2</bpmn:incoming>
+      <bpmn:outgoing>Flow_B3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_B4</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Catch_EinladungErhalten" name="Einladung erhalten">
+      <bpmn:incoming>Flow_B3</bpmn:incoming>
+      <bpmn:outgoing>Flow_B5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_EinladungErhalten" messageRef="Message_Einladung" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_AbsageErhalten" name="Absage erhalten">
+      <bpmn:incoming>Flow_B4</bpmn:incoming>
+      <bpmn:outgoing>Flow_B6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_AbsageErhalten" messageRef="Message_Absage" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_ZumGespraechEingeladen" name="Zum Gespräch eingeladen">
+      <bpmn:incoming>Flow_B5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Abgesagt" name="Bewerbung abgelehnt">
+      <bpmn:incoming>Flow_B6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_B1" sourceRef="Start_StelleGefunden" targetRef="Task_BewerbungSenden" />
+    <bpmn:sequenceFlow id="Flow_B2" sourceRef="Task_BewerbungSenden" targetRef="Gateway_AntwortAbwarten" />
+    <bpmn:sequenceFlow id="Flow_B3" sourceRef="Gateway_AntwortAbwarten" targetRef="Catch_EinladungErhalten" />
+    <bpmn:sequenceFlow id="Flow_B4" sourceRef="Gateway_AntwortAbwarten" targetRef="Catch_AbsageErhalten" />
+    <bpmn:sequenceFlow id="Flow_B5" sourceRef="Catch_EinladungErhalten" targetRef="End_ZumGespraechEingeladen" />
+    <bpmn:sequenceFlow id="Flow_B6" sourceRef="Catch_AbsageErhalten" targetRef="End_Abgesagt" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Unternehmen" name="Unternehmen" isExecutable="false">
+    <bpmn:startEvent id="Start_BewerbungEingegangen" name="Bewerbung eingegangen">
+      <bpmn:outgoing>Flow_U1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_BewerbungEingegangen" messageRef="Message_Bewerbung" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_BewerbungPruefen" name="Bewerbung prüfen">
+      <bpmn:incoming>Flow_U1</bpmn:incoming>
+      <bpmn:outgoing>Flow_U2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Geeignet" name="Bewerberin geeignet?">
+      <bpmn:incoming>Flow_U2</bpmn:incoming>
+      <bpmn:outgoing>Flow_U3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_U4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_EinladungSenden" name="Zum Gespräch einladen" messageRef="Message_Einladung">
+      <bpmn:incoming>Flow_U3</bpmn:incoming>
+      <bpmn:outgoing>Flow_U5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_AbsageSenden" name="Absage senden" messageRef="Message_Absage">
+      <bpmn:incoming>Flow_U4</bpmn:incoming>
+      <bpmn:outgoing>Flow_U6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Eingeladen" name="Bewerberin eingeladen">
+      <bpmn:incoming>Flow_U5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_AbsageVersandt" name="Absage versandt">
+      <bpmn:incoming>Flow_U6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_U1" sourceRef="Start_BewerbungEingegangen" targetRef="Task_BewerbungPruefen" />
+    <bpmn:sequenceFlow id="Flow_U2" sourceRef="Task_BewerbungPruefen" targetRef="Gateway_Geeignet" />
+    <bpmn:sequenceFlow id="Flow_U3" name="ja" sourceRef="Gateway_Geeignet" targetRef="Task_EinladungSenden" />
+    <bpmn:sequenceFlow id="Flow_U4" name="nein" sourceRef="Gateway_Geeignet" targetRef="Task_AbsageSenden" />
+    <bpmn:sequenceFlow id="Flow_U5" sourceRef="Task_EinladungSenden" targetRef="End_Eingeladen" />
+    <bpmn:sequenceFlow id="Flow_U6" sourceRef="Task_AbsageSenden" targetRef="End_AbsageVersandt" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Bewerbung">
+      <bpmndi:BPMNShape id="Participant_Bewerberin_di" bpmnElement="Participant_Bewerberin" isHorizontal="true"><dc:Bounds x="0" y="0" width="1014" height="237"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Unternehmen_di" bpmnElement="Participant_Unternehmen" isHorizontal="true"><dc:Bounds x="0" y="277" width="1014" height="279"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_StelleGefunden_di" bpmnElement="Start_StelleGefunden"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BewerbungSenden_di" bpmnElement="Task_BewerbungSenden"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_AntwortAbwarten_di" bpmnElement="Gateway_AntwortAbwarten"><dc:Bounds x="413" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="14" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_EinladungErhalten_di" bpmnElement="Catch_EinladungErhalten"><dc:Bounds x="756" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="729" y="21" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Catch_AbsageErhalten_di" bpmnElement="Catch_AbsageErhalten"><dc:Bounds x="588" y="156" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="137" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_ZumGespraechEingeladen_di" bpmnElement="End_ZumGespraechEingeladen"><dc:Bounds x="906" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Abgesagt_di" bpmnElement="End_Abgesagt"><dc:Bounds x="906" y="156" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="196" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_BewerbungEingegangen_di" bpmnElement="Start_BewerbungEingegangen"><dc:Bounds x="252" y="342" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="382" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BewerbungPruefen_di" bpmnElement="Task_BewerbungPruefen"><dc:Bounds x="378" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Geeignet_di" bpmnElement="Gateway_Geeignet" isMarkerVisible="true"><dc:Bounds x="581" y="335" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="302" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_EinladungSenden_di" bpmnElement="Task_EinladungSenden"><dc:Bounds x="714" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AbsageSenden_di" bpmnElement="Task_AbsageSenden"><dc:Bounds x="546" y="444" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Eingeladen_di" bpmnElement="End_Eingeladen"><dc:Bounds x="906" y="342" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="382" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AbsageVersandt_di" bpmnElement="End_AbsageVersandt"><dc:Bounds x="906" y="466" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="506" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_B1_di" bpmnElement="Flow_B1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B2_di" bpmnElement="Flow_B2"><di:waypoint x="330" y="72"/><di:waypoint x="413" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B3_di" bpmnElement="Flow_B3"><di:waypoint x="463" y="72"/><di:waypoint x="756" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B4_di" bpmnElement="Flow_B4"><di:waypoint x="438" y="97"/><di:waypoint x="438" y="174"/><di:waypoint x="588" y="174"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B5_di" bpmnElement="Flow_B5"><di:waypoint x="792" y="72"/><di:waypoint x="906" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_B6_di" bpmnElement="Flow_B6"><di:waypoint x="624" y="174"/><di:waypoint x="906" y="174"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U1_di" bpmnElement="Flow_U1"><di:waypoint x="288" y="360"/><di:waypoint x="378" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U2_di" bpmnElement="Flow_U2"><di:waypoint x="498" y="360"/><di:waypoint x="581" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U3_di" bpmnElement="Flow_U3"><di:waypoint x="631" y="360"/><di:waypoint x="714" y="360"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="341" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U4_di" bpmnElement="Flow_U4"><di:waypoint x="606" y="385"/><di:waypoint x="606" y="444"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="393" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U5_di" bpmnElement="Flow_U5"><di:waypoint x="834" y="360"/><di:waypoint x="906" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_U6_di" bpmnElement="Flow_U6"><di:waypoint x="666" y="484"/><di:waypoint x="906" y="484"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Bewerbung_di" bpmnElement="MessageFlow_Bewerbung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="342"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="208" width="60" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Einladung_di" bpmnElement="MessageFlow_Einladung"><di:waypoint x="774" y="320"/><di:waypoint x="774" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="186" width="53" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Absage_di" bpmnElement="MessageFlow_Absage"><di:waypoint x="576" y="444"/><di:waypoint x="576" y="428"/><di:waypoint x="534" y="428"/><di:waypoint x="534" y="261"/><di:waypoint x="606" y="261"/><di:waypoint x="606" y="192"/><bpmndi:BPMNLabel><dc:Bounds x="550" y="242" width="40" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

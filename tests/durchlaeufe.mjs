@@ -75,10 +75,12 @@
 //                                BPMN diagram is the warning that says so, and
 //                                the rest of the document renders, Mermaid
 //                                included; the three read-only downloads too
-//  12. BPMN without coordinates  a block laid out by dokufix beside two it
-//                                cannot lay out (several pools, a node in no
-//                                lane): the first is drawn with its credit, the
-//                                other two are warnings naming the reason;
+//  12. BPMN without coordinates  two blocks laid out by dokufix, one of them
+//                                two pools with a message flow (story 2.12),
+//                                beside two it cannot lay out (nothing to
+//                                place, a node in no lane): the first two are
+//                                drawn with their credit, the other two are
+//                                warnings naming the reason;
 //                                nothing of the drawing or the layout is left in
 //                                <body>, no Mermaid error picture; then all four
 //                                downloads, reopened: the same in each, and no
@@ -147,7 +149,7 @@ import { prepareLibraries, librariesLine } from './cdn.mjs';
 // What the warning of a BPMN diagram says, and the reason of a page without
 // the library, are asked where the product decides them.
 import { bpmnWarningText, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT } from '../src/app/bpmn.js';
-import { LAYOUT_SEVERAL_POOLS, layoutStrayText } from '../src/app/bpmn-layout.js';
+import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -276,9 +278,14 @@ const BPMN_LAID_OUT = bpmnBlock([
   '</bpmn:process>',
 ]);
 const BPMN_POOLS = bpmnBlock([
-  '<bpmn:collaboration id="Zusammenarbeit"><bpmn:participant id="A" name="Leser" processRef="PA"/><bpmn:participant id="B" name="Bibliothek" processRef="PB"/></bpmn:collaboration>',
+  '<bpmn:collaboration id="Zusammenarbeit"><bpmn:participant id="A" name="Leser" processRef="PA"/><bpmn:participant id="B" name="Bibliothek" processRef="PB"/>',
+  '  <bpmn:messageFlow id="M" name="Bestellung" sourceRef="Bestellen" targetRef="Liefern"/></bpmn:collaboration>',
   '<bpmn:process id="PA"><bpmn:task id="Bestellen" name="Bestellen"/></bpmn:process>',
   '<bpmn:process id="PB"><bpmn:task id="Liefern" name="Liefern"/></bpmn:process>',
+]);
+// A pool without a process of its own, alone: nothing to place.
+const BPMN_NOTHING = bpmnBlock([
+  '<bpmn:collaboration id="Zusammenarbeit"><bpmn:participant id="A" name="Verlag"/></bpmn:collaboration>',
 ]);
 const BPMN_STRAY = bpmnBlock([
   '<bpmn:process id="Prozess"><bpmn:laneSet id="Bahnen"><bpmn:lane id="Theke" name="Theke"><bpmn:flowNodeRef>Annehmen</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>',
@@ -289,6 +296,7 @@ const DOC_LAYOUT = [
   '# Anordnung', '[[toc]]',
   '## Angeordnet', BPMN_LAID_OUT,
   '## Mehrere Pools', BPMN_POOLS,
+  '## Nichts anzuordnen', BPMN_NOTHING,
   '## Ohne Bahn', BPMN_STRAY,
   '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
   '[^a]: Die Fußnote.',
@@ -352,7 +360,7 @@ const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, 
 // cases of the large view, one that of the downloads), nine of BPMN (two with
 // coordinates, seven without, three of them the loop process and the two loop
 // special cases of story 2.20).
-const DEMO_DIAGRAMS = 14;
+const DEMO_DIAGRAMS = 17;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';
@@ -1032,11 +1040,11 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       const laidOut = (s, x, text) => {
         const visible = x.warnings.filter(w => !w.transient);
         check(s, 'two warnings, each naming its diagram and the reason the layout gives, where the diagram would be',
-          visible.length === 2 && visible[0].text.includes(bpmnWarningText('Mehrere Pools')) && visible[0].text.includes(LAYOUT_SEVERAL_POOLS) && visible[0].before === 'H2#mehrere-pools' &&
+          visible.length === 2 && visible[0].text.includes(bpmnWarningText('Nichts anzuordnen')) && visible[0].text.includes(LAYOUT_NOTHING) && visible[0].before === 'H2#nichts-anzuordnen' &&
           visible[1].text.includes(bpmnWarningText('Ohne Bahn')) && visible[1].text.includes(layoutStrayText(['Verbuchen', 'Ablegen'])) && visible[1].before === 'H2#ohne-bahn',
           visible.map(w => [w.before, w.text]));
         check(s, 'the warnings are styled by the document styles', visible.every(w => isStyled(w)), visible.map(w => w.style));
-        check(s, 'the block without coordinates is drawn, with "' + BPMN_CREDIT.before + BPMN_CREDIT.text + '" below it', x.bpmn.join('|') === 'Angeordnet true ' + credit, x.bpmn);
+        check(s, 'the blocks without coordinates are drawn, two pools among them, with "' + BPMN_CREDIT.before + BPMN_CREDIT.text + '" below each', x.bpmn.join('|') === 'Angeordnet true ' + credit + '|Mehrere Pools true ' + credit, x.bpmn);
         check(s, 'no Mermaid error picture', x.errorPictures === 0, x.errorPictures);
         check(s, 'the passes around it ran', x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
         checkViewControls(s, x);

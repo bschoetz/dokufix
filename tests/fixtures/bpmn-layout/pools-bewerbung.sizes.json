@@ -1,0 +1,62 @@
+{
+ "Stelle gefunden": {
+  "w": 83,
+  "h": 15
+ },
+ "Antwort abwarten": {
+  "w": 50,
+  "h": 29
+ },
+ "Einladung erhalten": {
+  "w": 53,
+  "h": 29
+ },
+ "Absage erhalten": {
+  "w": 87,
+  "h": 15
+ },
+ "Zum Gespräch eingeladen": {
+  "w": 77,
+  "h": 29
+ },
+ "Bewerbung abgelehnt": {
+  "w": 60,
+  "h": 29
+ },
+ "Bewerbung eingegangen": {
+  "w": 70,
+  "h": 29
+ },
+ "Bewerberin geeignet?": {
+  "w": 60,
+  "h": 29
+ },
+ "Bewerberin eingeladen": {
+  "w": 60,
+  "h": 29
+ },
+ "Absage versandt": {
+  "w": 88,
+  "h": 15
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 23,
+  "h": 15
+ },
+ "Bewerbung": {
+  "w": 60,
+  "h": 15
+ },
+ "Einladung": {
+  "w": 53,
+  "h": 15
+ },
+ "Absage": {
+  "w": 40,
+  "h": 15
+ }
+}

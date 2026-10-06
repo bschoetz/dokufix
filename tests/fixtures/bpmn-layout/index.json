@@ -17,7 +17,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:680"
+    "src/demo.md:732"
    ],
    "shows": [
     "25.2"
@@ -26,14 +26,14 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:720"
+    "src/demo.md:772"
    ]
   },
   "ereignis": {
    "source": "tests/referenz.md:969"
   },
   "ref8": {
-   "source": "tests/referenz.md:1047"
+   "source": "tests/referenz.md:1108"
   },
   "demo2": {
    "source": "src/demo.md:316",
@@ -48,10 +48,10 @@
    "source": "src/demo.md:375"
   },
   "demo5": {
-   "source": "src/demo.md:620"
+   "source": "src/demo.md:672"
   },
   "demo6": {
-   "source": "src/demo.md:648"
+   "source": "src/demo.md:700"
   },
   "hund2": {
    "source": "_bmad-output/initiative-dokufix/analysis-bpmn-loops/hund2/hund2.bpmn",
@@ -190,6 +190,41 @@
    "shows": [
     "21.1",
     "21.2"
+   ]
+  },
+  "pools-abo": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/pools/abo-zwei-pools-repariert.bpmn",
+   "note": "two pools, three lanes, three message flows; written by the developer of the 2026-10-01 experiment, repaired in spike 2.26 (a parallel split without join)",
+   "shows": [
+    "12"
+   ]
+  },
+  "pools-bestellung": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/pools/bestellung-drei-pools.bpmn",
+   "note": "three pools, five message flows, one from the first to the third pool; written by the developer of the 2026-10-01 experiment",
+   "shows": [
+    "12"
+   ]
+  },
+  "pools-angebot": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/pools/llm-angebot.bpmn",
+   "note": "two pools without lanes; written by an LLM given only the task \"customer asks a company for an offer, the company answers\" and the rule \"BPMN 2.0 XML without coordinates\"",
+   "shows": [
+    "12"
+   ]
+  },
+  "pools-bewerbung": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/pools/llm-bewerbung.bpmn",
+   "note": "two pools without lanes; written by an LLM given only the task \"an applicant applies, the company invites or declines\" and the rule",
+   "shows": [
+    "12"
+   ]
+  },
+  "pools-wasserschaden": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/pools/llm-wasserschaden.bpmn",
+   "note": "three pools without lanes; written by an LLM given only the task \"a tenant reports water damage, the management commissions a craftsman who repairs it and sends an invoice\" and the rule",
+   "shows": [
+    "12"
    ]
   }
  }

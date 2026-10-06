@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Wasserschaden"
+                  targetNamespace="http://example.org/bpmn/wasserschaden">
+  <bpmn:collaboration id="Collaboration_Wasserschaden">
+    <bpmn:participant id="Participant_Mieter" name="Mieter" processRef="Process_Mieter" />
+    <bpmn:participant id="Participant_Hausverwaltung" name="Hausverwaltung" processRef="Process_Hausverwaltung" />
+    <bpmn:participant id="Participant_Handwerker" name="Handwerker" processRef="Process_Handwerker" />
+    <bpmn:messageFlow id="MessageFlow_Meldung" name="Schadensmeldung" sourceRef="Task_SchadenMelden" targetRef="StartEvent_MeldungErhalten" />
+    <bpmn:messageFlow id="MessageFlow_Auftrag" name="Auftrag" sourceRef="Task_HandwerkerBeauftragen" targetRef="StartEvent_AuftragErhalten" />
+    <bpmn:messageFlow id="MessageFlow_Rechnung" name="Rechnung" sourceRef="Task_RechnungSenden" targetRef="Task_RechnungEmpfangen" />
+  </bpmn:collaboration>
+
+  <bpmn:message id="Message_Schadensmeldung" name="Schadensmeldung" />
+  <bpmn:message id="Message_Auftrag" name="Auftrag" />
+  <bpmn:message id="Message_Rechnung" name="Rechnung" />
+
+  <bpmn:process id="Process_Mieter" name="Mieter" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_SchadenEntdeckt" name="Wasserschaden entdeckt">
+      <bpmn:outgoing>Flow_M1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_SchadenMelden" name="Wasserschaden melden" messageRef="Message_Schadensmeldung">
+      <bpmn:incoming>Flow_M1</bpmn:incoming>
+      <bpmn:outgoing>Flow_M2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_SchadenGemeldet" name="Schaden gemeldet">
+      <bpmn:incoming>Flow_M2</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_M1" sourceRef="StartEvent_SchadenEntdeckt" targetRef="Task_SchadenMelden" />
+    <bpmn:sequenceFlow id="Flow_M2" sourceRef="Task_SchadenMelden" targetRef="EndEvent_SchadenGemeldet" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Hausverwaltung" name="Hausverwaltung" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_MeldungErhalten" name="Schadensmeldung erhalten">
+      <bpmn:outgoing>Flow_H1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Meldung" messageRef="Message_Schadensmeldung" />
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_HandwerkerBeauftragen" name="Handwerker beauftragen" messageRef="Message_Auftrag">
+      <bpmn:incoming>Flow_H1</bpmn:incoming>
+      <bpmn:outgoing>Flow_H2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_RechnungEmpfangen" name="Rechnung empfangen" messageRef="Message_Rechnung">
+      <bpmn:incoming>Flow_H2</bpmn:incoming>
+      <bpmn:outgoing>Flow_H3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="EndEvent_RechnungErhalten" name="Rechnung erhalten">
+      <bpmn:incoming>Flow_H3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_H1" sourceRef="StartEvent_MeldungErhalten" targetRef="Task_HandwerkerBeauftragen" />
+    <bpmn:sequenceFlow id="Flow_H2" sourceRef="Task_HandwerkerBeauftragen" targetRef="Task_RechnungEmpfangen" />
+    <bpmn:sequenceFlow id="Flow_H3" sourceRef="Task_RechnungEmpfangen" targetRef="EndEvent_RechnungErhalten" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Handwerker" name="Handwerker" isExecutable="false">
+    <bpmn:startEvent id="StartEvent_AuftragErhalten" name="Auftrag erhalten">
+      <bpmn:outgoing>Flow_W1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Auftrag" messageRef="Message_Auftrag" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_SchadenBeheben" name="Schaden beheben">
+      <bpmn:incoming>Flow_W1</bpmn:incoming>
+      <bpmn:outgoing>Flow_W2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_RechnungSenden" name="Rechnung senden" messageRef="Message_Rechnung">
+      <bpmn:incoming>Flow_W2</bpmn:incoming>
+      <bpmn:outgoing>Flow_W3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="EndEvent_AuftragErledigt" name="Auftrag erledigt">
+      <bpmn:incoming>Flow_W3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_W1" sourceRef="StartEvent_AuftragErhalten" targetRef="Task_SchadenBeheben" />
+    <bpmn:sequenceFlow id="Flow_W2" sourceRef="Task_SchadenBeheben" targetRef="Task_RechnungSenden" />
+    <bpmn:sequenceFlow id="Flow_W3" sourceRef="Task_RechnungSenden" targetRef="EndEvent_AuftragErledigt" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Wasserschaden">
+      <bpmndi:BPMNShape id="Participant_Mieter_di" bpmnElement="Participant_Mieter" isHorizontal="true"><dc:Bounds x="0" y="0" width="1014" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Hausverwaltung_di" bpmnElement="Participant_Hausverwaltung" isHorizontal="true"><dc:Bounds x="0" y="184" width="1014" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Handwerker_di" bpmnElement="Participant_Handwerker" isHorizontal="true"><dc:Bounds x="0" y="368" width="1014" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_SchadenEntdeckt_di" bpmnElement="StartEvent_SchadenEntdeckt"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SchadenMelden_di" bpmnElement="Task_SchadenMelden"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_SchadenGemeldet_di" bpmnElement="EndEvent_SchadenGemeldet"><dc:Bounds x="906" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="94" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_MeldungErhalten_di" bpmnElement="StartEvent_MeldungErhalten"><dc:Bounds x="252" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="278" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_HandwerkerBeauftragen_di" bpmnElement="Task_HandwerkerBeauftragen"><dc:Bounds x="378" y="216" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RechnungEmpfangen_di" bpmnElement="Task_RechnungEmpfangen"><dc:Bounds x="714" y="216" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_RechnungErhalten_di" bpmnElement="EndEvent_RechnungErhalten"><dc:Bounds x="906" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="278" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_AuftragErhalten_di" bpmnElement="StartEvent_AuftragErhalten"><dc:Bounds x="420" y="422" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="462" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SchadenBeheben_di" bpmnElement="Task_SchadenBeheben"><dc:Bounds x="546" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RechnungSenden_di" bpmnElement="Task_RechnungSenden"><dc:Bounds x="714" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_AuftragErledigt_di" bpmnElement="EndEvent_AuftragErledigt"><dc:Bounds x="906" y="422" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="462" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_M1_di" bpmnElement="Flow_M1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_M2_di" bpmnElement="Flow_M2"><di:waypoint x="330" y="72"/><di:waypoint x="906" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_H1_di" bpmnElement="Flow_H1"><di:waypoint x="288" y="256"/><di:waypoint x="378" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_H2_di" bpmnElement="Flow_H2"><di:waypoint x="498" y="256"/><di:waypoint x="714" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_H3_di" bpmnElement="Flow_H3"><di:waypoint x="834" y="256"/><di:waypoint x="906" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_W1_di" bpmnElement="Flow_W1"><di:waypoint x="456" y="440"/><di:waypoint x="546" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_W2_di" bpmnElement="Flow_W2"><di:waypoint x="666" y="440"/><di:waypoint x="714" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_W3_di" bpmnElement="Flow_W3"><di:waypoint x="834" y="440"/><di:waypoint x="906" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Meldung_di" bpmnElement="MessageFlow_Meldung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="238"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="168" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Auftrag_di" bpmnElement="MessageFlow_Auftrag"><di:waypoint x="438" y="296"/><di:waypoint x="438" y="422"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="352" width="46" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Rechnung_di" bpmnElement="MessageFlow_Rechnung"><di:waypoint x="774" y="400"/><di:waypoint x="774" y="296"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="341" width="53" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

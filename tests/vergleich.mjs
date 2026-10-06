@@ -556,10 +556,11 @@ function judgeDiagrams(exp, wellFormed){
     if (!read) return;
     const m = read.model;
     Object.assign(d, { drawn: true, reason: '', laidOut: true, model: m, expected: [
-      ...(m.pool ? [{ id: m.pool.id, tag: 'participant' }] : []),
+      ...m.pools.filter(p => p.id).map(p => ({ id: p.id, tag: 'participant' })),
       ...m.lanes.filter(l => !l.synthetic).map(l => ({ id: l.id, tag: 'lane' })),
       ...m.nodes.map(n => ({ id: n.id, tag: n.tag })),
       ...m.flows.map(f => ({ id: f.id, tag: 'sequenceFlow' })),
+      ...m.messages.map(f => ({ id: f.id, tag: 'messageFlow' })),
     ] });
   });
   return exp;
@@ -3553,6 +3554,8 @@ const BPMN_AC2 = [
 // readProcess() read it; g: the geometry bpmnFacts() measured.
 function bpmnLayoutProblems(model, g){
   const out = [];
+  // Message flows (story 2.12) as the sequence flows: on the outlines, through no symbol, their labels apart.
+  const flows = model.flows.concat(model.messages || []);
   const type = new Map(model.nodes.map(n => [n.id, n.type]));
   const eps = 1.5;
   const onOutline = (p, box, kind) => {
@@ -3563,7 +3566,7 @@ function bpmnLayoutProblems(model, g){
     return Math.abs(Math.hypot(p[0] - cx, p[1] - cy) - w / 2) <= eps;
   };
   const fmt = p => p.map(v => Math.round(v)).join(',');
-  for (const fl of model.flows){
+  for (const fl of flows){
     const pts = g.flows[fl.id], a = g.shapes[fl.from], b = g.shapes[fl.to];
     if (!pts || pts.length < 2 || !a || !b){ out.push('outline: ' + fl.id + ' is not drawn'); continue; }
     if (!onOutline(pts[0], a, type.get(fl.from))) out.push('outline: ' + fl.id + ' starts at ' + fmt(pts[0]) + ', off ' + fl.from);
@@ -3583,7 +3586,7 @@ function bpmnLayoutProblems(model, g){
       }
     }
   }
-  const labels = model.flows.filter(fl => g.labels[fl.id + '_label']).map(fl => [fl.id, g.labels[fl.id + '_label']]);
+  const labels = flows.filter(fl => g.labels[fl.id + '_label']).map(fl => [fl.id, g.labels[fl.id + '_label']]);
   for (let i = 0; i < labels.length; i++) for (let j = i + 1; j < labels.length; j++){
     const [a, b] = [labels[i][1], labels[j][1]];
     if (a[0] < b[0] + b[2] - 0.5 && b[0] < a[0] + a[2] - 0.5 && a[1] < b[1] + b[3] - 0.5 && b[1] < a[1] + a[3] - 0.5) out.push('labels: the labels of ' + labels[i][0] + ' and ' + labels[j][0] + ' overlap');
@@ -3591,7 +3594,7 @@ function bpmnLayoutProblems(model, g){
   // Flows that leave a gateway at one point, in one direction: each needs a
   // label of its own; that they do not overlap is checked above.
   for (const n of model.nodes.filter(x => x.type === 'gateway')){
-    const outs = model.flows.filter(fl => fl.from === n.id && g.flows[fl.id] && g.flows[fl.id].length > 1);
+    const outs = flows.filter(fl => fl.from === n.id && g.flows[fl.id] && g.flows[fl.id].length > 1);
     const way = fl => { const [p, q] = g.flows[fl.id]; return Math.round(p[0]) + ',' + Math.round(p[1]) + ' ' + Math.sign(Math.round(q[0] - p[0])) + ',' + Math.sign(Math.round(q[1] - p[1])); };
     const groups = new Map();
     for (const fl of outs) groups.set(way(fl), (groups.get(way(fl)) || []).concat(fl));
@@ -3604,7 +3607,7 @@ function bpmnLayoutProblems(model, g){
   // 3 px; a circle and a diamond touch their box only at the middle of a
   // side, so there the piece has to pass that point. A piece that docks
   // meets its side at a right angle and is not one.
-  const pieces = model.flows.flatMap(fl => (g.flows[fl.id] || []).slice(1).map((q, i) => [fl.id, g.flows[fl.id][i], q]));
+  const pieces = flows.flatMap(fl => (g.flows[fl.id] || []).slice(1).map((q, i) => [fl.id, g.flows[fl.id][i], q]));
   for (const [id, p, q] of pieces){
     const flat = Math.abs(p[1] - q[1]) < 0.5, steep = Math.abs(p[0] - q[0]) < 0.5;
     if (flat === steep) continue;
@@ -3752,9 +3755,9 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
     if (!d.laidOut) return;
     const g = f.figures[i] && f.figures[i].geometry;
     const m = d.model, drawn = id => !!(g && (g.shapes[id] || g.flows[id]));
-    const counts = [m.pool ? 1 : 0, m.lanes.filter(l => !l.synthetic).length, m.nodes.length, m.flows.length];
-    const got = [m.pool && drawn(m.pool.id) ? 1 : 0, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, m.nodes.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length];
-    check('BPMN laid out, "' + d.title + '": pool, lanes, symbols and flows drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
+    const counts = [m.pools.filter(p => p.id).length, m.lanes.filter(l => !l.synthetic).length, m.nodes.length, m.flows.length, m.messages.length];
+    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, m.nodes.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length];
+    check('BPMN laid out, "' + d.title + '": pools, lanes, symbols, flows and message flows drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
     const problems = g ? bpmnLayoutProblems(m, g) : ['no SVG'];
     for (const [key, text] of BPMN_AC2){
       const mine = problems.filter(p => p.startsWith(key + ':'));
@@ -3930,6 +3933,15 @@ function sourceProblem(d, got){
   const want = d.source + '\n';
   if (!d.laidOut) return got === want ? '' : 'differs from the block\'s text at ' + [...want].findIndex((c, i) => got[i] !== c);
   if (!/<bpmndi:BPMNShape\b/.test(got)) return 'no BPMNShape';
+  // Processes without a collaboration (story 2.12): the collaboration dokufix inserted, with a participant per process, is the only other addition.
+  const ins = d.model && d.model.insert;
+  if (ins){
+    const part = new RegExp('[ \\t]*<((?:[\\w.-]+:)?)collaboration id="' + ins.id + '">[\\s\\S]*?</\\1collaboration>\\n');
+    const m = part.exec(got);
+    if (!m) return 'no inserted collaboration ' + ins.id;
+    if (ins.participants.some(p => !m[0].includes('id="' + p.id + '"') || !m[0].includes('processRef="' + p.process + '"'))) return 'the inserted collaboration lacks a participant';
+    got = got.replace(part, '');
+  }
   if (got.replace(LAID_OUT_PART, '').replace(NODE_REFS, '') !== want.replace(NODE_REFS, '')) return 'without its diagram part and the lanes\' node references not the author\'s XML';
   const had = refCounts(want), has = refCounts(got);
   const wrong = [...new Set([...had.keys(), ...has.keys()])].filter(id => !had.has(id) || !has.has(id) || has.get(id) > had.get(id) || (had.get(id) === 1 && has.get(id) !== 1));

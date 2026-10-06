@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Angebot"
+                  targetNamespace="http://example.org/bpmn/angebot">
+
+  <bpmn:collaboration id="Collaboration_Angebot">
+    <bpmn:participant id="Participant_Kunde" name="Kunde" processRef="Process_Kunde" />
+    <bpmn:participant id="Participant_Firma" name="Firma" processRef="Process_Firma" />
+    <bpmn:messageFlow id="MessageFlow_Anfrage" name="Anfrage" sourceRef="Task_AngebotAnfragen" targetRef="Start_AnfrageEingegangen" />
+    <bpmn:messageFlow id="MessageFlow_Angebot" name="Angebot" sourceRef="Task_AngebotSenden" targetRef="Task_AngebotEmpfangen" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Kunde" name="Kunde" isExecutable="false">
+    <bpmn:startEvent id="Start_BedarfErkannt" name="Bedarf erkannt">
+      <bpmn:outgoing>Flow_K1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_AngebotAnfragen" name="Angebot anfragen">
+      <bpmn:incoming>Flow_K1</bpmn:incoming>
+      <bpmn:outgoing>Flow_K2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_AngebotEmpfangen" name="Angebot empfangen">
+      <bpmn:incoming>Flow_K2</bpmn:incoming>
+      <bpmn:outgoing>Flow_K3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="End_AngebotLiegtVor" name="Angebot liegt vor">
+      <bpmn:incoming>Flow_K3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_K1" sourceRef="Start_BedarfErkannt" targetRef="Task_AngebotAnfragen" />
+    <bpmn:sequenceFlow id="Flow_K2" sourceRef="Task_AngebotAnfragen" targetRef="Task_AngebotEmpfangen" />
+    <bpmn:sequenceFlow id="Flow_K3" sourceRef="Task_AngebotEmpfangen" targetRef="End_AngebotLiegtVor" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Firma" name="Firma" isExecutable="false">
+    <bpmn:startEvent id="Start_AnfrageEingegangen" name="Anfrage eingegangen">
+      <bpmn:outgoing>Flow_F1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Anfrage" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_AngebotErstellen" name="Angebot erstellen">
+      <bpmn:incoming>Flow_F1</bpmn:incoming>
+      <bpmn:outgoing>Flow_F2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_AngebotSenden" name="Angebot senden">
+      <bpmn:incoming>Flow_F2</bpmn:incoming>
+      <bpmn:outgoing>Flow_F3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_AngebotVersendet" name="Angebot versendet">
+      <bpmn:incoming>Flow_F3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_F1" sourceRef="Start_AnfrageEingegangen" targetRef="Task_AngebotErstellen" />
+    <bpmn:sequenceFlow id="Flow_F2" sourceRef="Task_AngebotErstellen" targetRef="Task_AngebotSenden" />
+    <bpmn:sequenceFlow id="Flow_F3" sourceRef="Task_AngebotSenden" targetRef="End_AngebotVersendet" />
+  </bpmn:process>
+
+</bpmn:definitions>

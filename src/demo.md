@@ -401,6 +401,58 @@ Ein Pfeil zurück zu einem früheren Schritt derselben Bahn, eine Schleife, läu
 </bpmn:definitions>
 ```
 
+### Mehrere Pools
+
+Wer mit wem Nachrichten tauscht, steht in Pools: jeder Beteiligte bekommt einen, untereinander, und die Nachrichten laufen gestrichelt senkrecht von Pool zu Pool. Sie sollten drei Pools sehen, „Leserin“, „Bibliothek“ mit den Bahnen „Theke“ und „Fernleihe“, und „Partnerbibliothek“, dazu vier Nachrichtenflüsse mit ihren Namen:
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Leserin" name="Leserin" processRef="Prozess_Leserin"/>
+    <bpmn:participant id="Bibliothek" name="Bibliothek" processRef="Prozess_Bibliothek"/>
+    <bpmn:participant id="Partner" name="Partnerbibliothek" processRef="Prozess_Partner"/>
+    <bpmn:messageFlow id="N_Wunsch" name="Fernleihwunsch" sourceRef="L_Bestellen" targetRef="B_Eingang"/>
+    <bpmn:messageFlow id="N_Anfrage" name="Anfrage" sourceRef="B_Anfragen" targetRef="P_Eingang"/>
+    <bpmn:messageFlow id="N_Buch" name="Buch" sourceRef="P_Senden" targetRef="B_Buch"/>
+    <bpmn:messageFlow id="N_Bereit" name="Bereitgelegt" sourceRef="B_Melden" targetRef="L_Bereit"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Leserin" isExecutable="false">
+    <bpmn:startEvent id="L_Start" name="Buch fehlt"/>
+    <bpmn:sendTask id="L_Bestellen" name="Fernleihe bestellen"/>
+    <bpmn:intermediateCatchEvent id="L_Bereit" name="Liegt bereit"><bpmn:messageEventDefinition id="L_Bereit_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="L_Ende" name="Buch abgeholt"/>
+    <bpmn:sequenceFlow id="L1" sourceRef="L_Start" targetRef="L_Bestellen"/>
+    <bpmn:sequenceFlow id="L2" sourceRef="L_Bestellen" targetRef="L_Bereit"/>
+    <bpmn:sequenceFlow id="L3" sourceRef="L_Bereit" targetRef="L_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Bibliothek" isExecutable="false">
+    <bpmn:laneSet id="Bahnen_Bibliothek">
+      <bpmn:lane id="B_Theke" name="Theke"><bpmn:flowNodeRef>B_Eingang</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Melden</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="B_Fernleihe" name="Fernleihe"><bpmn:flowNodeRef>B_Anfragen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Buch</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="B_Eingang" name="Wunsch da"><bpmn:messageEventDefinition id="B_Eingang_Def"/></bpmn:startEvent>
+    <bpmn:sendTask id="B_Anfragen" name="Partner anfragen"/>
+    <bpmn:intermediateCatchEvent id="B_Buch" name="Buch da"><bpmn:messageEventDefinition id="B_Buch_Def"/></bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="B_Melden" name="Leserin benachrichtigen"/>
+    <bpmn:endEvent id="B_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="B1" sourceRef="B_Eingang" targetRef="B_Anfragen"/>
+    <bpmn:sequenceFlow id="B2" sourceRef="B_Anfragen" targetRef="B_Buch"/>
+    <bpmn:sequenceFlow id="B3" sourceRef="B_Buch" targetRef="B_Melden"/>
+    <bpmn:sequenceFlow id="B4" sourceRef="B_Melden" targetRef="B_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Partner" isExecutable="false">
+    <bpmn:startEvent id="P_Eingang" name="Anfrage da"><bpmn:messageEventDefinition id="P_Eingang_Def"/></bpmn:startEvent>
+    <bpmn:task id="P_Suchen" name="Buch heraussuchen"/>
+    <bpmn:sendTask id="P_Senden" name="Buch schicken"/>
+    <bpmn:endEvent id="P_Ende" name="Verschickt"/>
+    <bpmn:sequenceFlow id="P1" sourceRef="P_Eingang" targetRef="P_Suchen"/>
+    <bpmn:sequenceFlow id="P2" sourceRef="P_Suchen" targetRef="P_Senden"/>
+    <bpmn:sequenceFlow id="P3" sourceRef="P_Senden" targetRef="P_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
 ## Code-Block (kein Mermaid)
 
 ```javascript
@@ -752,6 +804,62 @@ Ein Rückfluss in der mittleren von drei Bahnen: Sie sollten ihn innerhalb seine
     <bpmn:sequenceFlow id="F5" sourceRef="F_Frage" targetRef="F_Senden" name="ja"/>
     <bpmn:sequenceFlow id="F6" sourceRef="F_Senden" targetRef="F_Abholen"/>
     <bpmn:sequenceFlow id="F7" sourceRef="F_Abholen" targetRef="F_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: Pool ohne Prozess daneben
+
+Zwei Pools mit Prozess und einer ohne: dokufix lässt den Pool „Verlag“ weg, der keinen eigenen Prozess hat, mit dem Nachrichtenfluss zu ihm, und ebenso einen Nachrichtenfluss innerhalb eines Pools. Sie sollten zwei Pools sehen, „Leser“ und „Bibliothek“, und einen Nachrichtenfluss „Bestellung“ zwischen ihnen, keinen „Verlag“.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Leser" name="Leser" processRef="Prozess_Leser"/>
+    <bpmn:participant id="Bib" name="Bibliothek" processRef="Prozess_Bib"/>
+    <bpmn:participant id="Verlag" name="Verlag"/>
+    <bpmn:messageFlow id="V_Bestellung" name="Bestellung" sourceRef="V_Bestellen" targetRef="V_Eingang"/>
+    <bpmn:messageFlow id="V_Nachdruck" name="Nachdruck" sourceRef="V_Pruefen" targetRef="Verlag"/>
+    <bpmn:messageFlow id="V_Intern" name="Notiz" sourceRef="V_Eingang" targetRef="V_Pruefen"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Leser" isExecutable="false">
+    <bpmn:startEvent id="V_Start" name="Buch gesucht"/>
+    <bpmn:sendTask id="V_Bestellen" name="Buch bestellen"/>
+    <bpmn:endEvent id="V_Ende" name="Bestellt"/>
+    <bpmn:sequenceFlow id="V1" sourceRef="V_Start" targetRef="V_Bestellen"/>
+    <bpmn:sequenceFlow id="V2" sourceRef="V_Bestellen" targetRef="V_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Bib" isExecutable="false">
+    <bpmn:startEvent id="V_Eingang" name="Bestellung da"><bpmn:messageEventDefinition id="V_Eingang_Def"/></bpmn:startEvent>
+    <bpmn:task id="V_Pruefen" name="Bestand prüfen"/>
+    <bpmn:endEvent id="V_Fertig" name="Geprüft"/>
+    <bpmn:sequenceFlow id="V3" sourceRef="V_Eingang" targetRef="V_Pruefen"/>
+    <bpmn:sequenceFlow id="V4" sourceRef="V_Pruefen" targetRef="V_Fertig"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: zwei Prozesse ohne Zusammenarbeit
+
+Zwei Prozesse ohne Pools: dokufix zeichnet jeden als Pool, untereinander, „Ausleihe“ mit seinem Namen, der zweite ohne. Im heruntergeladenen XML steht die Zusammenarbeit, die dokufix dafür einfügt; sonst ist es Ihr XML.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Ausleihe" name="Ausleihe" isExecutable="false">
+    <bpmn:startEvent id="A_Start" name="Buch gewünscht"/>
+    <bpmn:task id="A_Verbuchen" name="Ausleihe verbuchen"/>
+    <bpmn:endEvent id="A_Ende" name="Ausgeliehen"/>
+    <bpmn:sequenceFlow id="A1" sourceRef="A_Start" targetRef="A_Verbuchen"/>
+    <bpmn:sequenceFlow id="A2" sourceRef="A_Verbuchen" targetRef="A_Ende"/>
+  </bpmn:process>
+  <bpmn:process id="Prozess_Mahnung" isExecutable="false">
+    <bpmn:startEvent id="M_Start" name="Frist um"/>
+    <bpmn:task id="M_Mahnen" name="Mahnung schicken"/>
+    <bpmn:endEvent id="M_Ende" name="Gemahnt"/>
+    <bpmn:sequenceFlow id="M1" sourceRef="M_Start" targetRef="M_Mahnen"/>
+    <bpmn:sequenceFlow id="M2" sourceRef="M_Mahnen" targetRef="M_Ende"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

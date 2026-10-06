@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_1" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Pool_Kunde" name="Kunde" processRef="Process_Kunde" />
+    <bpmn:participant id="Pool_Shop" name="Shop" processRef="Process_Shop" />
+    <bpmn:participant id="Pool_Lieferant" name="Lieferant" processRef="Process_Lieferant" />
+    <bpmn:messageFlow id="M1" name="Bestellung" sourceRef="K_Bestellen" targetRef="S_Start" />
+    <bpmn:messageFlow id="M2" name="Nachbestellung" sourceRef="S_Nachbestellen" targetRef="L_Start" />
+    <bpmn:messageFlow id="M3" name="Lieferung" sourceRef="L_Liefern" targetRef="S_Wareneingang" />
+    <bpmn:messageFlow id="M4" name="Paket" sourceRef="S_Versenden" targetRef="K_Paket" />
+    <bpmn:messageFlow id="M5" name="Absage" sourceRef="S_Absagen" targetRef="K_Absage" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Kunde" isExecutable="false">
+    <bpmn:startEvent id="K_Start" name="Braucht Ware" />
+    <bpmn:sendTask id="K_Bestellen" name="Bestellen" />
+    <bpmn:eventBasedGateway id="K_Warten" />
+    <bpmn:intermediateCatchEvent id="K_Paket" name="Paket erhalten">
+      <bpmn:messageEventDefinition id="K_Paket_def" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="K_Absage" name="Absage erhalten">
+      <bpmn:messageEventDefinition id="K_Absage_def" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="K_Ende" name="Versorgt" />
+    <bpmn:endEvent id="K_Ende2" name="Sucht woanders" />
+    <bpmn:sequenceFlow id="K1" sourceRef="K_Start" targetRef="K_Bestellen" />
+    <bpmn:sequenceFlow id="K2" sourceRef="K_Bestellen" targetRef="K_Warten" />
+    <bpmn:sequenceFlow id="K3" sourceRef="K_Warten" targetRef="K_Paket" />
+    <bpmn:sequenceFlow id="K4" sourceRef="K_Warten" targetRef="K_Absage" />
+    <bpmn:sequenceFlow id="K5" sourceRef="K_Paket" targetRef="K_Ende" />
+    <bpmn:sequenceFlow id="K6" sourceRef="K_Absage" targetRef="K_Ende2" />
+  </bpmn:process>
+  <bpmn:process id="Process_Shop" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Shop">
+      <bpmn:lane id="Lane_Vertrieb" name="Vertrieb">
+        <bpmn:flowNodeRef>S_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Lieferbar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Absagen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_EndeAbsage</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Lager" name="Lager">
+        <bpmn:flowNodeRef>S_Vorrat</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Nachbestellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Wareneingang</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Versenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>S_Ende</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Start" name="Bestellung eingegangen">
+      <bpmn:messageEventDefinition id="S_Start_def" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="S_Pruefen" name="Bestellung prüfen" />
+    <bpmn:exclusiveGateway id="S_Lieferbar" name="Lieferbar?" />
+    <bpmn:sendTask id="S_Absagen" name="Absage senden" />
+    <bpmn:endEvent id="S_EndeAbsage" name="Abgesagt" />
+    <bpmn:exclusiveGateway id="S_Vorrat" name="Auf Lager?" />
+    <bpmn:sendTask id="S_Nachbestellen" name="Beim Lieferanten nachbestellen" />
+    <bpmn:intermediateCatchEvent id="S_Wareneingang" name="Ware eingetroffen">
+      <bpmn:messageEventDefinition id="S_Wareneingang_def" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sendTask id="S_Versenden" name="Paket versenden" />
+    <bpmn:endEvent id="S_Ende" name="Versendet" />
+    <bpmn:sequenceFlow id="S1" sourceRef="S_Start" targetRef="S_Pruefen" />
+    <bpmn:sequenceFlow id="S2" sourceRef="S_Pruefen" targetRef="S_Lieferbar" />
+    <bpmn:sequenceFlow id="S3" name="nein" sourceRef="S_Lieferbar" targetRef="S_Absagen" />
+    <bpmn:sequenceFlow id="S4" sourceRef="S_Absagen" targetRef="S_EndeAbsage" />
+    <bpmn:sequenceFlow id="S5" name="ja" sourceRef="S_Lieferbar" targetRef="S_Vorrat" />
+    <bpmn:sequenceFlow id="S6" name="nein" sourceRef="S_Vorrat" targetRef="S_Nachbestellen" />
+    <bpmn:sequenceFlow id="S7" sourceRef="S_Nachbestellen" targetRef="S_Wareneingang" />
+    <bpmn:sequenceFlow id="S8" sourceRef="S_Wareneingang" targetRef="S_Versenden" />
+    <bpmn:sequenceFlow id="S9" name="ja" sourceRef="S_Vorrat" targetRef="S_Versenden" />
+    <bpmn:sequenceFlow id="S10" sourceRef="S_Versenden" targetRef="S_Ende" />
+  </bpmn:process>
+  <bpmn:process id="Process_Lieferant" isExecutable="false">
+    <bpmn:startEvent id="L_Start" name="Nachbestellung eingegangen">
+      <bpmn:messageEventDefinition id="L_Start_def" />
+    </bpmn:startEvent>
+    <bpmn:task id="L_Packen" name="Ware packen" />
+    <bpmn:sendTask id="L_Liefern" name="Liefern" />
+    <bpmn:endEvent id="L_Ende" name="Geliefert" />
+    <bpmn:sequenceFlow id="L1" sourceRef="L_Start" targetRef="L_Packen" />
+    <bpmn:sequenceFlow id="L2" sourceRef="L_Packen" targetRef="L_Liefern" />
+    <bpmn:sequenceFlow id="L3" sourceRef="L_Liefern" targetRef="L_Ende" />
+  </bpmn:process>
+</bpmn:definitions>

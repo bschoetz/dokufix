@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Angebot"
+                  targetNamespace="http://example.org/bpmn/angebot">
+
+  <bpmn:collaboration id="Collaboration_Angebot">
+    <bpmn:participant id="Participant_Kunde" name="Kunde" processRef="Process_Kunde" />
+    <bpmn:participant id="Participant_Firma" name="Firma" processRef="Process_Firma" />
+    <bpmn:messageFlow id="MessageFlow_Anfrage" name="Anfrage" sourceRef="Task_AngebotAnfragen" targetRef="Start_AnfrageEingegangen" />
+    <bpmn:messageFlow id="MessageFlow_Angebot" name="Angebot" sourceRef="Task_AngebotSenden" targetRef="Task_AngebotEmpfangen" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Kunde" name="Kunde" isExecutable="false">
+    <bpmn:startEvent id="Start_BedarfErkannt" name="Bedarf erkannt">
+      <bpmn:outgoing>Flow_K1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_AngebotAnfragen" name="Angebot anfragen">
+      <bpmn:incoming>Flow_K1</bpmn:incoming>
+      <bpmn:outgoing>Flow_K2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_AngebotEmpfangen" name="Angebot empfangen">
+      <bpmn:incoming>Flow_K2</bpmn:incoming>
+      <bpmn:outgoing>Flow_K3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:endEvent id="End_AngebotLiegtVor" name="Angebot liegt vor">
+      <bpmn:incoming>Flow_K3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_K1" sourceRef="Start_BedarfErkannt" targetRef="Task_AngebotAnfragen" />
+    <bpmn:sequenceFlow id="Flow_K2" sourceRef="Task_AngebotAnfragen" targetRef="Task_AngebotEmpfangen" />
+    <bpmn:sequenceFlow id="Flow_K3" sourceRef="Task_AngebotEmpfangen" targetRef="End_AngebotLiegtVor" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Firma" name="Firma" isExecutable="false">
+    <bpmn:startEvent id="Start_AnfrageEingegangen" name="Anfrage eingegangen">
+      <bpmn:outgoing>Flow_F1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Anfrage" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_AngebotErstellen" name="Angebot erstellen">
+      <bpmn:incoming>Flow_F1</bpmn:incoming>
+      <bpmn:outgoing>Flow_F2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_AngebotSenden" name="Angebot senden">
+      <bpmn:incoming>Flow_F2</bpmn:incoming>
+      <bpmn:outgoing>Flow_F3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_AngebotVersendet" name="Angebot versendet">
+      <bpmn:incoming>Flow_F3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_F1" sourceRef="Start_AnfrageEingegangen" targetRef="Task_AngebotErstellen" />
+    <bpmn:sequenceFlow id="Flow_F2" sourceRef="Task_AngebotErstellen" targetRef="Task_AngebotSenden" />
+    <bpmn:sequenceFlow id="Flow_F3" sourceRef="Task_AngebotSenden" targetRef="End_AngebotVersendet" />
+  </bpmn:process>
+
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Angebot">
+      <bpmndi:BPMNShape id="Participant_Kunde_di" bpmnElement="Participant_Kunde" isHorizontal="true"><dc:Bounds x="0" y="0" width="846" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Firma_di" bpmnElement="Participant_Firma" isHorizontal="true"><dc:Bounds x="0" y="184" width="846" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_BedarfErkannt_di" bpmnElement="Start_BedarfErkannt"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AngebotAnfragen_di" bpmnElement="Task_AngebotAnfragen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AngebotEmpfangen_di" bpmnElement="Task_AngebotEmpfangen"><dc:Bounds x="546" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AngebotLiegtVor_di" bpmnElement="End_AngebotLiegtVor"><dc:Bounds x="738" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_AnfrageEingegangen_di" bpmnElement="Start_AnfrageEingegangen"><dc:Bounds x="252" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="278" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AngebotErstellen_di" bpmnElement="Task_AngebotErstellen"><dc:Bounds x="378" y="216" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AngebotSenden_di" bpmnElement="Task_AngebotSenden"><dc:Bounds x="546" y="216" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AngebotVersendet_di" bpmnElement="End_AngebotVersendet"><dc:Bounds x="738" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="278" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_K1_di" bpmnElement="Flow_K1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_K2_di" bpmnElement="Flow_K2"><di:waypoint x="330" y="72"/><di:waypoint x="546" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_K3_di" bpmnElement="Flow_K3"><di:waypoint x="666" y="72"/><di:waypoint x="738" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_F1_di" bpmnElement="Flow_F1"><di:waypoint x="288" y="256"/><di:waypoint x="378" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_F2_di" bpmnElement="Flow_F2"><di:waypoint x="498" y="256"/><di:waypoint x="546" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_F3_di" bpmnElement="Flow_F3"><di:waypoint x="666" y="256"/><di:waypoint x="738" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Anfrage_di" bpmnElement="MessageFlow_Anfrage"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="238"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="168" width="42" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Angebot_di" bpmnElement="MessageFlow_Angebot"><di:waypoint x="606" y="216"/><di:waypoint x="606" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="157" width="47" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
