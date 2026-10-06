@@ -35,7 +35,7 @@
       <bpmndi:BPMNShape id="t3_di" bpmnElement="t3"><dc:Bounds x="546" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="738" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="n1_di" bpmnElement="n1"><dc:Bounds x="297" y="-22" width="150" height="44"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="n2_di" bpmnElement="n2"><dc:Bounds x="213" y="147" width="150" height="44"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n2_di" bpmnElement="n2"><dc:Bounds x="213" y="212" width="150" height="44"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="n3_di" bpmnElement="n3"><dc:Bounds x="602" y="226" width="150" height="44"/></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="72"/><di:waypoint x="413" y="72"/></bpmndi:BPMNEdge>
@@ -44,7 +44,7 @@
       <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5"><di:waypoint x="498" y="216"/><di:waypoint x="606" y="216"/><di:waypoint x="606" y="112"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="f6_di" bpmnElement="f6"><di:waypoint x="666" y="72"/><di:waypoint x="738" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="a1_di" bpmnElement="a1"><di:waypoint x="372" y="72"/><di:waypoint x="372" y="22"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="a2_di" bpmnElement="a2"><di:waypoint x="363" y="169"/><di:waypoint x="438" y="137"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a2_di" bpmnElement="a2"><di:waypoint x="288" y="212"/><di:waypoint x="438" y="137"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="a3_di" bpmnElement="a3"><di:waypoint x="552" y="216"/><di:waypoint x="602" y="248"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

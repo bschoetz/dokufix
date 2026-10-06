@@ -36,7 +36,7 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">
-      <bpmndi:BPMNShape id="L1_di" bpmnElement="L1" isHorizontal="true"><dc:Bounds x="30" y="-74" width="1152" height="342"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L1_di" bpmnElement="L1" isHorizontal="true"><dc:Bounds x="30" y="-234" width="1152" height="502"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="L2_di" bpmnElement="L2" isHorizontal="true"><dc:Bounds x="30" y="268" width="1152" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="t1_di" bpmnElement="t1"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
@@ -48,7 +48,7 @@
       <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="934" y="322" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="907" y="362" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="n1_di" bpmnElement="n1"><dc:Bounds x="355" y="-37" width="150" height="44"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="n2_di" bpmnElement="n2"><dc:Bounds x="60" y="-62" width="200" height="44"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="n3_di" bpmnElement="n3"><dc:Bounds x="143" y="147" width="250" height="119"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n3_di" bpmnElement="n3"><dc:Bounds x="143" y="-222" width="250" height="119"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="n4_di" bpmnElement="n4"><dc:Bounds x="646" y="206" width="150" height="44"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="n5_di" bpmnElement="n5"><dc:Bounds x="1020" y="318" width="150" height="44"/></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
@@ -61,7 +61,7 @@
       <bpmndi:BPMNEdge id="f8_di" bpmnElement="f8"><di:waypoint x="862" y="340"/><di:waypoint x="934" y="340"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="a1_di" bpmnElement="a1"><di:waypoint x="309" y="32"/><di:waypoint x="355" y="-15"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="a2_di" bpmnElement="a2"><di:waypoint x="222" y="32"/><di:waypoint x="160" y="-18"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="a3_di" bpmnElement="a3"><di:waypoint x="268" y="147"/><di:waypoint x="387" y="81"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="a3_di" bpmnElement="a3"><di:waypoint x="268" y="-103"/><di:waypoint x="392" y="58"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="a4_di" bpmnElement="a4"><di:waypoint x="596" y="228"/><di:waypoint x="646" y="228"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="a5_di" bpmnElement="a5"><di:waypoint x="970" y="340"/><di:waypoint x="1020" y="340"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

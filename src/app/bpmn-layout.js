@@ -2808,7 +2808,13 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       // One at a message flow belongs to no pool, and no frame grows around it: it keeps off the pools' frames, as a
       // message flow's label (review of 2.31: one lay across two frames); the frame of a pool grows around its own.
       const offFrames = n.pool != null ? () => true : place => covered(place, edges) === 0;
-      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken], NOTE_CLEAR) === 0 && offFrames(place) && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
+      // Nor does it lie on the border between two lanes (review of 2.31, demo-notizen: one's lower edge on it): a line
+      // 1 px either side, as wide as anything, since the lanes widen later to whatever stands beside them.
+      const borders = model.lanes.slice(1).flatMap((l, i) => {
+        const above = model.lanes[i];
+        return (above.pool ?? 0) === (l.pool ?? 0) && !(above.synthetic && l.synthetic) ? [[-1e6, laneBox[l.key][1] - 1, 2e6, 2]] : [];
+      });
+      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken, ...borders], NOTE_CLEAR) === 0 && offFrames(place) && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
       let place = null, anchor = anchors[0];
       rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors){
         place = notePlaces(centre(an), size, far).find(p => clear(p, an, crossing));

@@ -59,14 +59,14 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Morgen">
-      <bpmndi:BPMNShape id="Participant_Familie_di" bpmnElement="Participant_Familie" isHorizontal="true"><dc:Bounds x="0" y="-108" width="1101" height="681"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Mama_di" bpmnElement="Lane_Mama" isHorizontal="true"><dc:Bounds x="30" y="-108" width="1071" height="208"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Kind_di" bpmnElement="Lane_Kind" isHorizontal="true"><dc:Bounds x="30" y="100" width="1071" height="329"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Familie_di" bpmnElement="Participant_Familie" isHorizontal="true"><dc:Bounds x="0" y="-64" width="1101" height="637"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Mama_di" bpmnElement="Lane_Mama" isHorizontal="true"><dc:Bounds x="30" y="-64" width="1071" height="208"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kind_di" bpmnElement="Lane_Kind" isHorizontal="true"><dc:Bounds x="30" y="144" width="1071" height="285"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Papa_di" bpmnElement="Lane_Papa" isHorizontal="true"><dc:Bounds x="30" y="429" width="1071" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_Wecker_di" bpmnElement="Start_Wecker"><dc:Bounds x="102" y="10" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="-24" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Wecker_di" bpmnElement="Start_Wecker"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="20" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Split_Start_di" bpmnElement="Split_Start"><dc:Bounds x="210" y="191" width="50" height="50"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Mama_Duschen_di" bpmnElement="Mama_Duschen"><dc:Bounds x="308" y="-12" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Mama_Anziehen_di" bpmnElement="Mama_Anziehen"><dc:Bounds x="476" y="-12" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Mama_Duschen_di" bpmnElement="Mama_Duschen"><dc:Bounds x="308" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Mama_Anziehen_di" bpmnElement="Mama_Anziehen"><dc:Bounds x="476" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Kind_Zaehne_di" bpmnElement="Kind_Zaehne"><dc:Bounds x="308" y="176" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Kind_BadFrei_di" bpmnElement="Kind_BadFrei"><dc:Bounds x="518" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="238" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Kind_Schulweg_di" bpmnElement="Kind_Schulweg"><dc:Bounds x="644" y="176" width="120" height="80"/></bpmndi:BPMNShape>
@@ -75,24 +75,24 @@
       <bpmndi:BPMNShape id="Papa_FrischMachen_di" bpmnElement="Papa_FrischMachen"><dc:Bounds x="644" y="461" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Join_Aufbruch_di" bpmnElement="Join_Aufbruch"><dc:Bounds x="812" y="191" width="50" height="50"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Ende_di" bpmnElement="Ende"><dc:Bounds x="934" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="907" y="238" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Notiz_Taktung_di" bpmnElement="Notiz_Taktung"><dc:Bounds x="604" y="104" width="200" height="44"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Notiz_MamaBad_di" bpmnElement="Notiz_MamaBad"><dc:Bounds x="453" y="-96" width="200" height="59"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Notiz_Taktung_di" bpmnElement="Notiz_Taktung"><dc:Bounds x="629" y="79" width="200" height="44"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Notiz_MamaBad_di" bpmnElement="Notiz_MamaBad"><dc:Bounds x="453" y="-52" width="200" height="59"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Notiz_Kreuzung_di" bpmnElement="Notiz_Kreuzung"><dc:Bounds x="889" y="381" width="200" height="44"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="120" y="46"/><di:waypoint x="120" y="216"/><di:waypoint x="210" y="216"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="235" y="191"/><di:waypoint x="235" y="28"/><di:waypoint x="308" y="28"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="120" y="90"/><di:waypoint x="120" y="216"/><di:waypoint x="210" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="235" y="191"/><di:waypoint x="235" y="72"/><di:waypoint x="308" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="260" y="216"/><di:waypoint x="308" y="216"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="235" y="241"/><di:waypoint x="235" y="501"/><di:waypoint x="308" y="501"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="428" y="28"/><di:waypoint x="476" y="28"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="428" y="72"/><di:waypoint x="476" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="428" y="216"/><di:waypoint x="518" y="216"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="554" y="216"/><di:waypoint x="644" y="216"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F8_di" bpmnElement="F8"><di:waypoint x="428" y="501"/><di:waypoint x="518" y="501"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9"><di:waypoint x="554" y="501"/><di:waypoint x="644" y="501"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10"><di:waypoint x="596" y="28"/><di:waypoint x="837" y="28"/><di:waypoint x="837" y="191"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10"><di:waypoint x="596" y="72"/><di:waypoint x="837" y="72"/><di:waypoint x="837" y="191"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11"><di:waypoint x="764" y="216"/><di:waypoint x="812" y="216"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F12_di" bpmnElement="F12"><di:waypoint x="764" y="501"/><di:waypoint x="837" y="501"/><di:waypoint x="837" y="241"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F13_di" bpmnElement="F13"><di:waypoint x="862" y="216"/><di:waypoint x="934" y="216"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Assoc_Taktung_di" bpmnElement="Assoc_Taktung"><di:waypoint x="604" y="126"/><di:waypoint x="547" y="202"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Assoc_MamaBad_di" bpmnElement="Assoc_MamaBad"><di:waypoint x="453" y="-66"/><di:waypoint x="404" y="-12"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_Taktung_di" bpmnElement="Assoc_Taktung"><di:waypoint x="629" y="101"/><di:waypoint x="547" y="202"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Assoc_MamaBad_di" bpmnElement="Assoc_MamaBad"><di:waypoint x="453" y="-22"/><di:waypoint x="404" y="32"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Assoc_Kreuzung_di" bpmnElement="Assoc_Kreuzung"><di:waypoint x="889" y="403"/><di:waypoint x="744" y="256"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

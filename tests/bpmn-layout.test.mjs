@@ -24,7 +24,7 @@ import {
   noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS,
 } from '../src/app/bpmn-layout.js';
 import { breaksOf } from './bpmn-rules.mjs';
-import { readFixture, readModel } from './bpmn-fixtures.mjs';
+import { readFixture, readModel, fixtureNames, measureOf, MODES } from './bpmn-fixtures.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The reference input of story 2.8: 1 pool, 4 lanes, 16 symbols, 17 flows.
@@ -1355,6 +1355,24 @@ test('a text annotation at a message flow keeps off the pools\' frames (review o
     assert.ok(!(inside && (across(n.y, n.bottom, f.y) || across(n.y, n.bottom, f.bottom) || across(n.x, n.right, f.x) || across(n.x, n.right, f.right))), 'across the frame of ' + p + ': ' + JSON.stringify([n, f]));
   }
   assert.deepEqual(breaks, []);
+});
+
+test('no text annotation lies on the border between two lanes: each keeps 6 px off it, in every fixture with text annotations (review of 2.31)', () => {
+  for (const name of fixtureNames()){
+    const fx = readFixture(name);
+    if (!fx.xml.includes('textAnnotation')) continue;
+    for (const mode of MODES){
+      const { model } = readModel(fx.xml), di = layoutGeometry(model, fx.raw, measureOf(fx.sizes, mode));
+      // The borders between two lanes of one pool; a box keeps NOTE_CLEAR off the line, 1 px either side of it.
+      const borders = model.lanes.slice(1).filter((l, i) => (l.pool ?? 0) === (model.lanes[i].pool ?? 0) && di.lanes[l.id]).map(l => di.lanes[l.id][1]);
+      // Not checked here: a text annotation in another lane than its partner's, which that lane grows around until it
+      // lies LABEL_GAP (4 px) inside (labelRoom(); notiz-morgen's Notiz_Kreuzung).
+      for (const [id, [, y, , h]] of Object.entries(di.notes || {})) for (const b of borders){
+        if (y === b + 4 || y + h === b - 4) continue;
+        assert.ok(y + h <= b - 7 || y >= b + 7, name + ', ' + mode + ': ' + id + ' at ' + y + '–' + (y + h) + ', the border at ' + b);
+      }
+    }
+  }
 });
 
 test('where nothing near is free, the lane grows at its border for the text annotation; the symbols keep their order (notiz-r12)', () => {
