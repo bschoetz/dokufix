@@ -55,7 +55,7 @@ test('a listed break that is gone fails as well', () => {
 // A diagram made up for the rules: in the pool, lane L1 holds the tasks A and
 // B side by side and the gateway G beyond them, lane L2 below it the task C.
 const M = {
-  pool: { id: 'P' },
+  pools: [{ id: 'P' }],
   lanes: [{ id: 'L1', nodes: ['A', 'B', 'G'] }, { id: 'L2', nodes: ['C'] }],
   nodes: [{ id: 'A', type: 'task', name: 'A' }, { id: 'B', type: 'task', name: 'B' }, { id: 'G', type: 'gateway', name: 'G?' }, { id: 'C', type: 'task', name: 'C' }],
   flows: [{ id: 'F1', from: 'A', to: 'B' }, { id: 'F2', from: 'B', to: 'A' }, { id: 'F3', from: 'A', to: 'G' }, { id: 'F4', from: 'G', to: 'C' }],
@@ -84,15 +84,36 @@ test('each rule on a diagram made up for it', () => {
     ['in and out at one port', { flows: { F1: [[[220, 90], [300, 90]]], F2: [[[300, 90], [220, 90]]] } }, ['double-headed A F1 F2', 'double-headed B F1 F2', 'on-one-line-foreign F1 F2']],
     ['two runs 10 px apart', { flows: { F1: [[[220, 80], [300, 80]]], F2: [[[300, 90], [220, 90]]] } }, ['parallel F1 F2']],
     ['two flows from one port on one line', { flows: { F1: [[[220, 90], [300, 90]]], F3: [[[220, 90], [260, 90], [260, 160], [525, 160], [525, 115]]] } }, ['on-one-line-shared F1 F3']],
-    ['a waypoint below the lanes', { flows: { F4: [[[550, 90], [600, 90], [600, 420], [260, 420], [260, 290], [220, 290]]] } }, ['point-outside-lanes F4']],
+    ['a waypoint below the lanes', { flows: { F4: [[[550, 90], [600, 90], [600, 420], [260, 420], [260, 290], [220, 290]]] } }, ['point-outside-lanes F4', 'sequence-outside-pool F4']],
     ['a task across the border of its lane', { shapes: { C: [100, 150, 120, 80] } }, ['node-outside-lane C L2']],
     ['a gap between two lanes', { shapes: { L2: [30, 210, 970, 190] } }, ['lane-gap L1 L2']],
     ['a flow label on its flow and on a task', { flows: { F1: [[[220, 90], [300, 90]], [290, 82, 30, 15]] } }, ['label-on-flow F1 F1', 'label-on-node F1 B']],
     ['two labels on each other: the gateway\'s text, 20 px wide, is centred in its box of 90 px', { flows: { F1: [[[220, 90], [300, 90]], [250, 30, 30, 15]] }, labels: { G: [220, 30, 90, 15] } }, ['label-on-label F1 G']],
     ['the box of 90 px is not the text', { flows: { F1: [[[220, 90], [300, 90]], [480, 10, 30, 15]] }, labels: { G: [480, 10, 90, 15] } }, []],
     ['a label beyond the lanes and the pool', { labels: { G: [-60, -20, 90, 15] } }, ['label-outside-lane G', 'label-outside-pool G']],
+    ['a task beyond the pool', { shapes: { C: [100, 350, 120, 80] } }, ['node-outside-lane C L2', 'node-outside-pool C P']],
   ];
   for (const [what, input, expected] of cases) assert.deepEqual(made(input), expected, what);
+});
+
+// Story 2.12: a second pool Q below P, with lane L3 holding the task D, and message flows between the pools.
+test('several pools: a message flow docks vertically and is in no lane; pools neither overlap nor touch; a sequence flow stays in its pool', () => {
+  const shapes = { ...SHAPES, Q: [0, 440, 1000, 200], L3: [30, 440, 970, 200], D: [300, 500, 120, 80] };
+  const model = { ...M, pools: [{ id: 'P' }, { id: 'Q' }], lanes: [...M.lanes.map(l => ({ ...l, pool: 0 })), { id: 'L3', nodes: ['D'], pool: 1 }],
+    nodes: [...M.nodes, { id: 'D', type: 'task', name: 'D' }], flows: [], messages: [{ id: 'N1', from: 'B', to: 'D' }] };
+  const check = (ways, over = {}) => breaksOf('<x>\n' + Object.entries({ ...shapes, ...over }).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+    Object.entries(ways).map(([id, w]) => '      <bpmndi:BPMNEdge id="' + id + '_di" bpmnElement="' + id + '">' + w.map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>\n').join('') + '</x>', model, SIZES);
+  // Straight down from B's bottom through the gap into D's top: no break, though the gap is in no lane.
+  assert.deepEqual(check({ N1: [[360, 130], [360, 500]] }), []);
+  // Out of B's side, then down: it leaves its source sideways.
+  assert.deepEqual(check({ N1: [[420, 90], [460, 90], [460, 420], [360, 420], [360, 500]] }), ['message-side N1']);
+  // The pools touching.
+  assert.deepEqual(check({ N1: [[360, 130], [360, 500]] }, { Q: [0, 400, 1000, 240] }), ['pool-overlap P Q']);
+  // A sequence flow of P into the gap.
+  const seq = { ...model, flows: [{ id: 'F1', from: 'A', to: 'B' }] };
+  assert.deepEqual(breaksOf('<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+    '      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="160" y="130"/><di:waypoint x="160" y="140"/><di:waypoint x="260" y="140"/><di:waypoint x="260" y="420"/><di:waypoint x="360" y="420"/><di:waypoint x="360" y="130"/></bpmndi:BPMNEdge>\n</x>', seq, SIZES),
+    ['point-outside-lanes F1', 'sequence-outside-pool F1']);
 });
 
 test('two flows that arrive at one gateway and run together into one docking point are a merge, not a break; at a task they are', () => {

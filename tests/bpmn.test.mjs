@@ -18,7 +18,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML, DOMParser } from 'linkedom';
 import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, labelMeasurer, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT, BPMN_VIEWER_CONFIG } from '../src/app/bpmn.js';
-import { LAYOUT_SEVERAL_POOLS, labelSize } from '../src/app/bpmn-layout.js';
+import { LAYOUT_NOTHING, labelSize } from '../src/app/bpmn-layout.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 
 const WITH_DI = '<bpmn:definitions xmlns:bpmn="m" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
@@ -356,9 +356,9 @@ test('a refusal of the layout comes before Mermaid is asked; an error of Mermaid
   const logged = t.mock.method(console, 'error', () => {});
   const { Viewer } = standIn();
   const layout = mermaidStandIn();
-  const two = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P1"><bpmn:task id="A"/></bpmn:process><bpmn:process id="P2"><bpmn:task id="B"/></bpmn:process></bpmn:definitions>';
+  const empty = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P1"/></bpmn:definitions>';
   let document = page();
-  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, two)), { message: LAYOUT_SEVERAL_POOLS }), layout);
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, empty)), { message: LAYOUT_NOTHING }), layout);
   assert.equal(layout.log.length, 0);
   assert.equal(logged.mock.calls.at(-1).arguments[0], 'BPMN error:');
   document = page();

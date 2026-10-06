@@ -20,7 +20,7 @@ import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, DEFAULT_RULES,
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, dedupe, orthogonal,
-  growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_SEVERAL_POOLS, LAYOUT_NOTHING, layoutStrayText,
+  growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_NOTHING, layoutStrayText,
 } from '../src/app/bpmn-layout.js';
 import { readFixture, readModel } from './bpmn-fixtures.mjs';
 
@@ -37,7 +37,8 @@ const LINE = '<bpmn:startEvent id="S" name="Los"/><bpmn:task id="T" name="Tun"/>
 // ---------- reading ----------
 test('the reference input: the pool, 4 lanes, 16 flow nodes with their kinds, 17 flows, nothing left out', () => {
   const { model, leftOut } = read(REFERENCE);
-  assert.deepEqual(model.pool, { id: 'Participant_1', name: 'Übergabe an die Tourenplanung' });
+  assert.deepEqual(model.pools, [{ id: 'Participant_1', name: 'Übergabe an die Tourenplanung' }]);
+  assert.deepEqual([model.messages, model.insert], [[], null]);
   assert.equal(model.plane, 'Collaboration_1');
   assert.deepEqual(model.lanes.map(l => [l.id, l.name, l.nodes.length, l.key, l.synthetic]),
     [['Lane_Kunde', 'Kunde', 3, 'l1', false], ['Lane_Hofbuero', 'Hofbüro', 7, 'l2', false], ['Lane_Kundenkartei', 'Kundenkartei', 4, 'l3', false], ['Lane_Tourenplanung', 'Tourenplanung', 2, 'l4', false]]);
@@ -58,11 +59,11 @@ test('the reference input: the pool, 4 lanes, 16 flow nodes with their kinds, 17
 
 test('no lanes: one synthetic lane with every node; a participant is the pool, without one there is none', () => {
   const bare = read(xmlOf('<bpmn:process id="P">' + LINE + '</bpmn:process>')).model;
-  assert.equal(bare.pool, null);
+  assert.deepEqual(bare.pools, [{ id: null, name: '' }]);
   assert.equal(bare.plane, 'P');
   assert.deepEqual(bare.lanes.map(l => [l.id, l.nodes, l.synthetic]), [['', ['S', 'T', 'E'], true]]);
   const pooled = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="Pool" name="Leihstelle" processRef="P"/></bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>')).model;
-  assert.deepEqual(pooled.pool, { id: 'Pool', name: 'Leihstelle' });
+  assert.deepEqual(pooled.pools, [{ id: 'Pool', name: 'Leihstelle' }]);
   assert.equal(pooled.plane, 'K');
   assert.deepEqual(pooled.lanes.map(l => [l.name, l.synthetic]), [['Leihstelle', true]]);
 });
@@ -73,13 +74,7 @@ test('a default namespace instead of a prefix reads the same', () => {
   assert.deepEqual([model.nodes.length, model.flows.length, model.plane], [3, 2, 'P']);
 });
 
-test('the refusals: several pools, nothing to place, nodes in no lane', () => {
-  const two = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P1"/><bpmn:participant id="B" processRef="P2"/></bpmn:collaboration>' +
-    '<bpmn:process id="P1"><bpmn:task id="X"/></bpmn:process><bpmn:process id="P2"><bpmn:task id="Y"/></bpmn:process>');
-  assert.throws(() => read(two), { message: LAYOUT_SEVERAL_POOLS });
-  assert.throws(() => read(xmlOf('<bpmn:process id="P1"><bpmn:task id="X"/></bpmn:process><bpmn:process id="P2"><bpmn:task id="Y"/></bpmn:process>')), { message: LAYOUT_SEVERAL_POOLS });
-  // A black-box pool beside one with a process is several pools too.
-  assert.throws(() => read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="B"/></bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>')), { message: LAYOUT_SEVERAL_POOLS });
+test('the refusals: nothing to place, nodes in no lane', () => {
   assert.throws(() => read(xmlOf('<bpmn:process id="P"/>')), { message: LAYOUT_NOTHING });
   assert.throws(() => read(xmlOf('<bpmn:process id="P"><bpmn:sequenceFlow id="F" sourceRef="a" targetRef="b"/></bpmn:process>')), { message: LAYOUT_NOTHING });
   // A pool without a process of its own, alone: nothing to place.
@@ -89,7 +84,6 @@ test('the refusals: several pools, nothing to place, nodes in no lane', () => {
     '<bpmn:task id="A"/><bpmn:task id="B"/><bpmn:task id="C"/></bpmn:process>');
   assert.throws(() => read(stray), { message: 'Diese Elemente liegen in keiner Bahn: B, C.' });
   assert.equal(layoutStrayText(['A']), 'Diese Elemente liegen in keiner Bahn: A.');
-  assert.equal(LAYOUT_SEVERAL_POOLS, 'Mehrere Pools lassen sich ohne Koordinaten noch nicht anordnen.');
   assert.equal(LAYOUT_NOTHING, 'Das BPMN-XML enthält kein Element, das sich anordnen lässt.');
 });
 
@@ -322,7 +316,7 @@ test('the geometry: BPMN sizes, the pool around the lanes, every flow on the out
   const di = layoutGeometry(model, raw);
   assert.deepEqual(Object.keys(di.nodes), ['S', 'G', 'A', 'B', 'E']);
   assert.deepEqual(model.nodes.map(n => di.nodes[n.id].slice(2)), [[36, 36], [50, 50], [120, 80], [120, 80], [36, 36]]);
-  const [px, py, pw, ph] = di.pool, l1 = di.lanes.L1, l2 = di.lanes.L2;
+  const [px, py, pw, ph] = Object.values(di.pools)[0], l1 = di.lanes.L1, l2 = di.lanes.L2;
   assert.equal(px + 30, l1[0], 'the pool\'s head before the lanes');
   assert.deepEqual([py, py + ph], [l1[1], l2[1] + l2[3]]);
   assert.equal(px + pw, l1[0] + l1[2]);
@@ -372,7 +366,7 @@ test('without lanes no lane is written; without a participant no pool', () => {
   const raw = { nodes: { n1: { cx: 50, cy: 50, w: 60, h: 60 }, n2: { cx: 200, cy: 50, w: 120, h: 50 }, n3: { cx: 350, cy: 50, w: 60, h: 60 } },
                 lanes: { l1: { x1: 0, y1: 0, x2: 400, y2: 100 } }, edges: [[P(80, 50), P(140, 50)], [P(260, 50), P(320, 50)]] };
   const di = layoutGeometry(model, raw);
-  assert.equal(di.pool, null);
+  assert.deepEqual(di.pools, {});
   assert.deepEqual(di.lanes, {});
   const { xml } = appendDiagram(xmlOf('<bpmn:process id="P">' + LINE + '</bpmn:process>'), model, di);
   assert.equal((xml.match(/<bpmndi:BPMNShape /g) || []).length, 3);
@@ -501,7 +495,7 @@ test('a lane without an id keeps its row and is not written; a participant witho
   const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant name="Ohne" processRef="P"/></bpmn:collaboration><bpmn:process id="P"><bpmn:laneSet id="LS">' +
     '<bpmn:lane name="X"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="L2" name="Y"><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' + LINE + '</bpmn:process>');
   const { model, leftOut } = read(xml);
-  assert.equal(model.pool, null);
+  assert.deepEqual(model.pools, [{ id: null, name: 'Ohne' }]);
   assert.deepEqual(model.lanes.map(l => [l.id, l.nodes, l.synthetic]), [['', ['S', 'T'], true], ['L2', ['E'], false]]);
   assert.deepEqual(leftOut.map(leftOutLine), ['lane (no id): has no id; its row is laid out, the lane is not drawn', 'participant (no id): has no id; it is not drawn as a pool']);
   assert.match(mermaidSource(model), /subgraph l1\["X"\]/);
@@ -539,9 +533,9 @@ test('the lanes and the pool grow until every waypoint and every label lies insi
   // grows 11 px up and 11 px down.
   const fx = readFixture('r06'), { model } = readModel(fx.xml);
   const di = layoutGeometry(model, fx.raw);
-  const [px, py, pw, ph] = di.pool, lane = di.lanes.Lane_1;
+  const [px, py, pw, ph] = Object.values(di.pools)[0], lane = di.lanes.Lane_1;
   const inside = ([x, y]) => x >= lane[0] + 12 && x <= lane[0] + lane[2] - 12 && y >= py + 12 && y <= py + ph - 12;
-  for (const way of Object.values(di.flows)) for (const p of way) assert.ok(inside(p), JSON.stringify(p) + ' outside ' + JSON.stringify(di.pool));
+  for (const way of Object.values(di.flows)) for (const p of way) assert.ok(inside(p), JSON.stringify(p) + ' outside ' + JSON.stringify(di.pools));
   for (const [x, y, w, h] of Object.values(di.flowLabels)) assert.ok(inside([x, y]) && inside([x + w, y + h]), 'label ' + JSON.stringify([x, y, w, h]));
   for (const [, y, , h] of Object.values(di.labels)) assert.ok(y >= py + 12 && y + h <= py + ph - 12, 'label at ' + y);
   assert.ok(py < 0, 'the frame grew upwards: ' + py);
@@ -629,7 +623,7 @@ test('a lane without an id above a drawn lane in a pool: the drawn lane keeps it
   // R1 off, the end stays in lane Y; with it, the end stands in its predecessor's lane X and Y keeps an empty row.
   for (const [options, inY] of [[{ gatewayLane: false }, true], [{}, false]]){
     const di = layoutGeometry(model, raw, labelSize, options);
-    const y = di.lanes.Y, [px, py, pw, ph] = di.pool, t = di.nodes.T, e = di.nodes.E;
+    const y = di.lanes.Y, [px, py, pw, ph] = Object.values(di.pools)[0], t = di.nodes.T, e = di.nodes.E;
     assert.ok(y[1] >= t[1] + t[3], 'lane Y starts below the task of lane X: ' + JSON.stringify({ y, t }));
     assert.equal(e[1] >= y[1] && e[1] + e[3] <= y[1] + y[3], inY, 'E in lane Y: ' + inY);
     if (!inY) assert.equal(e[1] + e[3] / 2, t[1] + t[3] / 2, 'E in the row of T');
@@ -746,4 +740,117 @@ test('the router merges two pieces of one direction: a Z whose middle piece has 
     const [lo, hi] = [pts[0][1], pts[pts.length - 1][1]].sort((a, b) => a - b);
     assert.ok(pts.every(([, y]) => y >= lo && y <= hi), name + ' ' + id + ': ' + JSON.stringify(pts));
   }
+});
+
+// ---------- several pools (story 2.12) ----------
+// Two pools: "Kunde" without lanes (S1 → A → E1), "Firma" with lanes L1 (S2 → B) and L2 (C → E2); message
+// flows A → S2 and C → E1's predecessor … as each case needs.
+const POOLS = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PK" name="Kunde" processRef="P1"/><bpmn:participant id="PF" name="Firma" processRef="P2"/>' +
+  '<bpmn:messageFlow id="M1" name="Anfrage" sourceRef="A" targetRef="S2"/><bpmn:messageFlow id="M2" name="Antwort" sourceRef="C" targetRef="W"/></bpmn:collaboration>' +
+  '<bpmn:process id="P1"><bpmn:startEvent id="S1"/><bpmn:sendTask id="A" name="Anfragen"/><bpmn:intermediateCatchEvent id="W" name="Antwort da"/><bpmn:endEvent id="E1"/>' +
+  '<bpmn:sequenceFlow id="F1" sourceRef="S1" targetRef="A"/><bpmn:sequenceFlow id="F2" sourceRef="A" targetRef="W"/><bpmn:sequenceFlow id="F3" sourceRef="W" targetRef="E1"/></bpmn:process>' +
+  '<bpmn:process id="P2"><bpmn:laneSet id="LS"><bpmn:lane id="L1" name="Eingang"><bpmn:flowNodeRef>S2</bpmn:flowNodeRef><bpmn:flowNodeRef>B</bpmn:flowNodeRef></bpmn:lane>' +
+  '<bpmn:lane id="L2" name="Versand"><bpmn:flowNodeRef>C</bpmn:flowNodeRef><bpmn:flowNodeRef>E2</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+  '<bpmn:startEvent id="S2"/><bpmn:task id="B" name="Prüfen"/><bpmn:sendTask id="C" name="Antworten"/><bpmn:endEvent id="E2"/>' +
+  '<bpmn:sequenceFlow id="G1" sourceRef="S2" targetRef="B"/><bpmn:sequenceFlow id="G2" sourceRef="B" targetRef="C"/><bpmn:sequenceFlow id="G3" sourceRef="C" targetRef="E2"/></bpmn:process>');
+// Raw positions as Mermaid gives them without the message flows: each pool from column 0.
+const rawOf = (model, cx) => ({ nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: cx[n.id], cy: 0, w: 50, h: 50 }])) });
+const box = (di, id) => di.nodes[id] || di.pools[id] || di.lanes[id];
+const within = ([x, y, w, h], [X, Y, W, H]) => x >= X && y >= Y && x + w <= X + W && y + h <= Y + H;
+
+test('several pools: one per participant in its order, the lanes of each next to each other, message flows between flow nodes', () => {
+  const { model, leftOut } = read(POOLS);
+  assert.deepEqual(model.pools, [{ id: 'PK', name: 'Kunde' }, { id: 'PF', name: 'Firma' }]);
+  assert.equal(model.plane, 'K');
+  assert.deepEqual(model.lanes.map(l => [l.id, l.name, l.key, l.pool, l.synthetic]), [['', 'Kunde', 'l1', 0, true], ['L1', 'Eingang', 'l2', 1, false], ['L2', 'Versand', 'l3', 1, false]]);
+  assert.deepEqual(model.nodes.map(n => n.key), ['n1', 'n2', 'n3', 'n4', 'n5', 'n6', 'n7', 'n8']);
+  assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2', 'F3', 'G1', 'G2', 'G3']);
+  assert.deepEqual(model.messages, [{ id: 'M1', from: 'A', to: 'S2', name: 'Anfrage' }, { id: 'M2', from: 'C', to: 'W', name: 'Antwort' }]);
+  assert.deepEqual([model.insert, leftOut], [null, []]);
+  // Mermaid sees the lanes of both pools and no message flow.
+  assert.ok(!/n2 --> n5|n7 --> n3/.test(mermaidSource(model)));
+});
+
+test('several pools: what is left out, each a line, in the order of the XML; a pool without a process beside pools with one is one of them', () => {
+  const xml = POOLS.replace('<bpmn:messageFlow id="M1"', '<bpmn:participant id="PX" name="Bank"/><bpmn:messageFlow id="MX" sourceRef="B" targetRef="PX"/>' +
+    '<bpmn:messageFlow id="MI" sourceRef="S2" targetRef="C"/><bpmn:messageFlow id="M1"');
+  const { model, leftOut } = read(xml);
+  assert.deepEqual(model.pools.map(p => p.id), ['PK', 'PF']);
+  assert.deepEqual(model.messages.map(m => m.id), ['M1', 'M2']);
+  assert.deepEqual(leftOut.map(leftOutLine), ['messageFlow MX: attached to a pool, not to a flow node', 'messageFlow MI: a message flow within one pool',
+    'participant PX: a pool without a process of its own beside pools with one']);
+  // One pool with a process beside a black box: one pool, as before, on the collaboration's plane.
+  const one = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="B"/></bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>'));
+  assert.deepEqual([one.model.pools, one.model.plane, one.leftOut], [[{ id: 'A', name: '' }], 'K', []]);
+});
+
+test('processes without a collaboration: drawn as pools, the collaboration inserted before the first process, nothing else of the XML changed', () => {
+  const body = '<bpmn:process id="P1" name="Kunde">' + LINE + '</bpmn:process>\n  <bpmn:process id="P2"><bpmn:task id="X" name="Tun"/></bpmn:process>';
+  const xml = '<?xml version="1.0"?>\n<bpmn:definitions ' + NS + ' id="dokufix_pool_1">\n  ' + body + '\n</bpmn:definitions>\n';
+  const { model } = read(xml);
+  assert.deepEqual(model.insert, { id: 'dokufix_zusammenarbeit', participants: [{ id: 'dokufix_pool_1_2', name: 'Kunde', process: 'P1' }, { id: 'dokufix_pool_2', name: '', process: 'P2' }] });
+  assert.deepEqual(model.pools, [{ id: 'dokufix_pool_1_2', name: 'Kunde' }, { id: 'dokufix_pool_2', name: '' }]);
+  assert.equal(model.plane, 'dokufix_zusammenarbeit');
+  const di = layoutGeometry(model, rawOf(model, { S: 0, T: 100, E: 200, X: 0 }));
+  const out = appendDiagram(xml, model, di).xml;
+  assert.ok(out.includes('\n  <bpmn:collaboration id="dokufix_zusammenarbeit">\n    <bpmn:participant id="dokufix_pool_1_2" name="Kunde" processRef="P1"/>\n    <bpmn:participant id="dokufix_pool_2" processRef="P2"/>\n  </bpmn:collaboration>\n  <bpmn:process id="P1"'), out);
+  assert.equal(out.replace(/\n  <bpmn:collaboration[\s\S]*?<\/bpmn:collaboration>/, '').replace(/  <bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>\n/, ''), xml);
+  assert.ok(out.includes('bpmnElement="dokufix_zusammenarbeit"') && out.includes('bpmnElement="dokufix_pool_1_2" isHorizontal="true"'));
+  // The same with read again: the inserted collaboration is read as the author's would be.
+  assert.deepEqual(read(out.replace(/<bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>/, '')).model.pools, model.pools);
+});
+
+test('several pools laid out: one below the other with a gap, each symbol and sequence flow in its pool, the lanes in theirs', () => {
+  const { model } = read(POOLS);
+  const di = layoutGeometry(model, rawOf(model, { S1: 0, A: 100, W: 200, E1: 300, S2: 0, B: 100, C: 200, E2: 300 }));
+  const [pk, pf] = [di.pools.PK, di.pools.PF];
+  assert.ok(pf[1] >= pk[1] + pk[3] + 40, 'a gap of 40 px at least: ' + JSON.stringify({ pk, pf }));
+  assert.deepEqual([pk[0], pk[2]], [pf[0], pf[2]], 'both as wide');
+  for (const l of ['L1', 'L2']) assert.ok(within(di.lanes[l], pf));
+  assert.equal(di.lanes.L1[1] + di.lanes.L1[3], di.lanes.L2[1]);
+  const poolOf = { S1: pk, A: pk, W: pk, E1: pk, S2: pf, B: pf, C: pf, E2: pf };
+  for (const [id, p] of Object.entries(poolOf)) assert.ok(within(di.nodes[id], p), id);
+  for (const f of model.flows) for (const [x, y] of di.flows[f.id]) assert.ok(within([x, y, 0, 0], poolOf[f.from]), f.id + ' at ' + [x, y]);
+});
+
+test('a message flow: from its source to its target, vertically at both ends on the side facing the other pool, through no symbol, with its name', () => {
+  const { model } = read(POOLS);
+  const di = layoutGeometry(model, rawOf(model, { S1: 0, A: 100, W: 200, E1: 300, S2: 0, B: 100, C: 200, E2: 300 }));
+  for (const m of model.messages){
+    const w = di.flows[m.id], s = box(di, m.from), t = box(di, m.to);
+    const down = t[1] > s[1];
+    assert.equal(w[0][0], w[1][0], m.id + ' leaves vertically');
+    assert.equal(w.at(-1)[0], w.at(-2)[0], m.id + ' enters vertically');
+    assert.equal(w[0][1], down ? s[1] + s[3] : s[1], m.id + ' leaves on the side facing the target');
+    assert.ok(Math.abs(w.at(-1)[1] - (down ? t[1] : t[1] + t[3])) <= 1, m.id + ' enters on the side facing the source');
+    for (let i = 1; i < w.length; i++){
+      const [x1, x2, y1, y2] = [Math.min(w[i - 1][0], w[i][0]), Math.max(w[i - 1][0], w[i][0]), Math.min(w[i - 1][1], w[i][1]), Math.max(w[i - 1][1], w[i][1])];
+      for (const n of model.nodes) if (n.id !== m.from && n.id !== m.to){ const [x, y, bw, bh] = di.nodes[n.id]; assert.ok(!(x2 > x && x1 < x + bw && y2 > y && y1 < y + bh), m.id + ' through ' + n.id); }
+    }
+    assert.ok(di.flowLabels[m.id], m.id + ' has its label');
+  }
+  // R7: the target of a message flow stands in its source's column at the earliest: S2 below A, W below C.
+  const cx = id => di.nodes[id][0] + di.nodes[id][2] / 2;
+  assert.ok(cx('S2') >= cx('A') - 1 && cx('W') >= cx('C') - 1, JSON.stringify({ A: cx('A'), S2: cx('S2'), C: cx('C'), W: cx('W') }));
+  // In the diagram part: a shape per pool, an edge per message flow.
+  const xml = appendDiagram(POOLS, model, di).xml;
+  assert.ok(xml.includes('bpmnElement="PK" isHorizontal="true"') && xml.includes('bpmnElement="PF" isHorizontal="true"'));
+  assert.ok(xml.includes('bpmnElement="M1">') && xml.includes('bpmnElement="M2">'));
+});
+
+test('three pools: a message flow from the first to the third crosses the second through no symbol', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="P1" processRef="Q1"/><bpmn:participant id="P2" processRef="Q2"/><bpmn:participant id="P3" processRef="Q3"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="A" targetRef="C"/></bpmn:collaboration>' +
+    '<bpmn:process id="Q1"><bpmn:startEvent id="S1"/><bpmn:task id="A"/><bpmn:sequenceFlow id="F1" sourceRef="S1" targetRef="A"/></bpmn:process>' +
+    '<bpmn:process id="Q2"><bpmn:task id="B1"/><bpmn:task id="B2"/><bpmn:task id="B3"/><bpmn:sequenceFlow id="F2" sourceRef="B1" targetRef="B2"/><bpmn:sequenceFlow id="F3" sourceRef="B2" targetRef="B3"/></bpmn:process>' +
+    '<bpmn:process id="Q3"><bpmn:startEvent id="C"/><bpmn:task id="D"/><bpmn:sequenceFlow id="F4" sourceRef="C" targetRef="D"/></bpmn:process>');
+  const { model } = read(xml);
+  const di = layoutGeometry(model, rawOf(model, { S1: 0, A: 100, B1: 0, B2: 100, B3: 200, C: 0, D: 100 }));
+  const w = di.flows.M;
+  assert.ok(di.pools.P2[1] > di.pools.P1[1] && di.pools.P3[1] > di.pools.P2[1]);
+  for (let i = 1; i < w.length; i++){
+    const [x1, x2, y1, y2] = [Math.min(w[i - 1][0], w[i][0]), Math.max(w[i - 1][0], w[i][0]), Math.min(w[i - 1][1], w[i][1]), Math.max(w[i - 1][1], w[i][1])];
+    for (const id of ['S1', 'B1', 'B2', 'B3', 'D']){ const [x, y, bw, bh] = di.nodes[id]; assert.ok(!(x2 > x && x1 < x + bw && y2 > y && y1 < y + bh), 'through ' + id + ': ' + JSON.stringify(w)); }
+  }
+  assert.ok(w.slice(1).some(([, y], i) => Math.min(y, w[i][1]) < di.pools.P2[1] && Math.max(y, w[i][1]) > di.pools.P2[1] + di.pools.P2[3]), 'it crosses the second pool');
 });

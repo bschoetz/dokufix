@@ -31,8 +31,16 @@
 //   label-on-flow,            a label on a piece of a flow, on a foreign
 //   label-on-node,            symbol, on another label: <label's element>
 //   label-on-label            <what it lies on>
-//   label-outside-lane,       a label not inside one lane, not inside the pool
+//   label-outside-lane,       a label not inside one lane, not inside its pool
 //   label-outside-pool
+// and with several pools (story 2.12):
+//   node-outside-pool         a symbol not inside its pool
+//   sequence-outside-pool     a waypoint of a sequence flow outside its pool
+//   pool-overlap              two pools that overlap or touch
+//   message-side              a message flow that leaves its source or enters
+//                             its target other than vertically
+// A message flow counts as a flow for every rule but point-outside-lanes;
+// its label is in no lane and no pool.
 // A label is its box in the diagram part; an event's or a gateway's is as wide
 // as a label can be (90 px) and bpmn-js centres the text in it, so its box is
 // the text's measured width (<n>.sizes.json, else the estimate) centred there.
@@ -103,10 +111,15 @@ export function breaksOf(xml, model, sizes = {}){
   const di = readDiagram(xml);
   const nodes = Object.fromEntries(model.nodes.map(n => [n.id, di.shapes[n.id]]));
   const type = Object.fromEntries(model.nodes.map(n => [n.id, n.type]));
-  const flowOf = Object.fromEntries(model.flows.map(f => [f.id, f]));
+  const messages = model.messages || [];
+  const flowOf = Object.fromEntries(model.flows.concat(messages).map(f => [f.id, f]));
+  const isMessage = new Set(messages.map(m => m.id));
   const drawnLanes = model.lanes.filter(l => !l.synthetic);
   const lanes = drawnLanes.map(l => di.shapes[l.id]);
-  const pool = model.pool ? di.shapes[model.pool.id] : null;
+  const pools = model.pools || (model.pool ? [model.pool] : []);
+  const poolBox = i => pools[i] && pools[i].id ? di.shapes[pools[i].id] : null;
+  const poolOf = {};
+  for (const l of model.lanes) for (const id of l.nodes) poolOf[id] = l.pool ?? 0;
   const inside = (x, y, [lx, ly, lw, lh]) => x >= lx && x <= lx + lw && y >= ly && y <= ly + lh;
   const within = ([x, y, w, h], box) => inside(x, y, box) && inside(x + w, y + h, box);
 
@@ -171,12 +184,34 @@ export function breaksOf(xml, model, sizes = {}){
     else add(sf.from === tf.from || sf.to === tf.to ? 'on-one-line-shared' : 'on-one-line-foreign', ...ids);
   }
 
-  if (lanes.length) for (const [id, w] of Object.entries(di.flows)) for (const [x, y] of w) if (!lanes.some(l => inside(x, y, l))) add('point-outside-lanes', id);
+  // Lanes count for a pool that has lanes drawn; a pool without lanes is checked against its frame below.
+  const lanesOfPool = k => drawnLanes.filter(l => (l.pool ?? 0) === k).map(l => di.shapes[l.id]);
+  for (const [id, w] of Object.entries(di.flows)){
+    if (isMessage.has(id)) continue;
+    const own = lanesOfPool(poolOf[flowOf[id].from]);
+    if (own.length) for (const [x, y] of w) if (!own.some(l => inside(x, y, l))) add('point-outside-lanes', id);
+  }
+  for (const [id, w] of Object.entries(di.flows)){
+    const f = flowOf[id];
+    if (isMessage.has(id)){
+      if (w[0][0] !== w[1][0] || w.at(-1)[0] !== w.at(-2)[0]) add('message-side', id);
+      continue;
+    }
+    const box = poolBox(poolOf[f.from]);
+    if (box && w.some(([x, y]) => !inside(x, y, box))) add('sequence-outside-pool', id);
+  }
+  for (const n of model.nodes){ const box = poolBox(poolOf[n.id]); if (box && !within(nodes[n.id], box)) add('node-outside-pool', n.id, pools[poolOf[n.id]].id); }
+  for (let i = 0; i < pools.length; i++) for (let j = i + 1; j < pools.length; j++){
+    const a = poolBox(i), b = poolBox(j);
+    if (a && b && a[0] <= b[0] + b[2] && b[0] <= a[0] + a[2] && a[1] <= b[1] + b[3] && b[1] <= a[1] + a[3]) add('pool-overlap', pools[i].id, pools[j].id);
+  }
   for (const l of drawnLanes) for (const id of l.nodes) if (!within(nodes[id], di.shapes[l.id])) add('node-outside-lane', id, l.id);
-  const stacked = drawnLanes.map(l => [l.id, di.shapes[l.id]]).sort((a, b) => a[1][1] - b[1][1]);
-  for (let i = 1; i < stacked.length; i++){
-    const [aid, a] = stacked[i - 1], [bid, b] = stacked[i];
-    if (b[1] !== a[1] + a[3]) add('lane-gap', aid, bid);
+  for (let k = 0; k < Math.max(1, pools.length); k++){
+    const stacked = drawnLanes.filter(l => (l.pool ?? 0) === k).map(l => [l.id, di.shapes[l.id]]).sort((a, b) => a[1][1] - b[1][1]);
+    for (let i = 1; i < stacked.length; i++){
+      const [aid, a] = stacked[i - 1], [bid, b] = stacked[i];
+      if (b[1] !== a[1] + a[3]) add('lane-gap', aid, bid);
+    }
   }
 
   const labels = [];
@@ -184,9 +219,10 @@ export function breaksOf(xml, model, sizes = {}){
     const box = di.labels[n.id];
     if (!box) continue;
     const [x, y, w, h] = box, s = sizes[n.name] || labelSize(n.name);
-    labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id });
+    labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
   }
-  for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id] });
+  for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });
+  for (const f of messages) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], message: true });
   for (const l of labels){
     const [x, y, w, h] = l.box;
     for (const s of segs){
@@ -199,7 +235,10 @@ export function breaksOf(xml, model, sizes = {}){
       const [a, b, c, d] = m.box;
       if (a < x + w && a + c > x && b < y + h && b + d > y) add('label-on-label', ...[l.id, m.id].sort());
     }
-    if (lanes.length && !lanes.some(ln => within(l.box, ln))) add('label-outside-lane', l.id);
+    if (l.message) continue;
+    const own = lanesOfPool(l.pool);
+    if (own.length && !own.some(ln => within(l.box, ln))) add('label-outside-lane', l.id);
+    const pool = poolBox(l.pool);
     if (pool && !within(l.box, pool)) add('label-outside-pool', l.id);
   }
   return [...out].sort();

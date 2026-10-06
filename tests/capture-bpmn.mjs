@@ -50,7 +50,7 @@ export async function captureBundle(){
 export const hasDiagram = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
 
 // The texts the layout measures, in the order it may ask for them, each once.
-export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat(model.flows.map(f => f.name).filter(Boolean)))];
+export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat(model.flows.concat(model.messages || []).map(f => f.name).filter(Boolean)))];
 
 function parseArgs(argv){
   const a = { out: null, files: [] };
