@@ -704,7 +704,7 @@ Ein BPMN-Prozess ohne Koordinaten mit Sonderfällen: ein Pool ohne Bahnen; XML o
 
 ### BPMN ohne Koordinaten: leere Bahn
 
-Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Teilprozess, dessen Inhalt dokufix nicht anordnet: Sie sollten drei Bahnen „Theke“, „Magazin“ und „Werkstatt“ sehen, die dritte leer, darin vier Symbole und vier Pfeile; der Teilprozess „Einarbeiten“ steht als ein Symbol, das Zeit-Ereignis „Eine Woche“ sitzt auf der Unterkante von „Lieferung prüfen“, sein Pfeil führt nach unten und zu „Im Regal“.
+Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Teilprozess, dessen Inhalt dokufix nicht anordnet: Sie sollten drei Bahnen „Theke“, „Magazin“ und „Werkstatt“ sehen, die dritte leer, darin fünf Symbole und vier Pfeile; der Teilprozess „Einarbeiten“ steht als ein Symbol, das Zeit-Ereignis „Eine Woche“ sitzt auf der Unterkante von „Lieferung prüfen“, sein Pfeil führt nach unten und zu „Im Regal“.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -774,6 +774,43 @@ Ereignisse auf dem Rand einer Aufgabe: Sie sollten an „Ware liefern“ zwei Er
     <bpmn:sequenceFlow id="A10" sourceRef="A_Antworten" targetRef="A_Beantwortet"/>
     <bpmn:sequenceFlow id="A11" sourceRef="A_Schaden" targetRef="A_Reklamieren"/>
     <bpmn:sequenceFlow id="A12" sourceRef="A_Reklamieren" targetRef="A_Reklamiert"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: angeheftete Ereignisse über Bahnen
+
+Ein Ausnahmepfad in eine andere Bahn: Sie sollten an „Gerät reparieren“ zwei Ereignisse sehen; der Pfad des Fehlers „Ersatzteil fehlt“ führt nach unten in die Bahn „Lager“, der Pfad der Zeit „Zwei Stunden“ (gestrichelt, nicht unterbrechend) nach oben in die Bahn „Meister“, wo „Beim Gesellen nachfragen“ in einer eigenen Reihe unter „Reparatur freigeben“ steht, auf der Seite zur Bahn „Geselle“.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Bahnen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="W_Zusammenarbeit"><bpmn:participant id="W_Pool" name="Werkstatt" processRef="W_Prozess"/></bpmn:collaboration>
+  <bpmn:process id="W_Prozess" isExecutable="false">
+    <bpmn:laneSet id="W_Bahnen">
+      <bpmn:lane id="W_Meister" name="Meister"><bpmn:flowNodeRef>W_Freigeben</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Fertig</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Nachfragen</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Gefragt</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="W_Geselle" name="Geselle"><bpmn:flowNodeRef>W_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Reparieren</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Teil</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Dauer</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Testen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="W_Lager" name="Lager"><bpmn:flowNodeRef>W_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Bestellt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="W_Start" name="Auftrag"/>
+    <bpmn:task id="W_Reparieren" name="Gerät reparieren"/>
+    <bpmn:boundaryEvent id="W_Teil" name="Ersatzteil fehlt" attachedToRef="W_Reparieren"><bpmn:errorEventDefinition id="W_Teil_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="W_Dauer" name="Zwei Stunden" cancelActivity="false" attachedToRef="W_Reparieren"><bpmn:timerEventDefinition id="W_Dauer_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="W_Testen" name="Gerät testen"/>
+    <bpmn:task id="W_Freigeben" name="Reparatur freigeben"/>
+    <bpmn:endEvent id="W_Fertig" name="Fertig"/>
+    <bpmn:task id="W_Bestellen" name="Ersatzteil bestellen"/>
+    <bpmn:endEvent id="W_Bestellt" name="Bestellt"/>
+    <bpmn:task id="W_Nachfragen" name="Beim Gesellen nachfragen"/>
+    <bpmn:endEvent id="W_Gefragt" name="Nachgefragt"/>
+    <bpmn:sequenceFlow id="W1" sourceRef="W_Start" targetRef="W_Reparieren"/>
+    <bpmn:sequenceFlow id="W2" sourceRef="W_Reparieren" targetRef="W_Testen"/>
+    <bpmn:sequenceFlow id="W3" sourceRef="W_Testen" targetRef="W_Freigeben"/>
+    <bpmn:sequenceFlow id="W4" sourceRef="W_Freigeben" targetRef="W_Fertig"/>
+    <bpmn:sequenceFlow id="W5" sourceRef="W_Teil" targetRef="W_Bestellen"/>
+    <bpmn:sequenceFlow id="W6" sourceRef="W_Bestellen" targetRef="W_Bestellt"/>
+    <bpmn:sequenceFlow id="W7" sourceRef="W_Dauer" targetRef="W_Nachfragen"/>
+    <bpmn:sequenceFlow id="W8" sourceRef="W_Nachfragen" targetRef="W_Gefragt"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

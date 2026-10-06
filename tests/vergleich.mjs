@@ -3582,8 +3582,8 @@ function bpmnLayoutProblems(model, g){
     if (!onOutline(pts[pts.length - 1], b, type.get(fl.to))) out.push('outline: ' + fl.id + ' ends at ' + fmt(pts[pts.length - 1]) + ', off ' + fl.to);
     // Its own source and target too: a piece that leaves or reaches a symbol
     // on its outline does not enter the box shrunk by a pixel; one that runs
-    // inside it does.
-    for (const n of model.nodes){
+    // inside it does. A boundary event is a symbol as well (story 2.30).
+    for (const n of model.nodes.concat(model.boundaries || [])){
       if (!g.shapes[n.id]) continue;
       const [x, y, w, h] = g.shapes[n.id];
       for (let i = 1; i < pts.length; i++){

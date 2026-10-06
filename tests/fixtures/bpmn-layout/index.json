@@ -17,7 +17,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:785"
+    "src/demo.md:822"
    ],
    "shows": [
     "25.2"
@@ -26,7 +26,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:825"
+    "src/demo.md:862"
    ]
   },
   "ereignis": {
@@ -272,6 +272,13 @@
   "angeheftet-stoerung": {
    "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/angeheftet/llm-stoerung.bpmn",
    "note": "a non-interrupting timer and an interrupting error on one collapsed sub-process (its content added for the lint, start and end were missing); written by an LLM given only the task \"IT support classifies a fault and fixes it in a sub-process; after four hours the customer is told without interrupting; when hardware must be replaced the fix is broken off and a technician sent\" and the rule",
+   "shows": [
+    "30"
+   ]
+  },
+  "demo-angeheftet-bahnen": {
+   "source": "src/demo.md:785",
+   "note": "boundary events whose ways go into a lane below and a lane above, the latter in a row of its own facing the host's lane (review of 2.30, R7)",
    "shows": [
     "30"
    ]

@@ -165,10 +165,10 @@ export function breaksOf(xml, model, sizes = {}){
     const x1 = Math.min(s.a[0], s.b[0]), x2 = Math.max(s.a[0], s.b[0]), y1 = Math.min(s.a[1], s.b[1]), y2 = Math.max(s.a[1], s.b[1]);
     for (const [nid, [nx, ny, nw, nh]] of Object.entries(nodes)){
       const own = nid === f.from || nid === f.to;
-      // A flow from a boundary event starts on its host's outline: along it or into it counts as through its own.
-      if (hostOf[f.from] === nid && x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1){ add('through-own', s.id, nid); continue; }
-      if (hostOf[f.from] === nid) continue;
-      if (x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) add(own ? 'through-own' : 'through', s.id, nid);
+      // A flow from a boundary event starts below its host's outline: into the host counts as through its own, along
+      // its outline as on-outline.
+      const host = hostOf[f.from] === nid;
+      if (x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) add(own || host ? 'through-own' : 'through', s.id, nid);
       const onH = y1 === y2 && (Math.abs(y1 - ny) <= 1 || Math.abs(y1 - ny - nh) <= 1) && Math.min(x2, nx + nw) - Math.max(x1, nx) > 2;
       const onV = x1 === x2 && (Math.abs(x1 - nx) <= 1 || Math.abs(x1 - nx - nw) <= 1) && Math.min(y2, ny + nh) - Math.max(y1, ny) > 2;
       if ((onH || onV) && !own) add('on-outline', s.id, nid);

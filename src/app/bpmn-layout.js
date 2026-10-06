@@ -225,7 +225,11 @@ function readPool(proc, participant, before, beforeLanes, leave){
   for (const el of kids(proc)){
     const tag = local(el), type = nodeType(tag), id = attr(el, 'id');
     if (type && id){
-      nodes.push({ id, name: clean(attr(el, 'name')), type, tag, key: 'n' + (before.length + nodes.length + 1) });
+      // markers: how many markers bpmn-js draws in the middle of an activity's lower edge (story 2.30): a sub-process's
+      // "+", a loop or multi-instance marker, an ad-hoc sub-process's "~", a compensation marker.
+      const markers = type !== 'task' ? 0 : (HOLDS_CONTENT.has(tag) || tag === 'callActivity' ? 1 : 0) + (tag === 'adHocSubProcess' ? 1 : 0) + (attr(el, 'isForCompensation') === 'true' ? 1 : 0) +
+        (kids(el).some(k => ['standardLoopCharacteristics', 'multiInstanceLoopCharacteristics'].includes(local(k))) ? 1 : 0);
+      nodes.push({ id, name: clean(attr(el, 'name')), type, tag, key: 'n' + (before.length + nodes.length + 1), ...(markers ? { markers } : {}) });
       // A sub-process is drawn as one symbol; what it holds is left out.
       if (HOLDS_CONTENT.has(tag)){
         for (const inner of descendants(el)) if (attr(inner, 'id') && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || ['sequenceFlow', 'boundaryEvent'].includes(local(inner)))) leave(inner, 'inside the sub-process ' + id);
@@ -234,7 +238,11 @@ function readPool(proc, participant, before, beforeLanes, leave){
     } else if (type) leave(el, 'has no id');
     else if (LEFT_OUT.has(tag)) leave(el, 'not laid out');
   }
-  if (!nodes.length) return null;
+  if (!nodes.length){
+    // A boundary event of a process with nothing to lay out has no host laid out (review of 2.30, R5).
+    for (const el of kids(proc)) if (local(el) === 'boundaryEvent') leave(el, attr(el, 'id') ? 'attached to ' + (attr(el, 'attachedToRef') || 'nothing') + ', which is not laid out' : 'has no id');
+    return null;
+  }
   before.push(...nodes);
   const byId = new Map(nodes.map(n => [n.id, n]));
   // Events on an activity's border (story 2.30): each with its host and whether it interrupts; one whose host is no
@@ -632,7 +640,8 @@ const POOL_GAP = 40;        // the gap between two pools without tracks (story 2
 const BOX_H = 60;           // the height of a pool without a process of its own (story 2.29)
 const GAP_TRACK = 20;       // in a gap the distance of two tracks and the margin beside the outermost (Ben, 2026-10-06: more room where message flows run)
 const PORT_STEP = 30;       // the distance of two ends on one side of a task
-const MARKER = 20;          // the room bpmn-js's marker takes in the middle of a sub-process's lower edge (story 2.30)
+const MARKER = 20;          // the room one marker of bpmn-js takes in the middle of an activity's lower edge (story 2.30)
+const MARKERS = 56;         // the room of two or more side by side: bpmn-js puts a sub-process's loop marker 18 px left of its "+", the "~" of an ad-hoc one 10 px right
 const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
 const MSG_BEND = 0.5;       // the cost of a bend of a message flow: two cost as much as a crossing (Ben, 2026-10-06, p-rs1: needless bends)
 const EVENT_BEND = 1;       // the cost of a bend of a flow from a boundary event: as much as a crossing (Ben, 2026-10-06, on r12, llm-antrag, sonder-bahnen: the exception path straighter)
@@ -1290,13 +1299,26 @@ function gridModel(model){
 // their own on the side facing the host's lane (Ben, 2026-10-06, sonder-bahnen),
 // as the arms of R5 do. After R1, so that an end has its lane; before R2, which
 // then sees no two ways in one row.
+// The ways of a host's boundary events: per flow from an event, the nodes it
+// reaches that no flow from the host itself reaches, each with the first event
+// way that reaches it (Ben's review of 2.30, R1: two events into one node; per
+// event, as branchRegions() gives them, that node belonged to neither way).
+function boundaryWays(g, id){
+  const outs = g.fwdOut.get(id);
+  const main = new Set(outs.filter(f => !f.event).flatMap(f => [f.to, ...g.reachable(f.to)]));
+  const taken = new Set([id]);
+  return outs.filter(f => f.event).map(f => {
+    const nodes = [f.to, ...g.reachable(f.to)].filter(x => !main.has(x) && !taken.has(x));
+    nodes.forEach(x => taken.add(x));
+    return { flow: f, nodes };
+  });
+}
 function ruleBoundaryBelow(g, model){
   const hosts = [...new Set(model.flows.filter(f => f.event).map(f => f.from))];
   for (const id of byCol(g, hosts)){
     const H = g.cells.get(id);
     let row = H.row;
-    for (const r of branchRegions(g, id)){
-      if (!r.flow.event) continue;
+    for (const r of boundaryWays(g, id)){
       const mine = r.nodes.filter(x => { const c = g.cells.get(x); return c.lane === H.lane && c.row === H.row && !c.pin; });
       if (mine.length){
         row = g.freshRow(H.lane, row, 1);
@@ -2280,6 +2302,29 @@ function finishGrid(g, model, measure, rules, reroute = true){
     return t.side === 'left' ? gapX[gx] + TRACK_MARGIN + t.i * TRACK : gapX[gx] + w - TRACK_MARGIN - t.i * TRACK;
   };
 
+  // Boundary events (story 2.30) side by side in the middle of their host's lower edge, 8 px apart where the host
+  // allows: those whose way turns left first, then those going straight down or without a flow, then those turning
+  // right; of two turning alike the one going deeper stands further in, so that their ways do not cross. A flow
+  // from one leaves its lower tip.
+  const byHost = new Map();
+  for (const b of model.boundaries || []) (byHost.get(b.host) || byHost.set(b.host, []).get(b.host)).push(b);
+  for (const [host, list] of byHost){
+    const c = box[host];
+    const key = b => {
+      const r = routed.find(o => o.f.event === b.id), q = r && r.pieces[1];
+      if (!q || q.h === undefined) return 0;
+      const turn = Math.sign(q.x2 - q.x1);
+      return turn * (1 + 1 / (1 + Math.abs(q.h - place.get(host).band)));
+    };
+    const sorted = [...list].sort((a, b) => key(a) - key(b));
+    const n = sorted.length, step = n > 1 ? Math.min(SIZE.inter[0] + 8, (c.w - SIZE.inter[0]) / (n - 1)) : 0;
+    // A sub-process, a call activity, a loop or a multi-instance activity carries its markers in the middle of that
+    // edge (MARKER each): one or two events stand beside them, one alone on the right.
+    const markers = g.cells.get(host).n.markers || 0, room = markers > 1 ? MARKERS : MARKER;
+    const at = i => markers && n <= 2 ? (n === 1 || i === 1 ? 1 : -1) * Math.min(room / 2 + SIZE.inter[0] / 2, c.w / 2 - ATTACH_CLEARANCE) : step * (i - (n - 1) / 2);
+    sorted.forEach((b, i) => { box[b.id] = { cx: c.cx + at(i), cy: c.cy + c.h / 2, w: SIZE.inter[0], h: SIZE.inter[1] }; });
+  }
+
   // Ports: at a task several ends per side beside each other, sorted by the
   // piece after them, so that they do not cross; a gateway and an event at
   // their tip.
@@ -2316,7 +2361,14 @@ function finishGrid(g, model, measure, rules, reroute = true){
     // Two message flows that come from one side alike take their places by their ids, the same at both ends, so that
     // two flows back and forth between two symbols lie side by side and do not cross (Ben, 2026-10-06, p-rs2);
     // in or out would swap their places from one end to the other.
-    const sorted = [...list].sort((a, b) => a.far - b.far || (a.r.message && b.r.message ? (a.r.f.id < b.r.f.id ? -1 : a.r.f.id > b.r.f.id ? 1 : 0) : 0) || (a.out === b.out ? 0 : a.out ? 1 : -1));
+    // Two flows from boundary events of one host that come alike take their places by their events: the one whose
+    // event lies nearer stands as the nearer piece would (review of 2.30, R1: else their ways crossed).
+    const nearer = (a, b) => {
+      if (!a.r.f.event || !b.r.f.event || a.out || b.out || a.r.f.from !== b.r.f.from || !a.far) return 0;
+      const d = e => Math.abs(box[e.r.f.event].cx - c.cx) + Math.abs(box[e.r.f.event].cy - c.cy);
+      return a.far < 0 ? d(a) - d(b) : d(b) - d(a);
+    };
+    const sorted = [...list].sort((a, b) => a.far - b.far || nearer(a, b) || (a.r.message && b.r.message ? (a.r.f.id < b.r.f.id ? -1 : a.r.f.id > b.r.f.id ? 1 : 0) : 0) || (a.out === b.out ? 0 : a.out ? 1 : -1));
     const n = sorted.length, room = (vertical ? c.w : c.h) - 2 * ATTACH_CLEARANCE;
     const step = c.task && n > 1 ? Math.min(PORT_STEP, room / (n - 1)) : 0;
     // A flow of one piece (straight to the neighbour) keeps the middle of the side; the others stand beside it, on the side they come from.
@@ -2334,28 +2386,6 @@ function finishGrid(g, model, measure, rules, reroute = true){
     }
   }
 
-  // Boundary events (story 2.30) side by side in the middle of their host's lower edge, 8 px apart where the host
-  // allows: those whose way turns left first, then those going straight down or without a flow, then those turning
-  // right; of two turning alike the one going deeper stands further in, so that their ways do not cross. A flow
-  // from one leaves its lower tip.
-  const byHost = new Map();
-  for (const b of model.boundaries || []) (byHost.get(b.host) || byHost.set(b.host, []).get(b.host)).push(b);
-  for (const [host, list] of byHost){
-    const c = box[host];
-    const key = b => {
-      const r = routed.find(o => o.f.event === b.id), q = r && r.pieces[1];
-      if (!q || q.h === undefined) return 0;
-      const turn = Math.sign(q.x2 - q.x1);
-      return turn * (1 + 1 / (1 + Math.abs(q.h - place.get(host).band)));
-    };
-    const sorted = [...list].sort((a, b) => key(a) - key(b));
-    const n = sorted.length, step = n > 1 ? Math.min(SIZE.inter[0] + 8, (c.w - SIZE.inter[0]) / (n - 1)) : 0;
-    // A sub-process and a call activity carry their marker in the middle of that edge: one or two events stand
-    // beside it, one alone on the right.
-    const marked = HOLDS_CONTENT.has(g.cells.get(host).n.tag) || g.cells.get(host).n.tag === 'callActivity';
-    const at = i => marked && n <= 2 ? (n === 1 || i === 1 ? 1 : -1) * (MARKER / 2 + SIZE.inter[0] / 2) : step * (i - (n - 1) / 2);
-    sorted.forEach((b, i) => { box[b.id] = { cx: c.cx + at(i), cy: c.cy + c.h / 2, w: SIZE.inter[0], h: SIZE.inter[1] }; });
-  }
   for (const r of routed) if (r.f.event){ const e = box[r.f.event]; portOf.set(r.f.id + '|true', { x: e.cx, y: e.cy + e.h / 2 }); }
 
   // An end at a frame (story 2.29) lies on the line of its piece, a vertical one: in a gap between columns on its

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Bahnen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="W_Zusammenarbeit"><bpmn:participant id="W_Pool" name="Werkstatt" processRef="W_Prozess"/></bpmn:collaboration>
+  <bpmn:process id="W_Prozess" isExecutable="false">
+    <bpmn:laneSet id="W_Bahnen">
+      <bpmn:lane id="W_Meister" name="Meister"><bpmn:flowNodeRef>W_Freigeben</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Fertig</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Nachfragen</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Gefragt</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="W_Geselle" name="Geselle"><bpmn:flowNodeRef>W_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Reparieren</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Teil</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Dauer</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Testen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="W_Lager" name="Lager"><bpmn:flowNodeRef>W_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>W_Bestellt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="W_Start" name="Auftrag"/>
+    <bpmn:task id="W_Reparieren" name="Gerät reparieren"/>
+    <bpmn:boundaryEvent id="W_Teil" name="Ersatzteil fehlt" attachedToRef="W_Reparieren"><bpmn:errorEventDefinition id="W_Teil_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="W_Dauer" name="Zwei Stunden" cancelActivity="false" attachedToRef="W_Reparieren"><bpmn:timerEventDefinition id="W_Dauer_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="W_Testen" name="Gerät testen"/>
+    <bpmn:task id="W_Freigeben" name="Reparatur freigeben"/>
+    <bpmn:endEvent id="W_Fertig" name="Fertig"/>
+    <bpmn:task id="W_Bestellen" name="Ersatzteil bestellen"/>
+    <bpmn:endEvent id="W_Bestellt" name="Bestellt"/>
+    <bpmn:task id="W_Nachfragen" name="Beim Gesellen nachfragen"/>
+    <bpmn:endEvent id="W_Gefragt" name="Nachgefragt"/>
+    <bpmn:sequenceFlow id="W1" sourceRef="W_Start" targetRef="W_Reparieren"/>
+    <bpmn:sequenceFlow id="W2" sourceRef="W_Reparieren" targetRef="W_Testen"/>
+    <bpmn:sequenceFlow id="W3" sourceRef="W_Testen" targetRef="W_Freigeben"/>
+    <bpmn:sequenceFlow id="W4" sourceRef="W_Freigeben" targetRef="W_Fertig"/>
+    <bpmn:sequenceFlow id="W5" sourceRef="W_Teil" targetRef="W_Bestellen"/>
+    <bpmn:sequenceFlow id="W6" sourceRef="W_Bestellen" targetRef="W_Bestellt"/>
+    <bpmn:sequenceFlow id="W7" sourceRef="W_Dauer" targetRef="W_Nachfragen"/>
+    <bpmn:sequenceFlow id="W8" sourceRef="W_Nachfragen" targetRef="W_Gefragt"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="W_Zusammenarbeit">
+      <bpmndi:BPMNShape id="W_Pool_di" bpmnElement="W_Pool" isHorizontal="true"><dc:Bounds x="0" y="0" width="846" height="603"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Meister_di" bpmnElement="W_Meister" isHorizontal="true"><dc:Bounds x="30" y="0" width="816" height="268"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Geselle_di" bpmnElement="W_Geselle" isHorizontal="true"><dc:Bounds x="30" y="268" width="816" height="191"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Lager_di" bpmnElement="W_Lager" isHorizontal="true"><dc:Bounds x="30" y="459" width="816" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Start_di" bpmnElement="W_Start"><dc:Bounds x="102" y="340" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="380" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Reparieren_di" bpmnElement="W_Reparieren"><dc:Bounds x="210" y="318" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Testen_di" bpmnElement="W_Testen"><dc:Bounds x="378" y="318" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Freigeben_di" bpmnElement="W_Freigeben"><dc:Bounds x="546" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Fertig_di" bpmnElement="W_Fertig"><dc:Bounds x="738" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Bestellen_di" bpmnElement="W_Bestellen"><dc:Bounds x="378" y="491" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Bestellt_di" bpmnElement="W_Bestellt"><dc:Bounds x="738" y="513" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="553" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Nachfragen_di" bpmnElement="W_Nachfragen"><dc:Bounds x="378" y="156" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Gefragt_di" bpmnElement="W_Gefragt"><dc:Bounds x="738" y="178" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="218" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Teil_di" bpmnElement="W_Teil"><dc:Bounds x="230" y="380" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="146" y="402" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="W_Dauer_di" bpmnElement="W_Dauer"><dc:Bounds x="274" y="380" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="247" y="440" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="W1_di" bpmnElement="W1"><di:waypoint x="138" y="358"/><di:waypoint x="210" y="358"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W2_di" bpmnElement="W2"><di:waypoint x="330" y="358"/><di:waypoint x="378" y="358"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W3_di" bpmnElement="W3"><di:waypoint x="498" y="358"/><di:waypoint x="606" y="358"/><di:waypoint x="606" y="112"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W4_di" bpmnElement="W4"><di:waypoint x="666" y="72"/><di:waypoint x="738" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W5_di" bpmnElement="W5"><di:waypoint x="248" y="416"/><di:waypoint x="248" y="531"/><di:waypoint x="378" y="531"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W6_di" bpmnElement="W6"><di:waypoint x="498" y="531"/><di:waypoint x="738" y="531"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W7_di" bpmnElement="W7"><di:waypoint x="292" y="416"/><di:waypoint x="292" y="428"/><di:waypoint x="342" y="428"/><di:waypoint x="342" y="196"/><di:waypoint x="378" y="196"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="W8_di" bpmnElement="W8"><di:waypoint x="498" y="196"/><di:waypoint x="738" y="196"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

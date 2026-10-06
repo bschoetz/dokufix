@@ -1,0 +1,26 @@
+{
+ "Auftrag": {
+  "w": 40,
+  "h": 15
+ },
+ "Fertig": {
+  "w": 31,
+  "h": 15
+ },
+ "Bestellt": {
+  "w": 39,
+  "h": 15
+ },
+ "Nachgefragt": {
+  "w": 66,
+  "h": 15
+ },
+ "Ersatzteil fehlt": {
+  "w": 75,
+  "h": 15
+ },
+ "Zwei Stunden": {
+  "w": 72,
+  "h": 15
+ }
+}

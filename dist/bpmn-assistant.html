@@ -330,7 +330,8 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     for (const el of kids(proc)) {
       const tag = local(el), type = nodeType(tag), id = attr(el, "id");
       if (type && id) {
-        nodes.push({ id, name: clean(attr(el, "name")), type, tag, key: "n" + (before.length + nodes.length + 1) });
+        const markers = type !== "task" ? 0 : (HOLDS_CONTENT.has(tag) || tag === "callActivity" ? 1 : 0) + (tag === "adHocSubProcess" ? 1 : 0) + (attr(el, "isForCompensation") === "true" ? 1 : 0) + (kids(el).some((k) => ["standardLoopCharacteristics", "multiInstanceLoopCharacteristics"].includes(local(k))) ? 1 : 0);
+        nodes.push({ id, name: clean(attr(el, "name")), type, tag, key: "n" + (before.length + nodes.length + 1), ...markers ? { markers } : {} });
         if (HOLDS_CONTENT.has(tag)) {
           for (const inner of descendants(el)) if (attr(inner, "id") && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || ["sequenceFlow", "boundaryEvent"].includes(local(inner)))) leave(inner, "inside the sub-process " + id);
         }
@@ -338,7 +339,10 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       } else if (type) leave(el, "has no id");
       else if (LEFT_OUT.has(tag)) leave(el, "not laid out");
     }
-    if (!nodes.length) return null;
+    if (!nodes.length) {
+      for (const el of kids(proc)) if (local(el) === "boundaryEvent") leave(el, attr(el, "id") ? "attached to " + (attr(el, "attachedToRef") || "nothing") + ", which is not laid out" : "has no id");
+      return null;
+    }
     before.push(...nodes);
     const byId = new Map(nodes.map((n) => [n.id, n]));
     const boundaries = [];
@@ -629,6 +633,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
   var GAP_TRACK = 20;
   var PORT_STEP = 30;
   var MARKER = 20;
+  var MARKERS = 56;
   var BEND = 5e-3;
   var MSG_BEND = 0.5;
   var EVENT_BEND = 1;
@@ -1153,13 +1158,22 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
     const hostOf = new Map(model.boundaries.map((b) => [b.id, b.host]));
     return { ...model, flows: model.flows.map((f) => hostOf.has(f.from) ? { ...f, from: hostOf.get(f.from), event: f.from } : f) };
   }
+  function boundaryWays(g, id) {
+    const outs = g.fwdOut.get(id);
+    const main = new Set(outs.filter((f) => !f.event).flatMap((f) => [f.to, ...g.reachable(f.to)]));
+    const taken = /* @__PURE__ */ new Set([id]);
+    return outs.filter((f) => f.event).map((f) => {
+      const nodes = [f.to, ...g.reachable(f.to)].filter((x) => !main.has(x) && !taken.has(x));
+      nodes.forEach((x) => taken.add(x));
+      return { flow: f, nodes };
+    });
+  }
   function ruleBoundaryBelow(g, model) {
     const hosts = [...new Set(model.flows.filter((f) => f.event).map((f) => f.from))];
     for (const id of byCol(g, hosts)) {
       const H = g.cells.get(id);
       let row = H.row;
-      for (const r of branchRegions(g, id)) {
-        if (!r.flow.event) continue;
+      for (const r of boundaryWays(g, id)) {
         const mine = r.nodes.filter((x) => {
           const c = g.cells.get(x);
           return c.lane === H.lane && c.row === H.row && !c.pin;
@@ -2048,6 +2062,24 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       const t = tracks.get(p), gx = p.v / 2, w = gapW[gx];
       return t.side === "left" ? gapX[gx] + TRACK_MARGIN + t.i * TRACK : gapX[gx] + w - TRACK_MARGIN - t.i * TRACK;
     };
+    const byHost = /* @__PURE__ */ new Map();
+    for (const b of model.boundaries || []) (byHost.get(b.host) || byHost.set(b.host, []).get(b.host)).push(b);
+    for (const [host, list] of byHost) {
+      const c = box[host];
+      const key = (b) => {
+        const r = routed.find((o) => o.f.event === b.id), q = r && r.pieces[1];
+        if (!q || q.h === void 0) return 0;
+        const turn = Math.sign(q.x2 - q.x1);
+        return turn * (1 + 1 / (1 + Math.abs(q.h - place.get(host).band)));
+      };
+      const sorted = [...list].sort((a, b) => key(a) - key(b));
+      const n = sorted.length, step = n > 1 ? Math.min(SIZE.inter[0] + 8, (c.w - SIZE.inter[0]) / (n - 1)) : 0;
+      const markers = g.cells.get(host).n.markers || 0, room = markers > 1 ? MARKERS : MARKER;
+      const at = (i) => markers && n <= 2 ? (n === 1 || i === 1 ? 1 : -1) * Math.min(room / 2 + SIZE.inter[0] / 2, c.w / 2 - ATTACH_CLEARANCE) : step * (i - (n - 1) / 2);
+      sorted.forEach((b, i) => {
+        box[b.id] = { cx: c.cx + at(i), cy: c.cy + c.h / 2, w: SIZE.inter[0], h: SIZE.inter[1] };
+      });
+    }
     const ends = /* @__PURE__ */ new Map();
     for (const r of routed) {
       const farOf = (atStart) => {
@@ -2075,7 +2107,12 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       const [id, side] = k.split("|"), c = box[id];
       const vertical = side === "top" || side === "bottom";
       const base = { x: side === "left" ? c.cx - c.w / 2 : side === "right" ? c.cx + c.w / 2 : c.cx, y: side === "top" ? c.cy - c.h / 2 : side === "bottom" ? c.cy + c.h / 2 : c.cy };
-      const sorted = [...list].sort((a, b) => a.far - b.far || (a.r.message && b.r.message ? a.r.f.id < b.r.f.id ? -1 : a.r.f.id > b.r.f.id ? 1 : 0 : 0) || (a.out === b.out ? 0 : a.out ? 1 : -1));
+      const nearer = (a, b) => {
+        if (!a.r.f.event || !b.r.f.event || a.out || b.out || a.r.f.from !== b.r.f.from || !a.far) return 0;
+        const d = (e) => Math.abs(box[e.r.f.event].cx - c.cx) + Math.abs(box[e.r.f.event].cy - c.cy);
+        return a.far < 0 ? d(a) - d(b) : d(b) - d(a);
+      };
+      const sorted = [...list].sort((a, b) => a.far - b.far || nearer(a, b) || (a.r.message && b.r.message ? a.r.f.id < b.r.f.id ? -1 : a.r.f.id > b.r.f.id ? 1 : 0 : 0) || (a.out === b.out ? 0 : a.out ? 1 : -1));
       const n = sorted.length, room = (vertical ? c.w : c.h) - 2 * ATTACH_CLEARANCE;
       const step = c.task && n > 1 ? Math.min(PORT_STEP, room / (n - 1)) : 0;
       const straight = c.task && n > 1 ? sorted.filter((e) => e.r.pieces.length === 1) : [];
@@ -2094,24 +2131,6 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
         const off = Math.max(-room / 2, Math.min(room / 2, offsets.get(e)));
         portOf.set(e.r.f.id + "|" + e.out, { x: base.x + (vertical ? off : 0), y: base.y + (vertical ? 0 : off) });
       }
-    }
-    const byHost = /* @__PURE__ */ new Map();
-    for (const b of model.boundaries || []) (byHost.get(b.host) || byHost.set(b.host, []).get(b.host)).push(b);
-    for (const [host, list] of byHost) {
-      const c = box[host];
-      const key = (b) => {
-        const r = routed.find((o) => o.f.event === b.id), q = r && r.pieces[1];
-        if (!q || q.h === void 0) return 0;
-        const turn = Math.sign(q.x2 - q.x1);
-        return turn * (1 + 1 / (1 + Math.abs(q.h - place.get(host).band)));
-      };
-      const sorted = [...list].sort((a, b) => key(a) - key(b));
-      const n = sorted.length, step = n > 1 ? Math.min(SIZE.inter[0] + 8, (c.w - SIZE.inter[0]) / (n - 1)) : 0;
-      const marked = HOLDS_CONTENT.has(g.cells.get(host).n.tag) || g.cells.get(host).n.tag === "callActivity";
-      const at = (i) => marked && n <= 2 ? (n === 1 || i === 1 ? 1 : -1) * (MARKER / 2 + SIZE.inter[0] / 2) : step * (i - (n - 1) / 2);
-      sorted.forEach((b, i) => {
-        box[b.id] = { cx: c.cx + at(i), cy: c.cy + c.h / 2, w: SIZE.inter[0], h: SIZE.inter[1] };
-      });
     }
     for (const r of routed) if (r.f.event) {
       const e = box[r.f.event];
@@ -2662,12 +2681,8 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
       const x1 = Math.min(s.a[0], s.b[0]), x2 = Math.max(s.a[0], s.b[0]), y1 = Math.min(s.a[1], s.b[1]), y2 = Math.max(s.a[1], s.b[1]);
       for (const [nid, [nx, ny, nw, nh]] of Object.entries(nodes)) {
         const own = nid === f.from || nid === f.to;
-        if (hostOf[f.from] === nid && x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) {
-          add("through-own", s.id, nid);
-          continue;
-        }
-        if (hostOf[f.from] === nid) continue;
-        if (x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) add(own ? "through-own" : "through", s.id, nid);
+        const host = hostOf[f.from] === nid;
+        if (x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) add(own || host ? "through-own" : "through", s.id, nid);
         const onH = y1 === y2 && (Math.abs(y1 - ny) <= 1 || Math.abs(y1 - ny - nh) <= 1) && Math.min(x2, nx + nw) - Math.max(x1, nx) > 2;
         const onV = x1 === x2 && (Math.abs(x1 - nx) <= 1 || Math.abs(x1 - nx - nw) <= 1) && Math.min(y2, ny + nh) - Math.max(y1, ny) > 2;
         if ((onH || onV) && !own) add("on-outline", s.id, nid);

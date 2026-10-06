@@ -1177,3 +1177,32 @@ test('R17 in another lane: the way of a boundary event takes a row of its own th
   assert.equal(bx(on.nodes.NE).cy, bx(on.nodes.N).cy);
   assert.ok(bx(off.nodes.N).cy <= bx(off.nodes.F).cy, 'without R17 R2 puts it in the row or above, away from the host');
 });
+
+test('two boundary events whose ways meet in one node: that way goes below the host, the host\'s own flow stays straight (review of 2.30, R1)', () => {
+  const { di } = boundaryLaid(LINE + '<bpmn:task id="M"/><bpmn:endEvent id="ME"/><bpmn:boundaryEvent id="B1" attachedToRef="T"/><bpmn:boundaryEvent id="B2" attachedToRef="T"/>' +
+    '<bpmn:sequenceFlow id="G1" sourceRef="B1" targetRef="M"/><bpmn:sequenceFlow id="G2" sourceRef="B2" targetRef="M"/><bpmn:sequenceFlow id="F3" sourceRef="M" targetRef="ME"/>',
+    { S: 0, T: 1, M: 2, E: 3, ME: 3 });
+  assert.ok(bx(di.nodes.M).cy > bx(di.nodes.T).cy, 'the shared target below the host');
+  assert.equal(di.flows.F2.length, 2, 'the host\'s flow straight: ' + JSON.stringify(di.flows.F2));
+  // The two ways into M do not cross: a horizontal piece of one cuts no vertical piece of the other.
+  const pieces = w => w.slice(1).map((q, i) => [w[i], q]);
+  const cross = (u, v) => pieces(u).some(([a, b]) => a[1] === b[1] && pieces(v).some(([p, q]) => p[0] === q[0] && p[0] > Math.min(a[0], b[0]) && p[0] < Math.max(a[0], b[0]) && a[1] > Math.min(p[1], q[1]) && a[1] < Math.max(p[1], q[1])));
+  assert.ok(!cross(di.flows.G1, di.flows.G2) && !cross(di.flows.G2, di.flows.G1), JSON.stringify([di.flows.G1, di.flows.G2]));
+});
+
+test('a loop or multi-instance marker in the middle of the lower edge stays free; two markers of a sub-process too (review of 2.30, R2)', () => {
+  const { model, di } = boundaryLaid('<bpmn:startEvent id="S"/><bpmn:task id="T"><bpmn:standardLoopCharacteristics/></bpmn:task>' +
+    '<bpmn:subProcess id="U"><bpmn:multiInstanceLoopCharacteristics/></bpmn:subProcess><bpmn:endEvent id="E"/>' +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="U"/><bpmn:sequenceFlow id="F3" sourceRef="U" targetRef="E"/>' +
+    '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:boundaryEvent id="C" attachedToRef="U"/><bpmn:endEvent id="X"/><bpmn:endEvent id="Y"/>' +
+    '<bpmn:sequenceFlow id="G" sourceRef="B" targetRef="X"/><bpmn:sequenceFlow id="H" sourceRef="C" targetRef="Y"/>', { S: 0, T: 1, U: 2, E: 3, X: 2, Y: 3 });
+  assert.deepEqual(model.nodes.filter(n => n.markers).map(n => [n.id, n.markers]), [['T', 1], ['U', 2]]);
+  assert.ok(bx(di.nodes.B).x >= bx(di.nodes.T).cx + 10, 'beside the loop marker');
+  assert.ok(bx(di.nodes.C).x >= bx(di.nodes.U).cx + 27, 'beside the "+" and the multi-instance marker');
+});
+
+test('a boundary event of a process with nothing else to lay out is named on the console (review of 2.30, R5)', () => {
+  const { leftOut } = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="Q" processRef="R"/></bpmn:collaboration>' +
+    '<bpmn:process id="P">' + LINE + '</bpmn:process><bpmn:process id="R"><bpmn:boundaryEvent id="B" attachedToRef="X"/></bpmn:process>'));
+  assert.equal(leftOutLine(leftOut.find(x => x.id === 'B')), 'boundaryEvent B: attached to X, which is not laid out');
+});
