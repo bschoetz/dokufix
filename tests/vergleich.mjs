@@ -3933,6 +3933,11 @@ function sourceProblem(d, got){
   const want = d.source + '\n';
   if (!d.laidOut) return got === want ? '' : 'differs from the block\'s text at ' + [...want].findIndex((c, i) => got[i] !== c);
   if (!/<bpmndi:BPMNShape\b/.test(got)) return 'no BPMNShape';
+  // Every element the layout places has its coordinates in the file: a shape per pool, lane and flow node, an edge
+  // with waypoints per sequence and message flow (story 2.12).
+  const esc = id => id.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const unplaced = (d.expected || []).filter(el => !new RegExp('<bpmndi:BPMN(?:Shape [^>]*bpmnElement="' + esc(el.id) + '"[^>]*><dc:Bounds |Edge [^>]*bpmnElement="' + esc(el.id) + '"><di:waypoint )').test(got));
+  if (unplaced.length) return 'no coordinates for ' + unplaced.map(el => el.tag + ' ' + el.id).join(', ');
   // Processes without a collaboration (story 2.12): the collaboration dokufix inserted, with a participant per process, is the only other addition.
   const ins = d.model && d.model.insert;
   if (ins){
