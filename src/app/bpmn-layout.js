@@ -2012,6 +2012,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const t = chTracks.get(b), n = t.top + t.bottom;
     const base = bands[b].kind === 'gap' ? POOL_GAP : bands[b].edge ? EDGE_BASE : CHANNEL_BASE;
     rowH[b] = Math.max(base, n ? 2 * TRACK_MARGIN + (n - 1) * TRACK + (bands[b].edge ? 0 : 8) : 0);
+    // A gap is as tall as the tallest label of a message flow across it, 6 px clear of either pool (story 2.12).
+    if (bands[b].kind === 'gap') for (const m of model.messages || []){
+      const s = place.get(m.from).band, e = place.get(m.to).band;
+      if (m.name && (b - s) * (b - e) < 0) rowH[b] = Math.max(rowH[b], measure(m.name).h + 12);
+    }
   }
   const gapW = [];
   for (let gx = 0; gx <= 2 * cols; gx += 2){
@@ -2194,12 +2199,36 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   const message = new Set((model.messages || []).map(m => m.id));
   // Per label the pool it belongs to; a message flow's label to none.
   const takenPool = [];
+  // A message flow's label keeps off the frames of the pools as well: their edges, 1 px either side; it is tried
+  // first in a gap between two pools, beside each vertical piece that passes the gap's middle, right and then left of it,
+  // then where any flow's label goes (story 2.12).
+  const frames = Object.values(di.pools).sort((a, b) => a[1] - b[1]);
+  const edges = frames.flatMap(([x, y, w, h]) => [[x, y - 1, w, 2], [x, y + h - 1, w, 2], [x - 1, y, 2, h], [x + w - 1, y, 2, h]]);
+  const gapsY = frames.slice(1).map((b, i) => [frames[i][1] + frames[i][3], b[1]]).filter(([a, b]) => b > a);
+  const inGaps = (pts, { w, h }) => {
+    const out = [];
+    for (let i = 1; i < pts.length; i++){
+      const a = pts[i - 1], b = pts[i];
+      if (Math.abs(a.x - b.x) >= 1) continue;
+      for (const [y1, y2] of gapsY){
+        // The piece passes the middle of the gap.
+        const yc = (y1 + y2) / 2;
+        if (Math.min(a.y, b.y) > yc || Math.max(a.y, b.y) < yc) continue;
+        const y = yc - h / 2;
+        out.push([a.x + 6, y, w, h], [a.x - 6 - w, y, w, h]);
+      }
+    }
+    return out;
+  };
   for (const { f, pts, loop } of routes){
     if (!f.name) continue;
     // Two flows leaving one corner of a gateway: their labels go to their
     // longest pieces, not both to that corner.
     const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
-    const place = flowLabel(pts, f.name, gateways.has(f.from) && alone, [...symbols, ...segments, ...taken], measure(f.name), !!loop);
+    const avoid = [...symbols, ...segments, ...taken];
+    const place = message.has(f.id)
+      ? bestPlace([...inGaps(pts, measure(f.name)), ...flowLabelPlaces(pts, f.name, false, measure(f.name))], [...avoid, ...edges])
+      : flowLabel(pts, f.name, gateways.has(f.from) && alone, avoid, measure(f.name), !!loop);
     di.flowLabels[f.id] = place;
     taken.push(place);
     takenPool.push(message.has(f.id) ? null : poolOf.get(f.from));

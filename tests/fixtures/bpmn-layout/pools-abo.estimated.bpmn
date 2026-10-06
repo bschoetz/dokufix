@@ -67,34 +67,34 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_1">
-      <bpmndi:BPMNShape id="Pool_Kunde_di" bpmnElement="Pool_Kunde" isHorizontal="true"><dc:Bounds x="0" y="-9" width="1210" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Pool_Hof_di" bpmnElement="Pool_Hof" isHorizontal="true"><dc:Bounds x="0" y="175" width="1210" height="441"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Formular_di" bpmnElement="Lane_Formular" isHorizontal="true"><dc:Bounds x="30" y="175" width="1180" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Lane_Kartei_di" bpmnElement="Lane_Kartei" isHorizontal="true"><dc:Bounds x="30" y="319" width="1180" height="153"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_Kunde_di" bpmnElement="Pool_Kunde" isHorizontal="true"><dc:Bounds x="0" y="0" width="1210" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_Hof_di" bpmnElement="Pool_Hof" isHorizontal="true"><dc:Bounds x="0" y="184" width="1210" height="432"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Formular_di" bpmnElement="Lane_Formular" isHorizontal="true"><dc:Bounds x="30" y="184" width="1180" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Kartei_di" bpmnElement="Lane_Kartei" isHorizontal="true"><dc:Bounds x="30" y="328" width="1180" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Touren_di" bpmnElement="Lane_Touren" isHorizontal="true"><dc:Bounds x="30" y="472" width="1180" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="K_Start_di" bpmnElement="K_Start"><dc:Bounds x="102" y="45" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="85" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="K_Senden_di" bpmnElement="K_Senden"><dc:Bounds x="210" y="23" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="K_Bestaetigung_di" bpmnElement="K_Bestaetigung"><dc:Bounds x="686" y="45" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="659" y="26" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="K_Termin_di" bpmnElement="K_Termin"><dc:Bounds x="854" y="45" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="827" y="11" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="K_Ende_di" bpmnElement="K_Ende"><dc:Bounds x="1102" y="45" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1075" y="85" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="F_Start_di" bpmnElement="F_Start"><dc:Bounds x="252" y="229" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="269" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="F_Pruefen_di" bpmnElement="F_Pruefen"><dc:Bounds x="378" y="207" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="K_Start_di" bpmnElement="K_Start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="K_Senden_di" bpmnElement="K_Senden"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="K_Bestaetigung_di" bpmnElement="K_Bestaetigung"><dc:Bounds x="686" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="659" y="35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="K_Termin_di" bpmnElement="K_Termin"><dc:Bounds x="854" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="827" y="20" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="K_Ende_di" bpmnElement="K_Ende"><dc:Bounds x="1102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1075" y="94" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Start_di" bpmnElement="F_Start"><dc:Bounds x="252" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="278" width="90" height="30"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Pruefen_di" bpmnElement="F_Pruefen"><dc:Bounds x="378" y="216" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="F_Teilen_di" bpmnElement="F_Teilen"><dc:Bounds x="546" y="375" width="50" height="50"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="F_Bestaetigen_di" bpmnElement="F_Bestaetigen"><dc:Bounds x="644" y="207" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="F_Bestaetigen_di" bpmnElement="F_Bestaetigen"><dc:Bounds x="644" y="216" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="F_Zusammen_di" bpmnElement="F_Zusammen"><dc:Bounds x="980" y="375" width="50" height="50"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="F_Ende_di" bpmnElement="F_Ende"><dc:Bounds x="1102" y="382" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1075" y="422" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="B_Liste_di" bpmnElement="B_Liste"><dc:Bounds x="644" y="360" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="B_Status_di" bpmnElement="B_Status"><dc:Bounds x="812" y="360" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="T_Einplanen_di" bpmnElement="T_Einplanen"><dc:Bounds x="644" y="504" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="T_Mitteilen_di" bpmnElement="T_Mitteilen"><dc:Bounds x="812" y="504" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="K1_di" bpmnElement="K1"><di:waypoint x="138" y="63"/><di:waypoint x="210" y="63"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="K2_di" bpmnElement="K2"><di:waypoint x="330" y="63"/><di:waypoint x="686" y="63"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="K3_di" bpmnElement="K3"><di:waypoint x="722" y="63"/><di:waypoint x="854" y="63"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="K4_di" bpmnElement="K4"><di:waypoint x="890" y="63"/><di:waypoint x="1102" y="63"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="288" y="247"/><di:waypoint x="378" y="247"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="438" y="287"/><di:waypoint x="438" y="400"/><di:waypoint x="546" y="400"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="571" y="375"/><di:waypoint x="571" y="247"/><di:waypoint x="644" y="247"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="764" y="247"/><di:waypoint x="1005" y="247"/><di:waypoint x="1005" y="375"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="K1_di" bpmnElement="K1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="K2_di" bpmnElement="K2"><di:waypoint x="330" y="72"/><di:waypoint x="686" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="K3_di" bpmnElement="K3"><di:waypoint x="722" y="72"/><di:waypoint x="854" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="K4_di" bpmnElement="K4"><di:waypoint x="890" y="72"/><di:waypoint x="1102" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F1_di" bpmnElement="F1"><di:waypoint x="288" y="256"/><di:waypoint x="378" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F2_di" bpmnElement="F2"><di:waypoint x="438" y="296"/><di:waypoint x="438" y="400"/><di:waypoint x="546" y="400"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F3_di" bpmnElement="F3"><di:waypoint x="571" y="375"/><di:waypoint x="571" y="256"/><di:waypoint x="644" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="F4_di" bpmnElement="F4"><di:waypoint x="764" y="256"/><di:waypoint x="1005" y="256"/><di:waypoint x="1005" y="375"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F5_di" bpmnElement="F5"><di:waypoint x="596" y="400"/><di:waypoint x="644" y="400"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F6_di" bpmnElement="F6"><di:waypoint x="764" y="400"/><di:waypoint x="812" y="400"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F7_di" bpmnElement="F7"><di:waypoint x="932" y="400"/><di:waypoint x="980" y="400"/></bpmndi:BPMNEdge>
@@ -102,9 +102,9 @@
       <bpmndi:BPMNEdge id="F9_di" bpmnElement="F9"><di:waypoint x="764" y="544"/><di:waypoint x="812" y="544"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F10_di" bpmnElement="F10"><di:waypoint x="932" y="544"/><di:waypoint x="1005" y="544"/><di:waypoint x="1005" y="425"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="F11_di" bpmnElement="F11"><di:waypoint x="1030" y="400"/><di:waypoint x="1102" y="400"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Msg_Anfrage_di" bpmnElement="Msg_Anfrage"><di:waypoint x="270" y="103"/><di:waypoint x="270" y="229"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="159" width="46" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Msg_Bestaetigung_di" bpmnElement="Msg_Bestaetigung"><di:waypoint x="704" y="207"/><di:waypoint x="704" y="81"/><bpmndi:BPMNLabel><dc:Bounds x="710" y="137" width="73" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Msg_Termin_di" bpmnElement="Msg_Termin"><di:waypoint x="872" y="504"/><di:waypoint x="872" y="492"/><di:waypoint x="800" y="492"/><di:waypoint x="800" y="159"/><di:waypoint x="872" y="159"/><di:waypoint x="872" y="81"/><bpmndi:BPMNLabel><dc:Bounds x="806" y="323" width="79" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Msg_Anfrage_di" bpmnElement="Msg_Anfrage"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="238"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="156.5" width="46.199999999999996" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Msg_Bestaetigung_di" bpmnElement="Msg_Bestaetigung"><di:waypoint x="704" y="216"/><di:waypoint x="704" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="710" y="156.5" width="72.6" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Msg_Termin_di" bpmnElement="Msg_Termin"><di:waypoint x="872" y="504"/><di:waypoint x="872" y="492"/><di:waypoint x="800" y="492"/><di:waypoint x="800" y="168"/><di:waypoint x="872" y="168"/><di:waypoint x="872" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="878" y="156.5" width="79.19999999999999" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

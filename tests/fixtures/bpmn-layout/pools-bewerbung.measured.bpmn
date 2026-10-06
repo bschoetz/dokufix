@@ -118,9 +118,9 @@
       <bpmndi:BPMNEdge id="Flow_U4_di" bpmnElement="Flow_U4"><di:waypoint x="606" y="385"/><di:waypoint x="606" y="444"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="393" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_U5_di" bpmnElement="Flow_U5"><di:waypoint x="834" y="360"/><di:waypoint x="906" y="360"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_U6_di" bpmnElement="Flow_U6"><di:waypoint x="666" y="484"/><di:waypoint x="906" y="484"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Bewerbung_di" bpmnElement="MessageFlow_Bewerbung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="342"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="208" width="60" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Einladung_di" bpmnElement="MessageFlow_Einladung"><di:waypoint x="774" y="320"/><di:waypoint x="774" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="186" width="53" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Absage_di" bpmnElement="MessageFlow_Absage"><di:waypoint x="576" y="444"/><di:waypoint x="576" y="428"/><di:waypoint x="534" y="428"/><di:waypoint x="534" y="261"/><di:waypoint x="606" y="261"/><di:waypoint x="606" y="192"/><bpmndi:BPMNLabel><dc:Bounds x="550" y="242" width="40" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Bewerbung_di" bpmnElement="MessageFlow_Bewerbung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="342"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="249.5" width="60" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Einladung_di" bpmnElement="MessageFlow_Einladung"><di:waypoint x="774" y="320"/><di:waypoint x="774" y="90"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="249.5" width="53" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Absage_di" bpmnElement="MessageFlow_Absage"><di:waypoint x="576" y="444"/><di:waypoint x="576" y="428"/><di:waypoint x="534" y="428"/><di:waypoint x="534" y="261"/><di:waypoint x="606" y="261"/><di:waypoint x="606" y="192"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="249.5" width="40" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

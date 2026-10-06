@@ -39,6 +39,8 @@
 //   pool-overlap              two pools that overlap or touch
 //   message-side              a message flow that leaves its source or enters
 //                             its target other than vertically
+//   label-on-pool-edge        a message flow's label across the frame of a
+//                             pool: <label's flow> <pool>
 // A message flow counts as a flow for every rule but point-outside-lanes;
 // its label is in no lane and no pool.
 // A label is its box in the diagram part; an event's or a gateway's is as wide
@@ -235,7 +237,16 @@ export function breaksOf(xml, model, sizes = {}){
       const [a, b, c, d] = m.box;
       if (a < x + w && a + c > x && b < y + h && b + d > y) add('label-on-label', ...[l.id, m.id].sort());
     }
-    if (l.message) continue;
+    if (l.message){
+      pools.forEach((p, k) => {
+        const b = poolBox(k);
+        if (!b) return;
+        const across = (lo, hi, at) => lo < at && at < hi;
+        const inX = x < b[0] + b[2] && x + w > b[0], inY = y < b[1] + b[3] && y + h > b[1];
+        if ((inX && (across(y, y + h, b[1]) || across(y, y + h, b[1] + b[3]))) || (inY && (across(x, x + w, b[0]) || across(x, x + w, b[0] + b[2])))) add('label-on-pool-edge', l.id, p.id);
+      });
+      continue;
+    }
     const own = lanesOfPool(l.pool);
     if (own.length && !own.some(ln => within(l.box, ln))) add('label-outside-lane', l.id);
     const pool = poolBox(l.pool);

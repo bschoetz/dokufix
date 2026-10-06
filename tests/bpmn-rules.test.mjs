@@ -107,6 +107,11 @@ test('several pools: a message flow docks vertically and is in no lane; pools ne
   assert.deepEqual(check({ N1: [[360, 130], [360, 500]] }), []);
   // Out of B's side, then down: it leaves its source sideways.
   assert.deepEqual(check({ N1: [[420, 90], [460, 90], [460, 420], [360, 420], [360, 500]] }), ['message-side N1']);
+  // A message flow's label across the top edge of Q.
+  const labelled = (box) => breaksOf('<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+    '      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1"><di:waypoint x="360" y="130"/><di:waypoint x="360" y="500"/>' + label(box) + '</bpmndi:BPMNEdge>\n</x>', model, SIZES);
+  assert.deepEqual(labelled([370, 432, 60, 15]), ['label-on-pool-edge N1 Q']);
+  assert.deepEqual(labelled([370, 410, 60, 15]), []);
   // The pools touching.
   assert.deepEqual(check({ N1: [[360, 130], [360, 500]] }, { Q: [0, 400, 1000, 240] }), ['pool-overlap P Q']);
   // A sequence flow of P into the gap.
