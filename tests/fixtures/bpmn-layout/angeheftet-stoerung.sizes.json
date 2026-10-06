@@ -1,0 +1,26 @@
+{
+ "Störungsmeldung eingegangen": {
+  "w": 88,
+  "h": 29
+ },
+ "Kunde informiert": {
+  "w": 90,
+  "h": 15
+ },
+ "Techniker beauftragt, Kunde informiert": {
+  "w": 90,
+  "h": 44
+ },
+ "Ticket geschlossen": {
+  "w": 64,
+  "h": 29
+ },
+ "Mehr als 4 Stunden": {
+  "w": 56,
+  "h": 29
+ },
+ "Hardwaretausch nötig": {
+  "w": 86,
+  "h": 29
+ }
+}

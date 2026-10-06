@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Rechnung" targetNamespace="http://example.org/bpmn">
+  <bpmn:collaboration id="Collaboration_Rechnung">
+    <bpmn:participant id="Participant_Handwerksbetrieb" name="Handwerksbetrieb" processRef="Process_Rechnung" />
+    <bpmn:messageFlow id="MessageFlow_Rechnung" name="Rechnung" sourceRef="Task_Versenden" targetRef="Start_Rechnung_erhalten" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Rechnung" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Rechnung">
+      <bpmn:lane id="Lane_Buero" name="Büro">
+        <bpmn:flowNodeRef>Start_Auftrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Schreiben</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Versenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Rechnung_versendet</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Buchhaltung" name="Buchhaltung">
+        <bpmn:flowNodeRef>Start_Rechnung_erhalten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Zusammenfuehrung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Warten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_14_Tage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Mahnungen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mahnung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Inkasso</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Inkasso</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Verbuchen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abschliessen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abgeschlossen</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Auftrag" name="Auftrag abgeschlossen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Schreiben" name="Rechnung schreiben">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_Versenden" name="Rechnung versenden">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Rechnung_versendet" name="Rechnung versendet">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:startEvent id="Start_Rechnung_erhalten" name="Rechnung erhalten">
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_Erhalten" />
+    </bpmn:startEvent>
+    <bpmn:exclusiveGateway id="Gateway_Zusammenfuehrung">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:receiveTask id="Task_Warten" name="Auf Zahlungseingang warten">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:boundaryEvent id="Boundary_14_Tage" name="14 Tage verstrichen" cancelActivity="true" attachedToRef="Task_Warten">
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_14" />
+    </bpmn:boundaryEvent>
+    <bpmn:exclusiveGateway id="Gateway_Mahnungen" name="Schon zwei Mahnungen verschickt?" default="Flow_9a">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_9a</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Mahnung" name="Mahnung verschicken">
+      <bpmn:incoming>Flow_9a</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Inkasso" name="Fall an Inkassobüro abgeben">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Inkasso" name="Fall an Inkasso abgegeben">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_Verbuchen" name="Zahlung verbuchen">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_Abschliessen" name="Auftrag abschließen">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Abgeschlossen" name="Auftrag abgeschlossen und bezahlt">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Auftrag" targetRef="Task_Schreiben" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Schreiben" targetRef="Task_Versenden" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Versenden" targetRef="End_Rechnung_versendet" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Start_Rechnung_erhalten" targetRef="Gateway_Zusammenfuehrung" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Gateway_Zusammenfuehrung" targetRef="Task_Warten" />
+    <bpmn:sequenceFlow id="Flow_6" name="Zahlung eingegangen" sourceRef="Task_Warten" targetRef="Task_Verbuchen" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Boundary_14_Tage" targetRef="Gateway_Mahnungen" />
+    <bpmn:sequenceFlow id="Flow_8" name="Ja" sourceRef="Gateway_Mahnungen" targetRef="Task_Inkasso">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">zweiMahnungenVerschickt</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="Flow_9a" name="Nein" sourceRef="Gateway_Mahnungen" targetRef="Task_Mahnung" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Mahnung" targetRef="Gateway_Zusammenfuehrung" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Inkasso" targetRef="End_Inkasso" />
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Verbuchen" targetRef="Task_Abschliessen" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Abschliessen" targetRef="End_Abgeschlossen" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Rechnung">
+      <bpmndi:BPMNShape id="Participant_Handwerksbetrieb_di" bpmnElement="Participant_Handwerksbetrieb" isHorizontal="true"><dc:Bounds x="0" y="0" width="1216" height="461"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Buero_di" bpmnElement="Lane_Buero" isHorizontal="true"><dc:Bounds x="30" y="0" width="1186" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Buchhaltung_di" bpmnElement="Lane_Buchhaltung" isHorizontal="true"><dc:Bounds x="30" y="144" width="1186" height="317"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Auftrag_di" bpmnElement="Start_Auftrag"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Schreiben_di" bpmnElement="Task_Schreiben"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Versenden_di" bpmnElement="Task_Versenden"><dc:Bounds x="378" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Rechnung_versendet_di" bpmnElement="End_Rechnung_versendet"><dc:Bounds x="1090" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1063" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Rechnung_erhalten_di" bpmnElement="Start_Rechnung_erhalten"><dc:Bounds x="102" y="216" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="256" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Zusammenfuehrung_di" bpmnElement="Gateway_Zusammenfuehrung" isMarkerVisible="true"><dc:Bounds x="245" y="209" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Warten_di" bpmnElement="Task_Warten"><dc:Bounds x="378" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Mahnungen_di" bpmnElement="Gateway_Mahnungen" isMarkerVisible="true"><dc:Bounds x="615" y="351" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="595" y="405" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Mahnung_di" bpmnElement="Task_Mahnung"><dc:Bounds x="1048" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Inkasso_di" bpmnElement="Task_Inkasso"><dc:Bounds x="748" y="336" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Inkasso_di" bpmnElement="End_Inkasso"><dc:Bounds x="1090" y="358" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1063" y="398" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Verbuchen_di" bpmnElement="Task_Verbuchen"><dc:Bounds x="580" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Abschliessen_di" bpmnElement="Task_Abschliessen"><dc:Bounds x="748" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Abgeschlossen_di" bpmnElement="End_Abgeschlossen"><dc:Bounds x="940" y="216" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="913" y="256" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_14_Tage_di" bpmnElement="Boundary_14_Tage"><dc:Bounds x="420" y="256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="442" y="278" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="330" y="72"/><di:waypoint x="378" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="498" y="72"/><di:waypoint x="1090" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="138" y="234"/><di:waypoint x="245" y="234"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="295" y="234"/><di:waypoint x="378" y="234"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="498" y="234"/><di:waypoint x="580" y="234"/><bpmndi:BPMNLabel><dc:Bounds x="504" y="201" width="70" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="438" y="292"/><di:waypoint x="438" y="376"/><di:waypoint x="615" y="376"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="665" y="376"/><di:waypoint x="748" y="376"/><bpmndi:BPMNLabel><dc:Bounds x="675" y="357" width="11" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9a_di" bpmnElement="Flow_9a"><di:waypoint x="640" y="351"/><di:waypoint x="640" y="320"/><di:waypoint x="1108" y="320"/><di:waypoint x="1108" y="274"/><bpmndi:BPMNLabel><dc:Bounds x="646" y="328" width="25" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="1108" y="194"/><di:waypoint x="1108" y="164"/><di:waypoint x="270" y="164"/><di:waypoint x="270" y="209"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="868" y="376"/><di:waypoint x="1090" y="376"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="700" y="234"/><di:waypoint x="748" y="234"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="868" y="234"/><di:waypoint x="940" y="234"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

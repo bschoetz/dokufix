@@ -1,0 +1,22 @@
+{
+ "Antrag eingegangen": {
+  "w": 70,
+  "h": 29
+ },
+ "Antrag bearbeitet": {
+  "w": 55,
+  "h": 29
+ },
+ "Erinnerung an Teamleitung gesendet": {
+  "w": 75,
+  "h": 44
+ },
+ "Technischer Fehler": {
+  "w": 62,
+  "h": 29
+ },
+ "Nach drei Tagen": {
+  "w": 86,
+  "h": 15
+ }
+}

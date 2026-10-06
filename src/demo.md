@@ -704,7 +704,7 @@ Ein BPMN-Prozess ohne Koordinaten mit Sonderfällen: ein Pool ohne Bahnen; XML o
 
 ### BPMN ohne Koordinaten: leere Bahn
 
-Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Teilprozess, dessen Inhalt dokufix nicht anordnet: Sie sollten drei Bahnen „Theke“, „Magazin“ und „Werkstatt“ sehen, die dritte leer, darin vier Symbole und drei Pfeile; der Teilprozess „Einarbeiten“ steht als ein Symbol, das angeheftete Ereignis und sein Pfeil fehlen.
+Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Teilprozess, dessen Inhalt dokufix nicht anordnet: Sie sollten drei Bahnen „Theke“, „Magazin“ und „Werkstatt“ sehen, die dritte leer, darin vier Symbole und vier Pfeile; der Teilprozess „Einarbeiten“ steht als ein Symbol, das Zeit-Ereignis „Eine Woche“ sitzt auf der Unterkante von „Lieferung prüfen“, sein Pfeil führt nach unten und zu „Im Regal“.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -730,6 +730,50 @@ Bahnen ohne Pool, eine davon leer, mit einem angehefteten Ereignis und einem Tei
     <bpmn:sequenceFlow id="N2" sourceRef="N_Pruefen" targetRef="N_Einarbeiten"/>
     <bpmn:sequenceFlow id="N3" sourceRef="N_Einarbeiten" targetRef="N_Ende"/>
     <bpmn:sequenceFlow id="N4" sourceRef="N_Frist" targetRef="N_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: angeheftete Ereignisse
+
+Ereignisse auf dem Rand einer Aufgabe: Sie sollten an „Ware liefern“ zwei Ereignisse nebeneinander auf der Unterkante sehen, die Zeit „Drei Tage“ unterbrechend (durchgezogener Doppelkreis) und die Eskalation „Rückfrage“ nicht unterbrechend (gestrichelt), jedes mit einem Pfeil nach unten und dann nach rechts in eine eigene Reihe; am Teilprozess „Lieferung prüfen“ den Fehler „Schaden“ rechts neben dem Plus-Zeichen, das frei bleibt; am Dienst „Sendung buchen“ den Fehler „Kein Netz“ mit einem Pfeil nach unten und zurück in dieselbe Aufgabe.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Angeheftet" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Angeheftet" isExecutable="false">
+    <bpmn:startEvent id="A_Start" name="Bestellung da"/>
+    <bpmn:serviceTask id="A_Buchen" name="Sendung buchen"/>
+    <bpmn:boundaryEvent id="A_Netz" name="Kein Netz" attachedToRef="A_Buchen"><bpmn:errorEventDefinition id="A_Netz_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="A_Liefern" name="Ware liefern"/>
+    <bpmn:boundaryEvent id="A_Frist" name="Drei Tage" attachedToRef="A_Liefern"><bpmn:timerEventDefinition id="A_Frist_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="A_Frage" name="Rückfrage" cancelActivity="false" attachedToRef="A_Liefern"><bpmn:escalationEventDefinition id="A_Frage_D"/></bpmn:boundaryEvent>
+    <bpmn:subProcess id="A_Pruefen" name="Lieferung prüfen">
+      <bpmn:startEvent id="A_P_Start"/>
+      <bpmn:endEvent id="A_P_Ende"/>
+      <bpmn:sequenceFlow id="A_P1" sourceRef="A_P_Start" targetRef="A_P_Ende"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="A_Schaden" name="Schaden" attachedToRef="A_Pruefen"><bpmn:errorEventDefinition id="A_Schaden_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="A_Rechnung" name="Rechnung stellen"/>
+    <bpmn:endEvent id="A_Ende" name="Geliefert"/>
+    <bpmn:task id="A_Mahnen" name="Lieferanten mahnen"/>
+    <bpmn:endEvent id="A_Gemahnt" name="Gemahnt"/>
+    <bpmn:task id="A_Antworten" name="Rückfrage beantworten"/>
+    <bpmn:endEvent id="A_Beantwortet" name="Beantwortet"/>
+    <bpmn:task id="A_Reklamieren" name="Schaden reklamieren"/>
+    <bpmn:endEvent id="A_Reklamiert" name="Reklamiert"/>
+    <bpmn:sequenceFlow id="A1" sourceRef="A_Start" targetRef="A_Buchen"/>
+    <bpmn:sequenceFlow id="A2" sourceRef="A_Buchen" targetRef="A_Liefern"/>
+    <bpmn:sequenceFlow id="A3" sourceRef="A_Liefern" targetRef="A_Pruefen"/>
+    <bpmn:sequenceFlow id="A4" sourceRef="A_Pruefen" targetRef="A_Rechnung"/>
+    <bpmn:sequenceFlow id="A5" sourceRef="A_Rechnung" targetRef="A_Ende"/>
+    <bpmn:sequenceFlow id="A6" name="erneut" sourceRef="A_Netz" targetRef="A_Buchen"/>
+    <bpmn:sequenceFlow id="A7" sourceRef="A_Frist" targetRef="A_Mahnen"/>
+    <bpmn:sequenceFlow id="A8" sourceRef="A_Mahnen" targetRef="A_Gemahnt"/>
+    <bpmn:sequenceFlow id="A9" sourceRef="A_Frage" targetRef="A_Antworten"/>
+    <bpmn:sequenceFlow id="A10" sourceRef="A_Antworten" targetRef="A_Beantwortet"/>
+    <bpmn:sequenceFlow id="A11" sourceRef="A_Schaden" targetRef="A_Reklamieren"/>
+    <bpmn:sequenceFlow id="A12" sourceRef="A_Reklamieren" targetRef="A_Reklamiert"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

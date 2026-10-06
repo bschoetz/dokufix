@@ -559,6 +559,7 @@ function judgeDiagrams(exp, wellFormed){
       ...m.pools.filter(p => p.id).map(p => ({ id: p.id, tag: 'participant' })),
       ...m.lanes.filter(l => !l.synthetic).map(l => ({ id: l.id, tag: 'lane' })),
       ...m.nodes.map(n => ({ id: n.id, tag: n.tag })),
+      ...(m.boundaries || []).map(b => ({ id: b.id, tag: 'boundaryEvent' })),
       ...m.flows.map(f => ({ id: f.id, tag: 'sequenceFlow' })),
       ...m.messages.map(f => ({ id: f.id, tag: 'messageFlow' })),
     ] });
@@ -3540,7 +3541,7 @@ function bpmnPlaced(xml){
 // The properties of a clean drawing (story 2.8, AC2), each with its key in
 // what bpmnLayoutProblems() reports.
 const BPMN_AC2 = [
-  ['outline', 'every flow starts and ends on the outline of its symbols'],
+  ['outline', 'every flow starts and ends on the outline of its symbols, every boundary event lies on its host\'s'],
   ['through', 'no flow runs through a symbol, its own source and target included'],
   ['labels', 'no two flow labels lie on top of each other'],
   ['corner', 'flows that leave a gateway at one point are told apart, by route or by label'],
@@ -3568,6 +3569,12 @@ function bpmnLayoutProblems(model, g){
     return Math.abs(Math.hypot(p[0] - cx, p[1] - cy) - w / 2) <= eps;
   };
   const fmt = p => p.map(v => Math.round(v)).join(',');
+  // A boundary event (story 2.30): its middle on its host's outline; a flow from it starts on its circle.
+  for (const b of model.boundaries || []){
+    const e = g.shapes[b.id], h = g.shapes[b.host];
+    if (!e || !h){ out.push('outline: the boundary event ' + b.id + ' or its host is not drawn'); continue; }
+    if (!onOutline([e[0] + e[2] / 2, e[1] + e[3] / 2], h, 'task')) out.push('outline: the boundary event ' + b.id + ' is off the outline of ' + b.host);
+  }
   for (const fl of flows){
     const pts = g.flows[fl.id], a = g.shapes[fl.from], b = g.shapes[fl.to];
     if (!pts || pts.length < 2 || !a || !b){ out.push('outline: ' + fl.id + ' is not drawn'); continue; }
@@ -3757,8 +3764,10 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
     if (!d.laidOut) return;
     const g = f.figures[i] && f.figures[i].geometry;
     const m = d.model, drawn = id => !!(g && (g.shapes[id] || g.flows[id]));
-    const counts = [m.pools.filter(p => p.id).length, m.lanes.filter(l => !l.synthetic).length, m.nodes.length, m.flows.length, m.messages.length];
-    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, m.nodes.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length];
+    // A boundary event (story 2.30) counts as a symbol.
+    const symbols = m.nodes.concat(m.boundaries || []);
+    const counts = [m.pools.filter(p => p.id).length, m.lanes.filter(l => !l.synthetic).length, symbols.length, m.flows.length, m.messages.length];
+    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, symbols.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length];
     check('BPMN laid out, "' + d.title + '": pools, lanes, symbols, flows and message flows drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
     const problems = g ? bpmnLayoutProblems(m, g) : ['no SVG'];
     for (const [key, text] of BPMN_AC2){

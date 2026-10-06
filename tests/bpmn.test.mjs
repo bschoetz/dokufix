@@ -336,11 +336,11 @@ test('what the layout leaves out is a line on the console each, and the rest is 
   const warned = t.mock.method(console, 'warn', () => {});
   const { Viewer } = standIn();
   const document = page();
-  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:boundaryEvent id="B" attachedToRef="A"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
+  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:dataStoreReference id="B"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
   const d = diagramIn(document, xml);
   await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), mermaidStandIn()));
   assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
-  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: boundaryEvent B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
+  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: dataStoreReference B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
 });
 
 test('XML without coordinates and without Mermaid: refused with that reason; no host is made', async t => {

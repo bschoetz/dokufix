@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Antrag" targetNamespace="http://example.org/bpmn">
+  <bpmn:process id="Process_Antrag" name="Antragsbearbeitung" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Poststelle" name="Poststelle">
+        <bpmn:flowNodeRef>Start_Antrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Erfassen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sachbearbeitung" name="Sachbearbeitung">
+        <bpmn:flowNodeRef>Task_VonHandPruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Zusammen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Entscheiden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Erinnerung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bescheid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ende_Bescheid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ende_Erinnerung</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT-System">
+        <bpmn:flowNodeRef>Task_Abgleich</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Fehler</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Antrag" name="Antrag eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Erfassen" name="Antrag erfassen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:serviceTask id="Task_Abgleich" name="Daten gegen Melderegister prüfen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_Fehler" name="Technischer Fehler" attachedToRef="Task_Abgleich">
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_VonHandPruefen" name="Daten von Hand prüfen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Zusammen" name="">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Entscheiden" name="Über Antrag entscheiden (bewilligen oder ablehnen)">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_Erinnerung" name="Nach drei Tagen" cancelActivity="false" attachedToRef="Task_Entscheiden">
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sendTask id="Task_Bescheid" name="Bescheid versenden">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="Ende_Bescheid" name="Antrag bearbeitet">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Ende_Erinnerung" name="Erinnerung an Teamleitung gesendet">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_1" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Antrag" targetRef="Task_Erfassen" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Erfassen" targetRef="Task_Abgleich" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Abgleich" targetRef="Gateway_Zusammen" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Boundary_Fehler" targetRef="Task_VonHandPruefen" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_VonHandPruefen" targetRef="Gateway_Zusammen" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_Zusammen" targetRef="Task_Entscheiden" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Entscheiden" targetRef="Task_Bescheid" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Boundary_Erinnerung" targetRef="Ende_Erinnerung" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Bescheid" targetRef="Ende_Bescheid" />
+  </bpmn:process>
+</bpmn:definitions>

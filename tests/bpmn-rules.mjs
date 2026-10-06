@@ -28,7 +28,11 @@
 //                             L, not a ⊤): a merge (story 2.21; a split is no
 //                             merge)
 //   point-outside-lanes       a waypoint in no lane
-//   node-outside-lane         a symbol not inside the lane that holds it
+//   node-outside-lane         a symbol not inside the lane that holds it (a
+//                             boundary event: its host's lane)
+//   off-border                a boundary event whose middle is not on its
+//                             host's outline: <event> <host> (story 2.30)
+//   boundary-overlap          two boundary events of one host that overlap
 //   lane-gap                  two lanes one below the other that do not meet
 //   label-on-flow,            a label on a piece of a flow, on a foreign
 //   label-on-node,            symbol, on another label: <label's element>
@@ -44,7 +48,9 @@
 //   label-on-pool-edge        a message flow's label across the frame of a
 //                             pool: <label's flow> <pool>
 // A message flow counts as a flow for every rule but point-outside-lanes;
-// its label is in no lane and no pool.
+// its label is in no lane and no pool. A boundary event (story 2.30) counts as
+// a symbol, an event, for every rule; that it lies across its host's outline
+// is no break.
 // A label is its box in the diagram part; an event's or a gateway's is as wide
 // as a label can be (90 px) and bpmn-js centres the text in it, so its box is
 // the text's measured width (<n>.sizes.json, else the estimate) centred there.
@@ -113,8 +119,10 @@ export function breaksOf(xml, model, sizes = {}){
   const out = new Set();
   const add = (rule, ...ids) => out.add([rule, ...ids].join(' '));
   const di = readDiagram(xml);
-  const nodes = Object.fromEntries(model.nodes.map(n => [n.id, di.shapes[n.id]]));
-  const type = Object.fromEntries(model.nodes.map(n => [n.id, n.type]));
+  const boundaries = model.boundaries || [];
+  const nodes = Object.fromEntries(model.nodes.concat(boundaries).map(n => [n.id, di.shapes[n.id]]));
+  const type = Object.fromEntries(model.nodes.map(n => [n.id, n.type]).concat(boundaries.map(b => [b.id, 'inter'])));
+  const hostOf = Object.fromEntries(boundaries.map(b => [b.id, b.host]));
   const messages = model.messages || [];
   const flowOf = Object.fromEntries(model.flows.concat(messages).map(f => [f.id, f]));
   const isMessage = new Set(messages.map(m => m.id));
@@ -124,6 +132,7 @@ export function breaksOf(xml, model, sizes = {}){
   const poolBox = i => pools[i] && pools[i].id ? di.shapes[pools[i].id] : null;
   const poolOf = {};
   for (const l of model.lanes) for (const id of l.nodes) poolOf[id] = l.pool ?? 0;
+  for (const b of boundaries) poolOf[b.id] = poolOf[b.host];
   const inside = (x, y, [lx, ly, lw, lh]) => x >= lx && x <= lx + lw && y >= ly && y <= ly + lh;
   const within = ([x, y, w, h], box) => inside(x, y, box) && inside(x + w, y + h, box);
 
@@ -156,6 +165,9 @@ export function breaksOf(xml, model, sizes = {}){
     const x1 = Math.min(s.a[0], s.b[0]), x2 = Math.max(s.a[0], s.b[0]), y1 = Math.min(s.a[1], s.b[1]), y2 = Math.max(s.a[1], s.b[1]);
     for (const [nid, [nx, ny, nw, nh]] of Object.entries(nodes)){
       const own = nid === f.from || nid === f.to;
+      // A flow from a boundary event starts on its host's outline: along it or into it counts as through its own.
+      if (hostOf[f.from] === nid && x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1){ add('through-own', s.id, nid); continue; }
+      if (hostOf[f.from] === nid) continue;
       if (x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) add(own ? 'through-own' : 'through', s.id, nid);
       const onH = y1 === y2 && (Math.abs(y1 - ny) <= 1 || Math.abs(y1 - ny - nh) <= 1) && Math.min(x2, nx + nw) - Math.max(x1, nx) > 2;
       const onV = x1 === x2 && (Math.abs(x1 - nx) <= 1 || Math.abs(x1 - nx - nw) <= 1) && Math.min(y2, ny + nh) - Math.max(y1, ny) > 2;
@@ -213,6 +225,16 @@ export function breaksOf(xml, model, sizes = {}){
     if (a && b && a[0] <= b[0] + b[2] && b[0] <= a[0] + a[2] && a[1] <= b[1] + b[3] && b[1] <= a[1] + a[3]) add('pool-overlap', pools[i].id, pools[j].id);
   }
   for (const l of drawnLanes) for (const id of l.nodes) if (!within(nodes[id], di.shapes[l.id])) add('node-outside-lane', id, l.id);
+  for (const b of boundaries){
+    const l = drawnLanes.find(x => x.nodes.includes(b.host));
+    if (l && !within(nodes[b.id], di.shapes[l.id])) add('node-outside-lane', b.id, l.id);
+    const [x, y, w, h] = nodes[b.id];
+    if (!onOutline([x + w / 2, y + h / 2], nodes[b.host], 'task')) add('off-border', b.id, b.host);
+  }
+  for (let i = 0; i < boundaries.length; i++) for (let j = i + 1; j < boundaries.length; j++){
+    const a = boundaries[i], b = boundaries[j], [ax, ay, aw, ah] = nodes[a.id], [bx, by, bw, bh] = nodes[b.id];
+    if (a.host === b.host && Math.min(ax + aw, bx + bw) > Math.max(ax, bx) && Math.min(ay + ah, by + bh) > Math.max(ay, by)) add('boundary-overlap', a.id, b.id);
+  }
   for (let k = 0; k < Math.max(1, pools.length); k++){
     const stacked = drawnLanes.filter(l => (l.pool ?? 0) === k).map(l => [l.id, di.shapes[l.id]]).sort((a, b) => a[1][1] - b[1][1]);
     for (let i = 1; i < stacked.length; i++){
@@ -222,7 +244,7 @@ export function breaksOf(xml, model, sizes = {}){
   }
 
   const labels = [];
-  for (const n of model.nodes){
+  for (const n of model.nodes.concat(boundaries)){
     const box = di.labels[n.id];
     if (!box) continue;
     const [x, y, w, h] = box, s = sizes[n.name] || labelSize(n.name);

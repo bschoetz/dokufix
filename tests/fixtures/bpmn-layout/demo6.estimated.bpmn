@@ -24,16 +24,18 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Prozess_Neu">
-      <bpmndi:BPMNShape id="N_Theke_di" bpmnElement="N_Theke" isHorizontal="true"><dc:Bounds x="30" y="0" width="480" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Magazin_di" bpmnElement="N_Magazin" isHorizontal="true"><dc:Bounds x="30" y="144" width="480" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Werkstatt_di" bpmnElement="N_Werkstatt" isHorizontal="true"><dc:Bounds x="30" y="288" width="480" height="104"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Start_di" bpmnElement="N_Start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Pruefen_di" bpmnElement="N_Pruefen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Einarbeiten_di" bpmnElement="N_Einarbeiten"><dc:Bounds x="210" y="176" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Ende_di" bpmnElement="N_Ende"><dc:Bounds x="402" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="375" y="238" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N2_di" bpmnElement="N2"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="176"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N3_di" bpmnElement="N3"><di:waypoint x="330" y="216"/><di:waypoint x="402" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="N_Theke_di" bpmnElement="N_Theke" isHorizontal="true"><dc:Bounds x="30" y="0" width="648" height="180"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Magazin_di" bpmnElement="N_Magazin" isHorizontal="true"><dc:Bounds x="30" y="180" width="648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Werkstatt_di" bpmnElement="N_Werkstatt" isHorizontal="true"><dc:Bounds x="30" y="324" width="648" height="104"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Start_di" bpmnElement="N_Start"><dc:Bounds x="102" y="72" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="112" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Pruefen_di" bpmnElement="N_Pruefen"><dc:Bounds x="210" y="50" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Einarbeiten_di" bpmnElement="N_Einarbeiten"><dc:Bounds x="378" y="212" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Ende_di" bpmnElement="N_Ende"><dc:Bounds x="570" y="234" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="215" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Frist_di" bpmnElement="N_Frist"><dc:Bounds x="252" y="112" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="278" y="134" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="N1_di" bpmnElement="N1"><di:waypoint x="138" y="90"/><di:waypoint x="210" y="90"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N2_di" bpmnElement="N2"><di:waypoint x="330" y="90"/><di:waypoint x="438" y="90"/><di:waypoint x="438" y="212"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N3_di" bpmnElement="N3"><di:waypoint x="498" y="252"/><di:waypoint x="570" y="252"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N4_di" bpmnElement="N4"><di:waypoint x="270" y="148"/><di:waypoint x="270" y="304"/><di:waypoint x="588" y="304"/><di:waypoint x="588" y="270"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

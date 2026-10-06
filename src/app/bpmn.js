@@ -285,6 +285,7 @@ export async function mermaidPositions(model, doc, index){
     const paths = Array.from(root.querySelectorAll('path[data-edge="true"][data-id]'));
     const taken = new Set();
     const keyOf = new Map(model.nodes.map(n => [n.id, n.key]));
+    for (const b of model.boundaries || []) keyOf.set(b.id, keyOf.get(b.host));
     for (const f of model.flows){
       const prefix = 'L_' + keyOf.get(f.from) + '_' + keyOf.get(f.to) + '_';
       const path = paths.find(e => !taken.has(e) && e.getAttribute('data-id').startsWith(prefix));

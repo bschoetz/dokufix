@@ -103,11 +103,10 @@ test('what the layout cannot place is left out, with every flow that touches it;
     '<bpmn:sequenceFlow id="F3" sourceRef="B" targetRef="Mahnen"/><bpmn:sequenceFlow id="F4" sourceRef="T" targetRef="SP_T"/></bpmn:process>');
   const { model, leftOut } = read(xml);
   assert.deepEqual(model.nodes.map(n => n.id), ['S', 'T', 'Mahnen', 'SP']);
-  assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2']);
-  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'DA', 'B', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'N', 'AS', 'GR', 'F3', 'F4']);
-  assert.equal(leftOutLine(leftOut.find(x => x.id === 'F3')), 'sequenceFlow F3: touches B, which is not laid out');
+  assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2', 'F3']);
+  assert.deepEqual(model.boundaries, [{ id: 'B', name: '', host: 'T', cancel: true }]);
+  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'DA', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'N', 'AS', 'GR', 'F4']);
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'SP_T')), 'task SP_T: inside the sub-process SP');
-  assert.equal(leftOutLine(leftOut.find(x => x.id === 'B')), 'boundaryEvent B: not laid out');
 });
 
 test('nested lanes: the inner lanes are laid out, the outer one is left out; an empty lane holds a stand-in', () => {
@@ -634,7 +633,7 @@ test('a lane without an id above a drawn lane in a pool: the drawn lane keeps it
 });
 
 test('a flow from a node to itself whose node is not laid out names it once', () => {
-  const { leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="Z" attachedToRef="T"/><bpmn:sequenceFlow id="ZZ" sourceRef="Z" targetRef="Z"/></bpmn:process>'));
+  const { leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:dataStoreReference id="Z"/><bpmn:sequenceFlow id="ZZ" sourceRef="Z" targetRef="Z"/></bpmn:process>'));
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'ZZ')), 'sequenceFlow ZZ: touches Z, which is not laid out');
 });
 
@@ -707,7 +706,7 @@ test('the rules are switched per call: one call without a rule leaves the next a
 });
 
 test('the default rules: R1–R16 but R7, all on, frozen', () => {
-  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'jumpAbove', 'loopAbove', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
+  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'boundaryBelow', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'jumpAbove', 'loopAbove', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
   assert.ok(Object.values(DEFAULT_RULES).every(v => v === true));
   assert.ok(Object.isFrozen(DEFAULT_RULES));
   assert.throws(() => { DEFAULT_RULES.startAlign = false; }, TypeError);
@@ -1037,4 +1036,119 @@ test('a message flow takes no needless bends: straight up across a flow that jum
   const { model } = read(xml);
   const di = layoutGeometry(model, rawOf(model, { A0: 0, A1: 100, A2: 300, A3: 400, B0: 0, G: 100, B1: 200, B2: 300 }));
   assert.equal(di.flows.M.length, 2, 'straight: ' + JSON.stringify(di.flows.M));
+});
+
+// ---------- boundary events (story 2.30) ----------
+// A process from its body, laid out with Mermaid's columns made up: per node id its column.
+function boundaryLaid(body, cols){
+  const xml = xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>');
+  const { model, leftOut } = read(xml);
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: cols[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
+  const di = layoutGeometry(model, raw);
+  return { model, leftOut, di, xml: appendDiagram(xml, model, di).xml };
+}
+const bx = ([x, y, w, h]) => ({ x, y, w, h, cx: x + w / 2, cy: y + h / 2, bottom: y + h, right: x + w });
+const TIMER = '<bpmn:timerEventDefinition id="TD"/>';
+
+test('boundary events are read with their host and whether they interrupt; their flows leave them', () => {
+  const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE +
+    '<bpmn:boundaryEvent id="B1" name="Frist" attachedToRef="T">' + TIMER + '</bpmn:boundaryEvent>' +
+    '<bpmn:boundaryEvent id="B2" cancelActivity="false" attachedToRef="T"/>' +
+    '<bpmn:boundaryEvent id="B3" attachedToRef="S"/><bpmn:boundaryEvent attachedToRef="T"/><bpmn:boundaryEvent id="B5" attachedToRef="Nichts"/>' +
+    '<bpmn:task id="M" name="Mahnen"/><bpmn:sequenceFlow id="FB" sourceRef="B1" targetRef="M"/><bpmn:sequenceFlow id="FM" sourceRef="M" targetRef="E"/>' +
+    '<bpmn:sequenceFlow id="FI" sourceRef="M" targetRef="B2"/><bpmn:sequenceFlow id="FX" sourceRef="B3" targetRef="M"/></bpmn:process>'));
+  assert.deepEqual(model.boundaries, [{ id: 'B1', name: 'Frist', host: 'T', cancel: true }, { id: 'B2', name: '', host: 'T', cancel: false }]);
+  assert.deepEqual(model.flows.map(f => [f.id, f.from, f.to]), [['F1', 'S', 'T'], ['F2', 'T', 'E'], ['FB', 'B1', 'M'], ['FM', 'M', 'E']]);
+  assert.deepEqual(leftOut.map(leftOutLine), [
+    'boundaryEvent B3: attached to S, which is not laid out', 'boundaryEvent (no id): has no id', 'boundaryEvent B5: attached to Nichts, which is not laid out',
+    'sequenceFlow FI: enters the boundary event B2', 'sequenceFlow FX: touches B3, which is not laid out']);
+});
+
+test('a message flow at a boundary event is left out, saying so', () => {
+  const { model, leftOut } = read(xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="A" processRef="P"/><bpmn:participant id="Q" name="Kunde"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="Q" targetRef="B"/></bpmn:collaboration><bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/></bpmn:process>'));
+  assert.deepEqual(model.messages, []);
+  assert.equal(leftOutLine(leftOut.find(x => x.id === 'M')), 'messageFlow M: at a boundary event, which takes no message flow yet');
+});
+
+test('a boundary event inside a sub-process is left out with its content', () => {
+  const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:subProcess id="SP"><bpmn:task id="I"/><bpmn:boundaryEvent id="IB" attachedToRef="I"/></bpmn:subProcess></bpmn:process>'));
+  assert.deepEqual(model.boundaries, []);
+  assert.equal(leftOutLine(leftOut.find(x => x.id === 'IB')), 'boundaryEvent IB: inside the sub-process SP');
+});
+
+test('Mermaid gets a flow from a boundary event as one from its host, and none back into the host', () => {
+  const { model } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:task id="M"/>' +
+    '<bpmn:sequenceFlow id="FB" sourceRef="B" targetRef="M"/><bpmn:sequenceFlow id="FR" sourceRef="B" targetRef="T"/></bpmn:process>'));
+  const src = mermaidSource(model);
+  assert.match(src, /n2 --> n4\n/);
+  assert.doesNotMatch(src, /n2 --> n2/);
+});
+
+test('a boundary event sits on its host\'s lower edge; its flow leaves it downwards to a row below, a column further', () => {
+  const { di, xml } = boundaryLaid(LINE + '<bpmn:boundaryEvent id="B" name="Frist" attachedToRef="T">' + TIMER + '</bpmn:boundaryEvent>' +
+    '<bpmn:task id="M" name="Mahnen"/><bpmn:endEvent id="EM"/><bpmn:sequenceFlow id="FB" sourceRef="B" targetRef="M"/><bpmn:sequenceFlow id="FM" sourceRef="M" targetRef="EM"/>',
+    { S: 0, T: 1, E: 2, M: 2, EM: 3 });
+  const t = bx(di.nodes.T), b = bx(di.nodes.B), m = bx(di.nodes.M);
+  assert.deepEqual([b.w, b.h], [36, 36]);
+  assert.equal(b.cy, t.bottom, 'the event\'s middle on the host\'s lower edge');
+  assert.equal(b.cx, t.cx, 'one event: in the middle of the edge');
+  assert.ok(m.y > t.bottom, 'the target below the host');
+  assert.ok(m.x > t.right, 'the target a column right of the host');
+  assert.equal(bx(di.nodes.EM).cy, m.cy, 'the way after it in the target\'s row');
+  const w = di.flows.FB;
+  assert.deepEqual(w[0], [b.cx, b.bottom], 'the flow starts at the event\'s lower tip');
+  assert.ok(w[1][0] === w[0][0] && w[1][1] > w[0][1], 'and runs down');
+  assert.deepEqual(w.at(-1), [m.x, m.cy]);
+  assert.match(xml, /<bpmndi:BPMNShape id="B_di" bpmnElement="B"><dc:Bounds x="\d+" y="\d+" width="36" height="36"\/><bpmndi:BPMNLabel>/);
+  const [lx, ly] = di.labels.B;
+  assert.ok(ly >= t.bottom, 'its name below the host\'s edge');
+  assert.ok(lx + 45 > b.right, 'beside the event, on its right');
+});
+
+test('two boundary events of one task stand side by side; the ways do not cross; one without a flow is drawn too', () => {
+  const { di } = boundaryLaid(LINE + '<bpmn:boundaryEvent id="B1" attachedToRef="T"/><bpmn:boundaryEvent id="B2" attachedToRef="T"/><bpmn:boundaryEvent id="B3" cancelActivity="false" attachedToRef="T"/>' +
+    '<bpmn:task id="M1"/><bpmn:task id="M2"/><bpmn:sequenceFlow id="G1" sourceRef="B1" targetRef="M1"/><bpmn:sequenceFlow id="G2" sourceRef="B2" targetRef="M2"/>',
+    { S: 0, T: 1, E: 2, M1: 2, M2: 2 });
+  const t = bx(di.nodes.T), bs = ['B1', 'B2', 'B3'].map(id => bx(di.nodes[id]));
+  for (const b of bs) assert.equal(b.cy, t.bottom);
+  const xs = bs.map(b => b.cx).sort((a, b) => a - b);
+  assert.ok(xs[1] - xs[0] >= 36 && xs[2] - xs[1] >= 36, 'no two overlap');
+  assert.ok(xs[0] >= t.x && xs[2] <= t.right, 'all on the edge');
+  const [m1, m2] = [bx(di.nodes.M1), bx(di.nodes.M2)];
+  assert.notEqual(m1.cy, m2.cy, 'each way a row of its own');
+  // The deeper way's event stands further in: its vertical does not cross the other's horizontal.
+  const [deep, flat] = m1.cy > m2.cy ? ['G1', 'G2'] : ['G2', 'G1'];
+  assert.ok(di.flows[deep][0][0] < di.flows[flat][0][0]);
+});
+
+test('on a sub-process the marker in the middle of the lower edge stays free', () => {
+  const { di } = boundaryLaid('<bpmn:startEvent id="S"/><bpmn:subProcess id="T"/><bpmn:endEvent id="E"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="E"/>' +
+    '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:endEvent id="X"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="X"/>', { S: 0, T: 1, E: 2, X: 2 });
+  const t = bx(di.nodes.T), b = bx(di.nodes.B);
+  assert.ok(b.x >= t.cx + 10, 'right of the marker');
+});
+
+test('a flow from a boundary event back into its host or before it leaves the event downwards', () => {
+  const { di } = boundaryLaid(LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:boundaryEvent id="C" attachedToRef="T"/>' +
+    '<bpmn:sequenceFlow id="R" sourceRef="B" targetRef="T"/><bpmn:sequenceFlow id="Z" sourceRef="C" targetRef="S"/>', { S: 0, T: 1, E: 2 });
+  const t = bx(di.nodes.T);
+  for (const [id, ev] of [['R', 'B'], ['Z', 'C']]){
+    const w = di.flows[id], b = bx(di.nodes[ev]);
+    assert.deepEqual(w[0], [b.cx, b.bottom]);
+    assert.ok(w[1][1] > w[0][1], id + ' runs down first');
+    for (let i = 1; i < w.length; i++) assert.ok(w[i - 1][0] === w[i][0] || w[i - 1][1] === w[i][1], id + ' right angles');
+  }
+  const r = di.flows.R.at(-1);
+  assert.ok(r[0] === t.x || r[0] === t.right, 'back into the host from the side');
+});
+
+test('boundary events: the rule R17 puts the way below; without it the way stays in the host\'s row', () => {
+  const body = LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:task id="M"/><bpmn:endEvent id="EM"/><bpmn:sequenceFlow id="FB" sourceRef="B" targetRef="M"/><bpmn:sequenceFlow id="FM" sourceRef="M" targetRef="EM"/>';
+  const xml = xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>');
+  const { model } = read(xml);
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: ({ S: 0, T: 1, E: 2, M: 2, EM: 3 })[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
+  const on = layoutGeometry(model, raw), off = layoutGeometry(model, raw, labelSize, { boundaryBelow: false });
+  assert.ok(bx(on.nodes.M).cy > bx(on.nodes.T).cy);
+  assert.equal(bx(off.nodes.M).cy, bx(off.nodes.T).cy);
 });

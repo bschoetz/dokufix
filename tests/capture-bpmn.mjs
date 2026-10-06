@@ -50,7 +50,7 @@ export async function captureBundle(){
 export const hasDiagram = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
 
 // The texts the layout measures, in the order it may ask for them, each once.
-export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat(model.flows.concat(model.messages || []).map(f => f.name).filter(Boolean)))];
+export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat((model.boundaries || []).map(b => b.name).filter(Boolean), model.flows.concat(model.messages || []).map(f => f.name).filter(Boolean)))];
 
 function parseArgs(argv){
   const a = { out: null, files: [] };
@@ -106,7 +106,9 @@ async function main(argv){
           return { raw, sizes: Object.fromEntries(texts.map(t => [t, measure(t)])) };
         } finally { viewer.destroy(); host.remove(); }
       }, { model: input.model, texts: labelTexts(input.model), index: 'capture-' + (++n) });
-      const missing = input.model.nodes.filter(m => !raw.nodes[m.key]).map(m => m.id).concat(input.model.flows.filter((f, i) => !raw.edges[i]).map(f => f.id));
+      // A flow from a boundary event back into its host is no edge of Mermaid's (mermaidSource()).
+      const hostOf = new Map((input.model.boundaries || []).map(b => [b.id, b.host]));
+      const missing = input.model.nodes.filter(m => !raw.nodes[m.key]).map(m => m.id).concat(input.model.flows.filter((f, i) => !raw.edges[i] && (hostOf.get(f.from) ?? f.from) !== f.to).map(f => f.id));
       if (missing.length) throw new Error(input.file + ': Mermaid did not lay out ' + missing.join(', '));
       fs.writeFileSync(input.out + '.raw.json', JSON.stringify(raw, null, 1));
       fs.writeFileSync(input.out + '.sizes.json', JSON.stringify(sizes, null, 1));

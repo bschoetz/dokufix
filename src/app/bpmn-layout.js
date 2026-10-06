@@ -4,8 +4,9 @@
 // order of the columns, not the picture, and is not the writing format:
 //
 //   1. readProcess() reads the XML into its pools, each with its lanes, flow
-//      nodes and sequence flows, a black box without lanes (story 2.29), and
-//      the message flows between pools, or refuses with the reason
+//      nodes and sequence flows, a black box without lanes (story 2.29), the
+//      events on an activity's border with their host (story 2.30), and the
+//      message flows between pools, or refuses with the reason
 //   2. mermaidSource() writes that as Mermaid swimlane-beta text, with ids
 //      of its own (n1…, l1…), so that Mermaid never sees the author's ids
 //   3. Mermaid renders it off-screen (src/app/bpmn.js, the one part that needs
@@ -24,9 +25,10 @@
 // step 5 exactly as it draws XML that came with coordinates.
 //
 // What the layout cannot place is left out, and the rest is laid out and
-// drawn (Ben, 2026-10-03): boundary events, text annotations, data objects and
-// stores, associations, groups, parent lanes of nested lanes, the content of
-// a sub-process, and every flow that touches one of them. readProcess() lists
+// drawn (Ben, 2026-10-03): text annotations, data objects and stores,
+// associations, groups, parent lanes of nested lanes, the content of a
+// sub-process, a boundary event on what is no activity laid out, a message
+// flow at a boundary event, and every flow that touches one of them. readProcess() lists
 // them; the page names each on the console, not in the document.
 //
 // Pure logic: no page, no library. The XML comes in as a parsed document; the
@@ -89,7 +91,7 @@ function nodeType(tag){
 }
 const HOLDS_CONTENT = new Set(['subProcess', 'adHocSubProcess', 'transaction']);
 // What a process or a collaboration may hold that the layout leaves out.
-const LEFT_OUT = new Set(['boundaryEvent', 'textAnnotation', 'dataObject', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
+const LEFT_OUT = new Set(['textAnnotation', 'dataObject', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
 // What a flow node may hold that is drawn and left out with it.
 const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation']);
 
@@ -111,7 +113,11 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //            pool in pools
 //     nodes: [{ id, name, type, tag, key }], type one of start, end, inter,
 //            gateway, task
-//     flows: [{ id, from, to, name }], the sequence flows, each inside its pool
+//     flows: [{ id, from, to, name }], the sequence flows, each inside its
+//            pool; from may be a boundary event
+//     boundaries: [{ id, name, host, cancel }], the events on an activity's
+//            border (story 2.30): host, the activity's id; cancel, whether
+//            it interrupts (cancelActivity)
 //     messages: [{ id, from, to, name, fromPool, toPool }], the message
 //            flows between two pools laid out, each end a flow node or a
 //            participant; fromPool, toPool: where an end is a participant,
@@ -150,7 +156,7 @@ export function readProcess(doc){
     : processes.filter(proc => attr(proc, 'id') || (leave(proc, 'has no id'), false)).map(proc => ({ participant: null, proc }));
   if (participants.length) for (const p of processes) if (!participants.some(pa => procOf(pa) === p)) leave(p, 'no participant refers to it');
 
-  const nodes = [], lanes = [], flows = [], pools = [];
+  const nodes = [], lanes = [], flows = [], pools = [], boundaries = [];
   const byId = new Map(), poolOfNode = new Map();
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
@@ -162,6 +168,7 @@ export function readProcess(doc){
     for (const l of own.lanes){ l.pool = index; lanes.push(l); }
     for (const n of own.nodes){ byId.set(n.id, n); poolOfNode.set(n.id, index); }
     flows.push(...own.flows);
+    boundaries.push(...own.boundaries);
     pools.push({ id: participant && attr(participant, 'id') ? attr(participant, 'id') : null, name: participant ? clean(attr(participant, 'name')) : '', el: participant, proc, standIn: own.standIn });
   }
   if (!pools.some(p => !p.box)) throw new Error(LAYOUT_NOTHING);
@@ -196,6 +203,8 @@ export function readProcess(doc){
   for (const [el, slot] of slots){
     const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef'), a = end(from), b = end(to);
     if (!attr(el, 'id')) slot.reason = 'has no id';
+    // A message flow at a boundary event is left out (story 2.30: not yet laid out).
+    else if (boundaries.some(x => x.id === from || x.id === to)) slot.reason = 'at a boundary event, which takes no message flow yet';
     else if (!a || !b) slot.reason = 'touches ' + [...new Set([from, to].filter(id => !end(id)))].join(' and ') + ', which is not laid out';
     else if (a.pool === b.pool) slot.reason = 'a message flow within one pool';
     else messages.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...(a.frame ? { fromPool: a.pool } : {}), ...(b.frame ? { toPool: b.pool } : {}) });
@@ -203,7 +212,7 @@ export function readProcess(doc){
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].tag === 'messageFlow' && leftOut[i].reason === null) leftOut.splice(i, 1);
   // A participant without an id gets no pool shape.
   for (const p of pools) if (p.el && !attr(p.el, 'id')) leave(p.el, 'has no id; it is not drawn as a pool');
-  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, messages, insert }, leftOut };
+  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, insert }, leftOut };
 }
 
 // The flow nodes, lanes and sequence flows of one pool's process, keyed on
@@ -219,7 +228,7 @@ function readPool(proc, participant, before, beforeLanes, leave){
       nodes.push({ id, name: clean(attr(el, 'name')), type, tag, key: 'n' + (before.length + nodes.length + 1) });
       // A sub-process is drawn as one symbol; what it holds is left out.
       if (HOLDS_CONTENT.has(tag)){
-        for (const inner of descendants(el)) if (attr(inner, 'id') && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || local(inner) === 'sequenceFlow')) leave(inner, 'inside the sub-process ' + id);
+        for (const inner of descendants(el)) if (attr(inner, 'id') && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || ['sequenceFlow', 'boundaryEvent'].includes(local(inner)))) leave(inner, 'inside the sub-process ' + id);
       }
       for (const inner of descendants(el)) if (LEFT_OUT_INSIDE.has(local(inner))) leave(inner, 'not laid out');
     } else if (type) leave(el, 'has no id');
@@ -228,6 +237,17 @@ function readPool(proc, participant, before, beforeLanes, leave){
   if (!nodes.length) return null;
   before.push(...nodes);
   const byId = new Map(nodes.map(n => [n.id, n]));
+  // Events on an activity's border (story 2.30): each with its host and whether it interrupts; one whose host is no
+  // activity laid out here is left out.
+  const boundaries = [];
+  for (const el of kids(proc)){
+    if (local(el) !== 'boundaryEvent') continue;
+    const id = attr(el, 'id'), host = attr(el, 'attachedToRef');
+    if (!id) leave(el, 'has no id');
+    else if (!byId.has(host) || byId.get(host).type !== 'task') leave(el, 'attached to ' + (host || 'nothing') + ', which is not laid out');
+    else boundaries.push({ id, name: clean(attr(el, 'name')), host, cancel: attr(el, 'cancelActivity') !== 'false' });
+  }
+  const boundaryIds = new Set(boundaries.map(b => b.id));
 
   // The lanes, nested ones included; only those without lanes inside are laid
   // out, each node in the first that names it. A node only an outer lane
@@ -270,10 +290,11 @@ function readPool(proc, participant, before, beforeLanes, leave){
     const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef');
     // Mermaid's swimlane layout fails on a flow from a node to itself.
     if (from === to && byId.has(from) && attr(el, 'id')) leave(el, 'a flow from a node to itself');
-    else if (byId.has(from) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
-    else leave(el, !attr(el, 'id') ? 'has no id' : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id)))].join(' and ') + ', which is not laid out');
+    // A flow leaves a boundary event and never enters one.
+    else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
+    else leave(el, !attr(el, 'id') ? 'has no id' : boundaryIds.has(to) ? 'enters the boundary event ' + to : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id) && !boundaryIds.has(id)))].join(' and ') + ', which is not laid out');
   }
-  return { nodes, lanes, flows, standIn };
+  return { nodes, lanes, flows, boundaries, standIn };
 }
 
 // One line per left-out element for the console.
@@ -286,15 +307,18 @@ export function leftOutLine(item){
 // ids such as "end", "subgraph" or "1" never reach Mermaid's parser; labels
 // lose what could end a quoted label or start an entity or a Markdown string.
 // The lanes of all pools go to Mermaid as one list, without the message flows:
-// they set no column there (Ben, 2026-10-06), R7 does (ruleCompact()).
+// they set no column there (Ben, 2026-10-06), R7 does (ruleCompact()). A
+// boundary event is no Mermaid node: its flows leave its host there (story
+// 2.30), so that what follows it stands right of the host.
 export function mermaidSource(model){
   const q = text => '"' + (clean(String(text).replace(/["<>&#`\\]/g, ' ')) || ' ') + '"';
   const byId = new Map(model.nodes.map(n => [n.id, n]));
+  for (const b of model.boundaries || []) byId.set(b.id, byId.get(b.host));
   const shape = n => n.key + (n.type === 'task' ? '[' + q(n.name) + ']' : n.type === 'gateway' ? '{' + q(n.name || '+') + '}' : '((' + q(n.name) + '))');
   return 'swimlane-beta LR\n' +
     model.lanes.map(l => '  subgraph ' + l.key + '[' + q(l.name) + ']\n' + l.nodes.map(id => '    ' + shape(byId.get(id)) + '\n').join('') +
       (l.hold ? '    ' + l.hold + '[" "]\n' : '') + '  end\n').join('') +
-    model.flows.map(f => '  ' + byId.get(f.from).key + ' -->' + (f.name ? '|' + q(f.name) + '|' : '') + ' ' + byId.get(f.to).key + '\n').join('');
+    model.flows.filter(f => byId.get(f.from) !== byId.get(f.to)).map(f => '  ' + byId.get(f.from).key + ' -->' + (f.name ? '|' + q(f.name) + '|' : '') + ' ' + byId.get(f.to).key + '\n').join('');
 }
 
 // ---------- the geometry ----------
@@ -594,6 +618,7 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   combProbe: true,    // R14 comb: for an exclusive split with three or more ways, the heads in different rows tried in one column (R9 as a trial)
   startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
   stagger: true,      // R16 two gateways above each other in one column: one tried a column further
+  boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host (story 2.30)
 });
 
 // The grid's measures.
@@ -607,6 +632,7 @@ const POOL_GAP = 40;        // the gap between two pools without tracks (story 2
 const BOX_H = 60;           // the height of a pool without a process of its own (story 2.29)
 const GAP_TRACK = 20;       // in a gap the distance of two tracks and the margin beside the outermost (Ben, 2026-10-06: more room where message flows run)
 const PORT_STEP = 30;       // the distance of two ends on one side of a task
+const MARKER = 20;          // the room bpmn-js's marker takes in the middle of a sub-process's lower edge (story 2.30)
 const BEND = 0.005;         // the cost of a bend in the router: half a grid step (length / 100)
 const MSG_BEND = 0.5;       // the cost of a bend of a message flow: two cost as much as a crossing (Ben, 2026-10-06, p-rs1: needless bends)
 
@@ -1131,7 +1157,8 @@ function ruleCompact(g, model, rules){
         // Likewise before a split R1 put in the lane of its ways (Ben, 2026-10-05, x-rg3): it needs its north and
         // south ports for the ways; with the node before in its column, the flow would come in vertically.
         || (g.laneSplits?.has(c.n.id) ?? false);
-      col = Math.max(col, pc + (sameRow || blocked || edge ? 1 : 0));
+      // A boundary event's way begins a column right of its host (story 2.30).
+      col = Math.max(col, pc + (sameRow || blocked || edge || f.event ? 1 : 0));
     }
     // A message flow's target stands in its source's column at the earliest (story 2.12): the flow goes down or up.
     for (const m of g.msgIn.get(c.n.id)){ const s = g.cells.get(m.from); if (isPlaced(s)) col = Math.max(col, s.col); }
@@ -1224,8 +1251,10 @@ function ruleBlockBox(g, model){
 //   R11  last, on the picture all others give; returns it
 // R7 and R8 run in finishGrid(), on every trial and on the picture returned.
 function layoutGrid(model, raw, measure, rules){
+  model = gridModel(model);
   const g = buildGrid(model, raw);
   if (rules.gatewayLane) ruleGatewayLane(g, model);
+  if (rules.boundaryBelow) ruleBoundaryBelow(g, model);
   if (rules.pathRows) rulePathRows(g, model);
   if (rules.loopAbove) ruleLoopAbove(g, model);
   if (rules.branchBelow) ruleBranchBelow(g, model);
@@ -1240,6 +1269,37 @@ function layoutGrid(model, raw, measure, rules){
   if (rules.stagger) ruleStagger(g, model, measure, rules);
   if (rules.endAlign) return ruleEndAlign(g, model, measure, rules);
   return finishGrid(g, model, measure, rules);
+}
+
+// The model as the grid sees it (story 2.30): a flow from a boundary event is
+// one from its host, with event, the event's id; the rules look for
+// predecessors and branches at the host, the router leaves the host through
+// the event. Without boundary events the model itself.
+function gridModel(model){
+  if (!(model.boundaries || []).length) return model;
+  const hostOf = new Map(model.boundaries.map(b => [b.id, b.host]));
+  return { ...model, flows: model.flows.map(f => hostOf.has(f.from) ? { ...f, from: hostOf.get(f.from), event: f.from } : f) };
+}
+
+// R17 (story 2.30). The way after a boundary event stands below its host, as
+// an exception path does in a modeler: the nodes of that way (reached by no
+// other way of the host) in the host's lane and row take a row of their own
+// below it, one per event's way; R7 puts the first a column right of the host.
+// After R1, so that an end has its lane; before R2, which then sees no two ways
+// in one row.
+function ruleBoundaryBelow(g, model){
+  const hosts = [...new Set(model.flows.filter(f => f.event).map(f => f.from))];
+  for (const id of byCol(g, hosts)){
+    const H = g.cells.get(id);
+    let row = H.row;
+    for (const r of branchRegions(g, id)){
+      if (!r.flow.event) continue;
+      const mine = r.nodes.filter(x => { const c = g.cells.get(x); return c.lane === H.lane && c.row === H.row && !c.pin; });
+      if (!mine.length) continue;
+      row = g.freshRow(H.lane, row, 1);
+      for (const x of mine) g.cells.get(x).row = row;
+    }
+  }
 }
 
 // A trial run from R7 on, for the trials R10 to R16 and R11: the finished DI,
@@ -1798,6 +1858,14 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const u = portUse.get(id + '|' + side);
     return u && (out ? u.in : u.out) ? 100 : 0;
   };
+  // A host's lower edge belongs to its boundary events (story 2.30): a flow from one leaves it downwards (else 200),
+  // another flow does not use it (100, as a port of the other direction).
+  const hosts = new Set((model.boundaries || []).map(b => b.host));
+  const boundaryCost = (f, pieces, s, t) => {
+    if (!hosts.size) return 0;
+    if (f.event) return pieces[0].v !== undefined && pieces[0].b2 > pieces[0].b1 ? 0 : 200;
+    return (hosts.has(f.from) && sideOfFirst(pieces[0], s) === 'bottom' ? 100 : 0) + (hosts.has(f.to) && sideOfLast(pieces[pieces.length - 1], t) === 'bottom' ? 100 : 0);
+  };
   const score = (f, pieces) => {
     const s = endAt(f, 'from'), t = endAt(f, 'to');
     // A bend costs half a grid step (Ben, 2026-10-05, hund2: try another exit to cut the bends of a line): with the
@@ -1807,13 +1875,18 @@ function finishGrid(g, model, measure, rules, reroute = true){
     // bends (a gateway may be entered from the right, as Ben did in hund2).
     const ahead = t.xo >= s.xo;
     const behind = ahead ? (typeOf(f.to) === 'task' && sideOfLast(pieces[pieces.length - 1], t) === 'right' ? 1 : 0) + (typeOf(f.from) === 'task' && sideOfFirst(pieces[0], s) === 'left' ? 1 : 0) : 0;
-    return cellsCrossed(pieces) * 1000 + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : BEND);
+    return cellsCrossed(pieces) * 1000 + boundaryCost(f, pieces, s, t) + portPenalty(f.from, sideOfFirst(pieces[0], s), true) + portPenalty(f.to, sideOfLast(pieces[pieces.length - 1], t), false) + conflicts(pieces, f) + length(pieces) / 100 + (pieces.length - 1 + 2 * behind) * (msgIds.has(f.id) ? MSG_BEND : BEND);
   };
   // The templates of a flow s→t.
   const templates = (s, t) => {
     const out = [];
     const ys = s.band, yt = t.band, xs = s.xo, xt = t.xo;
     const channels = channelsOf.get(poolOfBand(ys));
+    // From a boundary event back into its host (story 2.30): down, beside the host, in from the side.
+    if (ys === yt && xs === xt){
+      for (const ch of channels) for (const gx of [xs + 1, xs - 1]) out.push([V(xs, ys, ch), H(ch, xs, gx), V(gx, ch, ys), H(ys, gx, xs)]);
+      return out;
+    }
     if (ys === yt){
       out.push([H(ys, xs, xt)]);
       for (const ch of channels) out.push([V(xs, ys, ch), H(ch, xs, xt), V(xt, ch, yt)]);
@@ -1861,6 +1934,17 @@ function finishGrid(g, model, measure, rules, reroute = true){
     }
     return out;
   };
+  // From a boundary event (story 2.30) besides: down into a channel below the host, along it to a gap between
+  // columns, up or down that gap and in from the side; so a way to a lane above leaves the event downwards too.
+  const waysOf = (f, s, t) => {
+    if (!f.event) return templates(s, t);
+    const out = templates(s, t);
+    for (const ch of channelsOf.get(poolOfBand(s.band))){
+      if (ch < s.band) continue;
+      for (const gx of [s.xo + 1, t.xo - 1, t.xo + 1]) out.push([V(s.xo, s.band, ch), H(ch, s.xo, gx), V(gx, ch, t.band), H(t.band, gx, t.xo)]);
+    }
+    return out;
+  };
   // A template without its pieces of length 0, and two neighbours of one
   // direction merged into one piece, until none is left: the tracks, the
   // conflicts and the waypoints take H and V in turn (the middle H of a Z with
@@ -1888,7 +1972,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   for (const f of flowOrder){
     const s = place.get(f.from), t = place.get(f.to);
     let best = null;
-    for (const raw of templates(s, t)){
+    for (const raw of waysOf(f, s, t)){
       const pieces = clean(raw);
       if (!pieces.length) continue;
       const sc = score(f, pieces);
@@ -1914,7 +1998,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     };
     const cheapest = f => {
       let best = null;
-      for (const raw of templates(place.get(f.from), place.get(f.to))){
+      for (const raw of waysOf(f, place.get(f.from), place.get(f.to))){
         const pieces = clean(raw);
         if (!pieces.length) continue;
         const sc = score(f, pieces);
@@ -1952,7 +2036,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const unuse = (id, side, out) => { const u = portUse.get(id + '|' + side); if (u) u[out ? 'out' : 'in']--; };
     unuse(f.from, old.sides[0], true); unuse(f.to, old.sides[1], false);
     let best = { pieces: old.pieces, sc: score(f, old.pieces) };
-    for (const raw of templates(s, t)){
+    for (const raw of waysOf(f, s, t)){
       const pieces = clean(raw);
       if (!pieces.length) continue;
       const sc = score(f, pieces);
@@ -2099,7 +2183,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
   for (const c of g.cells.values()){
     colW[c.col] = Math.max(colW[c.col], widthOf(c.n));
     const b = place.get(c.n.id).band;
-    rowH[b] = Math.max(rowH[b], SIZE[c.n.type][1]);
+    // A host's row holds its boundary events below its lower edge, and as much above (story 2.30).
+    rowH[b] = Math.max(rowH[b], SIZE[c.n.type][1] + (hosts.has(c.n.id) ? SIZE.inter[1] : 0));
   }
   for (let b = 0; b < bands.length; b++){
     if (bands[b].kind === 'row'){ if (!rowH[b]) rowH[b] = EMPTY_ROW; continue; }
@@ -2207,7 +2292,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     };
     const add = (id, side, out, far) => { const k = id + '|' + side; (ends.get(k) || ends.set(k, []).get(k)).push({ r, out, far }); };
     const e = msgEnds.get(r.f.id);
-    if (!e?.from) add(r.f.from, r.sides[0], true, farOf(true));
+    if (!e?.from && !r.f.event) add(r.f.from, r.sides[0], true, farOf(true));
     if (!e?.to) add(r.f.to, r.sides[1], false, farOf(false));
   }
   const portOf = new Map(); // r|out → { x, y }
@@ -2235,6 +2320,30 @@ function finishGrid(g, model, measure, rules, reroute = true){
       portOf.set(e.r.f.id + '|' + e.out, { x: base.x + (vertical ? off : 0), y: base.y + (vertical ? 0 : off) });
     }
   }
+
+  // Boundary events (story 2.30) side by side in the middle of their host's lower edge, 8 px apart where the host
+  // allows: those whose way turns left first, then those going straight down or without a flow, then those turning
+  // right; of two turning alike the one going deeper stands further in, so that their ways do not cross. A flow
+  // from one leaves its lower tip.
+  const byHost = new Map();
+  for (const b of model.boundaries || []) (byHost.get(b.host) || byHost.set(b.host, []).get(b.host)).push(b);
+  for (const [host, list] of byHost){
+    const c = box[host];
+    const key = b => {
+      const r = routed.find(o => o.f.event === b.id), q = r && r.pieces[1];
+      if (!q || q.h === undefined) return 0;
+      const turn = Math.sign(q.x2 - q.x1);
+      return turn * (1 + 1 / (1 + Math.abs(q.h - place.get(host).band)));
+    };
+    const sorted = [...list].sort((a, b) => key(a) - key(b));
+    const n = sorted.length, step = n > 1 ? Math.min(SIZE.inter[0] + 8, (c.w - SIZE.inter[0]) / (n - 1)) : 0;
+    // A sub-process and a call activity carry their marker in the middle of that edge: one or two events stand
+    // beside it, one alone on the right.
+    const marked = HOLDS_CONTENT.has(g.cells.get(host).n.tag) || g.cells.get(host).n.tag === 'callActivity';
+    const at = i => marked && n <= 2 ? (n === 1 || i === 1 ? 1 : -1) * (MARKER / 2 + SIZE.inter[0] / 2) : step * (i - (n - 1) / 2);
+    sorted.forEach((b, i) => { box[b.id] = { cx: c.cx + at(i), cy: c.cy + c.h / 2, w: SIZE.inter[0], h: SIZE.inter[1] }; });
+  }
+  for (const r of routed) if (r.f.event){ const e = box[r.f.event]; portOf.set(r.f.id + '|true', { x: e.cx, y: e.cy + e.h / 2 }); }
 
   // An end at a frame (story 2.29) lies on the line of its piece, a vertical one: in a gap between columns on its
   // track, in a column at the other end's port; on the edge of its band facing the other end.
@@ -2295,11 +2404,12 @@ function finishGrid(g, model, measure, rules, reroute = true){
     const first = own[0], last = own[own.length - 1];
     di.pools[p.id] = [0, R(bandY[first]), R(totalW), R(bandY[last] + rowH[last] - bandY[first])];
   });
-  for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
+  for (const n of [...model.nodes, ...(model.boundaries || [])]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
   for (const { pts } of routes) orthogonal(pts);
   for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
   const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
   const poolOf = new Map([...g.cells.values()].map(c => [c.n.id, g.poolOfLane[c.lane]]));
+  for (const b of model.boundaries || []) poolOf.set(b.id, poolOf.get(b.host));
   finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways, poolOf);
   return di;
 }
@@ -2310,7 +2420,8 @@ function finishGrid(g, model, measure, rules, reroute = true){
 // taken, the one covered least. poolOf: per node the index of its pool.
 function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways, poolOf){
   const segments = routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q)));
-  const symbols = model.nodes.map(n => di.nodes[n.id]);
+  const boundaries = model.boundaries || [];
+  const symbols = [...model.nodes, ...boundaries].map(n => di.nodes[n.id]);
   const taken = [], owners = [];
   const message = new Set((model.messages || []).map(m => m.id));
   // Per label the pool it belongs to; a message flow's label to none.
@@ -2360,6 +2471,18 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     takenPool.push(poolOf.get(n.id));
     owners.push({ boxes: [place, di.labels[n.id]], anchor: box[n.id] });
   }
+  // A boundary event's name 4 px below its host's edge, beside the event: right first, then left (story 2.30).
+  for (const b of boundaries){
+    if (!b.name) continue;
+    const c = box[b.id], size = measure(b.name);
+    const places = [[c.cx + c.w / 2 + 2, c.cy + 4, size.w, size.h], [c.cx - c.w / 2 - 2 - size.w, c.cy + 4, size.w, size.h], ...labelPlaces(c, size, false)];
+    const place = bestPlace(places, [...symbols.filter(x => x !== di.nodes[b.id]), ...segments, ...taken]);
+    const [x, y, w, h] = place;
+    di.labels[b.id] = [R(x + w / 2 - LABEL_WIDTH / 2), R(y), LABEL_WIDTH, R(h)];
+    taken.push(place);
+    takenPool.push(poolOf.get(b.id));
+    owners.push({ boxes: [place, di.labels[b.id]], anchor: box[b.id] });
+  }
   // A lane a label reaches out of grows, and what lies beyond moves, each
   // label with its owner.
   // A black box keeps its distance to the lanes of the pool below it, or, with none below, of the pool above, while
@@ -2373,7 +2496,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   });
   const room = labelRoom(owners, model.lanes.map(l => laneBox[l.key]), box, routes);
   if (room.up || room.down){
-    for (const n of model.nodes){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
+    for (const n of [...model.nodes, ...boundaries]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
     for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
     model.pools.forEach((p, k) => { const a = anchors[k]; if (a) di.pools[p.id][1] = laneEdge(a.j, a.top) + a.d; });
   }
@@ -2558,6 +2681,7 @@ export function appendDiagram(xml, model, di){
   for (const p of model.pools) if (p.id && di.pools[p.id]) out += shape(p.id, di.pools[p.id], ' isHorizontal="true"');
   for (const l of model.lanes) if (!l.synthetic) out += shape(l.id, di.lanes[l.id], ' isHorizontal="true"');
   for (const n of model.nodes) out += shape(n.id, di.nodes[n.id], n.tag === 'exclusiveGateway' ? ' isMarkerVisible="true"' : '', di.labels[n.id]);
+  for (const b of model.boundaries || []) out += shape(b.id, di.nodes[b.id], '', di.labels[b.id]);
   for (const f of model.flows){
     out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + '_di')) + '" bpmnElement="' + esc(f.id) + '">' +
       di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + label(di.flowLabels[f.id]) + '</bpmndi:BPMNEdge>\n';

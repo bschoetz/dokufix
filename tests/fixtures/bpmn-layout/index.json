@@ -17,7 +17,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:741"
+    "src/demo.md:785"
    ],
    "shows": [
     "25.2"
@@ -26,7 +26,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:781"
+    "src/demo.md:825"
    ]
   },
   "ereignis": {
@@ -246,6 +246,34 @@
    "note": "a garage with a black box on top (customer) and one below (wholesaler), six message flows at their frames; written by an LLM given only the task \"a garage takes a repair order, waits for the customer's approval of the estimate, orders parts from a wholesaler, repairs and reports; how customer and wholesaler work inside is unknown\" and the rule",
    "shows": [
     "29"
+   ]
+  },
+  "demo-angeheftet": {
+   "source": "src/demo.md:741",
+   "note": "two boundary events on one task (a timer that interrupts, an escalation that does not), an error on a collapsed sub-process beside its marker, an error whose flow goes back into its own service task",
+   "shows": [
+    "30"
+   ]
+  },
+  "angeheftet-rechnung": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/angeheftet/llm-rechnung.bpmn",
+   "note": "an interrupting timer on a waiting task whose way leads through a decision back before its host; written by an LLM given only the task \"a craftsman's office sends an invoice, accounting waits for the payment, after 14 days without it sends a reminder and waits again, after the second reminder hands the case to a collection agency\" and the rule \"BPMN 2.0 XML without coordinates\"",
+   "shows": [
+    "30"
+   ]
+  },
+  "angeheftet-antrag": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/angeheftet/llm-antrag.bpmn",
+   "note": "an error on a service task whose way goes to a lane above, and a non-interrupting timer on a user task; written by an LLM given only the task \"an authority checks an application automatically, by hand after a technical error, decides and sends the notice; after three days of deciding a reminder goes to the team lead without interrupting\" and the rule",
+   "shows": [
+    "30"
+   ]
+  },
+  "angeheftet-stoerung": {
+   "source": "_bmad-output/initiative-dokufix/spike-2-26/eingaben/angeheftet/llm-stoerung.bpmn",
+   "note": "a non-interrupting timer and an interrupting error on one collapsed sub-process (its content added for the lint, start and end were missing); written by an LLM given only the task \"IT support classifies a fault and fixes it in a sub-process; after four hours the customer is told without interrupting; when hardware must be replaced the fix is broken off and a technician sent\" and the rule",
+   "shows": [
+    "30"
    ]
   }
  }

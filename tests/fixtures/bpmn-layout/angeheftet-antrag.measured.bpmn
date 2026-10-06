@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Antrag" targetNamespace="http://example.org/bpmn">
+  <bpmn:process id="Process_Antrag" name="Antragsbearbeitung" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Poststelle" name="Poststelle">
+        <bpmn:flowNodeRef>Start_Antrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Erfassen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Sachbearbeitung" name="Sachbearbeitung">
+        <bpmn:flowNodeRef>Task_VonHandPruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Entscheiden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Erinnerung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bescheid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ende_Bescheid</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Ende_Erinnerung</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT-System">
+        <bpmn:flowNodeRef>Task_Abgleich</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Fehler</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Zusammen</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Antrag" name="Antrag eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Erfassen" name="Antrag erfassen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:serviceTask id="Task_Abgleich" name="Daten gegen Melderegister prüfen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:boundaryEvent id="Boundary_Fehler" name="Technischer Fehler" attachedToRef="Task_Abgleich">
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_1" />
+    </bpmn:boundaryEvent>
+    <bpmn:userTask id="Task_VonHandPruefen" name="Daten von Hand prüfen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Zusammen" name="">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Entscheiden" name="Über Antrag entscheiden (bewilligen oder ablehnen)">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:boundaryEvent id="Boundary_Erinnerung" name="Nach drei Tagen" cancelActivity="false" attachedToRef="Task_Entscheiden">
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_1">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">P3D</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:sendTask id="Task_Bescheid" name="Bescheid versenden">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="Ende_Bescheid" name="Antrag bearbeitet">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="Ende_Erinnerung" name="Erinnerung an Teamleitung gesendet">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:messageEventDefinition id="MsgDef_1" />
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Antrag" targetRef="Task_Erfassen" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Erfassen" targetRef="Task_Abgleich" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Abgleich" targetRef="Gateway_Zusammen" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Boundary_Fehler" targetRef="Task_VonHandPruefen" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_VonHandPruefen" targetRef="Gateway_Zusammen" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_Zusammen" targetRef="Task_Entscheiden" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Entscheiden" targetRef="Task_Bescheid" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Boundary_Erinnerung" targetRef="Ende_Erinnerung" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Bescheid" targetRef="Ende_Bescheid" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Process_Antrag">
+      <bpmndi:BPMNShape id="Lane_Poststelle_di" bpmnElement="Lane_Poststelle" isHorizontal="true"><dc:Bounds x="30" y="0" width="988" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Sachbearbeitung_di" bpmnElement="Lane_Sachbearbeitung" isHorizontal="true"><dc:Bounds x="30" y="144" width="988" height="280"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_IT_di" bpmnElement="Lane_IT" isHorizontal="true"><dc:Bounds x="30" y="424" width="988" height="180"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Antrag_di" bpmnElement="Start_Antrag"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Erfassen_di" bpmnElement="Task_Erfassen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Abgleich_di" bpmnElement="Task_Abgleich"><dc:Bounds x="210" y="474" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_VonHandPruefen_di" bpmnElement="Task_VonHandPruefen"><dc:Bounds x="378" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Zusammen_di" bpmnElement="Gateway_Zusammen" isMarkerVisible="true"><dc:Bounds x="413" y="489" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Entscheiden_di" bpmnElement="Task_Entscheiden"><dc:Bounds x="550" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Bescheid_di" bpmnElement="Task_Bescheid"><dc:Bounds x="718" y="194" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Ende_Bescheid_di" bpmnElement="Ende_Bescheid"><dc:Bounds x="910" y="216" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="883" y="256" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Ende_Erinnerung_di" bpmnElement="Ende_Erinnerung"><dc:Bounds x="910" y="336" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="883" y="376" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Fehler_di" bpmnElement="Boundary_Fehler"><dc:Bounds x="252" y="536" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="174" y="558" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Erinnerung_di" bpmnElement="Boundary_Erinnerung"><dc:Bounds x="592" y="256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="628" y="278" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="474"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="330" y="514"/><di:waypoint x="413" y="514"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="270" y="572"/><di:waypoint x="270" y="584"/><di:waypoint x="526" y="584"/><di:waypoint x="526" y="234"/><di:waypoint x="498" y="234"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="438" y="274"/><di:waypoint x="438" y="489"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="463" y="514"/><di:waypoint x="510" y="514"/><di:waypoint x="510" y="234"/><di:waypoint x="550" y="234"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="670" y="234"/><di:waypoint x="718" y="234"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="610" y="292"/><di:waypoint x="610" y="354"/><di:waypoint x="910" y="354"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="838" y="234"/><di:waypoint x="910" y="234"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

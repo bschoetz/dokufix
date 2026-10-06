@@ -162,3 +162,18 @@ test('a merge is the whole rest of the way two flows share into one vertex of a 
   // Two flows out of G on one line: a split, no merge.
   assert.deepEqual(check({ F4: [[525, 115], [525, 200], [160, 200], [160, 250]], F7: [[525, 115], [525, 200], [760, 200], [760, 130]] }, [{ id: 'F4', from: 'G', to: 'C' }, { id: 'F7', from: 'G', to: 'D' }]), ['on-one-line-shared F4 F7']);
 });
+
+// Story 2.30: a boundary event X on A's lower edge (A: 100…220 × 50…130), its flow FX down and right into Z.
+test('a boundary event on its host\'s edge is no break; off the edge, or on another event of its host, it is', () => {
+  const check = (x, extra = {}) => {
+    const shapes = { ...SHAPES, X: x, Z: [300, 160, 120, 80], ...extra };
+    const model = { ...M, nodes: [...M.nodes, { id: 'Z', type: 'task', name: 'Z' }], boundaries: [{ id: 'X', host: 'A' }, ...('Y' in extra ? [{ id: 'Y', host: 'A' }] : [])], flows: [{ id: 'FX', from: 'X', to: 'Z' }] };
+    const w = [[x[0] + 18, x[1] + 36], [x[0] + 18, 200], [300, 200]];
+    return breaksOf('<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') +
+      '      <bpmndi:BPMNEdge id="FX_di" bpmnElement="FX">' + w.map(([px, py]) => '<di:waypoint x="' + px + '" y="' + py + '"/>').join('') + '</bpmndi:BPMNEdge>\n</x>', model, SIZES);
+  };
+  assert.deepEqual(check([202, 112, 36, 36]), [], 'on the corner');
+  assert.deepEqual(check([142, 112, 36, 36]), []);
+  assert.deepEqual(check([142, 140, 36, 36]), ['off-border X A']);
+  assert.deepEqual(check([142, 112, 36, 36], { Y: [160, 112, 36, 36] }), ['boundary-overlap X Y']);
+});

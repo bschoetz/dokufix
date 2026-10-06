@@ -85,5 +85,12 @@
  "blackbox-reklamation": [
   "node-outside-lane Gateway_Ergebnis Lane_Kundenservice"
  ],
- "blackbox-werkstatt": []
+ "blackbox-werkstatt": [],
+ "demo-angeheftet": [],
+ "angeheftet-rechnung": [],
+ "angeheftet-antrag": [
+  "node-outside-lane Gateway_Zusammen Lane_Sachbearbeitung",
+  "on-one-line-foreign Flow_4 Flow_6"
+ ],
+ "angeheftet-stoerung": []
 }
