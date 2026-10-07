@@ -29,7 +29,9 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
 - **Die Komponente heißt arielle.** Der Name spielt auf die Meerjungfrau an. arielle kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul, sagt offen, dass es auf Mermaid beruht, und steht wie Mermaid unter der MIT-Lizenz (Abschnitt 4a).
-- **Empfehlung:** In einem ersten Schritt den Algorithmus exakt nachbauen und einhängen. Das Layout bleibt dabei unverändert und ist an den Fixtures prüfbar. Verbesserungen am Algorithmus folgen erst danach als eigene Schritte.
+- **Mermaids Spaltenreihung ist volatil, und arielle beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. arielle ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
+- **Das fertige Layout bleibt trotzdem volatil, solange das eigene Raster es ist.** Auch mit festen Spalten ändert sich das Bild bei rund 23 % der Umordnungen, weil Regeln bei Gleichstand der Reihenfolge des Modells folgen. Ein Versuch zeigt den Weg: Wird das Modell vor dem Layout einmal kanonisch sortiert, ändert sich das Bild bei **0 von 570** Umordnungen. Die Qualität dieser Sortierung muss aber noch abgestimmt werden (Abschnitt 3b). Das ist ein eigener Schritt nach arielle.
+- **Empfehlung:** arielle in der Fassung aus dem Review als eigenes Modul übernehmen und einhängen. Die zwei geänderten Fixtures werden einmal neu geschrieben. Danach folgt als eigener Schritt die kanonische Ordnung für das Raster.
 
 ## Vorgehen
 
@@ -38,8 +40,10 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
 3. Den Quellcode von `mermaid@12.0.0` gelesen (npm-Paket, `dist/chunks/mermaid.core/`): Swimlane-Diagramm, Layout-Pipeline, Rangberechnung, Kanten-IDs, Direktiven. Die Pfade unten sind die Quellpfade, die das Paket in seinen Kommentaren nennt.
 4. Versuche im Browser: Chromium aus `/opt/pw-browsers`, `dist/dokufix.html` mit den Bibliotheken aus dem CDN-Spiegel von `tests/cdn.mjs`, `mermaidPositions()` per esbuild hineingebündelt wie in `tests/capture-bpmn.mjs` (Aufbau im Detail: Anhang B, *Versuchsaufbau*).
 5. Den Algorithmus in Node nachgebaut und gegen die 57 Fixtures und gegen das echte Mermaid an 300 Zufallsprozessen verglichen.
+6. Den Nachbau von einem zweiten Agenten reviewen lassen: Korrektheit, Vereinfachung, Volatilität gegen Umordnung und Umbenennung, Qualität der Varianten (Abschnitt 3a). Seine Kernergebnisse habe ich mit eigenen Tests nachgeprüft: Qualitätsmessung erneut ausgeführt, Invarianz unabhängig nachgemessen.
+7. Die verbleibende Volatilität im Raster gemessen und eine kanonische Sortierung des Modells als Gegenmittel ausprobiert (Abschnitt 3b).
 
-Die Versuchsskripte, auch der Nachbau, liegen nicht im Repository. Abschnitt 3 beschreibt den Nachbau so genau, dass er sich nachvollziehen lässt.
+Die Versuchsskripte, der Nachbau, arielle und der Review-Bericht liegen bisher nur im Scratchpad dieser Sitzung (`review/BERICHT.md`, `review/ranks-optimiert.mjs`, `review/ranks-exakt.mjs`), nicht im Repository. Abschnitte 2, 3 und 3a beschreiben sie so genau, dass sie sich nachvollziehen lassen.
 
 ## Datenfluss heute und nach der Ablösung
 
@@ -162,6 +166,8 @@ Die Fixtures decken Bahnen, leere Bahnen, mehrere Pools, Black Boxes, angeheftet
 
 **Gegen das echte Mermaid** (Browser, `mermaidPositions()` mit Mermaid 12.0.0): 300 zufällig erzeugte Prozesse mit 1 bis 4 Bahnen, 3 bis 24 Knoten, bis zu 33 Flüssen, zufälligen Rückwärtsflüssen, etwa 30 % beschrifteten Flüssen und leeren Bahnen. Die Spaltenordnung war **in 300 von 300 Fällen gleich**. Mermaid lieferte in keinem Fall einen Fehler.
 
+**Ein Fehler, den das Review gefunden hat:** Besteht ein Flussname nur aus Zeichen, die `mermaidSource()` entfernt (`` " < > & # ` \ ``), schreibt `q()` die Beschriftung `|" "|`. Für Mermaid ist das **keine** Beschriftung. Mein Nachbau legte dafür trotzdem einen Beschriftungsknoten an und verschob eine Spalte. In den Fixtures und in meinen 300 Zufallsprozessen kam das nicht vor. Das Review hat es im Browser belegt: Mit gezielt erzeugten Beschriftungen stimmten nur 237 von 400 Zufallsprozessen, mit der Regel „nach `q()` leer heißt keine Beschriftung“ 400 von 400. Die korrigierte Referenzfassung heißt `arielleExakt`. Sie stimmt außerdem mit 20 000 Zufallsmodellen überein, darunter angeheftete Ereignisse, mehrere Pools und mehr als zehn parallele Flüsse.
+
 **Varianten des Nachbaus:**
 
 | Variante | Spaltenordnung gleich | Angeordnetes XML gleich |
@@ -178,6 +184,95 @@ Daraus folgt:
 **Laufzeit:** Der Nachbau braucht für alle 57 Fixtures zusammen etwa 8 ms (Node, Mittel aus zehn Durchläufen). `mermaid.render()` brauchte für dieselben 57 im Browser 18,6 s (Anhang B, Hinweis 2).
 
 **Eine Eigenheit für später:** Mermaid und dokufix bestimmen Rückwärtsflüsse unterschiedlich. Mermaid sortiert die Kanten in der Tiefensuche nach Ziel-ID (Schritt 1). `buildGrid()` (`bpmn-layout.js:896–907`) geht die Flüsse in XML-Reihenfolge durch, ab den Knoten ohne eingehenden Fluss. In einer Näherung (Rückwärtsfluss bei Mermaid: innerhalb einer Bahn kein steigender Rang) unterscheiden sich die beiden in einem Fixture (`r05`). Für einen exakten Ersatz bleibt das so. Eine spätere eigene Lösung kann beides vereinheitlichen.
+
+## 3a. arielle: die empfohlene Fassung
+
+Weil Mermaids Spaltenreihung volatil ist, muss arielle Mermaid nicht exakt treffen. Maßstab ist die Qualität des fertigen Layouts und die Stabilität gegen bedeutungslose Änderungen am XML. Das Review hat dafür elf Varianten gemessen.
+
+### Woher die Volatilität kommt
+
+Mermaids Algorithmus greift an mehreren Stellen auf die Schlüssel `n1…` zurück, und die entstehen in XML-Reihenfolge:
+
+- `localeCompare` ordnet die Knoten einer Generation rein lexikografisch („n10“ vor „n9“). Diese Reihenfolge entscheidet, welcher von zwei Knoten derselben Bahn die frühere Spalte bekommt.
+- Beschriftungsknoten stehen durch ihr Präfix `edge-label-` vor allen Knoten ihrer Generation.
+- Die Tiefensuche sortiert die Kanten nach Ziel-Schlüssel und startet in der Reihenfolge der `flowNodeRef`. Davon hängt ab, welche Flüsse als Rückwärtsflüsse gelten.
+
+Wird ein Element im XML verschoben, bekommen andere Knoten andere Schlüssel, und die Spalten können kippen.
+
+### Die Regeln von arielle
+
+Die Schichtung bleibt die von Mermaid: Tiefensuche für Zyklen, Generationen, bahnweise Verdichtung. Nur dort, wo Mermaid auf die Schlüssel zurückgreift, entscheidet bei arielle die Struktur:
+
+- **Startknoten** der Tiefensuche: die Knoten ohne eingehenden Fluss zuerst, nach Bahn (oben zuerst), dann nach dem Tie-Break.
+- **Ausgehende Flüsse eines Knotens:** nach dem Tie-Break.
+- **Reihenfolge innerhalb einer Generation:** die Reihenfolge, in der die Knoten erreicht werden. Die Generation wird nicht mehr global nach Schlüsseln sortiert.
+- **Tie-Break:** zuerst der Weg, der mehr Knoten erreicht (der Hauptweg vor der kurzen Ausnahme), dann der Flussname, dann der Knotenname, zuletzt die Element-ID.
+- **Keine Beschriftungsspalte:** Ein Flussname setzt keine Spalte. Gemessen liefern „ohne Beschriftungsspalte“ und „Beschriftung als Gewicht“ dieselben Bilder, weil R7 die leere Spalte ohnehin schließt. Damit entfällt die ganze Mechanik der Hilfsknoten.
+
+**Umfang:** 81 Zeilen mit Kopfkommentar, davon 41 Zeilen Code, eine Funktion `arielle(model)`, die `{ n1: rang, … }` zurückgibt. Sie meldet keine ESLint-Fehler mit der Konfiguration des Repositorys. Laufzeit für alle 57 Fixtures: 3,2 ms. Die Reichweite kostet O(V·(V+E)); eine Kette aus 5 000 Knoten braucht 0,86 s, was für BPMN-Größen belanglos ist.
+
+### Gemessen
+
+**Qualität** (57 Fixtures, Messart `measured`, Regelverstöße aus `breaksOf()` gegen `known-breaks.json`):
+
+| Fassung | XML geändert | Verstöße (neu / weg) | Kreuzungen | Knicke |
+|---|---|---|---|---|
+| exakter Nachbau (heutiges Layout) | 0 | 45 (0 / 0) | 52 | 327 |
+| **arielle** | **2** | **44 (0 / 1)** | **48** | **325** |
+
+Die zwei Änderungen sind:
+
+- **`ref3`:** Der längere Weg nach dem Gateway bekommt die erste Spalte. Das Bild wird schmaler und etwas höher (1678 × 700 → 1546 × 780), Knicke 6 → 5.
+- **`notiz-hund2`:** Der bekannte Verstoß `association-through A_Temp Task_Verwerfen` fällt weg, Kreuzungen 8 → 4.
+
+Ich habe die Qualitätsmessung erneut ausgeführt und dieselben Zahlen bekommen.
+
+**Stabilität** (je Fixture 10 Umordnungen, die in BPMN keine Bedeutung haben: Flussknoten, angeheftete Ereignisse, Sequenzflüsse, `flowNodeRef`; Bahnen und Pools bleiben):
+
+| Fassung | Spalten geändert bei Umordnung | Spalten geändert bei Umbenennung der IDs |
+|---|---|---|
+| exakter Nachbau (Mermaid) | 24,0 % (19 Fixtures) | 0,0 % |
+| arielle mit Tie-Break nur Element-ID | 0,0 % | 22,5 % |
+| arielle mit Tie-Break Reichweite → Flussname → ID | 0,0 % | 6,3 % |
+| **arielle mit Tie-Break Reichweite → Flussname → Knotenname → ID** | **0,0 %** | **0,0 %** |
+
+Den Wert für Umordnung habe ich mit einem eigenen Test unabhängig nachgemessen: exakter Nachbau 136 von 570 Umordnungen mit anderen Spalten (23,9 %), arielle 0 von 570.
+
+**Wo keine Invarianz möglich ist:** Bei zwei Wegen, die in Reichweite, Flussnamen und Knotennamen gleich sind, etwa zwei unbenannten Zweigen eines parallelen Gateways mit gleich benannten Aufgaben, entscheidet die kleinere ID. Die Ordnung ist dann stabil gegen Umordnung, aber nicht gegen Umbenennung. Das Bild ist in beiden Fällen gleich gut, nur gespiegelt. In einer Schleife haben alle Knoten dieselbe Reichweite, dort entscheiden Namen und ID.
+
+**Abstand zu Mermaid:** arielle ist strukturell eigenständiger als der erste Nachbau. Es gibt keine String-IDs, keine Gruppen, keine Platzhalter und keine Hilfsknoten, dafür eine eigene strukturelle Ordnung. Die Schichtung selbst bleibt aber die von Mermaid. arielle ist deshalb weiter als von Mermaid abgeleitet zu behandeln (Abschnitt 4a).
+
+## 3b. Die verbleibende Volatilität im Raster
+
+arielle macht die Spalten stabil, das fertige Bild aber noch nicht:
+
+| Messung (570 Umordnungen) | Layout geändert |
+|---|---|
+| exakter Nachbau | 24,7 % (23 Fixtures) |
+| arielle | 21–23 % (21 Fixtures) |
+| Spalten je Element-ID festgehalten, nur das Raster | 23,7 % |
+
+Die Ursache liegt in `src/app/bpmn-layout.js`: Mehrere Regeln folgen bei Gleichstand der Reihenfolge des Modells. Beispiele sind `byCol` (Z. 951, ein stabiles Sortieren nach Spalte), `at()` (Z. 922, die erste passende Zelle) und etwa 44 Schleifen über `model.nodes` oder `model.flows` zwischen Z. 879 und 2000. Andere Rückwärtsflüsse in `buildGrid()` erklären nur 6 von 131 Änderungen, alle in `r05`.
+
+**Versuch: das Modell vor dem Layout kanonisch sortieren.** Die Idee: `model.nodes`, `lane.nodes`, `model.flows`, `model.boundaries` und die übrigen Listen werden vor `layoutGeometry()` einmal in eine Ordnung gebracht, die nur von der Struktur abhängt. Getestet habe ich:
+
+- Knoten nach arielles Spalte, Bahn, Name, ID,
+- Flüsse nach der Position ihrer Enden, Name, ID,
+- angeheftete Ereignisse nach Host, Name, ID,
+- der Rest nach ID.
+
+| Messung | Ergebnis |
+|---|---|
+| Layout geändert bei Umordnung | **0 von 570** (vorher 120 von 570, also 21,1 %) |
+| Fixtures, deren Layout sich durch die Sortierung einmalig ändert | 15 von 57 |
+| Verstöße / Kreuzungen / Knicke (Summe, `measured`) | 44 → 46 / 48 → 47 / 325 → 331 |
+
+Das zeigt: Die Volatilität des Rasters lässt sich ohne Eingriff in die Regeln vollständig beseitigen, allein durch eine feste Eingangsreihenfolge. Die getestete Sortierung ist aber noch nicht ausgewogen. Unter dem Strich kommen zwei Verstöße und sechs Knicke hinzu:
+
+- **schlechter:** `demo6` (neuer Verstoß `node-outside-lane`, Knicke 3 → 8), `r18` (neuer Verstoß `on-one-line-foreign`, Kreuzungen 3 → 7), `notiz-morgen` (neuer Verstoß `note-on-note`), `r15` (zwei Verstöße weg, drei neu),
+- **besser:** `r04` (ein Verstoß weg), `angeheftet-antrag` (ein Verstoß weg, Kreuzungen 1 → 0), `notiz-bauantrag` (Kreuzungen 10 → 8).
+
+Zur Einordnung: Die heutige Reihenfolge des XML ist selbst nur eine zufällige Stichprobe. Über alle Umordnungen gemittelt liegen die Verstöße bei etwa 0,78 je Fixture, also rund 45 für alle 57. Die kanonische Sortierung muss also nicht das heutige Bild schlagen, sondern dieses Mittel. Welche Ordnung die Regeln am besten bedient, ist die Aufgabe eines eigenen Schritts (Abschnitt 5, Schritt 4).
 
 ## 4. Was sich beim Ersatz ändert
 
@@ -258,17 +353,19 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 
 ## 5. Vorschlag für das Vorgehen
 
-**Schritt 1: exakter Nachbau, parallel zu Mermaid.**
+**Schritt 1: arielle übernehmen, parallel zu Mermaid.**
 
-- Die Komponente arielle als eigenes Modul `src/app/arielle.js` (Abschnitt 4a), Algorithmus nach Abschnitt 2, Schritte 0 bis 3, mit `<` statt `localeCompare`. Dazu Lizenzkopf und Eintrag in der Lizenzliste.
-- Tests in `tests/arielle.test.mjs` für die Eigenschaften aus Abschnitt 2.
-- Ein Test in `tests/bpmn-fixtures.test.mjs`: Für alle 57 Fixtures ergibt die Funktion dieselbe Spaltenordnung wie `raw.json`. Damit ist der Nachbau gegen Mermaid gesichert, solange die Rohpositionen noch da sind.
-- Einmalig ein Differenztest im Browser gegen Mermaid 12.0.0 mit Zufallsprozessen, als Werkzeug neben `tests/capture-bpmn.mjs`, wie im Versuch in Abschnitt 3.
+- `src/app/arielle.js` mit `arielle(model)` in der Fassung aus dem Review (Abschnitt 3a), mit Lizenzkopf und Eintrag in der Lizenzliste (Abschnitt 4a).
+- `tests/arielle.test.mjs` mit:
+  - einem Fall je Regel aus Abschnitt 3a,
+  - dem Invarianztest: dieselben Spalten bei Umordnung des XML und bei Umbenennung der IDs,
+  - als Referenz `arielleExakt`, die korrigierte exakte Fassung, nur im Test: Sie belegt, dass die Schichtung der von Mermaid entspricht. Geprüft wird das gegen `raw.json`, solange es die Datei noch gibt.
 
 **Schritt 2: umschalten.**
 
 - `layoutBpmn()` nutzt `arielle()` statt `mermaidPositions()`.
-- `npm run fixtures` muss „no difference“ melden, ebenso der Vergleichslauf `tests/vergleich.mjs` und die Durchläufe (bis auf Szenario 13, das sich bewusst ändert).
+- `npm run fixtures` meldet genau `ref3` und `notiz-hund2`. Beide ansehen, dann mit `npm run fixtures -- --write` neu schreiben; `known-breaks.json` verliert einen Eintrag.
+- Danach `tests/vergleich.mjs` und die Durchläufe. Szenario 13 ändert sich bewusst.
 
 **Schritt 3: aufräumen.**
 
@@ -276,34 +373,39 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 - `src/README.md` nachziehen.
 - Den BPMN-Assistenten im Store ohne Mermaid neu bauen.
 
-**Schritt 4 (optional, eigene Stories): eigene Verbesserungen.** Erst wenn der Ersatz steht, lässt sich der Algorithmus gezielt ändern, jeweils mit sichtbarem Diff in den Fixtures und einer Prüfung der Regelverstöße (`tests/bpmn-rules.mjs`, `known-breaks.json`). Kandidaten:
+**Schritt 4 (eigene Story): kanonische Ordnung für das Raster.** Das Modell wird vor `layoutGeometry()` kanonisch sortiert (Abschnitt 3b), oder die Regeln bekommen arielles Ordnung als letzten Schlüssel statt der Modellreihenfolge. Ziel: 0 % Layoutänderung bei Umordnung, und die Verstöße über die Fixtures nicht über dem Mittel der Umordnungen. Als Werkzeug gehört der Permutationstest dann fest in `tests/`.
 
-- eine gemeinsame Definition von Rückwärtsflüssen für Spalten und Raster (Abschnitt 3),
-- die Beschriftungsspalte überdenken,
+**Danach, bei Bedarf:**
+
+- eine gemeinsame Definition von Rückwärtsflüssen für arielle und `buildGrid()`,
 - Nachrichtenflüsse schon bei den Spalten berücksichtigen statt erst in R7,
 - Flüsse von einem Knoten auf sich selbst zulassen.
 
 ## 6. Abnahmekriterien
 
-Für Schritte 1 bis 3:
+Für die Schritte 1 bis 3:
 
-1. `npm run fixtures`: alle 57 Fixtures, beide Messarten, ohne Unterschied.
-2. `tests/fixtures/bpmn-layout/known-breaks.json` unverändert (`tests/bpmn-rules.test.mjs` grün).
-3. Vor dem Entfernen von `raw.json`: `arielle()` trifft die Spaltenordnung aller 57 Rohpositionen.
-4. Der Differenztest gegen Mermaid 12.0.0 ist für eine feste Zahl von Zufallsprozessen grün (Vorschlag: 1 000).
-5. `tests/vergleich.mjs` auf `tests/referenz.md`: gleiche Bilder der BPMN-Diagramme ohne Koordinaten in beiden Browsern.
+1. `npm run fixtures`: Nur `ref3` und `notiz-hund2` ändern sich, in beiden Messarten. Beide sind angesehen und neu geschrieben.
+2. `known-breaks.json`: kein neuer Verstoß, einer weniger (`notiz-hund2`, `association-through A_Temp Task_Verwerfen`).
+3. `tests/arielle.test.mjs`: Die Spalten sind für alle 57 Fixtures gleich bei Umordnung (Vorschlag: 10 Umordnungen je Fixture mit festem Startwert) und bei Umbenennung der IDs.
+4. Vor dem Entfernen von `raw.json`: `arielleExakt` trifft die Spaltenordnung aller 57 Rohpositionen.
+5. `tests/vergleich.mjs` auf `tests/referenz.md`: Die BPMN-Diagramme ohne Koordinaten sind in beiden Browsern gleich, bis auf die bewusst geänderten.
 6. `tests/durchlaeufe.mjs`: grün, mit geändertem Szenario 13 (BPMN ohne Koordinaten wird ohne Mermaid gezeichnet).
 7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/arielle.js`, mit Lizenzkopf; die Lizenzliste hat einen Eintrag für arielle.
 8. `npm test` und `npm run check` grün.
+
+Für Schritt 4 zusätzlich: Layoutänderung bei Umordnung 0 %; Summe der Verstöße über die 57 Fixtures nicht über dem Mittel der Umordnungen.
 
 ## 7. Offene Entscheidungen
 
 | Frage | Optionen | Empfehlung |
 |---|---|---|
-| Exakter Nachbau oder gleich eine eigene Lösung? | Nachbau zuerst; eigene Lösung sofort | **Nachbau zuerst.** Das Umschalten ist dann ohne sichtbare Änderung prüfbar, und spätere Änderungen sind einzeln bewertbar |
+| Exakter Nachbau oder eigene Ordnung? | exakt wie Mermaid; strukturelle Ordnung | **Entschieden:** strukturelle Ordnung (arielle). Mermaids Reihung ist volatil, eine Abweichung ist gewollt. Der exakte Nachbau bleibt nur als Referenz im Test |
 | Schnittstelle zu `layoutGeometry()` | `raw` im heutigen Format `{ nodes: { key: { cx } } }`; neue Form, etwa `columns: Map<key, number>` | Zunächst das heutige Format: keine Änderung an `layoutGeometry()` und an den Tests mit erfundenen Positionen. Umbenennen später, beim Aufräumen |
-| Was passiert mit `raw.json`? | löschen; als Referenz von Mermaid 12.0.0 behalten | Bis Schritt 2 behalten (Abnahmekriterium 3), danach löschen. Die Referenz steckt dann in den angeordneten XML-Dateien |
-| Beschriftungsspalte beibehalten? | ja (exakt); nein | Im Nachbau ja; als Kandidat für Schritt 4 vormerken |
+| Was passiert mit `raw.json`? | löschen; als Referenz von Mermaid 12.0.0 behalten | Bis Schritt 2 behalten (Abnahmekriterium 4), danach löschen |
+| Beschriftungsspalte beibehalten? | ja (wie Mermaid); nein | **Entschieden:** nein. Gleiche Bilder wie „als Gewicht“, ein Verstoß weniger als mit Spalte, und die Hilfsknoten entfallen |
+| Tie-Break bei gleichwertigen Wegen | Reichweite → Flussname → Knotenname → ID; Flussname zuerst („ja“ immer vor „nein“) | Reichweite zuerst (Empfehlung des Reviews): Der Hauptweg kommt vor der kurzen Ausnahme, und das Ergebnis ist in den Fixtures stabil gegen Umordnung und Umbenennung. Wer „ja“ immer vorn haben will, tauscht die ersten beiden Glieder |
+| Kanonische Ordnung für das Raster | jetzt mit arielle; als eigene Story | Eigene Story: Die Volatilität lässt sich so vollständig beseitigen (Abschnitt 3b), die Sortierung braucht aber noch Abstimmung, weil sie in vier Fixtures heute schlechter ist |
 | Flüsse von einem Knoten auf sich selbst | weiter auslassen; zeichnen | Zunächst weiter auslassen (heutiges Verhalten); eigene Story, weil der Router dafür einen Weg braucht |
 | Herkunft und Lizenz | Kommentar; eigenes Modul unter MIT mit Lizenzkopf und Eintrag in der Lizenzliste | **Entschieden:** arielle als eigenes Modul, offen als Portierung von Mermaid gekennzeichnet, unter MIT (Abschnitt 4a). Bei Unsicherheit, etwa vor einer kommerziellen Nutzung, sollte das jemand mit Rechtskenntnis bestätigen |
 | Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. Für arielle genügt MIT; für das übrige dokufix bestimmt die Wahl, wie andere es nutzen dürfen. Ist dokufix selbst MIT, ist das Gesamtbild am einfachsten |
