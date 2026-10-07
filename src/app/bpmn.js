@@ -187,7 +187,7 @@ const pageLayoutClient = () => pageClient || (pageClient = makeLayoutClient());
 // by the diagram's place in the document, diagram.index. diagram.signal, where
 // the render gives one, aborts a layout still running (src/app/render.js).
 // options, for the tests: client, the layout's client (makeLayoutClient());
-// timers and now, the notice's (showLayoutNotice()). A diagram whose
+// timers, frame and now, the notice's (showLayoutNotice()). A diagram whose
 // render was aborted by a newer one throws as well, the layout's AbortError,
 // but logs nothing: an abort is no failure, and the preview it stands in is
 // about to be replaced (drawDiagrams() in src/app/diagrams.js).
@@ -200,7 +200,7 @@ export async function renderBpmn(diagram, options = {}){
   }
 }
 
-async function drawBpmn(diagram, { client, timers, now } = {}){
+async function drawBpmn(diagram, { client, timers, frame, now } = {}){
   // A page whose script tag of bpmn-js failed has no BpmnJS.
   if (typeof BpmnJS !== 'function') throw new Error(BPMN_NO_LIBRARY);
   const doc = diagram.holder.ownerDocument;
@@ -212,7 +212,7 @@ async function drawBpmn(diagram, { client, timers, now } = {}){
     // diagram in it bpmn-js opens: the laid-out one, else its first.
     let xml = diagram.source, open;
     if (!hasCoordinates(xml)){
-      const notice = showLayoutNotice(diagram.holder, { timers, now });
+      const notice = showLayoutNotice(diagram.holder, { timers, frame, now });
       let leftOut;
       try {
         ({ xml, open, leftOut } = await (client || pageLayoutClient()).layout(diagram.source, { signal: diagram.signal }));

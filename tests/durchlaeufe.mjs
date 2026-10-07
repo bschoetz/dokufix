@@ -533,9 +533,11 @@ async function startWatchedRender(page, text){
     const w = window.durchlaeufeLayout = { texts: [], ticks: 0, begun: performance.now() };
     w.interval = setInterval(() => { w.ticks++; }, 50);
     const preview = document.getElementById('preview');
+    // The notice comes empty and gets its text a frame later (src/app/layout-notice.js): the empty one is not a text it shows.
     w.observer = new MutationObserver(() => {
       const n = preview.querySelector('.layout-notice');
-      if (n && w.texts.at(-1) !== n.textContent) w.texts.push(n.textContent);
+      if (n && w.firstNotice === undefined) w.firstNotice = n.textContent;
+      if (n && n.textContent && w.texts.at(-1) !== n.textContent) w.texts.push(n.textContent);
     });
     w.observer.observe(preview, { subtree: true, childList: true, characterData: true });
     const marker = document.createElement('i');
@@ -549,7 +551,7 @@ const watched = page => page.evaluate(() => {
   const w = window.durchlaeufeLayout;
   clearInterval(w.interval);
   w.observer.disconnect();
-  return { texts: w.texts, ticks: w.ticks, ms: Math.round(performance.now() - w.begun) };
+  return { texts: w.texts, firstNotice: w.firstNotice, ticks: w.ticks, ms: Math.round(performance.now() - w.begun) };
 });
 const noticeNow = page => page.evaluate(() => { const n = document.querySelector('#preview .layout-notice'); return n ? n.textContent : null; });
 // Every warning put into the preview from now on, read from the mutations
@@ -1256,7 +1258,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       let o = await open(browser, opts.file, editorReady);
       await startWatchedRender(o.page, DOC_WORKER);
       // While the large one is laid out: its container holds the notice, and the page handles a click.
-      await o.page.waitForFunction(() => !!document.querySelector('#preview .layout-notice'), null, { timeout: 60000 });
+      await o.page.waitForFunction(() => !!document.querySelector('#preview .layout-notice span'), null, { timeout: 60000 });
       const notice = await o.page.evaluate(() => {
         const n = document.querySelector('#preview .layout-notice'), figure = n.closest('figure.dokufix-diagram-bpmn');
         return { role: n.getAttribute('role'), transient: n.hasAttribute('data-dokufix-transient'), seconds: n.querySelector('span').getAttribute('aria-hidden'),
@@ -1276,6 +1278,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       const counted = w.texts.map(t => t.startsWith(LAYOUT_NOTICE_TEXT + ' ') ? Number(/(\d+) s$/.exec(t)[1]) : NaN);
       check(scope, 'the notice counted from 0 s, one second at a time, for each diagram laid out',
         counted[0] === 0 && counted[1] === 1 && counted.every((n, i) => i === 0 ? n === 0 : n === counted[i - 1] + 1 || n === 0), w.texts);
+      check(scope, 'the notice came into the page empty, its text after it: a change of a live region already there', w.firstNotice === '', JSON.stringify(w.firstNotice));
       check(scope, 'the page went on while the worker laid out: an interval of 50 ms missed hardly a tick', w.ticks >= 0.6 * w.ms / 50, { ticks: w.ticks, of: Math.round(w.ms / 50), ms: w.ms });
       const f = await facts(o.page);
       check(scope, 'both are drawn with their credit, no warning, no notice left', f.bpmn.join('|') === 'Groß true ' + credit + '|Klein true ' + credit && f.warnings.length === 0 && (await noticeNow(o.page)) === null, { bpmn: f.bpmn, warnings: f.warnings.map(x => x.text) });

@@ -3905,7 +3905,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   var LAYOUT_NOTICE_TEXT = "Diagramm wird angeordnet …";
   var LAYOUT_NOTICE_STYLE = "margin:0;padding:24px 0;text-align:center;color:#6e6e73;font-size:14px;font-variant-numeric:tabular-nums";
   var layoutSeconds = (s) => s + " s";
-  function showLayoutNotice(holder, { timers = globalThis, now = () => performance.now() } = {}) {
+  var nextFrame = (fn) => typeof requestAnimationFrame === "function" ? requestAnimationFrame(fn) : setTimeout(fn, 0);
+  function showLayoutNotice(holder, { timers = globalThis, frame = nextFrame, now = () => performance.now() } = {}) {
     const doc = holder.ownerDocument;
     const element = doc.createElement("p");
     element.className = LAYOUT_NOTICE_CLASS;
@@ -3915,8 +3916,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const count = doc.createElement("span");
     count.setAttribute("aria-hidden", "true");
     count.textContent = layoutSeconds(0);
-    element.append(doc.createTextNode(LAYOUT_NOTICE_TEXT + " "), count);
     holder.replaceChildren(element);
+    frame(() => element.append(doc.createTextNode(LAYOUT_NOTICE_TEXT + " "), count));
     const begun = now();
     let timer = timers.setInterval(() => {
       count.textContent = layoutSeconds(Math.round((now() - begun) / 1e3));

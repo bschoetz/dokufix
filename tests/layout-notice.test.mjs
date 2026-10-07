@@ -13,10 +13,13 @@ function holder(){
   const { document } = parseHTML('<!DOCTYPE html><html><body><article id="preview" class="dokufix-doc"><div class="dokufix-diagram-svg">der Quelltext</div></article></body></html>');
   return document.querySelector('.dokufix-diagram-svg');
 }
-// An interval the test fires, and a clock it sets.
+// An interval the test fires, a clock it sets, and frames it draws: the
+// notice's text comes with the first frame after it is put in (paint()).
 function fakeClock(){
-  const clock = { t: 5000, intervals: new Map(), next: 1 };
+  const clock = { t: 5000, intervals: new Map(), next: 1, frames: [] };
   clock.now = () => clock.t;
+  clock.frame = fn => { clock.frames.push(fn); };
+  clock.paint = () => { const due = clock.frames.splice(0); for (const fn of due) fn(); };
   clock.timers = {
     setInterval: (fn, ms) => { const id = clock.next++; clock.intervals.set(id, { fn, ms }); return id; },
     clearInterval: id => clock.intervals.delete(id),
@@ -31,6 +34,7 @@ test('the notice takes the container\'s place, says what is done and counts from
   const { element } = showLayoutNotice(h, clock);
   assert.equal(h.children.length, 1);
   assert.equal(h.firstElementChild, element);
+  clock.paint();
   assert.equal(h.textContent, 'Diagramm wird angeordnet … 0 s');
   assert.equal(LAYOUT_NOTICE_TEXT, 'Diagramm wird angeordnet …');
   assert.equal(element.tagName.toLowerCase(), 'p');
@@ -48,6 +52,7 @@ test('the notice takes the container\'s place, says what is done and counts from
 test('the seconds count up once a second, by the clock: a tick that comes late shows the time that has passed', () => {
   const h = holder(), clock = fakeClock();
   showLayoutNotice(h, clock);
+  clock.paint();
   clock.tick(1000);
   assert.equal(h.textContent, 'Diagramm wird angeordnet … 1 s');
   clock.tick(2004);
@@ -62,6 +67,7 @@ test('the seconds count up once a second, by the clock: a tick that comes late s
 test('stop() ends the count, as often as it is called; the notice stays until it is replaced', () => {
   const h = holder(), clock = fakeClock();
   const notice = showLayoutNotice(h, clock);
+  clock.paint();
   clock.tick(1000);
   notice.stop();
   notice.stop();
@@ -79,9 +85,27 @@ test('nothing that leaves the page takes it along: removeTransient() takes it ou
   assert.equal(h.textContent, '');
 });
 
-test('with the page\'s own timers and clock it starts and stops as well', () => {
+test('the live region comes first, empty, and its text a frame later: the text is a change of a region already in the page', () => {
+  const h = holder(), clock = fakeClock();
+  const { element } = showLayoutNotice(h, clock);
+  assert.equal(h.firstElementChild, element, 'the region is in the container');
+  assert.equal(element.getAttribute('role'), 'status');
+  assert.equal(element.textContent, '', 'and empty');
+  assert.equal(element.childNodes.length, 0);
+  assert.equal(clock.frames.length, 1, 'its text waits for the next frame');
+  // A tick before the frame counts all the same; the frame shows the count as it stands.
+  clock.tick(1000);
+  clock.paint();
+  assert.equal(element.textContent, 'Diagramm wird angeordnet … 1 s');
+  assert.equal(element.querySelector('span').getAttribute('aria-hidden'), 'true');
+  assert.equal(clock.frames.length, 0);
+});
+
+test('with the page\'s own timers, frame and clock it starts and stops as well (Node has no frame: the next task)', async () => {
   const h = holder();
   const notice = showLayoutNotice(h);
+  assert.equal(h.textContent, '');
+  await new Promise(r => setTimeout(r, 5));
   assert.equal(h.textContent, 'Diagramm wird angeordnet … 0 s');
   notice.stop();
 });

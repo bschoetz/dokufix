@@ -349,9 +349,12 @@ function fakeWorker(){
 }
 // The notice's timer and clock: what is pending, and one tick.
 function noticeTimers(){
-  const t = { intervals: new Map(), next: 1, time: 0 };
+  const t = { intervals: new Map(), next: 1, time: 0, frames: [] };
   t.timers = { setInterval: (fn, ms) => { const id = t.next++; t.intervals.set(id, fn); return id; }, clearInterval: id => t.intervals.delete(id) };
   t.now = () => t.time;
+  // The frame the notice's text waits for, drawn when the test says so.
+  t.frame = fn => { t.frames.push(fn); };
+  t.paint = () => { for (const fn of t.frames.splice(0)) fn(); };
   t.tick = ms => { t.time = ms; for (const fn of t.intervals.values()) fn(); };
   return t;
 }
@@ -370,11 +373,13 @@ test('XML without coordinates through a worker: the notice counts in the contain
   const document = page();
   const d = diagramIn(document, WITHOUT_DI);
   await withLibrary(Viewer, async () => {
-    const drawn = renderBpmn(d, { client, timers: clock.timers, now: clock.now });
+    const drawn = renderBpmn(d, { client, timers: clock.timers, frame: clock.frame, now: clock.now });
     await until(() => w.sent.length === 1, 'the XML went to the worker');
     assert.deepEqual(w.sent[0], { id: 1, xml: WITHOUT_DI });
     const notice = d.holder.firstElementChild;
     assert.equal(notice.getAttribute('class'), LAYOUT_NOTICE_CLASS);
+    assert.equal(d.holder.textContent, '', 'the live region first, empty');
+    clock.paint();
     assert.equal(d.holder.textContent, 'Diagramm wird angeordnet … 0 s');
     assert.equal(notice.hasAttribute('data-dokufix-transient'), true);
     clock.tick(1000);
