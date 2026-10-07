@@ -4,7 +4,9 @@ Die Versuche zur Ablösung von Mermaid als Layout-Engine für BPMN ohne Koordina
 
 Auswertung und Begründungen: `docs/analyse-mermaid-im-bpmn-code.md`, vor allem die Abschnitte 2 bis 3b und 4a. Der ausführliche Bericht des Reviews: `review/BERICHT.md`.
 
-Nichts hier ist Teil des Builds oder der Tests von dokufix. `src/` und `tests/` sind unverändert.
+Nichts hier ist Teil des Builds oder der Tests von dokufix.
+
+**Auf welchem Stand die Skripte laufen:** Sie importieren Teile des Repositorys, vor allem `tests/bpmn-fixtures.mjs` und die Fixture-Dateien, und entstanden, bevor das Produkt umgebaut wurde. Seit dem Messer der Beschriftungen (`3597e43`) fehlen `measureOf()`, `labelMeasurer()` und die Dateien `*.sizes.json`, `*.measured.bpmn` und `*.estimated.bpmn`; seit LMM im Produkt (`f0ff93e`) fehlen `*.raw.json` und `tests/capture-bpmn.mjs`. Auf dem heutigen Stand brechen die meisten Skripte deshalb ab. Sie bleiben, wie sie waren, damit sie zeigen, wie die Ergebnisse der Berichte zustande kamen. Wer eines noch einmal laufen lassen will, nimmt den Stand **`c1357b4`**, den letzten vor dem Umbau, etwa mit `git worktree add ../dokufix-spike c1357b4` und `npm ci` dort. Ausnahme: `messer-integration/screenshots.mjs` vergleicht zwei gebaute Dateien, die es als Argumente bekommt, und hängt an keinem Stand.
 
 ## Die Fassungen
 
