@@ -1,6 +1,6 @@
 # Grobkonzept: eine Ordnungsphase zwischen LMM und Raster
 
-Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`). Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
+Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); Teil a) des ersten Schritts ist umgesetzt, mit den Messwerten unten. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
 
 ## Ausgangslage
 
@@ -87,7 +87,7 @@ Fast alle Bilder würden sich ändern. Deshalb zuerst als Spike neben dem heutig
 - `lauf.mjs --aus <regel>` zeigt, welche Regel mit der Phase noch etwas bewirkt; was nichts mehr bewirkt, kann gehen
 - die Feedback-Seiten (`feedback-bauen.mjs`) für Bens Urteil am Bild, mit den Handfassungen daneben
 
-Es fehlen zwei Messgrößen in `lauf.mjs`: Kreuzungen und Knicke. Bisher misst sie nur das Skript des Spikes (`spikes/lmm/review/measure.mjs`), das auf einem alten Stand läuft. Sie kommen zuerst dazu (siehe *Erster Schritt*).
+Seit Teil a) des ersten Schritts misst `lauf.mjs` auch Kreuzungen und Knicke (`quality()` in `lib.mjs`) und zählt, wie oft `finishGrid()` je Regel läuft.
 
 **Abnahme**, vorläufig:
 
@@ -95,7 +95,11 @@ Es fehlen zwei Messgrößen in `lauf.mjs`: Kreuzungen und Knicke. Bisher misst s
 |---|---|---|
 | Brüche, alle 137 Eingaben | 33 | höchstens 33 |
 | Brüche, die 84 eigenen Eingaben (ohne die externen, gemessen auf `bd8e9c7`) | 13 | höchstens 13 |
-| Kreuzungen und Knicke, auch der Nachrichtenflüsse | noch nicht gemessen | höchstens wie heute |
+| Kreuzungen der Sequenzflüsse, 84 eigene Eingaben | 41 | höchstens 41 |
+| Kreuzungen der Nachrichtenflüsse, 84 eigene Eingaben | 15 | höchstens 15 |
+| Knicke der Sequenzflüsse, 84 eigene Eingaben | 495 | höchstens 495 |
+| Knicke der Nachrichtenflüsse, 84 eigene Eingaben | 18 | höchstens 18 |
+| Läufe von `finishGrid()`, 84 eigene Eingaben | 1668 | deutlich weniger |
 | Laufzeit der 84 eigenen Eingaben in Node (`lauf.mjs`) | 21 s | höchstens die Hälfte |
 | Laufzeit von hund3 in Chromium | 10 s | unter 1 s |
 | Unabhängig von Reihenfolge und Namen im XML (`tests/lmm.test.mjs`) | gegeben | bleibt |
@@ -113,10 +117,17 @@ Es fehlen zwei Messgrößen in `lauf.mjs`: Kreuzungen und Knicke. Bisher misst s
 
 Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern und ohne die Schnittstelle zum Raster anzufassen. Vorschlag: **R10 als Rechnung statt als Probe**, davor die Messung, die man dafür ohnehin braucht.
 
-**a) Messen (klein, vorab).**
-- `lauf.mjs` misst Kreuzungen und Knicke, auch die der Nachrichtenflüsse, aus dem Diagrammteil, wie `measure.mjs` im Spike.
-- `lauf.mjs` zählt, wie oft `finishGrid()` je Regel läuft. Dazu bekommt `layoutGeometry()` einen optionalen Zähler in `options`, ohne Wirkung auf das Bild.
-- Ergebnis: eine Grundlinie für die Abnahme, und die Antwort, welche Probe die meiste Zeit kostet.
+**a) Messen (umgesetzt, 7. Oktober 2026).**
+- `lauf.mjs` misst Kreuzungen und Knicke, auch die der Nachrichtenflüsse, aus dem Diagrammteil (`quality()` in `tools/bpmn-layout/lib.mjs`), für jeden Stand gleich.
+- `lauf.mjs` zählt, wie oft `finishGrid()` je Regel läuft. Dazu füllt `layoutGeometry()` ein optionales Objekt `options.runs`, ohne Wirkung auf das Bild (Test in `tests/bpmn-layout.test.mjs`; die 84 Bilder sind byte-gleich mit `bd8e9c7`).
+- Die Grundlinie steht in der Abnahme oben. Die Läufe von `finishGrid()` über die 84 eigenen Eingaben, nach der Regel, deren Proben sie auslösten:
+
+  | R16 | R12 | R11 | R13 | R14 | R18 | R10 | zusammen |
+  |---|---|---|---|---|---|---|---|
+  | 490 | 322 | 236 | 218 | 178 | 170 | 54 | 1668 |
+
+  Jede Probe ordnet zweimal an (mit und ohne zweiten Durchgang des Routers). R11 schließt mit dem Bild ab, das zurückgegeben wird; deshalb erscheint „final“ nicht eigens.
+- **Befund:** R10 kostet nur gut 3 % der Läufe. Die Zeit steckt in R16 (zwei Gateways übereinander, eines eine Spalte weiter probiert), R12 (Kreuzungsprobe) und R11 (Enden ausrichten). Für die Laufzeit bringt c) also wenig; das ändert die Reihenfolge danach (siehe unten).
 
 **b) Das Zählmodell prüfen.**
 - Die Schritte 1 und 2 der Phase in einem eigenen Modul unter `spikes/`: Hilfspunkte je Spalte und Kreuzungen zwischen benachbarten Spalten. Gezählt wird auf dem fertigen Raster des heutigen Layouts.
@@ -132,7 +143,7 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
   - wie viele Läufe von `finishGrid()` wegfallen,
   - ob Bens Befund b-wv2 ohne Probe so ausfällt wie heute.
 
-Warum R10: Es ist die Probe, die am klarsten Phase 3 ist (die Seite eines Wegs innerhalb seiner Bahn), sie hängt an einer einzigen Stelle, und ihr Ergebnis ist schon heute auf Kreuzungen gemessen. Das macht den Vergleich eindeutig. Trägt die Rechnung, folgen R12 und R14 mit demselben Zählmodell; trägt sie nicht, zeigt b), ob das Zählmodell oder die Vorgabe schuld ist.
+Warum R10 trotzdem zuerst: Es ist die Probe, die am klarsten Phase 3 ist (die Seite eines Wegs innerhalb seiner Bahn), sie hängt an einer einzigen Stelle, und ihr Ergebnis ist schon heute auf Kreuzungen gemessen. Das macht den Vergleich eindeutig, und es prüft das Zählmodell an einem kleinen Fall. Für die Laufzeit zählen danach R16 und R12: R16 gehört zum Nachschärfen der Spalten (Schritt 4 der Phase), R12 zur Reihenfolge je Spalte (Schritt 2). Trägt die Rechnung bei R10, folgt R12 mit demselben Zählmodell, dann R16 als Bedingung. Trägt sie nicht, zeigt b), ob das Zählmodell oder die Vorgabe schuld ist.
 
 ## Offene Fragen
 

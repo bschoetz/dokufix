@@ -1291,6 +1291,19 @@ test('a text annotation\'s text as bpmn-moddle reads it: text nodes of blanks on
   assert.deepEqual(textOf('A &amp; &amp; B'), ['A & & B']);
 });
 
+test('options.runs counts the runs of the grid per rule whose trials ran it, and changes nothing in the picture', () => {
+  const { model, raw } = gridInput(readFixture('hund2').xml);
+  const runs = {};
+  const counted = layoutGeometry(model, raw, undefined, { ...DEFAULT_RULES, runs });
+  assert.deepEqual(counted, layoutGeometry(model, raw));
+  assert.ok(Object.keys(runs).every(k => ['R18', 'R10', 'R12', 'R14', 'R13', 'R16', 'R11', 'final'].includes(k)), Object.keys(runs).join());
+  assert.equal(Object.values(runs).reduce((n, v) => n + v, 0), 68);
+  // Without the trials the grid runs once, for the picture returned.
+  const none = {};
+  layoutGeometry(model, raw, undefined, { handOver: false, rowProbe: false, crossProbe: false, combProbe: false, stepAside: false, stagger: false, endAlign: false, runs: none });
+  assert.deepEqual(none, { final: 1 });
+});
+
 // What a hostile document of a few KB made slow, each bounded far below what it took (security review of
 // 2026-10-07): the bound is a tenth of the old time or less, so a slow machine passes and a return of the old
 // algorithm fails.

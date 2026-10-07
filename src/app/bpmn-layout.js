@@ -794,8 +794,13 @@ export function wayHits(way, boxes){
 // x="undefined" in the diagram part).
 const byId = () => Object.create(null);
 
+// options: the rules (DEFAULT_RULES), each on unless set false; and runs, an
+// object the call fills with how often finishGrid() ran, per rule whose trials
+// ran it ("R10" …) and "final" for the picture returned: for the layout tools
+// (tools/bpmn-layout/lauf.mjs), no effect on the picture.
 export function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES){
   const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, options[k] ?? DEFAULT_RULES[k]]));
+  rules.runs = options.runs || null;
   // Each text measured once per width (none for a label): every trial of the rules lays the labels out again, and
   // each measure lays the text out anew, a text annotation in up to four widths (review of 2.31).
   const sizes = new Map();
@@ -1557,6 +1562,7 @@ function ruleHandOver(g, model, measure, rules){
 function layoutGrid(model, raw, measure, rules){
   model = gridModel(model);
   const g = buildGrid(model, raw);
+  g.runs = rules.runs;
   if (rules.gatewayLane) ruleGatewayLane(g, model);
   if (rules.boundaryBelow) ruleBoundaryBelow(g, model);
   if (rules.pathRows) rulePathRows(g, model);
@@ -1567,13 +1573,22 @@ function layoutGrid(model, raw, measure, rules){
   if (rules.firstColumn) ruleFirstColumn(g, model);
   if (rules.startAlign) ruleStartAlign(g, model);
   g.handCol = new Map();
+  // g.stage names the rule whose trials run finishGrid(), for the count in g.runs.
+  g.stage = 'R18';
   if (rules.handOver) ruleHandOver(g, model, measure, rules);
+  g.stage = 'R10';
   if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
+  g.stage = 'R12';
   if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
+  g.stage = 'R14';
   if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
+  g.stage = 'R13';
   if (rules.stepAside) ruleStepAside(g, model, measure, rules);
+  g.stage = 'R16';
   if (rules.stagger) ruleStagger(g, model, measure, rules);
+  g.stage = 'R11';
   if (rules.endAlign) return ruleEndAlign(g, model, measure, rules);
+  g.stage = 'final';
   return finishGrid(g, model, measure, rules);
 }
 
@@ -1996,6 +2011,7 @@ function gridQuality(di, model){
 // restores them. reroute: whether the router runs its pair trial and second
 // pass.
 function finishGrid(g, model, measure, rules, reroute = true){
+  if (g.runs) g.runs[g.stage] = (g.runs[g.stage] || 0) + 1;
   centreLaneSplits(g, model);
   // R9: R7 until each group of first nodes of ways stands in one column; each
   // round from the columns raw gave, the minimum columns only grow.

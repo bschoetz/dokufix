@@ -27,8 +27,8 @@ node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 
 | Datei | Was |
 |---|---|
-| `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), anordnen wie `layoutBpmn()`, Brüche, Größe, Blöcke, Nähe zu einer Referenz |
-| `lauf.mjs` | ordnet an und misst; `--lauf`, `--stand`, `--satz`, `--aus <regel,…>` (DEFAULT_RULES abschalten), Namen |
+| `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), anordnen wie `layoutBpmn()` (mit dem XML-Leser des Stands), Brüche, Größe, Blöcke, Kreuzungen und Knicke (`quality()`), Nähe zu einer Referenz |
+| `lauf.mjs` | ordnet an und misst, auch Kreuzungen, Knicke und wie oft `finishGrid()` je Regel lief (die Proben); `--lauf`, `--stand`, `--satz`, `--aus <regel,…>` (DEFAULT_RULES abschalten), Namen |
 | `vergleich.mjs` | zwei Läufe Eingabe für Eingabe, Byte für Byte |
 | `feedback-bauen.mjs`, `feedback-seite.js` | die Seite des Layout-Feedbacks: Bild, Modellierer, Kommentar, früheres Feedback, Export als Paket; `--art`, `--satz`, `--gegen`, `--varianten`, `--alle`, Namen |
 | `feedback-auswerten.mjs` | ein Paket von der Seite: was Ben geändert hat, gemessen an der erzeugten Fassung |

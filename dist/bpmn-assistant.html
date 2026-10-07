@@ -914,6 +914,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   var byId = () => /* @__PURE__ */ Object.create(null);
   function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES) {
     const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map((k) => [k, options[k] ?? DEFAULT_RULES[k]]));
+    rules.runs = options.runs || null;
     const sizes = /* @__PURE__ */ new Map();
     const once = (text, width) => {
       const key = (width ?? "") + ":" + text;
@@ -1517,6 +1518,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   function layoutGrid(model, raw, measure, rules) {
     model = gridModel(model);
     const g = buildGrid(model, raw);
+    g.runs = rules.runs;
     if (rules.gatewayLane) ruleGatewayLane(g, model);
     if (rules.boundaryBelow) ruleBoundaryBelow(g, model);
     if (rules.pathRows) rulePathRows(g, model);
@@ -1527,13 +1529,21 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     if (rules.firstColumn) ruleFirstColumn(g, model);
     if (rules.startAlign) ruleStartAlign(g, model);
     g.handCol = /* @__PURE__ */ new Map();
+    g.stage = "R18";
     if (rules.handOver) ruleHandOver(g, model, measure, rules);
+    g.stage = "R10";
     if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
+    g.stage = "R12";
     if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
+    g.stage = "R14";
     if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
+    g.stage = "R13";
     if (rules.stepAside) ruleStepAside(g, model, measure, rules);
+    g.stage = "R16";
     if (rules.stagger) ruleStagger(g, model, measure, rules);
+    g.stage = "R11";
     if (rules.endAlign) return ruleEndAlign(g, model, measure, rules);
+    g.stage = "final";
     return finishGrid(g, model, measure, rules);
   }
   function gridModel(model) {
@@ -1866,6 +1876,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return { crossings, through, overlaps, lines, labels, shared: shared.length, bends, msgBends, msgCrossings };
   }
   function finishGrid(g, model, measure, rules, reroute = true) {
+    if (g.runs) g.runs[g.stage] = (g.runs[g.stage] || 0) + 1;
     centreLaneSplits(g, model);
     const orig = new Map([...g.cells.values()].map((c) => [c, c.col]));
     const compactAll = () => {

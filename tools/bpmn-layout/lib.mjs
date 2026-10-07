@@ -118,12 +118,41 @@ export const readModel = (stand, xml) => stand.parser
 // { xml, di, model, leftOut }: die Eingabe angeordnet wie auf der Seite (layoutBpmn() in src/app/bpmn.js): das
 // Modell in LMMs Ordnung mit seinen Spalten an layoutGeometry(), das Modell des Autors an appendDiagram().
 // options: die Regel-Schalter (DEFAULT_RULES).
+// runs: wie oft finishGrid() lief, je Regel, deren Proben es aufriefen, und "final" (layoutGeometry(), options.runs);
+// leer bei einem Stand, der nicht zählt (vor dem 7. Oktober 2026).
 export function layOut(stand, xml, options){
   const read = readModel(stand, xml);
   if (!read) throw new Error('kein BPMN');
   const sorted = stand.lmm.kanonisch(read.model);
-  const di = stand.layout.layoutGeometry(sorted.model, stand.lmm.lmmPositions(sorted.model, sorted.rank), undefined, options);
-  return { ...stand.layout.appendDiagram(xml, read.model, di), di, model: read.model, leftOut: read.leftOut };
+  const runs = {};
+  const di = stand.layout.layoutGeometry(sorted.model, stand.lmm.lmmPositions(sorted.model, sorted.rank), undefined, { ...options, runs });
+  return { ...stand.layout.appendDiagram(xml, read.model, di), di, model: read.model, leftOut: read.leftOut, runs };
+}
+
+// Kreuzungen und Knicke des gezeichneten Bilds, aus dem Diagrammteil, für jeden Stand gleich gemessen:
+//   crossings     ein waagrechtes und ein senkrechtes Stück zweier Sequenzflüsse schneiden sich im Inneren
+//   msgCrossings  dasselbe für ein Stück eines Nachrichtenflusses mit einem Stück irgendeines anderen Flusses
+//   bends         Wegpunkte jenseits von zweien, über die Sequenzflüsse; msgBends über die Nachrichtenflüsse
+// Wie gridQuality() in src/app/bpmn-layout.js, das die Proben des Rasters bewertet, aber am fertigen XML.
+export function quality(xml, model){
+  const { flows } = readDi(xml);
+  const segsOf = list => list.flatMap(f => { const pts = flows[f.id] || []; return pts.slice(1).map((b, i) => ({ f: f.id, a: pts[i], b })); });
+  const seq = segsOf(model.flows), msg = segsOf(model.messages || []);
+  const cuts = (p, q) => {
+    const ph = p.a[1] === p.b[1], qh = q.a[1] === q.b[1];
+    if (p.f === q.f || ph === qh) return false;
+    const [h, v] = ph ? [p, q] : [q, p];
+    const x = v.a[0], y = h.a[1];
+    return x > Math.min(h.a[0], h.b[0]) && x < Math.max(h.a[0], h.b[0]) && y > Math.min(v.a[1], v.b[1]) && y < Math.max(v.a[1], v.b[1]);
+  };
+  let crossings = 0, msgCrossings = 0;
+  for (let i = 0; i < seq.length; i++) for (let j = i + 1; j < seq.length; j++) if (cuts(seq[i], seq[j])) crossings++;
+  for (let i = 0; i < msg.length; i++){
+    for (const q of seq) if (cuts(msg[i], q)) msgCrossings++;
+    for (let j = i + 1; j < msg.length; j++) if (cuts(msg[i], msg[j])) msgCrossings++;
+  }
+  const bendsOf = list => list.reduce((n, f) => n + Math.max(0, (flows[f.id] || []).length - 2), 0);
+  return { crossings, msgCrossings, bends: bendsOf(model.flows), msgBends: bendsOf(model.messages || []) };
 }
 
 export async function rules(){ return (await import(pathToFileURL(path.join(REPO, 'tests/bpmn-rules.mjs')).href)).breaksOf; }
