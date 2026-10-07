@@ -676,9 +676,10 @@ const RULE_CASES = [
   ['R1: a merge whose ways come from several lanes stands in the lane of the step after it', 'gatewayLane',
     [['A', 'S:s:0 G:x:1 T:t:3 E:e:4'], ['B', 'U:t:2 M:x:2']], 'S>G G>M G>U U>M M>T T>E',
     at => at.M.lane === 'A'],
+  // R9 stacks two such ways as well (Ben, 2026-10-07, lizenzprozess-gemini): R2 alone, without R9.
   ['R2: two ways of a decision that go on in one lane never share a row; the other one goes below', 'pathRows',
     [['A', 'S:s:0 G:x:1 T1:t:2 T2:t:3 E1:e:4 U1:t:2 U2:t:3 E2:e:4']], 'S>G G>T1 T1>T2 T2>E1 G>U1 U1>U2 U2>E2',
-    at => at.T1.y === at.G.y && at.T2.y === at.G.y && at.U1.y === at.U2.y && at.U1.y > at.G.y],
+    at => at.T1.y === at.G.y && at.T2.y === at.G.y && at.U1.y === at.U2.y && at.U1.y > at.G.y, { firstColumn: false }],
   ['R3: the step of a loop stands in the row above its gateway, in its column', 'loopAbove',
     [['A', 'S:s:0 K:t:1 H:x:2 L:t:3 E:e:3']], 'S>K K>H H>L L>K H>E',
     at => at.L.x === at.H.x && at.L.y < at.H.y],
@@ -716,10 +717,11 @@ const RULE_CASES = [
     [['A', 'S1:s:0 S2:s:1 T:t:2 E:e:3']], 'S1>T S2>T T>E',
     at => at.S1.x === at.S2.x && at.S1.y !== at.S2.y],
 ];
-for (const [name, key, lanes, flows, holds] of RULE_CASES){
+// base: rules switched off in both calls, where another rule gives the guarantee too.
+for (const [name, key, lanes, flows, holds, base = {}] of RULE_CASES){
   test(name, () => {
-    assert.equal(holds(laidOut(lanes, flows)), true, 'with the rule');
-    assert.equal(holds(laidOut(lanes, flows, { [key]: false })), false, 'with ' + key + ' off');
+    assert.equal(holds(laidOut(lanes, flows, base)), true, 'with the rule');
+    assert.equal(holds(laidOut(lanes, flows, { ...base, [key]: false })), false, 'with ' + key + ' off');
   });
 }
 
@@ -732,8 +734,8 @@ test('the rules are switched per call: one call without a rule leaves the next a
   assert.deepEqual(laidOut(lanes, flows, { startAlign: true, compact: false, reroute: false }), before, 'R7 and the second pass are no switches');
 });
 
-test('the default rules: R1–R18 but R7, all on, frozen', () => {
-  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'boundaryBelow', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'handOver', 'jumpAbove', 'loopAbove', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
+test('the default rules: R1–R19 but R7, all on, frozen', () => {
+  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'boundaryBelow', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'handOver', 'jumpAbove', 'loopAbove', 'messageSide', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
   assert.ok(Object.values(DEFAULT_RULES).every(v => v === true));
   assert.ok(Object.isFrozen(DEFAULT_RULES));
   assert.throws(() => { DEFAULT_RULES.startAlign = false; }, TypeError);
@@ -1072,7 +1074,8 @@ test('a message flow takes no needless bends: straight up across a flow that jum
     '<bpmn:process id="QB"><bpmn:task id="B0"/><bpmn:exclusiveGateway id="G" name="Gut?"/><bpmn:task id="B1"/><bpmn:task id="B2"/><bpmn:sequenceFlow id="G1" sourceRef="B0" targetRef="G"/>' +
     '<bpmn:sequenceFlow id="G2" sourceRef="G" targetRef="B1" name="nein"/><bpmn:sequenceFlow id="G3" sourceRef="B1" targetRef="B2"/><bpmn:sequenceFlow id="G4" sourceRef="G" targetRef="B2" name="ja"/></bpmn:process>');
   const { model } = read(xml);
-  const di = layoutGeometry(model, rawOf(model, { A0: 0, A1: 100, A2: 300, A3: 400, B0: 0, G: 100, B1: 200, B2: 300 }));
+  // Without R9, which stacks "ja" and "nein" since 2026-10-07 (lizenzprozess-gemini), so that B1 stays in the row.
+  const di = layoutGeometry(model, rawOf(model, { A0: 0, A1: 100, A2: 300, A3: 400, B0: 0, G: 100, B1: 200, B2: 300 }), measureLabel, { firstColumn: false });
   assert.equal(di.flows.M.length, 2, 'straight: ' + JSON.stringify(di.flows.M));
 });
 

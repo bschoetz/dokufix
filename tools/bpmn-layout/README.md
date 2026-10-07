@@ -50,6 +50,7 @@ Die Sätze, wie Spike 2.26 und die Stories 2.12 und 2.29 bis 2.31 sie gebildet h
 | `extern` | | 20 (`x-…`) | von Menschen gezeichnete Prozesse, je mit Handlayout als Referenz |
 | `pools`, `blackbox`, `angeheftet`, `notizen` | 5, 8, 11, 10 | 10, 7, 3, 13 | die Sätze der Stories 2.12, 2.29, 2.30, 2.31 |
 | `laufzeit` | 1 | | Bens hund3 (77 Knoten), nur auf Nennung |
+| `einzeln` | 1 | | Diagramme, über die Ben einzeln sprechen will, nur auf Nennung: `lauf.mjs --lauf <name> <name>`, `feedback-bauen.mjs --lauf <name> --art <name> <name>` |
 
 Der Satz von 70 aus Spike 2.26 ist `sauber`, `ben` und `extern`. `eingaben/referenzen/hund2.bpmn` ist Bens Handlayout von hund2, die Referenz für `closeness()`.
 

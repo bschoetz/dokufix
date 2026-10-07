@@ -44,7 +44,8 @@
 //   sequence-outside-pool     a waypoint of a sequence flow outside its pool
 //   pool-overlap              two pools that overlap or touch
 //   message-side              a message flow that leaves its source or enters
-//                             its target other than vertically
+//                             its target other than vertically; out of an end
+//                             event it may leave to the east
 //   label-on-pool-edge        a message flow's label across the frame of a
 //                             pool: <label's flow> <pool>
 // and with text annotations (story 2.31), each its box, each association its
@@ -235,7 +236,9 @@ export function breaksOf(xml, model, sizes = {}){
   for (const [id, w] of Object.entries(di.flows)){
     const f = flowOf[id];
     if (isMessage.has(id)){
-      if (w[0][0] !== w[1][0] || w.at(-1)[0] !== w.at(-2)[0]) add('message-side', id);
+      // Out of an end event also to the east, where no flow leaves (Ben, 2026-10-07, nz18-fluss2).
+      const east = type[f.from] === 'end' && w[0][1] === w[1][1] && w[1][0] > w[0][0];
+      if ((w[0][0] !== w[1][0] && !east) || w.at(-1)[0] !== w.at(-2)[0]) add('message-side', id);
       continue;
     }
     const box = poolBox(poolOf[f.from]);

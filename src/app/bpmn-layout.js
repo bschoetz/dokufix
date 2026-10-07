@@ -65,7 +65,9 @@ import { measureLabel } from './label-size.js';
 //                   another lane lies this far inside once that lane has
 //                   grown (labelRoom()), as far as a flow's label keeps from
 //                   its piece
-const ATTACH_CLEARANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12, LABEL_GAP = 4;
+// LABEL_CLEARANCE   a piece of a flow that ran through a foreign flow's label
+//                   keeps this far from it once moved aside (finishLabelsAndFrame())
+const ATTACH_CLEARANCE = 12, RING_CLEARANCE = 12, FRAME_MARGIN = 12, LABEL_GAP = 4, LABEL_CLEARANCE = 12;
 // They stand among the module's first declarations: esbuild writes such a
 // constant's value in place of its name only before the first declaration
 // that is no such constant, and so the built page carries no names for them.
@@ -834,6 +836,7 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   stagger: true,      // R16 two gateways above each other in one column: one tried a column further
   boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
   handOver: true,     // R18 the one step of a decision's way in another lane or row tried in the gateway's column, the nodes of another flow between moved a column (Ben, 2026-10-07, x-wv6)
+  messageSide: true,  // R19 an end where ways from several rows meet and that sends a message stands in the row of the way on the side of the message's other end (Ben, 2026-10-07, nz18-fluss2)
 });
 
 
@@ -971,8 +974,11 @@ function ruleGatewayLane(g, model){
     // Into the lane of its ways (Ben, 2026-10-05, x-tm1 and x-rg3: gateways centred): a split whose three or more ways
     // all begin in one other lane stands in that lane; R9 puts it in the middle row of its ways. Only heads whose lane
     // is settled (no gateways, no ends); a gateway may lie in any lane, intermediate events never change theirs.
+    // So does the split of an exclusive block with two ways (Ben, 2026-10-07, lizenzprozess-gemini: "deutlich
+    // lesbarer, wenn man wieder in X-Gate-Gruppen layoutet"): split, arms and merge stay together in one lane, and R9
+    // stacks the arms there.
     const heads = g.fwdOut.get(id).map(f => g.cells.get(f.to));
-    if (c.n.type === 'gateway' && heads.length >= 3 && heads.every(h => h.n.type !== 'gateway' && h.n.tag !== 'endEvent') && heads.every(h => h.lane === heads[0].lane) && heads[0].lane !== c.lane){
+    if (c.n.type === 'gateway' && (heads.length >= 3 || (heads.length === 2 && c.n.tag !== 'parallelGateway' && exclusiveBlock(g, model, id, 2))) && heads.every(h => h.n.type !== 'gateway' && h.n.tag !== 'endEvent') && heads.every(h => h.lane === heads[0].lane) && heads[0].lane !== c.lane){
       c.lane = heads[0].lane;
       (g.laneSplits ||= new Set()).add(id);
     }
@@ -1168,10 +1174,11 @@ function exclusiveBlock(g, model, id, min = 3){
 function ruleFirstColumn(g, model){
   g.columnGroups = [];
   // Two alternatives one above the other (Ben, 2026-10-05, krankheit: he made the alternatives at "Notfall?" easier
-  // to read): a split that is no parallel gateway, with exactly two ways that run together again at a merge, both
-  // heads still in its row (none directly the merge, none pinned).
+  // to read): a split that is no parallel gateway, with exactly two ways, both heads still in its row (none directly
+  // a merge, none pinned). The ways need not run together again (Ben, 2026-10-07, lizenzprozess-gemini: "Der untere
+  // ja/nein-Split sollte auch gestapelt sein").
   const pair = n => {
-    if (n.type !== 'gateway' || n.tag === 'parallelGateway' || g.fwdOut.get(n.id).length !== 2 || !exclusiveBlock(g, model, n.id, 2)) return false;
+    if (n.type !== 'gateway' || n.tag === 'parallelGateway' || g.fwdOut.get(n.id).length !== 2) return false;
     const P = g.cells.get(n.id);
     return g.fwdOut.get(n.id).every(f => { const c = g.cells.get(f.to); return c.n.type !== 'gateway' && !c.pin && c.lane === P.lane && c.row === P.row; });
   };
@@ -1208,6 +1215,9 @@ function ruleFirstColumn(g, model){
     // split and merge, the second goes into a new row right below, in the same column.
     else if (own.length === 2 && P.n.tag !== 'parallelGateway' && g.fwdOut.get(id).length === 2){
       const row0 = P.row, move = (f, row) => { for (const x of f.r.nodes){ const c = g.cells.get(x); if (c.lane === P.lane && c.row === row0 && !c.pin) c.row = row; } done.add(f); };
+      // The way "ja" stays straight, "nein" goes below (Ben, 2026-10-07, lizenzprozess-gemini); else the first flow
+      // stays.
+      if (/^(nein|no)$/i.test((own[0].r.flow.name || '').trim()) || /^(ja|yes)$/i.test((own[1].r.flow.name || '').trim())) own.reverse();
       move(own[1], g.freshRow(P.lane, row0, 1));
       done.add(own[0]);
     }
@@ -1384,7 +1394,10 @@ function ruleCompact(g, model, rules){
         || (rules.block && lonePar.has(c.n.id))
         // Likewise before a split R1 put in the lane of its ways (Ben, 2026-10-05, x-rg3): it needs its north and
         // south ports for the ways; with the node before in its column, the flow would come in vertically.
-        || (g.laneSplits?.has(c.n.id) ?? false);
+        || (g.laneSplits?.has(c.n.id) ?? false)
+        // And before an end R19 moved (nz18-fluss2): the way from the other row comes in from above or below, a
+        // column to the right, not down the end's own column into the port its message needs.
+        || (g.msgSide?.has(c.n.id) ?? false);
       // A boundary event's way begins a column right of its host (story 2.30).
       col = Math.max(col, pc + (sameRow || blocked || edge || f.event ? 1 : 0));
     }
@@ -1541,6 +1554,9 @@ function ruleHandOver(g, model, measure, rules){
 //        rows R2 and R5 gave, skips pins
 //   R15  the starts, after R9, whose rows it may move with the start's
 //        successor
+//   R19  an end that sends messages into the row of its way on their side,
+//        after the rules that give the ways their rows; g.msgSide, which R7
+//        reads
 //   R18  a trial, after R15, whose starts it leaves in place, and before the
 //        other trials, which decide on its columns; g.handCol, which R7 reads
 // From here each rule is a trial: it lays the picture out to the end (runGrid():
@@ -1566,6 +1582,7 @@ function layoutGrid(model, raw, measure, rules){
   if (rules.jumpAbove) ruleJumpAbove(g, model);
   if (rules.firstColumn) ruleFirstColumn(g, model);
   if (rules.startAlign) ruleStartAlign(g, model);
+  if (rules.messageSide) ruleMessageSide(g, model);
   g.handCol = new Map();
   if (rules.handOver) ruleHandOver(g, model, measure, rules);
   if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
@@ -1575,6 +1592,35 @@ function layoutGrid(model, raw, measure, rules){
   if (rules.stagger) ruleStagger(g, model, measure, rules);
   if (rules.endAlign) return ruleEndAlign(g, model, measure, rules);
   return finishGrid(g, model, measure, rules);
+}
+
+// R19 (Ben, 2026-10-07, nz18-fluss2: the end where both ways of the event-based gateway met stood in the upper way's
+// row; its message to the pool below left by the south port, which the lower way's flow came in by. He moved the end
+// into the lower way's row: the upper way comes in from above, the south port is the message's alone). An end with
+// ways in from two or more rows of its lane, whose messages all go to one side (or come from it), stands in the row of
+// the way furthest on that side, where its cell there is free, and a column right of every way's last node (R7).
+function ruleMessageSide(g, model){
+  for (const n of model.nodes){
+    if (n.type !== 'end') continue;
+    const c = g.cells.get(n.id);
+    if (c.pin) continue;
+    const rows = g.fwdIn.get(n.id).map(f => g.cells.get(f.from)).filter(p => p.lane === c.lane).map(p => p.row);
+    if (new Set(rows).size < 2) continue;
+    const pool = g.poolOfLane[c.lane];
+    const dirs = (model.messages || []).filter(m => m.from === n.id || m.to === n.id).map(m => {
+      const out = m.from === n.id, framePool = out ? m.toPool : m.fromPool;
+      if (framePool !== undefined) return Math.sign(framePool - pool);
+      const o = g.cells.get(out ? m.to : m.from);
+      return o ? Math.sign(o.lane - c.lane) : 0;
+    });
+    if (!dirs.length || dirs.some(d => d !== dirs[0]) || !dirs[0]) continue;
+    const row = dirs[0] > 0 ? Math.max(...rows) : Math.min(...rows);
+    if ((row - c.row) * dirs[0] <= 0) continue;
+    const there = g.at(c.lane, row, c.col);
+    if (there && there !== c) continue;
+    c.row = row;
+    (g.msgSide ||= new Set()).add(n.id);
+  }
 }
 
 // The model as the grid sees it (story 2.30): a flow from a boundary event is
@@ -2186,6 +2232,13 @@ function finishGrid(g, model, measure, rules, reroute = true){
     return n;
   };
   const msgIds = new Set((model.messages || []).map(m => m.id));
+  // Whether piece k of flow f is the first piece of a named flow out of a gateway and the crossing of h and v lies
+  // in the gap or channel next to the gateway.
+  const exitLabel = (f, k, h, v) => {
+    if (k !== 0 || !f.name || typeOf(f.from) !== 'gateway') return false;
+    const s = endAt(f, 'from');
+    return (Math.abs(v.v - s.xo) === 1 && h.h === s.band) || (Math.abs(h.h - s.band) === 1 && v.v === s.xo);
+  };
   const conflicts = (pieces, own) => {
     let n = blockCost(pieces, own);
     // A horizontal piece in a channel of a foreign lane: the flow back belongs in its own.
@@ -2208,7 +2261,13 @@ function finishGrid(g, model, measure, rules, reroute = true){
           if (p.v === q.v && overlap(p.b1, p.b2, q.b1, q.b2)) n += p.v % 2 ? Math.min(endWeight(own, pieces, i), endWeight(r.f, r.pieces, j)) : 0.3;
         } else {
           const [h, v] = p.h !== undefined ? [p, q] : [q, p];
-          if (Math.min(h.x1, h.x2) < v.v && v.v < Math.max(h.x1, h.x2) && Math.min(v.b1, v.b2) < h.h && h.h < Math.max(v.b1, v.b2)) n += 1;
+          if (Math.min(h.x1, h.x2) < v.v && v.v < Math.max(h.x1, h.x2) && Math.min(v.b1, v.b2) < h.h && h.h < Math.max(v.b1, v.b2)){
+            n += 1;
+            // A message flow right at the exit of a gateway, where the label of its flow stands (flowLabelPlaces()):
+            // the crossing costs as much as a piece on a foreign line (Ben, 2026-10-07, llm-reklamation: the message
+            // flow crossed "Ersatz" through its label; he led it over the merge's arm, which bears none).
+            if (msgIds.has(own.id) && exitLabel(r.f, j, h, v)) n += 3;
+          }
         }
       }));
     }
@@ -2426,6 +2485,10 @@ function finishGrid(g, model, measure, rules, reroute = true){
       for (const gx of [xs - 1, xs + 1]) out.push([V(xs, ys, ys + d), H(ys + d, xs, gx), V(gx, ys + d, G), H(G, gx, xt), V(xt, G, yt)]);
       for (const gx of [xt - 1, xt + 1]) out.push([V(xs, ys, G), H(G, xs, gx), V(gx, G, yt - d), H(yt - d, gx, xt), V(xt, yt - d, yt)]);
       for (const G2 of between) if ((G2 - G) * d > 0) for (const gx of [xs - 1, xs + 1, xt - 1, xt + 1]) out.push([V(xs, ys, G), H(G, xs, gx), V(gx, G, G2), H(G2, gx, xt), V(xt, G2, yt)]);
+      // Out beside the source and in beside the target, so that neither column is run through (Ben, 2026-10-07,
+      // nz19-pool1: the way into "Verzögerungsmeldung erhalten" ran through the event below it in its column; he
+      // bent it into the channel below the target).
+      for (const gs of [xs - 1, xs + 1]) for (const gt of [xt - 1, xt + 1]) out.push([V(xs, ys, ys + d), H(ys + d, xs, gs), V(gs, ys + d, G), H(G, gs, gt), V(gt, G, yt - d), H(yt - d, gt, xt), V(xt, yt - d, yt)]);
     }
     return out;
   };
@@ -2447,11 +2510,22 @@ function finishGrid(g, model, measure, rules, reroute = true){
     if (e.from && e.to){ const out = []; for (let gx = 0; gx <= 2 * cols; gx += 2) out.push([V(gx, s.band, t.band)]); return out; }
     return e.to ? toFrame(s.xo, s.band, t.band) : toFrame(t.xo, t.band, s.band).map(reverse);
   };
+  // From an end event also out of its east port, which no flow uses (Ben, 2026-10-07, nz18-fluss2: of two message
+  // flows out of one end the second left by the east port, rather than sharing the north port with the first): along
+  // its row to the target's column, or to the gap after the end and over a gap between pools, then into the target
+  // vertically.
+  const eastTemplates = (s, t) => {
+    const out = [], ys = s.band, yt = t.band, xs = s.xo, xt = t.xo;
+    if (xt <= xs) return out;
+    out.push([H(ys, xs, xt), V(xt, ys, yt)]);
+    for (const G of gaps.filter(G => (G - ys) * (G - yt) < 0)) out.push([H(ys, xs, xs + 1), V(xs + 1, ys, G), H(G, xs + 1, xt), V(xt, G, yt)]);
+    return out;
+  };
   const span = f => Math.abs(endAt(f, 'to').xo - endAt(f, 'from').xo) + Math.abs(endAt(f, 'to').band - endAt(f, 'from').band);
   for (const m of [...(model.messages || [])].sort((a, b) => span(a) - span(b))){
     const s = endAt(m, 'from'), t = endAt(m, 'to');
     let best = null;
-    for (const raw of msgEnds.has(m.id) ? frameTemplates(m, s, t) : msgTemplates(s, t)){
+    for (const raw of msgEnds.has(m.id) ? frameTemplates(m, s, t) : [...msgTemplates(s, t), ...(typeOf(m.from) === 'end' ? eastTemplates(s, t) : [])]){
       const pieces = clean(raw);
       if (!pieces.length) continue;
       const sc = score(m, pieces);
@@ -2855,6 +2929,52 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     taken.push(place);
     takenPool.push(poolOf.get(b.id));
     owners.push({ boxes: [place, di.labels[b.id]], anchor: box[b.id] });
+  }
+  // A middle piece of a flow that runs upright through a foreign flow's label moves aside, LABEL_CLEARANCE beside the
+  // label, the nearer side first, where it and its neighbours then touch no symbol and no label and cross no more
+  // flows than before (Ben, 2026-10-07, p-rs1: "Kollision durch mehr Abstand behoben"; the label stays beside its own
+  // flow). Its ends at the symbols stay.
+  {
+    const crossesOf = (a, b, skip) => {
+      let n = 0;
+      for (const o of routes){
+        if (o === skip) continue;
+        for (let i = 1; i < o.pts.length; i++){
+          const c = o.pts[i - 1], d = o.pts[i];
+          const [h, v] = Math.abs(a.y - b.y) < 1 ? [[a, b], [c, d]] : [[c, d], [a, b]];
+          if (Math.abs(h[0].y - h[1].y) >= 1 || Math.abs(v[0].x - v[1].x) >= 1) continue;
+          if (v[0].x > Math.min(h[0].x, h[1].x) && v[0].x < Math.max(h[0].x, h[1].x) && h[0].y > Math.min(v[0].y, v[1].y) && h[0].y < Math.max(v[0].y, v[1].y)) n++;
+        }
+      }
+      return n;
+    };
+    const hitsBox = (a, b, boxes) => boxes.some(q => Math.max(a.x, b.x) > q[0] - 1 && Math.min(a.x, b.x) < q[0] + q[2] + 1 && Math.max(a.y, b.y) > q[1] - 1 && Math.min(a.y, b.y) < q[1] + q[3] + 1);
+    const nearLine = (a, b, skip) => routes.some(o => o !== skip && o.pts.slice(1).some((d, i) => { const c = o.pts[i]; return Math.abs(c.x - d.x) < 1 && Math.abs(c.x - a.x) < LABEL_CLEARANCE / 2 && Math.min(Math.max(c.y, d.y), Math.max(a.y, b.y)) > Math.max(Math.min(c.y, d.y), Math.min(a.y, b.y)); }));
+    for (const lab of routes.filter(r => r.f.name && di.flowLabels[r.f.id])){
+      const L = di.flowLabels[lab.f.id];
+      for (const r of routes){
+        if (r === lab) continue;
+        for (let k = 2; k < r.pts.length - 1; k++){
+          const a = r.pts[k - 1], b = r.pts[k];
+          if (Math.abs(a.x - b.x) >= 1 || !hitsBox(a, b, [L])) continue;
+          const pre = r.pts[k - 2], post = r.pts[k + 1], before = [[pre, a], [a, b], [b, post]].reduce((n, [c, d]) => n + crossesOf(c, d, r), 0);
+          const others = [...taken, ...symbols];
+          const xs = [L[0] - LABEL_CLEARANCE, L[0] + L[2] + LABEL_CLEARANCE].sort((p, q) => Math.abs(p - a.x) - Math.abs(q - a.x));
+          for (const x of xs){
+            const a2 = { x, y: a.y }, b2 = { x, y: b.y };
+            const pieces = [[pre, a2], [a2, b2], [b2, post]];
+            // The neighbours keep their ends: a symbol at one of them does not block.
+            const blocked = hitsBox(a2, b2, others) || hitsBox(pre, a2, others.filter(q => !hitsBox(pre, pre, [q]))) || hitsBox(b2, post, others.filter(q => !hitsBox(post, post, [q])));
+            if (blocked || nearLine(a2, b2, r) || pieces.reduce((n, [c, d]) => n + crossesOf(c, d, r), 0) > before) continue;
+            a.x = x; b.x = x;
+            di.flows[r.f.id] = r.pts.map(q => [R(q.x), R(q.y)]);
+            break;
+          }
+        }
+      }
+    }
+    segments.length = 0;
+    segments.push(...routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
   }
   // The text annotations (story 2.31), each beside the partner of its first association, after the labels, keeping
   // off every symbol, piece of a flow, label and text annotation placed before it, its association off symbols and
