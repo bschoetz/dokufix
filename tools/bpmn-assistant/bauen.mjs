@@ -52,12 +52,12 @@ const bundle = (await esbuild.build({
       import * as a2 from '${REPO}/src/app/bpmn-layout.js';
       import { kanonisch, lmmPositions } from '${REPO}/src/app/lmm.js';
       import { breaksOf } from '${REPO}/tests/bpmn-rules.mjs';
-      import { pictureOf } from '${REPO}/src/app/diagram-downloads.js';
+      import { pictureOf, diagramFileName } from '${REPO}/src/app/diagram-downloads.js';
       import { parseXml } from '${REPO}/src/app/xml-parser.js';
       import { makeLayoutClient } from '${REPO}/src/app/layout-client.js';
       import { showLayoutNotice } from '${REPO}/src/app/layout-notice.js';
       import { addLineJumps } from '${REPO}/src/app/line-jumps.js';
-      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, addLineJumps, a2 };
+      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, diagramFileName, makeLayoutClient, showLayoutNotice, addLineJumps, a2 };
     `,
     resolveDir: HERE, loader: 'js',
   },
@@ -851,6 +851,17 @@ function error(s, msg){ const d = document.createElement('div'); d.className = '
 // ein Klick darauf öffnet es über dem ganzen Fenster im Viewer, wie die
 // Großansicht von dokufix: Titel, „Einpassen“, „Schließen“; Mausrad zoomt,
 // Ziehen verschiebt, + und - zoomen, Escape schließt.
+// Der Name einer heruntergeladenen .bpmn oder .svg (Ben, 2026-10-07): der Name der Kollaboration und die Zeit des
+// Klicks, „Bestellung_2026-10-07_19-15-02“. Eine Kollaboration hat selten einen Namen: dann der des ersten Prozesses,
+// dann die Namen der Pools, höchstens drei, mit „-“, dann „Diagramm“; ihre Id nicht, die ist meist „Collaboration_1“.
+// Wie in dokufix gesäubert (diagramFileName()).
+function fileBase(xml){
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const named = tag => [...doc.getElementsByTagNameNS('*', tag)].map(el => (el.getAttribute('name') || '').trim()).filter(Boolean);
+  const name = named('collaboration')[0] || named('process')[0] || named('participant').slice(0, 3).join('-');
+  const d = new Date(), two = n => String(n).padStart(2, '0');
+  return T.diagramFileName(name || 'Diagramm') + '_' + d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + '_' + two(d.getHours()) + '-' + two(d.getMinutes()) + '-' + two(d.getSeconds());
+}
 async function draw(s, xml, name){
   const holder = document.createElement('div');
   holder.className = 'dokufix-doc'; holder.style.maxWidth = 'none'; holder.style.margin = '0'; holder.style.padding = '0';
@@ -870,10 +881,11 @@ async function draw(s, xml, name){
   const a = document.createElement('a');
   a.className = 'btn small'; a.download = name + '.bpmn'; a.innerHTML = ${JSON.stringify(ICON.download)} + ' .bpmn'; a.title = 'Diagramm als .bpmn herunterladen';
   a.href = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }));
+  a.onclick = () => { a.download = fileBase(xml) + '.bpmn'; };
   // Das Bild wie in dokufix (pictureOf()): die Farben der Dokumentstile fest eingesetzt, beim Klick aus dem Bild gemacht.
   const v = document.createElement('a');
   v.className = 'btn small'; v.download = name + '.svg'; v.innerHTML = ${JSON.stringify(ICON.download)} + ' .svg'; v.title = 'Diagramm als .svg herunterladen'; v.href = '#';
-  v.onclick = () => { v.href = URL.createObjectURL(new Blob([withBackground(T.pictureOf(pic.querySelector('svg')))], { type: 'image/svg+xml' })); };
+  v.onclick = () => { v.download = fileBase(xml) + '.svg'; v.href = URL.createObjectURL(new Blob([withBackground(T.pictureOf(pic.querySelector('svg')))], { type: 'image/svg+xml' })); };
   const dl = document.createElement('span');
   dl.className = 'dls'; dl.append(a, v);
   const ed = document.createElement('button');
@@ -965,8 +977,9 @@ async function openModeler(title, xml){
   };
   box.querySelector('.dl').onclick = async () => {
     const a = document.createElement('a');
-    a.download = 'bearbeitet.bpmn';
-    a.href = URL.createObjectURL(new Blob([await current()], { type: 'application/xml' }));
+    const x = await current();
+    a.download = fileBase(x) + '.bpmn';
+    a.href = URL.createObjectURL(new Blob([x], { type: 'application/xml' }));
     a.click();
   };
 }
