@@ -30,8 +30,8 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
 - **Die Komponente heißt arielle.** Der Name spielt auf die Meerjungfrau an. arielle kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul, sagt offen, dass es auf Mermaid beruht, und steht wie Mermaid unter der MIT-Lizenz (Abschnitt 4a).
 - **Mermaids Spaltenreihung ist volatil, und arielle beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. arielle ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
-- **Das fertige Layout bleibt trotzdem volatil, solange das eigene Raster es ist.** Auch mit festen Spalten ändert sich das Bild bei rund 23 % der Umordnungen, weil Regeln bei Gleichstand der Reihenfolge des Modells folgen. Ein Versuch zeigt den Weg: Wird das Modell vor dem Layout einmal kanonisch sortiert, ändert sich das Bild bei **0 von 570** Umordnungen. Die Qualität dieser Sortierung muss aber noch abgestimmt werden (Abschnitt 3b). Das ist ein eigener Schritt nach arielle.
-- **Empfehlung:** arielle in der Fassung aus dem Review als eigenes Modul übernehmen und einhängen. Die zwei geänderten Fixtures werden einmal neu geschrieben. Danach folgt als eigener Schritt die kanonische Ordnung für das Raster.
+- **Auch das fertige Layout lässt sich stabil machen.** Mit arielle allein ändert sich das Bild noch bei rund 21–23 % der Umordnungen, weil Regeln des eigenen Rasters bei Gleichstand der Reihenfolge des Modells folgen. Die Lösung ist `kanonisch()`: Das Modell wird vor dem Layout einmal in arielles Reihenfolge gebracht. Knoten kommen in der Reihenfolge der Rangvergabe, Flüsse in der Reihenfolge von arielles Tiefensuche (Abschnitt 3b). Ergebnis: Das Bild ändert sich bei **0 von 570** Umordnungen und bei 0 von 570 Umbenennungen. Die Qualität wird besser: 43 statt 44 Verstöße, 46 statt 48 Kreuzungen, 324 statt 325 Knicke.
+- **Empfehlung:** arielle samt `kanonisch()` als eigenes Modul `src/app/arielle.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 10 der 57 Fixtures werden einmal neu geschrieben.
 
 ## Vorgehen
 
@@ -272,7 +272,56 @@ Das zeigt: Die Volatilität des Rasters lässt sich ohne Eingriff in die Regeln 
 - **schlechter:** `demo6` (neuer Verstoß `node-outside-lane`, Knicke 3 → 8), `r18` (neuer Verstoß `on-one-line-foreign`, Kreuzungen 3 → 7), `notiz-morgen` (neuer Verstoß `note-on-note`), `r15` (zwei Verstöße weg, drei neu),
 - **besser:** `r04` (ein Verstoß weg), `angeheftet-antrag` (ein Verstoß weg, Kreuzungen 1 → 0), `notiz-bauantrag` (Kreuzungen 10 → 8).
 
-Zur Einordnung: Die heutige Reihenfolge des XML ist selbst nur eine zufällige Stichprobe. Über alle Umordnungen gemittelt liegen die Verstöße bei etwa 0,78 je Fixture, also rund 45 für alle 57. Die kanonische Sortierung muss also nicht das heutige Bild schlagen, sondern dieses Mittel. Welche Ordnung die Regeln am besten bedient, ist die Aufgabe eines eigenen Schritts (Abschnitt 5, Schritt 4).
+Zur Einordnung: Die heutige Reihenfolge des XML ist selbst nur eine zufällige Stichprobe. Über alle Umordnungen gemittelt liegen die Verstöße bei etwa 0,78 je Fixture, also rund 45 für alle 57. Eine kanonische Sortierung muss also nicht das heutige Bild schlagen, sondern dieses Mittel.
+
+### Die verbesserte Sortierung: `kanonisch()`
+
+Ein zweites Review (`spikes/arielle/kanonisch/BERICHT.md`) hat den Versuch geprüft und eine bessere Ordnung gefunden. Die Befunde zum ersten Versuch:
+
+- **Vollständig und bedeutungstreu.** Sortiert sind alle Listen, deren Reihenfolge `layoutGeometry()` liest. Bahnen und Pools behalten ihre Reihenfolge.
+- **Falsch gewichtet.** Notizen, Assoziationen und Nachrichtenflüsse nach ID zu sortieren ist unnötig und schadet. Die Reihenfolge der Notizen ist die des Autors (Review von Story 2.31): Eine früher stehende Notiz bekommt den besseren Platz. Das kostete den neuen Verstoß in `notiz-morgen`. Außerdem bedient die Flussordnung „nach Position der Enden“ die Gleichstände der Regeln schlechter als die XML-Reihenfolge.
+- **Ein Messfehler in meinem Skript:** `canon-quality.mjs` verglich Diagramme, deren Schlüsselreihenfolge der Modellreihenfolge folgt. Viele „geänderte“ Fixtures waren deshalb nur anders serialisiert. Die Gesamtzahlen hielten der Nachmessung stand.
+
+**Die Regeln von `kanonisch(model)`:**
+
+| Liste | Ordnung |
+|---|---|
+| `model.nodes` | die Reihenfolge, in der arielle die Ränge vergibt: Spalte für Spalte, der Hauptweg zuerst |
+| `model.flows` | die Reihenfolge, in der arielles Tiefensuche die Flüsse durchläuft: der Hauptweg bis zum Ende, dann die Alternativen, jeder Rückwärtsfluss dort, wo die Suche auf ihn trifft |
+| `model.boundaries` | nach der Position des Hosts, dann nach dem ersten Fluss des Ereignisses, dann Name, dann ID |
+| `lane.nodes` | wie die Knoten |
+| Bahnen, Pools, Nachrichtenflüsse, Notizen, Assoziationen | **unverändert**: Ihre Reihenfolge hat Bedeutung oder ist die des Autors |
+
+Die Ordnungen fallen bei arielles Lauf ohnehin an. `kanonisch(model)` gibt deshalb Modell und Ränge in einem Lauf zurück: `{ model, rank }`.
+
+**Gemessen** (57 Fixtures, Messart `measured`, Diagrammteil je Element-ID):
+
+| | arielle allein | erster Versuch | **`kanonisch()`** |
+|---|---|---|---|
+| Verstöße (neu / weg gegenüber arielle) | 44 | 46 (+6 / −4) | **43 (+3 / −4)** |
+| Kreuzungen / Knicke | 48 / 325 | 47 / 331 | **46 / 324** |
+| Bilder anders als mit arielle allein | – | 16 | 10 |
+| Layout anders bei Umordnung (570) | 21–23 % (21 Fixtures) | 0 | **0** |
+| Layout anders bei Umbenennung (570) | 0 | 0 | **0** |
+
+Die drei „neuen“ Verstöße sind Tausche gleicher Art: In `r15` und `r17` liegt ein Verstoß an einem anderen Flusspaar, dafür gibt es in `r15` einen Knick und in `r17` eine Kreuzung weniger. `angeheftet-antrag` verliert seinen Verstoß `node-outside-lane`. In der Messart `estimated` ändern sich dieselben 10 Fixtures, Kreuzungen 47 → 45, Knicke 325 → 324.
+
+Die Invarianz und die Gesamtzahlen habe ich mit einem eigenen Skript nachgemessen (`spikes/arielle/check/kanonisch-check.mjs`): 0 von 570 Umordnungen ändern das Bild; 43 Verstöße, 46 Kreuzungen, 324 Knicke.
+
+**Warum der erste Versuch in vier Fixtures schlechter war:**
+
+- `demo6`: R1 setzt ein Ende in die Bahn seines ersten gleichwertigen Vorgängers (`preds.reduce`, `bpmn-layout.js:979`). Die Ordnung „nach Enden“ stellte den Vorgänger vom angehefteten Ereignis nach vorn.
+- `r18` und `r15`: Der Router legt Flüsse gleicher Länge in Modellreihenfolge. Andere Rückwärtsflüsse zuerst bedeuteten andere Spuren, danach andere Proben in R13 und R16.
+- `notiz-morgen`: die Notizen nach ID statt in der Reihenfolge des Autors.
+
+Bei 8 der 10 Bildänderungen mit `kanonisch()` steht jeder Knoten an derselben Stelle; nur der Router legt Flüsse gleicher Länge anders.
+
+**Grenzen:**
+
+- Werden auch Notizen und Nachrichtenflüsse umgeordnet, ändert sich das Bild noch bei 4,9 % der Umordnungen, nur in den 5 Fixtures mit Notizen. Das ist gewollt, denn deren Reihenfolge ist die des Autors.
+- Gleichstände in R1 und im Router sind damit deterministisch, aber nicht inhaltlich entschieden. Eine inhaltliche Regel dafür wäre ein eigener Schritt.
+
+**Die Alternative, die Ordnung als letzten Schlüssel in die Regeln zu tragen, ist nicht nötig.** Etwa 30 Stellen in 15 Funktionen lesen die Modellreihenfolge. Alle lesen nur `model.nodes`, `model.flows`, `model.boundaries` und die daraus gebauten Zellen. Eine Sortierung am Eingang wirkt daher genauso; auf einer Kopie von `bpmn-layout.js` gemessen, war der Diagrammteil bei 57 von 57 Fixtures gleich.
 
 ## 4. Was sich beim Ersatz ändert
 
@@ -355,16 +404,16 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 
 **Schritt 1: arielle übernehmen, parallel zu Mermaid.**
 
-- `src/app/arielle.js` mit `arielle(model)` in der Fassung aus dem Review (Abschnitt 3a), mit Lizenzkopf und Eintrag in der Lizenzliste (Abschnitt 4a).
+- `src/app/arielle.js` mit `arielle(model)` in der Fassung aus dem Review (Abschnitt 3a) und `kanonisch(model)` (Abschnitt 3b), mit Lizenzkopf und Eintrag in der Lizenzliste (Abschnitt 4a). Beide teilen sich einen Lauf.
 - `tests/arielle.test.mjs` mit:
   - einem Fall je Regel aus Abschnitt 3a,
-  - dem Invarianztest: dieselben Spalten bei Umordnung des XML und bei Umbenennung der IDs,
+  - dem Invarianztest: dieselben Spalten und derselbe fertige Diagrammteil bei Umordnung des XML und bei Umbenennung der IDs (für `npm test` eine kleine Zahl Umordnungen mit festem Startwert, die volle Messung als Skript),
   - als Referenz `arielleExakt`, die korrigierte exakte Fassung, nur im Test: Sie belegt, dass die Schichtung der von Mermaid entspricht. Geprüft wird das gegen `raw.json`, solange es die Datei noch gibt.
 
 **Schritt 2: umschalten.**
 
-- `layoutBpmn()` nutzt `arielle()` statt `mermaidPositions()`.
-- `npm run fixtures` meldet genau `ref3` und `notiz-hund2`. Beide ansehen, dann mit `npm run fixtures -- --write` neu schreiben; `known-breaks.json` verliert einen Eintrag.
+- `layoutBpmn()` nutzt `kanonisch()` statt `mermaidPositions()`: das sortierte Modell und die Ränge für `layoutGeometry()`, das Modell des Autors für `appendDiagram()`.
+- `npm run fixtures` meldet genau 10 Fixtures: `ref3`, `demo5`, `r06`, `r15`, `r17`, `r21`, `pools-bestellung`, `pools-bewerbung`, `angeheftet-antrag`, `angeheftet-stoerung`. Alle ansehen, dann mit `npm run fixtures -- --write` neu schreiben; `known-breaks.json` verliert `angeheftet-antrag`, und in `r15` und `r17` tauscht je ein Verstoß sein Flusspaar.
 - Danach `tests/vergleich.mjs` und die Durchläufe. Szenario 13 ändert sich bewusst.
 
 **Schritt 3: aufräumen.**
@@ -373,7 +422,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 - `src/README.md` nachziehen.
 - Den BPMN-Assistenten im Store ohne Mermaid neu bauen.
 
-**Schritt 4 (eigene Story): kanonische Ordnung für das Raster.** Das Modell wird vor `layoutGeometry()` kanonisch sortiert (Abschnitt 3b), oder die Regeln bekommen arielles Ordnung als letzten Schlüssel statt der Modellreihenfolge. Ziel: 0 % Layoutänderung bei Umordnung, und die Verstöße über die Fixtures nicht über dem Mittel der Umordnungen. Als Werkzeug gehört der Permutationstest dann fest in `tests/`.
+**Schritt 4 (eigene Story, optional): Gleichstände inhaltlich entscheiden.** Mit `kanonisch()` ist das Layout schon in Schritt 1 stabil. Offen bleibt, die Gleichstände in R1 und im Router inhaltlich statt nur deterministisch zu entscheiden (Abschnitt 3b, Grenzen).
 
 **Danach, bei Bedarf:**
 
@@ -385,16 +434,16 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 
 Für die Schritte 1 bis 3:
 
-1. `npm run fixtures`: Nur `ref3` und `notiz-hund2` ändern sich, in beiden Messarten. Beide sind angesehen und neu geschrieben.
-2. `known-breaks.json`: kein neuer Verstoß, einer weniger (`notiz-hund2`, `association-through A_Temp Task_Verwerfen`).
-3. `tests/arielle.test.mjs`: Die Spalten sind für alle 57 Fixtures gleich bei Umordnung (Vorschlag: 10 Umordnungen je Fixture mit festem Startwert) und bei Umbenennung der IDs.
+1. `npm run fixtures`: Nur die 10 Fixtures aus Schritt 2 ändern sich, in beiden Messarten. Alle sind angesehen und neu geschrieben.
+2. `known-breaks.json`: 43 statt 45 Verstöße; neu sind nur die Tausche in `r15` und `r17`.
+3. `tests/arielle.test.mjs`: Spalten und fertiger Diagrammteil sind für alle 57 Fixtures gleich bei Umordnung und bei Umbenennung der IDs.
 4. Vor dem Entfernen von `raw.json`: `arielleExakt` trifft die Spaltenordnung aller 57 Rohpositionen.
 5. `tests/vergleich.mjs` auf `tests/referenz.md`: Die BPMN-Diagramme ohne Koordinaten sind in beiden Browsern gleich, bis auf die bewusst geänderten.
 6. `tests/durchlaeufe.mjs`: grün, mit geändertem Szenario 13 (BPMN ohne Koordinaten wird ohne Mermaid gezeichnet).
 7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/arielle.js`, mit Lizenzkopf; die Lizenzliste hat einen Eintrag für arielle.
 8. `npm test` und `npm run check` grün.
 
-Für Schritt 4 zusätzlich: Layoutänderung bei Umordnung 0 %; Summe der Verstöße über die 57 Fixtures nicht über dem Mittel der Umordnungen.
+Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße, 46 Kreuzungen, 324 Knicke.
 
 ## 7. Offene Entscheidungen
 
@@ -405,7 +454,8 @@ Für Schritt 4 zusätzlich: Layoutänderung bei Umordnung 0 %; Summe der Verstö
 | Was passiert mit `raw.json`? | löschen; als Referenz von Mermaid 12.0.0 behalten | Bis Schritt 2 behalten (Abnahmekriterium 4), danach löschen |
 | Beschriftungsspalte beibehalten? | ja (wie Mermaid); nein | **Entschieden:** nein. Gleiche Bilder wie „als Gewicht“, ein Verstoß weniger als mit Spalte, und die Hilfsknoten entfallen |
 | Tie-Break bei gleichwertigen Wegen | Reichweite → Flussname → Knotenname → ID; Flussname zuerst („ja“ immer vor „nein“) | Reichweite zuerst (Empfehlung des Reviews): Der Hauptweg kommt vor der kurzen Ausnahme, und das Ergebnis ist in den Fixtures stabil gegen Umordnung und Umbenennung. Wer „ja“ immer vorn haben will, tauscht die ersten beiden Glieder |
-| Kanonische Ordnung für das Raster | jetzt mit arielle; als eigene Story | Eigene Story: Die Volatilität lässt sich so vollständig beseitigen (Abschnitt 3b), die Sortierung braucht aber noch Abstimmung, weil sie in vier Fixtures heute schlechter ist |
+| Kanonische Ordnung für das Raster | mit arielle; als eigene Story; die Ordnung als Schlüssel in die Regeln tragen | **Empfehlung: mit arielle**, als `kanonisch()`. Sie macht das Layout vollständig stabil und verbessert die Qualität leicht. Die Regeln anzufassen ist nicht nötig |
+| Wo `kanonisch()` hingehört | `readProcess()`; `arielle.js`; `layoutGeometry()` | `arielle.js`, aufgerufen in `layoutBpmn()`. `readProcess()` soll das Modell des Autors liefern, `layoutGeometry()` nicht von arielle abhängen |
 | Flüsse von einem Knoten auf sich selbst | weiter auslassen; zeichnen | Zunächst weiter auslassen (heutiges Verhalten); eigene Story, weil der Router dafür einen Weg braucht |
 | Herkunft und Lizenz | Kommentar; eigenes Modul unter MIT mit Lizenzkopf und Eintrag in der Lizenzliste | **Entschieden:** arielle als eigenes Modul, offen als Portierung von Mermaid gekennzeichnet, unter MIT (Abschnitt 4a). Bei Unsicherheit, etwa vor einer kommerziellen Nutzung, sollte das jemand mit Rechtskenntnis bestätigen |
 | Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. Für arielle genügt MIT; für das übrige dokufix bestimmt die Wahl, wie andere es nutzen dürfen. Ist dokufix selbst MIT, ist das Gesamtbild am einfachsten |
