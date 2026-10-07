@@ -1,0 +1,9 @@
+kanonisch-notizen.mjs (Notizen an Pools: canon), 57 Fixtures, Messart measured
+Qualität:  Verstöße 43 → 43 (davon Notiz-Verstöße 1 → 1), Kreuzungen 46 → 43, Knicke 324 → 324 (vorher: kanonisch() heute)
+Bild anders als mit kanonisch() heute: 3
+  notiz-zwei (Verstöße 1→1, Kreuzungen 0→0, Knicke 3→3, 1152×485→1152×482)
+  notiz-r12 (Verstöße 2→2, Kreuzungen 3→2, Knicke 5→5, 846×449→846×359)
+  notiz-bauantrag (Verstöße 4→4, Kreuzungen 10→8, Knicke 20→20, 1906×1393→1906×1393)
+Verstöße neu: keine
+Verstöße weg: keine
+Invarianz: Umordnung (inkl. Nachrichtenflüsse, Notizen, Assoziationen) Layout anders 0/570 (0.0 %), Umbenennung (inkl. derselben) 0/570 (0.0 %)
