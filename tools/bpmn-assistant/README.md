@@ -31,3 +31,5 @@ Das Favicon ist ein exklusives Gateway mit Fragezeichen in den Gateway-Farben de
 Der Assistent braucht kein Netz (seit 2026-10-07): bpmn-js, Viewer wie Modellierer, ist mit seinen Stylesheets in die Seite eingebettet, vor ihm der Text der bpmn.io License; der Modellierer wird erst beim ersten „Bearbeiten“ ausgeführt. Die Seite wird dadurch rund 0,9 MB größer. Nur die Links der Seite (Camunda Modeler, demo.bpmn.io) führen ins Netz.
 
 Eine heruntergeladene `.bpmn` oder `.svg`, auch die aus dem Modellierer, heißt nach der Kollaboration und der Zeit des Klicks, etwa `Bestellung_2026-10-07_19-15-02.bpmn`: der Name der Kollaboration, sonst der des ersten Prozesses, sonst die Namen der Pools (höchstens drei, mit „-“), sonst „Diagramm“.
+
+Das Feld „Kollaboration“ in der Leiste unter dem XML zeigt den Namen der ersten Kollaboration; ohne einen steht der Ersatz der Dateinamen grau darin, ohne Kollaboration ist es gesperrt. Enter oder das Verlassen des Felds schreibt den Namen als Attribut `name` in ihr Tag (leer: ohne es), der Rest des XML bleibt, und die Seite rendert neu.

@@ -176,6 +176,10 @@ textarea{width:100%;height:220px;font:12px/1.45 ui-monospace,monospace;padding:1
 textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;background:#fff}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .bar .hint{flex-basis:100%;margin-top:4px}
+#collab-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px}
+#collab{height:34px;width:220px;padding:0 10px;font:inherit;font-size:14px;border:1px solid #d2d2d7;border-radius:7px}
+#collab:focus{outline:2px solid var(--acc);outline-offset:-1px}
+#collab:disabled{background:#f5f5f7}
 #merge-x-l,#jumps-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px;cursor:pointer}
 .bar #theme-now{display:inline-flex;flex-direction:column;justify-content:space-between;height:34px;padding:2px 0;margin-left:4px}
 .bar #theme-name{display:block;flex:none;font-size:12px;line-height:14px;margin:0}
@@ -283,6 +287,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 <div class="bar">
 <button id="go" class="primary">${ICON.play} Rendern</button>
 <button id="up" title="Eine .bpmn-Datei laden und rendern">${ICON.upload} Datei hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" hidden>
+<label id="collab-l" title="Der Name der Kollaboration: Enter schreibt ihn ins XML und rendert neu; er gibt auch den Downloads ihren Namen">Kollaboration <input type="text" id="collab" spellcheck="false" autocomplete="off"></label>
 <button id="theme-btn" title="Farben der Diagramme">${ICON.palette} Diagrammfarben ändern</button><span id="theme-now"><span class="hint" id="theme-name"></span><span id="theme-sw" aria-hidden="true"></span></span>
 <label id="merge-x-l" title="Ohne Häkchen zeichnet A2 exklusive Gateways, die zusammenführen, als leere Raute"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
 <label id="jumps-l" title="Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte"><input type="checkbox" id="jumps" checked> Sprungbögen</label>
@@ -806,6 +811,32 @@ for (const b of [...BEISPIELE].reverse()){
   $('ex').after(k);
 }
 $('go').onclick = () => render();
+// Das Feld „Kollaboration“ (Ben, 2026-10-07): der Name, den das XML der ersten Kollaboration gibt; ohne einen der
+// Ersatz der Downloads (namesOf()) als Platzhalter, ohne Kollaboration gesperrt. Geändert (Enter oder das Feld
+// verlassen) steht er als Attribut name in ihrem Tag, leer ohne es; der Rest des XML bleibt, wie er ist, und die Seite
+// rendert neu. Ein Tag in einem Kommentar zählt nicht.
+const COLLAB_TAG = /<((?:[\\w.-]+:)?)collaboration\\b([^>]*?)(\\/?)>/;
+function setCollabName(xml, name){
+  const m = COLLAB_TAG.exec(xml.replace(/<!--[\\s\\S]*?-->/g, c => ' '.repeat(c.length)));
+  if (!m) return xml;
+  let attrs = m[2].replace(/\\s+name\\s*=\\s*("[^"]*"|'[^']*')/, '');
+  if (name) attrs += ' name="' + name.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;') + '"';
+  return xml.slice(0, m.index) + '<' + m[1] + 'collaboration' + attrs + m[3] + '>' + xml.slice(m.index + m[0].length);
+}
+function syncCollab(){
+  const n = namesOf($('xml').value);
+  const f = $('collab');
+  f.disabled = !n.collab;
+  f.value = n.own;
+  f.placeholder = n.collab ? (n.fallback || 'Diagramm') : 'keine im XML';
+}
+$('collab').addEventListener('keydown', e => { if (e.key === 'Enter'){ e.preventDefault(); $('collab').blur(); } });
+$('collab').onchange = () => {
+  $('xml').value = setCollabName($('xml').value, $('collab').value.trim());
+  render();
+};
+$('xml').addEventListener('change', syncCollab);
+syncCollab();
 $('up').onclick = () => $('file').click();
 $('file').onchange = async () => {
   const f = $('file').files[0];
@@ -855,10 +886,16 @@ function error(s, msg){ const d = document.createElement('div'); d.className = '
 // Klicks, „Bestellung_2026-10-07_19-15-02“. Eine Kollaboration hat selten einen Namen: dann der des ersten Prozesses,
 // dann die Namen der Pools, höchstens drei, mit „-“, dann „Diagramm“; ihre Id nicht, die ist meist „Collaboration_1“.
 // Wie in dokufix gesäubert (diagramFileName()).
-function fileBase(xml){
+// namesOf(): { collab, own, fallback }: ob das XML eine Kollaboration hat, ihr eigener Name und der Ersatz, wenn sie
+// keinen trägt.
+function namesOf(xml){
   const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  const named = tag => [...doc.getElementsByTagNameNS('*', tag)].map(el => (el.getAttribute('name') || '').trim()).filter(Boolean);
-  const name = named('collaboration')[0] || named('process')[0] || named('participant').slice(0, 3).join('-');
+  const all = tag => [...doc.getElementsByTagNameNS('*', tag)];
+  const named = tag => all(tag).map(el => (el.getAttribute('name') || '').trim()).filter(Boolean);
+  return { collab: all('collaboration').length > 0, own: named('collaboration')[0] || '', fallback: named('process')[0] || named('participant').slice(0, 3).join('-') };
+}
+function fileBase(xml){
+  const n = namesOf(xml), name = n.own || n.fallback;
   const d = new Date(), two = n => String(n).padStart(2, '0');
   return T.diagramFileName(name || 'Diagramm') + '_' + d.getFullYear() + '-' + two(d.getMonth() + 1) + '-' + two(d.getDate()) + '_' + two(d.getHours()) + '-' + two(d.getMinutes()) + '-' + two(d.getSeconds());
 }
@@ -1057,6 +1094,7 @@ async function render(){
   viewers = [];
   $('out').replaceChildren();
   const input = $('xml').value.trim();
+  syncCollab();
   try { localStorage.setItem('bpmn-testtool-xml', input); } catch {}
   if (!input){ error(section('Eingabe'), 'Kein XML.'); return; }
   const xml = hasDi(input) ? stripDi(input) : input;
