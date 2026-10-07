@@ -1,6 +1,6 @@
 # Grobkonzept: eine Ordnungsphase zwischen LMM und Raster
 
-Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); der erste Schritt (a, b, b2, c) ist umgesetzt, mit den Messwerten unten; c) als Versuch hinter `options.rowOrder`, ohne Wirkung auf das Produkt. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
+Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); der erste Schritt (a, b, b2, c) ist umgesetzt, mit den Messwerten unten; c) als Versuch hinter `options.rowOrder`, ohne Wirkung auf das Produkt. R12 durch Zählen ist versucht und nicht übernommen. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
 
 ## Ausgangslage
 
@@ -162,6 +162,20 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
 - Zweiter Versuch, gezählt auf den Lagen nach einem Probelauf: 82 von 84 Bildern gleich, Kreuzungen 42, Brüche 14. Der Rest kam aus Gleichständen, bei denen die Zählung eine Kreuzung nicht sieht (u4: Spuren und Ports an der Seite), und aus einem Gleichstandskriterium für Nachrichtenflüsse, das ein Bild ohne Gewinn drehte.
 - **Fassung jetzt:** Die Zählung entscheidet, wo sie einen Unterschied sieht; bei Gleichstand probiert R10 wie bisher, mit allen seinen Maßen. Ergebnis über die 84 eigenen Eingaben: **jedes Bild byte-gleich mit heute**, und R10 braucht 40 statt 54 Läufe von `finishGrid()`. Insgesamt sind das 1654 statt 1668 Läufe, weil R10 der kleinste Posten ist.
 - **Bewertung:** Die Rechnung ist verlässlich, wo sie entscheidet. Ohne die Probe als Rückfall ist sie es noch nicht, weil sie zu wenig zählt. Für die Laufzeit lohnt sich derselbe Aufbau bei R12 und R16, auf die zusammen fast die Hälfte der Läufe entfällt. Ob `rowOrder` eingeschaltet wird, ist offen: Auf den 84 eigenen Eingaben ändert es nichts; die externen fehlen in dieser Umgebung.
+
+**R12 durch Zählen (versucht, 7. Oktober 2026, nicht übernommen):**
+- Derselbe Aufbau wie bei R10: je Runde alle Versuche zählen, die mit weniger Kreuzungen zuerst mit einem echten Lauf prüfen, bei Gleichstand probieren wie heute, die mit mehr gar nicht.
+- Erste Fassung, alle Versuche gezählt: 3 Bilder anders, Kreuzungen 41 → 49. Die Zählung hielt Bahnwechsel eines Merge für schlechter, die in Wahrheit besser waren (`review-hund2-angeheftet`: 8 gezählt gegen 6 jetzt, gezeichnet 5 gegen 10).
+- Zweite Fassung, nur die Zeilenversuche gezählt: alle 84 Bilder gleich, aber keine Ersparnis (R12 weiter 322 Läufe).
+- Der Grund, über alle Versuche von R12 auf den 84 eigenen Eingaben, je Versuch die Zählung gegen einen echten Lauf:
+
+  | Versuch | Zählung gleich, echt gleich | Zählung gleich, echt anders | Zählung anders, echt in dieselbe Richtung | Zählung falsch herum |
+  |---|---|---|---|---|
+  | neue Zeile für einen Weg (a), 52 | 42 | 10 | 0 | 0 |
+  | Merge in eine andere Bahn (b), 25 | 5 | 14 | 0 | 6 |
+
+- Bei den Zeilenversuchen sieht die Zählung nie einen Unterschied. R12 (a) behandelt zwei Wege, die in der Zeile des Gateways hintereinander liegen und dort Spuren teilen. Das Zählmodell wertet Stücke auf gleicher Höhe nie als Kreuzung und sieht damit genau das nicht, was R12 behebt. Bei den Bahnwechseln legt der Router die Flüsse aus mehreren Bahnen in ein Merge anders, als das Modell annimmt.
+- **Folge:** Für R12 braucht das Zählmodell Spuren in einem Kanal (Reihenfolge von Stücken auf gleicher Höhe) und die Ports an der Seite einer Aufgabe. Ohne sie bringt das Zählen bei R12 nichts. Der Code ist nicht übernommen; `rowOrder` bleibt der einzige Versuch.
 
 Warum R10 trotzdem zuerst: Es ist die Probe, die am klarsten Phase 3 ist (die Seite eines Wegs innerhalb seiner Bahn), sie hängt an einer einzigen Stelle, und ihr Ergebnis ist schon heute auf Kreuzungen gemessen. Das macht den Vergleich eindeutig, und es prüft das Zählmodell an einem kleinen Fall. Für die Laufzeit zählen danach R16 und R12: R16 gehört zum Nachschärfen der Spalten (Schritt 4 der Phase), R12 zur Reihenfolge je Spalte (Schritt 2). Trägt die Rechnung bei R10, folgt R12 mit demselben Zählmodell, dann R16 als Bedingung. Trägt sie nicht, zeigt b), ob das Zählmodell oder die Vorgabe schuld ist.
 
