@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Process_Bestellung" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Bestellung">
+      <bpmn:lane id="Lane_Kundin" name="Kundin">
+        <bpmn:flowNodeRef>Start_Bestellt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Shop" name="Shop">
+        <bpmn:flowNodeRef>Task_Zahlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Zahlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Informieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Storniert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rechnung</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Lager" name="Lager">
+        <bpmn:flowNodeRef>Task_Packen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Versenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Versendet</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Bestellt" name="Bestellung aufgegeben"/>
+    <bpmn:serviceTask id="Task_Zahlung" name="Zahlung prüfen"/>
+    <bpmn:exclusiveGateway id="Gateway_Zahlung" name="Zahlung in Ordnung?"/>
+    <bpmn:sendTask id="Task_Informieren" name="Kundin informieren"/>
+    <bpmn:endEvent id="End_Storniert" name="Bestellung storniert"/>
+    <bpmn:parallelGateway id="Gateway_Split"/>
+    <bpmn:manualTask id="Task_Packen" name="Ware packen"/>
+    <bpmn:sendTask id="Task_Rechnung" name="Rechnung senden"/>
+    <bpmn:parallelGateway id="Gateway_Join"/>
+    <bpmn:manualTask id="Task_Versenden" name="Paket versenden"/>
+    <bpmn:endEvent id="End_Versendet" name="Bestellung versendet"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Bestellt" targetRef="Task_Zahlung"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Zahlung" targetRef="Gateway_Zahlung"/>
+    <bpmn:sequenceFlow id="Flow_3" name="ja" sourceRef="Gateway_Zahlung" targetRef="Gateway_Split"/>
+    <bpmn:sequenceFlow id="Flow_4" name="nein" sourceRef="Gateway_Zahlung" targetRef="Task_Informieren"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Informieren" targetRef="End_Storniert"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Gateway_Split" targetRef="Task_Packen"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Gateway_Split" targetRef="Task_Rechnung"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Packen" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Rechnung" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_Join" targetRef="Task_Versenden"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Versenden" targetRef="End_Versendet"/>
+  </bpmn:process>
+</bpmn:definitions>

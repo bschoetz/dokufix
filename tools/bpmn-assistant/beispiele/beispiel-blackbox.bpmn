@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Collaboration_Bestellung">
+    <bpmn:participant id="Pool_Kunde" name="Kunde"/>
+    <bpmn:participant id="Pool_Shop" name="Onlineshop" processRef="Process_Shop"/>
+    <bpmn:participant id="Pool_Paketdienst" name="Paketdienst"/>
+    <bpmn:messageFlow id="Message_Bestellung" name="Bestellung" sourceRef="Pool_Kunde" targetRef="Start_Bestellung"/>
+    <bpmn:messageFlow id="Message_Absage" name="Absage" sourceRef="Task_Absagen" targetRef="Pool_Kunde"/>
+    <bpmn:messageFlow id="Message_Bestaetigung" name="Bestätigung" sourceRef="Task_Bestaetigen" targetRef="Pool_Kunde"/>
+    <bpmn:messageFlow id="Message_Paket" name="Paket" sourceRef="Task_Uebergeben" targetRef="Pool_Paketdienst"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Shop" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Shop">
+      <bpmn:lane id="Lane_Vertrieb" name="Vertrieb">
+        <bpmn:flowNodeRef>Start_Bestellung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Lieferbar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Absagen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abgesagt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bestaetigen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Lager" name="Lager">
+        <bpmn:flowNodeRef>Task_Verpacken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Uebergeben</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Versandt</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Bestellung" name="Bestellung eingegangen"><bpmn:messageEventDefinition id="Def_Bestellung"/></bpmn:startEvent>
+    <bpmn:userTask id="Task_Pruefen" name="Bestellung prüfen"/>
+    <bpmn:exclusiveGateway id="Gateway_Lieferbar" name="Lieferbar?"/>
+    <bpmn:sendTask id="Task_Bestaetigen" name="Bestellung bestätigen"/>
+    <bpmn:manualTask id="Task_Verpacken" name="Ware verpacken"/>
+    <bpmn:sendTask id="Task_Uebergeben" name="Paket übergeben"/>
+    <bpmn:endEvent id="End_Versandt" name="Ware versandt"/>
+    <bpmn:sendTask id="Task_Absagen" name="Absage senden"/>
+    <bpmn:endEvent id="End_Abgesagt" name="Abgesagt"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Bestellung" targetRef="Task_Pruefen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Pruefen" targetRef="Gateway_Lieferbar"/>
+    <bpmn:sequenceFlow id="Flow_3" name="ja" sourceRef="Gateway_Lieferbar" targetRef="Task_Bestaetigen"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Bestaetigen" targetRef="Task_Verpacken"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Verpacken" targetRef="Task_Uebergeben"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Uebergeben" targetRef="End_Versandt"/>
+    <bpmn:sequenceFlow id="Flow_7" name="nein" sourceRef="Gateway_Lieferbar" targetRef="Task_Absagen"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Absagen" targetRef="End_Abgesagt"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,26 @@
+[
+ {
+  "label": "Urlaubsantrag (Pool mit Bahnen)",
+  "datei": "beispiel-urlaub.bpmn"
+ },
+ {
+  "label": "Onboarding",
+  "datei": "onboarding.bpmn"
+ },
+ {
+  "label": "Bestellung (Bahnen ohne Pool)",
+  "datei": "bestellung-bahnen-ohne-pool.bpmn"
+ },
+ {
+  "label": "Störung (ohne Pool und Bahnen)",
+  "datei": "stoerung-ohne-pool-und-bahnen.bpmn"
+ },
+ {
+  "label": "Bestellung (drei Pools mit Nachrichtenflüssen)",
+  "datei": "pools-bestellung.bpmn"
+ },
+ {
+  "label": "Onlineshop (Pool mit zwei Black Boxes)",
+  "datei": "beispiel-blackbox.bpmn"
+ }
+]

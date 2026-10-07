@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Stoerung" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Process_Stoerung" isExecutable="false">
+    <bpmn:startEvent id="Start_Gemeldet" name="Störung gemeldet"/>
+    <bpmn:userTask id="Task_Erfassen" name="Störung erfassen"/>
+    <bpmn:exclusiveGateway id="Gateway_Merge"/>
+    <bpmn:userTask id="Task_Loesen" name="Lösung versuchen"/>
+    <bpmn:exclusiveGateway id="Gateway_Behoben" name="Behoben?"/>
+    <bpmn:sendTask id="Task_Melden" name="Meldenden informieren"/>
+    <bpmn:endEvent id="End_Behoben" name="Störung behoben"/>
+    <bpmn:userTask id="Task_Uebergeben" name="An Fachteam übergeben"/>
+    <bpmn:intermediateCatchEvent id="Timer_Rueckmeldung" name="Eine Stunde">
+      <bpmn:timerEventDefinition id="TimerDef_Rueckmeldung"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Gemeldet" targetRef="Task_Erfassen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Erfassen" targetRef="Gateway_Merge"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_Merge" targetRef="Task_Loesen"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Loesen" targetRef="Gateway_Behoben"/>
+    <bpmn:sequenceFlow id="Flow_5" name="ja" sourceRef="Gateway_Behoben" targetRef="Task_Melden"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Melden" targetRef="End_Behoben"/>
+    <bpmn:sequenceFlow id="Flow_7" name="nein" sourceRef="Gateway_Behoben" targetRef="Task_Uebergeben"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Uebergeben" targetRef="Timer_Rueckmeldung"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Timer_Rueckmeldung" targetRef="Gateway_Merge"/>
+    <bpmn:textAnnotation id="Notiz_Uebergeben"><bpmn:text>Ticket mit Fehlerbild und Screenshot</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Uebergeben" sourceRef="Task_Uebergeben" targetRef="Notiz_Uebergeben"/>
+    <bpmn:textAnnotation id="Notiz_Timer"><bpmn:text>Ohne Rückmeldung beim Fachteam nachfragen</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Timer" sourceRef="Notiz_Timer" targetRef="Timer_Rueckmeldung"/>
+  </bpmn:process>
+</bpmn:definitions>

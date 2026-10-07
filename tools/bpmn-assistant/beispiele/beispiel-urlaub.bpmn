@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Urlaub" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Collaboration_Urlaub">
+    <bpmn:participant id="Pool_Urlaub" name="Urlaubsantrag" processRef="Process_Urlaub"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Urlaub" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Urlaub">
+      <bpmn:lane id="Lane_MA" name="Mitarbeiterin">
+        <bpmn:flowNodeRef>Start_Geplant</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Stellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ueberarbeiten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Vertretung</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_TL" name="Teamleitung">
+        <bpmn:flowNodeRef>Gateway_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Genehmigt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_PA" name="Personalabteilung">
+        <bpmn:flowNodeRef>Task_Eintragen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Genehmigt</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Geplant" name="Urlaub geplant"/>
+    <bpmn:userTask id="Task_Stellen" name="Antrag stellen"/>
+    <bpmn:exclusiveGateway id="Gateway_Merge"/>
+    <bpmn:userTask id="Task_Pruefen" name="Antrag prüfen"/>
+    <bpmn:exclusiveGateway id="Gateway_Genehmigt" name="Genehmigt?"/>
+    <bpmn:userTask id="Task_Ueberarbeiten" name="Antrag überarbeiten"/>
+    <bpmn:parallelGateway id="Gateway_Split"/>
+    <bpmn:serviceTask id="Task_Eintragen" name="Urlaub eintragen"/>
+    <bpmn:sendTask id="Task_Vertretung" name="Vertretung informieren"/>
+    <bpmn:parallelGateway id="Gateway_Join"/>
+    <bpmn:endEvent id="End_Genehmigt" name="Urlaub genehmigt"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Geplant" targetRef="Task_Stellen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Stellen" targetRef="Gateway_Merge"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Gateway_Merge" targetRef="Task_Pruefen"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_Pruefen" targetRef="Gateway_Genehmigt"/>
+    <bpmn:sequenceFlow id="Flow_5" name="ja" sourceRef="Gateway_Genehmigt" targetRef="Gateway_Split"/>
+    <bpmn:sequenceFlow id="Flow_6" name="nein" sourceRef="Gateway_Genehmigt" targetRef="Task_Ueberarbeiten"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Ueberarbeiten" targetRef="Gateway_Merge"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_Split" targetRef="Task_Eintragen"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_Split" targetRef="Task_Vertretung"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Eintragen" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Vertretung" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_Join" targetRef="End_Genehmigt"/>
+    <bpmn:textAnnotation id="Notiz_Pruefen"><bpmn:text>Spätestens nach drei Arbeitstagen</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Pruefen" sourceRef="Task_Pruefen" targetRef="Notiz_Pruefen"/>
+    <bpmn:textAnnotation id="Notiz_Nein"><bpmn:text>Mit Begründung</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Nein" sourceRef="Flow_6" targetRef="Notiz_Nein"/>
+  </bpmn:process>
+</bpmn:definitions>
