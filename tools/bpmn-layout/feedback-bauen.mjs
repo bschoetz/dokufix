@@ -8,7 +8,8 @@
 // --lauf       der Lauf, Vorgabe "produkt"; vorher lauf.mjs laufen lassen, wenn sich das Layout geändert hat
 // --art        A (die Sammlung) oder Pools (Stories 2.12, 2.29 bis 2.31); die Art trennt die Archive, damit früheres
 //              Feedback beim Beispiel steht. Vorgabe: Pools, wenn alle gewählten Eingaben aus den Pool-Sätzen
-//              stammen, sonst A. Der Name A blieb von A2, dem Layout aus Spike 2.26
+//              stammen, sonst A. Der Name A blieb von A2, dem Layout aus Spike 2.26. Eine andere Art, etwa LMM,
+//              nur mit genannten Eingaben, auf bpmn-feedback-<art>.html
 // --satz       alle Eingaben dieser Sätze (sauber, ben, extern, pools, blackbox, angeheftet, notizen)
 // --gegen      vergleicht mit diesem Satz des Archivs statt mit dem letzten, zu dem Feedback kam
 // --ziel       der Name der Seite in arbeit/, Vorgabe bpmn-feedback.html (A) und bpmn-feedback-pools.html (Pools)
@@ -47,8 +48,9 @@ const lauf = readLauf(laufName);
 const isPool = n => POOL_SAETZE.includes((INPUTS.get(n) || {}).set);
 const explicit = names.length ? names : saetze ? namesOf(saetze) : alle ? Object.keys(lauf.inputs) : null;
 if (!art) art = explicit && explicit.length && explicit.every(isPool) ? 'Pools' : 'A';
-if (!['A', 'Pools'].includes(art)) throw new Error('--art A oder Pools');
-if (!ziel) ziel = art === 'Pools' ? 'bpmn-feedback-pools.html' : 'bpmn-feedback.html';
+// Eine andere Art (etwa LMM, review-lmm.mjs) hat ihr eigenes Archiv und nimmt nur genannte Eingaben.
+if (!['A', 'Pools'].includes(art) && !explicit) throw new Error('Art ' + art + ': nur mit Namen, --satz oder --alle');
+if (!ziel) ziel = art === 'Pools' ? 'bpmn-feedback-pools.html' : art === 'A' ? 'bpmn-feedback.html' : 'bpmn-feedback-' + art.toLowerCase() + '.html';
 const ofArt = n => art === 'Pools' ? isPool(n) : !isPool(n);
 // Das Archiv der Sätze (arbeit/archiv/<satz>.json) und die Auswertungen (arbeit/feedback/<satz>-<datum>/).
 const ARCHIV = path.join(ARBEIT, 'archiv');
@@ -108,7 +110,7 @@ for (const b of beispiele) hash.update(b.name + '\0' + b.erzeugt + '\0');
 // mit dem letzten früheren Satz anderer Logik, damit ein Neubau ohne Regeländerung (etwa eine größere Sammlung) die
 // Änderung des letzten Patches nicht verdeckt.
 const satz = {
-  id: (art === 'Pools' ? 'pools-' : 'a-') + hash.digest('hex').slice(0, 8), variant: art, rules: lauf.rules || null,
+  id: art.toLowerCase() + '-' + hash.digest('hex').slice(0, 8), variant: art, rules: lauf.rules || null,
   angeordnet: lauf.angeordnet || fs.statSync(laufFile(laufName)).mtime.toISOString(), beispiele: beispiele.map(b => b.name), logik: lauf.logik,
 };
 
