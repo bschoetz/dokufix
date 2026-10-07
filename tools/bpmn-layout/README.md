@@ -32,7 +32,7 @@ node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 | `vergleich.mjs` | zwei Läufe Eingabe für Eingabe, Byte für Byte |
 | `feedback-bauen.mjs`, `feedback-seite.js` | die Seite des Layout-Feedbacks: Bild, Modellierer, Kommentar, früheres Feedback, Export als Paket; `--art`, `--satz`, `--gegen`, `--varianten`, `--alle`, Namen |
 | `feedback-auswerten.mjs` | ein Paket von der Seite: was Ben geändert hat, gemessen an der erzeugten Fassung |
-| `vor-lmm.mjs`, `review-lmm.mjs` | die Stände vor LMM (8266ec4, und d296705 mit dem Messer, aber Mermaids Spalten) aus den aufbewahrten Rohpositionen, und die Review-Seite aller Bilder, die der Umbau vom 2026-10-07 geändert hat (`arbeit/bpmn-feedback-lmm.html`) |
+| `vor-lmm.mjs`, `review-lmm.mjs` | die Stände vor LMM (8266ec4, und d296705 mit dem Messer, aber Mermaids Spalten) aus den aufbewahrten Rohpositionen, und die Review-Seite aller Bilder, die der Umbau vom 2026-10-07 geändert hat (`arbeit/bpmn-feedback-lmm.html`), mit dem Stand vor den Regeln aus Bens Feedback (Lauf `basis`, `--stand dd1dd25`) und den Handfassungen (Bens hund2, die Handlayouts der Quellen) |
 | `pruefen.mjs` | bpmnlint und die Prüfung paralleler Gateways; eine neue Eingabe kommt nur ohne Fehler in einen Satz |
 | `kreuz.mjs` | gekreuzte Nachrichtenflüsse zwischen denselben zwei Symbolen (Story 2.12) |
 | `browser-zeit.mjs` | die Laufzeit in Chromium und Firefox |

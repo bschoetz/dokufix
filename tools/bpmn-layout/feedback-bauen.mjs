@@ -16,7 +16,7 @@
 // --varianten  weitere Anordnungen derselben Beispiele, je Beispiel unter dem Bild als eigenes Bild, zum
 //              Entscheiden mit Bild: { "hinweis": "…", "varianten": [{ "key", "titel", "dir" }] }, dir relativ zu
 //              arbeit/ mit <name>.bpmn je Beispiel, etwa ein anderer Lauf. Eine Variante, deren Anordnung der gezeigten
-//              gleicht, steht nur als Zeile da.
+//              gleicht, steht nur als Zeile da; mit "nurAnders": true steht sie nur, wo sie da und anders ist.
 // --alle       alle Eingaben des Laufs
 //
 // Ohne Namen die Sammlung (A: Ben, 2026-10-05) oder die Pool-Sätze mit Brüchen (Pools), dazu jede Eingabe, die je
@@ -99,11 +99,12 @@ for (const name of chosen){
 }
 if (!beispiele.length) throw new Error('Keine Beispiele.');
 // Die Varianten je Beispiel: ihre Anordnung, oder null, wo sie der gezeigten gleicht.
+// A variant with "nurAnders" stands only where it has an arrangement that differs from the one shown.
 if (varianten) for (const b of beispiele) b.varianten = varianten.varianten.map(v => {
   const file = path.join(ARBEIT, v.dir, b.name + '.bpmn');
   const x = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : null;
-  return { key: v.key, titel: v.titel, erzeugt: x === b.erzeugt ? null : x, fehlt: !x };
-});
+  return { key: v.key, titel: v.titel, erzeugt: x === b.erzeugt ? null : x, fehlt: !x, nurAnders: !!v.nurAnders };
+}).filter(v => !(v.nurAnders && (v.fehlt || !v.erzeugt)));
 const hash = crypto.createHash('sha1');
 for (const b of beispiele) hash.update(b.name + '\0' + b.erzeugt + '\0');
 // Die Logik eines Satzes: die Prüfsumme des Laufs über die Module des Layouts (lib.mjs, loadStand()). Verglichen wird
