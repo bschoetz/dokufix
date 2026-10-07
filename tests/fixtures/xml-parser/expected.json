@@ -1,0 +1,4687 @@
+{
+ "attribut-anfuehrungszeichen": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "A>B",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Größer > als",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Mit 'Apostroph'",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "Einfach \"zitiert\"",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "attribut-crlf": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Zeile 1 Zeile 2",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Erste Zeile\nZweite Zeile",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "attribut-id-mit-leerraum": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "x",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "attribut-mehrzeilig": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "Über mehrere Zeilen",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "attribut-zeilenumbruch": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Bahn eins",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Zeile 1 Zeile 2",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Tab here",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "billion-laughs": {
+  "status": "rejected",
+  "code": "doctype",
+  "line": 2,
+  "column": 1
+ },
+ "bom": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "bom-ohne-deklaration": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "cdata-mit-close-tag": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "</bpmn:definitions> <bpmn:task id=\"Falsch\"/>",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "cdata-mit-leerraum": {
+  "differs": "the text of a note leaves out the text nodes that are blanks only, as bpmn-js does; Chromium keeps them",
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Nur dieser Text",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "cdata-text": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "A <b> & C\nzweite Zeile",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "cdata-und-text": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "vorher mitten nachher & Ende",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "definitions-ohne-inhalt": {
+  "status": "error",
+  "message": "Das BPMN-XML enthält kein Element, das sich anordnen lässt."
+ },
+ "deklaration-nach-leerraum": {
+  "status": "rejected",
+  "code": "declaration",
+  "line": 2,
+  "column": 3
+ },
+ "doctype-extern": {
+  "status": "rejected",
+  "code": "doctype",
+  "line": 2,
+  "column": 1
+ },
+ "doctype-extern-inhalt": {
+  "differs": "a DOCTYPE is an error (Ben, 2026-10-07); Chromium drops the reference to the external entity in the content without a word",
+  "status": "rejected",
+  "code": "doctype",
+  "line": 2,
+  "column": 1
+ },
+ "doctype-intern": {
+  "differs": "a DOCTYPE is an error (Ben, 2026-10-07); Chromium expands its internal entities, bpmn-js does not",
+  "status": "rejected",
+  "code": "doctype",
+  "line": 2,
+  "column": 1
+ },
+ "doctype-leer": {
+  "differs": "a DOCTYPE is an error (Ben, 2026-10-07); Chromium reads it",
+  "status": "rejected",
+  "code": "doctype",
+  "line": 2,
+  "column": 1
+ },
+ "entitaet-in-flowNodeRef": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task&1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task&1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task&1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task&1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "x",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task&1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "entitaet-kaputt": {
+  "status": "rejected",
+  "code": "reference",
+  "line": 15,
+  "column": 36
+ },
+ "entitaeten-grossschreibung": {
+  "status": "rejected",
+  "code": "reference",
+  "line": 15,
+  "column": 36
+ },
+ "entitaeten-html": {
+  "status": "rejected",
+  "code": "reference",
+  "line": 15,
+  "column": 39
+ },
+ "entitaeten-name": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Prüfen & ablegen <sofort> \"jetzt\" 'gleich'",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Zeile A Zeile B Tab AA ä 😀 😀",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "entitaeten-text": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "A & B < C > D \"E\" 'F' &amp; &lt; \nA😀",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "entitaeten-ungueltige-zeichen": {
+  "status": "rejected",
+  "code": "char",
+  "line": 15,
+  "column": 38
+ },
+ "flowNodeRef-leerraum": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "fremde-elemente": {
+  "differs": "elements are read by their namespace, as bpmn-js reads them: a signavio:task is no task, so no task stands outside a lane; read by its local name, it made readProcess() throw",
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "Mit Erweiterung",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "ids-doppelt": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_1",
+     "name": "Doppelgänger",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "ids-sonderzeichen": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Aufgabe.eins-ä_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "definitions",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Aufgabe.eins-ä_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "definitions",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Aufgabe.eins-ä_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Aufgabe.eins-ä_1",
+     "to": "definitions",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "definitions",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Aufgabe.eins-ä_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "kaputt-attribut-doppelt": {
+  "status": "rejected",
+  "code": "attribute",
+  "line": 22,
+  "column": 37
+ },
+ "kaputt-attribut-ohne-anfuehrung": {
+  "status": "rejected",
+  "code": "attribute",
+  "line": 21,
+  "column": 19
+ },
+ "kaputt-close-tag-mit-leerraum": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "kaputt-falsch-verschachtelt": {
+  "status": "rejected",
+  "code": "tag",
+  "line": 22,
+  "column": 49
+ },
+ "kaputt-kleiner-im-text": {
+  "status": "rejected",
+  "code": "name",
+  "line": 21,
+  "column": 61
+ },
+ "kaputt-leer": {
+  "status": "rejected",
+  "code": "structure",
+  "line": 1,
+  "column": 1
+ },
+ "kaputt-nur-deklaration": {
+  "status": "rejected",
+  "code": "structure",
+  "line": 2,
+  "column": 1
+ },
+ "kaputt-nur-leerraum": {
+  "status": "rejected",
+  "code": "structure",
+  "line": 2,
+  "column": 2
+ },
+ "kaputt-steuerzeichen": {
+  "status": "rejected",
+  "code": "char",
+  "line": 21,
+  "column": 65
+ },
+ "kaputt-tag-nicht-geschlossen": {
+  "status": "rejected",
+  "code": "tag",
+  "line": 25,
+  "column": 3
+ },
+ "kaputt-tagname-ungueltig": {
+  "status": "rejected",
+  "code": "name",
+  "line": 22,
+  "column": 5
+ },
+ "kaputt-text-nach-wurzel": {
+  "status": "rejected",
+  "code": "structure",
+  "line": 25,
+  "column": 1
+ },
+ "kaputt-wurzel-offen": {
+  "status": "rejected",
+  "code": "tag",
+  "line": 24,
+  "column": 1
+ },
+ "kaputt-zwei-wurzeln": {
+  "status": "rejected",
+  "code": "structure",
+  "line": 25,
+  "column": 1
+ },
+ "kein-definitions": {
+  "status": "null"
+ },
+ "kodierung-latin1": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Prüfen – größer",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "kodierung-utf16": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "kommentar-doppelstrich": {
+  "status": "rejected",
+  "code": "comment",
+  "line": 21,
+  "column": 12
+ },
+ "kommentare": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "VornHinten",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "leerraum-im-starttag": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "x",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "ohne-deklaration": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "praefix-bpmn2": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "praefix-falscher-namensraum": {
+  "differs": "elements are read by their namespace, as bpmn-js reads them: definitions of another namespace are no BPMN (null)",
+  "status": "null"
+ },
+ "praefix-gemischt": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "Mit anderem Präfix",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_2",
+     "text": "Zweite Notiz",
+     "pool": 0
+    },
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_2",
+     "note": "TextAnnotation_2",
+     "partner": "Task_3",
+     "kind": "node"
+    },
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "praefix-lokal-deklariert": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "praefix-nicht-deklariert": {
+  "status": "rejected",
+  "code": "namespace",
+  "line": 2,
+  "column": 1
+ },
+ "praefix-ohne": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "praefix-xml-reserviert": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "Task_3",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    },
+    {
+     "id": "Task_3",
+     "name": "Bewahrt",
+     "type": "task",
+     "tag": "task",
+     "key": "n5"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_4",
+     "from": "Task_1",
+     "to": "Task_3",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "standalone": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "text-eingerueckt": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "\n      Erste Zeile\n      Zweite Zeile\n    ",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "text-fehlt": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [],
+   "associations": [],
+   "insert": null
+  },
+  "leftOut": [
+   {
+    "id": "TextAnnotation_1",
+    "tag": "textAnnotation",
+    "reason": "has no text"
+   },
+   {
+    "id": "Association_1",
+    "tag": "association",
+    "reason": "its text annotation TextAnnotation_1 has no text"
+   }
+  ]
+ },
+ "text-leer": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [],
+   "associations": [],
+   "insert": null
+  },
+  "leftOut": [
+   {
+    "id": "TextAnnotation_1",
+    "tag": "textAnnotation",
+    "reason": "has no text"
+   },
+   {
+    "id": "Association_1",
+    "tag": "association",
+    "reason": "its text annotation TextAnnotation_1 has no text"
+   }
+  ]
+ },
+ "text-mit-kindelement": {
+  "differs": "the text of a note joins the text nodes of <text>, not the text of an element in it (\"Vorn  hinten\"); bpmn-js cannot open the file at all",
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Vorn  hinten",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "text-nur-leerraum": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [],
+   "associations": [],
+   "insert": null
+  },
+  "leftOut": [
+   {
+    "id": "TextAnnotation_1",
+    "tag": "textAnnotation",
+    "reason": "has no text"
+   },
+   {
+    "id": "Association_1",
+    "tag": "association",
+    "reason": "its text annotation TextAnnotation_1 has no text"
+   }
+  ]
+ },
+ "text-selbstschliessend": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [],
+   "associations": [],
+   "insert": null
+  },
+  "leftOut": [
+   {
+    "id": "TextAnnotation_1",
+    "tag": "textAnnotation",
+    "reason": "has no text"
+   },
+   {
+    "id": "Association_1",
+    "tag": "association",
+    "reason": "its text annotation TextAnnotation_1 has no text"
+   }
+  ]
+ },
+ "text-unicode": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Übergröße — „Anführung“ 🙂  geschütztes Leerzeichen Zeilentrenner",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "text-xml-space": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "  zwei  Leerzeichen  ",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "verarbeitungsanweisungen": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "AB",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "xml-1-1": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Eine Anmerkung",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "zeichenreferenz-cr": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "A B",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Zeile A\r\nZeile B\rEnde",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
+ "zeilenenden-cr": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Zeile A\nZeile B",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ }
+}

@@ -22,9 +22,9 @@ import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { measureLabel, LABEL_FONT } from '../src/app/label-size.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 
-const WITH_DI = '<bpmn:definitions xmlns:bpmn="m" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
+const WITH_DI = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
   '<bpmndi:BPMNDiagram><bpmndi:BPMNPlane bpmnElement="P"><bpmndi:BPMNShape bpmnElement="A"/></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>';
-const WITHOUT_DI = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P"><bpmn:startEvent id="S" name="Los"/><bpmn:task id="A" name="Tun"/>' +
+const WITHOUT_DI = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P"><bpmn:startEvent id="S" name="Los"/><bpmn:task id="A" name="Tun"/>' +
   '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="A"/></bpmn:process></bpmn:definitions>';
 
 // The SVG as saveSVG() writes it, in the parts that matter here.
@@ -304,7 +304,7 @@ test('an empty diagram part of the author\'s (a plane without shapes) stays as w
   t.mock.method(console, 'warn', () => {});
   const { Viewer, log } = standIn();
   const document = page();
-  const empty = WITHOUT_DI.replace('</bpmn:definitions>', '<bpmndi:BPMNDiagram id="BD"><bpmndi:BPMNPlane id="BP" bpmnElement="P"/></bpmndi:BPMNDiagram></bpmn:definitions>');
+  const empty = WITHOUT_DI.replace('</bpmn:definitions>', '<bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" id="BD"><bpmndi:BPMNPlane id="BP" bpmnElement="P"/></bpmndi:BPMNDiagram></bpmn:definitions>');
   const d = diagramIn(document, empty);
   await withLibrary(Viewer, () => renderBpmn(d));
   const asked = log.find(x => x.imported);
@@ -326,13 +326,13 @@ test('what the layout leaves out is a line on the console each, and the rest is 
   assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: dataStoreReference B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
 });
 
-// The order of the reasons: XML the browser cannot read, and XML that is no
+// The order of the reasons: XML the layout's parser rejects, and XML that is no
 // BPMN definitions, go to bpmn-js, which words the reason; then the layout's
 // own refusals (nothing to place, a node in no lane), before any host.
 test('a refusal of the layout is the reason, and no host is made', async t => {
   const logged = t.mock.method(console, 'error', () => {});
   const { Viewer, log } = standIn();
-  const empty = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P1"/></bpmn:definitions>';
+  const empty = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P1"/></bpmn:definitions>';
   let document = page();
   await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, empty)), { message: LAYOUT_NOTHING }));
   assert.equal(log.length, 0, 'bpmn-js is not asked');
@@ -377,7 +377,7 @@ test('a bpmn block becomes a figure with the credit below the SVG container; a r
   t.mock.method(console, 'error', () => {});
   const document = page();
   const root = document.getElementById('preview');
-  const empty = '<bpmn:definitions xmlns:bpmn="m"><bpmn:process id="P1"/></bpmn:definitions>';
+  const empty = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P1"/></bpmn:definitions>';
   root.innerHTML = '<h2>Rückgabe</h2><pre><code class="language-bpmn">' + WITH_DI.replace(/</g, '&lt;') + '</code></pre>' +
     '<h2>Ohne</h2><pre><code class="language-bpmn">' + WITHOUT_DI.replace(/</g, '&lt;') + '</code></pre>' +
     '<h2>Leer</h2><pre><code class="language-bpmn">' + empty.replace(/</g, '&lt;') + '</code></pre>';

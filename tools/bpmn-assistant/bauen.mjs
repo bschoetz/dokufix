@@ -44,7 +44,8 @@ const bundle = (await esbuild.build({
       import { kanonisch, lmmPositions } from '${REPO}/src/app/lmm.js';
       import { breaksOf } from '${REPO}/tests/bpmn-rules.mjs';
       import { pictureOf } from '${REPO}/src/app/diagram-downloads.js';
-      window.T = { kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, variants: { A2: a2 } };
+      import { parseXml } from '${REPO}/src/app/xml-parser.js';
+      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, variants: { A2: a2 } };
     `,
     resolveDir: HERE, loader: 'js',
   },
@@ -941,9 +942,9 @@ async function render(){
   try { localStorage.setItem('bpmn-testtool-xml', input); } catch {}
   if (!input){ error(section('Eingabe'), 'Kein XML.'); return; }
   const xml = hasDi(input) ? stripDi(input) : input;
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  const pe = doc.getElementsByTagName('parsererror')[0];
-  if (pe){ error(section('Eingabe'), 'Das XML ist nicht lesbar:\\n' + pe.textContent); return; }
+  // Mit dem Leser des Layouts (src/app/xml-parser.js), wie layoutBpmn() in der App, nicht mit dem DOMParser der Seite.
+  let doc;
+  try { doc = T.parseXml(xml); } catch (e){ error(section('Eingabe'), 'Das XML ist nicht lesbar:\\n' + e.message); return; }
   // Zuerst das Original, wenn die Datei eigene Koordinaten hat: so gezeichnet, in der gewählten Palette; sonst kein
   // Abschnitt (Ben, 2026-10-06: „nur noch Original (falls vorhanden) und A2“).
   if (hasShapes(input)){
@@ -970,7 +971,7 @@ async function render(){
       const t0 = performance.now();
       // Wie layoutBpmn() in src/app/bpmn.js: das Modell in LMMs Ordnung mit seinen Spalten fürs Raster, das des Autors
       // für den Diagrammteil.
-      const r = mod.readProcess(new DOMParser().parseFromString(xml, 'application/xml'));
+      const r = mod.readProcess(T.parseXml(xml));
       const k = T.kanonisch(r.model);
       const di = mod.layoutGeometry(k.model, T.lmmPositions(k.model, k.rank));
       const laid = mod.appendDiagram(xml, r.model, di);

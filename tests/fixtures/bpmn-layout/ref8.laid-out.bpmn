@@ -9,7 +9,7 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Prozess">
-      <bpmndi:BPMNShape id="G_Start_di" bpmnElement="G_Start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Start_di" bpmnElement="G_Start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="G_Zahlen_di" bpmnElement="G_Zahlen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="G_Ende_di" bpmnElement="G_Ende"><dc:Bounds x="402" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="375" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="G1_di" bpmnElement="G1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>

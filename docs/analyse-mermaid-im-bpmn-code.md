@@ -510,7 +510,20 @@ Ein fünftes Review (`spikes/lmm/parsing/BERICHT.md`) hat geprüft, wie das Pake
 
 **Tests im Paket:** das Korpus mit eingefrorenen Erwartungen von Chromium (läuft ohne Browser), ein Differenztest gegen Chromium und Firefox als Entwicklungswerkzeug, ein kleiner Konformitätstest des Lesers, ein Vergleich mit bpmn-js bei jedem Versionswechsel und die 57 Fixtures ohne `&amp;`-Behelf.
 
-**Offen:** XML 1.1 lesen oder abweisen (Chromium liest es, Firefox nicht); externe Entitäten im Inhalt als Fehler oder still leer; DOCTYPE überhaupt zulassen; Fehlermeldungen als Codes für die App.
+**Entschieden (Ben, 7. Oktober 2026):** XML 1.1 wird gelesen, als 1.0, wie in Chromium. Ein DOCTYPE ist ein Fehler. Damit lässt sich keine Entität deklarieren: Jeder Verweis außer den fünf vordefinierten ist ein Fehler, auch der auf eine externe Entität im Inhalt, und die Grenze gegen Aufblähen entfällt. Die Fehlermeldungen bleiben englisch, mit Zeile und Spalte, dazu kommt je Fehlerart ein festes Feld `code`, das eine App übersetzen kann.
+
+**Umgesetzt (7. Oktober 2026):**
+
+- Der Leser liegt als `src/app/xml-parser.js` im Produkt (`parseXml()`, `XmlError` mit `code`, `line`, `column`, `XML_ERROR_CODES`). Er ist der Prototyp ohne den DOCTYPE-Teil. Text und Verweise ergeben zusammen einen Textknoten, wie im Browser. Das Modul tut beim Laden nichts, daher bleibt das Bündel der Exporte bei 33 955 Zeichen; die gebaute Datei wächst um 8 421 B.
+- `layoutBpmn()` liest mit dem Leser statt mit `DOMParser`. Weist er das XML ab, geht es unverändert an bpmn-js, das den Fehler meldet, wie bisher. Der BPMN-Assistent liest ebenso.
+- `readProcess()` prüft den Namensraum statt Präfixe abzuschneiden (Vorschlag 1). Der Text einer Notiz lässt Textknoten weg, die nur aus Leerraum bestehen (Vorschlag 2). Die Hinweise aus Vorschlag 3 sind nicht gebaut.
+- Die Tests lesen mit dem Leser, der `&amp;`-Behelf in `readModel()` ist entfallen. Von den 57 Fixtures hat sich nur `ref8` geändert; die bekannten Brüche bleiben bei 43.
+- `tests/xml-parser.test.mjs` prüft das Korpus (70 Fälle, ohne `gross-5000`, in `tests/fixtures/xml-parser/`) gegen eingefrorene Erwartungen, ohne Browser. In 63 Fällen erwartet der Test, was Chromium im Spike gelesen hat. Sieben Fälle weichen gewollt ab, jeder mit Begründung im Test:
+  - drei DOCTYPE-Fälle,
+  - `cdata-mit-leerraum` (Notiz ohne Leerraumknoten),
+  - `text-mit-kindelement` (nur die Textknoten direkt unter `<text>`),
+  - `fremde-elemente` und `praefix-falscher-namensraum` (Namensräume).
+  Dazu kommen eigene Fälle: Textknoten, Attribute, Namensräume, Fehlerposition und Tiefe.
 
 ### Produktcode
 
@@ -632,6 +645,7 @@ Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße,
 | Lizenztexte in jeder dokufix-Datei | GPL- und LGPL-Text vollständig (gut 40 KB); Verweis auf Repository und Lizenzdateien | Offen, mit Rechtskenntnis zu entscheiden; berührt die Größenprüfungen des Builds |
 | Referenzschrift für Layout und Zeichnung | Inter; Liberation Sans; keine (Systemschrift); die Standardschrift von bpmn-js | **Entschieden (7. Oktober 2026): die Standardschrift von bpmn-js, `Arial, sans-serif`, in seinen Standardgrößen (12 px, Beschriftungen an Ereignissen, Gateways und Flüssen 11 px)**, wegen der Kompatibilität mit Camunda: Das erzeugte XML soll im Camunda Modeler und in jedem bpmn-js mit dessen Vorgabe stimmen, auch die Boxen der Beschriftungen. Die Tabelle hat die Maße von Arial (gemessen an Liberation Sans, metrisch gleich), und dokufix zeichnet in derselben Schrift (`BPMN_FONT`), ohne eine Schrift einzubetten: Windows und macOS haben Arial, Linux meist Liberation Sans. Restrisiko: Ein System ohne beides zeichnet in seiner `sans-serif`, die Beschriftungen fallen dann breiter oder schmaler aus als ihre Boxen, wie bisher auf jedem Rechner. Umgesetzt: Abschnitt 4b |
 | Schrift und Größe als Parameter des Pakets | fest wie bpmn-js; Parameter in der Form der `textRenderer`-Konfiguration von bpmn-js | **Später.** Vorerst fest auf die Vorgabe von bpmn-js. Ein Parameter wäre die sauberere Schnittstelle für ein eigenständiges Paket, braucht aber je Schrift eine Breitentabelle und mehr Tests |
+| XML lesen: Parser der Umgebung oder eigener Leser; XML 1.1; externe Entität im Inhalt; DOCTYPE; Fehlermeldungen | siehe Abschnitt 4c | **Entschieden und umgesetzt (7. Oktober 2026):** eigener Leser (`src/app/xml-parser.js`). XML 1.1 wird gelesen, ein DOCTYPE ist ein Fehler, damit auch jede externe Entität. Die Meldungen sind englisch und tragen ein Feld `code` (Abschnitt 4c) |
 | Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. dokufix darf die LGPL-Komponente unter jeder Lizenz enthalten, solange es deren Bedingungen erfüllt; für alle anderen bestimmt die Wahl, wie sie dokufix nutzen dürfen |
 | Was tun, solange Mermaid noch das Layout macht? | nichts; die kleine Korrektur für `%%{` (Anhang B, Hinweis 3b) vorziehen | **Erledigt:** Mermaid macht das Layout seit dem 7. Oktober 2026 nicht mehr; der Fehler ist mit dem Ersatz verschwunden |
 

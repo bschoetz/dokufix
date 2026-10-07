@@ -41,10 +41,11 @@
 // Pure logic: no page, no library; the one import is the label measurer, pure
 // logic itself. LMM is called by src/app/bpmn.js, not here: the grid takes
 // any columns, the tests' made-up ones too. The XML comes in as a parsed
-// document; the reader walks its elements and compares local names with
-// their prefix taken off, because the DOM library of the tests reports
-// "bpmn:laneSet" where a browser reports "laneSet", and finds nothing by
-// namespace.
+// document, from the layout's own parser (src/app/xml-parser.js), so that the
+// same XML gives the same model in Node as in every browser. The reader takes
+// an element by its namespace and local name, as bpmn-js does: a task of
+// another namespace (signavio:task) is no task, and definitions of another
+// namespace are no BPMN.
 // tests/bpmn-layout.test.mjs runs all of it in Node.
 //
 // The grid, its rules and its router come from spike 2.26 (variant A2, Ben,
@@ -75,8 +76,11 @@ export function layoutStrayText(ids){
   return 'Diese Elemente liegen in keiner Bahn: ' + ids.join(', ') + '.';
 }
 
-// Local name of an element, its prefix taken off: "laneSet" for <bpmn:laneSet>.
-const local = el => String(el.localName || el.nodeName || '').replace(/^.*:/, '');
+// The local name of an element of BPMN's namespace, whatever its prefix:
+// "laneSet" for <bpmn:laneSet>, <bpmn2:laneSet> or <laneSet> in the default
+// namespace; '' for an element of another namespace.
+const BPMN_NS = 'http://www.omg.org/spec/BPMN/20100524/MODEL';
+const local = el => (el.namespaceURI === BPMN_NS ? el.localName : '');
 const kids = el => Array.from(el.children || []);
 const attr = (el, name) => (el && el.getAttribute(name)) || '';
 function descendants(el){
@@ -103,8 +107,13 @@ const NOTED = new Set(['textAnnotation', 'association']);
 // A text annotation's text: its <text> child as written, every blank and line break kept. bpmn-js draws it so: moddle
 // keeps the text node verbatim, and diagram-js's layoutText() splits it at each line break and keeps empty and
 // indented lines; a pretty-printed <text> is drawn a line lower and indented, and its box is measured for that
-// (review of 2.31). Whether it has text at all is asked of it with the blanks taken off.
-const noteText = el => { const t = kids(el).find(k => local(k) === 'text'); return t ? t.textContent : ''; };
+// (review of 2.31). Like moddle, it joins the text and CDATA nodes of <text> and leaves out those that are blanks
+// only: <text>\n  <![CDATA[x]]>\n</text> is "x", one line, as bpmn-js draws it (spikes/lmm/parsing/BERICHT.md,
+// section 3.3). Whether it has text at all is asked of it with the blanks taken off.
+const noteText = el => {
+  const t = kids(el).find(k => local(k) === 'text');
+  return t ? Array.from(t.childNodes).filter(k => (k.nodeType === 3 || k.nodeType === 4) && k.data.trim()).map(k => k.data).join('') : '';
+};
 // What a flow node may hold that is drawn and left out with it.
 const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation']);
 

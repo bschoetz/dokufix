@@ -28,13 +28,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { DOMParser } from 'linkedom';
 import { readProcess, layoutGeometry, appendDiagram } from '../src/app/bpmn-layout.js';
+import { parseXml } from '../src/app/xml-parser.js';
 import { lmm, kanonisch, lmmPositions, LMM_MERMAID_VERSION } from '../src/app/lmm.js';
 import { fixtureNames, readFixture, readModel, expectedFile } from './bpmn-fixtures.mjs';
 import { readDiagram } from './bpmn-rules.mjs';
 
 const NS = 'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"';
 const xmlOf = body => '<bpmn:definitions ' + NS + ' id="D" targetNamespace="http://example.org/dokufix">' + body + '</bpmn:definitions>';
-const read = xml => readProcess(new DOMParser().parseFromString(xml, 'text/xml')).model;
+const read = xml => readProcess(parseXml(xml)).model;
 // A process from its lanes ({ lane: 'id …' }, or one string for a process without lanes) and the rest of its body.
 const processOf = (lanes, body, id = 'P') => '<bpmn:process id="' + id + '">' + (typeof lanes === 'string' ? '' : '<bpmn:laneSet id="LS_' + id + '">' +
   Object.entries(lanes).map(([lane, ids]) => '<bpmn:lane id="' + lane + '">' + ids.split(' ').filter(Boolean).map(n => '<bpmn:flowNodeRef>' + n + '</bpmn:flowNodeRef>').join('') + '</bpmn:lane>').join('') +

@@ -29,6 +29,7 @@ import {
 import { breaksOf } from './bpmn-rules.mjs';
 import { readFixture, readModel, fixtureNames, gridInput } from './bpmn-fixtures.mjs';
 import { measureLabel } from '../src/app/label-size.js';
+import { parseXml } from '../src/app/xml-parser.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The reference input of story 2.8: 1 pool, 4 lanes, 16 symbols, 17 flows.
@@ -36,7 +37,8 @@ const REFERENCE = fs.readFileSync(path.join(here, '../spikes/komponenten-aus-mar
 const NS = 'xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"';
 const xmlOf = body => '<bpmn:definitions ' + NS + ' id="D" targetNamespace="http://example.org/dokufix">' + body + '</bpmn:definitions>';
 const parse = xml => new DOMParser().parseFromString(xml, 'text/xml');
-const read = xml => readProcess(parse(xml));
+// The model as the page reads it, with the layout's own parser.
+const read = xml => readProcess(parseXml(xml));
 const LINE = '<bpmn:startEvent id="S" name="Los"/><bpmn:task id="T" name="Tun"/><bpmn:endEvent id="E" name="Fertig"/>' +
   '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="E"/>';
 

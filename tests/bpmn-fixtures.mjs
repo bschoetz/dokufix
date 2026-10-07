@@ -26,7 +26,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DOMParser } from 'linkedom';
+import { parseXml } from '../src/app/xml-parser.js';
 import { readProcess, layoutGeometry, appendDiagram } from '../src/app/bpmn-layout.js';
 import { kanonisch, lmmPositions } from '../src/app/lmm.js';
 
@@ -47,14 +47,12 @@ export function readFixture(name){
   return { name, xml: fs.readFileSync(fixtureFile(name, '.bpmn'), 'utf8') };
 }
 
-// The model as the page reads it. linkedom keeps "&amp;" in an attribute as it
-// stands, where a browser's parser reads "&"; it is read as a blank here, as
-// Mermaid saw it when its raw positions were the fixtures' columns
-// (mermaidSource() wrote "&" as a blank). The expected XML of hund, hund2,
-// notiz-hund2 and ref8 depends on it: their labels with "&" are measured with
-// a blank in its place.
+// The model as the page reads it, with the layout's own parser
+// (src/app/xml-parser.js), the same in Node as in the page. Until it was the
+// layout's, the tests read with linkedom, which keeps "&amp;" in an attribute
+// as it stands, and "&amp;" was read as a blank here (2026-10-07).
 export function readModel(xml){
-  return readProcess(new DOMParser().parseFromString(xml.replace(/&amp;/g, ' '), 'text/xml'));
+  return readProcess(parseXml(xml));
 }
 
 // What the page hands the grid for an input's XML (layoutBpmn() in

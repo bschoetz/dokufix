@@ -1,6 +1,7 @@
 import { TRANSIENT_ATTR } from './transient.js';
 import { readProcess, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
 import { kanonisch, lmmPositions } from './lmm.js';
+import { parseXml, XmlError } from './xml-parser.js';
 import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
@@ -213,9 +214,12 @@ async function drawBpmn(diagram){
 
 // XML without coordinates, laid out: { xml, open }, the author's XML with a
 // diagram part added (src/app/bpmn-layout.js) and that diagram's id. Refused
-// with the reason where it cannot be laid out. XML the browser's parser
-// cannot read, or that is no BPMN definitions (readProcess() gives null),
-// comes back as it is, without open: bpmn-js then says what is wrong with it.
+// with the reason where it cannot be laid out. XML the layout's parser
+// rejects (src/app/xml-parser.js), or that is no BPMN definitions
+// (readProcess() gives null), comes back as it is, without open: bpmn-js then
+// says what is wrong with it. The parser is the layout's own, not the page's
+// DOMParser, so that the same XML gives the same layout in every browser and
+// in the tests.
 // What the layout leaves out is a line on the console each. No library and
 // no page is asked: LMM gives the columns (src/app/lmm.js) and the layout
 // measures the labels as bpmn-js will draw them (src/app/label-size.js).
@@ -223,8 +227,9 @@ async function drawBpmn(diagram){
 // does not depend on the order of the XML; the author's model writes the
 // diagram part, so that it keeps the order of the XML.
 function layoutBpmn(xml){
-  const parsed = new globalThis.DOMParser().parseFromString(xml, 'application/xml');
-  if (parsed.getElementsByTagName('parsererror').length) return { xml };
+  let parsed;
+  try { parsed = parseXml(xml); }
+  catch (e){ if (e instanceof XmlError) return { xml }; throw e; }
   const read = readProcess(parsed);
   if (!read) return { xml };
   const sorted = kanonisch(read.model);

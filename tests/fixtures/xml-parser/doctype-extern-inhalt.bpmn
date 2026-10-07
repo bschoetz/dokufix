@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE definitions [
+  <!ENTITY geheim SYSTEM "file:///etc/hostname">
+]>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_1" name="Sachbearbeitung">
+        <bpmn:flowNodeRef>StartEvent_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Archiv">
+        <bpmn:flowNodeRef>Task_2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="StartEvent_1" name="Antrag liegt vor"/>
+    <bpmn:task id="Task_1" name="Antrag prüfen"/>
+    <bpmn:task id="Task_2" name="Antrag ablegen"/>
+    <bpmn:endEvent id="EndEvent_1" name="Fertig"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+    <bpmn:sequenceFlow id="Flow_2" name="geprüft" sourceRef="Task_1" targetRef="Task_2"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="EndEvent_1"/>
+    <bpmn:textAnnotation id="TextAnnotation_1"><bpmn:text>Inhalt: &geheim;</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="TextAnnotation_1" targetRef="Task_1"/>
+  </bpmn:process>
+</bpmn:definitions>
