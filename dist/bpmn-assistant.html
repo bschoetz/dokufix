@@ -946,8 +946,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     // R15 start events in the first column, each in a row of its own, spread around their successor
     stagger: true,
     // R16 two gateways above each other in one column: one tried a column further
-    boundaryBelow: true
+    boundaryBelow: true,
     // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
+    handOver: true
+    // R18 the one step of a decision's way in another lane or row tried in the gateway's column, the nodes of another flow between moved a column (Ben, 2026-10-07, x-wv6)
   });
   var GAP_BASE = 48;
   var CHANNEL_BASE = 44;
@@ -1423,7 +1425,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         const lanes = [b.P, b.J, ...b.inner].map((id) => g.cells.get(id).lane);
         if (c.lane >= Math.min(...lanes) && c.lane <= Math.max(...lanes) && col > P4.col && col < J.col) col = J.col + 1;
       }
-      col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0);
+      col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0, g.handCol?.get(c.n.id) ?? 0);
       put(c, col);
       for (const f of g.fwdIn.get(c.n.id)) {
         const p = g.cells.get(f.from);
@@ -1478,6 +1480,33 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
     return moved;
   }
+  function ruleHandOver(g, model, measure, rules) {
+    let best = runGrid(g, model, measure, rules);
+    const keys = ["crossings", "through", "overlaps", "lines", "labels", "shared"];
+    const better = (t, b) => keys.every((k) => t.q[k] <= b.q[k]) && (t.q.crossings < b.q.crossings || t.q.crossings === b.q.crossings && t.q.bends < b.q.bends);
+    for (let round = 0; round < 4; round++) {
+      const col = (c) => best.cols.get(c), pos = (c) => best.at.get(c);
+      let pick = null;
+      for (const c of g.cells.values()) {
+        const ins = g.fwdIn.get(c.n.id);
+        if (ins.length !== 1 || c.pin) continue;
+        const p = g.cells.get(ins[0].from);
+        if (p.n.type !== "gateway" || p.n.tag === "parallelGateway" || pos(p) === pos(c) || col(c) !== col(p) + 1) continue;
+        const lo = Math.min(pos(p), pos(c)), hi = Math.max(pos(p), pos(c));
+        const between = [...g.cells.values()].filter((o) => o !== p && o !== c && col(o) === col(p) && pos(o) > lo && pos(o) < hi);
+        if (!between.length || between.some((o) => o.pin || o.n.tag === "startEvent" || g.reachable(p.n.id).has(o.n.id))) continue;
+        const was = new Map(between.map((o) => [o, g.handCol.get(o.n.id)]));
+        for (const o of between) g.handCol.set(o.n.id, col(p) + 1);
+        const t = runGrid(g, model, measure, rules);
+        if (better(t, pick ? pick.t : best)) pick = { between, to: col(p) + 1, t };
+        for (const [o, w] of was) if (w === void 0) g.handCol.delete(o.n.id);
+        else g.handCol.set(o.n.id, w);
+      }
+      if (!pick) break;
+      for (const o of pick.between) g.handCol.set(o.n.id, pick.to);
+      best = pick.t;
+    }
+  }
   function layoutGrid(model, raw, measure, rules) {
     model = gridModel(model);
     const g = buildGrid(model, raw);
@@ -1490,6 +1519,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     if (rules.jumpAbove) ruleJumpAbove(g, model);
     if (rules.firstColumn) ruleFirstColumn(g, model);
     if (rules.startAlign) ruleStartAlign(g, model);
+    g.handCol = /* @__PURE__ */ new Map();
+    if (rules.handOver) ruleHandOver(g, model, measure, rules);
     if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
     if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
     if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
@@ -1547,8 +1578,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       const before = new Map([...g.cells.values()].map((c) => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
       const di = finishGrid(g, model, measure, rules, reroute);
       const cols = new Map([...g.cells.values()].map((c) => [c, c.col]));
+      const at = new Map([...g.cells.values()].map((c) => [c, c.lane * 1e6 + c.row]));
       for (const [c, v] of before) Object.assign(c, v);
-      return { di, q: gridQuality(di, model), cols, last: Math.max(...cols.values()) };
+      return { di, q: gridQuality(di, model), cols, at, last: Math.max(...cols.values()) };
     };
     const a = once(true);
     const b = once(false);

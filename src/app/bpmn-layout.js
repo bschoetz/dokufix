@@ -14,7 +14,7 @@
 //      columns as the x of each node's middle (raw), of which only the order
 //      counts, and appendDiagram() the author's model
 //   4. layoutGeometry() puts the nodes on a grid: those columns, the
-//      lanes, and rows within each lane. The rules R1–R17 give each node its
+//      lanes, and rows within each lane. The rules R1–R18 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
 //      the labels get their places, in the size bpmn-js will draw them in
 //      (src/app/label-size.js, the text layout of diagram-js replicated, the
@@ -764,7 +764,7 @@ export function wayHits(way, boxes){
 // measure: the size { w, h } a label's text takes as bpmn-js draws it, and
 // with a width a text annotation's: measureLabel() (src/app/label-size.js),
 // in the page as in Node; a test may give another.
-// options: which of the rules R1–R17 apply, keyed as in DEFAULT_RULES; a key
+// options: which of the rules R1–R18 apply, keyed as in DEFAULT_RULES; a key
 // left out keeps its default, so { startAlign: false } leaves out R15 in this
 // call only. R7 and the router's second pass always apply.
 export function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES){
@@ -806,6 +806,7 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
   stagger: true,      // R16 two gateways above each other in one column: one tried a column further
   boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
+  handOver: true,     // R18 the one step of a decision's way in another lane or row tried in the gateway's column, the nodes of another flow between moved a column (Ben, 2026-10-07, x-wv6)
 });
 
 
@@ -1372,7 +1373,7 @@ function ruleCompact(g, model, rules){
       const lanes = [b.P, b.J, ...b.inner].map(id => g.cells.get(id).lane);
       if (c.lane >= Math.min(...lanes) && c.lane <= Math.max(...lanes) && col > P.col && col < J.col) col = J.col + 1;
     }
-    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0);
+    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0, g.handCol?.get(c.n.id) ?? 0);
     put(c, col);
     for (const f of g.fwdIn.get(c.n.id)){ const p = g.cells.get(f.from); if (isPlaced(p) && p.col === c.col && (p.lane !== c.lane || p.row !== c.row)) spans.push({ col: c.col, a: p, b: c }); }
   }
@@ -1446,6 +1447,50 @@ function ruleBlockColumn(g, model){
   return moved;
 }
 
+// R18. The hand-over of a decision (Ben, 2026-10-07, x-wv6: "Versicherung
+// abschließen" stood a column right of its gateway, because a gateway of
+// another flow stood between them in its column, and the way "Ja" ran across
+// that flow's block). A trial, after R16: where the one step of a way of a
+// decision, a gateway that is no parallel one, stands in another lane or row a
+// column right of the gateway, and nodes between them in the gateway's column
+// keep the hand-over from going straight, those nodes are tried a column right
+// (a minimum column in R7; what follows them moves along), as Ben laid x-wv6 out
+// by hand. Only nodes of another flow, none the gateway reaches, none pinned
+// (r19: of two ways that leave a gateway down, the other does not push the
+// first away) and no start event, which R15 places (p-miwg1: a start event of
+// another flow moved, and the picture got worse). Per round the best trial is
+// taken where no measure of quality rises and the picture has fewer crossings,
+// or as many and fewer bends; up to four rounds. After R15, before the other
+// trials, which then decide on its columns (x-wv6: run last, it left the
+// merges of the lowest lane in one column).
+function ruleHandOver(g, model, measure, rules){
+  let best = runGrid(g, model, measure, rules);
+  const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels', 'shared'];
+  const better = (t, b) => keys.every(k => t.q[k] <= b.q[k]) && (t.q.crossings < b.q.crossings || (t.q.crossings === b.q.crossings && t.q.bends < b.q.bends));
+  for (let round = 0; round < 4; round++){
+    // Columns and rows of the picture the trials give, not the grid's before finishGrid().
+    const col = c => best.cols.get(c), pos = c => best.at.get(c);
+    let pick = null;
+    for (const c of g.cells.values()){
+      const ins = g.fwdIn.get(c.n.id);
+      if (ins.length !== 1 || c.pin) continue;
+      const p = g.cells.get(ins[0].from);
+      if (p.n.type !== 'gateway' || p.n.tag === 'parallelGateway' || pos(p) === pos(c) || col(c) !== col(p) + 1) continue;
+      const lo = Math.min(pos(p), pos(c)), hi = Math.max(pos(p), pos(c));
+      const between = [...g.cells.values()].filter(o => o !== p && o !== c && col(o) === col(p) && pos(o) > lo && pos(o) < hi);
+      if (!between.length || between.some(o => o.pin || o.n.tag === 'startEvent' || g.reachable(p.n.id).has(o.n.id))) continue;
+      const was = new Map(between.map(o => [o, g.handCol.get(o.n.id)]));
+      for (const o of between) g.handCol.set(o.n.id, col(p) + 1);
+      const t = runGrid(g, model, measure, rules);
+      if (better(t, pick ? pick.t : best)) pick = { between, to: col(p) + 1, t };
+      for (const [o, w] of was) if (w === undefined) g.handCol.delete(o.n.id); else g.handCol.set(o.n.id, w);
+    }
+    if (!pick) break;
+    for (const o of pick.between) g.handCol.set(o.n.id, pick.to);
+    best = pick.t;
+  }
+}
+
 // The rules on the grid, then the grid in pixels with the flows routed on it:
 // the finished DI.
 //
@@ -1469,6 +1514,8 @@ function ruleBlockColumn(g, model){
 //        rows R2 and R5 gave, skips pins
 //   R15  the starts, after R9, whose rows it may move with the start's
 //        successor
+//   R18  a trial, after R15, whose starts it leaves in place, and before the
+//        other trials, which decide on its columns; g.handCol, which R7 reads
 // From here each rule is a trial: it lays the picture out to the end (runGrid():
 // R7, R8, the router; finishGrid()) and keeps a change only where the picture
 // gets no worse.
@@ -1492,6 +1539,8 @@ function layoutGrid(model, raw, measure, rules){
   if (rules.jumpAbove) ruleJumpAbove(g, model);
   if (rules.firstColumn) ruleFirstColumn(g, model);
   if (rules.startAlign) ruleStartAlign(g, model);
+  g.handCol = new Map();
+  if (rules.handOver) ruleHandOver(g, model, measure, rules);
   if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
   if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
   if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
@@ -1564,8 +1613,10 @@ function runGrid(g, model, measure, rules){
     const before = new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
     const di = finishGrid(g, model, measure, rules, reroute);
     const cols = new Map([...g.cells.values()].map(c => [c, c.col]));
+    // Where each node ends up, by lane and row (R8 and R15 move rows in finishGrid()), for R18.
+    const at = new Map([...g.cells.values()].map(c => [c, c.lane * 1e6 + c.row]));
     for (const [c, v] of before) Object.assign(c, v);
-    return { di, q: gridQuality(di, model), cols, last: Math.max(...cols.values()) };
+    return { di, q: gridQuality(di, model), cols, at, last: Math.max(...cols.values()) };
   };
   // The router's second pass makes each flow cheaper, the picture not always better: both are reckoned, the better
   // one taken (crossings, flows through nodes, overlaps, lines, labels, shared pieces, bends).

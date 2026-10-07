@@ -700,6 +700,10 @@ const RULE_CASES = [
   ['R16: of a gateway and a node below it in one column, the gateway is tried a column further', 'stagger',
     [['A', 'S:s:0 G:x:1 E:e:5'], ['B', 'T:t:2 X:x:2 M:x:4'], ['C', 'U:x:3']], 'S>G G>T T>U U>M G>X X>M M>E U>E X>E',
     at => at.X.x !== at.U.x],
+  // Ben's feedback on x-wv6 (2026-10-07): a node of another flow between a decision and its step in another lane.
+  ['R18: the step of a decision\'s way in another lane stands in the gateway\'s column; a node of another flow between gives way', 'handOver',
+    [['A', 'S:s:0 T:t:1 G:x:2'], ['B', 'S2:s:0 U:t:1 X:t:2 Y:t:3'], ['C', 'V:t:3 M:x:4 M2:x:5 E:e:6']], 'S>T T>G G>V G>M V>M S2>U U>X X>Y Y>M2 M>M2 M2>E',
+    at => at.V.x === at.G.x && at.X.x > at.G.x],
   ['R15: the starts of a lane stand left-aligned, each in a row of its own', 'startAlign',
     [['A', 'S1:s:0 S2:s:1 T:t:2 E:e:3']], 'S1>T S2>T T>E',
     at => at.S1.x === at.S2.x && at.S1.y !== at.S2.y],
@@ -720,8 +724,8 @@ test('the rules are switched per call: one call without a rule leaves the next a
   assert.deepEqual(laidOut(lanes, flows, { startAlign: true, compact: false, reroute: false }), before, 'R7 and the second pass are no switches');
 });
 
-test('the default rules: R1–R16 but R7, all on, frozen', () => {
-  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'boundaryBelow', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'jumpAbove', 'loopAbove', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
+test('the default rules: R1–R18 but R7, all on, frozen', () => {
+  assert.deepEqual(Object.keys(DEFAULT_RULES).sort(), ['block', 'boundaryBelow', 'branchBelow', 'combProbe', 'crossProbe', 'endAlign', 'fan', 'firstColumn', 'gatewayLane', 'handOver', 'jumpAbove', 'loopAbove', 'pathRows', 'rowProbe', 'stagger', 'startAlign', 'stepAside']);
   assert.ok(Object.values(DEFAULT_RULES).every(v => v === true));
   assert.ok(Object.isFrozen(DEFAULT_RULES));
   assert.throws(() => { DEFAULT_RULES.startAlign = false; }, TypeError);
