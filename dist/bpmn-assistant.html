@@ -36,7 +36,7 @@ textarea{width:100%;height:220px;font:12px/1.45 ui-monospace,monospace;padding:1
 textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;background:#fff}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .bar .hint{flex-basis:100%;margin-top:4px}
-#merge-x-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px;cursor:pointer}
+#merge-x-l,#jumps-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px;cursor:pointer}
 .bar #theme-now{display:inline-flex;flex-direction:column;justify-content:space-between;height:34px;padding:2px 0;margin-left:4px}
 .bar #theme-name{display:block;flex:none;font-size:12px;line-height:14px;margin:0}
 #theme-sw{display:flex;gap:3px}#theme-sw i{width:12px;height:12px;border-radius:3px;border:1px solid #0002}
@@ -145,6 +145,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 <button id="up" title="Eine .bpmn-Datei laden und rendern"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg> Datei hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" hidden>
 <button id="theme-btn" title="Farben der Diagramme"><svg class="ic" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15" cy="7.5" r="1.2" fill="currentColor"/></svg> Diagrammfarben ändern</button><span id="theme-now"><span class="hint" id="theme-name"></span><span id="theme-sw" aria-hidden="true"></span></span>
 <label id="merge-x-l" title="Ohne Häkchen zeichnet A2 exklusive Gateways, die zusammenführen, als leere Raute"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
+<label id="jumps-l" title="Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte"><input type="checkbox" id="jumps" checked> Sprungbögen</label>
 <span class="hint">Strg+Enter rendert. Ein Klick auf ein Diagramm öffnet die Großansicht (Strg+Mausrad zoomt, Escape schließt).</span>
 </div>
 </header>
@@ -4015,6 +4016,44 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return { layout, withoutWorker };
   }
 
+  // src/app/line-jumps.js
+  var JUMP_RADIUS = 5;
+  var END = 3;
+  var piecesOf = (d) => {
+    const pieces = [];
+    let at = null;
+    for (const [, op, args] of d.matchAll(/([MLC])([^MLC]*)/g)) {
+      const end = args.split(/[\s,]+/).filter(Boolean).map(Number).slice(-2);
+      if (op === "L" && at) pieces.push({ a: at, b: end, op, args });
+      else pieces.push({ op, args });
+      at = end;
+    }
+    return pieces;
+  };
+  function addLineJumps(root, r = JUMP_RADIUS) {
+    const paths = [...root.querySelectorAll(".djs-connection > .djs-visual > path")].filter((p) => /^M[^A-Za-z]*(?:[LC][^A-Za-z]*)*$/.test((p.getAttribute("d") || "").trim())).map((path) => ({ path, pieces: piecesOf(path.getAttribute("d")) }));
+    const straight = paths.flatMap((p) => p.pieces.filter((s) => s.a));
+    const horizontal = straight.filter((s) => s.a[1] === s.b[1] && s.a[0] !== s.b[0]);
+    const vertical = straight.filter((s) => s.a[0] === s.b[0] && s.a[1] !== s.b[1]);
+    const inside = (v, p, q, room) => v > Math.min(p, q) + room && v < Math.max(p, q) - room;
+    let count = 0;
+    for (const h of horizontal) {
+      const y = h.a[1], dir = Math.sign(h.b[0] - h.a[0]);
+      const xs = vertical.filter((v) => inside(v.a[0], h.a[0], h.b[0], r + END) && inside(y, v.a[1], v.b[1], END)).map((v) => v.a[0]).sort((p, q) => (p - q) * dir);
+      const jumps = [];
+      for (const x of xs) if (!jumps.length || Math.abs(x - jumps[jumps.length - 1]) >= 2 * r + END) jumps.push(x);
+      if (!jumps.length) continue;
+      const sweep = dir > 0 ? 1 : 0;
+      h.jumps = jumps.map((x) => "L" + (x - dir * r) + "," + y + "A" + r + "," + r + ",0,0," + sweep + "," + (x + dir * r) + "," + y).join("");
+      count += jumps.length;
+    }
+    for (const p of paths) {
+      if (!p.pieces.some((s) => s.jumps)) continue;
+      p.path.setAttribute("d", p.pieces.map((s) => (s.jumps || "") + s.op + s.args.trim()).join(""));
+    }
+    return count;
+  }
+
   // src/app/layout-notice.js
   var LAYOUT_NOTICE_CLASS = "layout-notice";
   var LAYOUT_NOTICE_TEXT = "Diagramm wird angeordnet …";
@@ -4382,7 +4421,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
 
   // <stdin>
-  window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, a2: bpmn_layout_exports };
+  window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, addLineJumps, a2: bpmn_layout_exports };
 })();
 </script>
 <script id="bpmn-io-js">/*
@@ -4885,6 +4924,7 @@ applyTheme();
 // (bpmn-js füllt sie sonst zu 35 % über dem Pool) und der Poolkopf.
 function decorate(viewer){
   T.addBpmnTypeClasses(viewer);
+  if ($('jumps').checked) T.addLineJumps(viewer.get('canvas').getContainer());
   const registry = viewer.get('elementRegistry');
   registry.forEach(el => {
     const gfx = registry.getGraphics(el);
@@ -5014,6 +5054,14 @@ const MERGE_X_KEY = 'bpmn-assistant-merge-x';
 try { if (localStorage.getItem(MERGE_X_KEY) === 'aus') $('merge-x').checked = false; } catch {}
 $('merge-x').onchange = () => {
   try { localStorage.setItem(MERGE_X_KEY, $('merge-x').checked ? 'an' : 'aus'); } catch {}
+  render();
+};
+// Sprungbögen (src/app/line-jumps.js, Prototyp): gesetzt wie in der App, in Bild und Großansicht; der Modellierer
+// zeichnet ohne. Gemerkt wie das Häkchen davor; eine Änderung zeichnet neu.
+const JUMPS_KEY = 'bpmn-assistant-sprungboegen';
+try { if (localStorage.getItem(JUMPS_KEY) === 'aus') $('jumps').checked = false; } catch {}
+$('jumps').onchange = () => {
+  try { localStorage.setItem(JUMPS_KEY, $('jumps').checked ? 'an' : 'aus'); } catch {}
   render();
 };
 

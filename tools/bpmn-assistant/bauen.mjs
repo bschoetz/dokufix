@@ -55,7 +55,8 @@ const bundle = (await esbuild.build({
       import { parseXml } from '${REPO}/src/app/xml-parser.js';
       import { makeLayoutClient } from '${REPO}/src/app/layout-client.js';
       import { showLayoutNotice } from '${REPO}/src/app/layout-notice.js';
-      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, a2 };
+      import { addLineJumps } from '${REPO}/src/app/line-jumps.js';
+      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, addLineJumps, a2 };
     `,
     resolveDir: HERE, loader: 'js',
   },
@@ -143,7 +144,7 @@ textarea{width:100%;height:220px;font:12px/1.45 ui-monospace,monospace;padding:1
 textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;background:#fff}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .bar .hint{flex-basis:100%;margin-top:4px}
-#merge-x-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px;cursor:pointer}
+#merge-x-l,#jumps-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px;cursor:pointer}
 .bar #theme-now{display:inline-flex;flex-direction:column;justify-content:space-between;height:34px;padding:2px 0;margin-left:4px}
 .bar #theme-name{display:block;flex:none;font-size:12px;line-height:14px;margin:0}
 #theme-sw{display:flex;gap:3px}#theme-sw i{width:12px;height:12px;border-radius:3px;border:1px solid #0002}
@@ -252,6 +253,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 <button id="up" title="Eine .bpmn-Datei laden und rendern">${ICON.upload} Datei hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" hidden>
 <button id="theme-btn" title="Farben der Diagramme">${ICON.palette} Diagrammfarben ändern</button><span id="theme-now"><span class="hint" id="theme-name"></span><span id="theme-sw" aria-hidden="true"></span></span>
 <label id="merge-x-l" title="Ohne Häkchen zeichnet A2 exklusive Gateways, die zusammenführen, als leere Raute"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
+<label id="jumps-l" title="Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte"><input type="checkbox" id="jumps" checked> Sprungbögen</label>
 <span class="hint">Strg+Enter rendert. Ein Klick auf ein Diagramm öffnet die Großansicht (Strg+Mausrad zoomt, Escape schließt).</span>
 </div>
 </header>
@@ -642,6 +644,7 @@ applyTheme();
 // (bpmn-js füllt sie sonst zu 35 % über dem Pool) und der Poolkopf.
 function decorate(viewer){
   T.addBpmnTypeClasses(viewer);
+  if ($('jumps').checked) T.addLineJumps(viewer.get('canvas').getContainer());
   const registry = viewer.get('elementRegistry');
   registry.forEach(el => {
     const gfx = registry.getGraphics(el);
@@ -771,6 +774,14 @@ const MERGE_X_KEY = 'bpmn-assistant-merge-x';
 try { if (localStorage.getItem(MERGE_X_KEY) === 'aus') $('merge-x').checked = false; } catch {}
 $('merge-x').onchange = () => {
   try { localStorage.setItem(MERGE_X_KEY, $('merge-x').checked ? 'an' : 'aus'); } catch {}
+  render();
+};
+// Sprungbögen (src/app/line-jumps.js, Prototyp): gesetzt wie in der App, in Bild und Großansicht; der Modellierer
+// zeichnet ohne. Gemerkt wie das Häkchen davor; eine Änderung zeichnet neu.
+const JUMPS_KEY = 'bpmn-assistant-sprungboegen';
+try { if (localStorage.getItem(JUMPS_KEY) === 'aus') $('jumps').checked = false; } catch {}
+$('jumps').onchange = () => {
+  try { localStorage.setItem(JUMPS_KEY, $('jumps').checked ? 'an' : 'aus'); } catch {}
   render();
 };
 

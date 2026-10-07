@@ -1,6 +1,7 @@
 import { TRANSIENT_ATTR } from './transient.js';
 import { BPMN_VIEWER_CONFIG, BPMN_NO_LIBRARY, addBpmnTypeClasses } from './bpmn.js';
 import { maskNotMarkup } from './bpmn-layout.js';
+import { addLineJumps } from './line-jumps.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_VIEW_CLASS, removeViewerLeftovers } from './diagrams.js';
 
 // --- The live viewer in the large view of a BPMN diagram (story 2.11) -------
@@ -221,6 +222,8 @@ async function startViewer(figure){
     if (state.closed){ destroy(state); return; }
     for (const w of (result && result.warnings) || []) console.warn('BPMN viewer, import warning:', w && w.message ? w.message : w);
     addBpmnTypeClasses(state.viewer);
+    // The jumps of the picture (src/app/line-jumps.js), so that the large view draws it alike.
+    addLineJumps(box);
     const hint = doc.createElement('span');
     hint.className = HINT_CLASS;
     hint.setAttribute(TRANSIENT_ATTR, '');

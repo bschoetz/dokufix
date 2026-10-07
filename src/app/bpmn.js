@@ -1,6 +1,7 @@
 import { TRANSIENT_ATTR } from './transient.js';
 import { maskNotMarkup } from './bpmn-layout.js';
 import { makeLayoutClient } from './layout-client.js';
+import { addLineJumps } from './line-jumps.js';
 import { showLayoutNotice } from './layout-notice.js';
 import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 
@@ -28,7 +29,9 @@ import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 //   3. before the export each element gets a class by its type, which the
 //      document styles colour (src/doc.css): the viewer is told to draw with
 //      custom properties (var(--dokufix-bpmn-…)) instead of colours, so no
-//      colour is fixed in the SVG
+//      colour is fixed in the SVG; where two flows cross, the horizontal one
+//      jumps over the vertical one (addLineJumps(), src/app/line-jumps.js,
+//      a prototype)
 //   4. the SVG is finished (finishBpmnSvg()): the viewer's hit areas out, the
 //      title as its accessible name, the width as every diagram of the
 //      document has it (drawnWidth() in src/app/diagrams.js), ids made unique
@@ -227,6 +230,7 @@ async function drawBpmn(diagram, { client, timers, frame, now } = {}){
     // Elements bpmn-js does not know are drawn without them; that goes to the console only.
     for (const w of (result && result.warnings) || []) console.warn('BPMN import warning:', w && w.message ? w.message : w);
     addBpmnTypeClasses(viewer);
+    addLineJumps(host);
     const { svg } = await viewer.saveSVG();
     const parsed = new globalThis.DOMParser().parseFromString(svg, 'image/svg+xml').documentElement;
     if (!parsed || parsed.nodeName.toLowerCase() !== 'svg') throw new Error('bpmn-js hat kein SVG geliefert.');
