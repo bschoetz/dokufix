@@ -664,6 +664,10 @@ const RULE_CASES = [
   ['R1: a split whose three or more ways all begin in one other lane stands in that lane', 'gatewayLane',
     [['A', 'S:s:0 T:t:1 G:x:2'], ['B', 'X:t:3 Y:t:3 Z:t:3 M:x:4 E:e:5']], 'S>T T>G G>X G>Y G>Z X>M Y>M Z>M M>E',
     at => at.G.lane === 'B'],
+  // Ben's feedback on x-miwg4 (2026-10-07): a merge of two lanes stands in the row of the step after it.
+  ['R1: a merge whose ways come from several lanes stands in the lane of the step after it', 'gatewayLane',
+    [['A', 'S:s:0 G:x:1 T:t:3 E:e:4'], ['B', 'U:t:2 M:x:2']], 'S>G G>M G>U U>M M>T T>E',
+    at => at.M.lane === 'A'],
   ['R2: two ways of a decision that go on in one lane never share a row; the other one goes below', 'pathRows',
     [['A', 'S:s:0 G:x:1 T1:t:2 T2:t:3 E1:e:4 U1:t:2 U2:t:3 E2:e:4']], 'S>G G>T1 T1>T2 T2>E1 G>U1 U1>U2 U2>E2',
     at => at.T1.y === at.G.y && at.T2.y === at.G.y && at.U1.y === at.U2.y && at.U1.y > at.G.y],
@@ -679,6 +683,10 @@ const RULE_CASES = [
   ['R6: the one step between the exit of a loop and a merge further right stands in the merge\'s column', 'jumpAbove',
     [['A', 'S:s:0 A1:t:1 G:x:2 X:t:3 L:t:3 Y:t:4 H:x:4 Z:t:5 N:t:5 W:t:6 M:x:7 E:e:8']], 'S>A1 A1>G G>X X>Y Y>Z Z>W W>M G>L L>H H>A1 H>N N>M M>E',
     at => at.N.x === at.M.x && at.N.y < at.M.y],
+  // Ben's feedback on ref3 (2026-10-07): the end of a short exception stood in the split's column, inside the block.
+  ['R8: a foreign node in the column of a parallel split stands left of it, outside the block', 'block',
+    [['A', 'S:s:0 G:x:1 P:p:2 X:e:3 Y:t:4 J:p:5 E:e:6'], ['B', 'Z:t:2 Z2:t:3'], ['C', 'W:t:2 W2:e:3']], 'S>G G>P G>X G>W W>W2 P>Y P>Z Z>Z2 Y>J Z2>J J>E',
+    at => at.X.x < at.P.x],
   ['R9: the first steps of the arms of a parallel gateway stand in one column', 'firstColumn',
     [['A', 'S:s:0 P:p:1 X:t:2 J:p:5 E:e:6'], ['B', 'S2:s:0 Z:t:1 Z2:t:2 Y:t:3 E2:e:6']], 'S>P P>X X>J P>Y Y>J J>E S2>Z Z>Z2 Z2>E2',
     at => at.X.x === at.Y.x],

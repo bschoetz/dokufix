@@ -790,7 +790,7 @@ export function layoutGeometry(model, raw, measure = measureLabel, options = DEF
 // bundle reaches this module through src/app/diagrams.js). Keyed in the order
 // of the rules' numbers; layoutGrid() gives the order they run in.
 export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
-  gatewayLane: true,  // R1  a gateway or end event stands in the lane of its nearest predecessor; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
+  gatewayLane: true,  // R1  a gateway or end event stands in the lane of its nearest predecessor, a merge of several lanes in that of its next step; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
   pathRows: true,     // R2  two ways of a decision that go on in one lane get rows of their own
   loopAbove: true,    // R3  the steps of a loop stand in the row above their gateway, from there to the left
   branchBelow: true,  // R4  a step that leaves the lane while another way stays in the row stands in the gateway's column, on the side of its target lane
@@ -916,7 +916,8 @@ const byCol = (g, ids) => [...ids].sort((p, q) => g.cells.get(p).col - g.cells.g
 // in three or more lanes stands in the middle one of them (with an even number
 // the upper of the two in the middle), so each arm has a port of its own; its
 // join follows it. Intermediate events stay in their lane (Ben: they belong to
-// the role, throw and catch above all).
+// the role, throw and catch above all). A merge whose ways come from several
+// lanes stands in the lane of the step after it (Ben, 2026-10-07, x-miwg4).
 function ruleGatewayLane(g, model){
   for (const id of byCol(g, model.nodes.filter(n => n.type === 'gateway' || n.tag === 'endEvent').map(n => n.id))){
     const c = g.cells.get(id), preds = g.fwdIn.get(id);
@@ -932,6 +933,13 @@ function ruleGatewayLane(g, model){
     }
     if (!from) from = preds.reduce((m, p) => g.cells.get(p.from).col > g.cells.get(m).col ? p.from : m, preds[0].from);
     c.lane = g.cells.get(from).lane;
+    // A merge whose ways come from several lanes (Ben, 2026-10-07, x-miwg4: "In Zweifelsfällen ist es besser, das
+    // Merge-Gateway in die Zeile des nächsten Prozessschrittes zu packen"): one way changes lane anyway, so the merge
+    // stands in the lane of the step after it. Not a parallel join, which follows its split; only where the step's
+    // lane is settled (no gateway, no end).
+    const outs = g.fwdOut.get(id), next = outs.length === 1 && g.cells.get(outs[0].to);
+    if (c.n.type === 'gateway' && c.n.tag !== 'parallelGateway' && preds.length >= 2 && new Set(preds.map(p => g.cells.get(p.from).lane)).size >= 2
+      && next && next.n.type !== 'gateway' && next.n.tag !== 'endEvent'){ c.lane = next.lane; continue; }
     // Into the lane of its ways (Ben, 2026-10-05, x-tm1 and x-rg3: gateways centred): a split whose three or more ways
     // all begin in one other lane stands in that lane; R9 puts it in the middle row of its ways. Only heads whose lane
     // is settled (no gateways, no ends); a gateway may lie in any lane, intermediate events never change theirs.
