@@ -41,7 +41,7 @@ R1 läuft vor der Phase, nicht im Raster danach: Die Bahn eines Knotens ist Eing
 
 **Schritte:**
 
-1. **Lange Flüsse zerlegen.** Ein Fluss über mehrere Spalten wird in Hilfspunkte je Spalte geteilt, damit sich Kreuzungen überhaupt zählen lassen. Jeder Hilfspunkt braucht eine Bahn, und zwar die, in der der Router den Fluss in dieser Spalte führt. Wechselt ein Fluss die Bahn, entscheidet die Regel des Routers, wo er wechselt. Nachrichtenflüsse kommen als eigene, gewichtete Kanten dazu.
+1. **Lange Flüsse zerlegen, mit einem Router auf Spaltenebene.** Ein Fluss über mehrere Spalten bekommt je Spalte eine Lage beim Eintritt in ihr Band und eine beim Austritt; dazwischen läuft er senkrecht (ein Port oben oder unten). Die Lage gibt keine feste Regel je Art des Flusses, sondern ein kleiner Router: je Fluss die Kandidaten Zeile der Quelle, Zeile des Ziels, Rinne oben, Rinne unten, genommen der billigste nach Hindernissen und Kreuzungen mit dem schon Gelegten (b2, `mini`). Nachrichtenflüsse kommen als eigene, gewichtete Kanten dazu.
 2. **Reihenfolge je Spalte.** Mehrere Durchgänge von links nach rechts und zurück; jeder Knoten und Hilfspunkt wird nach der mittleren Lage seiner Nachbarn einsortiert (Baryzentrum oder Median), immer innerhalb seiner Bahn. Gleichstände entscheidet LMMs Ordnung, sodass das Ergebnis deterministisch und unabhängig von der Reihenfolge im XML bleibt.
    Die Konventionen, die heute als Regeln stehen, sind dabei harte Vorgaben:
    - der Hauptweg gerade, Ausnahmen darunter (R2)
