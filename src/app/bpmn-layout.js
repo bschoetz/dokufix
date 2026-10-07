@@ -796,7 +796,7 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   branchBelow: true,  // R4  a step that leaves the lane while another way stays in the row stands in the gateway's column, on the side of its target lane
   fan: true,          // R5  fan: the arms of a parallel block in other lanes take the row nearest the split; they leave the split and enter the join vertically, only the nearest arm horizontally by the east and west ports when none lies in the gateways' row
   jumpAbove: true,    // R6  the one step between the exit of a loop and a merge stands in the merge's column
-  block: true,        // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join
+  block: true,        // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join; a foreign node in the split's column moves the split right of it
   firstColumn: true,  // R9  (spike 2.26, Ben) the first shapes of the arms of a parallel gateway are centred on one x, one above the other
   rowProbe: true,     // R10 row trial: with crossings, each row R2 gives a way is tried on the other side; taken only with strictly fewer crossings
   endAlign: true,     // R11 ends aligned: an end event in the last column where its row is free up to it and the picture gets no worse; a soft recommendation
@@ -1364,7 +1364,7 @@ function ruleCompact(g, model, rules){
       const lanes = [b.P, b.J, ...b.inner].map(id => g.cells.get(id).lane);
       if (c.lane >= Math.min(...lanes) && c.lane <= Math.max(...lanes) && col > P.col && col < J.col) col = J.col + 1;
     }
-    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0);
+    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0);
     put(c, col);
     for (const f of g.fwdIn.get(c.n.id)){ const p = g.cells.get(f.from); if (isPlaced(p) && p.col === c.col && (p.lane !== c.lane || p.row !== c.row)) spans.push({ col: c.col, a: p, b: c }); }
   }
@@ -1408,6 +1408,30 @@ function ruleBlockBox(g, model){
       for (const c of inside) c.row = to.get(c.row);
       moved = true;
     }
+  }
+  return moved;
+}
+
+// R8, the split's column (Ben, 2026-10-07, ref3: "End-Event ragt in den
+// Parallel-Block rein und sorgt dadurch für hässlichen Knick"): the column of a
+// parallel split belongs to its block, from the split down or up to the farthest
+// node of the block, over the lanes between. A foreign node that is not pinned
+// and stands there (a short exception that took the next column of the decision
+// before the split) keeps its place, and the split moves a column right of it,
+// its arms and join with it, as Ben laid ref3 out by hand; it leaves its group
+// of R9 (the first nodes of a decision's ways), which would follow it. Sets g.blockCol,
+// which R7 reads; after R7 and the box, R7 runs again after it. Returns whether
+// a split moved.
+function ruleBlockColumn(g, model){
+  let moved = false;
+  const pos = c => c.lane * 1e6 + c.row;
+  for (const b of parallelBlocks(g, model)){
+    const ids = [b.P, b.J, ...b.inner], P = g.cells.get(b.P);
+    const ps = ids.map(id => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
+    const inside = [...g.cells.values()].filter(c => !ids.includes(c.n.id) && !c.pin && c.col === P.col && pos(c) > lo && pos(c) < hi);
+    if (!inside.length) continue;
+    g.blockCol.set(b.P, Math.max(g.blockCol.get(b.P) ?? 0, P.col + 1));
+    moved = true;
   }
   return moved;
 }
@@ -1870,7 +1894,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
       for (const [c, col] of orig) c.col = col;
       ruleCompact(g, model, rules);
       let settled = true;
-      for (const grp of g.columnGroups || []){
+      for (const all of g.columnGroups || []){
+        // A split R8 moved off a foreign node in its column (ruleBlockColumn()) leaves its group: else the group
+        // followed it, the foreign node with it.
+        const grp = all.filter(x => !g.blockCol.has(x));
+        if (!grp.length) continue;
         const cols = grp.map(x => g.cells.get(x).col), max = Math.max(...cols);
         if (cols.every(c => c === max)) continue;
         settled = false;
@@ -1879,9 +1907,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
       if (settled) break;
     }
   };
+  g.blockCol = new Map();
   compactAll();
   let boxed = false;
   for (let round = 0; rules.block && round < 3 && ruleBlockBox(g, model); round++){ boxed = true; compactAll(); }
+  for (let round = 0; rules.block && round < 3 && ruleBlockColumn(g, model); round++) compactAll();
   // Where the box moved rows, the starts dock to their successor again (R15).
   if (boxed && rules.startAlign && redockStarts(g, model)) compactAll();
 
