@@ -11,7 +11,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { makeLayoutClient, pageWorker, LAYOUT_TIME_LIMIT, LAYOUT_ABORTED, LAYOUT_WORKER_FAILED, layoutTimeLimitText } from '../src/app/layout-client.js';
+import { makeLayoutClient, pageWorker, LAYOUT_TIME_LIMIT, LAYOUT_START_LIMIT, LAYOUT_ABORTED, LAYOUT_WORKER_FAILED, layoutTimeLimitText, layoutStartText } from '../src/app/layout-client.js';
 import { layoutJob, answerLayout } from '../src/app/bpmn-layout-job.js';
 import { LAYOUT_NOTHING } from '../src/app/bpmn-layout.js';
 
@@ -20,22 +20,34 @@ const XML = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524
 const OTHER = XML.replace('name="Tun"', 'name="Lassen"');
 const EMPTY = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P1"/></bpmn:definitions>';
 
-// Fake workers: every one made is in made, with what it was sent and whether it was terminated.
-function fakeWorkers(){
+// Fake workers: every one made is in made, with what it was sent and whether
+// it was terminated. Each says { ready: true } once it is made, as
+// src/layout-worker.js does once it is loaded, in a microtask, after the
+// client has set its listeners; ready: false makes workers that keep silent
+// until the test calls ready().
+function fakeWorkers({ ready = true } = {}){
   const made = [];
   class FakeWorker {
-    constructor(){ this.sent = []; this.terminated = false; this.onmessage = null; this.onerror = null; made.push(this); }
+    constructor(){
+      this.sent = []; this.terminated = false; this.onmessage = null; this.onerror = null; this.onmessageerror = null;
+      made.push(this);
+      if (ready) queueMicrotask(() => this.ready());
+    }
     postMessage(m){ this.sent.push(structuredClone(m)); }
     terminate(){ this.terminated = true; }
+    ready(){ this.onmessage && this.onmessage({ data: { ready: true } }); }
     // The worker's answer to its last message, as src/layout-worker.js gives it.
     answer(message = this.sent.at(-1)){ this.onmessage && this.onmessage({ data: structuredClone(answerLayout(message)) }); }
     fail(message){ const e = { message, prevented: false, preventDefault(){ this.prevented = true; } }; this.error = e; this.onerror && this.onerror(e); }
+    // An answer the page could not read: a messageerror carries no message.
+    unreadable(){ const e = { prevented: false, preventDefault(){ this.prevented = true; } }; this.onmessageerror && this.onmessageerror(e); }
   }
   return { made, makeWorker: () => new FakeWorker() };
 }
 // A log that keeps its lines.
 const quiet = () => { const lines = []; return { lines, info: line => lines.push(line) }; };
 // Timers of the test's own: they fire when told, and tell what is pending.
+// fire(ms) fires those set for ms: the time limit, or the start limit.
 function fakeTimers(){
   let next = 1;
   const pending = new Map();
@@ -44,8 +56,12 @@ function fakeTimers(){
     setTimeout(fn, ms){ const id = next++; pending.set(id, { fn, ms }); return id; },
     clearTimeout(id){ pending.delete(id); },
     fireAll(){ for (const [id, t] of [...pending]){ pending.delete(id); t.fn(); } },
+    fire(ms){ for (const [id, t] of [...pending]) if (t.ms === ms){ pending.delete(id); t.fn(); } },
+    limits: () => [...pending.values()].map(t => t.ms).sort((a, b) => a - b),
   };
 }
+// The microtasks of now, the fake workers' "ready" among them.
+const tick = () => new Promise(r => setImmediate(r));
 // Whether a promise has settled by now.
 const settledYet = async p => { let done = false; p.then(() => { done = true; }, () => { done = true; }); await new Promise(r => setImmediate(r)); return done; };
 
@@ -64,8 +80,9 @@ test('a worker that answers: the result is layoutJob()\'s, the worker is made on
   assert.equal(made.length, 1);
   const w = made[0];
   assert.deepEqual(w.sent.map(m => m.id), [1], 'the second waits for the first');
-  assert.equal(timers.pending.size, 1, 'one time limit runs, the running request\'s');
-  assert.equal([...timers.pending.values()][0].ms, LAYOUT_TIME_LIMIT);
+  assert.deepEqual(timers.limits(), [LAYOUT_START_LIMIT, LAYOUT_TIME_LIMIT], 'the worker\'s start limit and the running request\'s time limit');
+  await tick();
+  assert.deepEqual(timers.limits(), [LAYOUT_TIME_LIMIT], 'it said it was ready: one time limit runs, the running request\'s');
   assert.equal(await settledYet(first), false);
   w.answer();
   assert.deepEqual(await first, layoutJob(XML));
@@ -148,7 +165,7 @@ test('in Node the page\'s worker is refused, since there is no Worker, and the d
 });
 
 test('a worker that fails before it ever answered does not start in this page: that request and every later one are laid out on the page', async () => {
-  const { made, makeWorker } = fakeWorkers();
+  const { made, makeWorker } = fakeWorkers({ ready: false });
   const timers = fakeTimers(), log = quiet();
   const client = makeLayoutClient({ makeWorker, timers, log });
   const p = client.layout(XML), q = client.layout(OTHER);
@@ -218,10 +235,12 @@ test('the time limit is the running request\'s alone: a request waiting in the q
   const timers = fakeTimers();
   const client = makeLayoutClient({ makeWorker, timers, log: quiet() });
   const first = client.layout(XML), second = client.layout(OTHER);
+  await tick();
   timers.fireAll();
   await assert.rejects(first, { message: layoutTimeLimitText(LAYOUT_TIME_LIMIT) });
   assert.equal(await settledYet(second), false, 'the second is not given up with it');
-  assert.equal(timers.pending.size, 1, 'it runs, with a limit of its own');
+  await tick();
+  assert.deepEqual(timers.limits(), [LAYOUT_TIME_LIMIT], 'it runs, with a limit of its own');
   made[1].answer();
   assert.deepEqual(await second, layoutJob(OTHER));
 });
@@ -232,4 +251,185 @@ test('another layout of the same protocol: without a worker the page runs the jo
   assert.deepEqual(await client.layout('<a/>'), { xml: '<a/>!' });
   const failing = makeLayoutClient({ makeWorker: () => { throw new Error('no'); }, job: async () => { throw new Error('kaputt'); }, log });
   await assert.rejects(failing.layout('<a/>'), { message: 'kaputt' });
+});
+
+// ---------- the fallback is the page's, not the worker's ----------
+test('a worker made anew after a time limit that fails before it answers: the request fails, the page keeps its workers', async () => {
+  // Workers that never say "ready": whether the page has heard from one rests on the first answer alone.
+  const { made, makeWorker } = fakeWorkers({ ready: false });
+  const timers = fakeTimers(), log = quiet();
+  const client = makeLayoutClient({ makeWorker, timers, log });
+  const first = client.layout(XML);
+  made[0].answer();
+  assert.deepEqual(await first, layoutJob(XML));
+  // The time limit: the worker goes, the next request gets a new one.
+  const slow = client.layout(OTHER), after = client.layout(XML);
+  timers.fire(LAYOUT_TIME_LIMIT);
+  await assert.rejects(slow, { message: layoutTimeLimitText(LAYOUT_TIME_LIMIT) });
+  assert.equal(made.length, 2);
+  // The new one fails before it has answered once: that is this request's failure.
+  made[1].fail('Uncaught InternalError: too much recursion');
+  await assert.rejects(after, { message: LAYOUT_WORKER_FAILED + ' Uncaught InternalError: too much recursion' });
+  assert.equal(made[1].terminated, true);
+  assert.equal(client.withoutWorker(), false, 'the page does not turn to laying out by itself');
+  assert.deepEqual(log.lines, []);
+  // The next request gets a worker again, and its time limit.
+  const again = client.layout(OTHER);
+  assert.equal(made.length, 3);
+  assert.deepEqual(timers.limits(), [LAYOUT_START_LIMIT, LAYOUT_TIME_LIMIT]);
+  made[2].answer();
+  assert.deepEqual(await again, layoutJob(OTHER));
+  assert.equal(timers.pending.size, 0);
+});
+
+test('a worker made anew after an abort that fails before it answers: the same, the request fails and the next gets a worker', async () => {
+  const { made, makeWorker } = fakeWorkers({ ready: false });
+  const timers = fakeTimers(), log = quiet();
+  const client = makeLayoutClient({ makeWorker, timers, log });
+  const first = client.layout(XML);
+  made[0].answer();
+  await first;
+  const a = new AbortController();
+  const aborted = client.layout(OTHER, { signal: a.signal });
+  a.abort();
+  await assert.rejects(aborted, { name: 'AbortError' });
+  const after = client.layout(XML);
+  made[1].fail('');
+  await assert.rejects(after, { message: LAYOUT_WORKER_FAILED });
+  assert.equal(client.withoutWorker(), false);
+  const again = client.layout(XML);
+  assert.equal(made.length, 3);
+  made[2].answer();
+  await again;
+  assert.deepEqual(log.lines, []);
+});
+
+// ---------- an answer the page cannot read ----------
+test('a messageerror is a failure of the worker: after it was heard from, the request rejects and the next gets a new worker; before, the page lays out by itself', async () => {
+  const { made, makeWorker } = fakeWorkers();
+  const timers = fakeTimers(), log = quiet();
+  const client = makeLayoutClient({ makeWorker, timers, log });
+  const p = client.layout(XML), q = client.layout(OTHER);
+  assert.equal(typeof made[0].onmessageerror, 'function', 'the client listens for it');
+  await tick();
+  made[0].unreadable();
+  await assert.rejects(p, { message: LAYOUT_WORKER_FAILED });
+  assert.equal(made[0].terminated, true);
+  assert.equal(made[0].onmessageerror, null, 'a dropped worker is not heard any more');
+  assert.equal(made.length, 2);
+  made[1].answer();
+  assert.deepEqual(await q, layoutJob(OTHER));
+  assert.deepEqual(log.lines, []);
+
+  const silent = fakeWorkers({ ready: false }), log2 = quiet();
+  const onPage = makeLayoutClient({ makeWorker: silent.makeWorker, timers: fakeTimers(), log: log2 });
+  const r = onPage.layout(XML);
+  silent.made[0].unreadable();
+  assert.deepEqual(await r, layoutJob(XML));
+  assert.equal(onPage.withoutWorker(), true);
+  assert.deepEqual(log2.lines, ['BPMN layout on the page, without a worker: the worker did not start']);
+});
+
+// ---------- the worker's start ----------
+test('the start limit is 5 s, and its reason says it in seconds', () => {
+  assert.equal(LAYOUT_START_LIMIT, 5000);
+  assert.equal(layoutStartText(5000), 'Das Layout im Hintergrund ist nicht innerhalb von 5 s gestartet.');
+  assert.equal(layoutStartText(20), 'Das Layout im Hintergrund ist nicht innerhalb von 0,02 s gestartet.');
+});
+
+test('a worker that says it is ready: its start limit ends, and the page has heard from a worker', async () => {
+  const { made, makeWorker } = fakeWorkers({ ready: false });
+  const timers = fakeTimers(), log = quiet();
+  const client = makeLayoutClient({ makeWorker, timers, log });
+  const first = client.layout(XML);
+  assert.deepEqual(timers.limits(), [LAYOUT_START_LIMIT, LAYOUT_TIME_LIMIT]);
+  made[0].ready();
+  assert.deepEqual(timers.limits(), [LAYOUT_TIME_LIMIT], 'only the time limit is left');
+  assert.equal(await settledYet(first), false, '"ready" is no answer');
+  // It fails before its first answer: it had started, so the request fails and the page keeps its workers.
+  made[0].fail('Uncaught RangeError: Maximum call stack size exceeded');
+  await assert.rejects(first, { message: LAYOUT_WORKER_FAILED + ' Uncaught RangeError: Maximum call stack size exceeded' });
+  assert.equal(client.withoutWorker(), false);
+  assert.deepEqual(log.lines, []);
+  assert.equal(timers.pending.size, 0);
+});
+
+test('a worker that never says it is ready, on a page that never heard from one: after the start limit the page lays out by itself, that request included', async () => {
+  const { made, makeWorker } = fakeWorkers({ ready: false });
+  const timers = fakeTimers(), log = quiet();
+  const client = makeLayoutClient({ makeWorker, timers, log });
+  const p = client.layout(XML), q = client.layout(OTHER);
+  timers.fire(LAYOUT_START_LIMIT);
+  assert.equal(made[0].terminated, true);
+  assert.deepEqual(await p, layoutJob(XML));
+  assert.deepEqual(await q, layoutJob(OTHER));
+  assert.deepEqual(await client.layout(XML), layoutJob(XML));
+  assert.equal(made.length, 1, 'no second worker');
+  assert.equal(client.withoutWorker(), true);
+  assert.deepEqual(log.lines, ['BPMN layout on the page, without a worker: the worker did not start (no "ready" within 5000 ms)']);
+  assert.equal(timers.pending.size, 0, 'neither the start limit nor the time limit is left');
+});
+
+test('a worker that never says it is ready, after one was heard from: the request fails with the reason, the next one gets a new worker', async () => {
+  const { made, makeWorker } = fakeWorkers({ ready: false });
+  const timers = fakeTimers(), log = quiet();
+  const client = makeLayoutClient({ makeWorker, timers, log });
+  const first = client.layout(XML);
+  made[0].ready();
+  made[0].answer();
+  await first;
+  // A worker made anew after a time limit, which does not start.
+  const slow = client.layout(OTHER);
+  timers.fire(LAYOUT_TIME_LIMIT);
+  await assert.rejects(slow, { message: layoutTimeLimitText(LAYOUT_TIME_LIMIT) });
+  const lost = client.layout(XML), next = client.layout(OTHER);
+  assert.equal(made.length, 2);
+  timers.fire(LAYOUT_START_LIMIT);
+  await assert.rejects(lost, { message: layoutStartText(LAYOUT_START_LIMIT) });
+  assert.equal(made[1].terminated, true);
+  assert.equal(client.withoutWorker(), false);
+  assert.equal(made.length, 3, 'the next request got a new worker');
+  assert.deepEqual(made[2].sent, [{ id: 4, xml: OTHER }]);
+  made[2].ready();
+  made[2].answer();
+  assert.deepEqual(await next, layoutJob(OTHER));
+  assert.deepEqual(log.lines, []);
+  assert.equal(timers.pending.size, 0);
+});
+
+test('a worker that says it is ready too late is not heard: its request was decided at the start limit (a limit of 20 ms and the real timers)', async () => {
+  const { made, makeWorker } = fakeWorkers({ ready: false });
+  const log = quiet();
+  const client = makeLayoutClient({ makeWorker, startLimit: 20, log });
+  const p = client.layout(XML);
+  const t = performance.now();
+  // The page lays out by itself once the limit is past: it never heard from a worker.
+  assert.deepEqual(await p, layoutJob(XML));
+  assert.ok(performance.now() - t >= 15, 'not before the limit');
+  assert.equal(made[0].terminated, true);
+  // Too late: nobody listens, and nothing changes.
+  assert.equal(made[0].onmessage, null);
+  made[0].ready();
+  made[0].answer(made[0].sent[0]);
+  assert.equal(client.withoutWorker(), true);
+  assert.deepEqual(log.lines, ['BPMN layout on the page, without a worker: the worker did not start (no "ready" within 20 ms)']);
+
+  // On a page that heard from a worker, a late one costs its request, and the next gets a new worker.
+  const second = fakeWorkers({ ready: false }), log2 = quiet();
+  const heard = makeLayoutClient({ makeWorker: second.makeWorker, startLimit: 20, timeLimit: 60, log: log2 });
+  const ok = heard.layout(XML);
+  second.made[0].answer();
+  await ok;
+  const slow = heard.layout(OTHER);
+  await assert.rejects(slow, { message: layoutTimeLimitText(60) });
+  const late = heard.layout(XML);
+  await assert.rejects(late, { message: layoutStartText(20) });
+  second.made[1].ready();
+  assert.equal(heard.withoutWorker(), false);
+  const next = heard.layout(OTHER);
+  assert.equal(second.made.length, 3);
+  second.made[2].ready();
+  second.made[2].answer();
+  assert.deepEqual(await next, layoutJob(OTHER));
+  assert.deepEqual(log2.lines, []);
 });

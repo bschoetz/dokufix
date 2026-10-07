@@ -189,7 +189,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 `);super("error on line "+d+" at column "+i+": "+a),this.name="XmlError",this.code=s,this.reason=a,this.line=d,this.column=i,this.offset=n}},Gn=class{constructor(s,a){this.nodeType=a?4:3,this.nodeName=a?"#cdata-section":"#text",this.data=s,this.parentNode=null}get textContent(){return this.data}},jn=class{constructor(s,a,e){this.nodeType=1,this.nodeName=s,this.prefix=a,this.localName=e,this.namespaceURI=null,this.attributes=[],this.children=[],this.childNodes=[],this.parentElement=null,this.parentNode=null}getAttribute(s){let a=this.attributes.find(e=>e.name===s);return a?a.value:null}get textContent(){let s="",a=[...this.childNodes].reverse();for(;a.length;){let e=a.pop();if(e.nodeType===1)for(let n=e.childNodes.length-1;n>=0;n--)a.push(e.childNodes[n]);else s+=e.data}return s}},Jn=class{constructor(){this.nodeType=9,this.nodeName="#document",this.documentElement=null,this.declaration=null}};function Me(t){let{name:s,ncStart:a}=Vo(),e=String(t);e.charCodeAt(0)===65279&&(e=e.slice(1)),e.indexOf("\r")!==-1&&(e=e.replace(/\r\n?/g,`
 `));let n=e.length,c=(N,J,Q)=>{throw new hn(N,J,e,Q)};ye.lastIndex=0;for(let N;N=ye.exec(e);)N[0].length===1&&c("char","Char 0x"+N[0].charCodeAt(0).toString(16).toUpperCase()+" out of allowed range",N.index);let d=new Jn,i=0,u=(N,J=i)=>e.startsWith(N,J),f=()=>(Dn.lastIndex=i,Dn.test(e)?(i=Dn.lastIndex,!0):!1),p=()=>{s.lastIndex=i;let N=s.exec(e);return N?(i=s.lastIndex,N[0]):null},y=(N,J,Q)=>{u(N)||c(J,Q,i),i+=N.length},h=(N,J,Q)=>{kn.lastIndex=J;let L=kn.exec(N);if(L||c("reference","EntityRef: expecting ';'",Q),L[3])return Object.hasOwn(Mn,L[3])||c("reference","Entity '"+L[3]+"' not defined",Q),[Mn[L[3]],kn.lastIndex];let Z=L[1]?parseInt(L[1],16):parseInt(L[2],10);return Ho(Z)||c("char","xmlParseCharRef: invalid xmlChar value "+Z,Q),[String.fromCodePoint(Z),kn.lastIndex]},w=()=>{let N=e[i];N!=='"'&&N!=="'"&&c("attribute",`AttValue: " or ' expected`,i);let J=++i,Q=e.indexOf(N,J);Q===-1&&c("attribute","AttValue: ' expected",J-1);let L=e.slice(J,Q);if(i=Q+1,L.indexOf("<")!==-1&&c("attribute","Unescaped '<' not allowed in attributes values",J+L.indexOf("<")),L.indexOf("&")===-1&&L.indexOf(`
 `)===-1&&L.indexOf("	")===-1)return L;let Z="";for(let $=0;$<L.length;){let ct=L[$];if(ct==="&"){let[dt,ht]=h(L,$,J+$);Z+=dt,$=ht}else Z+=ct==="	"||ct===`
-`?" ":ct,$++}return Z};if(u("<?xml")&&/[ \t\n?]/.test(e[5]||"")){let N=e.indexOf("?>");N===-1&&c("declaration","parsing XML declaration: '?>' expected",0);let J=/^[ \t\n]+version[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)')(?:[ \t\n]+encoding[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)'))?(?:[ \t\n]+standalone[ \t\n]*=[ \t\n]*(?:"(yes|no)"|'(yes|no)'))?[ \t\n]*$/.exec(e.slice(5,N));J||c("declaration","Malformed XML declaration",0);let Q=J[1]??J[2],L=J[3]??J[4]??null,Z=J[5]??J[6]??null;Q!=="1.0"&&Q!=="1.1"&&c("declaration","Unsupported version '"+Q+"'",0),L!==null&&!/^[A-Za-z][A-Za-z0-9._-]*$/.test(L)&&c("declaration","Invalid XML encoding name",0),d.declaration={version:Q,encoding:L,standalone:Z},i=N+2}let m=()=>{let N=i,J=e.indexOf("-->",i+4);J===-1&&c("comment","Comment not terminated",N);let Q=e.slice(i+4,J);Q.indexOf("--")!==-1&&c("comment","Double hyphen within comment",i+4+Q.indexOf("--")),Q.endsWith("-")&&c("comment","Comment must not end with '-'",J-1),i=J+3},l=()=>{let N=i;i+=2;let J=p();J||c("pi","xmlParsePI : no target name",N),J==="xml"&&c("declaration","XML declaration allowed only at the start of the document",N),J.toLowerCase()==="xml"&&c("pi","xmlParsePI : target '"+J+"' is reserved",N);let Q=e.indexOf("?>",i);Q===-1&&c("pi","ParsePI: PI "+J+" never end ...",N),Q>i&&!/[ \t\n]/.test(e[i])&&c("pi","ParsePI: PI "+J+" space expected",i),i=Q+2},E=()=>{for(;;)if(!f()){if(u("\x3c!--")){m();continue}if(u("<?")){l();continue}return}};E(),u("<!DOCTYPE")&&c("doctype","DOCTYPE is not supported",i),i>=n&&c("structure",e.trim()?"Start tag expected, '<' not found":"Document is empty",i),e[i]!=="<"&&c("structure","Start tag expected, '<' not found",i);let r=[],k=null,O=new Map([["xml",[yn]]]),A=N=>{let J=O.get(N);return J&&J.length?J[J.length-1]:void 0},S=N=>{for(let J of N)O.get(J).pop()},q=N=>(e.slice(0,N).match(/\n/g)||[]).length+1,W=!1,U=(N,J)=>{let Q=k.childNodes[k.childNodes.length-1];if(!J&&!W&&Q&&Q.nodeType===3)Q.data+=N;else{let L=new Gn(N,J);L.parentNode=k,k.childNodes.push(L)}W=!1},st=(N,J)=>{let Q=N.indexOf(":");return Q===-1?(a.test(N)||c("name","Failed to parse QName '"+N+"'",J),[null,N]):((Q===0||Q===N.length-1||N.indexOf(":",Q+1)!==-1||!a.test(N)||!a.test(N.slice(Q+1)))&&c("name","Failed to parse QName '"+N+"'",J),[N.slice(0,Q),N.slice(Q+1)])},D=()=>{k=null,E(),i<n&&c("structure","Extra content at the end of the document",i)};for(;i<n;){let N=e[i];if(N==="<"){if(u("</")){let _=i;k||c("structure","Start tag expected, '<' not found",_),i+=2;let j=p();j||c("name","expected name after </",i),j!==k.nodeName&&c("tag","Opening and ending tag mismatch: "+k.nodeName+" line "+q(r[r.length-1].pos)+" and "+j,_),f(),y(">","tag","expected '>'"),S(r.pop().declared),r.length?k=r[r.length-1].el:D();continue}if(u("\x3c!--")){m(),W=!0;continue}if(u("<![CDATA[")){k||c("structure","Start tag expected, '<' not found",i);let _=e.indexOf("]]>",i+9);_===-1&&c("cdata","CData section not finished",i),U(e.slice(i+9,_),!0),i=_+3;continue}if(u("<?")){l(),W=!0;continue}u("<!DOCTYPE")&&c("doctype","DOCTYPE is not supported",i),u("<!")&&c("name","StartTag: invalid element name",i);let Z=i;i++;let $=p();$||c("name","StartTag: invalid element name",Z);let[ct,dt]=st($,Z),ht=new jn($,ct,dt),T=new Set,tt=[],Ft=!1;for(;;){let _=f();if(u("/>")){Ft=!0,i+=2;break}if(u(">")){i++;break}i>=n&&c("tag","Couldn't find end of Start Tag "+$+" line "+q(Z),Z),_||c("attribute","attributes construct error",i);let j=i,Y=p();Y||c("attribute","error parsing attribute name",j),f(),y("=","attribute","Specification mandates value for attribute "+Y),f();let G=w();T.has(Y)&&c("attribute","Attribute "+Y+" redefined",j),T.add(Y);let[B,X]=st(Y,j);if(Y==="xmlns"||B==="xmlns"){B==="xmlns"&&X==="xmlns"&&c("namespace","xml namespace prefix mapped to wrong URI",j),B==="xmlns"&&X==="xml"&&G!==yn&&c("namespace","xml namespace prefix mapped to wrong URI",j),B==="xmlns"&&X!=="xml"&&G===yn&&c("namespace","reuse of the xml namespace name",j),B==="xmlns"&&G===""&&c("namespace","xmlns:"+X+": Empty XML namespace is not allowed",j),!B&&G===yn&&c("namespace","xml namespace URI cannot be the default namespace",j),G===Bn&&c("namespace","reuse of the xmlns namespace name is forbidden",j);let V=B?X:"";O.has(V)||O.set(V,[]),O.get(V).push(G),tt.push(V),ht.attributes.push({name:Y,prefix:B,localName:X,namespaceURI:Bn,value:G})}else ht.attributes.push({name:Y,prefix:B,localName:X,namespaceURI:null,value:G})}ct?(ht.namespaceURI=A(ct),ht.namespaceURI===void 0&&c("namespace","Namespace prefix "+ct+" on "+dt+" is not defined",Z)):ht.namespaceURI=A("")||null;let C=new Set;for(let _ of ht.attributes){if(_.namespaceURI===Bn||!_.prefix)continue;_.namespaceURI=A(_.prefix),_.namespaceURI===void 0&&c("namespace","Namespace prefix "+_.prefix+" for "+_.localName+" on "+dt+" is not defined",Z);let j=_.namespaceURI+" "+_.localName;C.has(j)&&c("attribute","Namespaced Attribute "+_.localName+" in '"+_.namespaceURI+"' redefined",Z),C.add(j)}k?(ht.parentElement=k,ht.parentNode=k,k.children.push(ht),k.childNodes.push(ht)):d.documentElement=ht,Ft?(S(tt),r.length||D()):(r.push({el:ht,declared:tt,pos:Z}),k=ht);continue}if(N==="&"){let Z=i;if(u("&#")){let[ct,dt]=h(e,i,Z);U(ct,!1),i=dt;continue}i++;let $=p();$||c("reference","xmlParseEntityRef: no name",Z),y(";","reference","EntityRef: expecting ';'"),Object.hasOwn(Mn,$)||c("reference","Entity '"+$+"' not defined",Z),U(Mn[$],!1);continue}let J=i;for(;J<n;J++){let Z=e.charCodeAt(J);if(Z===60||Z===38)break}let Q=e.slice(i,J),L=Q.indexOf("]]>");L!==-1&&c("structure","Sequence ']]>' not allowed in content",i+L),U(Q,!1),i=J}return r.length&&c("tag","Premature end of data in tag "+k.nodeName+" line "+q(r[r.length-1].pos),n),d}function Xo(t){let s;try{s=Me(t)}catch(c){if(c instanceof hn)return{xml:t};throw c}let a=ce(s);if(!a)return{xml:t};let e=be(a.model),n=we(t,a.model,de(e.model,xe(e.model,e.rank)));return{xml:n.xml,open:n.diagram,leftOut:a.leftOut.map(re)}}function ve(t){let s=t?t.id:void 0;try{return{id:s,ok:!0,result:Xo(String(t.xml))}}catch(a){return{id:s,ok:!1,error:a&&a.message?String(a.message):String(a)}}}self.onmessage=t=>self.postMessage(ve(t.data));})();</script>
+`?" ":ct,$++}return Z};if(u("<?xml")&&/[ \t\n?]/.test(e[5]||"")){let N=e.indexOf("?>");N===-1&&c("declaration","parsing XML declaration: '?>' expected",0);let J=/^[ \t\n]+version[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)')(?:[ \t\n]+encoding[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)'))?(?:[ \t\n]+standalone[ \t\n]*=[ \t\n]*(?:"(yes|no)"|'(yes|no)'))?[ \t\n]*$/.exec(e.slice(5,N));J||c("declaration","Malformed XML declaration",0);let Q=J[1]??J[2],L=J[3]??J[4]??null,Z=J[5]??J[6]??null;Q!=="1.0"&&Q!=="1.1"&&c("declaration","Unsupported version '"+Q+"'",0),L!==null&&!/^[A-Za-z][A-Za-z0-9._-]*$/.test(L)&&c("declaration","Invalid XML encoding name",0),d.declaration={version:Q,encoding:L,standalone:Z},i=N+2}let m=()=>{let N=i,J=e.indexOf("-->",i+4);J===-1&&c("comment","Comment not terminated",N);let Q=e.slice(i+4,J);Q.indexOf("--")!==-1&&c("comment","Double hyphen within comment",i+4+Q.indexOf("--")),Q.endsWith("-")&&c("comment","Comment must not end with '-'",J-1),i=J+3},l=()=>{let N=i;i+=2;let J=p();J||c("pi","xmlParsePI : no target name",N),J==="xml"&&c("declaration","XML declaration allowed only at the start of the document",N),J.toLowerCase()==="xml"&&c("pi","xmlParsePI : target '"+J+"' is reserved",N);let Q=e.indexOf("?>",i);Q===-1&&c("pi","ParsePI: PI "+J+" never end ...",N),Q>i&&!/[ \t\n]/.test(e[i])&&c("pi","ParsePI: PI "+J+" space expected",i),i=Q+2},E=()=>{for(;;)if(!f()){if(u("\x3c!--")){m();continue}if(u("<?")){l();continue}return}};E(),u("<!DOCTYPE")&&c("doctype","DOCTYPE is not supported",i),i>=n&&c("structure",e.trim()?"Start tag expected, '<' not found":"Document is empty",i),e[i]!=="<"&&c("structure","Start tag expected, '<' not found",i);let r=[],k=null,O=new Map([["xml",[yn]]]),A=N=>{let J=O.get(N);return J&&J.length?J[J.length-1]:void 0},S=N=>{for(let J of N)O.get(J).pop()},q=N=>(e.slice(0,N).match(/\n/g)||[]).length+1,W=!1,U=(N,J)=>{let Q=k.childNodes[k.childNodes.length-1];if(!J&&!W&&Q&&Q.nodeType===3)Q.data+=N;else{let L=new Gn(N,J);L.parentNode=k,k.childNodes.push(L)}W=!1},st=(N,J)=>{let Q=N.indexOf(":");return Q===-1?(a.test(N)||c("name","Failed to parse QName '"+N+"'",J),[null,N]):((Q===0||Q===N.length-1||N.indexOf(":",Q+1)!==-1||!a.test(N)||!a.test(N.slice(Q+1)))&&c("name","Failed to parse QName '"+N+"'",J),[N.slice(0,Q),N.slice(Q+1)])},D=()=>{k=null,E(),i<n&&c("structure","Extra content at the end of the document",i)};for(;i<n;){let N=e[i];if(N==="<"){if(u("</")){let _=i;k||c("structure","Start tag expected, '<' not found",_),i+=2;let j=p();j||c("name","expected name after </",i),j!==k.nodeName&&c("tag","Opening and ending tag mismatch: "+k.nodeName+" line "+q(r[r.length-1].pos)+" and "+j,_),f(),y(">","tag","expected '>'"),S(r.pop().declared),r.length?k=r[r.length-1].el:D();continue}if(u("\x3c!--")){m(),W=!0;continue}if(u("<![CDATA[")){k||c("structure","Start tag expected, '<' not found",i);let _=e.indexOf("]]>",i+9);_===-1&&c("cdata","CData section not finished",i),U(e.slice(i+9,_),!0),i=_+3;continue}if(u("<?")){l(),W=!0;continue}u("<!DOCTYPE")&&c("doctype","DOCTYPE is not supported",i),u("<!")&&c("name","StartTag: invalid element name",i);let Z=i;i++;let $=p();$||c("name","StartTag: invalid element name",Z);let[ct,dt]=st($,Z),ht=new jn($,ct,dt),T=new Set,tt=[],Ft=!1;for(;;){let _=f();if(u("/>")){Ft=!0,i+=2;break}if(u(">")){i++;break}i>=n&&c("tag","Couldn't find end of Start Tag "+$+" line "+q(Z),Z),_||c("attribute","attributes construct error",i);let j=i,Y=p();Y||c("attribute","error parsing attribute name",j),f(),y("=","attribute","Specification mandates value for attribute "+Y),f();let G=w();T.has(Y)&&c("attribute","Attribute "+Y+" redefined",j),T.add(Y);let[B,X]=st(Y,j);if(Y==="xmlns"||B==="xmlns"){B==="xmlns"&&X==="xmlns"&&c("namespace","xml namespace prefix mapped to wrong URI",j),B==="xmlns"&&X==="xml"&&G!==yn&&c("namespace","xml namespace prefix mapped to wrong URI",j),B==="xmlns"&&X!=="xml"&&G===yn&&c("namespace","reuse of the xml namespace name",j),B==="xmlns"&&G===""&&c("namespace","xmlns:"+X+": Empty XML namespace is not allowed",j),!B&&G===yn&&c("namespace","xml namespace URI cannot be the default namespace",j),G===Bn&&c("namespace","reuse of the xmlns namespace name is forbidden",j);let V=B?X:"";O.has(V)||O.set(V,[]),O.get(V).push(G),tt.push(V),ht.attributes.push({name:Y,prefix:B,localName:X,namespaceURI:Bn,value:G})}else ht.attributes.push({name:Y,prefix:B,localName:X,namespaceURI:null,value:G})}ct?(ht.namespaceURI=A(ct),ht.namespaceURI===void 0&&c("namespace","Namespace prefix "+ct+" on "+dt+" is not defined",Z)):ht.namespaceURI=A("")||null;let C=new Set;for(let _ of ht.attributes){if(_.namespaceURI===Bn||!_.prefix)continue;_.namespaceURI=A(_.prefix),_.namespaceURI===void 0&&c("namespace","Namespace prefix "+_.prefix+" for "+_.localName+" on "+dt+" is not defined",Z);let j=_.namespaceURI+" "+_.localName;C.has(j)&&c("attribute","Namespaced Attribute "+_.localName+" in '"+_.namespaceURI+"' redefined",Z),C.add(j)}k?(ht.parentElement=k,ht.parentNode=k,k.children.push(ht),k.childNodes.push(ht)):d.documentElement=ht,Ft?(S(tt),r.length||D()):(r.push({el:ht,declared:tt,pos:Z}),k=ht);continue}if(N==="&"){let Z=i;if(u("&#")){let[ct,dt]=h(e,i,Z);U(ct,!1),i=dt;continue}i++;let $=p();$||c("reference","xmlParseEntityRef: no name",Z),y(";","reference","EntityRef: expecting ';'"),Object.hasOwn(Mn,$)||c("reference","Entity '"+$+"' not defined",Z),U(Mn[$],!1);continue}let J=i;for(;J<n;J++){let Z=e.charCodeAt(J);if(Z===60||Z===38)break}let Q=e.slice(i,J),L=Q.indexOf("]]>");L!==-1&&c("structure","Sequence ']]>' not allowed in content",i+L),U(Q,!1),i=J}return r.length&&c("tag","Premature end of data in tag "+k.nodeName+" line "+q(r[r.length-1].pos),n),d}function Xo(t){let s;try{s=Me(t)}catch(c){if(c instanceof hn)return{xml:t};throw c}let a=ce(s);if(!a)return{xml:t};let e=be(a.model),n=we(t,a.model,de(e.model,xe(e.model,e.rank)));return{xml:n.xml,open:n.diagram,leftOut:a.leftOut.map(re)}}function ve(t){let s=t?t.id:void 0;try{return{id:s,ok:!0,result:Xo(String(t.xml))}}catch(a){return{id:s,ok:!1,error:a&&a.message?String(a.message):String(a)}}}self.onmessage=t=>self.postMessage(ve(t.data));self.postMessage({ready:!0});})();</script>
 <script>/*
 In diesem Skript steckt ein Nachbau des Textlayouts von diagram-js 15.28.0 (src/app/label-size.js von dokufix, lib/util/Text.js von diagram-js), dazu wenige Konstanten und Formeln des Textrenderers von bpmn-js 18.31.0 (bpmn.io License, Copyright (c) 2014-present Camunda Services GmbH), und LMM (src/app/lmm.js von dokufix), ein Nachbau der Schichtung aus Mermaid's swimlane layout 12.0.0 (src/rendering-util/layout-algorithms/swimlanes/ von Mermaid).
 
@@ -3759,7 +3759,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   // src/app/layout-client.js
   var LAYOUT_TIME_LIMIT = 12e4;
   var LAYOUT_SCRIPT_ID = "dokufix-layout-js";
-  var layoutTimeLimitText = (ms) => "Das Layout hat die Zeitgrenze von " + String(ms / 1e3).replace(".", ",") + " s überschritten.";
+  var LAYOUT_START_LIMIT = 5e3;
+  var inSeconds = (ms) => String(ms / 1e3).replace(".", ",");
+  var layoutTimeLimitText = (ms) => "Das Layout hat die Zeitgrenze von " + inSeconds(ms) + " s überschritten.";
+  var layoutStartText = (ms) => "Das Layout im Hintergrund ist nicht innerhalb von " + inSeconds(ms) + " s gestartet.";
   var LAYOUT_ABORTED = "Das Layout wurde abgebrochen.";
   var LAYOUT_WORKER_FAILED = "Das Layout ist im Hintergrund fehlgeschlagen.";
   var blobUrl = null;
@@ -3775,9 +3778,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     e.name = "AbortError";
     return e;
   }
-  function makeLayoutClient({ makeWorker = pageWorker, job: onPageJob = layoutJob, timeLimit = LAYOUT_TIME_LIMIT, timers = globalThis, log = console } = {}) {
+  function makeLayoutClient({ makeWorker = pageWorker, job: onPageJob = layoutJob, timeLimit = LAYOUT_TIME_LIMIT, startLimit = LAYOUT_START_LIMIT, timers = globalThis, log = console } = {}) {
     let worker = null;
-    let answered = false;
+    let startTimer;
+    let everHeard = false;
     let onPage = false;
     let ids = 0;
     const queue = [];
@@ -3791,16 +3795,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         log.info("BPMN layout on the page, without a worker: " + (e && e.message ? e.message : e));
         return null;
       }
-      answered = false;
       made.onmessage = (e) => receive(made, e.data);
       made.onerror = (e) => failed(made, e);
+      made.onmessageerror = (e) => failed(made, e);
+      startTimer = timers.setTimeout(() => lost(made, layoutStartText(startLimit), 'no "ready" within ' + startLimit + " ms"), startLimit);
       return made;
+    }
+    function stopStartTimer() {
+      if (startTimer !== void 0) timers.clearTimeout(startTimer);
+      startTimer = void 0;
     }
     function drop() {
       const w = worker;
       worker = null;
+      stopStartTimer();
       if (w) {
-        w.onmessage = w.onerror = null;
+        w.onmessage = w.onerror = w.onmessageerror = null;
         w.terminate();
       }
     }
@@ -3835,27 +3845,34 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       }
     }
     function receive(from, data) {
-      if (from !== worker || !running || !data || data.id !== running.id) return;
-      answered = true;
+      if (from !== worker) return;
+      everHeard = true;
+      stopStartTimer();
+      if (!running || !data || data.ready || data.id !== running.id) return;
       settle(running, data.ok ? null : new Error(String(data.error)), data.ok ? data.result : void 0);
       next();
     }
     function failed(from, e) {
       if (from !== worker) return;
       if (e && typeof e.preventDefault === "function") e.preventDefault();
-      const job = running, started = answered, reason = e && e.message ? String(e.message) : "";
+      const reason = e && e.message ? String(e.message) : "";
+      lost(from, LAYOUT_WORKER_FAILED + (reason ? " " + reason : ""), reason);
+    }
+    function lost(from, message, detail) {
+      if (from !== worker) return;
+      const job = running;
       drop();
       running = null;
-      if (!started) {
+      if (!everHeard) {
         onPage = true;
-        log.info("BPMN layout on the page, without a worker: the worker did not start" + (reason ? " (" + reason + ")" : ""));
+        log.info("BPMN layout on the page, without a worker: the worker did not start" + (detail ? " (" + detail + ")" : ""));
         if (job) {
           timers.clearTimeout(job.timer);
           job.timer = void 0;
           queue.unshift(job);
         }
       } else if (job) {
-        settle(job, new Error(LAYOUT_WORKER_FAILED + (reason ? " " + reason : "")));
+        settle(job, new Error(message));
       }
       next();
     }
@@ -4838,12 +4855,16 @@ const LAYOUT = T.makeLayoutClient();
 let aborter = null;
 // Die Anordnung von bpmn.io ist reine Logik wie A2 (bpmn-moddle, ohne DOM) und braucht bei großen Prozessen ebenso
 // lange (hund3: 17 s in Chromium); sie läuft deshalb auch in einem Worker, mit demselben Protokoll und Client, aus dem
-// Text ihres Skripts oben (window ist dort self). Ohne Worker ordnet sie auf der Seite an, wie bisher.
+// Text ihres Skripts oben (window ist dort self), "ready" nach dem Laden eingeschlossen. Ohne Worker ordnet sie auf der
+// Seite an, wie bisher.
 function balAnswer(r){
   return { xml: r.xml, warnings: (r.warnings || []).map(w => [w.code, w.message].filter(Boolean).join(': ') || String(w)) };
 }
 const BAL_HANDLER = 'self.onmessage = async e => { const m = e.data || {}; try { self.postMessage({ id: m.id, ok: true, result: balAnswer(await self.BAL.layoutProcess(String(m.xml))) }); }'
-  + ' catch (err){ self.postMessage({ id: m.id, ok: false, error: err && err.message ? String(err.message) : String(err) }); } };';
+  + ' catch (err){ self.postMessage({ id: m.id, ok: false, error: err && err.message ? String(err.message) : String(err) }); } };'
+  // Geladen: gemeldet wie der Worker der App (src/layout-worker.js); ein Worker, der sich nicht meldet, gilt dem Client
+  // als nicht gestartet.
+  + ' self.postMessage({ ready: true });';
 let balUrl = null;
 function balWorker(){
   if (typeof Worker !== 'function') throw new Error('the page has no Worker');

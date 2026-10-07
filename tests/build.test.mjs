@@ -443,7 +443,7 @@ const layoutBlock = html => {
 };
 // src/layout-worker.js with what it imports, one minified IIFE in the data
 // block #dokufix-layout-js, of which the page makes a worker.
-test('the built file carries the layout\'s worker in a block that does not run; run as a worker with nothing of a page, it answers as layoutJob() does', async () => {
+test('the built file carries the layout\'s worker in a block that does not run; run as a worker with nothing of a page, it says it is ready and answers as layoutJob() does', async () => {
   const html = fs.readFileSync(committed, 'utf8');
   assert.equal(html.split('<script type="text/plain" id="dokufix-layout-js">').length, 2, 'one block, of a type that does not run');
   const code = layoutBlock(html);
@@ -461,7 +461,9 @@ test('the built file carries the layout\'s worker in a block that does not run; 
   const self = { postMessage: m => posted.push(structuredClone(m)) };
   vm.runInNewContext(code, { self });
   assert.equal(typeof self.onmessage, 'function', 'it listens for messages when it is loaded');
-  assert.deepEqual(posted, [], 'and says nothing before it is asked');
+  // The start handshake (src/app/layout-client.js): once loaded it says so, and nothing else before it is asked.
+  assert.deepEqual(posted, [{ ready: true }], 'it says it is ready, and nothing else before it is asked');
+  posted.length = 0;
   const xml = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:task id="A" name="Tun"/>' +
     '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="A"/><bpmn:dataStoreReference id="B"/></bpmn:process></bpmn:definitions>';
   self.onmessage({ data: { id: 3, xml } });

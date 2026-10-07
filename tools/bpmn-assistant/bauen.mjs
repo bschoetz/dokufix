@@ -727,12 +727,16 @@ const LAYOUT = T.makeLayoutClient();
 let aborter = null;
 // Die Anordnung von bpmn.io ist reine Logik wie A2 (bpmn-moddle, ohne DOM) und braucht bei großen Prozessen ebenso
 // lange (hund3: 17 s in Chromium); sie läuft deshalb auch in einem Worker, mit demselben Protokoll und Client, aus dem
-// Text ihres Skripts oben (window ist dort self). Ohne Worker ordnet sie auf der Seite an, wie bisher.
+// Text ihres Skripts oben (window ist dort self), "ready" nach dem Laden eingeschlossen. Ohne Worker ordnet sie auf der
+// Seite an, wie bisher.
 function balAnswer(r){
   return { xml: r.xml, warnings: (r.warnings || []).map(w => [w.code, w.message].filter(Boolean).join(': ') || String(w)) };
 }
 const BAL_HANDLER = 'self.onmessage = async e => { const m = e.data || {}; try { self.postMessage({ id: m.id, ok: true, result: balAnswer(await self.BAL.layoutProcess(String(m.xml))) }); }'
-  + ' catch (err){ self.postMessage({ id: m.id, ok: false, error: err && err.message ? String(err.message) : String(err) }); } };';
+  + ' catch (err){ self.postMessage({ id: m.id, ok: false, error: err && err.message ? String(err.message) : String(err) }); } };'
+  // Geladen: gemeldet wie der Worker der App (src/layout-worker.js); ein Worker, der sich nicht meldet, gilt dem Client
+  // als nicht gestartet.
+  + ' self.postMessage({ ready: true });';
 let balUrl = null;
 function balWorker(){
   if (typeof Worker !== 'function') throw new Error('the page has no Worker');
