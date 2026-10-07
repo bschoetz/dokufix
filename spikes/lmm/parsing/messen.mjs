@@ -11,6 +11,7 @@
 // bun:leser), Chromium heißt "chromium".
 
 import fs from 'node:fs';
+import { kompakt, voll } from './speicher.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { alleFaelle } from './faelle.mjs';
@@ -28,7 +29,7 @@ const filter = arg('--faelle') ? new RegExp(arg('--faelle')) : null;
 
 const faelle = alleFaelle().filter(f => !filter || filter.test(f.name));
 const { readProcess } = await import(R + 'src/app/bpmn-layout.js');
-const store = fs.existsSync(OUT) ? JSON.parse(fs.readFileSync(OUT, 'utf8')) : { umgebungen: {} };
+const store = fs.existsSync(OUT) ? voll(JSON.parse(fs.readFileSync(OUT, 'utf8'))) : { umgebungen: {} };
 const merge = (key, info, results) => {
   const slot = store.umgebungen[key] || (store.umgebungen[key] = { info, results: {} });
   slot.info = info;
@@ -57,5 +58,5 @@ for (const name of wanted){
   console.log(key + ': ' + faelle.length + ' Fälle, ' + mod.info);
 }
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
-fs.writeFileSync(OUT, JSON.stringify(store));
+fs.writeFileSync(OUT, JSON.stringify(kompakt(store)));
 console.log('geschrieben: ' + OUT + ' (' + Object.keys(store.umgebungen).join(', ') + ')');

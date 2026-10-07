@@ -5,11 +5,12 @@
 //   node tabelle.mjs [--referenz chromium]
 
 import fs from 'node:fs';
+import { voll } from './speicher.mjs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
-const store = JSON.parse(fs.readFileSync(path.join(here, 'ergebnisse', 'ergebnisse.json'), 'utf8'));
+const store = voll(JSON.parse(fs.readFileSync(path.join(here, 'ergebnisse', 'ergebnisse.json'), 'utf8')));
 const arg = name => { const i = process.argv.indexOf(name); return i > 0 ? process.argv[i + 1] : null; };
 const REF = arg('--referenz') || 'chromium';
 const envs = Object.keys(store.umgebungen).filter(e => e !== REF);
