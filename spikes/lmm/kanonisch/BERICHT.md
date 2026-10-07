@@ -1,6 +1,6 @@
 # Kanonische Ordnung für das Raster: Prüfung des Versuchs und die empfohlene Sortierung
 
-Stand 7. Oktober 2026. Geprüft wurde der Versuch `check/canon.mjs` (`canonical(model)`), danach wurden 90 Sortiervarianten an den 57 Fixtures gemessen, die besten auf Invarianz gegen Umordnung und Umbenennung des XML. Ergebnis ist das Modul `kanonisch.mjs` (`kanonisch(model)`). Im Repository wurde nichts geändert; alles liegt in `spikes/arielle/kanonisch/`.
+Stand 7. Oktober 2026. Geprüft wurde der Versuch `check/canon.mjs` (`canonical(model)`), danach wurden 90 Sortiervarianten an den 57 Fixtures gemessen, die besten auf Invarianz gegen Umordnung und Umbenennung des XML. Ergebnis ist das Modul `kanonisch.mjs` (`kanonisch(model)`). Im Repository wurde nichts geändert; alles liegt in `spikes/lmm/kanonisch/`.
 
 ## Ergebnis in Kürze
 
@@ -193,4 +193,4 @@ Abnahme gegen Abschnitt 6 der Analyse: Layoutänderung bei Umordnung 0 %; Verst�
 | `permute-mehr.mjs` → `permute-mehr.log` | erweiterte Umordnung (Nachrichtenflüsse, Notizen, Assoziationen) |
 | `_repro-canon.log`, `_repro-canon-quality.log` | Reproduktion des Versuchs mit den Skripten aus `check/` |
 
-Alle Skripte laufen mit `cd spikes/arielle/kanonisch && node <skript>` und importieren das Repository über `/home/user/dokufix/`.
+Alle Skripte laufen mit `cd spikes/lmm/kanonisch && node <skript>` und importieren das Repository über `/home/user/dokufix/`.

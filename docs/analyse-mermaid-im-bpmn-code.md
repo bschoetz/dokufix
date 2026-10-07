@@ -28,11 +28,11 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - Es gibt keine Kopplung an eine Mermaid-Version und an eine Beta-Syntax mehr.
   - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
-- **Die Komponente heißt LMM**, kurz für „Little Mermaid“: ein Wortspiel auf LLM, mit dessen Hilfe sie entstanden ist. Ihr Arbeitstitel war „arielle“; die Dateien im Spike `spikes/arielle/` tragen ihn noch (`arielle()`, `arielleExakt()`). LMM kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul und sagt offen, dass es auf Mermaid beruht (MIT).
+- **Die Komponente heißt LMM**, kurz für „Little Mermaid“: ein Wortspiel auf LLM, mit dessen Hilfe sie entstanden ist. Ihr Arbeitstitel war „arielle“; die Dateien im Spike `spikes/lmm/` tragen ihn noch (`arielle()`, `arielleExakt()`). LMM kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul und sagt offen, dass es auf Mermaid beruht (MIT).
 - **Lizenz:** Die BPMN-Layout-Komponente soll später als eigenes Paket erscheinen und steht unter der **LGPL-3.0**. Sie nimmt XML ohne Positionen und gibt XML mit Positionen zurück, also `bpmn-layout.js`, `lmm.js` und einen kleinen Einstieg, ohne Laufzeitabhängigkeiten. Mermaids MIT-Hinweis bleibt in `lmm.js` erhalten (Abschnitt 4a).
 - **Mermaids Spaltenreihung ist volatil, und LMM beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. LMM ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
 - **Auch das fertige Layout lässt sich stabil machen.** Mit LMM allein ändert sich das Bild noch bei rund 21–23 % der Umordnungen, weil Regeln des eigenen Rasters bei Gleichstand der Reihenfolge des Modells folgen. Die Lösung ist `kanonisch()`: Das Modell wird vor dem Layout einmal in LMMs Reihenfolge gebracht. Knoten kommen in der Reihenfolge der Rangvergabe, Flüsse in der Reihenfolge von LMMs Tiefensuche (Abschnitt 3b). Ergebnis: Das Bild ändert sich bei **0 von 570** Umordnungen und bei 0 von 570 Umbenennungen. Die Qualität wird besser: 43 statt 44 Verstöße, 46 statt 48 Kreuzungen, 324 statt 325 Knicke.
-- **Empfehlung:** LMM samt `kanonisch()` als eigenes Modul `src/app/lmm.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 10 der 57 Fixtures werden einmal neu geschrieben.
+- **Empfehlung:** LMM samt `kanonisch()` als eigenes Modul `src/app/lmm.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 13 der 57 Fixtures werden einmal neu geschrieben.
 
 ## Vorgehen
 
@@ -44,7 +44,7 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
 6. Den Nachbau von einem zweiten Agenten reviewen lassen: Korrektheit, Vereinfachung, Volatilität gegen Umordnung und Umbenennung, Qualität der Varianten (Abschnitt 3a). Seine Kernergebnisse habe ich mit eigenen Tests nachgeprüft: Qualitätsmessung erneut ausgeführt, Invarianz unabhängig nachgemessen.
 7. Die verbleibende Volatilität im Raster gemessen und eine kanonische Sortierung des Modells als Gegenmittel ausprobiert (Abschnitt 3b).
 
-Die Versuchsskripte, die Nachbauten, LMM und die Review-Berichte liegen in `spikes/arielle/` (siehe dessen `README.md`). Dort heißen LMM `arielle()` (`review/ranks-optimiert.mjs`) und die exakte Referenz `arielleExakt()` (`review/ranks-exakt.mjs`); `kanonisch()` steht in `kanonisch/kanonisch.mjs`.
+Die Versuchsskripte, die Nachbauten, LMM und die Review-Berichte liegen in `spikes/lmm/` (siehe dessen `README.md`). Dort heißen LMM `arielle()` (`review/ranks-optimiert.mjs`) und die exakte Referenz `arielleExakt()` (`review/ranks-exakt.mjs`); `kanonisch()` steht in `kanonisch/kanonisch.mjs`.
 
 ## Datenfluss heute und nach der Ablösung
 
@@ -277,10 +277,10 @@ Zur Einordnung: Die heutige Reihenfolge des XML ist selbst nur eine zufällige S
 
 ### Die verbesserte Sortierung: `kanonisch()`
 
-Ein zweites Review (`spikes/arielle/kanonisch/BERICHT.md`) hat den Versuch geprüft und eine bessere Ordnung gefunden. Die Befunde zum ersten Versuch:
+Ein zweites Review (`spikes/lmm/kanonisch/BERICHT.md`) hat den Versuch geprüft und eine bessere Ordnung gefunden. Die Befunde zum ersten Versuch:
 
 - **Vollständig und bedeutungstreu.** Sortiert sind alle Listen, deren Reihenfolge `layoutGeometry()` liest. Bahnen und Pools behalten ihre Reihenfolge.
-- **Falsch gewichtet.** Notizen, Assoziationen und Nachrichtenflüsse nach ID zu sortieren ist unnötig und schadet. Die Reihenfolge der Notizen ist die des Autors (Review von Story 2.31): Eine früher stehende Notiz bekommt den besseren Platz. Das kostete den neuen Verstoß in `notiz-morgen`. Außerdem bedient die Flussordnung „nach Position der Enden“ die Gleichstände der Regeln schlechter als die XML-Reihenfolge.
+- **Falsch gewichtet.** Notizen nach ID zu sortieren ist ein schlechter Schlüssel: Eine früher stehende Notiz bekommt den besseren Platz, und die ID sagt darüber nichts. Das kostete den neuen Verstoß in `notiz-morgen`. (Das zweite Review hielt die XML-Reihenfolge der Notizen deshalb für die des Autors; das dritte hat das korrigiert, siehe *Die Notizen*.) Außerdem bedient die Flussordnung „nach Position der Enden“ die Gleichstände der Regeln schlechter als die XML-Reihenfolge.
 - **Ein Messfehler in meinem Skript:** `canon-quality.mjs` verglich Diagramme, deren Schlüsselreihenfolge der Modellreihenfolge folgt. Viele „geänderte“ Fixtures waren deshalb nur anders serialisiert. Die Gesamtzahlen hielten der Nachmessung stand.
 
 **Die Regeln von `kanonisch(model)`:**
@@ -291,7 +291,8 @@ Ein zweites Review (`spikes/arielle/kanonisch/BERICHT.md`) hat den Versuch gepr�
 | `model.flows` | die Reihenfolge, in der LMMs Tiefensuche die Flüsse durchläuft: der Hauptweg bis zum Ende, dann die Alternativen, jeder Rückwärtsfluss dort, wo die Suche auf ihn trifft |
 | `model.boundaries` | nach der Position des Hosts, dann nach dem ersten Fluss des Ereignisses, dann Name, dann ID |
 | `lane.nodes` | wie die Knoten |
-| Bahnen, Pools, Nachrichtenflüsse, Notizen, Assoziationen | **unverändert**: Ihre Reihenfolge hat Bedeutung oder ist die des Autors |
+| Bahnen, Pools | **unverändert**: Sie geben die sichtbare Anordnung von oben nach unten vor |
+| Notizen, Nachrichtenflüsse, Assoziationen | im ersten Schritt unverändert gelassen; die Lösung dafür steht unten unter *Die Notizen* |
 
 Die Ordnungen fallen bei LMMs Lauf ohnehin an. `kanonisch(model)` gibt deshalb Modell und Ränge in einem Lauf zurück: `{ model, rank }`.
 
@@ -307,7 +308,7 @@ Die Ordnungen fallen bei LMMs Lauf ohnehin an. `kanonisch(model)` gibt deshalb M
 
 Die drei „neuen“ Verstöße sind Tausche gleicher Art: In `r15` und `r17` liegt ein Verstoß an einem anderen Flusspaar, dafür gibt es in `r15` einen Knick und in `r17` eine Kreuzung weniger. `angeheftet-antrag` verliert seinen Verstoß `node-outside-lane`. In der Messart `estimated` ändern sich dieselben 10 Fixtures, Kreuzungen 47 → 45, Knicke 325 → 324.
 
-Die Invarianz und die Gesamtzahlen habe ich mit einem eigenen Skript nachgemessen (`spikes/arielle/check/kanonisch-check.mjs`): 0 von 570 Umordnungen ändern das Bild; 43 Verstöße, 46 Kreuzungen, 324 Knicke.
+Die Invarianz und die Gesamtzahlen habe ich mit einem eigenen Skript nachgemessen (`spikes/lmm/check/kanonisch-check.mjs`): 0 von 570 Umordnungen ändern das Bild; 43 Verstöße, 46 Kreuzungen, 324 Knicke.
 
 **Warum der erste Versuch in vier Fixtures schlechter war:**
 
@@ -319,10 +320,52 @@ Bei 8 der 10 Bildänderungen mit `kanonisch()` steht jeder Knoten an derselben S
 
 **Grenzen:**
 
-- Werden auch Notizen und Nachrichtenflüsse umgeordnet, ändert sich das Bild noch bei 4,9 % der Umordnungen, nur in den 5 Fixtures mit Notizen. Das ist gewollt, denn deren Reihenfolge ist die des Autors.
+- Werden auch Notizen und Nachrichtenflüsse umgeordnet, ändert sich das Bild noch bei rund 5–6 % der Umordnungen, nur in den 5 Fixtures mit Notizen. Gelöst ist das im nächsten Abschnitt.
 - Gleichstände in R1 und im Router sind damit deterministisch, aber nicht inhaltlich entschieden. Eine inhaltliche Regel dafür wäre ein eigener Schritt.
 
 **Die Alternative, die Ordnung als letzten Schlüssel in die Regeln zu tragen, ist nicht nötig.** Etwa 30 Stellen in 15 Funktionen lesen die Modellreihenfolge. Alle lesen nur `model.nodes`, `model.flows`, `model.boundaries` und die daraus gebauten Zellen. Eine Sortierung am Eingang wirkt daher genauso; auf einer Kopie von `bpmn-layout.js` gemessen, war der Diagrammteil bei 57 von 57 Fixtures gleich.
+
+### Die Notizen
+
+Ein drittes Review (`spikes/lmm/notizen/BERICHT.md`) hat die Reihenfolge der Textanmerkungen gelöst. Die frühere Begründung, die Reihenfolge der Notizen sei „die des Autors“ und solle deshalb bleiben, war nur für Notizen an Pools vertretbar. Für alle anderen war sie ein bedeutungsloser Tie-Break.
+
+**Wo die Reihenfolge wirkt** (`src/app/bpmn-layout.js`):
+
+- **`model.notes`:** Die Notizen werden der Reihe nach platziert (Schleife ab Z. 2812). Jede nimmt den ersten freien Platz neben ihrem Partner und meidet alles schon Platzierte, auch frühere Notizen. Die erste bekommt den besten Platz. Eine spätere weicht in die nächste Runde aus, in einen Streifen am Bahnrand, wodurch das Bild wächst, oder im schlimmsten Fall auf eine frühere Notiz (`note-on-note`). Notizen an Pools werden rechts vom Pool in Listenreihenfolge gestapelt (Z. 2996).
+- **`model.associations`:** Nur die erste Assoziation einer Notiz zählt (`assocs.find(…)`). Sie bestimmt Partner, Art und Ankerpunkt und in `readNotes()` auch den Pool.
+- **`model.messages`:** Der Router legt Nachrichtenflüsse gleicher Spannweite in Listenreihenfolge. In den Fixtures kippt das nie, für die Invarianz muss die Liste trotzdem sortiert werden.
+- **`appendDiagram()`:** Hier bestimmt die Reihenfolge nur, in welcher Folge die Elemente im Diagrammteil stehen, nicht ihre Geometrie.
+
+**Die Ordnung**, als Erweiterung von `kanonisch()` (`spikes/lmm/notizen/kanonisch-notizen.mjs`, gleiche Schnittstelle):
+
+| Liste | Ordnung |
+|---|---|
+| Notizen | nach Art des Partners: zuerst an Knoten, dann an angehefteten Ereignissen, an Sequenzflüssen, an Nachrichtenflüssen. Innerhalb einer Art nach dem Platz des Partners in `kanonisch()`, dann Text, dann ID |
+| Notizen an Pools | nach Pool, dann Text, dann ID; die XML-Reihenfolge bleibt als Option |
+| Nachrichtenflüsse | nach Position der Quelle, dann des Ziels, dann Name, dann ID |
+| Assoziationen | je Notiz nach dem Platz des Partners, dann Richtung, dann ID |
+
+**Gemessen** (57 Fixtures, `measured`):
+
+| | `kanonisch()` ohne Notizen | **mit Notizen** |
+|---|---|---|
+| Verstöße / davon Notizen | 43 / 1 | **43 / 1** |
+| Kreuzungen / Knicke | 46 / 324 | **43 / 324** |
+| mittlerer Abstand Notiz – Partner | 75 px | 70 px |
+| Layout anders bei Umordnung von allem, auch Notizen, Assoziationen und Nachrichtenflüssen (570) | 6,0 % (5 Fixtures) | **0** |
+| Layout anders bei Umbenennung (570) | 0 | **0** |
+
+Drei Fixtures ändern sich gegenüber `kanonisch()` ohne Notizen, keines wird schlechter:
+
+- `notiz-r12`: Kreuzungen 3 → 2, der Streifen entfällt, das Bild wird 90 px niedriger,
+- `notiz-bauantrag`: Kreuzungen 10 → 8,
+- `notiz-zwei`: Zwei Notizen am selben Knoten tauschen die Plätze.
+
+Ich habe die Invarianz mit einem eigenen Skript nachgemessen, das auch Notizen, Assoziationen und Nachrichtenflüsse umordnet (`spikes/lmm/check/notizen-check.mjs`). Ohne Notiz-Sortierung ändert sich das Bild in 36 von 570 Fällen (5 Fixtures), mit ihr in 0 von 570, bei 43 Verstößen, 43 Kreuzungen und 324 Knicken.
+
+**Notizen an Pools werden ebenfalls kanonisch sortiert.** BPMN gibt der Reihenfolge der Elemente keine Bedeutung. Modellierwerkzeuge schreiben die Reihenfolge, in der etwas angelegt wurde, und ein Autor kann den Stapel nur durch Umsortieren des XML steuern. Mit drei Notizen an einem Pool gibt es heute je nach XML drei verschiedene Bilder, kanonisch eines. Kein Fixture hat zwei Notizen an einem Pool; die Entscheidung ist also nicht an den Fixtures gemessen, sondern begründet.
+
+**Grenzen:** Ein Vergleich mit allen bzw. 150 zufälligen Reihenfolgen je Notiz-Fixture zeigt: Die gewählte Ordnung ist in 7 von 9 Fixtures die beste. In `notiz-bauantrag` bleibt eine einzelne Kollision zweier Notizen, die das Bild 208 px höher macht. Das ist eine Frage der Platzierung selbst, etwa mit zwei Durchgängen, nicht der Eingangsreihenfolge, und wäre eine eigene Story.
 
 ## 4. Was sich beim Ersatz ändert
 
@@ -446,7 +489,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
 **Schritt 2: umschalten.**
 
 - `layoutBpmn()` nutzt `kanonisch()` statt `mermaidPositions()`: das sortierte Modell und die Ränge für `layoutGeometry()`, das Modell des Autors für `appendDiagram()`.
-- `npm run fixtures` meldet genau 10 Fixtures: `ref3`, `demo5`, `r06`, `r15`, `r17`, `r21`, `pools-bestellung`, `pools-bewerbung`, `angeheftet-antrag`, `angeheftet-stoerung`. Alle ansehen, dann mit `npm run fixtures -- --write` neu schreiben; `known-breaks.json` verliert `angeheftet-antrag`, und in `r15` und `r17` tauscht je ein Verstoß sein Flusspaar.
+- `npm run fixtures` meldet genau 13 Fixtures: `ref3`, `demo5`, `r06`, `r15`, `r17`, `r21`, `pools-bestellung`, `pools-bewerbung`, `angeheftet-antrag`, `angeheftet-stoerung` (durch `kanonisch()`) sowie `notiz-r12`, `notiz-bauantrag`, `notiz-zwei` (durch die Notiz-Sortierung). Alle ansehen, dann mit `npm run fixtures -- --write` neu schreiben; `known-breaks.json` verliert `angeheftet-antrag`, und in `r15` und `r17` tauscht je ein Verstoß sein Flusspaar.
 - Danach `tests/vergleich.mjs` und die Durchläufe. Szenario 13 ändert sich bewusst.
 
 **Schritt 3: aufräumen.**
@@ -467,7 +510,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
 
 Für die Schritte 1 bis 3:
 
-1. `npm run fixtures`: Nur die 10 Fixtures aus Schritt 2 ändern sich, in beiden Messarten. Alle sind angesehen und neu geschrieben.
+1. `npm run fixtures`: Nur die 13 Fixtures aus Schritt 2 ändern sich, in beiden Messarten. Alle sind angesehen und neu geschrieben.
 2. `known-breaks.json`: 43 statt 45 Verstöße; neu sind nur die Tausche in `r15` und `r17`.
 3. `tests/lmm.test.mjs`: Spalten und fertiger Diagrammteil sind für alle 57 Fixtures gleich bei Umordnung und bei Umbenennung der IDs.
 4. Vor dem Entfernen von `raw.json`: `lmmExakt` trifft die Spaltenordnung aller 57 Rohpositionen.
@@ -476,7 +519,7 @@ Für die Schritte 1 bis 3:
 7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/lmm.js`, mit Mermaids MIT-Hinweis; die Dateien der BPMN-Komponente tragen LGPL-Köpfe, und die Lizenzliste hat einen Eintrag für die Komponente.
 8. `npm test` und `npm run check` grün.
 
-Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße, 46 Kreuzungen, 324 Knicke.
+Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße, 43 Kreuzungen, 324 Knicke; Layoutänderung 0 % auch bei Umordnung von Notizen, Assoziationen und Nachrichtenflüssen.
 
 ## 7. Offene Entscheidungen
 

@@ -1,4 +1,4 @@
-# Spike: arielle (heute LMM)
+# Spike: LMM (Arbeitstitel arielle)
 
 Die Versuche zur Ablösung von Mermaid als Layout-Engine für BPMN ohne Koordinaten, gesichert aus dem Scratchpad der Sitzung vom 7. Oktober 2026. Die Komponente, die Mermaid dabei ersetzt, heißt **LMM** (kurz für „Little Mermaid“, ein Wortspiel auf LLM). Sie berechnet die Spalte jedes Knotens. Ihr Arbeitstitel war „arielle“; unter diesem Namen stehen die Dateien und Funktionen hier im Spike (`arielle()`, `arielleExakt()`). In `src/` wird sie `src/app/lmm.js` heißen.
 
@@ -20,11 +20,11 @@ arielle beruht auf dem Swimlane-Layout von Mermaid 12.0.0 (MIT, Copyright (c) 20
 
 ## Die Skripte
 
-Alle Skripte laufen mit Node aus ihrem eigenen Ordner, also `cd spikes/arielle` (bzw. `review/`, `check/`), dann `node <skript>`. Sie importieren Module aus dem Repository über den absoluten Pfad `/home/user/dokufix/`. Wer das Repository woanders hat, passt diesen Pfad an. Vorausgesetzt ist `npm ci` im Repository.
+Alle Skripte laufen mit Node aus ihrem eigenen Ordner, also `cd spikes/lmm` (bzw. `review/`, `check/`), dann `node <skript>`. Sie importieren Module aus dem Repository über den absoluten Pfad `/home/user/dokufix/`. Wer das Repository woanders hat, passt diesen Pfad an. Vorausgesetzt ist `npm ci` im Repository.
 
 Die Browser-Skripte brauchen außerdem `dist/dokufix.html`, den CDN-Spiegel aus `tests/cdn.mjs` (er lädt beim ersten Lauf vom CDN nach `tests/.cdn/`) und Chromium unter `/opt/pw-browsers/chromium`.
 
-**Ordner `spikes/arielle/` (die eigenen Versuche):**
+**Ordner `spikes/lmm/` (die eigenen Versuche):**
 
 | Skript | Browser | Was |
 |---|---|---|

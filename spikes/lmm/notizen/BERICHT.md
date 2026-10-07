@@ -1,6 +1,6 @@
 # Kanonische Ordnung der Textanmerkungen: wo ihre Reihenfolge wirkt, und die erweiterte Sortierung
 
-Stand 7. Oktober 2026. Geprüft wurde, wo `layoutGeometry()` und `appendDiagram()` die Reihenfolge von `model.notes`, `model.associations` und `model.messages` lesen, dann wurden zehn Ordnungen der Notizen an den 57 Fixtures gemessen, gegen das Orakel „jede Reihenfolge“ gestellt und die besten auf Invarianz gegen Umordnung und Umbenennung geprüft. Ergebnis ist `kanonisch-notizen.mjs` (`kanonisch(model)` → `{ model, rank }`), das auf `kanonisch/kanonisch.mjs` aufsetzt und dessen Ordnung der Knoten, Flüsse und Ereignisse unverändert übernimmt. Die Komponente heißt LMM (vormals arielle; die Spike-Dateien heißen weiter `arielle…`). Im Repository wurde nichts geändert; alles liegt in `spikes/arielle/notizen/`.
+Stand 7. Oktober 2026. Geprüft wurde, wo `layoutGeometry()` und `appendDiagram()` die Reihenfolge von `model.notes`, `model.associations` und `model.messages` lesen, dann wurden zehn Ordnungen der Notizen an den 57 Fixtures gemessen, gegen das Orakel „jede Reihenfolge“ gestellt und die besten auf Invarianz gegen Umordnung und Umbenennung geprüft. Ergebnis ist `kanonisch-notizen.mjs` (`kanonisch(model)` → `{ model, rank }`), das auf `kanonisch/kanonisch.mjs` aufsetzt und dessen Ordnung der Knoten, Flüsse und Ereignisse unverändert übernimmt. Die Komponente heißt LMM (vormals arielle; die Spike-Dateien heißen weiter `arielle…`). Im Repository wurde nichts geändert; alles liegt in `spikes/lmm/notizen/`.
 
 ## Ergebnis in Kürze
 
@@ -157,4 +157,4 @@ Beide brauchen eine eigene Ordnung, nicht nur die der Notizen:
 | `permute-notizen.mjs`, `rename-notizen.mjs` | erweiterte Umordnung und Umbenennung (Nachrichtenflüsse, Notizen, Assoziationen) |
 | **`pruefen.mjs`** → `pruefen.log` | das schlanke Prüfskript: Qualität und Invarianz des Moduls, `--k=N`, `--xml-pools` |
 
-Alle Skripte laufen mit `cd spikes/arielle/notizen && node <skript>` und importieren das Repository über `/home/user/dokufix/`.
+Alle Skripte laufen mit `cd spikes/lmm/notizen && node <skript>` und importieren das Repository über `/home/user/dokufix/`.
