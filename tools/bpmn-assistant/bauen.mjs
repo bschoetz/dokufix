@@ -172,7 +172,7 @@ details{font-size:13px;color:var(--mute);margin:0 0 8px}
 #large .steps button[aria-pressed=true]{background:var(--acc);color:#fff;border-color:var(--acc)}
 #large .lwrap{flex:1;max-width:none;margin:0;padding:0;min-height:0;display:flex}
 #large .lcanvas{flex:1;min-height:0;background:var(--assistant-bg,#fff)}
-dialog#theme{border:1px solid var(--line);border-radius:12px;padding:20px 24px;max-width:min(980px,calc(100vw - 32px));box-shadow:0 12px 40px #0002}
+dialog#theme{border:1px solid var(--line);border-radius:12px;padding:20px 24px;width:min(980px,calc(100vw - 32px));max-width:none;box-shadow:0 12px 40px #0002}
 dialog#theme::backdrop{background:#0003}
 dialog#theme h2{font-size:18px;margin:0 0 12px}
 dialog#theme fieldset{border:0;border-top:1px solid var(--line);margin:0 0 12px;padding:10px 0 0}
