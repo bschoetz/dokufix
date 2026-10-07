@@ -100,6 +100,20 @@
 //                                line on the console, no warning and no page
 //                                error; with the library put back the same
 //                                click starts the viewer (story 2.11)
+//  15. BPMN laid out in the      a large process (the fixture hund2) laid out
+//      worker                    in the layout's worker beside a small one:
+//                                while it runs, the diagram's container shows
+//                                "Diagramm wird angeordnet … 0 s", the seconds
+//                                count, an interval of the page misses hardly a
+//                                tick and a click is handled; both are drawn
+//                                as the fixture's XML; a read-only export asked
+//                                for meanwhile carries neither the notice nor
+//                                an aborted layout. With the page's Worker
+//                                taken away the page lays out by itself, with
+//                                one line on the console, and draws the same.
+//                                A render requested during the layout of hund3
+//                                (17 to 19 s in Chromium) is drawn at once, the
+//                                layout before it given up
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -118,6 +132,14 @@
 //                                a dialog that says the download failed, with
 //                                the step's message; no file is handed over,
 //                                and the download buttons are enabled again
+//
+// and on a third copy, whose layout has a time limit of 0.3 s in place of
+// 120 s (src/app/layout-client.js):
+//
+//  16. the layout's time limit   the large process is the warning that names
+//                                its title and the time limit, the small one
+//                                after it is drawn by a new worker, and no
+//                                notice is left
 //
 // In the diagram cases (1, 10 to 13) every figure, in the page and in each
 // file, has the checkbox of its large view (story 2.9) and the line of its
@@ -152,6 +174,8 @@ import { prepareLibraries, librariesLine } from './cdn.mjs';
 import { bpmnWarningText, BPMN_NO_LIBRARY, BPMN_CREDIT } from '../src/app/bpmn.js';
 import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
+import { layoutTimeLimitText } from '../src/app/layout-client.js';
+import { LAYOUT_NOTICE_TEXT } from '../src/app/layout-notice.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
@@ -319,6 +343,17 @@ const DOC_NO_MERMAID = [
 ].join('\n\n') + '\n';
 // One BPMN diagram with coordinates, for the live viewer of its large view.
 const DOC_LIVE = ['# Ansicht', '## Gut', BPMN_GOOD, '## Schluss', 'Text.'].join('\n\n') + '\n';
+// The layout in its worker: a large process, the fixture hund2 (about 2 s in
+// Chromium), beside the small one; and hund3, Ben's process (17 to 19 s), for
+// a render that comes while it is laid out.
+const bpmnFence = xml => FENCE + 'bpmn\n' + xml.trim() + '\n' + FENCE;
+const HUND2 = fs.readFileSync(path.join(here, 'fixtures/bpmn-layout/hund2.bpmn'), 'utf8');
+const HUND2_LAID_OUT = fs.readFileSync(path.join(here, 'fixtures/bpmn-layout/hund2.laid-out.bpmn'), 'utf8');
+const HUND3 = fs.readFileSync(path.join(root, 'tools/bpmn-layout/eingaben/laufzeit/hund3.bpmn'), 'utf8');
+const DOC_WORKER = ['# Im Hintergrund', '[[toc]]', '## Groß', bpmnFence(HUND2), '## Klein', BPMN_LAID_OUT, '## Schluss', 'Text.'].join('\n\n') + '\n';
+const DOC_LONG = ['# Lang', '## Hund', bpmnFence(HUND3), '## Schluss', 'Text.'].join('\n\n') + '\n';
+const DOC_SHORT = ['# Kurz', '## Klein', BPMN_LAID_OUT, '## Schluss', 'Text.'].join('\n\n') + '\n';
+const SHORT_LIMIT = 300;
 const MARKED_MESSAGE = 'Absicht: marked.parse wirft (durchlaeufe)';
 // Three block markers, the one in the middle with a misspelt name.
 const DOC_MARKERS = [
@@ -385,16 +420,17 @@ const EXPORT_EDITS = [
   { after: "const EXPORT_STEPS = [removeTransientElements, showFilteredRows, inlineImages];\n",
     add: "EXPORT_STEPS.push(() => { throw new Error('" + EXPORT_STEP_MESSAGE + "'); });\n" },
 ];
-// Builds a copy of src/ in which one module got the given lines.
+// Builds a copy of src/ in which one module got the given lines, or, where an
+// edit names replace, the line in place of its anchor.
 function buildCopy(outDir, module, edits, name){
   const srcCopy = path.join(outDir, 'src');
   fs.cpSync(path.join(root, 'src'), srcCopy, { recursive: true });
   const file = path.join(srcCopy, module);
   let text = fs.readFileSync(file, 'utf8');
   for (const edit of edits){
-    const anchor = edit.before || edit.after;
+    const anchor = edit.before || edit.after || edit.replace;
     if (text.split(anchor).length !== 2) throw new Error('src/' + module + ': expected exactly once, to put a line next to it: ' + anchor.trim());
-    text = text.replace(anchor, () => edit.before ? edit.add + anchor : anchor + edit.add);
+    text = text.replace(anchor, () => edit.replace ? edit.add : edit.before ? edit.add + anchor : anchor + edit.add);
   }
   fs.writeFileSync(file, text);
   const built = path.join(outDir, name);
@@ -403,6 +439,10 @@ function buildCopy(outDir, module, edits, name){
   fs.rmSync(srcCopy, { recursive: true });
   return built;
 }
+
+const LIMIT_EDITS = [
+  { replace: 'export const LAYOUT_TIME_LIMIT = 120000;\n', add: 'export const LAYOUT_TIME_LIMIT = ' + SHORT_LIMIT + ';\n' },
+];
 
 // A file's text without its scripts: schlank and kompakt carry the reader
 // bundle, whose code names the class and the attribute of the filter's field.
@@ -433,7 +473,8 @@ const READONLY = [
 // Opens a file in a context of its own, with what the console and the page
 // report as errors collected. ready: what to wait for.
 // options.withoutBpmn: the page's request for bpmn-js fails; withoutMermaid:
-// the page's request for Mermaid fails.
+// the page's request for Mermaid fails; withoutWorker: the page has no Worker.
+// What the console says as info is kept as well (consoleInfo).
 async function open(browser, file, ready, options = {}){
   const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
   await libraries.serve(context);
@@ -441,14 +482,15 @@ async function open(browser, file, ready, options = {}){
   // A route of the page goes before the one of the context.
   if (options.withoutBpmn) await page.route(url => /\/npm\/bpmn-js@/.test(String(url)), route => route.abort('failed'));
   if (options.withoutMermaid) await page.route(url => /\/npm\/mermaid@/.test(String(url)), route => route.abort('failed'));
-  const consoleErrors = [], pageErrors = [], dialogs = [], downloads = [];
+  if (options.withoutWorker) await page.addInitScript(() => { delete window.Worker; });
+  const consoleErrors = [], consoleInfo = [], pageErrors = [], dialogs = [], downloads = [];
   page.on('pageerror', e => pageErrors.push(String(e)));
-  page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); });
+  page.on('console', m => { if (m.type() === 'error') consoleErrors.push(m.text()); if (m.type() === 'info') consoleInfo.push(m.text()); });
   page.on('dialog', d => { dialogs.push({ type: d.type(), message: d.message() }); return d.type() === 'prompt' ? d.accept('Stand aus durchlaeufe.mjs') : d.accept(); });
   page.on('download', d => downloads.push(d.suggestedFilename()));
   await page.goto(pathToFileURL(file).href);
   await page.waitForFunction(ready, null, { timeout: 90000 });
-  return { context, page, consoleErrors, pageErrors, dialogs, downloads };
+  return { context, page, consoleErrors, consoleInfo, pageErrors, dialogs, downloads };
 }
 // An editor file: init and the first render are done when the rail is filled.
 const editorReady = () => !!document.querySelector('#dokufix-rail.has-items');
@@ -477,6 +519,42 @@ async function typeAndRender(page, text){
   await page.fill('#source', text);
   await pressAndWaitForRender(page, '#render-btn');
 }
+// A render of text, watched from inside the page while it runs: every text
+// the notice of a layout shows, and the ticks of an interval of 50 ms, which
+// a page busy with a layout misses. renderDone() waits for it as
+// pressAndWaitForRender() does; watched() ends the watch and says what it saw.
+async function startWatchedRender(page, text){
+  await editMode(page);
+  await page.fill('#source', text);
+  await page.evaluate(() => {
+    const w = window.durchlaeufeLayout = { texts: [], ticks: 0, begun: performance.now() };
+    w.interval = setInterval(() => { w.ticks++; }, 50);
+    const preview = document.getElementById('preview');
+    w.observer = new MutationObserver(() => {
+      const n = preview.querySelector('.layout-notice');
+      if (n && w.texts.at(-1) !== n.textContent) w.texts.push(n.textContent);
+    });
+    w.observer.observe(preview, { subtree: true, childList: true, characterData: true });
+    const marker = document.createElement('i');
+    marker.id = 'durchlaeufe-render-pending';
+    document.getElementById('dokufix-rail').appendChild(marker);
+    document.getElementById('render-btn').click();
+  });
+}
+const renderDone = page => page.waitForFunction(() => !document.getElementById('durchlaeufe-render-pending'), null, { timeout: 120000 });
+const watched = page => page.evaluate(() => {
+  const w = window.durchlaeufeLayout;
+  clearInterval(w.interval);
+  w.observer.disconnect();
+  return { texts: w.texts, ticks: w.ticks, ms: Math.round(performance.now() - w.begun) };
+});
+const noticeNow = page => page.evaluate(() => { const n = document.querySelector('#preview .layout-notice'); return n ? n.textContent : null; });
+// The XML of each BPMN diagram as drawn, from its source link (story 2.10).
+const bpmnSources = page => page.evaluate(() => Array.from(document.querySelectorAll('#preview figure.dokufix-diagram-bpmn a[download$=".bpmn"]'), a => {
+  const href = a.getAttribute('href');
+  return decodeURIComponent(href.slice(href.indexOf(',') + 1));
+}));
+
 async function download(page, variant, file){
   await editMode(page);
   await page.click('#download-btn');
@@ -643,7 +721,7 @@ async function checkExports(scope, browser, page, dir, prefix, variants, each){
 }
 
 // ---------- one browser ----------
-async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
+async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWithShortLimit){
   const dir = path.join(opts.out, name);
   fs.mkdirSync(dir, { recursive: true });
   const browser = await BROWSERS[name]();
@@ -1153,6 +1231,95 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       await o.context.close();
     });
 
+    // ----- 15. BPMN laid out in the worker
+    await attempt(name + ' BPMN in the worker', async () => {
+      const scope = name + ' BPMN in the worker';
+      const credit = BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a>';
+      let o = await open(browser, opts.file, editorReady);
+      await startWatchedRender(o.page, DOC_WORKER);
+      // While the large one is laid out: its container holds the notice, and the page handles a click.
+      await o.page.waitForFunction(() => !!document.querySelector('#preview .layout-notice'), null, { timeout: 60000 });
+      const notice = await o.page.evaluate(() => {
+        const n = document.querySelector('#preview .layout-notice'), figure = n.closest('figure.dokufix-diagram-bpmn');
+        return { role: n.getAttribute('role'), transient: n.hasAttribute('data-dokufix-transient'), seconds: n.querySelector('span').getAttribute('aria-hidden'),
+                 figure: figure && figure.getAttribute('aria-label'), inContainer: n.parentElement.classList.contains('dokufix-diagram-svg'),
+                 waiting: Array.from(document.querySelectorAll('#preview figure.dokufix-diagram-bpmn .dokufix-diagram-svg'), h => h.textContent.length) };
+      });
+      check(scope, 'the notice stands in the container of the diagram laid out: a transient status, its seconds hidden from assistive technology',
+        notice.role === 'status' && notice.transient && notice.seconds === 'true' && notice.figure === 'Groß' && notice.inContainer, notice);
+      check(scope, 'the diagram after it waits with an empty container, not its source', notice.waiting.length === 2 && notice.waiting[1] === 0, notice.waiting);
+      const before = await o.page.evaluate(() => document.getElementById('numbering-btn').getAttribute('aria-pressed'));
+      await o.page.click('#numbering-btn');
+      const clicked = await o.page.evaluate(() => ({ pressed: document.getElementById('numbering-btn').getAttribute('aria-pressed'), stillLaidOut: !!document.querySelector('#preview .layout-notice') }));
+      check(scope, 'a click during the layout is handled while the layout runs', clicked.pressed !== before && clicked.stillLaidOut, { before, ...clicked });
+      await o.page.click('#numbering-btn');
+      await renderDone(o.page);
+      const w = await watched(o.page);
+      const counted = w.texts.map(t => t.startsWith(LAYOUT_NOTICE_TEXT + ' ') ? Number(/(\d+) s$/.exec(t)[1]) : NaN);
+      check(scope, 'the notice counted from 0 s, one second at a time, for each diagram laid out',
+        counted[0] === 0 && counted[1] === 1 && counted.every((n, i) => i === 0 ? n === 0 : n === counted[i - 1] + 1 || n === 0), w.texts);
+      check(scope, 'the page went on while the worker laid out: an interval of 50 ms missed hardly a tick', w.ticks >= 0.6 * w.ms / 50, { ticks: w.ticks, of: Math.round(w.ms / 50), ms: w.ms });
+      const f = await facts(o.page);
+      check(scope, 'both are drawn with their credit, no warning, no notice left', f.bpmn.join('|') === 'Groß true ' + credit + '|Klein true ' + credit && f.warnings.length === 0 && (await noticeNow(o.page)) === null, { bpmn: f.bpmn, warnings: f.warnings.map(x => x.text) });
+      const inWorker = await bpmnSources(o.page);
+      check(scope, 'the large one is drawn as the fixture hund2 is laid out in Node', inWorker.length === 2 && inWorker[0].trim() === HUND2_LAID_OUT.trim(), inWorker.map(x => x.length));
+      check(scope, 'no page error and no console error', o.pageErrors.length === 0 && o.consoleErrors.length === 0, o.pageErrors.concat(o.consoleErrors).join(' | ').slice(0, 400));
+      check(scope, 'the page has its worker: no line about laying out without one', !o.consoleInfo.some(l => l.includes('without a worker')), o.consoleInfo);
+      // A read-only export asked for while a layout runs renders again and waits for that render.
+      await startWatchedRender(o.page, DOC_WORKER);
+      await o.page.waitForFunction(() => !!document.querySelector('#preview .layout-notice'), null, { timeout: 60000 });
+      await checkExports(scope, browser, o.page, dir, 'worker', READONLY.slice(0, 1), (s, x, text) => {
+        check(s, 'both diagrams in the file, no warning, nothing of the notice or of an aborted layout',
+          x.bpmn.join('|') === 'Groß true ' + credit + '|Klein true ' + credit && x.warnings.length === 0 && !text.includes('layout-notice') && !text.includes(LAYOUT_NOTICE_TEXT) && !text.includes('abgebrochen'),
+          { bpmn: x.bpmn, warnings: x.warnings.map(y => y.text) });
+      });
+      await watched(o.page);
+      await o.context.close();
+
+      // Without the page's Worker the page lays out by itself, and draws the same.
+      o = await open(browser, opts.file, editorReady, { withoutWorker: true });
+      await typeAndRender(o.page, DOC_WORKER);
+      const g = await facts(o.page);
+      check(scope + ', without a Worker', 'the page has none, and both are drawn with their credit, no warning', (await o.page.evaluate(() => typeof Worker)) === 'undefined' &&
+        g.bpmn.join('|') === 'Groß true ' + credit + '|Klein true ' + credit && g.warnings.length === 0, { bpmn: g.bpmn, warnings: g.warnings.map(x => x.text) });
+      const onPage = await bpmnSources(o.page);
+      check(scope + ', without a Worker', 'the same XML as in the worker', JSON.stringify(onPage) === JSON.stringify(inWorker), onPage.map(x => x.length));
+      check(scope + ', without a Worker', 'one line on the console says so', o.consoleInfo.filter(l => l === 'BPMN layout on the page, without a worker: the page has no Worker').length === 1, o.consoleInfo);
+      check(scope + ', without a Worker', 'no page error and no console error', o.pageErrors.length === 0 && o.consoleErrors.length === 0, o.pageErrors.concat(o.consoleErrors).join(' | ').slice(0, 400));
+      await o.context.close();
+
+      // A render requested while hund3 is laid out is drawn at once.
+      o = await open(browser, opts.file, editorReady);
+      await startWatchedRender(o.page, DOC_LONG);
+      await o.page.waitForFunction(text => (document.querySelector('#preview .layout-notice') || {}).textContent === text, LAYOUT_NOTICE_TEXT + ' 1 s', { timeout: 60000 });
+      const t = Date.now();
+      await o.page.fill('#source', DOC_SHORT);
+      await o.page.click('#render-btn');
+      await o.page.waitForFunction(() => (document.querySelector('#preview h1') || {}).textContent === 'Kurz' && !!document.querySelector('#preview figure.dokufix-diagram-bpmn .dokufix-diagram-svg > svg') && !document.querySelector('#preview .layout-notice'), null, { timeout: 60000 });
+      const ms = Date.now() - t;
+      check(scope + ', a render during a layout', 'it is drawn at once, not after hund3: the layout before it was given up', ms < 8000, ms + ' ms');
+      await o.page.waitForTimeout(QUIET_WINDOW);   // the render given up would show up by now
+      const h = await facts(o.page);
+      check(scope + ', a render during a layout', 'the preview is the new render\'s: its diagram, no warning, no notice', h.bpmn.join('|') === 'Klein true ' + credit && h.warnings.length === 0 && (await noticeNow(o.page)) === null && (await o.page.evaluate(() => document.querySelector('#preview h1').textContent)) === 'Kurz', { bpmn: h.bpmn, warnings: h.warnings.map(x => x.text) });
+      check(scope + ', a render during a layout', 'no page error and no rejected promise', o.pageErrors.length === 0, o.pageErrors.join(' | '));
+      await watched(o.page);
+      await o.context.close();
+    });
+
+    // ----- 16. the layout's time limit (the copy with a time limit of 0.3 s)
+    await attempt(name + ' the layout\'s time limit', async () => {
+      const scope = name + ' the layout\'s time limit';
+      const credit = BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a>';
+      const o = await open(browser, copyWithShortLimit, editorReady);
+      await typeAndRender(o.page, DOC_WORKER);
+      const f = await facts(o.page);
+      checkWarning(scope, f, [bpmnWarningText('Groß'), layoutTimeLimitText(SHORT_LIMIT)], 'naming the diagram and the time limit');
+      check(scope, 'the time limit is said in seconds', layoutTimeLimitText(SHORT_LIMIT) === 'Das Layout hat die Zeitgrenze von 0,3 s überschritten.');
+      check(scope, 'the small one after it is drawn, by a worker made anew, and no notice is left', f.bpmn.join('|') === 'Klein true ' + credit && (await noticeNow(o.page)) === null && f.hosts === 0, { bpmn: f.bpmn, hosts: f.hosts });
+      checkErrors(scope, o, ['BPMN error']);
+      await o.context.close();
+    });
+
     // ----- 5. a pass throws (the copy with two passes more)
     await attempt(name + ' a pass throws', async () => {
       const scope = name + ' a pass throws';
@@ -1222,11 +1389,12 @@ fs.rmSync(opts.out, { recursive: true, force: true });
 fs.mkdirSync(opts.out, { recursive: true });
 const copyWithPasses = buildCopy(opts.out, 'app/render.js', PASS_EDITS, 'mit-werfenden-schritten.html');
 const copyWithExportStep = buildCopy(opts.out, 'app/downloads/export-body.js', EXPORT_EDITS, 'mit-werfendem-exportschritt.html');
+const copyWithShortLimit = buildCopy(opts.out, 'app/layout-client.js', LIMIT_EDITS, 'mit-kurzer-zeitgrenze.html');
 
 const names = opts.browser === 'all' ? ['chromium', 'firefox'] : [opts.browser];
 // The browsers run side by side, each in its own folder. Their checks land in
 // one list in the order they happen; the report lists them per browser.
-await Promise.all(names.map(name => runBrowser(name, opts, copyWithPasses, copyWithExportStep)));
+await Promise.all(names.map(name => runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWithShortLimit)));
 
 const byBrowser = r => names.findIndex(n => r.scope.startsWith(n));
 results.sort((a, b) => byBrowser(a) - byBrowser(b));
