@@ -187,12 +187,15 @@ const pageLayoutClient = () => pageClient || (pageClient = makeLayoutClient());
 // by the diagram's place in the document, diagram.index. diagram.signal, where
 // the render gives one, aborts a layout still running (src/app/render.js).
 // options, for the tests: client, the layout's client (makeLayoutClient());
-// timers and now, the notice's (showLayoutNotice()).
+// timers and now, the notice's (showLayoutNotice()). A diagram whose
+// render was aborted by a newer one throws as well, the layout's AbortError,
+// but logs nothing: an abort is no failure, and the preview it stands in is
+// about to be replaced (drawDiagrams() in src/app/diagrams.js).
 export async function renderBpmn(diagram, options = {}){
   try {
     await drawBpmn(diagram, options);
   } catch (err){
-    console.error('BPMN error:', err);
+    if (!(diagram.signal && diagram.signal.aborted)) console.error('BPMN error:', err);
     throw err;
   }
 }

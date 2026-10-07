@@ -247,8 +247,12 @@ export function renderDiagrams(root, context){
 // downloads, named by the titles of all diagrams of the document, the ones
 // that fail included, so that a name does not change with whether another
 // diagram is drawn. The tests hand in kinds of their own. context: { signal },
-// or none.
+// or none. Once the signal is aborted, by a newer render (src/app/render.js),
+// no diagram more is drawn, and the one it aborted is no failure: it gets no
+// warning, since the preview is about to be replaced by the newer render's,
+// and nothing would show the warning but that moment.
 export async function drawDiagrams(root, kinds, context = {}){
+  const aborted = () => !!(context.signal && context.signal.aborted);
   const doc = root.ownerDocument;
   const selector = Object.keys(kinds).map(kind => 'pre code.language-' + kind).join(', ');
   const diagrams = [];
@@ -263,6 +267,7 @@ export async function drawDiagrams(root, kinds, context = {}){
   }
   const names = diagramFileNames(diagrams.map(d => d.title));
   for (const [i, diagram] of diagrams.entries()){
+    if (aborted()) return;
     const kind = kinds[diagram.kind];
     try {
       await kind.render(diagram);
@@ -274,6 +279,7 @@ export async function drawDiagrams(root, kinds, context = {}){
         diagram.figure.insertBefore(line, credit);
       }
     } catch (err){
+      if (aborted()) return;
       diagram.figure.replaceWith(buildWarning(doc, kind.warning(diagram), errorMessage(err)));
     }
   }

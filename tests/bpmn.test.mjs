@@ -432,8 +432,8 @@ test('a layout refused in the worker is the reason, as on the page', async t => 
   });
 });
 
-test('the render\'s signal aborts a layout in the worker: the diagram is refused, the worker terminated, the count stopped', async t => {
-  t.mock.method(console, 'error', () => {});
+test('the render\'s signal aborts a layout in the worker: the diagram is refused, the worker terminated, the count stopped, and nothing is logged', async t => {
+  const logged = t.mock.method(console, 'error', () => {});
   const w = fakeWorker(), clock = noticeTimers();
   const controller = new AbortController();
   const d = { ...diagramIn(page(), WITHOUT_DI), signal: controller.signal };
@@ -445,6 +445,30 @@ test('the render\'s signal aborts a layout in the worker: the diagram is refused
   });
   assert.equal(w.terminated, true);
   assert.equal(clock.intervals.size, 0);
+  assert.equal(logged.mock.calls.length, 0, 'an abort is no BPMN error');
+});
+
+test('a render aborted during a layout: no warning in the preview, nothing on the console, and the BPMN diagrams after it are not laid out', async t => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const made = [];
+  const client = makeLayoutClient({ makeWorker: () => { const w = fakeWorker(); made.push(w); return w; } });
+  const document = page();
+  const root = document.getElementById('preview');
+  root.innerHTML = '<h2>Eins</h2><pre><code class="language-bpmn">' + WITHOUT_DI.replace(/</g, '&lt;') + '</code></pre>' +
+    '<h2>Zwei</h2><pre><code class="language-bpmn">' + WITHOUT_DI.replace(/</g, '&lt;') + '</code></pre>';
+  const controller = new AbortController();
+  const kinds = { bpmn: { ...DIAGRAM_KINDS.bpmn, render: d => renderBpmn(d, { client }) } };
+  await withLibrary(standIn().Viewer, async () => {
+    const drawing = drawDiagrams(root, kinds, { signal: controller.signal });
+    await until(() => made.length === 1 && made[0].sent.length === 1, 'sent');
+    controller.abort();
+    await drawing;
+  });
+  assert.equal(root.querySelectorAll('.dokufix-warning').length, 0, 'no warning');
+  assert.equal(logged.mock.calls.length, 0, 'no line on the console');
+  assert.equal(made.length, 1, 'the second diagram is not laid out: no worker made anew for it');
+  assert.equal(made[0].terminated, true);
+  assert.equal(root.querySelectorAll('figure.dokufix-diagram-bpmn').length, 2);
 });
 
 test('a BPMN block\'s container holds no source while the diagrams before it are drawn, and each diagram gets the render\'s signal', async t => {

@@ -157,6 +157,35 @@ test('a diagram whose renderer throws becomes the warning of its kind, with the 
   assert.deepEqual(Array.from(root.querySelectorAll('.dokufix-diagram-toggle')).map(t => t.id), ['dokufix-diagram-1-open', 'dokufix-diagram-3-open']);
 });
 
+test('a render aborted by a newer one: the diagram it aborted gets no warning, and no diagram after it is drawn', async () => {
+  const controller = new AbortController();
+  const seen = [];
+  const kinds = {
+    mermaid: { ...fake, render(d){ seen.push(d.title); return fake.render(d); } },
+    // As a layout in its worker ends when the render's signal is aborted: with an AbortError.
+    lang: { render(d){ seen.push(d.title); controller.abort(); const e = new Error('Das Layout wurde abgebrochen.'); e.name = 'AbortError'; throw e; },
+            warning: d => 'Das Diagramm „' + d.title + '“ konnte nicht gezeichnet werden.' },
+  };
+  const root = rootWith('<h2>Eins</h2>' + block('mermaid', 'a') + '<h2>Zwei</h2>' + block('lang', 'b') + '<h2>Drei</h2>' + block('mermaid', 'c'));
+  await drawDiagrams(root, kinds, { signal: controller.signal });
+  assert.deepEqual(seen, ['Eins', 'Zwei'], 'the third is not drawn');
+  assert.equal(root.querySelectorAll('.dokufix-warning').length, 0, 'no warning for an abort');
+  assert.equal(root.querySelectorAll('figure.dokufix-diagram').length, 3, 'the figures stay, for the newer render to replace');
+  assert.equal(root.querySelectorAll('figure .dokufix-diagram-svg > svg').length, 1);
+  // Aborted between two diagrams, by whatever: the next is not drawn either.
+  const later = new AbortController();
+  const drawnHere = [];
+  const quiet = { mermaid: { ...fake, render(d){ drawnHere.push(d.title); fake.render(d); later.abort(); } } };
+  const other = rootWith('<h2>A</h2>' + block('mermaid', 'a') + '<h2>B</h2>' + block('mermaid', 'b'));
+  await drawDiagrams(other, quiet, { signal: later.signal });
+  assert.deepEqual(drawnHere, ['A']);
+  assert.equal(other.querySelectorAll('.dokufix-warning').length, 0);
+  // A failure while the signal is not aborted is still a warning.
+  const failing = rootWith('<h2>X</h2>' + block('lang', 'x'));
+  await drawDiagrams(failing, { lang: { render(){ throw new Error('kaputt'); }, warning: () => 'Fehler.' } }, { signal: new AbortController().signal });
+  assert.equal(failing.querySelectorAll('.dokufix-warning').length, 1);
+});
+
 test('a drawn diagram\'s figure gets its width as drawn, for the zoom steps of its large view', async () => {
   const sized = { render(d){ d.holder.innerHTML = d.source; }, warning: () => '' };
   const root = rootWith('<h2>Eins</h2>' + block('mermaid', '&lt;svg width="100%" style="max-width: 812.5px;" viewBox="0 0 812.5 200"&gt;&lt;/svg&gt;') +

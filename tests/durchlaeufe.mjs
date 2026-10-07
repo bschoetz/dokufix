@@ -113,7 +113,10 @@
 //                                one line on the console, and draws the same.
 //                                A render requested during the layout of hund3
 //                                (17 to 19 s in Chromium) is drawn at once, the
-//                                layout before it given up
+//                                layout before it given up. After either abort,
+//                                the export's and the render's, no warning is
+//                                put into the preview, not even for a moment,
+//                                and nothing is logged as an error
 //
 // and on a copy of src/ built with two passes more, as tests/speichern.mjs
 // builds a copy with another demo text (the product has no switch for this):
@@ -549,6 +552,21 @@ const watched = page => page.evaluate(() => {
   return { texts: w.texts, ticks: w.ticks, ms: Math.round(performance.now() - w.begun) };
 });
 const noticeNow = page => page.evaluate(() => { const n = document.querySelector('#preview .layout-notice'); return n ? n.textContent : null; });
+// Every warning put into the preview from now on, read from the mutations
+// themselves, so that one replaced in the same task is seen as well: the
+// warning of an aborted layout stood for a moment only (review of
+// 2026-10-07). warningsSeen() ends the watch and gives their texts.
+const watchWarnings = page => page.evaluate(() => {
+  const w = window.durchlaeufeWarnings = { texts: [] };
+  const look = node => {
+    if (node.nodeType !== 1) return;
+    const found = node.matches('.dokufix-warning') ? [node] : Array.from(node.querySelectorAll('.dokufix-warning'));
+    for (const el of found) w.texts.push(el.textContent.replace(/\s+/g, ' ').trim());
+  };
+  w.observer = new MutationObserver(records => { for (const r of records) r.addedNodes.forEach(look); });
+  w.observer.observe(document.getElementById('preview'), { subtree: true, childList: true });
+});
+const warningsSeen = page => page.evaluate(() => { const w = window.durchlaeufeWarnings; w.observer.disconnect(); return w.texts; });
 // The XML of each BPMN diagram as drawn, from its source link (story 2.10).
 const bpmnSources = page => page.evaluate(() => Array.from(document.querySelectorAll('#preview figure.dokufix-diagram-bpmn a[download$=".bpmn"]'), a => {
   const href = a.getAttribute('href');
@@ -1268,11 +1286,18 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       // A read-only export asked for while a layout runs renders again and waits for that render.
       await startWatchedRender(o.page, DOC_WORKER);
       await o.page.waitForFunction(() => !!document.querySelector('#preview .layout-notice'), null, { timeout: 60000 });
+      const errorsBeforeExport = o.consoleErrors.length;
+      await watchWarnings(o.page);
       await checkExports(scope, browser, o.page, dir, 'worker', READONLY.slice(0, 1), (s, x, text) => {
         check(s, 'both diagrams in the file, no warning, nothing of the notice or of an aborted layout',
           x.bpmn.join('|') === 'Groß true ' + credit + '|Klein true ' + credit && x.warnings.length === 0 && !text.includes('layout-notice') && !text.includes(LAYOUT_NOTICE_TEXT) && !text.includes('abgebrochen'),
           { bpmn: x.bpmn, warnings: x.warnings.map(y => y.text) });
       });
+      // The export aborted the render that was laying out: an abort is no failure.
+      const exportWarnings = await warningsSeen(o.page);
+      check(scope + ', an export during a layout', 'no warning in the preview after the abort, not even for a moment', exportWarnings.length === 0, exportWarnings);
+      check(scope + ', an export during a layout', 'no error on the console after the abort', o.consoleErrors.length === errorsBeforeExport && o.pageErrors.length === 0,
+        o.consoleErrors.slice(errorsBeforeExport).concat(o.pageErrors).join(' | ').slice(0, 400));
       await watched(o.page);
       await o.context.close();
 
@@ -1292,6 +1317,8 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       o = await open(browser, opts.file, editorReady);
       await startWatchedRender(o.page, DOC_LONG);
       await o.page.waitForFunction(text => (document.querySelector('#preview .layout-notice') || {}).textContent === text, LAYOUT_NOTICE_TEXT + ' 1 s', { timeout: 60000 });
+      const errorsBeforeAbort = o.consoleErrors.length;
+      await watchWarnings(o.page);
       const t = Date.now();
       await o.page.fill('#source', DOC_SHORT);
       await o.page.click('#render-btn');
@@ -1301,6 +1328,9 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       await o.page.waitForTimeout(QUIET_WINDOW);   // the render given up would show up by now
       const h = await facts(o.page);
       check(scope + ', a render during a layout', 'the preview is the new render\'s: its diagram, no warning, no notice', h.bpmn.join('|') === 'Klein true ' + credit && h.warnings.length === 0 && (await noticeNow(o.page)) === null && (await o.page.evaluate(() => document.querySelector('#preview h1').textContent)) === 'Kurz', { bpmn: h.bpmn, warnings: h.warnings.map(x => x.text) });
+      const abortWarnings = await warningsSeen(o.page);
+      check(scope + ', a render during a layout', 'no warning in the preview after the abort, not even for a moment', abortWarnings.length === 0, abortWarnings);
+      check(scope + ', a render during a layout', 'no error on the console after the abort', o.consoleErrors.length === errorsBeforeAbort, o.consoleErrors.slice(errorsBeforeAbort).join(' | ').slice(0, 400));
       check(scope + ', a render during a layout', 'no page error and no rejected promise', o.pageErrors.length === 0, o.pageErrors.join(' | '));
       await watched(o.page);
       await o.context.close();

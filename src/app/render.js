@@ -118,6 +118,9 @@ async function renderOnce(signal) {
 
     const context = { frontmatter: fm, signal };
     await runPasses(previewEl, DOCUMENT_PASSES, context);
+    // Aborted by a newer render, which replaces the preview: nothing to
+    // attach to it (src/app/render-queue.js).
+    if (signal.aborted) return;
     // A run-time pass that fails leaves the document complete. Its warning is
     // for the reader of this page, so it is transient: no export carries it.
     const failed = await runPasses(previewEl, RUNTIME_PASSES, context);
@@ -128,8 +131,12 @@ async function renderOnce(signal) {
     previewEl.prepend(buildWarning(document, 'Das Dokument konnte nicht vollständig dargestellt werden.', errorMessage(err)));
   } finally {
     // Build the scrollspy rail (read-mode only; CSS gates visibility). Last,
-    // and always: see buildRail().
-    try { buildRail(previewEl); }
-    catch (err) { console.error('Rail failed:', err); }
+    // and always, whatever failed before it: see buildRail(). Not for a
+    // render that was aborted: the newer render builds it, and a rail
+    // rebuilt by the aborted one would say "finished" too early.
+    if (!signal.aborted){
+      try { buildRail(previewEl); }
+      catch (err) { console.error('Rail failed:', err); }
+    }
   }
 }
