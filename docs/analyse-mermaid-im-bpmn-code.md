@@ -29,7 +29,7 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
 - **Die Komponente heißt LMM**, kurz für „Little Mermaid“: ein Wortspiel auf LLM, mit dessen Hilfe sie entstanden ist. Ihr Arbeitstitel war „arielle“; die Dateien im Spike `spikes/arielle/` tragen ihn noch (`arielle()`, `arielleExakt()`). LMM kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul und sagt offen, dass es auf Mermaid beruht (MIT).
-- **Lizenz:** Die BPMN-Komponente, also Renderer, Layout und LMM, soll später als eigenes Paket erscheinen und steht unter der **LGPL-3.0**. Mermaids MIT-Hinweis bleibt in `lmm.js` erhalten (Abschnitt 4a).
+- **Lizenz:** Die BPMN-Layout-Komponente soll später als eigenes Paket erscheinen und steht unter der **LGPL-3.0**. Sie nimmt XML ohne Positionen und gibt XML mit Positionen zurück, also `bpmn-layout.js`, `lmm.js` und einen kleinen Einstieg, ohne Laufzeitabhängigkeiten. Mermaids MIT-Hinweis bleibt in `lmm.js` erhalten (Abschnitt 4a).
 - **Mermaids Spaltenreihung ist volatil, und LMM beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. LMM ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
 - **Auch das fertige Layout lässt sich stabil machen.** Mit LMM allein ändert sich das Bild noch bei rund 21–23 % der Umordnungen, weil Regeln des eigenen Rasters bei Gleichstand der Reihenfolge des Modells folgen. Die Lösung ist `kanonisch()`: Das Modell wird vor dem Layout einmal in LMMs Reihenfolge gebracht. Knoten kommen in der Reihenfolge der Rangvergabe, Flüsse in der Reihenfolge von LMMs Tiefensuche (Abschnitt 3b). Ergebnis: Das Bild ändert sich bei **0 von 570** Umordnungen und bei 0 von 570 Umbenennungen. Die Qualität wird besser: 43 statt 44 Verstöße, 46 statt 48 Kreuzungen, 324 statt 325 Knicke.
 - **Empfehlung:** LMM samt `kanonisch()` als eigenes Modul `src/app/lmm.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 10 der 57 Fixtures werden einmal neu geschrieben.
@@ -332,23 +332,40 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
 
 **Ort von LMM.** Ein eigenes Modul `src/app/lmm.js` mit `lmm(model)` und `kanonisch(model)` (Abschnitte 3a und 3b). Die Tests stehen in einer eigenen Datei, etwa `tests/lmm.test.mjs`. `src/app/bpmn-layout.js` und `src/app/bpmn.js` enthalten danach keinen von Mermaid übernommenen Code; sie rufen LMM nur auf. Die Grenze zwischen übernommenem und eigenem Code ist so eine Dateigrenze.
 
-**Entscheidung (7. Oktober 2026):** Die BPMN-Komponente soll ab einem gewissen Reifegrad als eigenes Projekt mit eigenem Repository erscheinen, losgelöst von dokufix. Dieses Paket enthält alle JS-Dateien, die man braucht, um den Renderer in eigene Software einzubinden, und steht unter der **GNU LGPL, Version 3**. Gründe:
+**Entscheidung (7. Oktober 2026):** Die BPMN-Layout-Komponente soll ab einem gewissen Reifegrad als eigenes Projekt mit eigenem Repository erscheinen, losgelöst von dokufix, unter der **GNU LGPL, Version 3**. Gründe:
 
 - Es lässt sich nicht ausschließen, dass fremder Code unter einer Copyleft-Lizenz in die Komponente geflossen ist.
 - Von LLMs erstellter Code soll der Allgemeinheit gehören und nicht wieder in private Software abfließen.
 
-**Was ins Paket gehört** (heutiger Stand der Abhängigkeiten):
+**Der Schnitt:** Die Bibliothek nimmt BPMN-XML ohne Positionen und gibt BPMN-XML mit Positionen (BPMN-DI) zurück. Zeichnen, also XML zu SVG, gehört nicht dazu.
 
-| Datei | Rolle | Bemerkung |
+**Was ins Paket gehört:**
+
+| Teil | Heute | Rolle |
 |---|---|---|
-| `src/app/bpmn.js` | Renderer: XML → SVG über bpmn-js, Layout-Anschluss, Messen der Beschriftungen, Abschluss des SVG | importiert `transient.js` und `bpmn-layout.js` |
-| `src/app/bpmn-layout.js` | Layout ohne Koordinaten: `readProcess()`, Raster, Regeln R1–R17, Router, `appendDiagram()` | rein, ohne Abhängigkeiten |
-| `src/app/lmm.js` | Spalten und kanonische Ordnung | enthält von Mermaid abgeleiteten Code (MIT) |
-| `src/app/transient.js` | eine Konstante (`TRANSIENT_ATTR`) | dokufix-spezifisch; im Paket ersetzen oder als Option übergeben |
-| `src/doc.css`, Regeln `dokufix-bpmn-*` | Farben über Custom Properties | kein JS, aber ohne sie hat das SVG keine Farben; mitliefern oder dokumentieren |
-| optional `src/app/live-viewer.js`, `src/app/diagram-downloads.js` | Live-Ansicht, Downloads | hängen an dokufix' Figur (`diagrams.js`); eher nicht im Paket |
+| `bpmn-layout.js` | `src/app/bpmn-layout.js` | XML lesen (`readProcess()`), Raster, Regeln R1–R17, Router, Beschriftungen, Notizen, XML schreiben (`appendDiagram()`), Schätzung der Beschriftungsgrößen (`labelSize()`). Hat keine Imports und braucht keine globalen Objekte |
+| `lmm.js` | neu (Abschnitte 3a, 3b) | Spalten und kanonische Ordnung; enthält von Mermaid abgeleiteten Code (MIT) |
+| ein Einstieg, etwa `layout(xml, options)` | neu, aus `layoutBpmn()` und `hasCoordinates()` in `src/app/bpmn.js`, rund 30 Zeilen | XML parsen, prüfen, ob schon Positionen da sind, `readProcess()` → `kanonisch()` → `layoutGeometry()` → `appendDiagram()`. Gibt `{ xml, diagram, leftOut }` zurück: das XML mit Diagrammteil, die ID des erzeugten Diagramms und die ausgelassenen Elemente mit Grund |
 
-Die Bibliothek **bpmn-js** ist eine Abhängigkeit, kein Bestandteil des Pakets. Sie steht unter der eigenen bpmn.io-Lizenz: MIT mit der Zusatzbedingung, das bpmn.io-Wasserzeichen in gerenderten Diagrammen nicht zu entfernen (`src/app/licences.js`, Eintrag bpmn-js). Wer das Paket nutzt, muss diese Bedingung selbst einhalten. Das sollte im Paket deutlich stehen.
+**Was nicht ins Paket gehört:** `src/app/bpmn.js` als Renderer (bpmn-js, SVG, Farben), `transient.js`, die Farbregeln in `doc.css`, Live-Ansicht und Downloads. Damit ist **bpmn-js keine Abhängigkeit** des Pakets, und die Bedingung der bpmn.io-Lizenz zum Wasserzeichen betrifft es nicht. Das Paket hat zur Laufzeit überhaupt keine Abhängigkeiten.
+
+**Zwei Stellen, an denen die Umgebung hineinspielt**, und wie das Paket sie offen hält:
+
+1. **XML parsen.** `readProcess()` erwartet ein geparstes Dokument. Im Browser liefert es `DOMParser`, in Node braucht es eine DOM-Bibliothek wie `linkedom`, die die Tests schon nutzen. Der Einstieg nimmt deshalb einen Parser als Option, mit `globalThis.DOMParser` als Vorgabe. Eine Eigenheit gehört in die Paket-Doku: linkedom liest `&amp;` anders als ein Browser (`readModel()` in `tests/bpmn-fixtures.mjs`).
+2. **Größe der Beschriftungen.** Die Positionen hängen davon ab, wie groß die Beschriftungen gezeichnet werden. Ohne Hilfe schätzt das Paket sie (`labelSize()`, die Messart `estimated` der Fixtures). Wer genau sein will, übergibt eine Messfunktion als Option. Für bpmn-js kann das Paket einen kleinen optionalen Adapter mitliefern, der einen vom Aufrufer erzeugten Viewer bekommt, so wie heute `labelMeasurer(viewer)` in `src/app/bpmn.js`. So entsteht keine Abhängigkeit von bpmn-js. Ohne Messfunktion passen die Abstände zu bpmn-js' Beschriftungen weniger genau; die Regelprüfung der Fixtures misst heute mit gemessenen Größen.
+
+**Was zum Repository des Pakets gehört, ohne Teil der Bibliothek zu sein:**
+
+- Tests: `tests/bpmn-layout.test.mjs`, `tests/lmm.test.mjs`, `tests/bpmn-fixtures.mjs` und `.test.mjs`, `tests/bpmn-rules.mjs` und `.test.mjs`, die 57 Fixtures samt `index.json` und `known-breaks.json`.
+- Werkzeug zum Messen der Beschriftungsgrößen im Browser: `tests/capture-bpmn.mjs`. Es braucht bpmn-js und Chromium, aber nur als Entwicklungsabhängigkeit.
+- `linkedom` und gegebenenfalls `playwright-core` als Entwicklungsabhängigkeiten.
+
+**Vor der Veröffentlichung aufzuräumen:**
+
+- Meldungen auf Deutsch (`LAYOUT_NOTHING`, `layoutStrayText()` und andere) auf Englisch oder Fehlercodes umstellen, damit Aufrufer sie selbst übersetzen können.
+- Kommentare, die auf dokufix verweisen (Stories, `src/README.md`, Personen), in eine eigene Dokumentation des Pakets überführen.
+- Alle Reste von Mermaid entfernen (Abschnitt 4, Schritt 3).
+- dokufix bindet das Paket danach als Abhängigkeit ein; `src/app/bpmn.js` ruft nur noch den Einstieg auf.
 
 **Lizenzrechtliche Einordnung** (eine fachliche Einschätzung, keine Rechtsberatung):
 
@@ -364,10 +381,10 @@ Die Bibliothek **bpmn-js** ist eine Abhängigkeit, kein Bestandteil des Pakets. 
    - die Copyright-Zeile von Mermaid und den vollständigen MIT-Text.
 2. **Lizenztexte im Paket.** Die LGPL-3.0 baut auf der GPL-3.0 auf. Ein Paket liefert deshalb beide Texte mit, üblicherweise als `COPYING.LESSER` und `COPYING`, dazu eine Datei mit dem MIT-Hinweis von Mermaid.
 3. **In dokufix, solange die Komponente dort lebt:**
-   - Die Lizenzliste `src/app/licences.js` bekommt einen Eintrag für die BPMN-Komponente mit `use: 'embedded'`, Lizenz LGPL-3.0, Rechteinhaber und dem Hinweis auf den Mermaid-Anteil (MIT). `tests/licences.test.mjs` wird angepasst (Z. 69, die Liste der Einträge).
+   - Die Lizenzliste `src/app/licences.js` bekommt einen Eintrag für die BPMN-Layout-Komponente mit `use: 'embedded'`, Lizenz LGPL-3.0, Rechteinhaber und dem Hinweis auf den Mermaid-Anteil (MIT). `tests/licences.test.mjs` wird angepasst (Z. 69, die Liste der Einträge).
    - **Achtung Größe:** Die LGPL verlangt, beim Weitergeben eine Kopie der GPL-3.0 und der LGPL-3.0 beizulegen. Zusammen sind das gut 40 KB Text. Die Lizenzansicht steht in jeder Variante, auch in den Exporten. Ob die beiden Texte vollständig in jede Datei gehören oder ob ein Verweis auf den Quelltext und die Lizenzdateien des Repositorys genügt, sollte jemand mit Rechtskenntnis entscheiden (Abschnitt 7). Die Größenprüfungen des Builds (`tests/build.test.mjs`) müssen das berücksichtigen.
    - Das Austauschen der Komponente ist erfüllt, weil dokufix aus offenem Quelltext mit `npm run build` gebaut wird. Das sollte im README stehen.
-4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* nennen, welche Dateien zur BPMN-Komponente gehören, dass sie unter LGPL-3.0 steht und dass `lmm.js` auf Mermaid (MIT) beruht.
+4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* nennen, welche Dateien zur BPMN-Layout-Komponente gehören (`bpmn-layout.js`, `lmm.js`, der Einstieg), dass sie unter LGPL-3.0 steht und dass `lmm.js` auf Mermaid (MIT) beruht.
 
 ### Produktcode
 

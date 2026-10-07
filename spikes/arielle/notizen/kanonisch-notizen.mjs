@@ -13,12 +13,14 @@
 //   associations  grouped by text annotation (in the notes' order); within one, by the place of the partner, then
 //                 the one written towards the partner first, then id. The first is the one the layout reads, and
 //                 the text annotation's pool is taken from it anew (readNotes() took it from the XML's first)
-//   notes         by the place of the partner of their first association: the partner's position among the nodes
-//                 (a boundary event after its host, a flow after its source, a message flow after the earlier of
-//                 its ends; among those, the position of the boundary event, flow or message in its list), then
-//                 the text, then id. Measured best of the orders tried (BERICHT.md): in reading order of the
-//                 process, the first text annotation at a node takes the near place, the one at the node's event
-//                 or outgoing flow the next
+//   notes         those at a node first, then those at a boundary event, at a sequence flow, at a message flow
+//                 (the fewer anchors a text annotation has, the earlier: one box against the points of every piece
+//                 of a flow; option notes: 'partner' leaves this step out); within a kind by the place of the
+//                 partner of the first association: the partner's position among the nodes (a boundary event
+//                 after its host, a flow after its source, a message flow after the earlier of its ends; among
+//                 those, the position of the boundary event, flow or message in its list), then the text, then
+//                 id. Measured best of the orders tried (BERICHT.md): in reading order of the process, the first
+//                 text annotation at a node takes the near place, the one at the node's event or flow the next
 //   notes at pools   by pool, then text, then id (option poolNotes: 'xml' keeps the XML's stack order; BERICHT.md,
 //                 Abschnitt 4). They are placed apart from the others, so only their order among themselves counts
 // The order hangs on ids only where two text annotations have the same partner and the same text, two message
@@ -28,7 +30,7 @@ const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const lex = (p, q) => { for (let i = 0; i < p.length; i++){ const d = p[i] - q[i]; if (d) return d; } return 0; };
 const KIND = { node: 0, boundary: 1, flow: 2, message: 3, pool: 4 };
 
-export function kanonisch(model, { poolNotes = 'canon' } = {}){
+export function kanonisch(model, { poolNotes = 'canon', notes: noteOrder = 'kind' } = {}){
   const { model: m, rank } = kanonischBasis(model);
   const pos = new Map(m.nodes.map((n, i) => [n.id, i]));
   const boundaries = m.boundaries || [], hostOf = new Map(boundaries.map(b => [b.id, b.host])), bPos = new Map(boundaries.map((b, i) => [b.id, i]));
@@ -54,7 +56,8 @@ export function kanonisch(model, { poolNotes = 'canon' } = {}){
   const firstOf = new Map();
   for (const a of [...(m.associations || [])].sort(assocKey)) if (!firstOf.has(a.note)) firstOf.set(a.note, a);
   const first = n => firstOf.get(n.id), P = n => place(first(n));
-  const noteKey = (x, y) => lex(P(x), P(y)) || cmp(x.text, y.text) || cmp(x.id, y.id);
+  const kind = n => noteOrder === 'kind' ? KIND[first(n).kind] : 0;
+  const noteKey = (x, y) => kind(x) - kind(y) || lex(P(x), P(y)) || cmp(x.text, y.text) || cmp(x.id, y.id);
   const all = (m.notes || []).map(n => ({ ...n, pool: poolOfPartner(first(n)) }));
   const atPool = n => first(n).kind === 'pool';
   const notes = [...all.filter(n => !atPool(n)).sort(noteKey), ...(poolNotes === 'xml' ? all.filter(atPool) : all.filter(atPool).sort(noteKey))];
