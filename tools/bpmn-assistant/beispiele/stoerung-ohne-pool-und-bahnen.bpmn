@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Stoerung" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Stoerung" name="Störungsbearbeitung" targetNamespace="http://example.org/dokufix">
   <bpmn:process id="Process_Stoerung" isExecutable="false">
     <bpmn:startEvent id="Start_Gemeldet" name="Störung gemeldet"/>
     <bpmn:userTask id="Task_Erfassen" name="Störung erfassen"/>

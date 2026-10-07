@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" name="Onlinebestellung mit Paketdienst" targetNamespace="http://example.org/dokufix">
   <bpmn:collaboration id="Collaboration_Bestellung">
     <bpmn:participant id="Pool_Kunde" name="Kunde"/>
     <bpmn:participant id="Pool_Shop" name="Onlineshop" processRef="Process_Shop"/>

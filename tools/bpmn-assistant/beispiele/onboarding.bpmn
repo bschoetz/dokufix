@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Onboarding" targetNamespace="http://dokufix.example/onboarding">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Onboarding" name="Onboarding neuer Mitarbeiter" targetNamespace="http://dokufix.example/onboarding">
   <bpmn:collaboration id="Collaboration_Onboarding">
     <bpmn:participant id="Participant_Onboarding" name="Onboarding neuer Mitarbeiter" processRef="Process_Onboarding"/>
   </bpmn:collaboration>

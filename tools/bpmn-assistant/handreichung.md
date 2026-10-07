@@ -28,6 +28,7 @@ Das XML steht in einem eingezäunten Block mit der Sprache `bpmn`:
 ````
 
 - **Titel:** Der Titel des Diagramms ist die letzte Überschrift vor dem Block. Setze deshalb eine passende Überschrift direkt davor.
+- **Name:** Gib `bpmn:definitions` ein Attribut `name` mit dem Namen des Ablaufs, etwa `name="Urlaubsantrag"`. Es benennt das ganze Modell, gleich ob mit Pools oder ohne, und gibt einer heruntergeladenen Datei ihren Namen.
 - **Ein Diagramm je Block:** Zusammenhängende Pools mit ihren Nachrichtenflüssen stehen in einem Block. Voneinander unabhängige Abläufe schreibst du als mehrere Blöcke, jeden unter einer eigenen Überschrift.
 - **Mit Koordinaten:** XML, das bereits ein `BPMNShape` enthält, zeichnet dokufix unverändert so, wie es ist. Dann gelten die Grenzen dieser Handreichung nicht. Schreibe Koordinaten trotzdem nur, wenn sie aus einem echten Modellierwerkzeug stammen, nie selbst gerechnet und nie nur für einen Teil der Elemente.
 
@@ -132,7 +133,7 @@ Drei vollständige, gültige Beispiele. Alle sind geprüft: bpmnlint ohne Fehler
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Urlaub" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Urlaub" name="Urlaubsantrag" targetNamespace="http://example.org/dokufix">
   <bpmn:collaboration id="Collaboration_Urlaub">
     <bpmn:participant id="Pool_Urlaub" name="Urlaubsantrag" processRef="Process_Urlaub"/>
   </bpmn:collaboration>
@@ -193,7 +194,7 @@ Kunde und Firma als zwei Pools; die Firma mit zwei Bahnen; drei Nachrichtenflüs
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Angebot" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Angebot" name="Angebot" targetNamespace="http://example.org/dokufix">
   <bpmn:collaboration id="Collaboration_Angebot">
     <bpmn:participant id="Pool_Kunde" name="Kunde" processRef="Process_Kunde"/>
     <bpmn:participant id="Pool_Firma" name="Firma" processRef="Process_Firma"/>
@@ -255,7 +256,7 @@ Der Onlineshop mit zwei Bahnen; Kunde und Paketdienst als Black Boxes, weil ihr 
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" name="Bestellung" targetNamespace="http://example.org/dokufix">
   <bpmn:collaboration id="Collaboration_Bestellung">
     <bpmn:participant id="Pool_Kunde" name="Kunde"/>
     <bpmn:participant id="Pool_Shop" name="Onlineshop" processRef="Process_Shop"/>

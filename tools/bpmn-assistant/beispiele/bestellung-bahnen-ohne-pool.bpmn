@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Bestellung" name="Bestellabwicklung" targetNamespace="http://example.org/dokufix">
   <bpmn:process id="Process_Bestellung" isExecutable="false">
     <bpmn:laneSet id="LaneSet_Bestellung">
       <bpmn:lane id="Lane_Kundin" name="Kundin">

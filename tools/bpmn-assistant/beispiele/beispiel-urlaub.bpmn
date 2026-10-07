@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Urlaub" targetNamespace="http://example.org/dokufix">
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Urlaub" name="Urlaubsantrag" targetNamespace="http://example.org/dokufix">
   <bpmn:collaboration id="Collaboration_Urlaub">
     <bpmn:participant id="Pool_Urlaub" name="Urlaubsantrag" processRef="Process_Urlaub"/>
   </bpmn:collaboration>
