@@ -1,0 +1,5647 @@
+{
+ "exakt (Mermaid)": {
+  "xmlChanged": [],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 327,
+  "width": 64363,
+  "height": 25017,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1678,
+    "height": 700,
+    "changed": false
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "ohne Beschriftungsspalte": {
+  "xmlChanged": [
+   "notiz-hund2"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [
+   "notiz-hund2: listed break gone: association-through A_Temp Task_Verwerfen"
+  ],
+  "breaks": 44,
+  "crossings": 48,
+  "bends": 326,
+  "width": 64463,
+  "height": 24836,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1678,
+    "height": 700,
+    "changed": false
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "changed": true
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "Beschriftung als Gewicht": {
+  "xmlChanged": [
+   "notiz-hund2"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [
+   "notiz-hund2: listed break gone: association-through A_Temp Task_Verwerfen"
+  ],
+  "breaks": 44,
+  "crossings": 48,
+  "bends": 326,
+  "width": 64463,
+  "height": 24836,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1678,
+    "height": 700,
+    "changed": false
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "changed": true
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "XML-Reihenfolge wie buildGrid()": {
+  "xmlChanged": [],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 327,
+  "width": 64363,
+  "height": 25017,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1678,
+    "height": 700,
+    "changed": false
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch, Tie-Break Element-ID": {
+  "xmlChanged": [],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 327,
+  "width": 64363,
+  "height": 25017,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1678,
+    "height": 700,
+    "changed": false
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch, Tie-Break Name": {
+  "xmlChanged": [],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 327,
+  "width": 64363,
+  "height": 25017,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1678,
+    "height": 700,
+    "changed": false
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch, Tie-Break Struktur": {
+  "xmlChanged": [
+   "ref3"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 326,
+  "width": 64231,
+  "height": 25097,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1546,
+    "height": 780,
+    "changed": true
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch, Tie-Break Bahn+Struktur": {
+  "xmlChanged": [
+   "ref3"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 326,
+  "width": 64231,
+  "height": 25097,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1546,
+    "height": 780,
+    "changed": true
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch, Tie-Break Struktur+Name": {
+  "xmlChanged": [
+   "ref3"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [],
+  "breaks": 45,
+  "crossings": 52,
+  "bends": 326,
+  "width": 64231,
+  "height": 25097,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1546,
+    "height": 780,
+    "changed": true
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 7,
+    "crossings": 8,
+    "bends": 36,
+    "width": 4526,
+    "height": 1511,
+    "changed": false
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch Struktur+Name, ohne Beschriftungsspalte": {
+  "xmlChanged": [
+   "ref3",
+   "notiz-hund2"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [
+   "notiz-hund2: listed break gone: association-through A_Temp Task_Verwerfen"
+  ],
+  "breaks": 44,
+  "crossings": 48,
+  "bends": 325,
+  "width": 64331,
+  "height": 24916,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1546,
+    "height": 780,
+    "changed": true
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "changed": true
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch Struktur, Beschriftung als Gewicht": {
+  "xmlChanged": [
+   "ref3",
+   "notiz-hund2"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [
+   "notiz-hund2: listed break gone: association-through A_Temp Task_Verwerfen"
+  ],
+  "breaks": 44,
+  "crossings": 48,
+  "bends": 325,
+  "width": 64331,
+  "height": 24916,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1546,
+    "height": 780,
+    "changed": true
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "changed": true
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ },
+ "kanonisch Struktur, ohne Beschriftungsspalte": {
+  "xmlChanged": [
+   "ref3",
+   "notiz-hund2"
+  ],
+  "newBreaks": [],
+  "goneBreaks": [
+   "notiz-hund2: listed break gone: association-through A_Temp Task_Verwerfen"
+  ],
+  "breaks": 44,
+  "crossings": 48,
+  "bends": 325,
+  "width": 64331,
+  "height": 24916,
+  "perFixture": {
+   "ref3": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1546,
+    "height": 780,
+    "changed": true
+   },
+   "ref4": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "hund": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1686,
+    "height": 556,
+    "changed": false
+   },
+   "mehrere": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 944,
+    "height": 144,
+    "changed": false
+   },
+   "zwei": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 1280,
+    "height": 296,
+    "changed": false
+   },
+   "mitte": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "ereignis": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 600,
+    "height": 160,
+    "changed": false
+   },
+   "ref8": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 336,
+    "height": 80,
+    "changed": false
+   },
+   "demo2": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 882,
+    "height": 432,
+    "changed": false
+   },
+   "demo3": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 636,
+    "height": 80,
+    "changed": false
+   },
+   "reparatur": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 882,
+    "height": 288,
+    "changed": false
+   },
+   "demo5": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 776,
+    "height": 189,
+    "changed": false
+   },
+   "demo6": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 648,
+    "height": 428,
+    "changed": false
+   },
+   "hund2": {
+    "breaks": 6,
+    "crossings": 2,
+    "bends": 24,
+    "width": 4424,
+    "height": 1234,
+    "changed": false
+   },
+   "r01": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 8,
+    "width": 1320,
+    "height": 152,
+    "changed": false
+   },
+   "r02": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 1448,
+    "height": 432,
+    "changed": false
+   },
+   "r03": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1148,
+    "height": 432,
+    "changed": false
+   },
+   "r04": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 4,
+    "width": 942,
+    "height": 155,
+    "changed": false
+   },
+   "r05": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 7,
+    "width": 846,
+    "height": 432,
+    "changed": false
+   },
+   "r06": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 166,
+    "changed": false
+   },
+   "r07": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 849,
+    "height": 155,
+    "changed": false
+   },
+   "r08": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r09": {
+    "breaks": 0,
+    "crossings": 4,
+    "bends": 6,
+    "width": 1014,
+    "height": 432,
+    "changed": false
+   },
+   "r10": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 874,
+    "height": 144,
+    "changed": false
+   },
+   "r11": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 770,
+    "height": 80,
+    "changed": false
+   },
+   "r12": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 776,
+    "height": 266,
+    "changed": false
+   },
+   "r13": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 900,
+    "height": 137,
+    "changed": false
+   },
+   "r14": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 7,
+    "width": 850,
+    "height": 517,
+    "changed": false
+   },
+   "r15": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 13,
+    "width": 1616,
+    "height": 475,
+    "changed": false
+   },
+   "r16": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 7,
+    "width": 874,
+    "height": 412,
+    "changed": false
+   },
+   "r17": {
+    "breaks": 2,
+    "crossings": 2,
+    "bends": 8,
+    "width": 1182,
+    "height": 198,
+    "changed": false
+   },
+   "r18": {
+    "breaks": 0,
+    "crossings": 3,
+    "bends": 21,
+    "width": 1190,
+    "height": 1060,
+    "changed": false
+   },
+   "r19": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r20": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 714,
+    "height": 432,
+    "changed": false
+   },
+   "r21": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 4,
+    "width": 706,
+    "height": 144,
+    "changed": false
+   },
+   "r22": {
+    "breaks": 2,
+    "crossings": 0,
+    "bends": 11,
+    "width": 1014,
+    "height": 583,
+    "changed": false
+   },
+   "pools-abo": {
+    "breaks": 3,
+    "crossings": 2,
+    "bends": 9,
+    "width": 1210,
+    "height": 624,
+    "changed": false
+   },
+   "pools-bestellung": {
+    "breaks": 1,
+    "crossings": 2,
+    "bends": 6,
+    "width": 1448,
+    "height": 736,
+    "changed": false
+   },
+   "pools-angebot": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 846,
+    "height": 328,
+    "changed": false
+   },
+   "pools-bewerbung": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 1014,
+    "height": 553,
+    "changed": false
+   },
+   "pools-wasserschaden": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 0,
+    "width": 1014,
+    "height": 513,
+    "changed": false
+   },
+   "blackbox-kredit": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 2,
+    "width": 1182,
+    "height": 469,
+    "changed": false
+   },
+   "blackbox-reklamation": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 5,
+    "width": 1112,
+    "height": 388,
+    "changed": false
+   },
+   "blackbox-werkstatt": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 1810,
+    "height": 358,
+    "changed": false
+   },
+   "demo-angeheftet": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 6,
+    "width": 840,
+    "height": 470,
+    "changed": false
+   },
+   "angeheftet-rechnung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1216,
+    "height": 461,
+    "changed": false
+   },
+   "angeheftet-antrag": {
+    "breaks": 1,
+    "crossings": 1,
+    "bends": 6,
+    "width": 984,
+    "height": 708,
+    "changed": false
+   },
+   "angeheftet-stoerung": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 840,
+    "height": 346,
+    "changed": false
+   },
+   "demo-angeheftet-bahnen": {
+    "breaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 603,
+    "changed": false
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "changed": false
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "changed": false
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "changed": false
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "changed": false
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "changed": false
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "changed": false
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "changed": true
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "changed": false
+   }
+  }
+ }
+}

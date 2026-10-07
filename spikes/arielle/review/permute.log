@@ -1,0 +1,11 @@
+kanonisch, Tie-Break Element-ID (K=10): Spalten geändert 0.0 % (0 Fixtures), Layout geändert 23.7 % (22 Fixtures), Raster allein 23.7 %; Verstöße im Mittel 0.80, max 7, Fixtures mit mehreren Verstoßmengen 8; Kreuzungen im Mittel 0.88, Knicke 5.8
+exakt (Mermaid) (K=10): Spalten geändert 24.0 % (19 Fixtures), Layout geändert 24.7 % (23 Fixtures), Raster allein 23.7 %; Verstöße im Mittel 0.79, max 7, Fixtures mit mehreren Verstoßmengen 9; Kreuzungen im Mittel 0.88, Knicke 5.8
+kanonisch, Tie-Break Struktur (K=10): Spalten geändert 0.0 % (0 Fixtures), Layout geändert 23.9 % (22 Fixtures), Raster allein 23.9 %; Verstöße im Mittel 0.80, max 7, Fixtures mit mehreren Verstoßmengen 8; Kreuzungen im Mittel 0.88, Knicke 5.8
+kanonisch, Tie-Break Name (K=10): Spalten geändert 0.0 % (0 Fixtures), Layout geändert 23.7 % (22 Fixtures); Verstöße im Mittel 0.80, max 7, Fixtures mit mehreren Verstoßmengen 8; Kreuzungen im Mittel 0.88, Knicke 5.8
+kanonisch, Tie-Break Bahn+Struktur (K=10): Spalten geändert 0.0 % (0 Fixtures), Layout geändert 23.9 % (22 Fixtures); Verstöße im Mittel 0.80, max 7, Fixtures mit mehreren Verstoßmengen 8; Kreuzungen im Mittel 0.88, Knicke 5.8
+ohne Beschriftungsspalte (K=10): Spalten geändert 24.2 % (19 Fixtures), Layout geändert 24.9 % (23 Fixtures); Verstöße im Mittel 0.79, max 7, Fixtures mit mehreren Verstoßmengen 9; Kreuzungen im Mittel 0.86, Knicke 5.7
+Beschriftung als Gewicht (K=10): Spalten geändert 24.2 % (19 Fixtures), Layout geändert 24.9 % (23 Fixtures); Verstöße im Mittel 0.79, max 7, Fixtures mit mehreren Verstoßmengen 9; Kreuzungen im Mittel 0.86, Knicke 5.7
+XML-Reihenfolge wie buildGrid() (K=10): Spalten geändert 24.6 % (19 Fixtures), Layout geändert 24.9 % (23 Fixtures); Verstöße im Mittel 0.79, max 7, Fixtures mit mehreren Verstoßmengen 9; Kreuzungen im Mittel 0.87, Knicke 5.8
+kanonisch Struktur, Beschriftung als Gewicht (K=10): Spalten geändert 0.0 % (0 Fixtures), Layout geändert 23.0 % (21 Fixtures); Verstöße im Mittel 0.78, max 6, Fixtures mit mehreren Verstoßmengen 8; Kreuzungen im Mittel 0.81, Knicke 5.7
+kanonisch Struktur, ohne Beschriftungsspalte (K=10): Spalten geändert 0.0 % (0 Fixtures), Layout geändert 23.0 % (21 Fixtures); Verstöße im Mittel 0.78, max 6, Fixtures mit mehreren Verstoßmengen 8; Kreuzungen im Mittel 0.81, Knicke 5.7
+exit 0

@@ -1,0 +1,117 @@
+{
+ "app (Referenz)": {
+  "n": 57,
+  "rawSame": 5,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 18734,
+  "differ": []
+ },
+ "flowchart.curve linear": {
+  "n": 57,
+  "rawSame": 5,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19110,
+  "differ": []
+ },
+ "theme dark": {
+  "n": 57,
+  "rawSame": 5,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19065,
+  "differ": []
+ },
+ "securityLevel loose": {
+  "n": 57,
+  "rawSame": 5,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19199,
+  "differ": []
+ },
+ "fontSize 20": {
+  "n": 57,
+  "rawSame": 0,
+  "cxSame": 0,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 17894,
+  "differ": []
+ },
+ "flowchart.nodeSpacing 20": {
+  "n": 57,
+  "rawSame": 1,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19748,
+  "differ": []
+ },
+ "flowchart.rankSpacing 40": {
+  "n": 57,
+  "rawSame": 1,
+  "cxSame": 1,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19243,
+  "differ": []
+ },
+ "swimlane.ignoreCrossLaneEdges false": {
+  "n": 57,
+  "rawSame": 2,
+  "cxSame": 2,
+  "colSame": 23,
+  "xmlSame": 53,
+  "errors": 0,
+  "ms": 11238,
+  "differ": [
+   "r19",
+   "r20",
+   "pools-bestellung",
+   "angeheftet-antrag"
+  ]
+ },
+ "swimlane.optimizeRanksByCrossings false": {
+  "n": 57,
+  "rawSame": 5,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19246,
+  "differ": []
+ },
+ "swimlane.automaticLaneOrdering true": {
+  "n": 57,
+  "rawSame": 3,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 16730,
+  "differ": []
+ },
+ "swimlane.lineHops false": {
+  "n": 57,
+  "rawSame": 5,
+  "cxSame": 5,
+  "colSame": 57,
+  "xmlSame": 57,
+  "errors": 0,
+  "ms": 19085,
+  "differ": []
+ }
+}

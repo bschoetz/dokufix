@@ -1,0 +1,54 @@
+# Spike: arielle
+
+Die Versuche zur Ablösung von Mermaid als Layout-Engine für BPMN ohne Koordinaten, gesichert aus dem Scratchpad der Sitzung vom 7. Oktober 2026. arielle ist die Komponente, die Mermaid dabei ersetzt: Sie berechnet die Spalte jedes Knotens. Der Name spielt auf die Meerjungfrau an.
+
+Auswertung und Begründungen: `docs/analyse-mermaid-im-bpmn-code.md`, vor allem die Abschnitte 2 bis 3b und 4a. Der ausführliche Bericht des Reviews: `review/BERICHT.md`.
+
+Nichts hier ist Teil des Builds oder der Tests von dokufix. `src/` und `tests/` sind unverändert.
+
+## Die Fassungen
+
+| Datei | Export | Was |
+|---|---|---|
+| `review/ranks-optimiert.mjs` | `arielle(model)` | **Die empfohlene Fassung.** Mermaids Schichtung mit einer Ordnung aus der Struktur des Prozesses, ohne Beschriftungsspalte (Analyse, Abschnitt 3a) |
+| `review/ranks-exakt.mjs` | `arielleExakt(model)` | Exakter Nachbau von Mermaid 12.0.0, korrigiert und gestrafft. Referenz |
+| `ranks.mjs` | `mermaidRanks(model)` | Der erste, enge Nachbau. Er enthält den Fehler mit Beschriftungen, die `q()` leert (`review/BERICHT.md`, Abschnitt 1.3) |
+| `check/canon.mjs` | `canonical(model)` (im Skript) | Versuch: das Modell vor `layoutGeometry()` kanonisch sortieren (Analyse, Abschnitt 3b) |
+
+arielle beruht auf dem Swimlane-Layout von Mermaid 12.0.0 (MIT, Copyright (c) 2014 - 2022 Knut Sveidqvist). Bei der Übernahme nach `src/` bekommt es den Lizenzkopf und den Eintrag in der Lizenzliste (Analyse, Abschnitt 4a).
+
+## Die Skripte
+
+Alle Skripte laufen mit Node aus ihrem eigenen Ordner, also `cd spikes/arielle` (bzw. `review/`, `check/`), dann `node <skript>`. Sie importieren Module aus dem Repository über den absoluten Pfad `/home/user/dokufix/`. Wer das Repository woanders hat, passt diesen Pfad an. Vorausgesetzt ist `npm ci` im Repository.
+
+Die Browser-Skripte brauchen außerdem `dist/dokufix.html`, den CDN-Spiegel aus `tests/cdn.mjs` (er lädt beim ersten Lauf vom CDN nach `tests/.cdn/`) und Chromium unter `/opt/pw-browsers/chromium`.
+
+**Ordner `spikes/arielle/` (die eigenen Versuche):**
+
+| Skript | Browser | Was |
+|---|---|---|
+| `ranks.mjs` | nein | Nachbau gegen die 57 Fixtures: Spaltenordnung, XML beider Messarten |
+| `random.mjs` | ja | Nachbau gegen das echte Mermaid, 300 Zufallsprozesse |
+| `plaincheck.mjs` | nein | `localeCompare` gegen einfachen Zeichenvergleich, 2 000 Zufallsprozesse (braucht `ranks-plain.mjs`, das `quirks.mjs` schreibt) |
+| `quirks.mjs` | nein | Eigenheiten: Zeichenvergleich, ohne Beschriftungsknoten, Rückwärtsflüsse |
+| `timing.mjs` | nein | Laufzeit des Nachbaus |
+| `experiment.mjs`, `experiment.json` | ja | Konfigurationsvarianten von Mermaid gegen die Fixtures, Laufzeit von `mermaid.render()` (Analyse, Anhang B, Hinweise 2 und 3a) |
+| `directive.mjs`, `directive2.mjs`, `directive3.mjs` | teils | Direktiven `%%{…}%%` in BPMN-Beschriftungen (Anhang B, Hinweis 3b) |
+| `assistant.mjs` | ja | BPMN-Assistent mit und ohne Mermaid (Anhang B, Hinweis 4) |
+| `compare.mjs` | nein | Funktionen im BPMN-Assistenten gegen die Quellen (Anhang B, Hinweis 5) |
+
+**Ordner `check/` (Nachprüfung des Reviews und Raster-Versuch):**
+
+| Skript | Was |
+|---|---|
+| `invariance.mjs` | unabhängiger Permutationstest: Spalten von `arielleExakt` und `arielle` bei Umordnung des XML |
+| `canon.mjs` | Layoutänderung bei Umordnung, mit und ohne kanonisch sortiertes Modell |
+| `canon-quality.mjs` | Regelverstöße, Kreuzungen und Knicke mit kanonisch sortiertem Modell, je Fixture |
+| `debug.mjs` | Hilfsskript zum Lesen des XML mit linkedom |
+
+**Ordner `review/`:** die Skripte, Protokolle und Messdaten des Reviews. Die Liste mit Erklärungen steht am Ende von `review/BERICHT.md`. `browser-raws.json` hält die Rohpositionen aus dem Browserlauf fest, damit `browser-eval.mjs` ohne Browser auswerten kann.
+
+## Nicht gesichert
+
+- Das npm-Paket `mermaid@12.0.0` (149 MB), aus dem der Algorithmus gelesen wurde. Es ist fremder Code und lässt sich jederzeit mit `npm pack mermaid@12.0.0` wieder holen. Die Analyse nennt die Quellpfade.
+- Ein Entwurf des Hauptteils der Analyse; er steht vollständig in `docs/analyse-mermaid-im-bpmn-code.md`.

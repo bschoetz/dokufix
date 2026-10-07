@@ -1,0 +1,14 @@
+
+kanonisch, Tie-Break Element-ID (Umbenennung, K=10): Spalten geändert 22.5 %, Layout geändert 1.8 % (2 Fixtures: ref3, blackbox-reklamation)
+
+exakt (Mermaid) (Umbenennung, K=10): Spalten geändert 0.0 %, Layout geändert 0.0 % (0 Fixtures)
+
+kanonisch, Tie-Break Name (Umbenennung, K=10): Spalten geändert 0.0 %, Layout geändert 0.0 % (0 Fixtures)
+
+kanonisch, Tie-Break Struktur (Umbenennung, K=10): Spalten geändert 6.3 %, Layout geändert 0.0 % (0 Fixtures)
+
+kanonisch Struktur, ohne Beschriftungsspalte (Umbenennung, K=10): Spalten geändert 6.3 %, Layout geändert 0.0 % (0 Fixtures)
+
+kanonische Spalten, 570 Umordnungen: Layout geändert 131, davon mit anderen Rückwärtsflüssen von buildGrid() 6
+ref3 7/10; demo5 4/10; demo6 7/10; r04 7/10; r05 6/10 (Rückwärtsflüsse anders: 6); r06 6/10; r07 6/10; r12 5/10; r15 9/10; r16 5/10; r17 9/10; r18 7/10; r21 5/10; pools-bestellung 4/10; pools-bewerbung 8/10; blackbox-kredit 5/10; demo-angeheftet 4/10; angeheftet-antrag 6/10; angeheftet-stoerung 7/10; notiz-zwei 5/10; notiz-bauantrag 9/10
+exit 0

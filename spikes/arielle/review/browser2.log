@@ -1,0 +1,23 @@
+.........
+Gezielte Fälle:
+  Beschriftung "ja": arielle gleich, Nachbau gleich
+  Beschriftung "#" (q() macht ein Leerzeichen daraus): arielle ABWEICHEND, Nachbau ABWEICHEND
+  Beschriftung "\"": arielle ABWEICHEND, Nachbau ABWEICHEND
+  Beschriftung "<>&": arielle ABWEICHEND, Nachbau ABWEICHEND
+  Beschriftung "a|b": arielle gleich, Nachbau gleich
+  Beschriftung "a %% b": arielle gleich, Nachbau gleich
+  Beschriftung "x::y": arielle gleich, Nachbau gleich
+  Beschriftung "(a) [b] {c}": arielle gleich, Nachbau gleich
+  Beschriftung "a-->b": arielle gleich, Nachbau gleich
+  Beschriftung "end": arielle gleich, Nachbau gleich
+  Beschriftung "a;b": arielle gleich, Nachbau gleich
+  Beschriftung "~~~": arielle gleich, Nachbau gleich
+  Beschriftung "@{x}": arielle gleich, Nachbau gleich
+  Beschriftung "\u00e4\u00f6\u00fc \u20ac": arielle gleich, Nachbau gleich
+  Knotenname "#": arielle gleich, Nachbau gleich
+  Knotenname "a|b": arielle gleich, Nachbau gleich
+  Knotenname "(x)": arielle gleich, Nachbau gleich
+  Knotenname "end": arielle gleich, Nachbau gleich
+Zufallsmodelle: 400, Mermaid-Fehler: 0, arielle gleich: 237, Nachbau gleich: 237, arielle abweichend: 3, 4, 12, 13, 14, 15, 18, 20, 22, 23, Nachbau abweichend: 3, 4, 12, 13, 14, 15, 18, 20, 22, 23
+Knoten je Modell: min 2, max 51; Flüsse max 71
+exit 0
