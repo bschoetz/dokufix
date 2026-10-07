@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_1" targetNamespace="http://example.com/bpmn">
+  <process id="Process_1" isExecutable="false">
+    <laneSet id="LaneSet_1">
+      <lane id="Lane_1" name="Sachbearbeitung">
+        <flowNodeRef>StartEvent_1</flowNodeRef>
+        <flowNodeRef>Task_1</flowNodeRef>
+      </lane>
+      <lane id="Lane_2" name="Archiv">
+        <flowNodeRef>Task_2</flowNodeRef>
+        <flowNodeRef>EndEvent_1</flowNodeRef>
+      </lane>
+    </laneSet>
+    <startEvent id="StartEvent_1" name="Antrag liegt vor"/>
+    <task id="Task_1" name="Antrag prüfen"/>
+    <task id="Task_2" name="Antrag ablegen"/>
+    <endEvent id="EndEvent_1" name="Fertig"/>
+    <sequenceFlow id="Flow_1" sourceRef="StartEvent_1" targetRef="Task_1"/>
+    <sequenceFlow id="Flow_2" name="geprüft" sourceRef="Task_1" targetRef="Task_2"/>
+    <sequenceFlow id="Flow_3" sourceRef="Task_2" targetRef="EndEvent_1"/>
+    <textAnnotation id="TextAnnotation_1"><text>Eine Anmerkung</text></textAnnotation>
+    <association id="Association_1" sourceRef="TextAnnotation_1" targetRef="Task_1"/>
+  </process>
+</definitions>
