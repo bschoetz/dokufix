@@ -28,10 +28,10 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - Es gibt keine Kopplung an eine Mermaid-Version und an eine Beta-Syntax mehr.
   - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
-- **Die Komponente heißt arielle.** Der Name spielt auf die Meerjungfrau an. arielle kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul, sagt offen, dass es auf Mermaid beruht, und steht wie Mermaid unter der MIT-Lizenz (Abschnitt 4a).
-- **Mermaids Spaltenreihung ist volatil, und arielle beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. arielle ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
-- **Auch das fertige Layout lässt sich stabil machen.** Mit arielle allein ändert sich das Bild noch bei rund 21–23 % der Umordnungen, weil Regeln des eigenen Rasters bei Gleichstand der Reihenfolge des Modells folgen. Die Lösung ist `kanonisch()`: Das Modell wird vor dem Layout einmal in arielles Reihenfolge gebracht. Knoten kommen in der Reihenfolge der Rangvergabe, Flüsse in der Reihenfolge von arielles Tiefensuche (Abschnitt 3b). Ergebnis: Das Bild ändert sich bei **0 von 570** Umordnungen und bei 0 von 570 Umbenennungen. Die Qualität wird besser: 43 statt 44 Verstöße, 46 statt 48 Kreuzungen, 324 statt 325 Knicke.
-- **Empfehlung:** arielle samt `kanonisch()` als eigenes Modul `src/app/arielle.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 10 der 57 Fixtures werden einmal neu geschrieben.
+- **Die Komponente heißt LMM**, kurz für „Little Mermaid“: ein Wortspiel auf LLM, mit dessen Hilfe sie entstanden ist. Ihr Arbeitstitel war „arielle“; die Dateien im Spike `spikes/arielle/` tragen ihn noch (`arielle()`, `arielleExakt()`). LMM kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul, sagt offen, dass es auf Mermaid beruht, und steht wie Mermaid unter der MIT-Lizenz (Abschnitt 4a).
+- **Mermaids Spaltenreihung ist volatil, und LMM beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. LMM ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
+- **Auch das fertige Layout lässt sich stabil machen.** Mit LMM allein ändert sich das Bild noch bei rund 21–23 % der Umordnungen, weil Regeln des eigenen Rasters bei Gleichstand der Reihenfolge des Modells folgen. Die Lösung ist `kanonisch()`: Das Modell wird vor dem Layout einmal in LMMs Reihenfolge gebracht. Knoten kommen in der Reihenfolge der Rangvergabe, Flüsse in der Reihenfolge von LMMs Tiefensuche (Abschnitt 3b). Ergebnis: Das Bild ändert sich bei **0 von 570** Umordnungen und bei 0 von 570 Umbenennungen. Die Qualität wird besser: 43 statt 44 Verstöße, 46 statt 48 Kreuzungen, 324 statt 325 Knicke.
+- **Empfehlung:** LMM samt `kanonisch()` als eigenes Modul `src/app/lmm.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 10 der 57 Fixtures werden einmal neu geschrieben.
 
 ## Vorgehen
 
@@ -43,7 +43,7 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
 6. Den Nachbau von einem zweiten Agenten reviewen lassen: Korrektheit, Vereinfachung, Volatilität gegen Umordnung und Umbenennung, Qualität der Varianten (Abschnitt 3a). Seine Kernergebnisse habe ich mit eigenen Tests nachgeprüft: Qualitätsmessung erneut ausgeführt, Invarianz unabhängig nachgemessen.
 7. Die verbleibende Volatilität im Raster gemessen und eine kanonische Sortierung des Modells als Gegenmittel ausprobiert (Abschnitt 3b).
 
-Die Versuchsskripte, der Nachbau, arielle und der Review-Bericht liegen bisher nur im Scratchpad dieser Sitzung (`review/BERICHT.md`, `review/ranks-optimiert.mjs`, `review/ranks-exakt.mjs`), nicht im Repository. Abschnitte 2, 3 und 3a beschreiben sie so genau, dass sie sich nachvollziehen lassen.
+Die Versuchsskripte, die Nachbauten, LMM und die Review-Berichte liegen in `spikes/arielle/` (siehe dessen `README.md`). Dort heißen LMM `arielle()` (`review/ranks-optimiert.mjs`) und die exakte Referenz `arielleExakt()` (`review/ranks-exakt.mjs`); `kanonisch()` steht in `kanonisch/kanonisch.mjs`.
 
 ## Datenfluss heute und nach der Ablösung
 
@@ -166,7 +166,7 @@ Die Fixtures decken Bahnen, leere Bahnen, mehrere Pools, Black Boxes, angeheftet
 
 **Gegen das echte Mermaid** (Browser, `mermaidPositions()` mit Mermaid 12.0.0): 300 zufällig erzeugte Prozesse mit 1 bis 4 Bahnen, 3 bis 24 Knoten, bis zu 33 Flüssen, zufälligen Rückwärtsflüssen, etwa 30 % beschrifteten Flüssen und leeren Bahnen. Die Spaltenordnung war **in 300 von 300 Fällen gleich**. Mermaid lieferte in keinem Fall einen Fehler.
 
-**Ein Fehler, den das Review gefunden hat:** Besteht ein Flussname nur aus Zeichen, die `mermaidSource()` entfernt (`` " < > & # ` \ ``), schreibt `q()` die Beschriftung `|" "|`. Für Mermaid ist das **keine** Beschriftung. Mein Nachbau legte dafür trotzdem einen Beschriftungsknoten an und verschob eine Spalte. In den Fixtures und in meinen 300 Zufallsprozessen kam das nicht vor. Das Review hat es im Browser belegt: Mit gezielt erzeugten Beschriftungen stimmten nur 237 von 400 Zufallsprozessen, mit der Regel „nach `q()` leer heißt keine Beschriftung“ 400 von 400. Die korrigierte Referenzfassung heißt `arielleExakt`. Sie stimmt außerdem mit 20 000 Zufallsmodellen überein, darunter angeheftete Ereignisse, mehrere Pools und mehr als zehn parallele Flüsse.
+**Ein Fehler, den das Review gefunden hat:** Besteht ein Flussname nur aus Zeichen, die `mermaidSource()` entfernt (`` " < > & # ` \ ``), schreibt `q()` die Beschriftung `|" "|`. Für Mermaid ist das **keine** Beschriftung. Mein Nachbau legte dafür trotzdem einen Beschriftungsknoten an und verschob eine Spalte. In den Fixtures und in meinen 300 Zufallsprozessen kam das nicht vor. Das Review hat es im Browser belegt: Mit gezielt erzeugten Beschriftungen stimmten nur 237 von 400 Zufallsprozessen, mit der Regel „nach `q()` leer heißt keine Beschriftung“ 400 von 400. Die korrigierte Referenzfassung heißt `lmmExakt`. Sie stimmt außerdem mit 20 000 Zufallsmodellen überein, darunter angeheftete Ereignisse, mehrere Pools und mehr als zehn parallele Flüsse.
 
 **Varianten des Nachbaus:**
 
@@ -185,9 +185,9 @@ Daraus folgt:
 
 **Eine Eigenheit für später:** Mermaid und dokufix bestimmen Rückwärtsflüsse unterschiedlich. Mermaid sortiert die Kanten in der Tiefensuche nach Ziel-ID (Schritt 1). `buildGrid()` (`bpmn-layout.js:896–907`) geht die Flüsse in XML-Reihenfolge durch, ab den Knoten ohne eingehenden Fluss. In einer Näherung (Rückwärtsfluss bei Mermaid: innerhalb einer Bahn kein steigender Rang) unterscheiden sich die beiden in einem Fixture (`r05`). Für einen exakten Ersatz bleibt das so. Eine spätere eigene Lösung kann beides vereinheitlichen.
 
-## 3a. arielle: die empfohlene Fassung
+## 3a. LMM: die empfohlene Fassung
 
-Weil Mermaids Spaltenreihung volatil ist, muss arielle Mermaid nicht exakt treffen. Maßstab ist die Qualität des fertigen Layouts und die Stabilität gegen bedeutungslose Änderungen am XML. Das Review hat dafür elf Varianten gemessen.
+Weil Mermaids Spaltenreihung volatil ist, muss LMM Mermaid nicht exakt treffen. Maßstab ist die Qualität des fertigen Layouts und die Stabilität gegen bedeutungslose Änderungen am XML. Das Review hat dafür elf Varianten gemessen.
 
 ### Woher die Volatilität kommt
 
@@ -199,9 +199,9 @@ Mermaids Algorithmus greift an mehreren Stellen auf die Schlüssel `n1…` zurü
 
 Wird ein Element im XML verschoben, bekommen andere Knoten andere Schlüssel, und die Spalten können kippen.
 
-### Die Regeln von arielle
+### Die Regeln von LMM
 
-Die Schichtung bleibt die von Mermaid: Tiefensuche für Zyklen, Generationen, bahnweise Verdichtung. Nur dort, wo Mermaid auf die Schlüssel zurückgreift, entscheidet bei arielle die Struktur:
+Die Schichtung bleibt die von Mermaid: Tiefensuche für Zyklen, Generationen, bahnweise Verdichtung. Nur dort, wo Mermaid auf die Schlüssel zurückgreift, entscheidet bei LMM die Struktur:
 
 - **Startknoten** der Tiefensuche: die Knoten ohne eingehenden Fluss zuerst, nach Bahn (oben zuerst), dann nach dem Tie-Break.
 - **Ausgehende Flüsse eines Knotens:** nach dem Tie-Break.
@@ -209,7 +209,7 @@ Die Schichtung bleibt die von Mermaid: Tiefensuche für Zyklen, Generationen, ba
 - **Tie-Break:** zuerst der Weg, der mehr Knoten erreicht (der Hauptweg vor der kurzen Ausnahme), dann der Flussname, dann der Knotenname, zuletzt die Element-ID.
 - **Keine Beschriftungsspalte:** Ein Flussname setzt keine Spalte. Gemessen liefern „ohne Beschriftungsspalte“ und „Beschriftung als Gewicht“ dieselben Bilder, weil R7 die leere Spalte ohnehin schließt. Damit entfällt die ganze Mechanik der Hilfsknoten.
 
-**Umfang:** 81 Zeilen mit Kopfkommentar, davon 41 Zeilen Code, eine Funktion `arielle(model)`, die `{ n1: rang, … }` zurückgibt. Sie meldet keine ESLint-Fehler mit der Konfiguration des Repositorys. Laufzeit für alle 57 Fixtures: 3,2 ms. Die Reichweite kostet O(V·(V+E)); eine Kette aus 5 000 Knoten braucht 0,86 s, was für BPMN-Größen belanglos ist.
+**Umfang:** 81 Zeilen mit Kopfkommentar, davon 41 Zeilen Code, eine Funktion `lmm(model)`, die `{ n1: rang, … }` zurückgibt. Sie meldet keine ESLint-Fehler mit der Konfiguration des Repositorys. Laufzeit für alle 57 Fixtures: 3,2 ms. Die Reichweite kostet O(V·(V+E)); eine Kette aus 5 000 Knoten braucht 0,86 s, was für BPMN-Größen belanglos ist.
 
 ### Gemessen
 
@@ -218,7 +218,7 @@ Die Schichtung bleibt die von Mermaid: Tiefensuche für Zyklen, Generationen, ba
 | Fassung | XML geändert | Verstöße (neu / weg) | Kreuzungen | Knicke |
 |---|---|---|---|---|
 | exakter Nachbau (heutiges Layout) | 0 | 45 (0 / 0) | 52 | 327 |
-| **arielle** | **2** | **44 (0 / 1)** | **48** | **325** |
+| **LMM** | **2** | **44 (0 / 1)** | **48** | **325** |
 
 Die zwei Änderungen sind:
 
@@ -232,31 +232,31 @@ Ich habe die Qualitätsmessung erneut ausgeführt und dieselben Zahlen bekommen.
 | Fassung | Spalten geändert bei Umordnung | Spalten geändert bei Umbenennung der IDs |
 |---|---|---|
 | exakter Nachbau (Mermaid) | 24,0 % (19 Fixtures) | 0,0 % |
-| arielle mit Tie-Break nur Element-ID | 0,0 % | 22,5 % |
-| arielle mit Tie-Break Reichweite → Flussname → ID | 0,0 % | 6,3 % |
-| **arielle mit Tie-Break Reichweite → Flussname → Knotenname → ID** | **0,0 %** | **0,0 %** |
+| LMM mit Tie-Break nur Element-ID | 0,0 % | 22,5 % |
+| LMM mit Tie-Break Reichweite → Flussname → ID | 0,0 % | 6,3 % |
+| **LMM mit Tie-Break Reichweite → Flussname → Knotenname → ID** | **0,0 %** | **0,0 %** |
 
-Den Wert für Umordnung habe ich mit einem eigenen Test unabhängig nachgemessen: exakter Nachbau 136 von 570 Umordnungen mit anderen Spalten (23,9 %), arielle 0 von 570.
+Den Wert für Umordnung habe ich mit einem eigenen Test unabhängig nachgemessen: exakter Nachbau 136 von 570 Umordnungen mit anderen Spalten (23,9 %), LMM 0 von 570.
 
 **Wo keine Invarianz möglich ist:** Bei zwei Wegen, die in Reichweite, Flussnamen und Knotennamen gleich sind, etwa zwei unbenannten Zweigen eines parallelen Gateways mit gleich benannten Aufgaben, entscheidet die kleinere ID. Die Ordnung ist dann stabil gegen Umordnung, aber nicht gegen Umbenennung. Das Bild ist in beiden Fällen gleich gut, nur gespiegelt. In einer Schleife haben alle Knoten dieselbe Reichweite, dort entscheiden Namen und ID.
 
-**Abstand zu Mermaid:** arielle ist strukturell eigenständiger als der erste Nachbau. Es gibt keine String-IDs, keine Gruppen, keine Platzhalter und keine Hilfsknoten, dafür eine eigene strukturelle Ordnung. Die Schichtung selbst bleibt aber die von Mermaid. arielle ist deshalb weiter als von Mermaid abgeleitet zu behandeln (Abschnitt 4a).
+**Abstand zu Mermaid:** LMM ist strukturell eigenständiger als der erste Nachbau. Es gibt keine String-IDs, keine Gruppen, keine Platzhalter und keine Hilfsknoten, dafür eine eigene strukturelle Ordnung. Die Schichtung selbst bleibt aber die von Mermaid. LMM ist deshalb weiter als von Mermaid abgeleitet zu behandeln (Abschnitt 4a).
 
 ## 3b. Die verbleibende Volatilität im Raster
 
-arielle macht die Spalten stabil, das fertige Bild aber noch nicht:
+LMM macht die Spalten stabil, das fertige Bild aber noch nicht:
 
 | Messung (570 Umordnungen) | Layout geändert |
 |---|---|
 | exakter Nachbau | 24,7 % (23 Fixtures) |
-| arielle | 21–23 % (21 Fixtures) |
+| LMM | 21–23 % (21 Fixtures) |
 | Spalten je Element-ID festgehalten, nur das Raster | 23,7 % |
 
 Die Ursache liegt in `src/app/bpmn-layout.js`: Mehrere Regeln folgen bei Gleichstand der Reihenfolge des Modells. Beispiele sind `byCol` (Z. 951, ein stabiles Sortieren nach Spalte), `at()` (Z. 922, die erste passende Zelle) und etwa 44 Schleifen über `model.nodes` oder `model.flows` zwischen Z. 879 und 2000. Andere Rückwärtsflüsse in `buildGrid()` erklären nur 6 von 131 Änderungen, alle in `r05`.
 
 **Versuch: das Modell vor dem Layout kanonisch sortieren.** Die Idee: `model.nodes`, `lane.nodes`, `model.flows`, `model.boundaries` und die übrigen Listen werden vor `layoutGeometry()` einmal in eine Ordnung gebracht, die nur von der Struktur abhängt. Getestet habe ich:
 
-- Knoten nach arielles Spalte, Bahn, Name, ID,
+- Knoten nach LMMs Spalte, Bahn, Name, ID,
 - Flüsse nach der Position ihrer Enden, Name, ID,
 - angeheftete Ereignisse nach Host, Name, ID,
 - der Rest nach ID.
@@ -286,21 +286,21 @@ Ein zweites Review (`spikes/arielle/kanonisch/BERICHT.md`) hat den Versuch gepr�
 
 | Liste | Ordnung |
 |---|---|
-| `model.nodes` | die Reihenfolge, in der arielle die Ränge vergibt: Spalte für Spalte, der Hauptweg zuerst |
-| `model.flows` | die Reihenfolge, in der arielles Tiefensuche die Flüsse durchläuft: der Hauptweg bis zum Ende, dann die Alternativen, jeder Rückwärtsfluss dort, wo die Suche auf ihn trifft |
+| `model.nodes` | die Reihenfolge, in der LMM die Ränge vergibt: Spalte für Spalte, der Hauptweg zuerst |
+| `model.flows` | die Reihenfolge, in der LMMs Tiefensuche die Flüsse durchläuft: der Hauptweg bis zum Ende, dann die Alternativen, jeder Rückwärtsfluss dort, wo die Suche auf ihn trifft |
 | `model.boundaries` | nach der Position des Hosts, dann nach dem ersten Fluss des Ereignisses, dann Name, dann ID |
 | `lane.nodes` | wie die Knoten |
 | Bahnen, Pools, Nachrichtenflüsse, Notizen, Assoziationen | **unverändert**: Ihre Reihenfolge hat Bedeutung oder ist die des Autors |
 
-Die Ordnungen fallen bei arielles Lauf ohnehin an. `kanonisch(model)` gibt deshalb Modell und Ränge in einem Lauf zurück: `{ model, rank }`.
+Die Ordnungen fallen bei LMMs Lauf ohnehin an. `kanonisch(model)` gibt deshalb Modell und Ränge in einem Lauf zurück: `{ model, rank }`.
 
 **Gemessen** (57 Fixtures, Messart `measured`, Diagrammteil je Element-ID):
 
-| | arielle allein | erster Versuch | **`kanonisch()`** |
+| | LMM allein | erster Versuch | **`kanonisch()`** |
 |---|---|---|---|
-| Verstöße (neu / weg gegenüber arielle) | 44 | 46 (+6 / −4) | **43 (+3 / −4)** |
+| Verstöße (neu / weg gegenüber LMM) | 44 | 46 (+6 / −4) | **43 (+3 / −4)** |
 | Kreuzungen / Knicke | 48 / 325 | 47 / 331 | **46 / 324** |
-| Bilder anders als mit arielle allein | – | 16 | 10 |
+| Bilder anders als mit LMM allein | – | 16 | 10 |
 | Layout anders bei Umordnung (570) | 21–23 % (21 Fixtures) | 0 | **0** |
 | Layout anders bei Umbenennung (570) | 0 | 0 | **0** |
 
@@ -325,44 +325,44 @@ Bei 8 der 10 Bildänderungen mit `kanonisch()` steht jeder Knoten an derselben S
 
 ## 4. Was sich beim Ersatz ändert
 
-Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem eigenen Modul `src/app/arielle.js` landet (Abschnitt 4a), als reine Funktion `arielle(model)`. Sie gibt `{ nodes: { key: { cx } } }` zurück, sodass `layoutGeometry()` unverändert bleibt. Wo es eine Entscheidung braucht, steht sie in Abschnitt 7.
+Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigenen Modul `src/app/lmm.js` landet (Abschnitt 4a), als reine Funktion `lmm(model)`. Sie gibt `{ nodes: { key: { cx } } }` zurück, sodass `layoutGeometry()` unverändert bleibt. Wo es eine Entscheidung braucht, steht sie in Abschnitt 7.
 
-### 4a. Die Komponente arielle und ihre Lizenz
+### 4a. Die Komponente LMM und ihre Lizenz
 
-**Ort.** Ein eigenes Modul `src/app/arielle.js` mit der reinen Funktion `arielle(model)` (Modell aus `readProcess()`, Rückgabe `{ nodes: { key: { cx } } }`). Ihre Tests liegen in einer eigenen Datei, etwa `tests/arielle.test.mjs`. `src/app/bpmn-layout.js` und `src/app/bpmn.js` enthalten danach keinen von Mermaid übernommenen Code. Sie rufen arielle nur auf.
+**Ort.** Ein eigenes Modul `src/app/lmm.js` mit der reinen Funktion `lmm(model)` (Modell aus `readProcess()`, Rückgabe `{ nodes: { key: { cx } } }`). Ihre Tests liegen in einer eigenen Datei, etwa `tests/lmm.test.mjs`. `src/app/bpmn-layout.js` und `src/app/bpmn.js` enthalten danach keinen von Mermaid übernommenen Code. Sie rufen LMM nur auf.
 
 **Warum ein eigenes Modul:** Die Grenze zwischen übernommenem und eigenem Code ist dann eine Dateigrenze. Lizenzkopf, Herkunftsangabe und Lizenzeintrag beziehen sich auf genau diese Datei. Wer später den Algorithmus durch einen eigenen ersetzt, tauscht ein Modul aus, ohne das Layout anzufassen.
 
 **Lizenzrechtliche Einordnung** (eine fachliche Einschätzung, keine Rechtsberatung):
 
-- arielle ist eine Portierung von Teilen des Swimlane-Layouts von Mermaid 12.0.0. Das ist von Mermaid abgeleiteter Code, auch wenn er gekürzt und umgeschrieben ist.
+- LMM ist eine Portierung von Teilen des Swimlane-Layouts von Mermaid 12.0.0. Das ist von Mermaid abgeleiteter Code, auch wenn er gekürzt und umgeschrieben ist.
 - Mermaid steht unter der MIT-Lizenz (`LICENSE` des npm-Pakets: „Copyright (c) 2014 - 2022 Knut Sveidqvist“). MIT erlaubt Verwenden, Ändern und Weitergeben unter einer einzigen Bedingung: Der Copyright-Hinweis und der Lizenztext müssen in allen Kopien oder wesentlichen Teilen enthalten sein.
-- arielle unter dieselbe Lizenz zu stellen ist der einfachste saubere Weg. Die Datei hat dann eine einheitliche Lizenz. Die eigenen Änderungen bekommen eine zusätzliche Copyright-Zeile für dokufix; die Zeile von Mermaid bleibt stehen.
+- LMM unter dieselbe Lizenz zu stellen ist der einfachste saubere Weg. Die Datei hat dann eine einheitliche Lizenz. Die eigenen Änderungen bekommen eine zusätzliche Copyright-Zeile für dokufix; die Zeile von Mermaid bleibt stehen.
 - Weil MIT eine freizügige Lizenz ist, verträgt sich ein MIT-Modul mit nahezu jeder Lizenz des übrigen dokufix-Codes, auch einer anderen. Offen ist, unter welcher Lizenz dokufix selbst steht: Das Repository hat keine `LICENSE`-Datei (Abschnitt 7).
 
 **Was dafür konkret nötig ist:**
 
-1. **Kopf von `src/app/arielle.js`:**
+1. **Kopf von `src/app/lmm.js`:**
    - der Name und wofür die Komponente da ist,
    - die Herkunft: Mermaid 12.0.0, `src/rendering-util/layout-algorithms/swimlanes/` (`phase1.cycles.ts`, `phase2.laneAwareCompact.ts`, `helpers.ts`, `edgeLabelNodes.ts`) und die Kanten-IDs des Flowchart-Modells,
    - der Hinweis, dass der Code angepasst und gekürzt ist,
    - die Copyright-Zeile von Mermaid, eine Copyright-Zeile für dokufix und der vollständige MIT-Lizenztext.
 
    Der volle Text im Kopf ist die sicherste Form, denn der Quelltext wird auch einzeln weitergegeben, etwa über das Repository. MIT verlangt nicht, Änderungen zu kennzeichnen; es ist trotzdem gute Praxis.
-2. **Lizenzliste `src/app/licences.js`:** Ein Eintrag für arielle mit `use: 'embedded'`, Lizenz MIT und beiden Copyright-Zeilen. Der Grund: dokufix wird als eine HTML-Datei weitergegeben, in der der Kommentarkopf nach dem Build nicht mehr sicher steht. Die Lizenzansicht steht in jeder Variante, auch in den Exporten (Kommentar am Anfang von `licences.js`), und trägt den Hinweis so mit. Den MIT-Text kennt `LICENCE_TEXTS` schon. `tests/licences.test.mjs` (Z. 69, die Liste der Einträge) wird um den Eintrag ergänzt.
-3. **Mermaid-Eintrag:** Der bestehende Eintrag `use: 'cdn'` bleibt, weil Mermaid für Mermaid-Diagramme weiter vom CDN geladen wird. Der arielle-Eintrag nennt Mermaid als Herkunft.
-4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* einen Satz zu arielle, dass sie auf Mermaid beruht und unter MIT steht.
+2. **Lizenzliste `src/app/licences.js`:** Ein Eintrag für LMM mit `use: 'embedded'`, Lizenz MIT und beiden Copyright-Zeilen. Der Grund: dokufix wird als eine HTML-Datei weitergegeben, in der der Kommentarkopf nach dem Build nicht mehr sicher steht. Die Lizenzansicht steht in jeder Variante, auch in den Exporten (Kommentar am Anfang von `licences.js`), und trägt den Hinweis so mit. Den MIT-Text kennt `LICENCE_TEXTS` schon. `tests/licences.test.mjs` (Z. 69, die Liste der Einträge) wird um den Eintrag ergänzt.
+3. **Mermaid-Eintrag:** Der bestehende Eintrag `use: 'cdn'` bleibt, weil Mermaid für Mermaid-Diagramme weiter vom CDN geladen wird. Der LMM-Eintrag nennt Mermaid als Herkunft.
+4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* einen Satz zu LMM, dass sie auf Mermaid beruht und unter MIT steht.
 
 ### Produktcode
 
 | Datei, Stelle | Heute | Beim Ersatz |
 |---|---|---|
-| `src/app/bpmn.js:2` | importiert `mermaidSource` | entfällt; stattdessen `arielle` aus `./arielle.js` |
+| `src/app/bpmn.js:2` | importiert `mermaidSource` | entfällt; stattdessen `lmm` aus `./lmm.js` |
 | `src/app/bpmn.js:7–8, 32` | Kommentare „Mermaid as the layout engine“, „mermaid for the layout“ | anpassen |
 | `src/app/bpmn.js:39` | `BPMN_NO_MERMAID` | entfällt |
 | `src/app/bpmn.js:148` | Kommentar zu `offscreenHost()`: „and Mermaid lays out in“ | anpassen; der Host bleibt für bpmn-js |
 | `src/app/bpmn.js:245–247` | Prüfung auf Mermaid in `layoutBpmn()` | entfällt |
-| `src/app/bpmn.js:250` | `await mermaidPositions(…)` | Aufruf von `arielle(read.model)`, synchron |
+| `src/app/bpmn.js:250` | `await mermaidPositions(…)` | Aufruf von `lmm(read.model)`, synchron |
 | `src/app/bpmn.js:256–308` | `mermaidPositions()`, Zähler `layoutRuns` | entfällt |
 | `src/app/bpmn-layout.js:1–26` | Modulkommentar, Schritte 2 und 3 über Mermaid | neu schreiben: Schritt „Spalten“ statt Mermaid |
 | `src/app/bpmn-layout.js:47–51` | `MERMAID_LAYOUT_VERSION` | entfällt |
@@ -383,10 +383,10 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 | `tests/bpmn.test.mjs:55` | Prüfung des Texts von `BPMN_NO_MERMAID` | entfällt |
 | `tests/bpmn-layout.test.mjs:128, 137–177, 495–509, 799–800, 840, 1123–1126, 1279–1287` | Tests des Mermaid-Texts | werden zu Tests der Spaltenberechnung: eine Spalte je Knoten und Bahn, Fluss über Bahngrenzen, Beschriftung, angeheftetes Ereignis, Schleife, keine Nachrichtenflüsse |
 | `tests/bpmn-layout.test.mjs:180–181` | `MERMAID_LAYOUT_VERSION` | entfällt |
-| `tests/bpmn-layout.test.mjs:289, 366–370, 467–490, 662, 785, 1085, 1254` | erfundene Rohpositionen „in the shape Mermaid gives“ | funktionieren weiter, weil das Format von `raw` bleibt; nur die Kommentare anpassen. Wo die Spalten aus dem Modell folgen sollen, `arielle()` nehmen |
+| `tests/bpmn-layout.test.mjs:289, 366–370, 467–490, 662, 785, 1085, 1254` | erfundene Rohpositionen „in the shape Mermaid gives“ | funktionieren weiter, weil das Format von `raw` bleibt; nur die Kommentare anpassen. Wo die Spalten aus dem Modell folgen sollen, `lmm()` nehmen |
 | `tests/licences.test.mjs:33–34, 112–121, 147–168, 196–198` | Wächter „Mermaid pin = MERMAID_LAYOUT_VERSION“ (Story 2.8, AC6) | entfällt; die Prüfung „Lizenzliste = Pin“ bleibt |
 | `tests/fixtures/bpmn-layout/*.raw.json` (57 Dateien), `index.json` (`"mermaid"`) | Rohpositionen aus dem Browser | entfallen; `tests/bpmn-fixtures.mjs` berechnet die Spalten selbst. Alternativ als Referenz für den Differenztest behalten (Abschnitt 7) |
-| `tests/bpmn-fixtures.mjs:12–19, 50`, `tests/bpmn-fixtures.test.mjs:14, 21–26` | Lesen von `raw.json`, Versionsprüfung | auf `arielle()` umstellen; vier statt fünf Dateien je Fixture |
+| `tests/bpmn-fixtures.mjs:12–19, 50`, `tests/bpmn-fixtures.test.mjs:14, 21–26` | Lesen von `raw.json`, Versionsprüfung | auf `lmm()` umstellen; vier statt fünf Dateien je Fixture |
 | `tests/capture-bpmn.mjs` | erfasst Rohpositionen und Größen der Beschriftungen | nur noch die Größen (`labelMeasurer()` braucht weiter den Browser); `mermaidPositions` und die Kantenprüfung entfallen |
 | `tests/durchlaeufe.mjs:89–93, 307–312` | Szenario 13: ohne Mermaid wird BPMN ohne Koordinaten zur Warnung | Erwartung umdrehen: Es wird gezeichnet; nur das Mermaid-Diagramm wird zur Warnung |
 | `tests/durchlaeufe.mjs:306, 1056` | `LAYOUT_TRACES`: keine Spuren von Mermaids Layout in Dateien | kann bleiben (schadet nicht) oder entfallen |
@@ -402,13 +402,13 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 
 ## 5. Vorschlag für das Vorgehen
 
-**Schritt 1: arielle übernehmen, parallel zu Mermaid.**
+**Schritt 1: LMM übernehmen, parallel zu Mermaid.**
 
-- `src/app/arielle.js` mit `arielle(model)` in der Fassung aus dem Review (Abschnitt 3a) und `kanonisch(model)` (Abschnitt 3b), mit Lizenzkopf und Eintrag in der Lizenzliste (Abschnitt 4a). Beide teilen sich einen Lauf.
-- `tests/arielle.test.mjs` mit:
+- `src/app/lmm.js` mit `lmm(model)` in der Fassung aus dem Review (Abschnitt 3a) und `kanonisch(model)` (Abschnitt 3b), mit Lizenzkopf und Eintrag in der Lizenzliste (Abschnitt 4a). Beide teilen sich einen Lauf.
+- `tests/lmm.test.mjs` mit:
   - einem Fall je Regel aus Abschnitt 3a,
   - dem Invarianztest: dieselben Spalten und derselbe fertige Diagrammteil bei Umordnung des XML und bei Umbenennung der IDs (für `npm test` eine kleine Zahl Umordnungen mit festem Startwert, die volle Messung als Skript),
-  - als Referenz `arielleExakt`, die korrigierte exakte Fassung, nur im Test: Sie belegt, dass die Schichtung der von Mermaid entspricht. Geprüft wird das gegen `raw.json`, solange es die Datei noch gibt.
+  - als Referenz `lmmExakt`, die korrigierte exakte Fassung, nur im Test: Sie belegt, dass die Schichtung der von Mermaid entspricht. Geprüft wird das gegen `raw.json`, solange es die Datei noch gibt.
 
 **Schritt 2: umschalten.**
 
@@ -426,7 +426,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem e
 
 **Danach, bei Bedarf:**
 
-- eine gemeinsame Definition von Rückwärtsflüssen für arielle und `buildGrid()`,
+- eine gemeinsame Definition von Rückwärtsflüssen für LMM und `buildGrid()`,
 - Nachrichtenflüsse schon bei den Spalten berücksichtigen statt erst in R7,
 - Flüsse von einem Knoten auf sich selbst zulassen.
 
@@ -436,11 +436,11 @@ Für die Schritte 1 bis 3:
 
 1. `npm run fixtures`: Nur die 10 Fixtures aus Schritt 2 ändern sich, in beiden Messarten. Alle sind angesehen und neu geschrieben.
 2. `known-breaks.json`: 43 statt 45 Verstöße; neu sind nur die Tausche in `r15` und `r17`.
-3. `tests/arielle.test.mjs`: Spalten und fertiger Diagrammteil sind für alle 57 Fixtures gleich bei Umordnung und bei Umbenennung der IDs.
-4. Vor dem Entfernen von `raw.json`: `arielleExakt` trifft die Spaltenordnung aller 57 Rohpositionen.
+3. `tests/lmm.test.mjs`: Spalten und fertiger Diagrammteil sind für alle 57 Fixtures gleich bei Umordnung und bei Umbenennung der IDs.
+4. Vor dem Entfernen von `raw.json`: `lmmExakt` trifft die Spaltenordnung aller 57 Rohpositionen.
 5. `tests/vergleich.mjs` auf `tests/referenz.md`: Die BPMN-Diagramme ohne Koordinaten sind in beiden Browsern gleich, bis auf die bewusst geänderten.
 6. `tests/durchlaeufe.mjs`: grün, mit geändertem Szenario 13 (BPMN ohne Koordinaten wird ohne Mermaid gezeichnet).
-7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/arielle.js`, mit Lizenzkopf; die Lizenzliste hat einen Eintrag für arielle.
+7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/lmm.js`, mit Lizenzkopf; die Lizenzliste hat einen Eintrag für LMM.
 8. `npm test` und `npm run check` grün.
 
 Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße, 46 Kreuzungen, 324 Knicke.
@@ -449,16 +449,16 @@ Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße,
 
 | Frage | Optionen | Empfehlung |
 |---|---|---|
-| Exakter Nachbau oder eigene Ordnung? | exakt wie Mermaid; strukturelle Ordnung | **Entschieden:** strukturelle Ordnung (arielle). Mermaids Reihung ist volatil, eine Abweichung ist gewollt. Der exakte Nachbau bleibt nur als Referenz im Test |
+| Exakter Nachbau oder eigene Ordnung? | exakt wie Mermaid; strukturelle Ordnung | **Entschieden:** strukturelle Ordnung (LMM). Mermaids Reihung ist volatil, eine Abweichung ist gewollt. Der exakte Nachbau bleibt nur als Referenz im Test |
 | Schnittstelle zu `layoutGeometry()` | `raw` im heutigen Format `{ nodes: { key: { cx } } }`; neue Form, etwa `columns: Map<key, number>` | Zunächst das heutige Format: keine Änderung an `layoutGeometry()` und an den Tests mit erfundenen Positionen. Umbenennen später, beim Aufräumen |
 | Was passiert mit `raw.json`? | löschen; als Referenz von Mermaid 12.0.0 behalten | Bis Schritt 2 behalten (Abnahmekriterium 4), danach löschen |
 | Beschriftungsspalte beibehalten? | ja (wie Mermaid); nein | **Entschieden:** nein. Gleiche Bilder wie „als Gewicht“, ein Verstoß weniger als mit Spalte, und die Hilfsknoten entfallen |
 | Tie-Break bei gleichwertigen Wegen | Reichweite → Flussname → Knotenname → ID; Flussname zuerst („ja“ immer vor „nein“) | Reichweite zuerst (Empfehlung des Reviews): Der Hauptweg kommt vor der kurzen Ausnahme, und das Ergebnis ist in den Fixtures stabil gegen Umordnung und Umbenennung. Wer „ja“ immer vorn haben will, tauscht die ersten beiden Glieder |
-| Kanonische Ordnung für das Raster | mit arielle; als eigene Story; die Ordnung als Schlüssel in die Regeln tragen | **Empfehlung: mit arielle**, als `kanonisch()`. Sie macht das Layout vollständig stabil und verbessert die Qualität leicht. Die Regeln anzufassen ist nicht nötig |
-| Wo `kanonisch()` hingehört | `readProcess()`; `arielle.js`; `layoutGeometry()` | `arielle.js`, aufgerufen in `layoutBpmn()`. `readProcess()` soll das Modell des Autors liefern, `layoutGeometry()` nicht von arielle abhängen |
+| Kanonische Ordnung für das Raster | mit LMM; als eigene Story; die Ordnung als Schlüssel in die Regeln tragen | **Empfehlung: mit LMM**, als `kanonisch()`. Sie macht das Layout vollständig stabil und verbessert die Qualität leicht. Die Regeln anzufassen ist nicht nötig |
+| Wo `kanonisch()` hingehört | `readProcess()`; `lmm.js`; `layoutGeometry()` | `lmm.js`, aufgerufen in `layoutBpmn()`. `readProcess()` soll das Modell des Autors liefern, `layoutGeometry()` nicht von LMM abhängen |
 | Flüsse von einem Knoten auf sich selbst | weiter auslassen; zeichnen | Zunächst weiter auslassen (heutiges Verhalten); eigene Story, weil der Router dafür einen Weg braucht |
-| Herkunft und Lizenz | Kommentar; eigenes Modul unter MIT mit Lizenzkopf und Eintrag in der Lizenzliste | **Entschieden:** arielle als eigenes Modul, offen als Portierung von Mermaid gekennzeichnet, unter MIT (Abschnitt 4a). Bei Unsicherheit, etwa vor einer kommerziellen Nutzung, sollte das jemand mit Rechtskenntnis bestätigen |
-| Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. Für arielle genügt MIT; für das übrige dokufix bestimmt die Wahl, wie andere es nutzen dürfen. Ist dokufix selbst MIT, ist das Gesamtbild am einfachsten |
+| Herkunft und Lizenz | Kommentar; eigenes Modul unter MIT mit Lizenzkopf und Eintrag in der Lizenzliste | **Entschieden:** LMM als eigenes Modul, offen als Portierung von Mermaid gekennzeichnet, unter MIT (Abschnitt 4a). Bei Unsicherheit, etwa vor einer kommerziellen Nutzung, sollte das jemand mit Rechtskenntnis bestätigen |
+| Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. Für LMM genügt MIT; für das übrige dokufix bestimmt die Wahl, wie andere es nutzen dürfen. Ist dokufix selbst MIT, ist das Gesamtbild am einfachsten |
 | Was tun, solange Mermaid noch das Layout macht? | nichts; die kleine Korrektur für `%%{` (Anhang B, Hinweis 3b) vorziehen | Nur wenn der Ersatz nicht bald kommt. Mit dem Ersatz verschwindet der Fehler von selbst |
 
 ## Anhang A: Bestandsaufnahme aller Mermaid-Stellen
