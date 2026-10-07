@@ -83,9 +83,15 @@ const BPMN_NS = 'http://www.omg.org/spec/BPMN/20100524/MODEL';
 const local = el => (el.namespaceURI === BPMN_NS ? el.localName : '');
 const kids = el => Array.from(el.children || []);
 const attr = (el, name) => (el && el.getAttribute(name)) || '';
+// Every element below el, in document order; with a stack, not by recursion, so
+// that a document deeper than the call stack is read as the parser reads it.
 function descendants(el){
-  const out = [];
-  for (const k of kids(el)){ out.push(k); out.push(...descendants(k)); }
+  const out = [], stack = kids(el).reverse();
+  while (stack.length){
+    const k = stack.pop();
+    out.push(k);
+    for (let i = k.children.length - 1; i >= 0; i--) stack.push(k.children[i]);
+  }
   return out;
 }
 const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
@@ -107,12 +113,13 @@ const NOTED = new Set(['textAnnotation', 'association']);
 // A text annotation's text: its <text> child as written, every blank and line break kept. bpmn-js draws it so: moddle
 // keeps the text node verbatim, and diagram-js's layoutText() splits it at each line break and keeps empty and
 // indented lines; a pretty-printed <text> is drawn a line lower and indented, and its box is measured for that
-// (review of 2.31). Like moddle, it joins the text and CDATA nodes of <text> and leaves out those that are blanks
-// only: <text>\n  <![CDATA[x]]>\n</text> is "x", one line, as bpmn-js draws it (spikes/lmm/parsing/BERICHT.md,
-// section 3.3). Whether it has text at all is asked of it with the blanks taken off.
+// (review of 2.31). Like moddle, it joins the text and CDATA nodes of <text> and leaves out the text nodes that are
+// blanks only: <text>\n  <![CDATA[x]]>\n</text> is "x", one line, as bpmn-js draws it (spikes/lmm/parsing/BERICHT.md,
+// section 3.3). A CDATA section stays whatever it holds, as in moddle: <![CDATA[\n]]> between two lines is a line
+// break. Whether it has text at all is asked of it with the blanks taken off.
 const noteText = el => {
   const t = kids(el).find(k => local(k) === 'text');
-  return t ? Array.from(t.childNodes).filter(k => (k.nodeType === 3 || k.nodeType === 4) && k.data.trim()).map(k => k.data).join('') : '';
+  return t ? Array.from(t.childNodes).filter(k => k.nodeType === 4 || (k.nodeType === 3 && k.data.trim())).map(k => k.data).join('') : '';
 };
 // What a flow node may hold that is drawn and left out with it.
 const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation']);
@@ -2987,15 +2994,21 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
 // ---------- the diagram part ----------
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
+// The text with every comment, CDATA section and processing instruction blanked
+// out, each character a blank, so that every place stays where it was: a tag or
+// an id written in one is not the XML's. The parser takes a PI after the root
+// as well, so a closing definitions tag in it must not catch the diagram part.
+const maskNotMarkup = text => text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/g, m => ' '.repeat(m.length));
+
 // The lane set as the layout placed the nodes (spike 2.26, Ben, 2026-10-05): a
 // node a rule put in another lane (R1, R12) would otherwise stay in the
 // author's. Per node the lane di.laneOf names, the one it stands in on the
 // grid; where that differs from the author's, every lane but it and its outer
 // lanes loses the node's flowNodeRef, and it gets one before its closing tag
 // (an empty lane between its tags, a self-closing one opened). Otherwise the
-// text stays as written. Comments and CDATA do not count.
+// text stays as written. Comments, CDATA and PIs do not count.
 function relane(text, model, di){
-  const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
+  const masked = maskNotMarkup(text);
   // The lanes in the text: id, prefix, range [open, close] and outer lane.
   const lanes = [], stack = [];
   // A tag's attributes: a quoted value may hold ">".
@@ -3045,10 +3058,10 @@ function relane(text, model, di){
 
 // The collaboration readProcess() made for processes without one (model.insert),
 // inserted before the first process tag, with that tag's prefix and
-// indentation, a participant per process; comments and CDATA do not count.
+// indentation, a participant per process; comments, CDATA and PIs do not count.
 function insertCollaboration(text, model){
   if (!model.insert) return text;
-  const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
+  const masked = maskNotMarkup(text);
   const m = /<((?:[\w.-]+:)?)process\b/.exec(masked);
   if (!m) return text;
   const lineStart = text.lastIndexOf('\n', m.index - 1) + 1;
@@ -3073,9 +3086,9 @@ function insertCollaboration(text, model){
 // one of the author's.
 export function appendDiagram(xml, model, di){
   const text = insertCollaboration(relane(String(xml), model, di), model);
-  // Comments and CDATA sections are blanked out first: a closing tag or an id
-  // written in one is not the XML's.
-  const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, m => ' '.repeat(m.length));
+  // Comments, CDATA sections and PIs are blanked out first: a closing tag or an
+  // id written in one is not the XML's.
+  const masked = maskNotMarkup(text);
   const closes = [...masked.matchAll(/<\/(?:[\w.-]+:)?definitions\s*>/g)];
   if (!closes.length) throw new Error(LAYOUT_NOTHING);
   const at = closes[closes.length - 1].index;

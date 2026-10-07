@@ -514,16 +514,26 @@ Ein fünftes Review (`spikes/lmm/parsing/BERICHT.md`) hat geprüft, wie das Pake
 
 **Umgesetzt (7. Oktober 2026):**
 
-- Der Leser liegt als `src/app/xml-parser.js` im Produkt (`parseXml()`, `XmlError` mit `code`, `line`, `column`, `XML_ERROR_CODES`). Er ist der Prototyp ohne den DOCTYPE-Teil. Text und Verweise ergeben zusammen einen Textknoten, wie im Browser. Das Modul tut beim Laden nichts, daher bleibt das Bündel der Exporte bei 33 955 Zeichen; die gebaute Datei wächst um 8 421 B.
+- Der Leser liegt als `src/app/xml-parser.js` im Produkt (`parseXml()`, `XmlError` mit `code`, `line`, `column`, `XML_ERROR_CODES`). Er ist der Prototyp ohne den DOCTYPE-Teil. Text und Verweise ergeben zusammen einen Textknoten, wie im Browser. Das Modul tut beim Laden nichts, daher bleibt das Bündel der Exporte bei 33 955 Zeichen; die gebaute Datei wächst um 8 791 B.
 - `layoutBpmn()` liest mit dem Leser statt mit `DOMParser`. Weist er das XML ab, geht es unverändert an bpmn-js, das den Fehler meldet, wie bisher. Der BPMN-Assistent liest ebenso.
 - `readProcess()` prüft den Namensraum statt Präfixe abzuschneiden (Vorschlag 1). Der Text einer Notiz lässt Textknoten weg, die nur aus Leerraum bestehen (Vorschlag 2). Die Hinweise aus Vorschlag 3 sind nicht gebaut.
 - Die Tests lesen mit dem Leser, der `&amp;`-Behelf in `readModel()` ist entfallen. Von den 57 Fixtures hat sich nur `ref8` geändert; die bekannten Brüche bleiben bei 43.
-- `tests/xml-parser.test.mjs` prüft das Korpus (70 Fälle, ohne `gross-5000`, in `tests/fixtures/xml-parser/`) gegen eingefrorene Erwartungen, ohne Browser. In 63 Fällen erwartet der Test, was Chromium im Spike gelesen hat. Sieben Fälle weichen gewollt ab, jeder mit Begründung im Test:
+- `tests/xml-parser.test.mjs` prüft das Korpus (70 Fälle, ohne `gross-5000`, in `tests/fixtures/xml-parser/`, nach dem Review 72) gegen eingefrorene Erwartungen, ohne Browser. In 63 Fällen erwartet der Test, was Chromium im Spike gelesen hat. Sieben Fälle weichen gewollt ab, jeder mit Begründung im Test:
   - drei DOCTYPE-Fälle,
   - `cdata-mit-leerraum` (Notiz ohne Leerraumknoten),
   - `text-mit-kindelement` (nur die Textknoten direkt unter `<text>`),
   - `fremde-elemente` und `praefix-falscher-namensraum` (Namensräume).
   Dazu kommen eigene Fälle: Textknoten, Attribute, Namensräume, Fehlerposition und Tiefe.
+- **Review (Fable, 7. Oktober 2026), behoben:**
+  - Ein Kommentar oder eine PI im Text trennt jetzt die Textknoten, wie im Browser. Vorher verschmolz der Text davor und danach, und die Leerraum-Regel der Notiz griff nicht: eine Zeile zu viel.
+  - `noteText()` behält CDATA immer, wie bpmn-moddle.
+  - Doppelte Attribute über verschiedene Präfixe mit gleichem Namensraum sind ein Fehler.
+  - Die xml- und xmlns-URIs dürfen nicht dort gebunden werden, wo Namespaces in XML es verbietet.
+  - Die XML-Deklaration nimmt nur den Leerraum von XML an, kein geschütztes Leerzeichen.
+  - `appendDiagram()` blendet auch PIs aus: Ein `</bpmn:definitions>` in einer PI nach der Wurzel fängt das Diagramm nicht mehr.
+  - `descendants()` in `readProcess()` arbeitet mit einem Stapel statt rekursiv und schafft damit tiefe Dokumente.
+  - Zwei neue Korpusfälle: `text-kommentar` und `cdata-zeilenumbruch`.
+- **Bewusst offen gelassen:** Ob ein Namensraum-Name eine gültige URI ist, prüft der Leser nicht (Chromium tut es). Ein PI-Ziel, das nur mit `xml` beginnt (`xml:x`), nimmt er an; laut §2.6 ist es reserviert, nicht verboten. Präfixe außer ASCII in den Textregeln von `appendDiagram()` und die Laufzeit des Fehlerpfads bei sehr großen Dateien bleiben, wie sie sind.
 
 ### Produktcode
 

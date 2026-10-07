@@ -46,6 +46,8 @@ Die heiklen Fälle aus Spike lmm/parsing (`spikes/lmm/parsing/korpus/`, erzeugt 
 | `praefix-xml-reserviert.bpmn` | Das reservierte Präfix xml: (xml:space) ohne Deklaration: zulässig. |
 | `fremde-elemente.bpmn` | Fremde Elemente (camunda:, signavio:task): readProcess() liest ein signavio:task als Aufgabe, weil es nur den lokalen Namen sieht; bpmn-js nicht. Mit Namensräumen wäre das zu unterscheiden. |
 | `text-eingerueckt.bpmn` | Schön formatierter Text mit Einrückung: wörtlich zu behalten (bpmn-js zeichnet ihn so). |
+| `text-kommentar.bpmn` | Neu nach dem Review vom 7. Oktober 2026: ein Kommentar und eine PI im Text. Sie trennen die Textknoten wie im Browser, auch wenn sie nicht im Baum stehen; der Leerraum vor dem Kommentar ist ein eigener Knoten und fällt weg, wie bei bpmn-js. |
+| `cdata-zeilenumbruch.bpmn` | Neu nach dem Review: ein CDATA-Abschnitt, der nur einen Zeilenumbruch hält, zwischen zwei Zeilen. Er bleibt, wie in bpmn-moddle: zwei Zeilen. |
 | `text-leer.bpmn` | Leeres <text></text>: die Anmerkung hat keinen Text und wird ausgelassen. |
 | `text-nur-leerraum.bpmn` | Nur Leerraum im Text: ebenfalls "has no text". |
 | `text-selbstschliessend.bpmn` | Selbstschließendes <text/>. |

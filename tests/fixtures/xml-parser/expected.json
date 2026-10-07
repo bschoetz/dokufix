@@ -1203,6 +1203,111 @@
   },
   "leftOut": []
  },
+ "cdata-zeilenumbruch": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "Zeile 1\nZeile 2",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
+ },
  "definitions-ohne-inhalt": {
   "status": "error",
   "message": "Das BPMN-XML enthält kein Element, das sich anordnen lässt."
@@ -3638,6 +3743,111 @@
     "reason": "its text annotation TextAnnotation_1 has no text"
    }
   ]
+ },
+ "text-kommentar": {
+  "status": "ok",
+  "model": {
+   "pools": [
+    {
+     "id": null,
+     "name": ""
+    }
+   ],
+   "plane": "Process_1",
+   "lanes": [
+    {
+     "id": "Lane_1",
+     "name": "Sachbearbeitung",
+     "nodes": [
+      "StartEvent_1",
+      "Task_1"
+     ],
+     "key": "l1",
+     "synthetic": false,
+     "pool": 0
+    },
+    {
+     "id": "Lane_2",
+     "name": "Archiv",
+     "nodes": [
+      "Task_2",
+      "EndEvent_1"
+     ],
+     "key": "l2",
+     "synthetic": false,
+     "pool": 0
+    }
+   ],
+   "nodes": [
+    {
+     "id": "StartEvent_1",
+     "name": "Antrag liegt vor",
+     "type": "start",
+     "tag": "startEvent",
+     "key": "n1"
+    },
+    {
+     "id": "Task_1",
+     "name": "Antrag prüfen",
+     "type": "task",
+     "tag": "task",
+     "key": "n2"
+    },
+    {
+     "id": "Task_2",
+     "name": "Antrag ablegen",
+     "type": "task",
+     "tag": "task",
+     "key": "n3"
+    },
+    {
+     "id": "EndEvent_1",
+     "name": "Fertig",
+     "type": "end",
+     "tag": "endEvent",
+     "key": "n4"
+    }
+   ],
+   "flows": [
+    {
+     "id": "Flow_1",
+     "from": "StartEvent_1",
+     "to": "Task_1",
+     "name": ""
+    },
+    {
+     "id": "Flow_2",
+     "from": "Task_1",
+     "to": "Task_2",
+     "name": "geprüft"
+    },
+    {
+     "id": "Flow_3",
+     "from": "Task_2",
+     "to": "EndEvent_1",
+     "name": ""
+    }
+   ],
+   "boundaries": [],
+   "messages": [],
+   "notes": [
+    {
+     "id": "TextAnnotation_1",
+     "text": "\n      Hallo Welt\n    ",
+     "pool": 0
+    }
+   ],
+   "associations": [
+    {
+     "id": "Association_1",
+     "note": "TextAnnotation_1",
+     "partner": "Task_1",
+     "kind": "node"
+    }
+   ],
+   "insert": null
+  },
+  "leftOut": []
  },
  "text-leer": {
   "status": "ok",

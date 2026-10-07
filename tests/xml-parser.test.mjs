@@ -13,6 +13,9 @@
 //     from it. tests/fixtures/xml-parser/expected.json holds it, frozen from
 //     what Chromium read in the spike (spikes/lmm/parsing/ergebnisse/,
 //     environment chromium), but where DIFFERS below says why it differs;
+//     text-kommentar and cdata-zeilenumbruch came with the review of
+//     2026-10-07, after the spike: their text nodes as Chromium gives them
+//     (measured in the review), their note as bpmn-moddle reads it;
 //   - what the corpus does not show on its own: a run of text and references
 //     is one text node and a CDATA section one of its own, the error's code,
 //     line and column, a deep document, the namespaces of elements and
@@ -88,6 +91,11 @@ if (process.argv.includes('--write')){
     assert.equal(t.textContent, 'x & A <y> z');
   });
 
+  test('a comment or a PI ends a text node, though neither is kept, as in a browser', () => {
+    const t = parseXml('<a>\n  <!-- c -->\n  x<?p?>y</a>').documentElement;
+    assert.deepEqual(t.childNodes.map(k => k.data), ['\n  ', '\n  x', 'y']);
+  });
+
   test('attribute values: references resolved, line breaks and tabs normalised, \\r\\n read as \\n', () => {
     const a = parseXml('<a n="A &amp; B&#10;C\td\r\ne" m=\'&quot;&#x1F600;\'/>').documentElement;
     assert.equal(a.getAttribute('n'), 'A & B\nC d e');
@@ -115,6 +123,11 @@ if (process.argv.includes('--write')){
       ['<x:a/>', 'namespace', 1, 1],
       ['<a>\u0007</a>', 'char', 1, 4],
       ['<?xml version="2.0"?><a/>', 'declaration', 1, 1],
+      ['<?xml\u00A0version="1.0"?><a/>', 'declaration', 1, 1],
+      ['<a b:x="1" c:x="2" xmlns:b="u" xmlns:c="u"/>', 'attribute', 1, 1],
+      ['<a xmlns="http://www.w3.org/XML/1998/namespace"/>', 'namespace', 1, 4],
+      ['<a xmlns="http://www.w3.org/2000/xmlns/"/>', 'namespace', 1, 4],
+      ['<a xmlns:p="http://www.w3.org/2000/xmlns/"/>', 'namespace', 1, 4],
     ];
     for (const [xml, code, line, column] of cases){
       assert.throws(() => parseXml(xml), e => e instanceof XmlError && e.code === code && e.line === line && e.column === column &&

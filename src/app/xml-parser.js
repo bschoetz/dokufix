@@ -40,8 +40,13 @@
 //     predefined ones is an error, as in every browser. This is where it
 //     reads otherwise than a browser, which reads a DOCTYPE
 //   - namespaces: every prefix must be declared (xml always is), xmlns may not
-//     be; localName is the name without its prefix
-//   - one root element; after it only comments, PIs and blanks
+//     be, neither URI bound where it may not be; no two attributes with one
+//     namespace and local name; localName is the name without its prefix.
+//     Unlike Chromium it does not ask whether a namespace name is a valid URI
+//     ("not a uri" is taken), which BPMN's tools never write wrong
+//   - one root element; after it only comments, PIs and blanks. A PI whose
+//     target merely begins with "xml" (xml:x, xmlfoo) is taken: the name is
+//     reserved, not forbidden (§2.6); Chromium rejects it
 //   - the XML declaration only at the very start; version 1.0 or 1.1, read as
 //     1.0, as Chromium does (Ben, 2026-10-07; Firefox rejects 1.1). 1.1
 //     differs only in characters and line ends BPMN does not use, and a tool
@@ -82,7 +87,7 @@ function getPatterns(){
 }
 const S_RE = /[ \t\n]+/y; // no "\r" is left after the line ends are normalised
 // A character XML forbids (§2.2 Char); a surrogate pair is allowed and taken first.
-const BAD_CHAR_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF￾￿]/g;
+const BAD_CHAR_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF\uFFFE\uFFFF]/g;
 const REFERENCE_RE = /&(?:#(?:x([0-9A-Fa-f]+)|([0-9]+))|([^;&<\s]+));/y;
 const isChar = cp => cp === 0x9 || cp === 0xA || cp === 0xD || (cp >= 0x20 && cp <= 0xD7FF) || (cp >= 0xE000 && cp <= 0xFFFD) || (cp >= 0x10000 && cp <= 0x10FFFF);
 
@@ -188,7 +193,8 @@ export function parseXml(input){
   if (at('<?xml') && /[ \t\n?]/.test(text[5] || '')){
     const end = text.indexOf('?>');
     if (end === -1) fail('declaration', 'parsing XML declaration: \'?>\' expected', 0);
-    const m = /^\s+version\s*=\s*(?:"([^"]*)"|'([^']*)')(?:\s+encoding\s*=\s*(?:"([^"]*)"|'([^']*)'))?(?:\s+standalone\s*=\s*(?:"(yes|no)"|'(yes|no)'))?\s*$/.exec(text.slice(5, end));
+    // S (§2.3) is blank, tab and line break only, not every \s of JavaScript.
+    const m = /^[ \t\n]+version[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)')(?:[ \t\n]+encoding[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)'))?(?:[ \t\n]+standalone[ \t\n]*=[ \t\n]*(?:"(yes|no)"|'(yes|no)'))?[ \t\n]*$/.exec(text.slice(5, end));
     if (!m) fail('declaration', 'Malformed XML declaration', 0);
     const version = m[1] ?? m[2], encoding = m[3] ?? m[4] ?? null, standalone = m[5] ?? m[6] ?? null;
     if (version !== '1.0' && version !== '1.1') fail('declaration', 'Unsupported version \'' + version + '\'', 0);
@@ -237,13 +243,21 @@ export function parseXml(input){
   let cur = null, curNs = new Map([['xml', XML_NS]]);
   const lineOf = pos => (text.slice(0, pos).match(/\n/g) || []).length + 1;
   // Text joins the text node before it, as in a browser: "A &amp; B" is one
-  // node. A CDATA section is a node of its own.
+  // node. A CDATA section is a node of its own, and a comment or a PI ends a
+  // text node, though neither is kept: in a browser it stands between the
+  // two, and bpmn-js gets the text before and after it apart too. A note's
+  // text leaves out the nodes that are blanks only, so the blanks around a
+  // comment in it must stay nodes of their own.
+  let split = false;
   const addText = (data, cdata) => {
     const last = cur.childNodes[cur.childNodes.length - 1];
-    if (!cdata && last && last.nodeType === 3){ last.data += data; return; }
-    const node = new XmlText(data, cdata);
-    node.parentNode = cur;
-    cur.childNodes.push(node);
+    if (!cdata && !split && last && last.nodeType === 3) last.data += data;
+    else {
+      const node = new XmlText(data, cdata);
+      node.parentNode = cur;
+      cur.childNodes.push(node);
+    }
+    split = false;
   };
   // QName → [prefix, local name]; both must be NCNames (Namespaces in XML §3):
   // "bpmn:1task" is an XML name but no QName.
@@ -273,7 +287,7 @@ export function parseXml(input){
         else afterRoot();
         continue;
       }
-      if (at('<!--')){ comment(); continue; }
+      if (at('<!--')){ comment(); split = true; continue; }
       if (at('<![CDATA[')){
         if (!cur) fail('structure', 'Start tag expected, \'<\' not found', i);
         const end = text.indexOf(']]>', i + 9);
@@ -282,7 +296,7 @@ export function parseXml(input){
         i = end + 3;
         continue;
       }
-      if (at('<?')){ pi(); continue; }
+      if (at('<?')){ pi(); split = true; continue; }
       if (at('<!DOCTYPE')) fail('doctype', 'DOCTYPE is not supported', i);
       if (at('<!')) fail('name', 'StartTag: invalid element name', i);
       // A start tag.
@@ -315,6 +329,8 @@ export function parseXml(input){
           if (ap === 'xmlns' && al === 'xml' && value !== XML_NS) fail('namespace', 'xml namespace prefix mapped to wrong URI', apos);
           if (ap === 'xmlns' && al !== 'xml' && value === XML_NS) fail('namespace', 'reuse of the xml namespace name', apos);
           if (ap === 'xmlns' && value === '') fail('namespace', 'xmlns:' + al + ': Empty XML namespace is not allowed', apos);
+          if (!ap && value === XML_NS) fail('namespace', 'xml namespace URI cannot be the default namespace', apos);
+          if (value === XMLNS_NS) fail('namespace', 'reuse of the xmlns namespace name is forbidden', apos);
           if (ns === curNs) ns = new Map(curNs);
           ns.set(ap ? al : '', value);
           el.attributes.push({ name: aname, prefix: ap, localName: al, namespaceURI: XMLNS_NS, value });
@@ -324,10 +340,16 @@ export function parseXml(input){
       // declarations are known.
       if (prefix){ if (!ns.has(prefix)) fail('namespace', 'Namespace prefix ' + prefix + ' on ' + local + ' is not defined', start); el.namespaceURI = ns.get(prefix); }
       else el.namespaceURI = ns.get('') || null;
+      // Two attributes may not share namespace and local name, whatever their
+      // prefixes (§6.3): b:x and c:x with b and c bound to one URI.
+      const expanded = new Set();
       for (const a of el.attributes){
         if (a.namespaceURI === XMLNS_NS || !a.prefix) continue;
         if (!ns.has(a.prefix)) fail('namespace', 'Namespace prefix ' + a.prefix + ' for ' + a.localName + ' on ' + local + ' is not defined', start);
         a.namespaceURI = ns.get(a.prefix);
+        const key = a.namespaceURI + ' ' + a.localName;
+        if (expanded.has(key)) fail('attribute', 'Namespaced Attribute ' + a.localName + " in '" + a.namespaceURI + "' redefined", start);
+        expanded.add(key);
       }
       if (cur){ el.parentElement = cur; el.parentNode = cur; cur.children.push(el); cur.childNodes.push(el); }
       else doc.documentElement = el;

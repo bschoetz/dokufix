@@ -440,6 +440,11 @@ test('what follows the closing tag stays, a closing tag in a comment is not the 
   const at = xml.indexOf('</definitions>');
   assert.equal(out.slice(0, at), xml.slice(0, at));
   assert.ok(out.endsWith('</definitions>\n<!-- nicht </definitions> -->\n'));
+  // Nor is one in a processing instruction, which the parser takes after the root as well (review of 2026-10-07).
+  const pi = xml + '<?pi </definitions> ?>\n';
+  const withPi = appendDiagram(pi, read(pi).model, di).xml;
+  assert.ok(withPi.endsWith('</definitions>\n<!-- nicht </definitions> -->\n<?pi </definitions> ?>\n'));
+  assert.equal(parseXml(withPi).documentElement.children.filter(el => el.localName === 'BPMNDiagram').length, 1);
   assert.match(out, /id="dokufix_diagram_2"/);
   assert.match(out, /id="S_di_2" bpmnElement="S"/);
   assert.throws(() => appendDiagram('<definitions/>', model, di), { message: LAYOUT_NOTHING });
@@ -1263,6 +1268,20 @@ test('a pretty-printed text annotation is measured as bpmn-js draws it: the empt
   assert.ok(noteSize(model.notes[0].text).h > noteSize('Bitte prüfen').h);
   // Blanks alone are no text.
   assert.deepEqual(read(xmlOf('<bpmn:process id="P">' + LINE + note('L', '\n   ') + assoc('A', 'T', 'L') + '</bpmn:process>')).model.notes, []);
+});
+
+test('a text annotation\'s text as bpmn-moddle reads it: text nodes of blanks only left out, a CDATA section kept whatever it holds (review of 2026-10-07)', () => {
+  const textOf = inner => read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:textAnnotation id="N"><bpmn:text>' + inner + '</bpmn:text></bpmn:textAnnotation>' + assoc('A', 'T', 'N') + '</bpmn:process>')).model.notes.map(n => n.text);
+  assert.deepEqual(textOf('\n  <![CDATA[x]]>\n'), ['x']);
+  assert.deepEqual(textOf('\n  <!-- c -->\n  Hallo\n'), ['\n  Hallo\n']);
+  assert.deepEqual(textOf('Zeile 1<![CDATA[\n]]>Zeile 2'), ['Zeile 1\nZeile 2']);
+  assert.deepEqual(textOf('A &amp; &amp; B'), ['A & & B']);
+});
+
+test('a document deeper than the call stack is read as the parser reads it: every element found without recursion', () => {
+  const depth = 20000;
+  const xml = xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:extensionElements>' + '<x>'.repeat(depth) + '</x>'.repeat(depth) + '</bpmn:extensionElements></bpmn:process>');
+  assert.deepEqual(read(xml).model.nodes.map(n => n.id), ['S', 'T', 'E']);
 });
 
 test('what is no comment is left out, saying why: no text, no association, an association between two annotations or none', () => {

@@ -433,10 +433,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   var kids = (el) => Array.from(el.children || []);
   var attr = (el, name) => el && el.getAttribute(name) || "";
   function descendants(el) {
-    const out = [];
-    for (const k of kids(el)) {
+    const out = [], stack = kids(el).reverse();
+    while (stack.length) {
+      const k = stack.pop();
       out.push(k);
-      out.push(...descendants(k));
+      for (let i = k.children.length - 1; i >= 0; i--) stack.push(k.children[i]);
     }
     return out;
   }
@@ -454,7 +455,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   var NOTED = /* @__PURE__ */ new Set(["textAnnotation", "association"]);
   var noteText = (el) => {
     const t = kids(el).find((k) => local(k) === "text");
-    return t ? Array.from(t.childNodes).filter((k) => (k.nodeType === 3 || k.nodeType === 4) && k.data.trim()).map((k) => k.data).join("") : "";
+    return t ? Array.from(t.childNodes).filter((k) => k.nodeType === 4 || k.nodeType === 3 && k.data.trim()).map((k) => k.data).join("") : "";
   };
   var LEFT_OUT_INSIDE = /* @__PURE__ */ new Set(["dataInputAssociation", "dataOutputAssociation"]);
   function readProcess(doc) {
@@ -2879,8 +2880,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
   }
   var esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+  var maskNotMarkup = (text) => text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/g, (m) => " ".repeat(m.length));
   function relane(text, model, di) {
-    const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, (m) => " ".repeat(m.length));
+    const masked = maskNotMarkup(text);
     const lanes = [], stack = [];
     for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>/g)) {
       if (m[1]) {
@@ -2932,7 +2934,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
   function insertCollaboration(text, model) {
     if (!model.insert) return text;
-    const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, (m2) => " ".repeat(m2.length));
+    const masked = maskNotMarkup(text);
     const m = /<((?:[\w.-]+:)?)process\b/.exec(masked);
     if (!m) return text;
     const lineStart = text.lastIndexOf("\n", m.index - 1) + 1;
@@ -2944,7 +2946,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
   function appendDiagram(xml, model, di) {
     const text = insertCollaboration(relane(String(xml), model, di), model);
-    const masked = text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, (m) => " ".repeat(m.length));
+    const masked = maskNotMarkup(text);
     const closes = [...masked.matchAll(/<\/(?:[\w.-]+:)?definitions\s*>/g)];
     if (!closes.length) throw new Error(LAYOUT_NOTHING);
     const at = closes[closes.length - 1].index;
@@ -3116,7 +3118,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return patterns;
   }
   var S_RE = /[ \t\n]+/y;
-  var BAD_CHAR_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF￾￿]/g;
+  var BAD_CHAR_RE = /[\uD800-\uDBFF][\uDC00-\uDFFF]|[\x00-\x08\x0B\x0C\x0E-\x1F\uD800-\uDFFF\uFFFE\uFFFF]/g;
   var REFERENCE_RE = /&(?:#(?:x([0-9A-Fa-f]+)|([0-9]+))|([^;&<\s]+));/y;
   var isChar = (cp) => cp === 9 || cp === 10 || cp === 13 || cp >= 32 && cp <= 55295 || cp >= 57344 && cp <= 65533 || cp >= 65536 && cp <= 1114111;
   var XmlError = class extends Error {
@@ -3252,7 +3254,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     if (at("<?xml") && /[ \t\n?]/.test(text[5] || "")) {
       const end = text.indexOf("?>");
       if (end === -1) fail("declaration", "parsing XML declaration: '?>' expected", 0);
-      const m = /^\s+version\s*=\s*(?:"([^"]*)"|'([^']*)')(?:\s+encoding\s*=\s*(?:"([^"]*)"|'([^']*)'))?(?:\s+standalone\s*=\s*(?:"(yes|no)"|'(yes|no)'))?\s*$/.exec(text.slice(5, end));
+      const m = /^[ \t\n]+version[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)')(?:[ \t\n]+encoding[ \t\n]*=[ \t\n]*(?:"([^"]*)"|'([^']*)'))?(?:[ \t\n]+standalone[ \t\n]*=[ \t\n]*(?:"(yes|no)"|'(yes|no)'))?[ \t\n]*$/.exec(text.slice(5, end));
       if (!m) fail("declaration", "Malformed XML declaration", 0);
       const version = m[1] ?? m[2], encoding = m[3] ?? m[4] ?? null, standalone = m[5] ?? m[6] ?? null;
       if (version !== "1.0" && version !== "1.1") fail("declaration", "Unsupported version '" + version + "'", 0);
@@ -3302,15 +3304,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const stack = [];
     let cur = null, curNs = /* @__PURE__ */ new Map([["xml", XML_NS]]);
     const lineOf = (pos) => (text.slice(0, pos).match(/\n/g) || []).length + 1;
+    let split = false;
     const addText = (data, cdata) => {
       const last = cur.childNodes[cur.childNodes.length - 1];
-      if (!cdata && last && last.nodeType === 3) {
-        last.data += data;
-        return;
+      if (!cdata && !split && last && last.nodeType === 3) last.data += data;
+      else {
+        const node = new XmlText(data, cdata);
+        node.parentNode = cur;
+        cur.childNodes.push(node);
       }
-      const node = new XmlText(data, cdata);
-      node.parentNode = cur;
-      cur.childNodes.push(node);
+      split = false;
     };
     const splitName = (qname, pos) => {
       const c = qname.indexOf(":");
@@ -3347,6 +3350,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         }
         if (at("<!--")) {
           comment();
+          split = true;
           continue;
         }
         if (at("<![CDATA[")) {
@@ -3359,6 +3363,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         }
         if (at("<?")) {
           pi();
+          split = true;
           continue;
         }
         if (at("<!DOCTYPE")) fail("doctype", "DOCTYPE is not supported", i);
@@ -3399,6 +3404,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             if (ap === "xmlns" && al === "xml" && value !== XML_NS) fail("namespace", "xml namespace prefix mapped to wrong URI", apos);
             if (ap === "xmlns" && al !== "xml" && value === XML_NS) fail("namespace", "reuse of the xml namespace name", apos);
             if (ap === "xmlns" && value === "") fail("namespace", "xmlns:" + al + ": Empty XML namespace is not allowed", apos);
+            if (!ap && value === XML_NS) fail("namespace", "xml namespace URI cannot be the default namespace", apos);
+            if (value === XMLNS_NS) fail("namespace", "reuse of the xmlns namespace name is forbidden", apos);
             if (ns === curNs) ns = new Map(curNs);
             ns.set(ap ? al : "", value);
             el.attributes.push({ name: aname, prefix: ap, localName: al, namespaceURI: XMLNS_NS, value });
@@ -3408,10 +3415,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           if (!ns.has(prefix)) fail("namespace", "Namespace prefix " + prefix + " on " + local2 + " is not defined", start);
           el.namespaceURI = ns.get(prefix);
         } else el.namespaceURI = ns.get("") || null;
+        const expanded = /* @__PURE__ */ new Set();
         for (const a of el.attributes) {
           if (a.namespaceURI === XMLNS_NS || !a.prefix) continue;
           if (!ns.has(a.prefix)) fail("namespace", "Namespace prefix " + a.prefix + " for " + a.localName + " on " + local2 + " is not defined", start);
           a.namespaceURI = ns.get(a.prefix);
+          const key = a.namespaceURI + " " + a.localName;
+          if (expanded.has(key)) fail("attribute", "Namespaced Attribute " + a.localName + " in '" + a.namespaceURI + "' redefined", start);
+          expanded.add(key);
         }
         if (cur) {
           el.parentElement = cur;
