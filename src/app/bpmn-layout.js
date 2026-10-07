@@ -1422,8 +1422,8 @@ function ruleBlockBox(g, model){
 
 // R8, the split's column (Ben, 2026-10-07, ref3: "End-Event ragt in den
 // Parallel-Block rein und sorgt dadurch für hässlichen Knick"): the column of a
-// parallel split belongs to its block, from the split down or up to the farthest
-// node of the block, over the lanes between. A foreign node that is not pinned
+// parallel split belongs to its block, from the split down or up to the first
+// nodes of its arms, over the lanes between. A foreign node that is not pinned
 // and stands there (a short exception that took the next column of the decision
 // before the split) keeps its place, and the split moves a column right of it,
 // its arms and join with it, as Ben laid ref3 out by hand; it leaves its group
@@ -1434,8 +1434,10 @@ function ruleBlockColumn(g, model){
   let moved = false;
   const pos = c => c.lane * 1e6 + c.row;
   for (const b of parallelBlocks(g, model)){
+    // Between the split and the first nodes of its arms, where its ways leave it up or down (Ben, 2026-10-07,
+    // x-wv6: reckoned to the block's farthest node, a separate flow far below the arms moved the split away).
     const ids = [b.P, b.J, ...b.inner], P = g.cells.get(b.P);
-    const ps = ids.map(id => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
+    const ps = [b.P, ...g.fwdOut.get(b.P).map(f => f.to)].map(id => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
     const inside = [...g.cells.values()].filter(c => !ids.includes(c.n.id) && !c.pin && c.col === P.col && pos(c) > lo && pos(c) < hi);
     if (!inside.length) continue;
     g.blockCol.set(b.P, Math.max(g.blockCol.get(b.P) ?? 0, P.col + 1));

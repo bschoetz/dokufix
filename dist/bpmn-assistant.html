@@ -1470,7 +1470,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const pos = (c) => c.lane * 1e6 + c.row;
     for (const b of parallelBlocks(g, model)) {
       const ids = [b.P, b.J, ...b.inner], P4 = g.cells.get(b.P);
-      const ps = ids.map((id) => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
+      const ps = [b.P, ...g.fwdOut.get(b.P).map((f) => f.to)].map((id) => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
       const inside = [...g.cells.values()].filter((c) => !ids.includes(c.n.id) && !c.pin && c.col === P4.col && pos(c) > lo && pos(c) < hi);
       if (!inside.length) continue;
       g.blockCol.set(b.P, Math.max(g.blockCol.get(b.P) ?? 0, P4.col + 1));
