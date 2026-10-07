@@ -36,7 +36,7 @@ import { chromium } from 'playwright-core';
 import { prepareLibraries, LIBRARY_FOLDER } from './cdn.mjs';
 import { fixtureNames, readFixture, readModel } from './bpmn-fixtures.mjs';
 import { NOTE_WIDTHS } from '../src/app/bpmn-layout.js';
-import { measureLabel, missingFromTable, LABEL_SIZE_VERSION } from '../src/app/label-size.js';
+import { measureLabel, labelBox, missingFromTable, LABEL_SIZE_VERSION } from '../src/app/label-size.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const CHROMIUM = process.env.CHROMIUM || '/usr/bin/chromium';
@@ -122,7 +122,10 @@ function measureInPage({ labels, notes }){
   try {
     const tr = viewer.get('textRenderer'), style = tr.getExternalStyle();
     const lines = (text, width) => tr.createText(text, { box: { width, height: 30 }, style }).querySelectorAll('tspan').length;
-    const label = text => {
+    // A label with a word wider than 90 px is laid out in the wider box the measurer gives it (labelBox()), which
+    // is then its width: the diagram gives bpmn-js that width, and it draws the lines in it.
+    const label = (text, box) => {
+      if (box > 90) return { w: box, h: Math.ceil(lines(text, box) * 1.2 * style.fontSize) };
       const b = tr.getExternalLabelBounds({ x: 0, y: 0, width: 90, height: 30 }, text);
       return { w: b.width, h: Math.ceil(b.height / Math.max(1, lines(text, 90)) * lines(text, b.width)) };
     };
@@ -132,7 +135,7 @@ function measureInPage({ labels, notes }){
     const family = tr.getDefaultStyle().fontFamily;
     return {
       font: { family, width: probe(family), arial: probe('Arial'), liberation: probe('Liberation Sans'), fallback: probe('sans-serif') },
-      labels: labels.map(text => ({ text, size: label(text) })),
+      labels: labels.map(({ text, box }) => ({ text, size: label(text, box) })),
       notes: notes.map(({ text, width }) => ({ text, width, size: note(text, width) })),
     };
   } finally { viewer.destroy(); host.remove(); }
@@ -167,7 +170,7 @@ async function main(argv){
   const unknown = argv.filter(a => a !== '--table');
   if (unknown.length) throw new Error('unknown argument: ' + unknown.join(' '));
   const texts = corpus();
-  const r = await inChromium(page => page.evaluate(measureInPage, { labels: texts.labels, notes: texts.notes }));
+  const r = await inChromium(page => page.evaluate(measureInPage, { labels: texts.labels.map(text => ({ text, box: labelBox(text) })), notes: texts.notes }));
   const font = r.font.width === r.font.arial && r.font.arial !== r.font.fallback ? 'Arial' : r.font.width === r.font.liberation ? 'Liberation Sans' : 'another font (' + r.font.width + ' px for the probe; Arial ' + r.font.arial + ', Liberation Sans ' + r.font.liberation + ', sans-serif ' + r.font.fallback + ')';
   const same = (a, b) => a.w === b.w && a.h === b.h;
   const differing = [];

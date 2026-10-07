@@ -413,11 +413,30 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       const n = layoutText(text, width - 2 * NOTE_PADDING, TEXT_FONT_SIZE).length;
       return { w: width, h: Math.max(MIN_NOTE_HEIGHT, Math.round(n * TEXT_LINE + 2 * NOTE_PADDING)) };
     }
-    const imported = layoutText(text, LABEL_WIDTH, LABEL_FONT_SIZE);
-    const w = Math.ceil(imported.reduce((m, l) => Math.max(m, l.width), 0));
+    const box = labelBox(text), imported = layoutText(text, box, LABEL_FONT_SIZE);
+    const w = box > LABEL_WIDTH ? box : Math.ceil(imported.reduce((m, l) => Math.max(m, l.width), 0));
     const h = Math.ceil(imported.length * LABEL_LINE);
     const drawn = layoutText(text, w, LABEL_FONT_SIZE).length;
     return { w, h: Math.ceil(h / Math.max(1, imported.length) * drawn) };
+  }
+  function labelBox(text) {
+    const paragraphs = String(text).split(/\u00AD?\r?\n/);
+    const words = paragraphs.flatMap((p) => p.split(/\s+|(?<=[-\u00AD])/)).filter(Boolean);
+    const widest = Math.ceil(words.reduce((m, w) => Math.max(m, lineWidth(w.replace(/\u00AD$/, "-"), LABEL_FONT_SIZE)), 0));
+    if (widest <= LABEL_WIDTH) return LABEL_WIDTH;
+    const whole = (box) => paragraphs.every((p) => {
+      let pos = 0;
+      const lines = [];
+      const rest = [p];
+      while (rest.length) lines.push(layoutNext(rest, box, LABEL_FONT_SIZE));
+      return lines.every((l) => {
+        const t = l.text.trim(), at = p.indexOf(t, pos), end = at + t.length;
+        pos = end;
+        return at >= 0 && (end >= p.length || /\s/.test(p[end]) || /[-\u00AD]$/.test(t));
+      });
+    });
+    for (let box = widest; box <= widest + 40; box += 2) if (whole(box)) return box;
+    return widest;
   }
 
   // src/app/bpmn-layout.js
@@ -2698,7 +2717,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (n.type === "task" || !n.name) continue;
       const place = bestPlace(labelPlaces(box[n.id], measure(n.name), n.type === "gateway"), [...symbols.filter((b) => b !== di.nodes[n.id]), ...segments, ...taken]);
       const [x, y, w, h] = place;
-      di.labels[n.id] = [R(x + w / 2 - LABEL_WIDTH2 / 2), R(y), LABEL_WIDTH2, R(h)];
+      di.labels[n.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH2, w) / 2), R(y), Math.max(LABEL_WIDTH2, w), R(h)];
       taken.push(place);
       takenPool.push(poolOf.get(n.id));
       owners.push({ boxes: [place, di.labels[n.id]], anchor: box[n.id] });
@@ -2709,7 +2728,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       const places = [[c.cx + c.w / 2 + 2, c.cy + 4, size.w, size.h], [c.cx - c.w / 2 - 2 - size.w, c.cy + 4, size.w, size.h], ...labelPlaces(c, size, false)];
       const place = bestPlace(places, [...symbols.filter((x2) => x2 !== di.nodes[b.id]), ...segments, ...taken]);
       const [x, y, w, h] = place;
-      di.labels[b.id] = [R(x + w / 2 - LABEL_WIDTH2 / 2), R(y), LABEL_WIDTH2, R(h)];
+      di.labels[b.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH2, w) / 2), R(y), Math.max(LABEL_WIDTH2, w), R(h)];
       taken.push(place);
       takenPool.push(poolOf.get(b.id));
       owners.push({ boxes: [place, di.labels[b.id]], anchor: box[b.id] });

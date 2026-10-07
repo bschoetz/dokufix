@@ -221,14 +221,44 @@ const LABEL_WIDTH = 90, LABEL_LINE = 1.2 * LABEL_FONT_SIZE, TEXT_LINE = 1.2 * TE
 // With a width, the size of a text annotation that wide (story 2.31), in 12 px:
 // the text from the top left, 7 px in, at least 40 px high
 // (getTextAnnotationBounds()).
+// A label with a word wider than the box is laid out in a box as wide as its
+// words need (labelBox()), so that no word is cut (Ben, 2026-10-07, nz19-pool1:
+// "Verzögerungsme/ldung"; he drew the label wider). bpmn-js draws a label in
+// the width the diagram gives it, so the wider box is what it draws.
 export function measureLabel(text, width){
   if (width){
     const n = layoutText(text, width - 2 * NOTE_PADDING, TEXT_FONT_SIZE).length;
     return { w: width, h: Math.max(MIN_NOTE_HEIGHT, Math.round(n * TEXT_LINE + 2 * NOTE_PADDING)) };
   }
-  const imported = layoutText(text, LABEL_WIDTH, LABEL_FONT_SIZE);
-  const w = Math.ceil(imported.reduce((m, l) => Math.max(m, l.width), 0));
+  const box = labelBox(text), imported = layoutText(text, box, LABEL_FONT_SIZE);
+  // A wider box is the label's width, so bpmn-js draws its lines in the width they were laid out in.
+  const w = box > LABEL_WIDTH ? box : Math.ceil(imported.reduce((m, l) => Math.max(m, l.width), 0));
   const h = Math.ceil(imported.length * LABEL_LINE);
   const drawn = layoutText(text, w, LABEL_FONT_SIZE).length;
   return { w, h: Math.ceil(h / Math.max(1, imported.length) * drawn) };
+}
+
+// The width of the box a label is laid out in: 90 px, or where a word is wider
+// (a word: up to a blank, or up to and with a hyphen or a soft hyphen, where
+// diagram-js may break), the widest word rounded up; and where diagram-js,
+// which shortens by the ratio of the widths, would still cut a word there, a
+// few pixels more until it cuts none (at most 40).
+export function labelBox(text){
+  const paragraphs = String(text).split(/\u00AD?\r?\n/);
+  const words = paragraphs.flatMap(p => p.split(/\s+|(?<=[-\u00AD])/)).filter(Boolean);
+  const widest = Math.ceil(words.reduce((m, w) => Math.max(m, lineWidth(w.replace(/\u00AD$/, '-'), LABEL_FONT_SIZE)), 0));
+  if (widest <= LABEL_WIDTH) return LABEL_WIDTH;
+  const whole = box => paragraphs.every(p => {
+    let pos = 0;
+    const lines = [];
+    const rest = [p];
+    while (rest.length) lines.push(layoutNext(rest, box, LABEL_FONT_SIZE));
+    return lines.every(l => {
+      const t = l.text.trim(), at = p.indexOf(t, pos), end = at + t.length;
+      pos = end;
+      return at >= 0 && (end >= p.length || /\s/.test(p[end]) || /[-\u00AD]$/.test(t));
+    });
+  });
+  for (let box = widest; box <= widest + 40; box += 2) if (whole(box)) return box;
+  return widest;
 }

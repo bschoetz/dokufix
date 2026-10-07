@@ -2911,9 +2911,9 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   for (const n of model.nodes){
     if (n.type === 'task' || !n.name) continue;
     const place = bestPlace(labelPlaces(box[n.id], measure(n.name), n.type === 'gateway'), [...symbols.filter(b => b !== di.nodes[n.id]), ...segments, ...taken]);
-    // bpmn-js centres the text on the box: the box is as wide as a label can be.
+    // bpmn-js centres the text on the box: the box is as wide as a label can be, 90 px or the wider box of a long word (labelBox()).
     const [x, y, w, h] = place;
-    di.labels[n.id] = [R(x + w / 2 - LABEL_WIDTH / 2), R(y), LABEL_WIDTH, R(h)];
+    di.labels[n.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH, w) / 2), R(y), Math.max(LABEL_WIDTH, w), R(h)];
     taken.push(place);
     takenPool.push(poolOf.get(n.id));
     owners.push({ boxes: [place, di.labels[n.id]], anchor: box[n.id] });
@@ -2925,7 +2925,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     const places = [[c.cx + c.w / 2 + 2, c.cy + 4, size.w, size.h], [c.cx - c.w / 2 - 2 - size.w, c.cy + 4, size.w, size.h], ...labelPlaces(c, size, false)];
     const place = bestPlace(places, [...symbols.filter(x => x !== di.nodes[b.id]), ...segments, ...taken]);
     const [x, y, w, h] = place;
-    di.labels[b.id] = [R(x + w / 2 - LABEL_WIDTH / 2), R(y), LABEL_WIDTH, R(h)];
+    di.labels[b.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH, w) / 2), R(y), Math.max(LABEL_WIDTH, w), R(h)];
     taken.push(place);
     takenPool.push(poolOf.get(b.id));
     owners.push({ boxes: [place, di.labels[b.id]], anchor: box[b.id] });

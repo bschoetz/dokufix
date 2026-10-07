@@ -117,7 +117,7 @@
       <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="1462" y="172"/><di:waypoint x="1510" y="172"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="1630" y="172"/><di:waypoint x="1702" y="172"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Auftrag_di" bpmnElement="MF_Auftrag"><di:waypoint x="120" y="60"/><di:waypoint x="120" y="154"/><bpmndi:BPMNLabel><dc:Bounds x="126" y="73" width="84" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MF_KV_di" bpmnElement="MF_KV"><di:waypoint x="606" y="132"/><di:waypoint x="606" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="66.5" width="82" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MF_KV_di" bpmnElement="MF_KV"><di:waypoint x="606" y="132"/><di:waypoint x="606" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="73" width="94" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Freigabe_di" bpmnElement="MF_Freigabe"><di:waypoint x="756" y="60"/><di:waypoint x="756" y="154"/><bpmndi:BPMNLabel><dc:Bounds x="762" y="73" width="44" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Bestellung_di" bpmnElement="MF_Bestellung"><di:waypoint x="1004" y="212"/><di:waypoint x="1004" y="284"/><bpmndi:BPMNLabel><dc:Bounds x="1010" y="257" width="52" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="MF_Lieferung_di" bpmnElement="MF_Lieferung"><di:waypoint x="1154" y="284"/><di:waypoint x="1154" y="190"/><bpmndi:BPMNLabel><dc:Bounds x="1160" y="257" width="46" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>

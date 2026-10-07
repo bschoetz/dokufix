@@ -18,7 +18,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { measureLabel, textWidth, layoutText, missingFromTable, LABEL_FONT, LABEL_SIZE_VERSION, LABEL_FONT_SIZE } from '../src/app/label-size.js';
+import { measureLabel, labelBox, textWidth, layoutText, missingFromTable, LABEL_FONT, LABEL_SIZE_VERSION, LABEL_FONT_SIZE } from '../src/app/label-size.js';
 
 const px = units => units * 12 / 2048;
 
@@ -112,6 +112,18 @@ test('a label is laid out again in its own width when bpmn-js draws it, which ca
   assert.deepEqual(layoutText('Alle Zitzen gemolken?', 90, LABEL_FONT_SIZE).map(l => l.text), ['Alle Zitzen ', 'gemolken?']);
   assert.deepEqual(layoutText('Alle Zitzen gemolken?', 54, LABEL_FONT_SIZE).map(l => l.text), ['Alle ', 'Zitzen ', 'gemolken?']);
   assert.deepEqual(measureLabel('Alle Zitzen gemolken?'), { w: 54, h: 41 });
+});
+
+test('a label with a word wider than 90 px is laid out in a box as wide as its words need, which is its width: no word is cut (Ben, 2026-10-07, nz19-pool1)', () => {
+  assert.equal(labelBox('Wunsch eingegangen'), 90);
+  assert.deepEqual(layoutText('Verzögerungsmeldung', 90, LABEL_FONT_SIZE).map(l => l.text), ['Verzögerungsmel', 'dung']);
+  assert.equal(labelBox('Verzögerungsmeldung\nerhalten'), 111);
+  assert.deepEqual(measureLabel('Verzögerungsmeldung\nerhalten'), { w: 111, h: 27 });
+  assert.deepEqual(measureLabel('Verzögerungsmitteilung\nan Vertriebsmitarbeiter'), { w: 115, h: 27 });
+  // Where diagram-js, shortening by the ratio of the widths, would still cut a word in the widest word's width, the box grows until it cuts none.
+  const box = labelBox('Zahlung an Inkassodienstleister übergeben');
+  assert.ok(box > Math.ceil(layoutText('Inkassodienstleister', 200, LABEL_FONT_SIZE)[0].width));
+  assert.equal(layoutText('Zahlung an Inkassodienstleister übergeben', box, LABEL_FONT_SIZE).map(l => l.text.trim()).join(' '), 'Zahlung an Inkassodienstleister übergeben');
 });
 
 test('a text annotation, in 12 px: its lines in the width less 7 px either side, 14.4 px each and 14 px of padding, rounded, at least 40 px', () => {
