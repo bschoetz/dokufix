@@ -10,6 +10,14 @@
 // von bpmn.io, bpmn-auto-layout 2.0.0-alpha.2, gebündelt in die Seite, ohne CDN, mit den Lizenzhinweisen der
 // gebündelten Pakete davor.
 //
+// A2 ordnet wie die App im Worker des Layouts an (docs/konzept-worker.md, Ben, 2026-10-07): derselbe Block
+// #dokufix-layout-js, aus dist/dokufix.html übernommen (src/layout-worker.js, gebündelt von build.mjs), derselbe
+// Client (src/app/layout-client.js) mit der Zeitgrenze von 120 s und derselbe Hinweis mit den Sekunden
+// (src/app/layout-notice.js). Im Worker läuft, was reine Logik ist und das meiste an Zeit kostet: Lesen, LMM,
+// Raster, Diagrammteil. Auf der Seite bleibt, was sie braucht oder was schnell ist: das Lesen fürs Nicht-Angeordnete
+// und das Modell der Regelprüfung, die Behelfslinien (DOMParser), die Brüche, das Zeichnen mit bpmn-js und die
+// Anordnung von bpmn.io, eine fremde Bibliothek, die nicht in den Worker gehört.
+//
 //   npm run assistant          (dist/dokufix.html gebaut: npm run build)
 //
 // Herkunft: das Bauskript des Spikes 2.26 (spike-2-26/testtool/bauen.mjs im Store), am 2026-10-07 ins Repository
@@ -45,7 +53,9 @@ const bundle = (await esbuild.build({
       import { breaksOf } from '${REPO}/tests/bpmn-rules.mjs';
       import { pictureOf } from '${REPO}/src/app/diagram-downloads.js';
       import { parseXml } from '${REPO}/src/app/xml-parser.js';
-      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, variants: { A2: a2 } };
+      import { makeLayoutClient } from '${REPO}/src/app/layout-client.js';
+      import { showLayoutNotice } from '${REPO}/src/app/layout-notice.js';
+      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, variants: { A2: a2 } };
     `,
     resolveDir: HERE, loader: 'js',
   },
@@ -76,6 +86,9 @@ const bundleNotice = ['In diesem Skript steckt ein Nachbau des Textlayouts von '
 
 const dist = fs.readFileSync(path.join(REPO, 'dist/dokufix.html'), 'utf8');
 const docCss = /<style id="dokufix-doc-css">([\s\S]*?)<\/style>/.exec(dist)[1];
+// Der Worker des Layouts, wie ihn die App trägt: der Block, aus dem der Client den Worker macht. build.mjs hat ihn
+// gegen "</script" und "<!--" geprüft.
+const layoutJs = /<script type="text\/plain" id="dokufix-layout-js">([\s\S]*?)<\/script>/.exec(dist)[1];
 // Die Beispiele (Ben, 2026-10-06; seit Story 2.31 drei mit Textanmerkungen): Reihenfolge und Beschriftung in
 // beispiele/beispiele.json, das XML je Datei daneben. Die Handreichung für LLMs: handreichung.md.
 const handreichung = fs.readFileSync(path.join(HERE, 'handreichung.md'), 'utf8');
@@ -264,11 +277,12 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 </form>
 </dialog>
 <main id="out"></main>
+<script type="text/plain" id="dokufix-layout-js">${layoutJs}</script>
 <script>/*
 ${bundleNotice}
 */
 ${bundle}</script>
-<script>/*
+<script id="bpmn-io-js">/*
 ${balNotice}*/
 ${balBundle}</script>
 <script>
@@ -707,6 +721,25 @@ const hasDi = xml => /<(?:[\\w.-]+:)?BPMNDiagram\\b/.test(xml.replace(/<!--[\\s\
 // Koordinaten hat ein XML, sobald es eine Form trägt; so entscheidet auch die App (hasCoordinates()).
 const hasShapes = xml => /<(?:[\\w.-]+:)?BPMNShape\\b/.test(xml.replace(/<!--[\\s\\S]*?-->|<!\\[CDATA\\[[\\s\\S]*?\\]\\]>/g, ''));
 let viewers = [], run = 0;
+// Der Client des Layouts: ein Worker für die Seite, beim ersten Rendern gemacht. Jedes Rendern bricht das vorige ab,
+// auch ein Layout, das noch im Worker läuft.
+const LAYOUT = T.makeLayoutClient();
+let aborter = null;
+// Die Anordnung von bpmn.io ist reine Logik wie A2 (bpmn-moddle, ohne DOM) und braucht bei großen Prozessen ebenso
+// lange (hund3: 17 s in Chromium); sie läuft deshalb auch in einem Worker, mit demselben Protokoll und Client, aus dem
+// Text ihres Skripts oben (window ist dort self). Ohne Worker ordnet sie auf der Seite an, wie bisher.
+function balAnswer(r){
+  return { xml: r.xml, warnings: (r.warnings || []).map(w => [w.code, w.message].filter(Boolean).join(': ') || String(w)) };
+}
+const BAL_HANDLER = 'self.onmessage = async e => { const m = e.data || {}; try { self.postMessage({ id: m.id, ok: true, result: balAnswer(await self.BAL.layoutProcess(String(m.xml))) }); }'
+  + ' catch (err){ self.postMessage({ id: m.id, ok: false, error: err && err.message ? String(err.message) : String(err) }); } };';
+let balUrl = null;
+function balWorker(){
+  if (typeof Worker !== 'function') throw new Error('the page has no Worker');
+  if (!balUrl) balUrl = URL.createObjectURL(new Blob(['var window = self;\\n', $('bpmn-io-js').textContent, '\\n', String(balAnswer), '\\n', BAL_HANDLER], { type: 'text/javascript' }));
+  return new Worker(balUrl);
+}
+const BAL_LAYOUT = T.makeLayoutClient({ makeWorker: balWorker, job: async xml => balAnswer(await window.BAL.layoutProcess(xml)), log: { info: line => console.info('bpmn.io: ' + line) } });
 
 try { const s = localStorage.getItem('bpmn-testtool-xml'); if (s) $('xml').value = s; } catch {}
 for (const b of [...BEISPIELE].reverse()){
@@ -934,6 +967,8 @@ document.addEventListener('keydown', e => {
 
 async function render(){
   const my = ++run;
+  if (aborter) aborter.abort();
+  const signal = (aborter = new AbortController()).signal;
   closeLarge();
   for (const v of viewers) try { v.destroy(); } catch {}
   viewers = [];
@@ -965,22 +1000,33 @@ async function render(){
     d.innerHTML = '<summary>' + read.leftOut.length + ' Elemente nicht angeordnet (wie in der App)</summary>' + read.leftOut.map(l => esc(l.tag + ' ' + (l.id || '') + ': ' + l.reason)).join('<br>');
     $('out').appendChild(d);
   }
-  for (const [name, mod] of Object.entries(T.variants)){
+  for (const name of Object.keys(T.variants)){
     const s = section(name);
+    // Im Worker, wie in der App (layoutJob() in src/app/bpmn-layout-job.js): das Modell in LMMs Ordnung mit seinen
+    // Spalten fürs Raster, das des Autors für den Diagrammteil. Solange er rechnet, zählt der Hinweis die Sekunden, und
+    // die Seite bleibt bedienbar; nach 120 s gibt der Client auf, mit dem Grund an Stelle des Diagramms.
+    const wait = document.createElement('div');
+    s.appendChild(wait);
+    const notice = T.showLayoutNotice(wait);
+    let laid, ms;
     try {
       const t0 = performance.now();
-      // Wie layoutBpmn() in src/app/bpmn.js: das Modell in LMMs Ordnung mit seinen Spalten fürs Raster, das des Autors
-      // für den Diagrammteil.
-      const r = mod.readProcess(T.parseXml(xml));
-      const k = T.kanonisch(r.model);
-      const di = mod.layoutGeometry(k.model, T.lmmPositions(k.model, k.rank));
-      const laid = mod.appendDiagram(xml, r.model, di);
-      const ms = performance.now() - t0;
-      const sig = signalLines(laid.xml, r.model);
-      let info = Math.round(ms) + ' ms' + (sig.count ? ' · ' + sig.count + ' Assoziationen zwischen Flussknoten als Gerade (Behelf)' : '');
+      laid = await LAYOUT.layout(xml, { signal });
+      ms = performance.now() - t0;
+    } catch (e){
+      // Abgebrochen von einem neueren Rendern: dessen Abschnitte stehen schon da.
+      if (my !== run) return;
+      error(s, (e && e.message) || String(e));
+      continue;
+    } finally { notice.stop(); wait.remove(); }
+    if (my !== run) return;
+    try {
+      // Das Modell des Autors, auf der Seite gelesen (read oben), für die Behelfslinien und die Regelprüfung.
+      const sig = signalLines(laid.xml, read.model);
+      let info = Math.round(ms) + ' ms' + (LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker') + (sig.count ? ' · ' + sig.count + ' Assoziationen zwischen Flussknoten als Gerade (Behelf)' : '');
       try {
         // Gateways und End-Ereignisse dürfen in jeder Bahn liegen (wie splitBreaks() im Lauf; A2 setzt auch Enden um).
-        const breaks = T.breaksOf(laid.xml, r.model, {}).filter(b => !(b.startsWith('node-outside-lane ') && r.model.nodes.some(n => (n.type === 'gateway' || n.tag === 'endEvent') && n.id === b.split(' ')[1])));
+        const breaks = T.breaksOf(laid.xml, read.model, {}).filter(b => !(b.startsWith('node-outside-lane ') && read.model.nodes.some(n => (n.type === 'gateway' || n.tag === 'endEvent') && n.id === b.split(' ')[1])));
         info = breaks.length + ' Brüche · ' + info;
         if (breaks.length){ const d = document.createElement('details'); d.innerHTML = '<summary>Brüche</summary>' + breaks.map(esc).join('<br>'); s.appendChild(d); }
       } catch (e){ info += ' · Regelprüfung: ' + e.message; }
@@ -991,11 +1037,23 @@ async function render(){
   }
   // Die Anordnung von bpmn.io (Ben, 2026-10-06), unter A2; die Brüche mit dem Modell, das dokufix liest.
   const title = 'bpmn.io (' + ${JSON.stringify(BAL_VERSION)} + ')', s = section(title);
+  const wait = document.createElement('div');
+  s.appendChild(wait);
+  const notice = T.showLayoutNotice(wait);
+  let res, ms;
   try {
     const t0 = performance.now();
     // layoutProcess() gibt { xml, warnings } zurück; die Warnungen der Bibliothek stehen unter dem Bild.
-    const res = await window.BAL.layoutProcess(xml), out = res.xml, warn = (res.warnings || []).map(w => [w.code, w.message].filter(Boolean).join(': ') || String(w));
-    let info = Math.round(performance.now() - t0) + ' ms' + (warn.length ? ' · ' + warn.length + ' Warnungen' : '');
+    res = await BAL_LAYOUT.layout(xml, { signal });
+    ms = performance.now() - t0;
+  } catch (e){
+    if (my === run) error(s, (e && e.message) || String(e));
+    return;
+  } finally { notice.stop(); wait.remove(); }
+  if (my !== run) return;
+  try {
+    const out = res.xml, warn = res.warnings;
+    let info = Math.round(ms) + ' ms' + (BAL_LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker') + (warn.length ? ' · ' + warn.length + ' Warnungen' : '');
     if (warn.length){ const d = document.createElement('details'); d.innerHTML = '<summary>Warnungen von bpmn.io</summary>' + warn.map(esc).join('<br>'); s.appendChild(d); }
     try {
       // Die Regelprüfung liest das DI in der Form, die dokufix schreibt: ein Element je Zeile, ohne Leerraum vor />.

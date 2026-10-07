@@ -225,3 +225,11 @@ test('the time limit is the running request\'s alone: a request waiting in the q
   made[1].answer();
   assert.deepEqual(await second, layoutJob(OTHER));
 });
+
+test('another layout of the same protocol: without a worker the page runs the job it is given, and a promise of it is waited for', async () => {
+  const log = quiet();
+  const client = makeLayoutClient({ makeWorker: () => { throw new Error('the page has no Worker'); }, job: async xml => ({ xml: xml + '!' }), log });
+  assert.deepEqual(await client.layout('<a/>'), { xml: '<a/>!' });
+  const failing = makeLayoutClient({ makeWorker: () => { throw new Error('no'); }, job: async () => { throw new Error('kaputt'); }, log });
+  await assert.rejects(failing.layout('<a/>'), { message: 'kaputt' });
+});

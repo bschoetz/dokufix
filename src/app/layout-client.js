@@ -72,10 +72,13 @@ function abortError(){
 }
 
 // options: makeWorker, a function that gives a worker (postMessage(),
-// terminate(), onmessage, onerror) or throws; timeLimit in ms; timers, with
-// setTimeout() and clearTimeout(); log, with info(), for the one line of the
-// page without a worker.
-export function makeLayoutClient({ makeWorker = pageWorker, timeLimit = LAYOUT_TIME_LIMIT, timers = globalThis, log = console } = {}){
+// terminate(), onmessage, onerror) or throws; job, what the page runs in
+// place of a worker, layoutJob() unless another layout speaks the same
+// protocol (the BPMN Assistant's bpmn.io, tools/bpmn-assistant/bauen.mjs); it
+// may give a promise; timeLimit in ms; timers, with setTimeout() and
+// clearTimeout(); log, with info(), for the one line of the page without a
+// worker.
+export function makeLayoutClient({ makeWorker = pageWorker, job: onPageJob = layoutJob, timeLimit = LAYOUT_TIME_LIMIT, timers = globalThis, log = console } = {}){
   let worker = null;     // the worker, made with the first request that needs it
   let answered = false;  // whether it has answered once: it started
   let onPage = false;    // no worker: every request is laid out here
@@ -115,7 +118,7 @@ export function makeLayoutClient({ makeWorker = pageWorker, timeLimit = LAYOUT_T
       if (!onPage && !worker) worker = start();
       if (onPage){
         let result, error = null;
-        try { result = layoutJob(job.xml); } catch (e){ error = e; }
+        try { result = onPageJob(job.xml); } catch (e){ error = e; }
         settle(job, error, result);
         continue;
       }
