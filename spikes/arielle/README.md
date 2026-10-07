@@ -16,7 +16,7 @@ Nichts hier ist Teil des Builds oder der Tests von dokufix. `src/` und `tests/` 
 | `kanonisch/kanonisch.mjs` | `kanonisch(model)` → `{ model, rank }` | **Die empfohlene Sortierung des Modells** vor `layoutGeometry()`: macht das fertige Layout stabil gegen Umordnung (Analyse, Abschnitt 3b). Braucht `kanonisch/arielle-order.mjs` |
 | `check/canon.mjs` | `canonical(model)` (im Skript) | Der erste Versuch einer kanonischen Sortierung, durch `kanonisch()` überholt |
 
-arielle beruht auf dem Swimlane-Layout von Mermaid 12.0.0 (MIT, Copyright (c) 2014 - 2022 Knut Sveidqvist). Bei der Übernahme nach `src/` bekommt es den Lizenzkopf und den Eintrag in der Lizenzliste (Analyse, Abschnitt 4a).
+arielle beruht auf dem Swimlane-Layout von Mermaid 12.0.0 (MIT, Copyright (c) 2014 - 2022 Knut Sveidqvist). Bei der Übernahme nach `src/` wird LMM Teil der BPMN-Komponente, die unter der LGPL-3.0 steht. Mermaids MIT-Hinweis bleibt im Dateikopf erhalten (Analyse, Abschnitt 4a).
 
 ## Die Skripte
 

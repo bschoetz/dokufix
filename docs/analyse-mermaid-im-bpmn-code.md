@@ -28,7 +28,8 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - Es gibt keine Kopplung an eine Mermaid-Version und an eine Beta-Syntax mehr.
   - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
-- **Die Komponente heißt LMM**, kurz für „Little Mermaid“: ein Wortspiel auf LLM, mit dessen Hilfe sie entstanden ist. Ihr Arbeitstitel war „arielle“; die Dateien im Spike `spikes/arielle/` tragen ihn noch (`arielle()`, `arielleExakt()`). LMM kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul, sagt offen, dass es auf Mermaid beruht, und steht wie Mermaid unter der MIT-Lizenz (Abschnitt 4a).
+- **Die Komponente heißt LMM**, kurz für „Little Mermaid“: ein Wortspiel auf LLM, mit dessen Hilfe sie entstanden ist. Ihr Arbeitstitel war „arielle“; die Dateien im Spike `spikes/arielle/` tragen ihn noch (`arielle()`, `arielleExakt()`). LMM kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul und sagt offen, dass es auf Mermaid beruht (MIT).
+- **Lizenz:** Die BPMN-Komponente, also Renderer, Layout und LMM, soll später als eigenes Paket erscheinen und steht unter der **LGPL-3.0**. Mermaids MIT-Hinweis bleibt in `lmm.js` erhalten (Abschnitt 4a).
 - **Mermaids Spaltenreihung ist volatil, und LMM beseitigt das.** Mit Mermaids Spalten ändern sich die Spalten bei 24 % bedeutungsloser Umordnungen des XML, etwa einer anderen Reihenfolge der Flussknoten oder Sequenzflüsse. LMM ersetzt Mermaids Sortierung nach Schlüsseln durch eine Ordnung aus der Struktur des Prozesses (Abschnitt 3a). Ergebnis: Die Spalten ändern sich bei 0 % der Umordnungen, und auch Umbenennungen von IDs ändern in den Fixtures nichts. Die Qualität bleibt gleich oder wird besser: 2 von 57 Fixtures ändern sich, 1 Regelverstoß weniger, keiner neu, Kreuzungen 52 → 48.
 - **Auch das fertige Layout lässt sich stabil machen.** Mit LMM allein ändert sich das Bild noch bei rund 21–23 % der Umordnungen, weil Regeln des eigenen Rasters bei Gleichstand der Reihenfolge des Modells folgen. Die Lösung ist `kanonisch()`: Das Modell wird vor dem Layout einmal in LMMs Reihenfolge gebracht. Knoten kommen in der Reihenfolge der Rangvergabe, Flüsse in der Reihenfolge von LMMs Tiefensuche (Abschnitt 3b). Ergebnis: Das Bild ändert sich bei **0 von 570** Umordnungen und bei 0 von 570 Umbenennungen. Die Qualität wird besser: 43 statt 44 Verstöße, 46 statt 48 Kreuzungen, 324 statt 325 Knicke.
 - **Empfehlung:** LMM samt `kanonisch()` als eigenes Modul `src/app/lmm.js` übernehmen und einhängen. Das sortierte Modell geht an `layoutGeometry()`, das Modell des Autors an `appendDiagram()`, sodass das geschriebene XML seine Reihenfolge behält. 10 der 57 Fixtures werden einmal neu geschrieben.
@@ -327,31 +328,46 @@ Bei 8 der 10 Bildänderungen mit `kanonisch()` steht jeder Knoten an derselben S
 
 Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigenen Modul `src/app/lmm.js` landet (Abschnitt 4a), als reine Funktion `lmm(model)`. Sie gibt `{ nodes: { key: { cx } } }` zurück, sodass `layoutGeometry()` unverändert bleibt. Wo es eine Entscheidung braucht, steht sie in Abschnitt 7.
 
-### 4a. Die Komponente LMM und ihre Lizenz
+### 4a. Die Komponente LMM, das BPMN-Paket und die Lizenz
 
-**Ort.** Ein eigenes Modul `src/app/lmm.js` mit der reinen Funktion `lmm(model)` (Modell aus `readProcess()`, Rückgabe `{ nodes: { key: { cx } } }`). Ihre Tests liegen in einer eigenen Datei, etwa `tests/lmm.test.mjs`. `src/app/bpmn-layout.js` und `src/app/bpmn.js` enthalten danach keinen von Mermaid übernommenen Code. Sie rufen LMM nur auf.
+**Ort von LMM.** Ein eigenes Modul `src/app/lmm.js` mit `lmm(model)` und `kanonisch(model)` (Abschnitte 3a und 3b). Die Tests stehen in einer eigenen Datei, etwa `tests/lmm.test.mjs`. `src/app/bpmn-layout.js` und `src/app/bpmn.js` enthalten danach keinen von Mermaid übernommenen Code; sie rufen LMM nur auf. Die Grenze zwischen übernommenem und eigenem Code ist so eine Dateigrenze.
 
-**Warum ein eigenes Modul:** Die Grenze zwischen übernommenem und eigenem Code ist dann eine Dateigrenze. Lizenzkopf, Herkunftsangabe und Lizenzeintrag beziehen sich auf genau diese Datei. Wer später den Algorithmus durch einen eigenen ersetzt, tauscht ein Modul aus, ohne das Layout anzufassen.
+**Entscheidung (7. Oktober 2026):** Die BPMN-Komponente soll ab einem gewissen Reifegrad als eigenes Projekt mit eigenem Repository erscheinen, losgelöst von dokufix. Dieses Paket enthält alle JS-Dateien, die man braucht, um den Renderer in eigene Software einzubinden, und steht unter der **GNU LGPL, Version 3**. Gründe:
+
+- Es lässt sich nicht ausschließen, dass fremder Code unter einer Copyleft-Lizenz in die Komponente geflossen ist.
+- Von LLMs erstellter Code soll der Allgemeinheit gehören und nicht wieder in private Software abfließen.
+
+**Was ins Paket gehört** (heutiger Stand der Abhängigkeiten):
+
+| Datei | Rolle | Bemerkung |
+|---|---|---|
+| `src/app/bpmn.js` | Renderer: XML → SVG über bpmn-js, Layout-Anschluss, Messen der Beschriftungen, Abschluss des SVG | importiert `transient.js` und `bpmn-layout.js` |
+| `src/app/bpmn-layout.js` | Layout ohne Koordinaten: `readProcess()`, Raster, Regeln R1–R17, Router, `appendDiagram()` | rein, ohne Abhängigkeiten |
+| `src/app/lmm.js` | Spalten und kanonische Ordnung | enthält von Mermaid abgeleiteten Code (MIT) |
+| `src/app/transient.js` | eine Konstante (`TRANSIENT_ATTR`) | dokufix-spezifisch; im Paket ersetzen oder als Option übergeben |
+| `src/doc.css`, Regeln `dokufix-bpmn-*` | Farben über Custom Properties | kein JS, aber ohne sie hat das SVG keine Farben; mitliefern oder dokumentieren |
+| optional `src/app/live-viewer.js`, `src/app/diagram-downloads.js` | Live-Ansicht, Downloads | hängen an dokufix' Figur (`diagrams.js`); eher nicht im Paket |
+
+Die Bibliothek **bpmn-js** ist eine Abhängigkeit, kein Bestandteil des Pakets. Sie steht unter der eigenen bpmn.io-Lizenz: MIT mit der Zusatzbedingung, das bpmn.io-Wasserzeichen in gerenderten Diagrammen nicht zu entfernen (`src/app/licences.js`, Eintrag bpmn-js). Wer das Paket nutzt, muss diese Bedingung selbst einhalten. Das sollte im Paket deutlich stehen.
 
 **Lizenzrechtliche Einordnung** (eine fachliche Einschätzung, keine Rechtsberatung):
 
-- LMM ist eine Portierung von Teilen des Swimlane-Layouts von Mermaid 12.0.0. Das ist von Mermaid abgeleiteter Code, auch wenn er gekürzt und umgeschrieben ist.
-- Mermaid steht unter der MIT-Lizenz (`LICENSE` des npm-Pakets: „Copyright (c) 2014 - 2022 Knut Sveidqvist“). MIT erlaubt Verwenden, Ändern und Weitergeben unter einer einzigen Bedingung: Der Copyright-Hinweis und der Lizenztext müssen in allen Kopien oder wesentlichen Teilen enthalten sein.
-- LMM unter dieselbe Lizenz zu stellen ist der einfachste saubere Weg. Die Datei hat dann eine einheitliche Lizenz. Die eigenen Änderungen bekommen eine zusätzliche Copyright-Zeile für dokufix; die Zeile von Mermaid bleibt stehen.
-- Weil MIT eine freizügige Lizenz ist, verträgt sich ein MIT-Modul mit nahezu jeder Lizenz des übrigen dokufix-Codes, auch einer anderen. Offen ist, unter welcher Lizenz dokufix selbst steht: Das Repository hat keine `LICENSE`-Datei (Abschnitt 7).
+- **Mermaids MIT-Code in einem LGPL-Paket ist zulässig.** MIT erlaubt die Weitergabe unter einer anderen Lizenz („sublicense“). Copyright-Zeile und MIT-Text von Mermaid müssen aber erhalten bleiben. `lmm.js` trägt deshalb beide Hinweise: den MIT-Hinweis für die übernommenen Teile und den LGPL-Hinweis für das Ganze.
+- **Was die LGPL bewirkt:** Wer das Paket ändert und weitergibt, muss seine Änderungen am Paket unter der LGPL offenlegen. Software, die das Paket nur nutzt, darf unter jeder Lizenz stehen, auch einer geschlossenen. Der Nutzer muss dann aber das Paket gegen eine geänderte Fassung austauschen können. Das ist ein schwaches Copyleft: Der Code der Komponente selbst bleibt offen, ihre Nutzung in geschlossener Software bleibt erlaubt.
+- **Restrisiko zum ersten Grund:** Die LGPL kann echten GPL-Code nicht aufnehmen, denn die Verträglichkeit geht nur von LGPL nach GPL, nicht umgekehrt. Sollte sich GPL-Code finden, müsste er ersetzt oder das Paket unter die GPL gestellt werden. In dieser Analyse gibt es dafür keinen Hinweis: LMM stammt nachweislich aus Mermaid (MIT), und der übrige Layout-Code ist in dokufix entstanden. Die Entstehung früherer Sitzungen ist hier aber nicht geprüft.
+- **Schutzfähigkeit:** Ob von LLMs erzeugter Code urheberrechtlich geschützt ist, ist offen. Das US Copyright Office verlangt einen menschlichen schöpferischen Beitrag, in Deutschland gilt im Grundsatz Ähnliches. Die Lizenz greift so weit, wie ein Urheberrecht besteht, insbesondere an den menschlichen Vorgaben, Entscheidungen und Überarbeitungen. Das spricht nicht gegen die Lizenz, begrenzt aber ihre Durchsetzbarkeit.
 
-**Was dafür konkret nötig ist:**
+**Was konkret nötig ist:**
 
-1. **Kopf von `src/app/lmm.js`:**
-   - der Name und wofür die Komponente da ist,
-   - die Herkunft: Mermaid 12.0.0, `src/rendering-util/layout-algorithms/swimlanes/` (`phase1.cycles.ts`, `phase2.laneAwareCompact.ts`, `helpers.ts`, `edgeLabelNodes.ts`) und die Kanten-IDs des Flowchart-Modells,
-   - der Hinweis, dass der Code angepasst und gekürzt ist,
-   - die Copyright-Zeile von Mermaid, eine Copyright-Zeile für dokufix und der vollständige MIT-Lizenztext.
-
-   Der volle Text im Kopf ist die sicherste Form, denn der Quelltext wird auch einzeln weitergegeben, etwa über das Repository. MIT verlangt nicht, Änderungen zu kennzeichnen; es ist trotzdem gute Praxis.
-2. **Lizenzliste `src/app/licences.js`:** Ein Eintrag für LMM mit `use: 'embedded'`, Lizenz MIT und beiden Copyright-Zeilen. Der Grund: dokufix wird als eine HTML-Datei weitergegeben, in der der Kommentarkopf nach dem Build nicht mehr sicher steht. Die Lizenzansicht steht in jeder Variante, auch in den Exporten (Kommentar am Anfang von `licences.js`), und trägt den Hinweis so mit. Den MIT-Text kennt `LICENCE_TEXTS` schon. `tests/licences.test.mjs` (Z. 69, die Liste der Einträge) wird um den Eintrag ergänzt.
-3. **Mermaid-Eintrag:** Der bestehende Eintrag `use: 'cdn'` bleibt, weil Mermaid für Mermaid-Diagramme weiter vom CDN geladen wird. Der LMM-Eintrag nennt Mermaid als Herkunft.
-4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* einen Satz zu LMM, dass sie auf Mermaid beruht und unter MIT steht.
+1. **Dateiköpfe.** Jede Datei des Pakets bekommt eine SPDX-Zeile (`SPDX-License-Identifier: LGPL-3.0-or-later` oder `LGPL-3.0-only`, Abschnitt 7), eine Copyright-Zeile des Rechteinhabers und einen kurzen LGPL-Hinweis. `lmm.js` zusätzlich:
+   - die Herkunft: Mermaid 12.0.0, `src/rendering-util/layout-algorithms/swimlanes/` (`phase1.cycles.ts`, `phase2.laneAwareCompact.ts`, `helpers.ts`), mit dem Hinweis, dass der Code angepasst und gekürzt ist,
+   - die Copyright-Zeile von Mermaid und den vollständigen MIT-Text.
+2. **Lizenztexte im Paket.** Die LGPL-3.0 baut auf der GPL-3.0 auf. Ein Paket liefert deshalb beide Texte mit, üblicherweise als `COPYING.LESSER` und `COPYING`, dazu eine Datei mit dem MIT-Hinweis von Mermaid.
+3. **In dokufix, solange die Komponente dort lebt:**
+   - Die Lizenzliste `src/app/licences.js` bekommt einen Eintrag für die BPMN-Komponente mit `use: 'embedded'`, Lizenz LGPL-3.0, Rechteinhaber und dem Hinweis auf den Mermaid-Anteil (MIT). `tests/licences.test.mjs` wird angepasst (Z. 69, die Liste der Einträge).
+   - **Achtung Größe:** Die LGPL verlangt, beim Weitergeben eine Kopie der GPL-3.0 und der LGPL-3.0 beizulegen. Zusammen sind das gut 40 KB Text. Die Lizenzansicht steht in jeder Variante, auch in den Exporten. Ob die beiden Texte vollständig in jede Datei gehören oder ob ein Verweis auf den Quelltext und die Lizenzdateien des Repositorys genügt, sollte jemand mit Rechtskenntnis entscheiden (Abschnitt 7). Die Größenprüfungen des Builds (`tests/build.test.mjs`) müssen das berücksichtigen.
+   - Das Austauschen der Komponente ist erfüllt, weil dokufix aus offenem Quelltext mit `npm run build` gebaut wird. Das sollte im README stehen.
+4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* nennen, welche Dateien zur BPMN-Komponente gehören, dass sie unter LGPL-3.0 steht und dass `lmm.js` auf Mermaid (MIT) beruht.
 
 ### Produktcode
 
@@ -404,7 +420,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
 
 **Schritt 1: LMM übernehmen, parallel zu Mermaid.**
 
-- `src/app/lmm.js` mit `lmm(model)` in der Fassung aus dem Review (Abschnitt 3a) und `kanonisch(model)` (Abschnitt 3b), mit Lizenzkopf und Eintrag in der Lizenzliste (Abschnitt 4a). Beide teilen sich einen Lauf.
+- `src/app/lmm.js` mit `lmm(model)` in der Fassung aus dem Review (Abschnitt 3a) und `kanonisch(model)` (Abschnitt 3b), mit LGPL-Kopf samt Mermaids MIT-Hinweis und Eintrag in der Lizenzliste (Abschnitt 4a). Beide teilen sich einen Lauf.
 - `tests/lmm.test.mjs` mit:
   - einem Fall je Regel aus Abschnitt 3a,
   - dem Invarianztest: dieselben Spalten und derselbe fertige Diagrammteil bei Umordnung des XML und bei Umbenennung der IDs (für `npm test` eine kleine Zahl Umordnungen mit festem Startwert, die volle Messung als Skript),
@@ -440,7 +456,7 @@ Für die Schritte 1 bis 3:
 4. Vor dem Entfernen von `raw.json`: `lmmExakt` trifft die Spaltenordnung aller 57 Rohpositionen.
 5. `tests/vergleich.mjs` auf `tests/referenz.md`: Die BPMN-Diagramme ohne Koordinaten sind in beiden Browsern gleich, bis auf die bewusst geänderten.
 6. `tests/durchlaeufe.mjs`: grün, mit geändertem Szenario 13 (BPMN ohne Koordinaten wird ohne Mermaid gezeichnet).
-7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/lmm.js`, mit Lizenzkopf; die Lizenzliste hat einen Eintrag für LMM.
+7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/lmm.js`, mit Mermaids MIT-Hinweis; die Dateien der BPMN-Komponente tragen LGPL-Köpfe, und die Lizenzliste hat einen Eintrag für die Komponente.
 8. `npm test` und `npm run check` grün.
 
 Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße, 46 Kreuzungen, 324 Knicke.
@@ -457,8 +473,11 @@ Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße,
 | Kanonische Ordnung für das Raster | mit LMM; als eigene Story; die Ordnung als Schlüssel in die Regeln tragen | **Empfehlung: mit LMM**, als `kanonisch()`. Sie macht das Layout vollständig stabil und verbessert die Qualität leicht. Die Regeln anzufassen ist nicht nötig |
 | Wo `kanonisch()` hingehört | `readProcess()`; `lmm.js`; `layoutGeometry()` | `lmm.js`, aufgerufen in `layoutBpmn()`. `readProcess()` soll das Modell des Autors liefern, `layoutGeometry()` nicht von LMM abhängen |
 | Flüsse von einem Knoten auf sich selbst | weiter auslassen; zeichnen | Zunächst weiter auslassen (heutiges Verhalten); eigene Story, weil der Router dafür einen Weg braucht |
-| Herkunft und Lizenz | Kommentar; eigenes Modul unter MIT mit Lizenzkopf und Eintrag in der Lizenzliste | **Entschieden:** LMM als eigenes Modul, offen als Portierung von Mermaid gekennzeichnet, unter MIT (Abschnitt 4a). Bei Unsicherheit, etwa vor einer kommerziellen Nutzung, sollte das jemand mit Rechtskenntnis bestätigen |
-| Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. Für LMM genügt MIT; für das übrige dokufix bestimmt die Wahl, wie andere es nutzen dürfen. Ist dokufix selbst MIT, ist das Gesamtbild am einfachsten |
+| Herkunft und Lizenz | MIT wie Mermaid; LGPL-3.0; GPL-3.0; MPL-2.0 | **Entschieden:** Die BPMN-Komponente steht unter LGPL-3.0, LMM ist offen als Portierung von Mermaid gekennzeichnet, Mermaids MIT-Hinweis bleibt (Abschnitt 4a) |
+| `LGPL-3.0-only` oder `LGPL-3.0-or-later` | nur Version 3; auch spätere Versionen | Offen. `-or-later` ist bei der FSF üblich und erlaubt später einen Wechsel auf eine neue Fassung; `-only` behält die Kontrolle über die Bedingungen |
+| Rechteinhaber der Copyright-Zeile | Person; Projekt („die dokufix-Autoren“) | Offen; nötig für alle Dateiköpfe |
+| Lizenztexte in jeder dokufix-Datei | GPL- und LGPL-Text vollständig (gut 40 KB); Verweis auf Repository und Lizenzdateien | Offen, mit Rechtskenntnis zu entscheiden; berührt die Größenprüfungen des Builds |
+| Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. dokufix darf die LGPL-Komponente unter jeder Lizenz enthalten, solange es deren Bedingungen erfüllt; für alle anderen bestimmt die Wahl, wie sie dokufix nutzen dürfen |
 | Was tun, solange Mermaid noch das Layout macht? | nichts; die kleine Korrektur für `%%{` (Anhang B, Hinweis 3b) vorziehen | Nur wenn der Ersatz nicht bald kommt. Mit dem Ersatz verschwindet der Fehler von selbst |
 
 ## Anhang A: Bestandsaufnahme aller Mermaid-Stellen

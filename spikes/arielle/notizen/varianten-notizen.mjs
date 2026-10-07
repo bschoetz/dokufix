@@ -14,6 +14,7 @@
 //             left to right)
 //   kind      the kind of the partner first (boundary event, flow, message flow, node: the more constrained first),
 //             then as partner
+//   kind-rev  the kinds the other way round (node, boundary event, flow, message flow), then as partner
 //   long      the longer text first (bigger box, fewer free places), then as partner
 //   rpartner  partner reversed (right to left), as a control
 // pools (text annotations at pools, stacked right of the frame):
@@ -27,11 +28,14 @@ import { kanonisch as kanonischBasis } from '../kanonisch/kanonisch.mjs';
 const cmp = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
 const lex = (p, q) => { for (let i = 0; i < p.length; i++){ const d = p[i] - q[i]; if (d) return d; } return 0; };
 
-export const NOTE_ORDERS = ['xml', 'id', 'text', 'partner', 'partner-id', 'lanecol', 'kind', 'long', 'rpartner'];
+export const NOTE_ORDERS = ['xml', 'id', 'text', 'partner', 'partner-id', 'lanecol', 'kind', 'kind-rev', 'long', 'rpartner'];
 export const POOL_ORDERS = ['xml', 'canon'];
 export const MSG_ORDERS = ['xml', 'ends'];
 export const ASSOC_ORDERS = ['xml', 'canon'];
 const KIND = { node: 0, boundary: 1, flow: 2, message: 3, pool: 4 };
+// The more constrained partner first: a boundary event (on an activity's edge, between flows), a point on a flow, a
+// message flow (between frames), a node.
+const CONSTRAINED = { boundary: 0, flow: 1, message: 2, node: 3, pool: 4 };
 
 export function kanonischWith(model, { notes: no = 'partner', pools: po = 'canon', messages: mo = 'ends', assocs: ao = 'canon' } = {}){
   const { model: m, rank } = kanonischBasis(model);
@@ -74,7 +78,8 @@ export function kanonischWith(model, { notes: no = 'partner', pools: po = 'canon
     partner: byPartner,
     'partner-id': (x, y) => lex(P(x), P(y)) || cmp(x.id, y.id),
     lanecol: (x, y) => lane(x) - lane(y) || col(x) - col(y) || byPartner(x, y),
-    kind: (x, y) => KIND[first(x).kind] - KIND[first(y).kind] || byPartner(x, y),
+    kind: (x, y) => CONSTRAINED[first(x).kind] - CONSTRAINED[first(y).kind] || byPartner(x, y),
+    'kind-rev': (x, y) => KIND[first(x).kind] - KIND[first(y).kind] || byPartner(x, y),
     long: (x, y) => y.text.length - x.text.length || byPartner(x, y),
     rpartner: (x, y) => lex(P(y), P(x)) || cmp(x.text, y.text) || cmp(x.id, y.id),
   }[no];
