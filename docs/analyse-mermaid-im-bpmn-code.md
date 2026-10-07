@@ -1,50 +1,293 @@
-# Mermaid im BPMN-Code
+# Mermaid im BPMN-Code: Grundlage für die Ablösung
 
-Analyse, wo und wozu der BPMN-Code von dokufix Mermaid verwendet. Im Mittelpunkt stehen die beiden Produktmodule `src/app/bpmn.js` und `src/app/bpmn-layout.js`. Dazu kommen ihre Einbindung (`src/app.js`, `src/index.html`, `src/app/licences.js`), die Tests und Werkzeuge in `tests/` sowie die Artefakte außerhalb des Builds (BPMN-Assistent, Spike).
-Stand 7. Oktober 2026, Commit `8266ec4`. Alle Zeilenangaben beziehen sich auf diesen Stand. Die Analyse ändert nichts am Code; die Hinweise am Ende sind Vorschläge. Der Abschnitt *Hinweise im Detail* beruht zusätzlich auf Versuchen im Browser (Chromium, Mermaid 12.0.0) und auf dem Quellcode des npm-Pakets `mermaid@12.0.0`.
+Ziel dieses Dokuments ist es, Mermaid im BPMN-Layout durch eine eigene Lösung ersetzen zu können. Es beschreibt:
+
+- was Mermaid heute zum BPMN-Layout beiträgt (die Schnittstelle),
+- wie Mermaid 12.0.0 diesen Beitrag berechnet (den Algorithmus),
+- den Nachweis, dass ein Nachbau dasselbe Ergebnis liefert,
+- was sich beim Ersatz in Code, Tests und Dokumentation ändert,
+- einen Vorschlag für das Vorgehen und die Abnahmekriterien.
+
+Im Anhang stehen die vollständige Bestandsaufnahme aller Mermaid-Stellen (Anhang A) und die Befunde zur heutigen Nutzung (Anhang B).
+
+Stand 7. Oktober 2026, Commit `8266ec4`. Alle Zeilenangaben beziehen sich auf diesen Stand. Das Dokument ändert nichts am Code; Vorschläge sind als solche gekennzeichnet. Es beruht auf dem Lesen des Codes, auf dem Quellcode des npm-Pakets `mermaid@12.0.0` und auf Versuchen im Browser (Chromium, Mermaid 12.0.0) und in Node.
+
+Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Diagramme der Autoren in ` ```mermaid `-Blöcken. Abgelöst wird nur seine Rolle als Layout-Engine für BPMN.
 
 ## Ergebnis in Kürze
 
-- **Mermaid zeichnet kein BPMN.** Gezeichnet wird BPMN immer von bpmn-js. Mermaid hat im BPMN-Code genau eine Aufgabe: Es ist die **Layout-Engine für BPMN-XML ohne Koordinaten** (ohne `BPMNShape`). Das kam mit Story 2.8.
-- **Mermaid liefert nur die Reihenfolge der Spalten.** Seit Story 2.27 liest das Layout aus Mermaids SVG nur noch die x-Koordinate der Knotenmitten. Raster, Zeilen, Routing und Beschriftungen berechnet `layoutGeometry()` selbst (Regeln R1–R17).
-- **Mermaid wird nur an einer Stelle aufgerufen:** `mermaid.render()` in `mermaidPositions()` (`src/app/bpmn.js:269`). Alles andere sind Prüfungen, ob Mermaid vorhanden ist, das Erzeugen des Mermaid-Texts, das Auswerten des SVG, die Versionsbindung und die Tests.
-- **Der Mermaid-Text nutzt das Beta-Schlüsselwort `swimlane-beta LR`** (`src/app/bpmn-layout.js:406`). Das ist das größte Risiko bei einem Versionswechsel. Deshalb ist die Version an drei Stellen auf `12.0.0` festgelegt, und ein Test prüft, dass sie übereinstimmen.
-- **Mermaids Bild landet nie im Dokument.** Mermaid rendert in einen flüchtigen Host außerhalb des sichtbaren Bereichs, der danach in jedem Fall entfernt wird. Die Exporte enthalten keine Spur davon; `tests/durchlaeufe.mjs` prüft das.
-- **Ohne Mermaid** werden BPMN-Diagramme mit Koordinaten weiterhin gezeichnet. BPMN ohne Koordinaten wird zur Warnung „Die Bibliothek Mermaid wurde nicht geladen; sie ordnet BPMN ohne Koordinaten an.“
-- **Zwei Befunde aus den Versuchen** (Details unter *Hinweise im Detail*):
-  - Eine BPMN-Beschriftung mit `%%{wort` gelangt als Mermaid-Direktive in den Layout-Text. Fehlt das schließende `}%%`, scheitert das ganze Layout mit „Parse error“, und das Diagramm wird zur Warnung. Ist die Direktive geschlossen, wird sie angewendet und kann die Spaltenreihenfolge ändern (Hinweis 3).
-  - Der BPMN-Assistent bricht ohne Mermaid vollständig ab (`ReferenceError: mermaid is not defined`), auch für XML mit Koordinaten (Hinweise 4 und 5).
+- **Mermaid liefert dem BPMN-Layout genau eine Information: die Spalte jedes Knotens.** Das Layout liest aus Mermaids SVG nur die x-Koordinate der Knotenmitten. Daraus wird eine Spaltennummer; alles andere (Zeilen, Routing, Beschriftungen, Rahmen) berechnet `layoutGeometry()` selbst.
+- **Diese Spalte entsteht in Mermaid 12.0.0 durch einen kleinen, deterministischen Algorithmus** (`assignLayers_LaneAwareCompact` mit vorgeschalteter Zyklenauflösung, zusammen unter 100 Zeilen im Mermaid-Quellcode). Schrift, Thema, Abstände und Kantenrouting spielen für die Spalte keine Rolle.
+- **Ein Nachbau in reinem JavaScript (rund 50 Zeilen, ohne Browser) liefert exakt dasselbe Ergebnis.** Belegt durch:
+  - 57 von 57 Fixtures: dieselbe Spaltenordnung wie Mermaid, das angeordnete XML Byte für Byte gleich, in beiden Messarten (`measured` und `estimated`).
+  - 300 von 300 zufällig erzeugten Prozessen: dieselbe Spaltenordnung wie das echte Mermaid im Browser.
+- **Der Ersatz lässt sich an einer einzigen Stelle einhängen:** Statt `mermaidPositions()` liefert eine reine Funktion die Spalten. `layoutGeometry()` und alle Regeln R1–R17 bleiben unverändert.
+- **Was der Ersatz bringt:**
+  - Die Anordnung dauert für alle 57 Fixtures 8 ms statt 18,6 s, das sind etwa 98 % der bisherigen Layoutzeit.
+  - Das ganze Layout läuft in Node. Die Fixtures brauchen keine Rohpositionen aus dem Browser mehr.
+  - Es gibt keine Kopplung an eine Mermaid-Version und an eine Beta-Syntax mehr.
+  - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
+  - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
+- **Empfehlung:** In einem ersten Schritt den Algorithmus exakt nachbauen und einhängen. Das Layout bleibt dabei unverändert und ist an den Fixtures prüfbar. Verbesserungen am Algorithmus folgen erst danach als eigene Schritte.
 
 ## Vorgehen
 
-1. Volltextsuche nach `mermaid` (Groß-/Kleinschreibung egal) über das ganze Repository, ohne `.git`.
-2. `src/app/bpmn.js` vollständig gelesen, `src/app/bpmn-layout.js` an allen Fundstellen und dem dazwischen liegenden Datenfluss (`readProcess()` → `mermaidSource()` → `mermaidPositions()` → `layoutGeometry()` → `appendDiagram()`).
-3. Einbindung (Konfiguration, CDN-Tag, Lizenzliste, ESLint-Globals), Tests und Werkzeuge an den Fundstellen gelesen, ebenso die zugehörigen Abschnitte von `src/README.md`.
-4. Abgegrenzt gegen die Stellen, an denen Mermaid seine eigenen Diagramme zeichnet (fenced ` ```mermaid `). Diese gehören nicht zum BPMN-Code und stehen nur zur Einordnung im Abschnitt *Abgrenzung*.
+1. Volltextsuche nach `mermaid` (Groß-/Kleinschreibung egal) über das ganze Repository; `src/app/bpmn.js` vollständig, `src/app/bpmn-layout.js` an allen Fundstellen und im Datenfluss gelesen, ebenso Einbindung, Tests, Werkzeuge und `src/README.md` (Ergebnis: Anhang A).
+2. Die Tests mit Mermaid-Bezug ausgeführt: `node --test tests/bpmn.test.mjs tests/bpmn-layout.test.mjs tests/licences.test.mjs tests/bpmn-fixtures.test.mjs`, 268 Tests, alle grün.
+3. Den Quellcode von `mermaid@12.0.0` gelesen (npm-Paket, `dist/chunks/mermaid.core/`): Swimlane-Diagramm, Layout-Pipeline, Rangberechnung, Kanten-IDs, Direktiven. Die Pfade unten sind die Quellpfade, die das Paket in seinen Kommentaren nennt.
+4. Versuche im Browser: Chromium aus `/opt/pw-browsers`, `dist/dokufix.html` mit den Bibliotheken aus dem CDN-Spiegel von `tests/cdn.mjs`, `mermaidPositions()` per esbuild hineingebündelt wie in `tests/capture-bpmn.mjs` (Aufbau im Detail: Anhang B, *Versuchsaufbau*).
+5. Den Algorithmus in Node nachgebaut und gegen die 57 Fixtures und gegen das echte Mermaid an 300 Zufallsprozessen verglichen.
 
-5. Die Tests mit Mermaid-Bezug ausgeführt: `node --test tests/bpmn.test.mjs tests/bpmn-layout.test.mjs tests/licences.test.mjs tests/bpmn-fixtures.test.mjs`, 268 Tests, alle grün.
-6. Für die Hinweise eigene Versuche im Browser gemacht: Chromium aus `/opt/pw-browsers`, `dist/dokufix.html` mit den Bibliotheken aus dem lokalen CDN-Spiegel (`tests/cdn.mjs`), `mermaidPositions()` per esbuild hineingebündelt wie in `tests/capture-bpmn.mjs`. Die Versuchsskripte liegen nicht im Repository; Aufbau und Ergebnisse stehen bei den Hinweisen.
+Die Versuchsskripte, auch der Nachbau, liegen nicht im Repository. Abschnitt 3 beschreibt den Nachbau so genau, dass er sich nachvollziehen lässt.
 
-## Datenfluss: BPMN ohne Koordinaten
+## Datenfluss heute und nach der Ablösung
 
 ```mermaid
 flowchart LR
   A["BPMN-XML<br>(fenced bpmn)"] --> B{"hasCoordinates()"}
   B -- ja --> V["bpmn-js<br>importXML / saveSVG"]
-  B -- nein --> C["readProcess()<br>Modell mit Schlüsseln n1, l1, h1"]
-  C --> D["mermaidSource()<br>swimlane-beta LR"]
-  D --> E["mermaidPositions()<br>mermaid.render() im Off-Screen-Host"]
-  E --> F["layoutGeometry()<br>nur cx je Knoten → Spalten"]
+  B -- nein --> C["readProcess()<br>Modell"]
+  C --> D["heute: mermaidSource() + mermaidPositions()<br>Mermaid rendert im Off-Screen-Host"]
+  C -. künftig .-> N["eigene Spaltenberechnung<br>reine Funktion, ohne Browser"]
+  D --> F["layoutGeometry()<br>Spalten → Raster, Regeln R1–R17, Router"]
+  N -.-> F
   F --> G["appendDiagram()<br>BPMN-DI ins XML"]
   G --> V
   V --> S["SVG im Dokument"]
 ```
 
-Nur der Schritt `mermaidPositions()` braucht eine Seite und Mermaid. `readProcess()`, `mermaidSource()`, `layoutGeometry()` und `appendDiagram()` sind reine Logik und laufen in Node (`tests/bpmn-layout.test.mjs`, `tests/bpmn-fixtures.test.mjs`).
+Heute braucht nur der Schritt `mermaidPositions()` eine Seite und Mermaid. Nach der Ablösung ist der ganze Weg von `readProcess()` bis `appendDiagram()` reine Logik.
 
-## Fundstellen im Produktcode
+## 1. Was Mermaid heute beiträgt
 
-### `src/app/bpmn.js` (Browser-Teil des Layouts)
+### Die Schnittstelle
+
+`layoutBpmn()` (`src/app/bpmn.js:242–254`) ruft:
+
+```js
+const raw = await mermaidPositions(read.model, doc, index);
+const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw, measurer()));
+```
+
+`layoutGeometry(model, raw, measure, options)` (`src/app/bpmn-layout.js:817`) liest von `raw` **nur** `raw.nodes[key].cx` je Knoten des Modells (`buildGrid()`, `bpmn-layout.js:879–893`):
+
+1. Alle `cx` der Knoten werden gesammelt; Werte, die weniger als eine Einheit auseinanderliegen, gelten als gleich.
+2. Die verschiedenen Werte werden aufsteigend sortiert. Die Spalte eines Knotens ist der Index seines Werts in dieser Liste.
+3. Fehlt ein Knoten in `raw.nodes`, wirft `buildGrid()` „Mermaid hat das Element „…“ nicht angeordnet.“
+
+Für den Ersatz heißt das: **Gebraucht wird für jeden Knoten eine Zahl, deren Ordnung die Spalten festlegt.** Gleiche Zahl heißt gleiche Spalte. Die Skala ist egal, Lücken sind egal. `raw.nodes[key] = { cx: rang }` genügt. Das zeigt auch der vorhandene Test `the geometry refuses positions that lack a node; Mermaid's lanes and flows it does not read` (`tests/bpmn-layout.test.mjs:366–370`).
+
+### Die Eingabe
+
+Mermaid sieht das Modell so, wie `mermaidSource()` (`bpmn-layout.js:401–410`) es schreibt. Für die Spalten zählen davon:
+
+| Teil des Modells | Wie Mermaid es sieht |
+|---|---|
+| `model.lanes` (alle Bahnen aller Pools, in dieser Reihenfolge) | je eine Gruppe (`subgraph l<n>`); eine Bahn ist die Einheit, in der sich Knoten eine Spalte nicht teilen dürfen |
+| `lane.nodes` | die Knoten der Bahn, in dieser Reihenfolge |
+| `lane.hold` (leere Bahn) | ein Platzhalterknoten `h<n>` ohne Kanten; beeinflusst keine anderen Knoten |
+| `model.nodes[].key` (`n1…`) | die Knoten-ID; geht in Sortierungen ein (siehe Abschnitt 2) |
+| `model.flows` | je eine Kante von `key(from)` nach `key(to)`; ein Fluss von einem angehefteten Ereignis geht vom Host aus; ein Fluss, dessen beide Enden derselbe Knoten sind (auch Host ↔ eigenes Ereignis), entfällt |
+| `flow.name` (nicht leer) | macht aus der Kante eine **beschriftete** Kante, die eine eigene Spalte bekommt (Abschnitt 2, Schritt 0) |
+| Knotentyp, Knotenname, Bahnname | spielen für die Spalte keine Rolle |
+| Nachrichtenflüsse, Black Boxes, Textanmerkungen, Assoziationen | sieht Mermaid nicht |
+
+### Wie das Layout die Spalten verwendet
+
+Die Spalten sind mehr als eine Startreihenfolge. Sie wirken an drei Stellen:
+
+1. **Als Startraster.** `buildGrid()` setzt `col` jeder Zelle. Die Regeln laufen vor R7 auf diesem Raster (Reihenfolge in `layoutGrid()`, `bpmn-layout.js:1494–1512`). R1, R2, R4, R5, R6, R9 und R17 lesen die Spalten direkt, etwa über `byCol`, das Knoten nach Spalte ordnet. Die Proben R10 und R12 bis R16 bewerten Varianten, die jeweils von diesen Spalten ausgehen.
+2. **Als Sortierschlüssel in R7.** `ruleCompact()` (`bpmn-layout.js:1350ff.`) verdichtet die Spalten neu, behält aber „Mermaid's order“ als Sortierung bei (`byMermaid`: Spalte, dann Bahn, dann Zeile).
+3. **Als Ausgangspunkt jeder Runde von R9.** `finishGrid()` (`bpmn-layout.js:1909–1912`) setzt die Spalten in jeder Runde auf die ursprünglichen zurück.
+
+Eine andere Spaltenberechnung ändert deshalb in der Regel das fertige Bild. Wie stark, hängt vom Prozess ab (Abschnitt 3, Varianten). Wer das heutige Layout erhalten will, muss Mermaids Spalten exakt treffen.
+
+## 2. Wie Mermaid 12.0.0 die Spalten berechnet
+
+`swimlane-beta` ist in Mermaid 12.0.0 ein Flowchart mit eigenem Layout (`src/diagrams/swimlanes/swimlanesDiagram.ts`: `createFlowDiagram(…)`). Das Layout steckt in `src/rendering-util/layout-algorithms/swimlanes/`. Der Einstieg `runSwimlaneLayoutCore()` (`layoutCore.ts`) ruft `sugiyamaLayout()` (`pipeline.ts`) mit den Voreinstellungen, denn dokufix setzt keine `swimlane`-Schlüssel. Für die x-Koordinate, also die Spalte, sind nur die folgenden Schritte maßgeblich. Die Reihenfolge innerhalb einer Spalte (`orderLayers`, vertikal), die Koordinaten (`assignCoordinates`) und das Kantenrouting bestimmen nur die y-Lage, Abstände und Linien, die dokufix nicht liest.
+
+**Schritt 0: der Graph** (`toGraphView()` in `helpers.ts`, `createEdgeLabelNodes()` in `edgeLabelNodes.ts`, Kanten-IDs in `getEdgeId()` und `addLink()` des Flowchart-Modells)
+
+- Knoten in dieser Reihenfolge: die Gruppen (Bahnen) in **umgekehrter** Reihenfolge, dann die Knoten in Textreihenfolge (Bahn für Bahn, je mit Platzhalter), dann die Beschriftungsknoten in der Reihenfolge der Kanten.
+- Kanten-ID: `L_<a>_<b>_0` für die erste Kante zwischen `a` und `b`, für jede weitere `L_<a>_<b>_<k+1>`, wobei `k` die Zahl der schon vorhandenen ist (also `_0`, `_2`, `_3`, …).
+- Jede beschriftete Kante wird ersetzt: Es entsteht ein Beschriftungsknoten `edge-label-<a>-<b>-<Kanten-ID>`, dazu die Kanten `a → Beschriftung` und `Beschriftung → b`. Der Beschriftungsknoten gehört zur Bahn der Quelle, bei einer Kante über Bahngrenzen zur Bahn des Ziels.
+
+**Schritt 1: Zyklen auflösen** (`removeCycles_DFS()` in `phase1.cycles.ts`)
+
+- Tiefensuche. Die ausgehenden Kanten jedes Knotens werden nach Zielknoten sortiert (`localeCompare`), bei gleichem Ziel nach Kanten-ID.
+- Startknoten der Suche: zuerst alle Knoten ohne eingehende Kante, dann alle übrigen, jeweils in Knotenreihenfolge (Schritt 0).
+- Jede Kante zu einem Knoten, der gerade auf dem Suchpfad liegt, wird umgedreht.
+
+**Schritt 2: Verarbeitungsreihenfolge** (`topoSortByGenerationIfAcyclic()` in `phase2.laneAwareCompact.ts`, bei `LR`)
+
+- Topologische Sortierung nach Generationen (Kahn): zuerst alle Knoten ohne eingehende Kante, sortiert mit `localeCompare`; dann jeweils die Knoten, deren letzte eingehende Kante gerade abgearbeitet wurde, wieder sortiert.
+
+**Schritt 3: Ränge** (`assignLayers_LaneAwareCompact()` im selben Modul)
+
+```text
+für jeden Knoten v in der Reihenfolge aus Schritt 2 (Gruppen übersprungen):
+  basis   = Maximum über alle eingehenden Kanten u → v von
+            rang(u) + (1, wenn u und v in derselben Bahn liegen, sonst 0)
+  rang(v) = max(basis, frei(bahn(v)))
+  frei(bahn(v)) = rang(v) + 1
+```
+
+**Schritt 4: von Rängen zu Spalten** (in dokufix)
+
+Mermaid legt jeden Rang auf eine eigene x-Position (bei `LR`), alle Knoten eines Rangs auf dieselbe. `buildGrid()` liest nur die echten Knoten. Ränge, die nur Beschriftungs- oder Platzhalterknoten tragen, fallen damit heraus. Die Spalte ist also der dichte Rang unter den echten Knoten.
+
+**Was daraus folgt, in Worten:**
+
+- In einer Bahn steht in jeder Spalte höchstens ein Knoten. Die Knoten einer Bahn stehen in der Reihenfolge, in der Schritt 2 sie abarbeitet.
+- Ein Fluss innerhalb einer Bahn schiebt das Ziel mindestens eine Spalte nach rechts. Ein Fluss über eine Bahngrenze erlaubt dieselbe Spalte.
+- Eine Beschriftung kostet eine Spalte: Ein beschrifteter Fluss in einer Bahn schiebt das Ziel zwei Spalten weiter, nicht eine.
+- Die Pools teilen sich die Ränge, weil ihre Bahnen als eine Liste an Mermaid gehen. Nachrichtenflüsse gehen nicht ein; um sie kümmert sich R7.
+
+**Was keine Rolle spielt** (gemessen, Anhang B, Hinweis 3a): Thema, Schriftgröße, `securityLevel`, `flowchart.curve`, `flowchart.nodeSpacing`, `flowchart.rankSpacing`, `swimlane.optimizeRanksByCrossings` (wirkt nur im anderen Zweig `assignLayers_Gravity`), `swimlane.automaticLaneOrdering` (wirkt nur auf die Reihenfolge innerhalb einer Spalte) und `swimlane.lineHops`. Nur `swimlane.ignoreCrossLaneEdges: false` schaltet auf einen anderen Algorithmus (`assignLayers_Gravity`) um. dokufix setzt diesen Schlüssel nicht.
+
+## 3. Nachweis: Ein Nachbau liefert dasselbe Ergebnis
+
+Der Nachbau setzt die Schritte 0 bis 3 in einer Funktion `mermaidRanks(model)` um: rund 50 Zeilen, ohne DOM, ohne Mermaid. Er arbeitet auf dem Modell aus `readProcess()`. Das Ergebnis wurde als `raw = { nodes: { key: { cx: rang * 100 } } }` an das unveränderte `layoutGeometry()` gegeben.
+
+**Gegen die Fixtures** (`tests/fixtures/bpmn-layout/`, Node, `layOut()` aus `tests/bpmn-fixtures.mjs`):
+
+| Vergleich | Gleich |
+|---|---|
+| Spaltenordnung wie in den gespeicherten Rohpositionen von Mermaid | **57 von 57** |
+| Angeordnetes XML wie `<n>.estimated.bpmn` | **57 von 57** |
+| Angeordnetes XML wie `<n>.measured.bpmn` | **57 von 57** |
+
+Die Fixtures decken Bahnen, leere Bahnen, mehrere Pools, Black Boxes, angeheftete Ereignisse, Textanmerkungen, Schleifen und beschriftete Flüsse ab.
+
+**Gegen das echte Mermaid** (Browser, `mermaidPositions()` mit Mermaid 12.0.0): 300 zufällig erzeugte Prozesse mit 1 bis 4 Bahnen, 3 bis 24 Knoten, bis zu 33 Flüssen, zufälligen Rückwärtsflüssen, etwa 30 % beschrifteten Flüssen und leeren Bahnen. Die Spaltenordnung war **in 300 von 300 Fällen gleich**. Mermaid lieferte in keinem Fall einen Fehler.
+
+**Varianten des Nachbaus:**
+
+| Variante | Spaltenordnung gleich | Angeordnetes XML gleich |
+|---|---|---|
+| exakter Nachbau | 57 / 57 | 57 / 57 |
+| `localeCompare` durch einfachen Zeichenvergleich (`<`) ersetzt | 57 / 57, ebenso in 2 000 Zufallsprozessen | 57 / 57 |
+| ohne Beschriftungsknoten (Beschriftung kostet keine Spalte) | 33 / 57 | 56 / 57 (anders: `notiz-hund2`) |
+
+Daraus folgt:
+
+- Der Vergleich mit `localeCompare` lässt sich durch einen einfachen Zeichenvergleich ersetzen. Die IDs bestehen nur aus Kleinbuchstaben, Ziffern, `-` und `_`. Der Nachbau hängt dann nicht mehr an der Collation des Browsers.
+- Die Beschriftungsspalte ist eine Eigenheit von Mermaid, die das Raster weitgehend ausgleicht: Ohne sie ändern sich die Spalten in 24 Fixtures, das fertige Bild aber nur in einem. Für einen exakten Ersatz gehört sie dazu; ob sie gewollt ist, kann später entschieden werden.
+
+**Laufzeit:** Der Nachbau braucht für alle 57 Fixtures zusammen etwa 8 ms (Node, Mittel aus zehn Durchläufen). `mermaid.render()` brauchte für dieselben 57 im Browser 18,6 s (Anhang B, Hinweis 2).
+
+**Eine Eigenheit für später:** Mermaid und dokufix bestimmen Rückwärtsflüsse unterschiedlich. Mermaid sortiert die Kanten in der Tiefensuche nach Ziel-ID (Schritt 1). `buildGrid()` (`bpmn-layout.js:896–907`) geht die Flüsse in XML-Reihenfolge durch, ab den Knoten ohne eingehenden Fluss. In einer Näherung (Rückwärtsfluss bei Mermaid: innerhalb einer Bahn kein steigender Rang) unterscheiden sich die beiden in einem Fixture (`r05`). Für einen exakten Ersatz bleibt das so. Eine spätere eigene Lösung kann beides vereinheitlichen.
+
+## 4. Was sich beim Ersatz ändert
+
+Die Liste geht davon aus, dass der Nachbau als reine Funktion in `src/app/bpmn-layout.js` landet. Ein möglicher Name ist `layoutColumns(model)`. Sie gibt `{ nodes: { key: { cx } } }` zurück, sodass `layoutGeometry()` unverändert bleibt. Wo es eine Entscheidung braucht, steht sie in Abschnitt 7.
+
+### Produktcode
+
+| Datei, Stelle | Heute | Beim Ersatz |
+|---|---|---|
+| `src/app/bpmn.js:2` | importiert `mermaidSource` | entfällt; stattdessen die neue Funktion |
+| `src/app/bpmn.js:7–8, 32` | Kommentare „Mermaid as the layout engine“, „mermaid for the layout“ | anpassen |
+| `src/app/bpmn.js:39` | `BPMN_NO_MERMAID` | entfällt |
+| `src/app/bpmn.js:148` | Kommentar zu `offscreenHost()`: „and Mermaid lays out in“ | anpassen; der Host bleibt für bpmn-js |
+| `src/app/bpmn.js:245–247` | Prüfung auf Mermaid in `layoutBpmn()` | entfällt |
+| `src/app/bpmn.js:250` | `await mermaidPositions(…)` | Aufruf der neuen Funktion, synchron |
+| `src/app/bpmn.js:256–308` | `mermaidPositions()`, Zähler `layoutRuns` | entfällt |
+| `src/app/bpmn-layout.js:1–26` | Modulkommentar, Schritte 2 und 3 über Mermaid | neu schreiben: Schritt „Spalten“ statt Mermaid |
+| `src/app/bpmn-layout.js:47–51` | `MERMAID_LAYOUT_VERSION` | entfällt |
+| `src/app/bpmn-layout.js:118–123, 148` | Doku von `synthetic`, `hold`, `key` mit Bezug auf Mermaid | anpassen; `key` bleibt, weil das Layout intern damit arbeitet (`laneBox[l.key]`) |
+| `src/app/bpmn-layout.js:371–373` | Platzhalter `hold` für leere Bahnen | wird nicht mehr gebraucht: Ein Platzhalter ohne Kanten beeinflusst keine Spalte. Kann entfallen, samt Erwähnungen in den Tests |
+| `src/app/bpmn-layout.js:379–380` | Fluss auf sich selbst wird ausgelassen, „Mermaid's swimlane layout fails“ | Begründung entfällt; ob solche Flüsse künftig gezeichnet werden, ist eine eigene Entscheidung (Abschnitt 7) |
+| `src/app/bpmn-layout.js:393–410` | `mermaidSource()` | entfällt, oder bleibt nur für den einmaligen Differenztest (Abschnitt 5) |
+| `src/app/bpmn-layout.js:800–804, 830–832, 876–885` | Doku und Fehlermeldung „Mermaid hat das Element … nicht angeordnet“ | anpassen; die Fehlermeldung kann nicht mehr auftreten oder wird zur internen Zusicherung |
+| `src/app/bpmn-layout.js:1345–1353, 1909–1912` | Kommentare und `byMermaid` in R7 und R9 | umbenennen, etwa in „the columns' order“ |
+| `src/app.js:24–26` | Kommentar nennt `app/bpmn.js` als Nutzer von Mermaid | anpassen; `mermaid.initialize()` bleibt für Mermaid-Diagramme |
+| `src/index.html:118`, `src/app/licences.js:46`, `eslint.config.mjs:48` | Mermaid laden, Lizenz, Global | **bleibt** (Mermaid-Diagramme) |
+
+### Tests und Werkzeuge
+
+| Datei, Stelle | Heute | Beim Ersatz |
+|---|---|---|
+| `tests/bpmn.test.mjs:11–14, 216–444` | Stand-in für Mermaid, Tests „laid out by Mermaid in a transient host“, „without Mermaid: refused“, „an error of Mermaid is the reason“ | Stand-in entfällt. Neu: BPMN ohne Koordinaten wird ohne `mermaid` gezeichnet, und es entsteht nur noch der Host von bpmn-js |
+| `tests/bpmn.test.mjs:55` | Prüfung des Texts von `BPMN_NO_MERMAID` | entfällt |
+| `tests/bpmn-layout.test.mjs:128, 137–177, 495–509, 799–800, 840, 1123–1126, 1279–1287` | Tests des Mermaid-Texts | werden zu Tests der Spaltenberechnung: eine Spalte je Knoten und Bahn, Fluss über Bahngrenzen, Beschriftung, angeheftetes Ereignis, Schleife, keine Nachrichtenflüsse |
+| `tests/bpmn-layout.test.mjs:180–181` | `MERMAID_LAYOUT_VERSION` | entfällt |
+| `tests/bpmn-layout.test.mjs:289, 366–370, 467–490, 662, 785, 1085, 1254` | erfundene Rohpositionen „in the shape Mermaid gives“ | funktionieren weiter, weil das Format von `raw` bleibt; nur die Kommentare anpassen. Wo die Spalten aus dem Modell folgen sollen, die neue Funktion nehmen |
+| `tests/licences.test.mjs:33–34, 112–121, 147–168, 196–198` | Wächter „Mermaid pin = MERMAID_LAYOUT_VERSION“ (Story 2.8, AC6) | entfällt; die Prüfung „Lizenzliste = Pin“ bleibt |
+| `tests/fixtures/bpmn-layout/*.raw.json` (57 Dateien), `index.json` (`"mermaid"`) | Rohpositionen aus dem Browser | entfallen; `tests/bpmn-fixtures.mjs` berechnet die Spalten selbst. Alternativ als Referenz für den Differenztest behalten (Abschnitt 7) |
+| `tests/bpmn-fixtures.mjs:12–19, 50`, `tests/bpmn-fixtures.test.mjs:14, 21–26` | Lesen von `raw.json`, Versionsprüfung | auf die neue Funktion umstellen; vier statt fünf Dateien je Fixture |
+| `tests/capture-bpmn.mjs` | erfasst Rohpositionen und Größen der Beschriftungen | nur noch die Größen (`labelMeasurer()` braucht weiter den Browser); `mermaidPositions` und die Kantenprüfung entfallen |
+| `tests/durchlaeufe.mjs:89–93, 307–312` | Szenario 13: ohne Mermaid wird BPMN ohne Koordinaten zur Warnung | Erwartung umdrehen: Es wird gezeichnet; nur das Mermaid-Diagramm wird zur Warnung |
+| `tests/durchlaeufe.mjs:306, 1056` | `LAYOUT_TRACES`: keine Spuren von Mermaids Layout in Dateien | kann bleiben (schadet nicht) oder entfallen |
+| `tests/vergleich.mjs:546–547` | „The run assumes the page has Mermaid“ für BPMN ohne Koordinaten | Kommentar anpassen |
+
+### Dokumentation und Artefakte
+
+| Stelle | Beim Ersatz |
+|---|---|
+| `src/README.md:12` (Features), `:61` und `:388` (Größen), `:192` und `:194` (*Libraries*), `:325–330`, `:371–375` (*Diagrams*), `:1251–1252` (Modultabelle) | Mermaid als Layout-Engine streichen, den neuen Schritt beschreiben, die Größenänderung des Builds nachtragen |
+| `dist/bpmn-assistant.html` | im Store neu bauen (`spike-2-26/testtool/bauen.mjs`); den CDN-Tag und `mermaid.initialize()` können entfallen, der Assistent braucht Mermaid dann nicht mehr |
+| `docs/dokufix-fuer-llms.md` | bleibt; der Mermaid-Abschnitt betrifft Mermaid-Diagramme |
+
+## 5. Vorschlag für das Vorgehen
+
+**Schritt 1: exakter Nachbau, parallel zu Mermaid.**
+
+- Neue reine Funktion in `src/app/bpmn-layout.js` (Abschnitt 2, Schritte 0 bis 3), mit `<` statt `localeCompare`.
+- Tests in `tests/bpmn-layout.test.mjs` für die Eigenschaften aus Abschnitt 2.
+- Ein Test in `tests/bpmn-fixtures.test.mjs`: Für alle 57 Fixtures ergibt die Funktion dieselbe Spaltenordnung wie `raw.json`. Damit ist der Nachbau gegen Mermaid gesichert, solange die Rohpositionen noch da sind.
+- Einmalig ein Differenztest im Browser gegen Mermaid 12.0.0 mit Zufallsprozessen, als Werkzeug neben `tests/capture-bpmn.mjs`, wie im Versuch in Abschnitt 3.
+
+**Schritt 2: umschalten.**
+
+- `layoutBpmn()` nutzt die neue Funktion statt `mermaidPositions()`.
+- `npm run fixtures` muss „no difference“ melden, ebenso der Vergleichslauf `tests/vergleich.mjs` und die Durchläufe (bis auf Szenario 13, das sich bewusst ändert).
+
+**Schritt 3: aufräumen.**
+
+- Alles aus Abschnitt 4 mit „entfällt“: `mermaidPositions()`, `mermaidSource()`, `MERMAID_LAYOUT_VERSION`, `BPMN_NO_MERMAID`, die Platzhalter, der Versionswächter, `raw.json`, der Rohpositionsteil von `capture-bpmn.mjs`.
+- `src/README.md` nachziehen.
+- Den BPMN-Assistenten im Store ohne Mermaid neu bauen.
+
+**Schritt 4 (optional, eigene Stories): eigene Verbesserungen.** Erst wenn der Ersatz steht, lässt sich der Algorithmus gezielt ändern, jeweils mit sichtbarem Diff in den Fixtures und einer Prüfung der Regelverstöße (`tests/bpmn-rules.mjs`, `known-breaks.json`). Kandidaten:
+
+- eine gemeinsame Definition von Rückwärtsflüssen für Spalten und Raster (Abschnitt 3),
+- die Beschriftungsspalte überdenken,
+- Nachrichtenflüsse schon bei den Spalten berücksichtigen statt erst in R7,
+- Flüsse von einem Knoten auf sich selbst zulassen.
+
+## 6. Abnahmekriterien
+
+Für Schritte 1 bis 3:
+
+1. `npm run fixtures`: alle 57 Fixtures, beide Messarten, ohne Unterschied.
+2. `tests/fixtures/bpmn-layout/known-breaks.json` unverändert (`tests/bpmn-rules.test.mjs` grün).
+3. Vor dem Entfernen von `raw.json`: Die neue Funktion trifft die Spaltenordnung aller 57 Rohpositionen.
+4. Der Differenztest gegen Mermaid 12.0.0 ist für eine feste Zahl von Zufallsprozessen grün (Vorschlag: 1 000).
+5. `tests/vergleich.mjs` auf `tests/referenz.md`: gleiche Bilder der BPMN-Diagramme ohne Koordinaten in beiden Browsern.
+6. `tests/durchlaeufe.mjs`: grün, mit geändertem Szenario 13 (BPMN ohne Koordinaten wird ohne Mermaid gezeichnet).
+7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr, außer in einem Kommentar zur Herkunft des Algorithmus.
+8. `npm test` und `npm run check` grün.
+
+## 7. Offene Entscheidungen
+
+| Frage | Optionen | Empfehlung |
+|---|---|---|
+| Exakter Nachbau oder gleich eine eigene Lösung? | Nachbau zuerst; eigene Lösung sofort | **Nachbau zuerst.** Das Umschalten ist dann ohne sichtbare Änderung prüfbar, und spätere Änderungen sind einzeln bewertbar |
+| Schnittstelle zu `layoutGeometry()` | `raw` im heutigen Format `{ nodes: { key: { cx } } }`; neue Form, etwa `columns: Map<key, number>` | Zunächst das heutige Format: keine Änderung an `layoutGeometry()` und an den Tests mit erfundenen Positionen. Umbenennen später, beim Aufräumen |
+| Was passiert mit `raw.json`? | löschen; als Referenz von Mermaid 12.0.0 behalten | Bis Schritt 2 behalten (Abnahmekriterium 3), danach löschen. Die Referenz steckt dann in den angeordneten XML-Dateien |
+| Beschriftungsspalte beibehalten? | ja (exakt); nein | Im Nachbau ja; als Kandidat für Schritt 4 vormerken |
+| Flüsse von einem Knoten auf sich selbst | weiter auslassen; zeichnen | Zunächst weiter auslassen (heutiges Verhalten); eigene Story, weil der Router dafür einen Weg braucht |
+| Herkunftsvermerk | keiner; Kommentar; Eintrag in der Lizenzliste | Der Nachbau setzt den Algorithmus von Mermaid (MIT) um. Ein Kommentar an der Funktion mit Herkunft und Copyright-Zeile von Mermaid ist sauber und kostet nichts. Ob mehr nötig ist, sollte jemand mit Blick auf die MIT-Lizenz entscheiden; dieses Dokument ist keine Rechtsberatung |
+| Was tun, solange Mermaid noch das Layout macht? | nichts; die kleine Korrektur für `%%{` (Anhang B, Hinweis 3b) vorziehen | Nur wenn der Ersatz nicht bald kommt. Mit dem Ersatz verschwindet der Fehler von selbst |
+
+## Anhang A: Bestandsaufnahme aller Mermaid-Stellen
+
+Die vollständige Liste der Stellen, an denen der BPMN-Code heute Mermaid verwendet. Was davon beim Ersatz entfällt, steht in Abschnitt 4.
+
+### Fundstellen im Produktcode
+
+#### `src/app/bpmn.js` (Browser-Teil des Layouts)
 
 | Zeile | Was | Erläuterung |
 |---|---|---|
@@ -72,7 +315,7 @@ Nur der Schritt `mermaidPositions()` braucht eine Seite und Mermaid. `readProces
 
 Diese Funktion hängt eng an der Struktur des SVG, das Mermaid 12.0.0 für `swimlane-beta` schreibt: Klassennamen `g.node`, `g.cluster.swimlane`, `rect.swimlane-body`, `rect.swimlane-title`, die Attribute `data-edge`, `data-id`, `data-points` und das ID-Muster `-flowchart-`.
 
-### `src/app/bpmn-layout.js` (reine Logik)
+#### `src/app/bpmn-layout.js` (reine Logik)
 
 | Zeile | Was | Erläuterung |
 |---|---|---|
@@ -101,7 +344,7 @@ Diese Funktion hängt eng an der Struktur des SVG, das Mermaid 12.0.0 für `swim
 - Angeheftete Ereignisse (Boundary Events) sind keine Mermaid-Knoten: Ihre Flüsse gehen vom Host aus. Flüsse zurück in den Host fallen weg (Story 2.30).
 - Black Boxes (Pools ohne Prozess) und Textanmerkungen sieht Mermaid nie (Stories 2.29, 2.31).
 
-### Einbindung und Konfiguration
+#### Einbindung und Konfiguration
 
 | Datei:Zeile | Was | Bezug zum BPMN-Code |
 |---|---|---|
@@ -110,7 +353,7 @@ Diese Funktion hängt eng an der Struktur des SVG, das Mermaid 12.0.0 für `swim
 | `src/app/licences.js:46` | Lizenzeintrag Mermaid 12.0.0, MIT, `use: 'cdn'` | Wird gegen den Pin in `index.html` geprüft. |
 | `eslint.config.mjs:48` | `mermaid: 'readonly'` | Globale Variable für `bpmn.js`, `diagrams.js` und `app.js`. |
 
-## Versionsbindung
+### Versionsbindung
 
 Die Mermaid-Version steht an diesen Stellen:
 
@@ -130,7 +373,7 @@ Die Wächter:
 
 Ablauf bei einem Versionswechsel laut `src/README.md` (Abschnitt *Libraries*, Z. 192): Pin und `MERMAID_LAYOUT_VERSION` gemeinsam anheben, die Rohpositionen neu erfassen (`npm run capture`) und den Vergleichslauf `tests/vergleich.mjs` auf `tests/referenz.md` fahren (Referenzeingabe „Übergabe an die Tourenplanung“, beide Browser).
 
-## Fehlerfälle
+### Fehlerfälle
 
 | Situation | Verhalten | Stelle |
 |---|---|---|
@@ -143,7 +386,7 @@ Ablauf bei einem Versionswechsel laut `src/README.md` (Abschnitt *Libraries*, Z.
 | Mermaid ordnet einen Knoten nicht an | „Mermaid hat das Element „…“ nicht angeordnet.“ | `bpmn-layout.js:885` |
 | Fluss von einem Knoten auf sich selbst | Ausgelassen, Konsolenzeile „BPMN layout, left out: …“. | `bpmn-layout.js:379–380`, `bpmn.js:252` |
 
-## Tests und Werkzeuge
+### Tests und Werkzeuge
 
 | Datei | Mermaid-Bezug |
 |---|---|
@@ -156,12 +399,12 @@ Ablauf bei einem Versionswechsel laut `src/README.md` (Abschnitt *Libraries*, Z.
 | `tests/vergleich.mjs` | Regressionslauf bei einem Wechsel der Mermaid-Version. Er setzt voraus, dass die Seite Mermaid hat (Z. 546–547). |
 | `tests/cdn.mjs` | Lokaler Spiegel der CDN-Dateien, darunter `mermaid@12.0.0`, für die Browserläufe. |
 
-## Außerhalb des Produkt-Builds
+### Außerhalb des Produkt-Builds
 
 - **BPMN-Assistent** (`dist/bpmn-assistant.html`): Kein Teil des Builds. Er wird im Store von `spike-2-26/testtool/bauen.mjs` aus `src/app/bpmn.js`, `src/app/bpmn-layout.js` und weiteren Modulen gebündelt (`src/README.md:76`). Er lädt Mermaid 12.0.0 vom CDN, ruft `mermaid.initialize()` mit derselben Konfiguration wie die App und nutzt `mermaidPositions()` und `mermaidSource()` unverändert (als `window.T`). Nach einer Änderung am Layout muss er neu gebaut werden.
 - **Spike `spikes/komponenten-aus-markdown/src/bpmn.js`**: Der historische Vorläufer. Dort war Mermaid auch **Schreibformat**: `fromMermaid()` und `parseMermaid()` lesen Mermaid-Swimlane-Text über `mermaid.mermaidAPI.getDiagramFromText()` (Z. 36–38). `layoutFromMermaid()` (Z. 286–290) übernahm Mermaids Koordinaten und stauchte und korrigierte sie (Z. 103–171). Das Produkt hat das nicht übernommen: Mermaid ist kein Schreibformat mehr, und seit Story 2.27 ersetzt das Raster das Skalieren und die Korrekturen. Die Tests unter `spikes/komponenten-aus-markdown/tests/mermaid-*.mjs` und ihre Ausgaben in `tests/out/` gehören zu diesem Spike.
 
-## Abgrenzung: Mermaid ohne BPMN-Bezug
+### Abgrenzung: Mermaid ohne BPMN-Bezug
 
 Diese Stellen nutzen Mermaid für eigene Diagramme (fenced ` ```mermaid `) und gehören nicht zum BPMN-Code. Sie stehen hier nur, damit sie nicht verwechselt werden:
 
@@ -170,7 +413,9 @@ Diese Stellen nutzen Mermaid für eigene Diagramme (fenced ` ```mermaid `) und g
 - `src/app/live-viewer.js:14`: Ein Mermaid-Diagramm behält überall die statische Großansicht; nur BPMN bekommt den Live-Viewer.
 - Gemeinsam mit BPMN ist nur die SVG-Konvention: `finishBpmnSvg()` schreibt Breite und `max-width` wie Mermaid, damit `drawnWidth()` (`diagrams.js:166–178`) beide gleich liest.
 
-## Hinweise im Detail
+## Anhang B: Befunde zur heutigen Nutzung
+
+Diese Befunde beschreiben die Nutzung von Mermaid, wie sie heute ist. Sie sind die Motivation für die Ablösung und zeigen, was mit ihr verschwindet. Jeder Hinweis nennt am Anfang, was der Ersatz daran ändert.
 
 Die fünf Hinweise jeweils mit Befund, Belegen, Auswirkung und Vorschlag. Die Schwere ist eine Einschätzung: **niedrig** heißt, dass im heutigen Betrieb mit Mermaid 12.0.0 nichts sichtbar falsch läuft, **mittel**, dass ein Autor oder Sprachmodell es mit gewöhnlichem Inhalt auslösen kann.
 
@@ -196,6 +441,8 @@ Alle Messungen stammen aus einem Lauf in diesem Container:
 Die Zahlenwerte weichen ab, weil die Schriften in diesem Container andere Knotenbreiten ergeben als auf dem Rechner, auf dem die Fixtures erfasst wurden. Die Reihenfolge der Spalten bleibt gleich, und nur sie liest das Layout. Das Ergebnis ist deshalb identisch. Damit ist der Aufbau als Messinstrument bestätigt.
 
 ### Hinweis 1: Abhängigkeit von einer Beta-Syntax und vom SVG-Aufbau
+
+**Mit dem Ersatz:** entfällt vollständig. Keine Beta-Syntax, kein SVG-Aufbau, kein Algorithmuswechsel durch ein Update von Mermaid. Die Checkliste unten gilt nur, solange Mermaid das Layout macht.
 
 **Schwere:** niedrig im Betrieb, hoch für den Aufwand eines Mermaid-Updates.
 
@@ -240,6 +487,8 @@ Hilfreich wäre außerdem ein Hinweis bei Schritt 2, dass sich `raw.json` auch o
 
 ### Hinweis 2: Erfasst wird mehr, als das Layout liest
 
+**Mit dem Ersatz:** entfällt. Es gibt keine Rohpositionen mehr; die Fixtures hängen nicht mehr von den Schriften des Rechners ab. Die Messung hier ist zugleich die Grundlage für den Laufzeitgewinn in Abschnitt 3.
+
 **Schwere:** niedrig.
 
 **Befund.** `mermaidPositions()` liefert `raw = { nodes: { key: { cx, cy, w, h } }, lanes: { key: { x1, y1, x2, y2 } }, edges: [[{ x, y }, …] | null] }`. Davon nutzen:
@@ -273,6 +522,8 @@ Die zusätzliche Arbeit kostet also kaum Zeit. Fast die ganze Laufzeit steckt in
 3. **Seitenlauf verschlanken.** `mermaidPositions()` liest im Seitenlauf nur `cx` und überspringt `getBBox()`, Bahnen und Kanten (etwa über einen Parameter für das Werkzeug). Das spart rund 1,5 % der Layoutzeit. Der Gewinn rechtfertigt den zusätzlichen Pfad nicht.
 
 ### Hinweis 3: Geteilte globale Konfiguration und Direktiven in Beschriftungen
+
+**Mit dem Ersatz:** entfällt. Die Konfiguration von Mermaid wirkt nur noch auf Mermaid-Diagramme, und BPMN-Beschriftungen gelangen nicht mehr in einen Mermaid-Text. Die Messung in 3a belegt zugleich, dass die Spalten nur vom Algorithmus in Abschnitt 2 abhängen.
 
 **Schwere:** niedrig für die Konfiguration, **mittel** für die Direktiven.
 
@@ -345,6 +596,8 @@ Die Direktive gilt nur für diesen einen Aufruf. Der nächste Aufruf von `mermai
 
 ### Hinweis 4: Vier verschiedene Prüfungen auf Mermaid
 
+**Mit dem Ersatz:** Die Prüfung in `bpmn.js` entfällt. Die Prüfungen in `app.js` und `diagrams.js` betreffen dann nur Mermaid-Diagramme; Vorschlag 2 bleibt sinnvoll. Der Abbruch des Assistenten verschwindet, wenn er ohne Mermaid gebaut wird.
+
 **Schwere:** niedrig.
 
 **Befund.** Ob Mermaid vorhanden ist, wird an vier Stellen geprüft, und jede prüft etwas anderes:
@@ -381,6 +634,8 @@ Ohne Mermaid bricht das Skript der Oberfläche (`dist/bpmn-assistant.html:3378�
 3. Im BPMN-Assistenten den Aufruf von `mermaid.initialize()` ebenso absichern (Hinweis 5).
 
 ### Hinweis 5: Kopie im BPMN-Assistenten
+
+**Mit dem Ersatz:** Der Assistent muss einmal neu gebaut werden und braucht Mermaid danach nicht mehr. Die Gefahr, dass er hinter dem Produkt zurückbleibt, bleibt für das Layout selbst bestehen; Vorschlag 2 gilt weiter.
 
 **Schwere:** niedrig. Der Assistent ist ein Werkzeug, kein Teil des Produkts.
 
