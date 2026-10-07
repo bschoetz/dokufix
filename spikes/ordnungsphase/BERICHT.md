@@ -1,6 +1,6 @@
 # Ordnungsphase, Teil b: Trägt das Zählmodell?
 
-Stand 7. Oktober 2026, Teil b auf `154797a`, Teil b2 auf `5d051a2` (unten). Teil b des ersten Schritts aus `docs/konzept-ordnungsphase.md`: Zählt ein Ebenen-Modell (Kreuzungen zwischen benachbarten Spalten, an Knoten und Hilfspunkten) die Kreuzungen, die der Router zeichnet? Und erkennt es, welches von zwei Bildern weniger Kreuzungen hat? Das muss eine Rechnung leisten, die eine Probe ersetzt.
+Stand 7. Oktober 2026, Teil b auf `154797a`, Teil b2 auf `5d051a2`, Teil b3 auf `c43d858` (unten). Teil b des ersten Schritts aus `docs/konzept-ordnungsphase.md`: Zählt ein Ebenen-Modell (Kreuzungen zwischen benachbarten Spalten, an Knoten und Hilfspunkten) die Kreuzungen, die der Router zeichnet? Und erkennt es, welches von zwei Bildern weniger Kreuzungen hat? Das muss eine Rechnung leisten, die eine Probe ersetzt.
 
 ## Aufbau
 
@@ -142,4 +142,31 @@ Ein Z, das in einer Lücke die Zeile wechselt, wählt der Router fast nie (9 von
 4. **Die 6 Paare von R10 sind schmal:** 5 davon sind hund2 und vier seiner Abwandlungen, das sechste ist u4. Vor dem Produkt braucht es mehr Fälle, am besten die externen Eingaben.
 
 **Für Schritt c)** heißt das: R10 als Rechnung kann mit `mini` gebaut werden. Je Gruppe von Zeilen aus R2 wird die Seite gewählt, deren Zählung kleiner ist; bei Gleichstand bleibt R2s Seite. Dazu braucht `mini` die Lagen aus dem Raster statt aus dem Diagrammteil, also eine Fassung im Layout selbst, hinter dem Schalter `rowOrder`.
+
+## Teil b3: Spuren und Ports, für R12
+
+**Anlass:** R12 durch Zählen hat nichts gebracht (`docs/konzept-ordnungsphase.md`, Schritt c). Bei den 52 Zeilenversuchen von R12 sah `mini` nie einen Unterschied, obwohl sich in 10 die gezeichneten Kreuzungen änderten: R12 trennt zwei Wege, die in der Zeile des Gateways Spuren teilen, und das Modell wertet Stücke auf gleicher Höhe nie als Kreuzung.
+
+**`mini2`** (`zaehlmodell.mjs`) zählt an Wegen statt an Spalten:
+- Aus der Lage jedes Flusses wird ein rechtwinkliger Weg: senkrecht in der Mitte einer Spalte, ein Wechsel der Höhe in der Mitte einer Lücke.
+- Gezählt werden die Schnitte eines waagrechten und eines senkrechten Stücks.
+- Dazu kommen die Spuren: Laufen zwei Flüsse ein Stück auf derselben Höhe (oder senkrecht auf derselben x), kreuzen sie sich, wenn sie an einem Ende des gemeinsamen Stücks in der einen Reihenfolge ankommen und am anderen in der anderen weggehen.
+- Wer dort endet oder geradeaus weiterläuft, legt keine Reihenfolge fest. Flüsse, die an einem Knoten enden, sortiert der Router an dessen Seite (die Ports); sie kreuzen sich nicht.
+
+**Ergebnis** (wie oben, 123 Bilder und 18 Paare):
+
+| Regel | gezählt (gezeichnet 121) | Korrelation | Paare richtig / gleich / falsch herum | R12 (7 Paare) |
+|---|---|---|---|---|
+| mini | 64 | 0,78 | 9 / 9 / 0 | 2 / 5 / 0 |
+| mini2 | 87 | 0,81 | 5 / 9 / 4 | 0 / 5 / 2 |
+| mini2 mit allen Kanälen des Pools | 51 | 0,78 | 5 / 7 / 6 | 0 / 5 / 2 |
+
+- Die Spuren bringen die Summe näher an die gezeichneten Kreuzungen, aber die Richtung wird schlechter: 4 Paare falsch herum statt keinem.
+- Alle Fehler liegen in `review-hund2-angeheftet` und `nz06-hund2`. Dort führt der Router einen langen Fluss (`Flow_17`, `Task_Karenz → GW_Merge_Ende`) durch den Kanal unter dem ganzen Pool. `mini2` legt ihn durch die Rinne knapp unter der eigenen Bahn und zählt dort zwei Kreuzungen, die es nicht gibt.
+- Mit allen Kanälen des Pools als Kandidaten (zwischen je zwei Zeilen, ganz oben, ganz unten) findet `mini2` Wege, die weniger kreuzen als die des echten Routers. Es zählt dann zu wenig, und die Richtung wird noch schlechter (6 falsch herum). Dieser Versuch ist nicht im Code geblieben.
+
+**Was daraus folgt:**
+1. **Ein Zählmodell, das R12 trägt, müsste den Router nachbauen.** Der Router wägt viele Kosten gegeneinander ab: Spuren, Ports an der Seite einer Aufgabe, die Reihenfolge der Flüsse, einen zweiten Durchgang und zwei Varianten des ganzen Bilds. Ein gieriger Router auf Spaltenebene weicht davon ab, und zwar gerade bei den Fällen, um die es R12 geht: zwei Wege in einer Zeile, lange Flüsse um das Bild herum.
+2. **Wo das Zählen trägt, ist es eingesetzt:** R10 entscheidet nach `mini` und probiert nur bei Gleichstand (`options.rowOrder`).
+3. **Für die Laufzeit ist das Zählen der falsche Hebel.** Ein direkterer: Jeder Probelauf (`runGrid()`) ruft `finishGrid()` zweimal auf, mit und ohne den zweiten Durchgang des Routers, und nimmt das bessere Bild. Würden die Proben nur einen Durchgang rechnen und erst das Ergebnis beide, halbierten sich die Läufe der Proben; die Bilder könnten sich dabei ändern. Das ist nicht gemessen.
 

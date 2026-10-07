@@ -1,6 +1,6 @@
 # Grobkonzept: eine Ordnungsphase zwischen LMM und Raster
 
-Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); der erste Schritt (a, b, b2, c) ist umgesetzt, mit den Messwerten unten; c) als Versuch hinter `options.rowOrder`, ohne Wirkung auf das Produkt. R12 durch Zählen ist versucht und nicht übernommen. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
+Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); der erste Schritt (a, b, b2, c) ist umgesetzt, mit den Messwerten unten; c) als Versuch hinter `options.rowOrder`, ohne Wirkung auf das Produkt. R12 durch Zählen ist versucht und nicht übernommen, auch nicht mit Spuren und Ports im Zählmodell (b3). Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
 
 ## Ausgangslage
 
@@ -176,6 +176,8 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
 
 - Bei den Zeilenversuchen sieht die Zählung nie einen Unterschied. R12 (a) behandelt zwei Wege, die in der Zeile des Gateways hintereinander liegen und dort Spuren teilen. Das Zählmodell wertet Stücke auf gleicher Höhe nie als Kreuzung und sieht damit genau das nicht, was R12 behebt. Bei den Bahnwechseln legt der Router die Flüsse aus mehreren Bahnen in ein Merge anders, als das Modell annimmt.
 - **Folge:** Für R12 braucht das Zählmodell Spuren in einem Kanal (Reihenfolge von Stücken auf gleicher Höhe) und die Ports an der Seite einer Aufgabe. Ohne sie bringt das Zählen bei R12 nichts. Der Code ist nicht übernommen; `rowOrder` bleibt der einzige Versuch.
+- **Spuren und Ports im Spike (Teil b3, `spikes/ordnungsphase/BERICHT.md`):** Mit Spuren (`mini2`) kommt die Summe den gezeichneten Kreuzungen näher (87 statt 64 von 121), aber die Richtung wird schlechter: 4 Paare falsch herum statt keinem, bei R12 2 von 7. Mit allen Kanälen des Pools als Kandidaten werden es 6. Ein Zählmodell, das R12 trägt, müsste den Router nachbauen.
+- **Bewertung des Wegs:** Das Zählen trägt dort, wo die Entscheidung grob ist (die Seite eines Wegs, R10). Bei Entscheidungen, die an Spuren und langen Wegen um das Bild hängen (R12), müsste es den Router nachbauen. Für die Laufzeit ist es deshalb nicht der richtige Hebel. Ein direkterer, nicht gemessen: Die Proben rechnen nur einen Durchgang des Routers statt zwei, erst das Ergebnis beide. Das halbiert die Läufe der Proben, kann aber Bilder ändern.
 
 Warum R10 trotzdem zuerst: Es ist die Probe, die am klarsten Phase 3 ist (die Seite eines Wegs innerhalb seiner Bahn), sie hängt an einer einzigen Stelle, und ihr Ergebnis ist schon heute auf Kreuzungen gemessen. Das macht den Vergleich eindeutig, und es prüft das Zählmodell an einem kleinen Fall. Für die Laufzeit zählen danach R16 und R12: R16 gehört zum Nachschärfen der Spalten (Schritt 4 der Phase), R12 zur Reihenfolge je Spalte (Schritt 2). Trägt die Rechnung bei R10, folgt R12 mit demselben Zählmodell, dann R16 als Bedingung. Trägt sie nicht, zeigt b), ob das Zählmodell oder die Vorgabe schuld ist.
 

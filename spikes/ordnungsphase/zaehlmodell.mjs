@@ -37,6 +37,13 @@
 //            einem schon gelegten Fluss 1, die Vorlieben von bpmn entscheiden Gleichstände. Gelegt wie im Router:
 //            vorwärts die kurzen zuerst, die Rückflüsse zuletzt. Keine Spuren, keine Ports an der Seite, kein zweiter
 //            Durchgang
+//   mini2    wie mini, aber gezählt an Wegen (Teil b3): aus der Lage jedes Flusses ein rechtwinkliger Weg (senkrecht in
+//            der Mitte einer Spalte, ein Wechsel der Höhe in der Mitte einer Lücke), darauf die Schnitte eines
+//            waagrechten und eines senkrechten Stücks, und die Spuren: Laufen zwei Flüsse ein Stück auf derselben Höhe
+//            (oder senkrecht auf derselben x), legt der Router sie nebeneinander; sie kreuzen sich, wenn sie an einem
+//            Ende des gemeinsamen Stücks in der einen Reihenfolge ankommen und am anderen in der anderen weggehen. Wer
+//            dort endet oder geradeaus weiterläuft, legt keine Reihenfolge fest; Flüsse, die an einem Knoten enden,
+//            sortiert der Router an dessen Seite (die Ports), sie kreuzen sich dort nicht.
 
 const attr = (tag, name) => { const m = new RegExp('\\s' + name + '="([^"]*)"').exec(tag); return m ? m[1] : null; };
 
@@ -65,7 +72,7 @@ function yBei(punkte, x){
   return null;
 }
 
-export const REGELN = ['router', 'quelle', 'ziel', 'bpmn', 'mini'];
+export const REGELN = ['router', 'quelle', 'ziel', 'bpmn', 'mini', 'mini2'];
 
 // Wie oft sich zwei Flüsse kreuzen, an ihren Lagen { sa, sb, yE, yA }: in jeder gemeinsamen Lücke, wenn ihre
 // Reihenfolge links und rechts verschieden ist; in jeder gemeinsamen Spalte, wenn der eine dort senkrecht läuft und der
@@ -83,6 +90,61 @@ function kreuzt(a, b){
     return m;
   };
   return n + senkrechtDurch(a, b) + senkrechtDurch(b, a);
+}
+
+// Ein Weg als Punkte: rechtwinklig, ohne doppelte Punkte und ohne Punkte mitten auf einer Geraden.
+function vereinfacht(punkte){
+  const out = [];
+  for (const p of punkte){
+    const last = out[out.length - 1];
+    if (last && Math.abs(last[0] - p[0]) < 0.01 && Math.abs(last[1] - p[1]) < 0.01) continue;
+    if (out.length >= 2){
+      const [a, b] = [out[out.length - 2], last];
+      if ((Math.abs(a[0] - b[0]) < 0.01 && Math.abs(b[0] - p[0]) < 0.01) || (Math.abs(a[1] - b[1]) < 0.01 && Math.abs(b[1] - p[1]) < 0.01)){ out[out.length - 1] = p; continue; }
+    }
+    out.push(p);
+  }
+  return out;
+}
+
+// Wie oft sich zwei rechtwinklige Wege kreuzen: Schnitte im Inneren eines waagrechten und eines senkrechten Stücks,
+// dazu je gemeinsames Stück auf gleicher Höhe (gleicher x) eine Kreuzung, wenn die Reihenfolge an seinen beiden Enden
+// verschieden ist (mini2).
+function wegeKreuzen(P, Q){
+  const stuecke = W => W.slice(1).map((b, i) => ({ a: W[i], b, i, W }));
+  const sp = stuecke(P), sq = stuecke(Q);
+  const waag = s => Math.abs(s.a[1] - s.b[1]) < 0.01, senk = s => Math.abs(s.a[0] - s.b[0]) < 0.01;
+  let n = 0;
+  const schnitt = (h, v) => {
+    const x = v.a[0], y = h.a[1];
+    return x > Math.min(h.a[0], h.b[0]) + 0.01 && x < Math.max(h.a[0], h.b[0]) - 0.01 && y > Math.min(v.a[1], v.b[1]) + 0.01 && y < Math.max(v.a[1], v.b[1]) - 0.01;
+  };
+  // Die Seite, von der ein Weg an einem Ende seines Stücks s kommt oder zu der er geht: −1 oben (links), +1 unten
+  // (rechts), 0 wo er dort endet oder geradeaus weiterläuft. ende: der Punkt; achse 1 für waagrechte Stücke (Seite nach
+  // y), 0 für senkrechte (Seite nach x).
+  const seite = (s, ende, achse) => {
+    const W = s.W, i = s.i;
+    const amAnfang = Math.abs(s.a[0] - ende[0]) < 0.01 && Math.abs(s.a[1] - ende[1]) < 0.01;
+    const amEnde = Math.abs(s.b[0] - ende[0]) < 0.01 && Math.abs(s.b[1] - ende[1]) < 0.01;
+    if (!amAnfang && !amEnde) return 0;
+    const nachbar = amAnfang ? W[i - 1] : W[i + 2];
+    if (!nachbar) return 0;
+    return Math.sign(nachbar[achse] - ende[achse]);
+  };
+  for (const p of sp) for (const q of sq){
+    if (waag(p) && senk(q) && schnitt(p, q)) n++;
+    else if (senk(p) && waag(q) && schnitt(q, p)) n++;
+    else for (const [ist, achse, quer] of [[waag, 1, 0], [senk, 0, 1]]){
+      if (!ist(p) || !ist(q) || Math.abs(p.a[achse] - q.a[achse]) > 0.01) continue;
+      const lo = Math.max(Math.min(p.a[quer], p.b[quer]), Math.min(q.a[quer], q.b[quer])), hi = Math.min(Math.max(p.a[quer], p.b[quer]), Math.max(q.a[quer], q.b[quer]));
+      if (hi - lo < 0.5) continue;
+      const punkt = v => (quer === 0 ? [v, p.a[1]] : [p.a[0], v]);
+      const vorn = Math.sign(seite(p, punkt(lo), achse) - seite(q, punkt(lo), achse));
+      const hinten = Math.sign(seite(p, punkt(hi), achse) - seite(q, punkt(hi), achse));
+      if (vorn * hinten < 0) n++;
+    }
+  }
+  return n;
 }
 
 // paare, wenn gegeben: je gezählte Kreuzung [fluss, fluss, wo], zum Nachsehen.
@@ -143,6 +205,18 @@ export function zaehlen(xml, model, regel, paare = null){
     if (!rueck || !gleich) kandidaten.push([oben, rueck && R.cy < L.cy ? 0.01 : rueck ? 0.02 : 0.05], [unten, rueck && R.cy > L.cy ? 0 : rueck ? 0.02 : 0.06]);
     offen.push({ id: f.id, sa, sb, L, R, rueck, kandidaten });
   }
+  // Der Weg einer Lage für mini2: senkrecht in der Mitte jeder Spalte von yEin nach yAus, in der Mitte jeder Lücke
+  // von yAus(k) nach yEin(k+1).
+  const wegVon = lage => {
+    if (lage.weg) return lage.weg;
+    const pts = [[X[lage.sa], lage.yE.get(lage.sa)], [X[lage.sa], lage.yA.get(lage.sa)]];
+    for (let k = lage.sa; k < lage.sb; k++){
+      const gx = (X[k] + H[k] + X[k + 1] - H[k + 1]) / 2;
+      pts.push([gx, lage.yA.get(k)], [gx, lage.yE.get(k + 1)], [X[k + 1], lage.yE.get(k + 1)], [X[k + 1], lage.yA.get(k + 1)]);
+    }
+    return (lage.weg = vereinfacht(pts));
+  };
+  const paar = regel === 'mini2' ? (a, b) => wegeKreuzen(wegVon(a), wegVon(b)) : kreuzt;
   const lageMit = (o, y) => {
     const yE = new Map(), yA = new Map();
     for (let k = o.sa; k <= o.sb; k++){ yE.set(k, k === o.sa ? o.L.cy : y); yA.set(k, k === o.sb ? o.R.cy : y); }
@@ -150,7 +224,7 @@ export function zaehlen(xml, model, regel, paare = null){
   };
   if (regel === 'quelle' || regel === 'ziel' || regel === 'bpmn')
     for (const o of offen) lagen.push(lageMit(o, regel === 'quelle' ? (o.rueck ? o.R.cy : o.L.cy) : regel === 'ziel' ? (o.rueck ? o.L.cy : o.R.cy) : o.kandidaten[0][0]));
-  else if (regel === 'mini'){
+  else if (regel === 'mini' || regel === 'mini2'){
     // Ein Router auf Spaltenebene: je Fluss der Kandidat mit den geringsten Kosten, ein geschnittener Knoten 1000, eine
     // Kreuzung mit einem schon gelegten Fluss 1, dazu die Vorliebe; vorwärts die kurzen zuerst, Rückflüsse zuletzt.
     const nachSpalte = X.map(() => []);
@@ -164,7 +238,7 @@ export function zaehlen(xml, model, regel, paare = null){
         let kosten = vorliebe;
         for (let k = o.sa + 1; k < o.sb; k++) kosten += 1000 * nachSpalte[k].filter(n => n.top - 1 < y && y < n.bottom + 1).length;
         kosten += 1000 * (schneidet(o.sa, o.L.cy, y, o.L) + schneidet(o.sb, o.R.cy, y, o.R));
-        for (const andere of lagen) kosten += kreuzt(lage, andere);
+        for (const andere of lagen) kosten += paar(lage, andere);
         if (!best || kosten < best.kosten) best = { kosten, lage };
       }
       lagen.push(best.lage);
@@ -172,7 +246,7 @@ export function zaehlen(xml, model, regel, paare = null){
   }
   let kreuzungen = 0;
   for (let i = 0; i < lagen.length; i++) for (let j = i + 1; j < lagen.length; j++){
-    const n = kreuzt(lagen[i], lagen[j]);
+    const n = paar(lagen[i], lagen[j]);
     if (n){ kreuzungen += n; if (paare) paare.push([lagen[i].id, lagen[j].id, n]); }
   }
   return { kreuzungen, kanten, gleicheSpalte, spalten: X.length };
