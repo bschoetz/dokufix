@@ -108,12 +108,17 @@ const ICON = {
   palette: svgIcon('<path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.6-.9 1.2-1.8-.5-1-.1-2.2 1.1-2.2H17a4 4 0 0 0 4-4c0-5.5-4-10-9-10z"/><circle cx="7.5" cy="11" r="1.2" fill="currentColor"/><circle cx="10.5" cy="7" r="1.2" fill="currentColor"/><circle cx="15" cy="7.5" r="1.2" fill="currentColor"/>'),
 };
 
+// Das Favicon (Ben, 2026-10-07): ein exklusives Gateway mit Fragezeichen, in den Gateway-Farben der Vorlage „Gelb“;
+// das Fragezeichen als Pfad, nicht als Schrift, damit es überall gleich aussieht.
+const FAVICON = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><path d="M16 1.8 30.2 16 16 30.2 1.8 16z" fill="#f0f8ff" stroke="#0066cc" stroke-width="2.6" stroke-linejoin="round"/><path d="M12.2 12.6a3.9 3.9 0 1 1 5.6 3.5c-1.2.6-1.8 1.4-1.8 2.7v.6" fill="none" stroke="#004080" stroke-width="2.8" stroke-linecap="round"/><circle cx="16" cy="23.4" r="1.7" fill="#004080"/></svg>');
+
 const html = `<!doctype html>
 <html lang="de">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dokufix BPMN Assistant</title>
+<link rel="icon" type="image/svg+xml" href="${FAVICON}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/assets/diagram-js.css">
 <script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/bpmn-navigated-viewer.production.min.js"></script>
 <style>${docCss}</style>
