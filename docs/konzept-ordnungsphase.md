@@ -1,24 +1,33 @@
 # Grobkonzept: eine Ordnungsphase zwischen LMM und Raster
 
-Stand 7. Oktober 2026, Commit `fb4b877`. Ein Grobkonzept, noch nicht verfeinert, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
+Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`). Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
 
 ## Ausgangslage
 
 Das Layout von BPMN ohne Koordinaten läuft heute in drei Schritten (`src/README.md`, *Diagrams*):
 
-1. **LMM** (`src/app/lmm.js`): je Flussknoten eine Spalte, dazu das Modell in einer kanonischen Ordnung (`kanonisch()`). LMM baut die ersten zwei Phasen eines klassischen Ebenen-Layouts (Sugiyama) nach: Zyklen auflösen und Ebenen (Spalten) zuteilen.
-2. **Das Raster** (`layoutGeometry()`, `layoutGrid()`, `finishGrid()` in `src/app/bpmn-layout.js`, die Variante A2 aus Spike 2.26): Es beginnt mit allen Knoten in Zeile 0 ihrer Bahn und gibt ihnen mit den Regeln R1 bis R18 Bahn, Zeile und Spalte. R7 verdichtet die Spalten, R8 hält Parallel-Blöcke frei.
-3. **Der Router** zeichnet jeden Fluss auf dem Raster, dann Pixel, Beschriftungen, Notizen und der Diagrammteil (`appendDiagram()`).
+1. **LMM** (`src/app/lmm.js`) gibt jedem Flussknoten eine Spalte und liefert das Modell in einer kanonischen Ordnung (`kanonisch()`).
+2. **Das Raster** (`layoutGeometry()`, `layoutGrid()`, `finishGrid()` in `src/app/bpmn-layout.js`, die Variante A2 aus Spike 2.26) beginnt mit allen Knoten in Zeile 0 ihrer Bahn. Die Regeln R1 bis R18 geben jedem Knoten Bahn, Zeile und Spalte. R7 verdichtet die Spalten, R8 hält Parallel-Blöcke frei.
+3. **Der Router** zeichnet jeden Fluss auf dem Raster. Danach kommen Pixel, Beschriftungen, Notizen und der Diagrammteil (`appendDiagram()`).
 
-Was fehlt, sind die dritte und die vierte Phase des Ebenen-Layouts: die **Reihenfolge innerhalb der Ebenen** (bei uns: welche Zeile seiner Bahn ein Knoten bekommt), gewählt so, dass wenig gekreuzt wird, und die **Koordinaten** (bei uns: das Nachschärfen der Spalten). Beides erledigen heute die Regeln des Rasters, einzeln und durch Ausprobieren.
+Gemessen an einem klassischen Ebenen-Layout (Sugiyama) mit dem Fluss von links nach rechts:
+
+| Phase | Was sie leistet | Bei uns |
+|---|---|---|
+| 1 Zyklen auflösen | Rückflüsse umdrehen | LMM |
+| 2 Ebenen zuteilen | je Knoten eine Ebene, also eine **Spalte** | LMM; im Raster nachträglich verschoben (R7, R8, R9, R16, R18) |
+| 3 Reihenfolge je Ebene | die Knoten einer Spalte von oben nach unten ordnen, mit wenig Kreuzungen | fehlt; die Regeln und Proben des Rasters erledigen es einzeln |
+| 4 Koordinaten | die y-Lage, also die **Zeile**: Ketten über die Spalten hinweg auf eine Linie bringen, damit der Hauptweg gerade läuft | fehlt; R2, R3, R5, R15, R17 setzen Zeilen einzeln |
+
+Wichtig für den Entwurf ist der Unterschied zwischen Phase 3 und 4. Eine Reihenfolge gilt je Spalte, eine Zeile im Raster aber über alle Spalten. Aus der Reihenfolge allein folgt noch keine Zeile: Damit der Hauptweg gerade bleibt, muss ein eigener Schritt die Zeilen über die Spalten hinweg ausrichten. Das Nachschärfen der Spalten ist dagegen keine Phase 4, sondern eine Verfeinerung von Phase 2.
 
 ## Das Problem
 
 Ein guter Teil der Regeln gleicht vermutlich nur aus, was LMM nicht vorbereitet:
 
 - **Spalten werden nachträglich repariert.** LMM kennt keine Parallel-Blöcke, keine Nachrichtenflüsse und keine Ports der Gateways. R7, R8, R9, R16 und R18 schieben danach Spalten. Die Regeln wurden ursprünglich an Mermaids Spalten abgestimmt, also an Vorgaben, die sich nicht ändern ließen; LMM gehört jetzt uns.
-- **Zeilen werden durch Proben gesucht.** R10, R12, R13, R14, R16 und R18 sind Proben: Jede ordnet das ganze Bild an und behält ihre Änderung nur, wo es nicht schlechter wird. Das ist lokale Kreuzungsminimierung durch Ausprobieren, was die fehlende Phase global und gezielt täte.
-- **Laufzeit.** Gemessen am 7. Oktober 2026 in Node: hund2 läuft 68-mal komplett durch `finishGrid()` (1,1 s), x-wv6 90-mal (0,6 s), ref3 32-mal. Bens hund3 (77 Knoten) braucht 10 s in Chromium und 15 s in Firefox (Spike 2.26).
+- **Zeilen werden durch Proben gesucht.** R10, R12, R13, R14, R16 und R18 sind Proben: Jede ordnet das ganze Bild an und behält ihre Änderung nur, wo es nicht schlechter wird. Das ist lokale Kreuzungsminimierung durch Ausprobieren. Die fehlende Phase täte es global und gezielt. Der Vorteil der Proben: Sie messen die Kreuzungen, die der Router wirklich zeichnet.
+- **Laufzeit.** Gemessen am 7. Oktober 2026 in Node: hund2 läuft 68-mal komplett durch `finishGrid()` (1,1 s), x-wv6 90-mal (0,6 s), ref3 32-mal. Bens hund3 (77 Knoten) braucht 10 s in Chromium und 15 s in Firefox (Spike 2.26). Der Security-Review des Parsers hat dasselbe als offenen Punkt N3 benannt: Ein fremdes Dokument von wenigen hundert KB blockiert den Tab über die Laufzeit von `layoutGeometry()` (`docs/analyse-mermaid-im-bpmn-code.md`, Abschnitt 7). Die Phase senkt die Laufzeit, ersetzt aber keine Obergrenze, denn auch ein Ebenen-Layout ist nicht linear.
 - **Befunde vom 7. Oktober 2026.** Drei von vier Befunden aus Bens Feedback gingen auf die Vorbereitung durch LMM zurück und wurden nachträglich im Raster behoben:
   - ref3: Bei einem Gleichstand von Split und End-Event bekam der Split die erste Spalte (R8).
   - x-miwg4: Ein Merge stand in derselben Spalte wie sein Vorgänger aus einer anderen Bahn (R1).
@@ -26,31 +35,39 @@ Ein guter Teil der Regeln gleicht vermutlich nur aus, was LMM nicht vorbereitet:
 
 ## Die Phase
 
-**Eingabe:** die Spalten von LMM, die Bahnen des Autors, das Modell in LMMs Ordnung.
+**Eingabe:** die Spalten von LMM, die Bahnen nach R1, das Modell in LMMs Ordnung.
+
+R1 läuft vor der Phase, nicht im Raster danach: Die Bahn eines Knotens ist Eingabe der Reihenfolge je Bahn. Wer sie danach noch ändert, macht die Ordnung ungültig.
 
 **Schritte:**
 
-1. **Lange Flüsse zerlegen.** Ein Fluss über mehrere Spalten wird in Zwischenpunkte je Spalte geteilt, damit sich Kreuzungen überhaupt zählen lassen. Nachrichtenflüsse kommen als eigene, gewichtete Kanten dazu.
-2. **Zeilen je Bahn festlegen.** Mehrere Durchgänge von links nach rechts und zurück; jeder Knoten wird nach der mittleren Lage seiner Nachbarn einsortiert (Baryzentrum oder Median), die Ordnung von LMM entscheidet bei Gleichstand, sodass das Ergebnis deterministisch bleibt. Feste Vorgaben halten dabei die Konventionen ein, die heute als Regeln stehen:
+1. **Lange Flüsse zerlegen.** Ein Fluss über mehrere Spalten wird in Hilfspunkte je Spalte geteilt, damit sich Kreuzungen überhaupt zählen lassen. Jeder Hilfspunkt braucht eine Bahn, und zwar die, in der der Router den Fluss in dieser Spalte führt. Wechselt ein Fluss die Bahn, entscheidet die Regel des Routers, wo er wechselt. Nachrichtenflüsse kommen als eigene, gewichtete Kanten dazu.
+2. **Reihenfolge je Spalte.** Mehrere Durchgänge von links nach rechts und zurück; jeder Knoten und Hilfspunkt wird nach der mittleren Lage seiner Nachbarn einsortiert (Baryzentrum oder Median), immer innerhalb seiner Bahn. Gleichstände entscheidet LMMs Ordnung, sodass das Ergebnis deterministisch und unabhängig von der Reihenfolge im XML bleibt.
+   Die Konventionen, die heute als Regeln stehen, sind dabei harte Vorgaben:
    - der Hauptweg gerade, Ausnahmen darunter (R2)
    - Schleifen oben (R3), ein Abzweig in eine andere Bahn auf deren Seite (R4)
    - die Arme eines Parallel-Blocks zusammen, nah am Split (R5)
    - die Wege nach angehefteten Ereignissen unter ihrem Host (R17)
    - Start-Ereignisse vorn, je in eigener Zeile (R15)
    - sendende und empfangende Knoten auf der Seite ihres Pools (b-wv2)
-3. **Spalten nachschärfen.** Die gerade Übergabe einer Entscheidung (R18), die Breite eines Parallel-Blocks (R8), die ersten Knoten der Wege in einer Spalte (R9) und das Verdichten (R7) in einem Durchgang, als Bedingungen statt als Proben.
+
+   Ein reines Baryzentrum hält solche Vorgaben nicht ein. Es braucht eine eingeschränkte Kreuzungsminimierung: die Vorgaben als Teilordnung je Spalte, das Baryzentrum ordnet nur innerhalb dieser Teilordnung (Forster, „A Fast and Simple Heuristic for Constrained Two-Level Crossing Reduction“). Die Alternative sind Strafgewichte, die eine Verletzung teuer machen, aber nicht verbieten. Welcher Weg trägt, ist die eigentliche Frage des Spikes.
+3. **Zeilen ausrichten.** Aus der Reihenfolge je Spalte werden Zeilen je Bahn. Ketten von Knoten, die der Hauptweg verbindet, kommen auf eine Zeile; dazwischen wird nur so weit verschoben, wie die Reihenfolge es erlaubt. Das klassische Vorbild ist Brandes und Köpf („Fast and Simple Horizontal Coordinate Assignment“), hier auf ganzzahlige Zeilen statt Pixel.
+4. **Spalten nachschärfen.** Die gerade Übergabe einer Entscheidung (R18), die Breite eines Parallel-Blocks (R8), die ersten Knoten der Wege in einer Spalte (R9) und das Verdichten (R7), in einem Durchgang und als Bedingungen statt als Proben. Das verfeinert Phase 2. Ändert es eine Spalte so, dass sich die Nachbarschaft ändert, laufen die Schritte 2 und 3 noch einmal für die betroffenen Spalten.
 
 **Ausgabe:** je Knoten Bahn, Zeile und Spalte statt nur der Spalte.
 
+**Gezählt gegen gezeichnet.** Die Phase zählt Kreuzungen zwischen Hilfspunkten benachbarter Spalten. Der Router zeichnet orthogonal, mit Ports, Kanälen und Spuren. Beides kann auseinanderlaufen, dann optimiert die Phase ein Ersatzmaß. Der Spike misst deshalb über die Eingaben, wie gut die gezählten mit den gezeichneten Kreuzungen übereinstimmen. Eine einzelne Probe am Ende auf dem fertigen Bild darf bleiben, wo der Zusammenhang schwach ist.
+
 ## Was sich ändern müsste
 
-- **Ein neues Modul,** neben LMM oder als dessen Erweiterung. Es wäre ganz eigener Code; der von Mermaid übernommene Teil bliebe in `lmm.js` (Lizenz: `docs/analyse-mermaid-im-bpmn-code.md`, Abschnitt 4a).
+- **Ein neues Modul neben `lmm.js`**, nicht dessen Erweiterung. Es wäre ganz eigener Code, und der von Mermaid übernommene Teil bliebe klar getrennt, auch lizenzrechtlich (`docs/analyse-mermaid-im-bpmn-code.md`, Abschnitt 4a). Die BPMN-Komponente soll unter LGPL-3.0 erscheinen; das neue Modul gehört dazu.
 - **Die Schnittstelle zum Raster:** `layoutGeometry()` bekommt die Zeilen mitgeliefert, nicht nur die Spalten (`raw`), und sucht sie nicht mehr selbst.
 - **Die Regeln**, vorläufige Zuordnung:
 
   | Regel | Heute | Mit der Phase |
   |---|---|---|
-  | R1 | Bahn von Gateways und End-Ereignissen | bleibt (BPMN-Konvention) |
+  | R1 | Bahn von Gateways und End-Ereignissen | bleibt (BPMN-Konvention), läuft aber vor der Phase |
   | R2, R5 | Zeilen für Wege und Arme | Vorgaben der Phase |
   | R3, R4, R6, R15, R17 | Schleifen, Abzweige, Sprünge, Starts, angeheftete Wege | Vorgaben der Phase |
   | R7, R8, R9 | Verdichten, Block-Breite, erste Knoten in einer Spalte | Nachschärfen der Spalten, als Bedingungen |
@@ -60,28 +77,67 @@ Ein guter Teil der Regeln gleicht vermutlich nur aus, was LMM nicht vorbereitet:
   | Router | | bleibt |
 
 - **Die Laufzeit** sollte deutlich sinken, weil die vielen Probe-Durchläufe wegfallen.
-- **Tests:** Die Fixtures ändern sich fast alle; `npm run fixtures -- --write` schreibt sie neu, nachdem Ben die Bilder gesehen hat. Die Regeltests in `tests/bpmn-layout.test.mjs` werden zu Tests der Vorgaben.
+- **Tests:** Die Fixtures ändern sich fast alle; `npm run fixtures -- --write` schreibt sie neu, nachdem Ben die Bilder gesehen hat. Die Regeltests in `tests/bpmn-layout.test.mjs` werden zu Tests der Vorgaben. Der Test auf Unabhängigkeit von Reihenfolge und Namen (`tests/lmm.test.mjs`) bleibt unverändert und muss weiter grün sein.
 
 ## Vorgehen
 
-Fast alle Bilder würden sich ändern. Deshalb zuerst als Spike neben dem heutigen Layout, wie Spike 2.26 es für A2 war. Die Werkzeuge in `tools/bpmn-layout/` haben dafür alles:
+Fast alle Bilder würden sich ändern. Deshalb zuerst als Spike neben dem heutigen Layout, wie Spike 2.26 es für A2 war. Die Werkzeuge in `tools/bpmn-layout/` haben dafür fast alles:
 
-- `lauf.mjs` und `vergleich.mjs` über die 137 Eingaben: Brüche, Knicke, Knicke der Nachrichtenflüsse, Nähe zu den Handlayouts, Laufzeit
+- `lauf.mjs` und `vergleich.mjs` über die 137 Eingaben: Brüche, Nähe zu den Handlayouts, Laufzeit
 - `lauf.mjs --aus <regel>` zeigt, welche Regel mit der Phase noch etwas bewirkt; was nichts mehr bewirkt, kann gehen
 - die Feedback-Seiten (`feedback-bauen.mjs`) für Bens Urteil am Bild, mit den Handfassungen daneben
 
-Abnahme, vorläufig: nicht mehr Brüche als heute (33), Kreuzungen und Knicke nicht mehr, die Laufzeit von hund3 deutlich unter heute, und Bens Urteil an den Bildern.
+Es fehlen zwei Messgrößen in `lauf.mjs`: Kreuzungen und Knicke. Bisher misst sie nur das Skript des Spikes (`spikes/lmm/review/measure.mjs`), das auf einem alten Stand läuft. Sie kommen zuerst dazu (siehe *Erster Schritt*).
+
+**Abnahme**, vorläufig:
+
+| Größe | Heute | Ziel |
+|---|---|---|
+| Brüche, alle 137 Eingaben | 33 | höchstens 33 |
+| Brüche, die 84 eigenen Eingaben (ohne die externen, gemessen auf `bd8e9c7`) | 13 | höchstens 13 |
+| Kreuzungen und Knicke, auch der Nachrichtenflüsse | noch nicht gemessen | höchstens wie heute |
+| Laufzeit der 84 eigenen Eingaben in Node (`lauf.mjs`) | 21 s | höchstens die Hälfte |
+| Laufzeit von hund3 in Chromium | 10 s | unter 1 s |
+| Unabhängig von Reihenfolge und Namen im XML (`tests/lmm.test.mjs`) | gegeben | bleibt |
+| Bens Urteil an den Bildern | | angenommen |
 
 ## Risiken
 
-- **Bens Feedback steckt in den Regeln.** Viele Kommentare im Code tragen „Ben, 2026-10-0x“ und eine Begründung am Beispiel. Diese Entscheidungen müssen als Vorgaben in die neue Phase wandern, sonst gehen sie verloren. Eine Liste aller solchen Stellen gehört an den Anfang des Spikes.
+- **Bens Feedback steckt in den Regeln.** Viele Kommentare im Code tragen „Ben, 2026-10-0x“ und eine Begründung am Beispiel. Diese Entscheidungen müssen als Vorgaben in die neue Phase wandern, sonst gehen sie verloren. Die Liste lässt sich vorab mit `grep` aus `src/app/bpmn-layout.js` erzeugen und gehört als Tabelle (Regel, Beispiel, Vorgabe in der Phase) an den Anfang des Spikes.
 - **Alle Bilder ändern sich.** Auch die, die heute gut sind. Ben sieht sie, bevor etwas ins Produkt geht.
-- **Zwei Wege gleichzeitig.** Solange der Spike läuft, entwickeln sich Raster und Phase nebeneinander; Änderungen an den Regeln in dieser Zeit müssen in beide.
+- **Zwei Wege gleichzeitig.** Solange der Spike läuft, entwickeln sich Raster und Phase nebeneinander. Vorschlag: Die Regeln werden für die Dauer des Spikes eingefroren. Wo das nicht geht, steht jede Regeländerung auf einer Liste, die der Spike abarbeitet.
+- **Ersatzmaß.** Gezählte und gezeichnete Kreuzungen können auseinanderlaufen (siehe oben). Das misst der Spike, bevor er auf das Zählmodell baut.
+- **Unabhängigkeit von Reihenfolge und Namen.** Gleichstände nach LMMs Ordnung zu entscheiden reicht nur, wenn auch die Hilfspunkte kanonisch geordnet sind, etwa nach dem Fluss, zu dem sie gehören, in LMMs Ordnung der Flüsse.
+
+## Erster Schritt (Vorschlag)
+
+Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern und ohne die Schnittstelle zum Raster anzufassen. Vorschlag: **R10 als Rechnung statt als Probe**, davor die Messung, die man dafür ohnehin braucht.
+
+**a) Messen (klein, vorab).**
+- `lauf.mjs` misst Kreuzungen und Knicke, auch die der Nachrichtenflüsse, aus dem Diagrammteil, wie `measure.mjs` im Spike.
+- `lauf.mjs` zählt, wie oft `finishGrid()` je Regel läuft. Dazu bekommt `layoutGeometry()` einen optionalen Zähler in `options`, ohne Wirkung auf das Bild.
+- Ergebnis: eine Grundlinie für die Abnahme, und die Antwort, welche Probe die meiste Zeit kostet.
+
+**b) Das Zählmodell prüfen.**
+- Die Schritte 1 und 2 der Phase in einem eigenen Modul unter `spikes/`: Hilfspunkte je Spalte und Kreuzungen zwischen benachbarten Spalten. Gezählt wird auf dem fertigen Raster des heutigen Layouts.
+- Diese Zahl wird je Eingabe mit den gezeichneten Kreuzungen aus a) verglichen.
+- Ergebnis: ob das Ersatzmaß trägt, mit Zahlen. Das ist das größte Risiko der ganzen Phase, und es lässt sich so prüfen, bevor etwas am Produkt geändert ist.
+
+**c) R10 durch eine Rechnung ersetzen.**
+- R10 heute (`ruleRowProbe()`): Für jede Gruppe von Zeilen, die R2 einem Weg gibt, ordnet R10 das ganze Bild ein weiteres Mal an, mit dem Weg auf der anderen Seite. Es behält das nur, wenn die Kreuzungen weniger werden. Das kostet einen vollen Lauf je Gruppe.
+- Die Rechnung: Die Seite jeder Gruppe entscheidet ein Baryzentrum aus dem Zählmodell. Gezählt werden die Lagen der Nachbarn in den Spalten davor und danach, Nachrichtenflüsse gewichtet zur Seite ihres Pools (die Vorgabe aus b-wv2). Ein Durchgang, kein Probelauf.
+- Hinter einem eigenen Schalter in `DEFAULT_RULES` (etwa `rowOrder`), sodass `lauf.mjs --aus rowOrder` und `vergleich.mjs` alt und neu nebeneinanderstellen.
+- Ergebnis:
+  - wie viele Bilder sich ändern und ob sie besser oder schlechter werden (Brüche, Kreuzungen, Knicke),
+  - wie viele Läufe von `finishGrid()` wegfallen,
+  - ob Bens Befund b-wv2 ohne Probe so ausfällt wie heute.
+
+Warum R10: Es ist die Probe, die am klarsten Phase 3 ist (die Seite eines Wegs innerhalb seiner Bahn), sie hängt an einer einzigen Stelle, und ihr Ergebnis ist schon heute auf Kreuzungen gemessen. Das macht den Vergleich eindeutig. Trägt die Rechnung, folgen R12 und R14 mit demselben Zählmodell; trägt sie nicht, zeigt b), ob das Zählmodell oder die Vorgabe schuld ist.
 
 ## Offene Fragen
 
-- Baryzentrum oder Median, und wie viele Durchgänge? Bei kleinen Prozessen auch exakt (alle Reihenfolgen probieren)?
+- Baryzentrum oder Median, und wie viele Durchgänge? Exakt (alle Reihenfolgen probieren) wächst je Spalte faktoriell; wenn überhaupt, dann nur bis zu einer festen Schranke, etwa 6 Knoten je Bahn und Spalte.
 - Wie stark wiegen Nachrichtenflüsse gegenüber Sequenzflüssen?
-- Sollen Bahnwechsel von Gateways (R1) in die Phase, damit die Zeilen sie schon kennen?
-- Kommt die Phase in `lmm.js` (dann „LMM“ als ganzes Ebenen-Layout) oder in ein eigenes Modul?
+- Teilordnung (Forster) oder Strafgewichte für die Vorgaben?
 - Wie viel Nachschärfen der Spalten ist als Bedingung lösbar, und wo braucht es weiter eine Probe?
+- Welche Obergrenze für die Größe des Layouts (Analyse, Abschnitt 7), unabhängig von der Phase?
