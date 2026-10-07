@@ -1,0 +1,2183 @@
+[
+ {
+  "variant": "heute",
+  "breaks": 16,
+  "noteBreaks": 1,
+  "crossings": 19,
+  "bends": 75,
+  "width": 13391,
+  "height": 5989,
+  "gapSum": 2626.9980114024274,
+  "gapN": 35,
+  "changed": [],
+  "added": [],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "gap": 106.06601717798213,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "gap": 47.071067811865476,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "gap": 93.75867753774992,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "gap": 109.68067655303338,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "xml/canon/ends/canon",
+  "breaks": 16,
+  "noteBreaks": 1,
+  "crossings": 19,
+  "bends": 75,
+  "width": 13391,
+  "height": 5989,
+  "gapSum": 2626.9980114024274,
+  "gapN": 35,
+  "changed": [],
+  "added": [],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "gap": 106.06601717798213,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "gap": 47.071067811865476,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "gap": 93.75867753774992,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "gap": 109.68067655303338,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "id/canon/ends/canon",
+  "breaks": 17,
+  "noteBreaks": 2,
+  "crossings": 16,
+  "bends": 75,
+  "width": 13346,
+  "height": 5713,
+  "gapSum": 2271.0212996784994,
+  "gapN": 35,
+  "changed": [
+   "notiz-morgen",
+   "notiz-r12",
+   "demo-notizen",
+   "notiz-bauantrag"
+  ],
+  "added": [
+   "notiz-morgen: note-on-note Notiz_Kreuzung Notiz_Taktung"
+  ],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1042,
+    "height": 573,
+    "gap": 54.9952450886004,
+    "changed": true,
+    "added": [
+     "note-on-note Notiz_Kreuzung Notiz_Taktung"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "gap": 47.071067811865476,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 359,
+    "gap": 44.82729309971111,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 935,
+    "height": 801,
+    "gap": 49.013203435596424,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 8,
+    "bends": 20,
+    "width": 1906,
+    "height": 1185,
+    "gap": 107.2322032952947,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "text/canon/ends/canon",
+  "breaks": 20,
+  "noteBreaks": 5,
+  "crossings": 17,
+  "bends": 75,
+  "width": 13293,
+  "height": 5731,
+  "gapSum": 2424.972740517997,
+  "gapN": 35,
+  "changed": [
+   "notiz-morgen",
+   "notiz-zwei",
+   "notiz-bauantrag"
+  ],
+  "added": [
+   "notiz-morgen: note-on-note Notiz_Kreuzung Notiz_Taktung",
+   "notiz-bauantrag: association-through As_Rechtsbehelf TA_Ausnahme",
+   "notiz-bauantrag: note-on-flow TA_Rechtsbehelf MF_Ablehnung",
+   "notiz-bauantrag: note-on-note TA_Ausnahme TA_Rechtsbehelf"
+  ],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1042,
+    "height": 573,
+    "gap": 54.9952450886004,
+    "changed": true,
+    "added": [
+     "note-on-note Notiz_Kreuzung Notiz_Taktung"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 482,
+    "gap": 47.071067811865476,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "gap": 93.75867753774992,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 7,
+    "noteBreaks": 4,
+    "crossings": 8,
+    "bends": 20,
+    "width": 1867,
+    "height": 1185,
+    "gap": 104.2570149290017,
+    "changed": true,
+    "added": [
+     "association-through As_Rechtsbehelf TA_Ausnahme",
+     "note-on-flow TA_Rechtsbehelf MF_Ablehnung",
+     "note-on-note TA_Ausnahme TA_Rechtsbehelf"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "partner/canon/ends/canon",
+  "breaks": 16,
+  "noteBreaks": 1,
+  "crossings": 18,
+  "bends": 75,
+  "width": 13391,
+  "height": 5896,
+  "gapSum": 2480.203858088311,
+  "gapN": 35,
+  "changed": [
+   "notiz-zwei",
+   "notiz-r12"
+  ],
+  "added": [],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "gap": 106.06601717798213,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 482,
+    "gap": 47.071067811865476,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 359,
+    "gap": 44.82729309971111,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "gap": 109.68067655303338,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "partner-id/canon/ends/canon",
+  "breaks": 16,
+  "noteBreaks": 1,
+  "crossings": 18,
+  "bends": 75,
+  "width": 13391,
+  "height": 5899,
+  "gapSum": 2480.203858088311,
+  "gapN": 35,
+  "changed": [
+   "notiz-r12",
+   "demo-notizen"
+  ],
+  "added": [],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "gap": 106.06601717798213,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 485,
+    "gap": 47.071067811865476,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 359,
+    "gap": 44.82729309971111,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "gap": 109.68067655303338,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "lanecol/canon/ends/canon",
+  "breaks": 19,
+  "noteBreaks": 4,
+  "crossings": 18,
+  "bends": 75,
+  "width": 13352,
+  "height": 5896,
+  "gapSum": 2453.4271627916737,
+  "gapN": 35,
+  "changed": [
+   "notiz-zwei",
+   "notiz-r12",
+   "notiz-bauantrag"
+  ],
+  "added": [
+   "notiz-bauantrag: association-through As_Rechtsbehelf TA_Ausnahme",
+   "notiz-bauantrag: note-on-flow TA_Rechtsbehelf MF_Ablehnung",
+   "notiz-bauantrag: note-on-note TA_Ausnahme TA_Rechtsbehelf"
+  ],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "gap": 106.06601717798213,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 482,
+    "gap": 47.071067811865476,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 359,
+    "gap": 44.82729309971111,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 7,
+    "noteBreaks": 4,
+    "crossings": 10,
+    "bends": 20,
+    "width": 1867,
+    "height": 1393,
+    "gap": 106.7054881867404,
+    "changed": true,
+    "added": [
+     "association-through As_Rechtsbehelf TA_Ausnahme",
+     "note-on-flow TA_Rechtsbehelf MF_Ablehnung",
+     "note-on-note TA_Ausnahme TA_Rechtsbehelf"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "kind/canon/ends/canon",
+  "breaks": 16,
+  "noteBreaks": 1,
+  "crossings": 16,
+  "bends": 75,
+  "width": 13391,
+  "height": 5896,
+  "gapSum": 2431.3909034720255,
+  "gapN": 35,
+  "changed": [
+   "notiz-zwei",
+   "notiz-r12",
+   "notiz-bauantrag"
+  ],
+  "added": [],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 3,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1101,
+    "height": 620,
+    "gap": 106.06601717798213,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 482,
+    "gap": 47.071067811865476,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 2,
+    "bends": 5,
+    "width": 846,
+    "height": 359,
+    "gap": 44.82729309971111,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 921,
+    "height": 732,
+    "gap": 55.8,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 8,
+    "bends": 20,
+    "width": 1906,
+    "height": 1393,
+    "gap": 104.25701492900173,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "long/canon/ends/canon",
+  "breaks": 17,
+  "noteBreaks": 2,
+  "crossings": 17,
+  "bends": 75,
+  "width": 13379,
+  "height": 5751,
+  "gapSum": 2355.683418636652,
+  "gapN": 35,
+  "changed": [
+   "notiz-morgen",
+   "notiz-zwei",
+   "demo-notizen",
+   "notiz-bauantrag"
+  ],
+  "added": [
+   "notiz-morgen: note-on-note Notiz_Kreuzung Notiz_Taktung"
+  ],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1042,
+    "height": 573,
+    "gap": 54.9952450886004,
+    "changed": true,
+    "added": [
+     "note-on-note Notiz_Kreuzung Notiz_Taktung"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 502,
+    "gap": 47.071067811865476,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "gap": 93.75867753774992,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 968,
+    "height": 732,
+    "gap": 57.8,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 8,
+    "bends": 20,
+    "width": 1906,
+    "height": 1185,
+    "gap": 95.4470902755189,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ },
+ {
+  "variant": "rpartner/canon/ends/canon",
+  "breaks": 20,
+  "noteBreaks": 5,
+  "crossings": 17,
+  "bends": 75,
+  "width": 13307,
+  "height": 5823,
+  "gapSum": 2391.0387576959793,
+  "gapN": 35,
+  "changed": [
+   "notiz-morgen",
+   "notiz-zwei",
+   "demo-notizen",
+   "notiz-bauantrag"
+  ],
+  "added": [
+   "notiz-morgen: note-on-note Notiz_Kreuzung Notiz_Taktung",
+   "notiz-bauantrag: association-through As_Rechtsbehelf TA_Ausnahme",
+   "notiz-bauantrag: note-on-flow TA_Rechtsbehelf MF_Ablehnung",
+   "notiz-bauantrag: note-on-note TA_Ausnahme TA_Rechtsbehelf"
+  ],
+  "gone": [],
+  "perFixture": {
+   "demo5": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 2,
+    "width": 809,
+    "height": 189,
+    "gap": 35.35533905932738,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 2,
+     "width": 809,
+     "height": 189,
+     "gap": 35.35533905932738
+    }
+   },
+   "notiz-morgen": {
+    "breaks": 4,
+    "noteBreaks": 1,
+    "crossings": 0,
+    "bends": 5,
+    "width": 1042,
+    "height": 573,
+    "gap": 54.9952450886004,
+    "changed": true,
+    "added": [
+     "note-on-note Notiz_Kreuzung Notiz_Taktung"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 3,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 5,
+     "width": 1101,
+     "height": 620,
+     "gap": 106.06601717798213
+    }
+   },
+   "notiz-zwei": {
+    "breaks": 1,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 3,
+    "width": 1152,
+    "height": 502,
+    "gap": 47.071067811865476,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 1,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 3,
+     "width": 1152,
+     "height": 485,
+     "gap": 47.071067811865476
+    }
+   },
+   "notiz-fluss": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 0,
+    "bends": 1,
+    "width": 816,
+    "height": 318,
+    "gap": 48.32549401354036,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 0,
+     "bends": 1,
+     "width": 816,
+     "height": 318,
+     "gap": 48.32549401354036
+    }
+   },
+   "notiz-pool": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 0,
+    "width": 1214,
+    "height": 473,
+    "gap": 30.17766952966369,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 0,
+     "width": 1214,
+     "height": 473,
+     "gap": 30.17766952966369
+    }
+   },
+   "notiz-r12": {
+    "breaks": 2,
+    "noteBreaks": 0,
+    "crossings": 3,
+    "bends": 5,
+    "width": 846,
+    "height": 449,
+    "gap": 93.75867753774992,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 2,
+     "noteBreaks": 0,
+     "crossings": 3,
+     "bends": 5,
+     "width": 846,
+     "height": 449,
+     "gap": 93.75867753774992
+    }
+   },
+   "demo-notizen": {
+    "breaks": 0,
+    "noteBreaks": 0,
+    "crossings": 1,
+    "bends": 4,
+    "width": 935,
+    "height": 804,
+    "gap": 49.013203435596424,
+    "changed": true,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 0,
+     "noteBreaks": 0,
+     "crossings": 1,
+     "bends": 4,
+     "width": 921,
+     "height": 732,
+     "gap": 55.8
+    }
+   },
+   "notiz-hund2": {
+    "breaks": 6,
+    "noteBreaks": 0,
+    "crossings": 4,
+    "bends": 35,
+    "width": 4626,
+    "height": 1330,
+    "gap": 71.33883476483184,
+    "changed": false,
+    "added": [],
+    "gone": [],
+    "before": {
+     "breaks": 6,
+     "noteBreaks": 0,
+     "crossings": 4,
+     "bends": 35,
+     "width": 4626,
+     "height": 1330,
+     "gap": 71.33883476483184
+    }
+   },
+   "notiz-bauantrag": {
+    "breaks": 7,
+    "noteBreaks": 4,
+    "crossings": 8,
+    "bends": 20,
+    "width": 1867,
+    "height": 1185,
+    "gap": 104.2570149290017,
+    "changed": true,
+    "added": [
+     "association-through As_Rechtsbehelf TA_Ausnahme",
+     "note-on-flow TA_Rechtsbehelf MF_Ablehnung",
+     "note-on-note TA_Ausnahme TA_Rechtsbehelf"
+    ],
+    "gone": [],
+    "before": {
+     "breaks": 4,
+     "noteBreaks": 1,
+     "crossings": 10,
+     "bends": 20,
+     "width": 1906,
+     "height": 1393,
+     "gap": 109.68067655303338
+    }
+   }
+  },
+  "permChanged": 0,
+  "permTotal": 0,
+  "permFixtures": [],
+  "renChanged": 0,
+  "renTotal": 0,
+  "renFixtures": []
+ }
+]
