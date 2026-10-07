@@ -55,7 +55,7 @@
   "on-one-line-shared F2_p1_x F3_p1_y"
  ],
  "r17": [
-  "label-on-flow F7_c_a F10_e_a",
+  "label-on-node F7_c_a c",
   "label-on-node F8_d_b d"
  ],
  "r18": [],
@@ -104,7 +104,6 @@
  "notiz-fluss": [],
  "notiz-pool": [],
  "notiz-r12": [
-  "association-through A_bt F7_bt_n",
   "label-on-flow bt F4_g_a",
   "label-on-node F4_g_a g"
  ],
@@ -119,9 +118,9 @@
   "node-outside-lane GW_ParSplit Lane_Melker"
  ],
  "notiz-bauantrag": [
-  "association-through As_Ausnahme Gateway_Nachf",
-  "label-on-node Gateway_Ausnahme Task_Beteiligung",
+  "association-through As_Beteiligung TA_Ausnahme",
   "node-outside-lane Gateway_Ausnahme Lane_Amtsleitung",
+  "note-on-note TA_Ausnahme TA_Rechtsgrundlage",
   "on-one-line-shared Flow_AS_ToNachf MF_Nachforderung"
  ]
 }

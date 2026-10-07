@@ -55,22 +55,22 @@
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Angebot">
       <bpmndi:BPMNShape id="Participant_Kunde_di" bpmnElement="Participant_Kunde" isHorizontal="true"><dc:Bounds x="0" y="0" width="846" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Participant_Firma_di" bpmnElement="Participant_Firma" isHorizontal="true"><dc:Bounds x="0" y="184" width="846" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_BedarfErkannt_di" bpmnElement="Start_BedarfErkannt"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_BedarfErkannt_di" bpmnElement="Start_BedarfErkannt"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AngebotAnfragen_di" bpmnElement="Task_AngebotAnfragen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AngebotEmpfangen_di" bpmnElement="Task_AngebotEmpfangen"><dc:Bounds x="546" y="32" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_AngebotLiegtVor_di" bpmnElement="End_AngebotLiegtVor"><dc:Bounds x="738" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_AnfrageEingegangen_di" bpmnElement="Start_AnfrageEingegangen"><dc:Bounds x="252" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="278" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AngebotLiegtVor_di" bpmnElement="End_AngebotLiegtVor"><dc:Bounds x="738" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_AnfrageEingegangen_di" bpmnElement="Start_AnfrageEingegangen"><dc:Bounds x="252" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="278" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AngebotErstellen_di" bpmnElement="Task_AngebotErstellen"><dc:Bounds x="378" y="216" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_AngebotSenden_di" bpmnElement="Task_AngebotSenden"><dc:Bounds x="546" y="216" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_AngebotVersendet_di" bpmnElement="End_AngebotVersendet"><dc:Bounds x="738" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="278" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_AngebotVersendet_di" bpmnElement="End_AngebotVersendet"><dc:Bounds x="738" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="278" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_K1_di" bpmnElement="Flow_K1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_K2_di" bpmnElement="Flow_K2"><di:waypoint x="330" y="72"/><di:waypoint x="546" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_K3_di" bpmnElement="Flow_K3"><di:waypoint x="666" y="72"/><di:waypoint x="738" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_F1_di" bpmnElement="Flow_F1"><di:waypoint x="288" y="256"/><di:waypoint x="378" y="256"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_F2_di" bpmnElement="Flow_F2"><di:waypoint x="498" y="256"/><di:waypoint x="546" y="256"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_F3_di" bpmnElement="Flow_F3"><di:waypoint x="666" y="256"/><di:waypoint x="738" y="256"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Anfrage_di" bpmnElement="MessageFlow_Anfrage"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="238"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="156.5" width="43" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Angebot_di" bpmnElement="MessageFlow_Angebot"><di:waypoint x="606" y="216"/><di:waypoint x="606" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="156.5" width="45" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Anfrage_di" bpmnElement="MessageFlow_Anfrage"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="238"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="157" width="39" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Angebot_di" bpmnElement="MessageFlow_Angebot"><di:waypoint x="606" y="216"/><di:waypoint x="606" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="157" width="41" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

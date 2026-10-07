@@ -1,6 +1,6 @@
 import { TRANSIENT_ATTR } from './transient.js';
 import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
-import { LABEL_FONT } from './label-size.js';
+import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
 // A fenced block of the language `bpmn` holds BPMN 2.0 XML, with its diagram
@@ -53,7 +53,7 @@ export function hasCoordinates(xml){
   return /<(?:[\w.-]+:)?BPMNShape\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
 }
 
-// The font bpmn-js draws in, at 12 px: its own default, "Arial, sans-serif",
+// The font bpmn-js draws in: its own default, "Arial, sans-serif",
 // the font the layout of XML without coordinates measures the labels in
 // (src/app/label-size.js), so the labels fit the boxes the layout gave them,
 // here as in the Camunda Modeler. Until the layout measured for itself it was
@@ -65,9 +65,10 @@ export function hasCoordinates(xml){
 export const BPMN_FONT = LABEL_FONT;
 
 // What the viewer is told: colours are custom properties that the document
-// styles define on the figure, and the text renderer uses the layout's font,
-// external labels (events, gateways, flows) at 12 px like the rest, where
-// bpmn-js's own default is 11 px.
+// styles define on the figure, and the text renderer uses the layout's font in
+// bpmn-js's own default sizes, 12 px and, for the labels of events, gateways
+// and flows, 11 px (src/app/label-size.js), as the Camunda Modeler draws them.
+// Until the layout measured in 11 px they were drawn at 12 px too.
 export const BPMN_VIEWER_CONFIG = {
   bpmnRenderer: {
     defaultFillColor: 'var(--dokufix-bpmn-fill)',
@@ -75,8 +76,8 @@ export const BPMN_VIEWER_CONFIG = {
     defaultLabelColor: 'var(--dokufix-bpmn-label)',
   },
   textRenderer: {
-    defaultStyle: { fontFamily: BPMN_FONT, fontSize: 12 },
-    externalStyle: { fontSize: 12 },
+    defaultStyle: { fontFamily: BPMN_FONT, fontSize: TEXT_FONT_SIZE },
+    externalStyle: { fontSize: LABEL_FONT_SIZE },
   },
 };
 

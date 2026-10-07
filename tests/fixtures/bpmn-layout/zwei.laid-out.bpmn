@@ -35,25 +35,25 @@
       <bpmndi:BPMNShape id="Erwerbung_di" bpmnElement="Erwerbung" isHorizontal="true"><dc:Bounds x="0" y="0" width="1280" height="296"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Erwerbung_di" bpmnElement="Z_Erwerbung" isHorizontal="true"><dc:Bounds x="30" y="0" width="1250" height="152"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Leserin_di" bpmnElement="Z_Leserin" isHorizontal="true"><dc:Bounds x="30" y="152" width="1250" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Z_Start_di" bpmnElement="Z_Start"><dc:Bounds x="102" y="62" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="102" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Z_Start_di" bpmnElement="Z_Start"><dc:Bounds x="102" y="62" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="102" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Aufnehmen_di" bpmnElement="Z_Aufnehmen"><dc:Bounds x="210" y="40" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Suchen_di" bpmnElement="Z_Suchen"><dc:Bounds x="378" y="40" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Z_Gefunden_di" bpmnElement="Z_Gefunden" isMarkerVisible="true"><dc:Bounds x="581" y="55" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="618" y="38" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Z_Gefunden_di" bpmnElement="Z_Gefunden" isMarkerVisible="true"><dc:Bounds x="581" y="55" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="616" y="39" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Preis_di" bpmnElement="Z_Preis"><dc:Bounds x="714" y="40" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Z_Frei_di" bpmnElement="Z_Frei" isMarkerVisible="true"><dc:Bounds x="882" y="55" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="862" y="109" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Z_Frei_di" bpmnElement="Z_Frei" isMarkerVisible="true"><dc:Bounds x="882" y="55" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="862" y="109" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Bestellen_di" bpmnElement="Z_Bestellen"><dc:Bounds x="980" y="40" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Z_Ende_di" bpmnElement="Z_Ende"><dc:Bounds x="1172" y="62" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1145" y="102" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Z_Ende_di" bpmnElement="Z_Ende"><dc:Bounds x="1172" y="62" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1145" y="102" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Z_Absage_di" bpmnElement="Z_Absage"><dc:Bounds x="546" y="184" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Z_Abgesagt_di" bpmnElement="Z_Abgesagt"><dc:Bounds x="1172" y="206" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1145" y="246" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Z_Abgesagt_di" bpmnElement="Z_Abgesagt"><dc:Bounds x="1172" y="206" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1145" y="246" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Z1_di" bpmnElement="Z1"><di:waypoint x="138" y="80"/><di:waypoint x="210" y="80"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Z2_di" bpmnElement="Z2"><di:waypoint x="330" y="80"/><di:waypoint x="378" y="80"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Z3_di" bpmnElement="Z3"><di:waypoint x="498" y="80"/><di:waypoint x="581" y="80"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Z4_di" bpmnElement="Z4"><di:waypoint x="631" y="80"/><di:waypoint x="714" y="80"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="61" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Z5_di" bpmnElement="Z5"><di:waypoint x="606" y="55"/><di:waypoint x="606" y="28"/><di:waypoint x="438" y="28"/><di:waypoint x="438" y="40"/><bpmndi:BPMNLabel><dc:Bounds x="573" y="32" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Z10_di" bpmnElement="Z10"><di:waypoint x="606" y="105"/><di:waypoint x="606" y="184"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="113" width="50" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Z4_di" bpmnElement="Z4"><di:waypoint x="631" y="80"/><di:waypoint x="714" y="80"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="62" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Z5_di" bpmnElement="Z5"><di:waypoint x="606" y="55"/><di:waypoint x="606" y="28"/><di:waypoint x="438" y="28"/><di:waypoint x="438" y="40"/><bpmndi:BPMNLabel><dc:Bounds x="575" y="32" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Z10_di" bpmnElement="Z10"><di:waypoint x="606" y="105"/><di:waypoint x="606" y="184"/><bpmndi:BPMNLabel><dc:Bounds x="612" y="113" width="46" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Z6_di" bpmnElement="Z6"><di:waypoint x="834" y="80"/><di:waypoint x="882" y="80"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Z7_di" bpmnElement="Z7"><di:waypoint x="932" y="80"/><di:waypoint x="980" y="80"/><bpmndi:BPMNLabel><dc:Bounds x="942" y="61" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Z8_di" bpmnElement="Z8"><di:waypoint x="907" y="55"/><di:waypoint x="907" y="12"/><di:waypoint x="270" y="12"/><di:waypoint x="270" y="40"/><bpmndi:BPMNLabel><dc:Bounds x="874" y="16" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Z7_di" bpmnElement="Z7"><di:waypoint x="932" y="80"/><di:waypoint x="980" y="80"/><bpmndi:BPMNLabel><dc:Bounds x="942" y="62" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Z8_di" bpmnElement="Z8"><di:waypoint x="907" y="55"/><di:waypoint x="907" y="12"/><di:waypoint x="270" y="12"/><di:waypoint x="270" y="40"/><bpmndi:BPMNLabel><dc:Bounds x="876" y="16" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Z9_di" bpmnElement="Z9"><di:waypoint x="1100" y="80"/><di:waypoint x="1172" y="80"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Z11_di" bpmnElement="Z11"><di:waypoint x="666" y="224"/><di:waypoint x="1172" y="224"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>

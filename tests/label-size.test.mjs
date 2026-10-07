@@ -18,7 +18,7 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { measureLabel, textWidth, layoutText, missingFromTable, LABEL_FONT, LABEL_SIZE_VERSION } from '../src/app/label-size.js';
+import { measureLabel, textWidth, layoutText, missingFromTable, LABEL_FONT, LABEL_SIZE_VERSION, LABEL_FONT_SIZE } from '../src/app/label-size.js';
 
 const px = units => units * 12 / 2048;
 
@@ -97,23 +97,24 @@ test('a line fits when it is at most as wide as the box (diagram-js 15.27.3 and 
   assert.deepEqual(layoutText('Erledigt', w - 0.001).map(l => l.text), ['Erledig', 't']);
 });
 
-test('a label: the widest line and the lines of 14.4 px, both rounded up, in a box of 90 px', () => {
-  assert.deepEqual(measureLabel('ja'), { w: 10, h: 15 });
-  assert.deepEqual(measureLabel('nein'), { w: 23, h: 15 });
-  assert.deepEqual(measureLabel('Wunsch eingegangen'), { w: 70, h: 29 });
-  assert.deepEqual(measureLabel('Vorrätig?'), { w: 49, h: 15 });
-  assert.deepEqual(measureLabel('Nach zehn Arbeitstagen ohne Entscheidung'), { w: 73, h: 58 });
-  assert.deepEqual(measureLabel(''), { w: 0, h: 15 });
+test('a label, in 11 px: the widest line and the lines of 13.2 px, both rounded up, in a box of 90 px', () => {
+  assert.equal(LABEL_FONT_SIZE, 11);
+  assert.deepEqual(measureLabel('ja'), { w: 9, h: 14 });
+  assert.deepEqual(measureLabel('nein'), { w: 21, h: 14 });
+  assert.deepEqual(measureLabel('Wunsch eingegangen'), { w: 64, h: 27 });
+  assert.deepEqual(measureLabel('Vorrätig?'), { w: 45, h: 14 });
+  assert.deepEqual(measureLabel('Nach zehn Arbeitstagen ohne Entscheidung'), { w: 67, h: 53 });
+  assert.deepEqual(measureLabel(''), { w: 0, h: 14 });
 });
 
 test('a label is laid out again in its own width when bpmn-js draws it, which can take a line more: the height follows the lines as drawn', () => {
-  // "Alle Zitzen gemolken?": two lines in 90 px, 59 px wide; in 59 px three lines.
-  assert.deepEqual(layoutText('Alle Zitzen gemolken?', 90).map(l => l.text), ['Alle Zitzen ', 'gemolken?']);
-  assert.deepEqual(layoutText('Alle Zitzen gemolken?', 59).map(l => l.text), ['Alle ', 'Zitzen ', 'gemolken?']);
-  assert.deepEqual(measureLabel('Alle Zitzen gemolken?'), { w: 59, h: 44 });
+  // "Alle Zitzen gemolken?" in 11 px: two lines in 90 px, 54 px wide; in 54 px three lines.
+  assert.deepEqual(layoutText('Alle Zitzen gemolken?', 90, LABEL_FONT_SIZE).map(l => l.text), ['Alle Zitzen ', 'gemolken?']);
+  assert.deepEqual(layoutText('Alle Zitzen gemolken?', 54, LABEL_FONT_SIZE).map(l => l.text), ['Alle ', 'Zitzen ', 'gemolken?']);
+  assert.deepEqual(measureLabel('Alle Zitzen gemolken?'), { w: 54, h: 41 });
 });
 
-test('a text annotation: its lines in the width less 7 px either side, 14.4 px each and 14 px of padding, rounded, at least 40 px', () => {
+test('a text annotation, in 12 px: its lines in the width less 7 px either side, 14.4 px each and 14 px of padding, rounded, at least 40 px', () => {
   assert.deepEqual(measureLabel('kurz', 100), { w: 100, h: 40 });
   assert.deepEqual(measureLabel('eins\nzwei\ndrei', 100), { w: 100, h: 57 });
   assert.deepEqual(measureLabel('Bei Großkunden Vertrag prüfen!!', 100), { w: 100, h: 57 });

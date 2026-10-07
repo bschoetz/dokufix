@@ -11,7 +11,9 @@
 // This module is that text layout, replicated, with a table of the advance
 // widths of one font in place of the canvas: pure arithmetic, the same result
 // in Node and in every browser. The font is the one bpmn-js draws in by
-// default, "Arial, sans-serif" at 12 px (TextRenderer.js of bpmn-js), so the
+// default, "Arial, sans-serif", in its sizes (TextRenderer.js of bpmn-js: 12 px
+// for a text annotation, 11 px for the label of an event, a gateway or a
+// flow), so the
 // XML is placed for the Camunda Modeler and any bpmn-js that opens it as it is,
 // and dokufix draws in that font too (BPMN_FONT in src/app/bpmn.js). A machine
 // without Arial draws in what "sans-serif" resolves to there: on Linux
@@ -98,13 +100,19 @@ const KERNING = {
   'f’': 37, 'r,': -113, 'r.': -113, 'r’': 76, 'v,': -152, 'v.': -152, 'w,': -113, 'w.': -113, 'y,': -152,
   'y.': -152, '‘‘': -37, '’s': -37, '’’': -37,
 };
-const UNITS_PER_EM = 2048, FONT_SIZE = 12;
+// The font sizes bpmn-js draws in by default (TextRenderer.js): its default
+// style, 12 px, for a text annotation, and one px less, 11 px, for the label
+// of an event, a gateway or a flow (externalStyle). The table is in font
+// units, so a width in either size is the same arithmetic.
+const UNITS_PER_EM = 2048;
+export const TEXT_FONT_SIZE = 12, LABEL_FONT_SIZE = 11;
 // A character outside the table takes a fallback: a CJK character the width of
-// an em, an emoji what Chromium's emoji font gave here (14.97 px), anything
-// else the mean of the table. What a machine has for these differs anyway.
+// an em, an emoji what Chromium's emoji font gave here (14.97 px at 12 px),
+// anything else the mean of the table. What a machine has for these differs
+// anyway.
 const CJK = /[\u2e80-\u9fff\uac00-\ud7af\uf900-\ufaff\uff00-\uffef]/;
 const EMOJI = /[\u2600-\u27bf\u{1f000}-\u{1faff}]/u;
-const CJK_WIDTH = 12, EMOJI_WIDTH = 14.97247314453125;
+const EMOJI_EM = 14.97247314453125 / 12;
 
 // The table by character, read from RANGES when it is first needed, and the
 // mean of its widths: made on demand, not when the module loads, so that a
@@ -126,19 +134,19 @@ function units(){
 // a text instead of failing on it.
 export const missingFromTable = text => [...new Set([...String(text)].filter(c => !units().map.has(c) && c !== '\n' && c !== '\r'))];
 
-// The width in px of a text, as the canvas would measure it: the advance of
-// each character plus the kerning of each pair of neighbours.
-export function textWidth(text){
+// The width in px of a text in size px, as the canvas would measure it: the
+// advance of each character plus the kerning of each pair of neighbours.
+export function textWidth(text, size = TEXT_FONT_SIZE){
   const { map, mean } = units();
   let sum = 0, px = 0, prev = '';
   for (const c of text){
     const u = map.get(c);
     if (u !== undefined) sum += u;
-    else px += CJK.test(c) ? CJK_WIDTH : EMOJI.test(c) ? EMOJI_WIDTH : mean * FONT_SIZE / UNITS_PER_EM;
+    else px += CJK.test(c) ? size : EMOJI.test(c) ? EMOJI_EM * size : mean * size / UNITS_PER_EM;
     if (prev) sum += KERNING[prev + c] || 0;
     prev = c;
   }
-  return sum * FONT_SIZE / UNITS_PER_EM + px;
+  return sum * size / UNITS_PER_EM + px;
 }
 
 // ---------- the text layout of diagram-js ----------
@@ -146,7 +154,7 @@ const SOFT_BREAK = '\u00AD';
 
 // getTextBBox(): a line's width; an empty line is 0 wide, and trailing white
 // space does not count.
-const lineWidth = text => text === '' ? 0 : textWidth(text.replace(/\s+$/, ''));
+const lineWidth = (text, size) => text === '' ? 0 : textWidth(text.replace(/\s+$/, ''), size);
 
 // semanticShorten(): the line cut at a blank, a hyphen or a soft hyphen to
 // fewer than maxLength characters; a hyphen that does not fit takes the part
@@ -175,11 +183,11 @@ function shortenLine(line, width, maxWidth){
 
 // layoutNext() and fit(): the next line, shortened until it fits; what it
 // leaves goes back, trimmed, to the front of lines.
-function layoutNext(lines, maxWidth){
+function layoutNext(lines, maxWidth, size){
   const original = lines.shift();
   let fitLine = original;
   for (;;){
-    const width = fitLine ? lineWidth(fitLine) : 0;
+    const width = fitLine ? lineWidth(fitLine, size) : 0;
     if (fitLine === ' ' || fitLine === '' || width <= maxWidth || fitLine.length < 2){
       if (fitLine.length < original.length) lines.unshift(original.slice(fitLine.length).trim());
       return { text: fitLine, width };
@@ -188,37 +196,39 @@ function layoutNext(lines, maxWidth){
   }
 }
 
-// layoutText(): the lines of a text in a box maxWidth wide (the box less its
-// padding), as diagram-js breaks them: [{ text, width }]. The author's line
-// breaks count, a soft hyphen before one falls away, an empty line is a line.
-export function layoutText(text, maxWidth){
+// layoutText(): the lines of a text in size px in a box maxWidth wide (the box
+// less its padding), as diagram-js breaks them: [{ text, width }]. The
+// author's line breaks count, a soft hyphen before one falls away, an empty
+// line is a line.
+export function layoutText(text, maxWidth, size = TEXT_FONT_SIZE){
   const lines = String(text).split(/\u00AD?\r?\n/), layouted = [];
-  while (lines.length) layouted.push(layoutNext(lines, maxWidth));
+  while (lines.length) layouted.push(layoutNext(lines, maxWidth, size));
   return layouted;
 }
 
 // ---------- the text renderer of bpmn-js ----------
 // The box a label is laid out in on import (DEFAULT_LABEL_SIZE), the height
-// of a line (lineHeight 1.2 of the font size), a text annotation's padding and
-// least height.
-const LABEL_WIDTH = 90, LINE_HEIGHT = 1.2 * FONT_SIZE, NOTE_PADDING = 7, MIN_NOTE_HEIGHT = 40;
+// of a line (lineHeight 1.2 of the font size) of a label and of a text
+// annotation, a text annotation's padding and least height.
+const LABEL_WIDTH = 90, LABEL_LINE = 1.2 * LABEL_FONT_SIZE, TEXT_LINE = 1.2 * TEXT_FONT_SIZE, NOTE_PADDING = 7, MIN_NOTE_HEIGHT = 40;
 
 // The size { w, h } of an event's, a gateway's or a flow's label as bpmn-js
-// draws it: on import it lays the text out in a box 90 px wide, the width the
+// draws it, in 11 px: on import it lays the text out in a box 90 px wide, the width the
 // widest line and the height a line per line, both rounded up
 // (getExternalLabelBounds()); when it draws, it lays the text out again in
 // that width, which can take a line more, so the lines are counted a second
 // time and the height follows them.
-// With a width, the size of a text annotation that wide (story 2.31): the text
-// from the top left, 7 px in, at least 40 px high (getTextAnnotationBounds()).
+// With a width, the size of a text annotation that wide (story 2.31), in 12 px:
+// the text from the top left, 7 px in, at least 40 px high
+// (getTextAnnotationBounds()).
 export function measureLabel(text, width){
   if (width){
-    const n = layoutText(text, width - 2 * NOTE_PADDING).length;
-    return { w: width, h: Math.max(MIN_NOTE_HEIGHT, Math.round(n * LINE_HEIGHT + 2 * NOTE_PADDING)) };
+    const n = layoutText(text, width - 2 * NOTE_PADDING, TEXT_FONT_SIZE).length;
+    return { w: width, h: Math.max(MIN_NOTE_HEIGHT, Math.round(n * TEXT_LINE + 2 * NOTE_PADDING)) };
   }
-  const imported = layoutText(text, LABEL_WIDTH);
+  const imported = layoutText(text, LABEL_WIDTH, LABEL_FONT_SIZE);
   const w = Math.ceil(imported.reduce((m, l) => Math.max(m, l.width), 0));
-  const h = Math.ceil(imported.length * LINE_HEIGHT);
-  const drawn = layoutText(text, w).length;
+  const h = Math.ceil(imported.length * LABEL_LINE);
+  const drawn = layoutText(text, w, LABEL_FONT_SIZE).length;
   return { w, h: Math.ceil(h / Math.max(1, imported.length) * drawn) };
 }

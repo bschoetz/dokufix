@@ -80,17 +80,17 @@
       <bpmndi:BPMNShape id="Lane_Poststelle_di" bpmnElement="Lane_Poststelle" isHorizontal="true"><dc:Bounds x="30" y="0" width="984" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Sachbearbeitung_di" bpmnElement="Lane_Sachbearbeitung" isHorizontal="true"><dc:Bounds x="30" y="144" width="984" height="384"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_IT_di" bpmnElement="Lane_IT" isHorizontal="true"><dc:Bounds x="30" y="528" width="984" height="180"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_Antrag_di" bpmnElement="Start_Antrag"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Antrag_di" bpmnElement="Start_Antrag"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Erfassen_di" bpmnElement="Task_Erfassen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Abgleich_di" bpmnElement="Task_Abgleich"><dc:Bounds x="210" y="578" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_VonHandPruefen_di" bpmnElement="Task_VonHandPruefen"><dc:Bounds x="378" y="416" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Gateway_Zusammen_di" bpmnElement="Gateway_Zusammen" isMarkerVisible="true"><dc:Bounds x="413" y="593" width="50" height="50"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Entscheiden_di" bpmnElement="Task_Entscheiden"><dc:Bounds x="546" y="194" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Bescheid_di" bpmnElement="Task_Bescheid"><dc:Bounds x="714" y="194" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Ende_Bescheid_di" bpmnElement="Ende_Bescheid"><dc:Bounds x="906" y="216" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="256" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Ende_Erinnerung_di" bpmnElement="Ende_Erinnerung"><dc:Bounds x="906" y="336" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="376" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Boundary_Fehler_di" bpmnElement="Boundary_Fehler"><dc:Bounds x="252" y="640" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="173" y="662" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Boundary_Erinnerung_di" bpmnElement="Boundary_Erinnerung"><dc:Bounds x="588" y="256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="625" y="278" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Ende_Bescheid_di" bpmnElement="Ende_Bescheid"><dc:Bounds x="906" y="216" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="256" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Ende_Erinnerung_di" bpmnElement="Ende_Erinnerung"><dc:Bounds x="906" y="336" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="376" width="90" height="40"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Fehler_di" bpmnElement="Boundary_Fehler"><dc:Bounds x="252" y="640" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="176" y="662" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Erinnerung_di" bpmnElement="Boundary_Erinnerung"><dc:Bounds x="588" y="256" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="622" y="278" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="578"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="330" y="618"/><di:waypoint x="413" y="618"/></bpmndi:BPMNEdge>

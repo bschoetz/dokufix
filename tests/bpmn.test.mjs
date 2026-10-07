@@ -59,9 +59,9 @@ test('the reasons and the warning say what the plan says', () => {
   assert.deepEqual(BPMN_CREDIT, { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' });
 });
 
-test('the viewer draws with the three custom properties and the measurer\'s font, bpmn-js\'s default, at 12 px', () => {
+test('the viewer draws with the three custom properties and the measurer\'s font in bpmn-js\'s default sizes, 12 px and 11 px for the labels of events, gateways and flows', () => {
   assert.deepEqual(BPMN_VIEWER_CONFIG.bpmnRenderer, { defaultFillColor: 'var(--dokufix-bpmn-fill)', defaultStrokeColor: 'var(--dokufix-bpmn-stroke)', defaultLabelColor: 'var(--dokufix-bpmn-label)' });
-  assert.deepEqual(BPMN_VIEWER_CONFIG.textRenderer, { defaultStyle: { fontFamily: 'Arial, sans-serif', fontSize: 12 }, externalStyle: { fontSize: 12 } });
+  assert.deepEqual(BPMN_VIEWER_CONFIG.textRenderer, { defaultStyle: { fontFamily: 'Arial, sans-serif', fontSize: 12 }, externalStyle: { fontSize: 11 } });
   assert.equal(BPMN_FONT, LABEL_FONT, 'the labels are drawn in the font they are measured in');
 });
 
@@ -277,9 +277,9 @@ test('the labels of a layout are measured by the layout itself, not by the viewe
   const document = page();
   const d = diagramIn(document, WITHOUT_DI);
   await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), mermaidStandIn()));
-  // "Los": one line of 14.4 px, rounded up, as measureLabel() gives it; the viewer's text renderer is never asked.
+  // "Los": one line of 13.2 px (11 px), rounded up, as measureLabel() gives it; the viewer's text renderer is never asked.
   assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), measureLabel('Los').h);
-  assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), 15);
+  assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), 14);
   assert.deepEqual(log.map(x => Object.keys(x)[0]), ['made', 'imported', 'saved', 'destroyed'], 'the viewer draws, nothing else');
   assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
 });

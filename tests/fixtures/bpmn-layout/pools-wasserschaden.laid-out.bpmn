@@ -74,30 +74,30 @@
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_Wasserschaden">
       <bpmndi:BPMNShape id="Participant_Mieter_di" bpmnElement="Participant_Mieter" isHorizontal="true"><dc:Bounds x="0" y="0" width="1014" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_Hausverwaltung_di" bpmnElement="Participant_Hausverwaltung" isHorizontal="true"><dc:Bounds x="0" y="185" width="1014" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Participant_Handwerker_di" bpmnElement="Participant_Handwerker" isHorizontal="true"><dc:Bounds x="0" y="369" width="1014" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_SchadenEntdeckt_di" bpmnElement="StartEvent_SchadenEntdeckt"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Hausverwaltung_di" bpmnElement="Participant_Hausverwaltung" isHorizontal="true"><dc:Bounds x="0" y="184" width="1014" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Participant_Handwerker_di" bpmnElement="Participant_Handwerker" isHorizontal="true"><dc:Bounds x="0" y="368" width="1014" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_SchadenEntdeckt_di" bpmnElement="StartEvent_SchadenEntdeckt"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_SchadenMelden_di" bpmnElement="Task_SchadenMelden"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_SchadenGemeldet_di" bpmnElement="EndEvent_SchadenGemeldet"><dc:Bounds x="906" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="94" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_MeldungErhalten_di" bpmnElement="StartEvent_MeldungErhalten"><dc:Bounds x="252" y="239" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="279" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_HandwerkerBeauftragen_di" bpmnElement="Task_HandwerkerBeauftragen"><dc:Bounds x="378" y="217" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_RechnungEmpfangen_di" bpmnElement="Task_RechnungEmpfangen"><dc:Bounds x="714" y="217" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_RechnungErhalten_di" bpmnElement="EndEvent_RechnungErhalten"><dc:Bounds x="906" y="239" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="279" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="StartEvent_AuftragErhalten_di" bpmnElement="StartEvent_AuftragErhalten"><dc:Bounds x="420" y="423" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="463" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_SchadenBeheben_di" bpmnElement="Task_SchadenBeheben"><dc:Bounds x="546" y="401" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_RechnungSenden_di" bpmnElement="Task_RechnungSenden"><dc:Bounds x="714" y="401" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="EndEvent_AuftragErledigt_di" bpmnElement="EndEvent_AuftragErledigt"><dc:Bounds x="906" y="423" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="463" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_SchadenGemeldet_di" bpmnElement="EndEvent_SchadenGemeldet"><dc:Bounds x="906" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="94" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_MeldungErhalten_di" bpmnElement="StartEvent_MeldungErhalten"><dc:Bounds x="252" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="278" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_HandwerkerBeauftragen_di" bpmnElement="Task_HandwerkerBeauftragen"><dc:Bounds x="378" y="216" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RechnungEmpfangen_di" bpmnElement="Task_RechnungEmpfangen"><dc:Bounds x="714" y="216" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_RechnungErhalten_di" bpmnElement="EndEvent_RechnungErhalten"><dc:Bounds x="906" y="238" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="278" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_AuftragErhalten_di" bpmnElement="StartEvent_AuftragErhalten"><dc:Bounds x="420" y="422" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="462" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_SchadenBeheben_di" bpmnElement="Task_SchadenBeheben"><dc:Bounds x="546" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_RechnungSenden_di" bpmnElement="Task_RechnungSenden"><dc:Bounds x="714" y="400" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="EndEvent_AuftragErledigt_di" bpmnElement="EndEvent_AuftragErledigt"><dc:Bounds x="906" y="422" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="462" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_M1_di" bpmnElement="Flow_M1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_M2_di" bpmnElement="Flow_M2"><di:waypoint x="330" y="72"/><di:waypoint x="906" y="72"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_H1_di" bpmnElement="Flow_H1"><di:waypoint x="288" y="257"/><di:waypoint x="378" y="257"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_H2_di" bpmnElement="Flow_H2"><di:waypoint x="498" y="257"/><di:waypoint x="714" y="257"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_H3_di" bpmnElement="Flow_H3"><di:waypoint x="834" y="257"/><di:waypoint x="906" y="257"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_W1_di" bpmnElement="Flow_W1"><di:waypoint x="456" y="441"/><di:waypoint x="546" y="441"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_W2_di" bpmnElement="Flow_W2"><di:waypoint x="666" y="441"/><di:waypoint x="714" y="441"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_W3_di" bpmnElement="Flow_W3"><di:waypoint x="834" y="441"/><di:waypoint x="906" y="441"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Meldung_di" bpmnElement="MessageFlow_Meldung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="239"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="150" width="87" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Auftrag_di" bpmnElement="MessageFlow_Auftrag"><di:waypoint x="438" y="297"/><di:waypoint x="438" y="423"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="341.5" width="39" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="MessageFlow_Rechnung_di" bpmnElement="MessageFlow_Rechnung"><di:waypoint x="774" y="401"/><di:waypoint x="774" y="297"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="341.5" width="55" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_H1_di" bpmnElement="Flow_H1"><di:waypoint x="288" y="256"/><di:waypoint x="378" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_H2_di" bpmnElement="Flow_H2"><di:waypoint x="498" y="256"/><di:waypoint x="714" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_H3_di" bpmnElement="Flow_H3"><di:waypoint x="834" y="256"/><di:waypoint x="906" y="256"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_W1_di" bpmnElement="Flow_W1"><di:waypoint x="456" y="440"/><di:waypoint x="546" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_W2_di" bpmnElement="Flow_W2"><di:waypoint x="666" y="440"/><di:waypoint x="714" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_W3_di" bpmnElement="Flow_W3"><di:waypoint x="834" y="440"/><di:waypoint x="906" y="440"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Meldung_di" bpmnElement="MessageFlow_Meldung"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="238"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="150.5" width="86" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Auftrag_di" bpmnElement="MessageFlow_Auftrag"><di:waypoint x="438" y="296"/><di:waypoint x="438" y="422"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="341" width="36" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Rechnung_di" bpmnElement="MessageFlow_Rechnung"><di:waypoint x="774" y="400"/><di:waypoint x="774" y="296"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="341" width="51" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

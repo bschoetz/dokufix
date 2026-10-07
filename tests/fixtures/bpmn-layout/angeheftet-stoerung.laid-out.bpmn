@@ -64,18 +64,18 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Process_Stoerung">
-      <bpmndi:BPMNShape id="Start_Meldung_di" bpmnElement="Start_Meldung"><dc:Bounds x="102" y="72" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="112" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Meldung_di" bpmnElement="Start_Meldung"><dc:Bounds x="102" y="72" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="112" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Klassifizieren_di" bpmnElement="Task_Klassifizieren"><dc:Bounds x="210" y="50" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Sub_Behebung_di" bpmnElement="Sub_Behebung"><dc:Bounds x="378" y="50" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_VerzoegerungInfo_di" bpmnElement="Task_VerzoegerungInfo"><dc:Bounds x="546" y="192" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Info_di" bpmnElement="End_Info"><dc:Bounds x="906" y="214" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="254" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Info_di" bpmnElement="End_Info"><dc:Bounds x="906" y="214" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="254" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Techniker_di" bpmnElement="Task_Techniker"><dc:Bounds x="546" y="316" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_KundeInfo_di" bpmnElement="Task_KundeInfo"><dc:Bounds x="714" y="316" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Hardware_di" bpmnElement="End_Hardware"><dc:Bounds x="906" y="338" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="378" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Hardware_di" bpmnElement="End_Hardware"><dc:Bounds x="906" y="338" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="378" width="90" height="40"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Task_Schliessen_di" bpmnElement="Task_Schliessen"><dc:Bounds x="546" y="50" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Geschlossen_di" bpmnElement="End_Geschlossen"><dc:Bounds x="906" y="72" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="112" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Boundary_Zeit_di" bpmnElement="Boundary_Zeit"><dc:Bounds x="448" y="112" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="470" y="134" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Boundary_Hardware_di" bpmnElement="Boundary_Hardware"><dc:Bounds x="392" y="112" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="301" y="134" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Geschlossen_di" bpmnElement="End_Geschlossen"><dc:Bounds x="906" y="72" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="879" y="112" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Zeit_di" bpmnElement="Boundary_Zeit"><dc:Bounds x="448" y="112" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="467" y="134" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Boundary_Hardware_di" bpmnElement="Boundary_Hardware"><dc:Bounds x="392" y="112" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="305" y="134" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="90"/><di:waypoint x="210" y="90"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="330" y="90"/><di:waypoint x="378" y="90"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="498" y="90"/><di:waypoint x="546" y="90"/></bpmndi:BPMNEdge>

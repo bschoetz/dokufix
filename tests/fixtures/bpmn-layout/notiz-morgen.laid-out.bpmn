@@ -63,18 +63,18 @@
       <bpmndi:BPMNShape id="Lane_Mama_di" bpmnElement="Lane_Mama" isHorizontal="true"><dc:Bounds x="30" y="-188" width="1071" height="192"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Kind_di" bpmnElement="Lane_Kind" isHorizontal="true"><dc:Bounds x="30" y="4" width="1071" height="284"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Lane_Papa_di" bpmnElement="Lane_Papa" isHorizontal="true"><dc:Bounds x="30" y="288" width="1071" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_Wecker_di" bpmnElement="Start_Wecker"><dc:Bounds x="102" y="-86" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="-105" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Wecker_di" bpmnElement="Start_Wecker"><dc:Bounds x="102" y="-86" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="-104" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Split_Start_di" bpmnElement="Split_Start"><dc:Bounds x="210" y="191" width="50" height="50"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Mama_Duschen_di" bpmnElement="Mama_Duschen"><dc:Bounds x="308" y="-108" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Mama_Anziehen_di" bpmnElement="Mama_Anziehen"><dc:Bounds x="476" y="-108" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Kind_Zaehne_di" bpmnElement="Kind_Zaehne"><dc:Bounds x="308" y="176" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Kind_BadFrei_di" bpmnElement="Kind_BadFrei"><dc:Bounds x="518" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="238" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Kind_BadFrei_di" bpmnElement="Kind_BadFrei"><dc:Bounds x="518" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="238" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Kind_Schulweg_di" bpmnElement="Kind_Schulweg"><dc:Bounds x="644" y="176" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Papa_Kaffee_di" bpmnElement="Papa_Kaffee"><dc:Bounds x="308" y="320" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Papa_BadFrei_di" bpmnElement="Papa_BadFrei"><dc:Bounds x="518" y="342" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="382" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Papa_BadFrei_di" bpmnElement="Papa_BadFrei"><dc:Bounds x="518" y="342" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="491" y="382" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Papa_FrischMachen_di" bpmnElement="Papa_FrischMachen"><dc:Bounds x="644" y="320" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Join_Aufbruch_di" bpmnElement="Join_Aufbruch"><dc:Bounds x="812" y="191" width="50" height="50"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Ende_di" bpmnElement="Ende"><dc:Bounds x="934" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="907" y="238" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Ende_di" bpmnElement="Ende"><dc:Bounds x="934" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="907" y="238" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Notiz_Taktung_di" bpmnElement="Notiz_Taktung"><dc:Bounds x="629" y="80" width="150" height="43"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Notiz_MamaBad_di" bpmnElement="Notiz_MamaBad"><dc:Bounds x="453" y="-176" width="200" height="43"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Notiz_Kreuzung_di" bpmnElement="Notiz_Kreuzung"><dc:Bounds x="889" y="8" width="200" height="43"/></bpmndi:BPMNShape>

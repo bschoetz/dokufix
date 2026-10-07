@@ -20,15 +20,15 @@
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="graph">
       <bpmndi:BPMNShape id="subgraph_di" bpmnElement="subgraph" isHorizontal="true"><dc:Bounds x="0" y="-45" width="776" height="189"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="start_di" bpmnElement="start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Flow_1_di" bpmnElement="Flow_1" isMarkerVisible="true"><dc:Bounds x="210" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="190" y="101" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="start_di" bpmnElement="start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Flow_1_di" bpmnElement="Flow_1" isMarkerVisible="true"><dc:Bounds x="210" y="47" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="190" y="101" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="style_di" bpmnElement="style"><dc:Bounds x="308" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="click_di" bpmnElement="click"><dc:Bounds x="476" y="32" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="end_di" bpmnElement="end"><dc:Bounds x="668" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="end_di" bpmnElement="end"><dc:Bounds x="668" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="641" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Notiz_di" bpmnElement="Notiz"><dc:Bounds x="453" y="-33" width="150" height="40"/></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="S1_di" bpmnElement="S1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="S2_di" bpmnElement="S2"><di:waypoint x="260" y="72"/><di:waypoint x="308" y="72"/><bpmndi:BPMNLabel><dc:Bounds x="270" y="53" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="S3_di" bpmnElement="S3"><di:waypoint x="235" y="47"/><di:waypoint x="235" y="20"/><di:waypoint x="368" y="20"/><di:waypoint x="368" y="32"/><bpmndi:BPMNLabel><dc:Bounds x="162" y="24" width="67" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="S2_di" bpmnElement="S2"><di:waypoint x="260" y="72"/><di:waypoint x="308" y="72"/><bpmndi:BPMNLabel><dc:Bounds x="270" y="54" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="S3_di" bpmnElement="S3"><di:waypoint x="235" y="47"/><di:waypoint x="235" y="20"/><di:waypoint x="368" y="20"/><di:waypoint x="368" y="32"/><bpmndi:BPMNLabel><dc:Bounds x="241" y="25" width="61" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="S4_di" bpmnElement="S4"><di:waypoint x="428" y="72"/><di:waypoint x="476" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="S5_di" bpmnElement="S5"><di:waypoint x="596" y="72"/><di:waypoint x="668" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="Zur_Notiz_di" bpmnElement="Zur_Notiz"><di:waypoint x="408" y="32"/><di:waypoint x="453" y="-13"/></bpmndi:BPMNEdge>

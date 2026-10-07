@@ -32,18 +32,18 @@
       <bpmndi:BPMNShape id="Leserin_di" bpmnElement="Leserin" isHorizontal="true"><dc:Bounds x="30" y="0" width="852" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Theke_di" bpmnElement="Theke" isHorizontal="true"><dc:Bounds x="30" y="144" width="852" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Magazin_di" bpmnElement="Magazin" isHorizontal="true"><dc:Bounds x="30" y="288" width="852" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Start_di" bpmnElement="V_Start"><dc:Bounds x="120" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="93" y="35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Start_di" bpmnElement="V_Start"><dc:Bounds x="120" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="93" y="36" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="V_Aufnehmen_di" bpmnElement="V_Aufnehmen"><dc:Bounds x="78" y="176" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Frage_di" bpmnElement="V_Frage" isMarkerVisible="true"><dc:Bounds x="281" y="191" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="261" y="172" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Frage_di" bpmnElement="V_Frage" isMarkerVisible="true"><dc:Bounds x="281" y="191" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="261" y="173" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="V_Holen_di" bpmnElement="V_Holen"><dc:Bounds x="246" y="320" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="V_Fernleihe_di" bpmnElement="V_Fernleihe"><dc:Bounds x="414" y="176" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="V_Benachrichtigen_di" bpmnElement="V_Benachrichtigen"><dc:Bounds x="582" y="176" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="V_Abholen_di" bpmnElement="V_Abholen"><dc:Bounds x="582" y="32" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="V_Ende_di" bpmnElement="V_Ende"><dc:Bounds x="774" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="747" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="V_Ende_di" bpmnElement="V_Ende"><dc:Bounds x="774" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="747" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="V1_di" bpmnElement="V1"><di:waypoint x="138" y="90"/><di:waypoint x="138" y="176"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="V2_di" bpmnElement="V2"><di:waypoint x="198" y="216"/><di:waypoint x="281" y="216"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V3_di" bpmnElement="V3"><di:waypoint x="306" y="241"/><di:waypoint x="306" y="320"/><bpmndi:BPMNLabel><dc:Bounds x="312" y="249" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="V4_di" bpmnElement="V4"><di:waypoint x="331" y="216"/><di:waypoint x="414" y="216"/><bpmndi:BPMNLabel><dc:Bounds x="341" y="197" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V3_di" bpmnElement="V3"><di:waypoint x="306" y="241"/><di:waypoint x="306" y="320"/><bpmndi:BPMNLabel><dc:Bounds x="312" y="249" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="V4_di" bpmnElement="V4"><di:waypoint x="331" y="216"/><di:waypoint x="414" y="216"/><bpmndi:BPMNLabel><dc:Bounds x="341" y="198" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="V5_di" bpmnElement="V5"><di:waypoint x="366" y="360"/><di:waypoint x="642" y="360"/><di:waypoint x="642" y="256"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="V6_di" bpmnElement="V6"><di:waypoint x="534" y="216"/><di:waypoint x="582" y="216"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="V7_di" bpmnElement="V7"><di:waypoint x="642" y="176"/><di:waypoint x="642" y="112"/></bpmndi:BPMNEdge>

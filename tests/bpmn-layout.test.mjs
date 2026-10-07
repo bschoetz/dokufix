@@ -279,14 +279,14 @@ test('labelRoom: a label wholly in the next lane is checked again after a growth
 });
 
 test('labels: measured at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {
-  // In Arial at 12 px: "ja" 9.3 px wide, rounded up; a line 14.4 px high, rounded up.
-  assert.deepEqual(measureLabel('ja'), { w: 10, h: 15 });
-  assert.deepEqual(measureLabel('Abwesenheit, nichts zu tun'), { w: 73, h: 29 }, 'two lines of 14.4 px');
+  // In Arial at 11 px, bpmn-js's size for such a label: "ja" 8.6 px wide, rounded up; a line 13.2 px high, rounded up.
+  assert.deepEqual(measureLabel('ja'), { w: 9, h: 14 });
+  assert.deepEqual(measureLabel('Abwesenheit, nichts zu tun'), { w: 67, h: 27 }, 'two lines of 13.2 px');
   const pts = ptsOf([[0, 100], [40, 100], [40, 300], [400, 300]]);
-  assert.deepEqual(flowLabel(pts, 'mitte', false), [207, 281, 27, 15]);   // the longest piece, above it
-  assert.deepEqual(flowLabel(pts, 'ja', true), [10, 81, 10, 15]);        // right at the exit
-  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 10], [200, 10]]), 'nein', true), [10, -9, 23, 15], 'a stub too short: the piece after it');
-  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 200]]), 'unten', true), [6, 8, 31, 15]);
+  assert.deepEqual(flowLabel(pts, 'mitte', false), [208, 282, 24, 14]);   // the longest piece, above it
+  assert.deepEqual(flowLabel(pts, 'ja', true), [10, 82, 9, 14]);         // right at the exit
+  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 10], [200, 10]]), 'nein', true), [10, -8, 21, 14], 'a stub too short: the piece after it');
+  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 200]]), 'unten', true), [6, 8, 28, 14]);
 });
 
 // A model and Mermaid's positions for it: two lanes, a start, a gateway, two
@@ -559,7 +559,7 @@ test('flow labels keep off other labels, flows and symbols, the own gateway incl
   const pts = ptsOf([[125, 100], [300, 100]]);
   const first = flowLabel(pts, 'ja', true);
   // That place taken by another label: the other side of the piece.
-  assert.deepEqual(flowLabel(pts, 'ja', true, [first]), [135, 104, 10, 15]);
+  assert.deepEqual(flowLabel(pts, 'ja', true, [first]), [135, 104, 9, 14]);
   // The short-stub rule: the label of the piece after the stub does not lie on the gateway.
   const gw = [75, 75, 50, 50];
   const stub = ptsOf([[100, 125], [100, 135], [300, 135]]);
@@ -1434,10 +1434,9 @@ test('where nothing near is free, the lane grows at its border for the text anno
   const order = (d, k) => Object.keys(d.nodes).sort((p, q) => d.nodes[p][k] - d.nodes[q][k] || (p < q ? -1 : 1));
   assert.deepEqual(order(di, 0), order(before, 0), 'the columns kept');
   assert.deepEqual(order(di, 1), order(before, 1), 'the rows kept');
-  // One break stays, on the list of known breaks: the association to the boundary event runs straight up past the
-  // label of the event's flow, "Frist verstrichen", which in Arial is 86 px wide, 2 px more than in the font it was
-  // placed with before; the line grazes its left edge by a third of a pixel.
-  assert.deepEqual(breaksOf(appendDiagram(fx.xml, withNotes, di).xml, withNotes).filter(b => /^(note|association)-/.test(b)), ['association-through A_bt F7_bt_n']);
+  // No break of a text annotation or an association. (Measured at 12 px, the label of the event's flow, "Frist
+  // verstrichen", was 86 px wide and the association grazed its left edge; at 11 px, bpmn-js's size, it keeps off.)
+  assert.deepEqual(breaksOf(appendDiagram(fx.xml, withNotes, di).xml, withNotes).filter(b => /^(note|association)-/.test(b)), []);
 });
 
 test('the size of a text annotation: the narrowest width a third as high as wide, at least 40 px high', () => {
