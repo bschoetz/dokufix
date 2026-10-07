@@ -1,6 +1,7 @@
 import { TRANSIENT_ATTR } from './transient.js';
 import { maskNotMarkup } from './bpmn-layout.js';
-import { layoutJob } from './bpmn-layout-job.js';
+import { makeLayoutClient } from './layout-client.js';
+import { showLayoutNotice } from './layout-notice.js';
 import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
@@ -15,9 +16,12 @@ import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 //   1. the library has to be there and the XML has to parse; otherwise the
 //      diagram is refused with the reason, and diagrams.js puts a warning in
 //      its place. XML without coordinates is laid out (layoutJob() of
-//      src/app/bpmn-layout-job.js), or
-//      refused with the reason the layout gives; XML the browser cannot read
-//      goes to bpmn-js as it is, which words the reason
+//      src/app/bpmn-layout-job.js), in the layout's worker where the page can
+//      make one (src/app/layout-client.js), with a notice in the diagram's
+//      container that counts the seconds (src/app/layout-notice.js); or it is
+//      refused with the reason the layout gives, the time limit's included;
+//      XML the browser cannot read goes to bpmn-js as it is, which words the
+//      reason
 //   2. bpmn-js draws into a host of its own: transient, fixed off-screen,
 //      outside the document, in <body>; it is destroyed and the host removed
 //      after each diagram, whether it was drawn or not
@@ -35,7 +39,8 @@ import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 // to the rule for such modules (src/README.md). It draws in the holder's
 // document. The rest works on the strings and elements it is handed.
 // tests/bpmn.test.mjs runs all of it in Node, renderBpmn() with a stand-in
-// for the library.
+// for the library, and with a fake worker or without one: Node has no
+// Worker, so there the layout runs in the same call, on the page.
 
 export const BPMN_NO_LIBRARY = 'Die Bibliothek bpmn-js wurde nicht geladen.';
 // The attribution below every BPMN diagram: "Gezeichnet mit bpmn-js", the
@@ -172,19 +177,27 @@ function offscreenHost(doc){
   return host;
 }
 
+// The layout's client of the page: one, made with the first diagram that
+// needs it, so the worker it makes serves every render.
+let pageClient = null;
+const pageLayoutClient = () => pageClient || (pageClient = makeLayoutClient());
+
 // Renderer of the kind bpmn (diagrams.js): draws diagram.source into
 // diagram.holder, or throws with the reason. The ids of the SVG are numbered
-// by the diagram's place in the document, diagram.index.
-export async function renderBpmn(diagram){
+// by the diagram's place in the document, diagram.index. diagram.signal, where
+// the render gives one, aborts a layout still running (src/app/render.js).
+// options, for the tests: client, the layout's client (makeLayoutClient());
+// timers and now, the notice's (showLayoutNotice()).
+export async function renderBpmn(diagram, options = {}){
   try {
-    await drawBpmn(diagram);
+    await drawBpmn(diagram, options);
   } catch (err){
     console.error('BPMN error:', err);
     throw err;
   }
 }
 
-async function drawBpmn(diagram){
+async function drawBpmn(diagram, { client, timers, now } = {}){
   // A page whose script tag of bpmn-js failed has no BpmnJS.
   if (typeof BpmnJS !== 'function') throw new Error(BPMN_NO_LIBRARY);
   const doc = diagram.holder.ownerDocument;
@@ -194,9 +207,16 @@ async function drawBpmn(diagram){
   try {
     // The XML that is drawn, with coordinates where they could be made, and the
     // diagram in it bpmn-js opens: the laid-out one, else its first.
-    const { xml, open, leftOut } = hasCoordinates(diagram.source) ? { xml: diagram.source } : layoutJob(diagram.source);
-    // What the layout leaves out is a line on the console each.
-    for (const line of leftOut || []) console.warn('BPMN layout, left out:', line);
+    let xml = diagram.source, open;
+    if (!hasCoordinates(xml)){
+      const notice = showLayoutNotice(diagram.holder, { timers, now });
+      let leftOut;
+      try {
+        ({ xml, open, leftOut } = await (client || pageLayoutClient()).layout(diagram.source, { signal: diagram.signal }));
+      } finally { notice.stop(); }
+      // What the layout leaves out is a line on the console each.
+      for (const line of leftOut || []) console.warn('BPMN layout, left out:', line);
+    }
     diagram.xml = xml;
     host = offscreenHost(doc);
     viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });

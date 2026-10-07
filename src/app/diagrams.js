@@ -202,14 +202,20 @@ async function renderMermaid({ holder }){
 // tests/diagrams.test.mjs holds the keys equal). Each: render(diagram),
 // which draws into diagram.holder or throws; warning(diagram), the text of the
 // warning that stands where a diagram that threw would have been; credit, the
-// link below the diagram, if its library asks for one.
+// link below the diagram, if its library asks for one. sourceInHolder: false
+// for a kind whose renderer reads diagram.source and not the SVG container,
+// whose container then stays empty until the diagram is drawn, instead of
+// showing its source as text while the diagrams before it are drawn: BPMN,
+// since the layout of a large process may take its seconds in the worker
+// while the page shows the rest.
 // download, what the line below a drawn diagram offers as its source: the
 // extension of the file, its MIME type in the data: URL, what it is, in the
 // link's title, and its text, read after the diagram is drawn. A kind
 // without one gets no line.
-// diagram: { kind, figure, holder, source, title, index }, index its place
-// among the diagrams of the document, from 1; a BPMN diagram also has xml
-// once it is drawn, the XML bpmn-js drew (src/app/bpmn.js).
+// diagram: { kind, figure, holder, source, title, index, signal }, index its
+// place among the diagrams of the document, from 1, signal the render's
+// AbortSignal (src/app/render.js), where it gives one; a BPMN diagram also has
+// xml once it is drawn, the XML bpmn-js drew (src/app/bpmn.js).
 export const DIAGRAM_KINDS = {
   mermaid: {
     render: renderMermaid,
@@ -218,6 +224,7 @@ export const DIAGRAM_KINDS = {
   },
   bpmn: {
     render: renderBpmn,
+    sourceInHolder: false,
     warning: diagram => bpmnWarningText(diagram.title),
     // "Gezeichnet mit bpmn-js" under every BPMN diagram (Ben, 2026-10-01 and 2026-10-03).
     credit: BPMN_CREDIT,
@@ -226,9 +233,10 @@ export const DIAGRAM_KINDS = {
 };
 
 // Document pass: every fenced block of a known kind becomes its figure, and
-// the figure its diagram. See drawDiagrams().
-export function renderDiagrams(root){
-  return drawDiagrams(root, DIAGRAM_KINDS);
+// the figure its diagram. See drawDiagrams(). context: the render's, whose
+// signal goes to every diagram.
+export function renderDiagrams(root, context){
+  return drawDiagrams(root, DIAGRAM_KINDS, context);
 }
 
 // All blocks of the given kinds become figures first, then the diagrams are
@@ -238,8 +246,9 @@ export function renderDiagrams(root){
 // drawn diagram's figure gets its width as drawn and the line of its
 // downloads, named by the titles of all diagrams of the document, the ones
 // that fail included, so that a name does not change with whether another
-// diagram is drawn. The tests hand in kinds of their own.
-export async function drawDiagrams(root, kinds){
+// diagram is drawn. The tests hand in kinds of their own. context: { signal },
+// or none.
+export async function drawDiagrams(root, kinds, context = {}){
   const doc = root.ownerDocument;
   const selector = Object.keys(kinds).map(kind => 'pre code.language-' + kind).join(', ');
   const diagrams = [];
@@ -248,9 +257,9 @@ export async function drawDiagrams(root, kinds){
     const title = diagramTitle(code, root);
     const index = diagrams.length + 1;
     const { figure, holder } = diagramFigure(doc, kind, title, kinds[kind].credit, index);
-    holder.textContent = code.textContent;
+    if (kinds[kind].sourceInHolder !== false) holder.textContent = code.textContent;
     code.parentElement.replaceWith(figure);
-    diagrams.push({ kind, figure, holder, source: code.textContent, title, index });
+    diagrams.push({ kind, figure, holder, source: code.textContent, title, index, signal: context.signal });
   }
   const names = diagramFileNames(diagrams.map(d => d.title));
   for (const [i, diagram] of diagrams.entries()){

@@ -8,7 +8,10 @@
 // they are. The renderer itself, renderBpmn(), is run with a stand-in for the
 // library (the global BpmnJS): that is enough for its refusals, its host and
 // the order of what it does. XML without coordinates goes through the layout
-// first, which asks no library and makes no host of its own: LMM gives the
+// first, which asks no library and makes no host of its own; Node has no
+// Worker, so the layout runs on the page there, as in a browser without one,
+// and a fake worker handed to renderBpmn() stands for the worker of a page
+// (src/app/layout-client.js, checked in tests/layout-client.test.mjs): LMM gives the
 // columns (src/app/lmm.js, checked in tests/lmm.test.mjs), the layout itself is
 // checked in tests/bpmn-layout.test.mjs. That bpmn-js draws every element, with
 // the colours of the document styles, is checked by the browser runs
@@ -21,6 +24,9 @@ import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, render
 import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { measureLabel, LABEL_FONT } from '../src/app/label-size.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
+import { makeLayoutClient, layoutTimeLimitText, LAYOUT_ABORTED } from '../src/app/layout-client.js';
+import { answerLayout } from '../src/app/bpmn-layout-job.js';
+import { LAYOUT_NOTICE_CLASS } from '../src/app/layout-notice.js';
 
 const WITH_DI = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
   '<bpmndi:BPMNDiagram><bpmndi:BPMNPlane bpmnElement="P"><bpmndi:BPMNShape bpmnElement="A"/></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>';
@@ -330,6 +336,131 @@ test('what the layout leaves out is a line on the console each, and the rest is 
   await withLibrary(Viewer, () => renderBpmn(d));
   assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
   assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: dataStoreReference B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
+});
+
+// ---------- XML without coordinates, through a worker ----------
+// A worker of the test's: it answers as src/layout-worker.js when told.
+function fakeWorker(){
+  const w = { sent: [], terminated: false, onmessage: null, onerror: null };
+  w.postMessage = m => w.sent.push(structuredClone(m));
+  w.terminate = () => { w.terminated = true; };
+  w.answer = () => w.onmessage({ data: structuredClone(answerLayout(w.sent.at(-1))) });
+  return w;
+}
+// The notice's timer and clock: what is pending, and one tick.
+function noticeTimers(){
+  const t = { intervals: new Map(), next: 1, time: 0 };
+  t.timers = { setInterval: (fn, ms) => { const id = t.next++; t.intervals.set(id, fn); return id; }, clearInterval: id => t.intervals.delete(id) };
+  t.now = () => t.time;
+  t.tick = ms => { t.time = ms; for (const fn of t.intervals.values()) fn(); };
+  return t;
+}
+const until = async (test, what) => { for (let i = 0; i < 200 && !test(); i++) await new Promise(r => setImmediate(r)); assert.ok(test(), what); };
+
+test('XML without coordinates through a worker: the notice counts in the container while the worker lays out, then the SVG of the same XML as on the page', async t => {
+  t.mock.method(console, 'warn', () => {});
+  t.mock.method(console, 'info', () => {});
+  // On the page, without a worker: what bpmn-js is to get.
+  const direct = standIn();
+  await withLibrary(direct.Viewer, () => renderBpmn(diagramIn(page(), WITHOUT_DI)));
+  const expected = direct.log.find(x => x.imported);
+  const w = fakeWorker(), clock = noticeTimers();
+  const client = makeLayoutClient({ makeWorker: () => w });
+  const { Viewer, log } = standIn();
+  const document = page();
+  const d = diagramIn(document, WITHOUT_DI);
+  await withLibrary(Viewer, async () => {
+    const drawn = renderBpmn(d, { client, timers: clock.timers, now: clock.now });
+    await until(() => w.sent.length === 1, 'the XML went to the worker');
+    assert.deepEqual(w.sent[0], { id: 1, xml: WITHOUT_DI });
+    const notice = d.holder.firstElementChild;
+    assert.equal(notice.getAttribute('class'), LAYOUT_NOTICE_CLASS);
+    assert.equal(d.holder.textContent, 'Diagramm wird angeordnet … 0 s');
+    assert.equal(notice.hasAttribute('data-dokufix-transient'), true);
+    clock.tick(1000);
+    clock.tick(2000);
+    assert.equal(d.holder.textContent, 'Diagramm wird angeordnet … 2 s');
+    assert.equal(log.length, 0, 'no viewer while the worker lays out');
+    w.answer();
+    await drawn;
+  });
+  assert.deepEqual(log.find(x => x.imported), expected, 'bpmn-js got the same XML and opens the same diagram');
+  assert.equal(d.xml, expected.imported);
+  assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg', 'the SVG took the notice\'s place');
+  assert.equal(clock.intervals.size, 0, 'the count is stopped');
+  assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
+});
+
+test('through a worker, what the layout leaves out is a line on the console each, as on the page', async t => {
+  const warned = t.mock.method(console, 'warn', () => {});
+  const w = fakeWorker();
+  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:dataStoreReference id="B"/></bpmn:process>');
+  const d = diagramIn(page(), xml);
+  await withLibrary(standIn().Viewer, async () => {
+    const drawn = renderBpmn(d, { client: makeLayoutClient({ makeWorker: () => w }) });
+    await until(() => w.sent.length === 1, 'sent');
+    w.answer();
+    await drawn;
+  });
+  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: dataStoreReference B: not laid out']);
+});
+
+test('a worker that takes longer than the time limit: the diagram is refused with the reason, the count stopped, no host, the worker terminated', async t => {
+  const logged = t.mock.method(console, 'error', () => {});
+  const w = fakeWorker(), clock = noticeTimers();
+  const { Viewer, log } = standIn();
+  const document = page();
+  const d = diagramIn(document, WITHOUT_DI);
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(d, { client: makeLayoutClient({ makeWorker: () => w, timeLimit: 20 }), timers: clock.timers, now: clock.now }), { message: layoutTimeLimitText(20) }));
+  assert.equal(w.terminated, true);
+  assert.equal(clock.intervals.size, 0, 'the count is stopped');
+  assert.equal(log.length, 0, 'bpmn-js is not asked');
+  assert.deepEqual(Array.from(document.body.children).map(el => el.id), ['preview']);
+  assert.equal(logged.mock.calls.at(-1).arguments[0], 'BPMN error:');
+});
+
+test('a layout refused in the worker is the reason, as on the page', async t => {
+  t.mock.method(console, 'error', () => {});
+  const w = fakeWorker();
+  const empty = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P1"/></bpmn:definitions>';
+  const d = diagramIn(page(), empty);
+  await withLibrary(standIn().Viewer, async () => {
+    const drawn = renderBpmn(d, { client: makeLayoutClient({ makeWorker: () => w }) });
+    await until(() => w.sent.length === 1, 'sent');
+    w.answer();
+    await assert.rejects(drawn, { message: LAYOUT_NOTHING });
+  });
+});
+
+test('the render\'s signal aborts a layout in the worker: the diagram is refused, the worker terminated, the count stopped', async t => {
+  t.mock.method(console, 'error', () => {});
+  const w = fakeWorker(), clock = noticeTimers();
+  const controller = new AbortController();
+  const d = { ...diagramIn(page(), WITHOUT_DI), signal: controller.signal };
+  await withLibrary(standIn().Viewer, async () => {
+    const drawn = renderBpmn(d, { client: makeLayoutClient({ makeWorker: () => w }), timers: clock.timers, now: clock.now });
+    await until(() => w.sent.length === 1, 'sent');
+    controller.abort();
+    await assert.rejects(drawn, { name: 'AbortError', message: LAYOUT_ABORTED });
+  });
+  assert.equal(w.terminated, true);
+  assert.equal(clock.intervals.size, 0);
+});
+
+test('a BPMN block\'s container holds no source while the diagrams before it are drawn, and each diagram gets the render\'s signal', async t => {
+  t.mock.method(console, 'info', () => {});
+  const document = page();
+  const root = document.getElementById('preview');
+  root.innerHTML = '<h2>Eins</h2><pre><code class="language-bpmn">' + WITH_DI.replace(/</g, '&lt;') + '</code></pre>' +
+    '<h2>Zwei</h2><pre><code class="language-bpmn">' + WITHOUT_DI.replace(/</g, '&lt;') + '</code></pre>';
+  const seen = [];
+  const controller = new AbortController();
+  await withLibrary(standIn().Viewer, () => drawDiagrams(root, { bpmn: { ...DIAGRAM_KINDS.bpmn, render: d => {
+    seen.push({ title: d.title, signal: d.signal === controller.signal, holders: Array.from(root.querySelectorAll('.dokufix-diagram-svg'), h => h.textContent) });
+    return DIAGRAM_KINDS.bpmn.render(d);
+  } } }, { signal: controller.signal }));
+  assert.deepEqual(seen, [{ title: 'Eins', signal: true, holders: ['', ''] }, { title: 'Zwei', signal: true, holders: ['', ''] }]);
+  assert.equal(root.querySelectorAll('figure .dokufix-diagram-svg > svg').length, 2);
 });
 
 // The order of the reasons: XML the layout's parser rejects, and XML that is no
