@@ -13,7 +13,8 @@ Nichts hier ist Teil des Builds oder der Tests von dokufix. `src/` und `tests/` 
 | `review/ranks-optimiert.mjs` | `arielle(model)` | **Die empfohlene Fassung.** Mermaids Schichtung mit einer Ordnung aus der Struktur des Prozesses, ohne Beschriftungsspalte (Analyse, Abschnitt 3a) |
 | `review/ranks-exakt.mjs` | `arielleExakt(model)` | Exakter Nachbau von Mermaid 12.0.0, korrigiert und gestrafft. Referenz |
 | `ranks.mjs` | `mermaidRanks(model)` | Der erste, enge Nachbau. Er enthält den Fehler mit Beschriftungen, die `q()` leert (`review/BERICHT.md`, Abschnitt 1.3) |
-| `check/canon.mjs` | `canonical(model)` (im Skript) | Versuch: das Modell vor `layoutGeometry()` kanonisch sortieren (Analyse, Abschnitt 3b) |
+| `kanonisch/kanonisch.mjs` | `kanonisch(model)` → `{ model, rank }` | **Die empfohlene Sortierung des Modells** vor `layoutGeometry()`: macht das fertige Layout stabil gegen Umordnung (Analyse, Abschnitt 3b). Braucht `kanonisch/arielle-order.mjs` |
+| `check/canon.mjs` | `canonical(model)` (im Skript) | Der erste Versuch einer kanonischen Sortierung, durch `kanonisch()` überholt |
 
 arielle beruht auf dem Swimlane-Layout von Mermaid 12.0.0 (MIT, Copyright (c) 2014 - 2022 Knut Sveidqvist). Bei der Übernahme nach `src/` bekommt es den Lizenzkopf und den Eintrag in der Lizenzliste (Analyse, Abschnitt 4a).
 
@@ -44,7 +45,10 @@ Die Browser-Skripte brauchen außerdem `dist/dokufix.html`, den CDN-Spiegel aus 
 | `invariance.mjs` | unabhängiger Permutationstest: Spalten von `arielleExakt` und `arielle` bei Umordnung des XML |
 | `canon.mjs` | Layoutänderung bei Umordnung, mit und ohne kanonisch sortiertes Modell |
 | `canon-quality.mjs` | Regelverstöße, Kreuzungen und Knicke mit kanonisch sortiertem Modell, je Fixture |
+| `kanonisch-check.mjs` | unabhängige Nachprüfung von `kanonisch()`: Layout bei Umordnung, Verstöße, Kreuzungen, Knicke |
 | `debug.mjs` | Hilfsskript zum Lesen des XML mit linkedom |
+
+**Ordner `kanonisch/`:** das zweite Review, das der kanonischen Sortierung. Bericht, Varianten, Messdaten und die Kopie `bpmn-layout-intern.js` für die Alternative „Ordnung als Schlüssel in den Regeln“ stehen in `kanonisch/BERICHT.md`.
 
 **Ordner `review/`:** die Skripte, Protokolle und Messdaten des Reviews. Die Liste mit Erklärungen steht am Ende von `review/BERICHT.md`. `browser-raws.json` hält die Rohpositionen aus dem Browserlauf fest, damit `browser-eval.mjs` ohne Browser auswerten kann.
 
