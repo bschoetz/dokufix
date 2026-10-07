@@ -1,6 +1,6 @@
 # Grobkonzept: eine Ordnungsphase zwischen LMM und Raster
 
-Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); Teil a) des ersten Schritts ist umgesetzt, mit den Messwerten unten. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
+Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); die Teile a), b) und b2) des ersten Schritts sind umgesetzt, mit den Messwerten unten. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
 
 ## Ausgangslage
 
@@ -140,11 +140,16 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
 - Mit einer einfachen Regel für die Lage (Zeile der Quelle) liegt sie in 9 der 18 Paare falsch herum.
 - **Folge:** Die eigentliche Schwierigkeit der Phase ist die Lage der Hilfspunkte, nicht das Zählen. Die Phase muss vorhersagen, welche Zeile oder Rinne der Router zwischen zwei Spalten nimmt und welche Ports. Das wird ein eigener Schritt b2), vor c).
 
-**b2) Die Lage der Hilfspunkte wie der Router (Vorschlag).** Aus den Regeln des Routers (Kanäle, Spuren, Ports, die Rinne der Rückflüsse) eine Lage der Hilfspunkte ableiten, ohne zu routen, und mit `pruefen.mjs` gegen `router+spalte` messen. Ziel: in den 18 Paaren nie falsch herum, die 6 von R10 richtig.
+**b2) Die Lage der Hilfspunkte wie der Router (umgesetzt, 7. Oktober 2026, `spikes/ordnungsphase/BERICHT.md`, Teil b2).**
+- Das Zählmodell kennt jetzt auch senkrechte Stücke in einer Spalte (Ports oben und unten). Mit der Lage aus dem gezeichneten Bild steigt die obere Schranke auf eine Korrelation von 0,89 und 14 von 18 Paaren richtig.
+- Eine feste Form je Art des Flusses reicht nicht; sie lag in 6 Paaren falsch herum. Der Router entscheidet nach Hindernissen: Lange Vorwärtsflüsse gehen über die äußere Rinne, wenn das Bild dazwischen voll ist.
+- **Ein Router auf Spaltenebene trägt** (`mini`): vier Kandidaten je Fluss (Zeile der Quelle, Zeile des Ziels, Rinne oben, Rinne unten), ein geschnittener Knoten kostet 1000, eine Kreuzung mit dem schon Gelegten 1, die Vorlieben aus den gezeichneten Formen entscheiden Gleichstände. In den 18 Paaren liegt er nie falsch herum (9 richtig, 9 gleich) und trifft alle 6 Entscheidungen von R10.
+- Er zählt zu wenig (64 statt 121): Spuren in einem Kanal, Ports an der Seite einer Aufgabe und manche Rückflüsse fehlen. Bei R12 sieht er 5 von 7 Unterschieden nicht.
+- **Folge für die Phase:** Schritt 1 ist kein Zerlegen mit fester Lage, sondern ein kleiner Router auf Spaltenebene. Die 6 Paare von R10 sind schmal (5 davon hund2 und seine Abwandlungen); vor dem Produkt braucht es mehr Fälle, am besten die externen Eingaben.
 
 **c) R10 durch eine Rechnung ersetzen.**
 - R10 heute (`ruleRowProbe()`): Für jede Gruppe von Zeilen, die R2 einem Weg gibt, ordnet R10 das ganze Bild ein weiteres Mal an, mit dem Weg auf der anderen Seite. Es behält das nur, wenn die Kreuzungen weniger werden. Das kostet einen vollen Lauf je Gruppe.
-- Die Rechnung: Die Seite jeder Gruppe entscheidet ein Baryzentrum aus dem Zählmodell. Gezählt werden die Lagen der Nachbarn in den Spalten davor und danach, Nachrichtenflüsse gewichtet zur Seite ihres Pools (die Vorgabe aus b-wv2). Ein Durchgang, kein Probelauf.
+- Die Rechnung: Für jede Gruppe zählt `mini` (b2) beide Seiten auf dem Raster, ohne zu routen; genommen wird die Seite mit weniger Kreuzungen, bei Gleichstand bleibt die Seite von R2. Nachrichtenflüsse zählen gewichtet zur Seite ihres Pools (die Vorgabe aus b-wv2). Dazu braucht `mini` eine Fassung im Layout, die mit Zellen (Bahn, Zeile, Spalte) statt mit dem Diagrammteil arbeitet.
 - Hinter einem eigenen Schalter in `DEFAULT_RULES` (etwa `rowOrder`), sodass `lauf.mjs --aus rowOrder` und `vergleich.mjs` alt und neu nebeneinanderstellen.
 - Ergebnis:
   - wie viele Bilder sich ändern und ob sie besser oder schlechter werden (Brüche, Kreuzungen, Knicke),
