@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_wartung" targetNamespace="http://example.com/wartung">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_1" name="Störungsmeldung und Wartung" processRef="Process_1" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Schicht" name="Schichtleitung">
+        <bpmn:flowNodeRef>Start_1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Melden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abnahme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Abnahme</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Instand" name="Instandhaltung">
+        <bpmn:flowNodeRef>Task_Analyse</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Ersatzteil</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reparatur</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Einbau</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Einkauf" name="Einkauf">
+        <bpmn:flowNodeRef>Task_Bestellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wareneingang</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_1" name="Störung erkannt">
+      <bpmn:outgoing>F1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Melden" name="Störung melden">
+      <bpmn:incoming>F1</bpmn:incoming>
+      <bpmn:outgoing>F2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Analyse" name="Ursache analysieren">
+      <bpmn:incoming>F2</bpmn:incoming>
+      <bpmn:outgoing>F3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_Ersatzteil" name="Ersatzteil nötig?">
+      <bpmn:incoming>F3</bpmn:incoming>
+      <bpmn:outgoing>F4</bpmn:outgoing>
+      <bpmn:outgoing>F5</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Bestellen" name="Ersatzteil bestellen">
+      <bpmn:incoming>F4</bpmn:incoming>
+      <bpmn:outgoing>F6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Wareneingang" name="Wareneingang prüfen">
+      <bpmn:incoming>F6</bpmn:incoming>
+      <bpmn:outgoing>F7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Reparatur" name="Anlage reparieren">
+      <bpmn:incoming>F5</bpmn:incoming>
+      <bpmn:incoming>F7</bpmn:incoming>
+      <bpmn:incoming>F10</bpmn:incoming>
+      <bpmn:outgoing>F8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Abnahme" name="Anlage abnehmen">
+      <bpmn:incoming>F8</bpmn:incoming>
+      <bpmn:outgoing>F9</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gw_Abnahme" name="Anlage läuft einwandfrei?">
+      <bpmn:incoming>F9</bpmn:incoming>
+      <bpmn:outgoing>F10</bpmn:outgoing>
+      <bpmn:outgoing>F11</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_1" name="Anlage wieder in Betrieb">
+      <bpmn:incoming>F11</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start_1" targetRef="Task_Melden" />
+    <bpmn:sequenceFlow id="F2" sourceRef="Task_Melden" targetRef="Task_Analyse" />
+    <bpmn:sequenceFlow id="F3" sourceRef="Task_Analyse" targetRef="Gw_Ersatzteil" />
+    <bpmn:sequenceFlow id="F4" name="ja" sourceRef="Gw_Ersatzteil" targetRef="Task_Bestellen" />
+    <bpmn:sequenceFlow id="F5" name="nein" sourceRef="Gw_Ersatzteil" targetRef="Task_Reparatur" />
+    <bpmn:sequenceFlow id="F6" sourceRef="Task_Bestellen" targetRef="Task_Wareneingang" />
+    <bpmn:sequenceFlow id="F7" sourceRef="Task_Wareneingang" targetRef="Task_Reparatur" />
+    <bpmn:sequenceFlow id="F8" sourceRef="Task_Reparatur" targetRef="Task_Abnahme" />
+    <bpmn:sequenceFlow id="F9" sourceRef="Task_Abnahme" targetRef="Gw_Abnahme" />
+    <bpmn:sequenceFlow id="F10" name="nein, erneut reparieren" sourceRef="Gw_Abnahme" targetRef="Task_Reparatur" />
+    <bpmn:sequenceFlow id="F11" name="ja" sourceRef="Gw_Abnahme" targetRef="End_1" />
+    <bpmn:textAnnotation id="Note_1">
+      <bpmn:text>Meldung per Störungsformular, bei Stillstand sofort telefonisch an die Instandhaltung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="A1" sourceRef="Task_Melden" targetRef="Note_1" />
+    <bpmn:textAnnotation id="Note_2">
+      <bpmn:text>Bestellung ab 5.000 EUR nur mit Freigabe der Werksleitung</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="A2" sourceRef="Task_Bestellen" targetRef="Note_2" />
+    <bpmn:textAnnotation id="Note_3">
+      <bpmn:text>Schleife: nach zweitem Fehlschlag Herstellerservice hinzuziehen</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="A3" sourceRef="Gw_Abnahme" targetRef="Note_3" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Werkstatt"
+                  targetNamespace="http://example.org/bpmn/werkstatt">
+  <bpmn:message id="Msg_Auftrag" name="Reparaturauftrag" />
+  <bpmn:message id="Msg_KV" name="Kostenvoranschlag" />
+  <bpmn:message id="Msg_Freigabe" name="Freigabe" />
+  <bpmn:message id="Msg_Bestellung" name="Ersatzteilbestellung" />
+  <bpmn:message id="Msg_Lieferung" name="Ersatzteillieferung" />
+  <bpmn:message id="Msg_Fertig" name="Fertigmeldung" />
+
+  <bpmn:collaboration id="Collaboration_Werkstatt">
+    <bpmn:participant id="Participant_Kunde" name="Kunde" />
+    <bpmn:participant id="Participant_Werkstatt" name="Kfz-Werkstatt" processRef="Process_Werkstatt" />
+    <bpmn:participant id="Participant_Grosshaendler" name="Großhändler" />
+    <bpmn:messageFlow id="MF_Auftrag" name="Reparaturauftrag" sourceRef="Participant_Kunde" targetRef="Start_Auftrag" messageRef="Msg_Auftrag" />
+    <bpmn:messageFlow id="MF_KV" name="Kostenvoranschlag" sourceRef="Task_KVSenden" targetRef="Participant_Kunde" messageRef="Msg_KV" />
+    <bpmn:messageFlow id="MF_Freigabe" name="Freigabe" sourceRef="Participant_Kunde" targetRef="Event_Freigabe" messageRef="Msg_Freigabe" />
+    <bpmn:messageFlow id="MF_Bestellung" name="Bestellung" sourceRef="Task_Bestellen" targetRef="Participant_Grosshaendler" messageRef="Msg_Bestellung" />
+    <bpmn:messageFlow id="MF_Lieferung" name="Lieferung" sourceRef="Participant_Grosshaendler" targetRef="Event_Lieferung" messageRef="Msg_Lieferung" />
+    <bpmn:messageFlow id="MF_Fertig" name="Fertigmeldung" sourceRef="Task_Melden" targetRef="Participant_Kunde" messageRef="Msg_Fertig" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Werkstatt" name="Reparatur durchführen" isExecutable="false">
+    <bpmn:startEvent id="Start_Auftrag" name="Reparaturauftrag eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Auftrag" messageRef="Msg_Auftrag" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Annehmen" name="Reparaturauftrag annehmen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_KVErstellen" name="Kostenvoranschlag erstellen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_KVSenden" name="Kostenvoranschlag an Kunden senden" messageRef="Msg_KV">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Event_Freigabe" name="Freigabe erhalten">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Freigabe" messageRef="Msg_Freigabe" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_Teile" name="Ersatzteile vorrätig?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ja</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Nein</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_Bestellen" name="Fehlende Ersatzteile bestellen" messageRef="Msg_Bestellung">
+      <bpmn:incoming>Flow_Nein</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:intermediateCatchEvent id="Event_Lieferung" name="Ersatzteile geliefert">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Lieferung" messageRef="Msg_Lieferung" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:exclusiveGateway id="Gateway_Join">
+      <bpmn:incoming>Flow_Ja</bpmn:incoming>
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Reparieren" name="Auto reparieren">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:sendTask id="Task_Melden" name="Fertigstellung an Kunden melden" messageRef="Msg_Fertig">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Fertig" name="Reparatur abgeschlossen">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Auftrag" targetRef="Task_Annehmen" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Annehmen" targetRef="Task_KVErstellen" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_KVErstellen" targetRef="Task_KVSenden" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_KVSenden" targetRef="Event_Freigabe" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Event_Freigabe" targetRef="Gateway_Teile" />
+    <bpmn:sequenceFlow id="Flow_Ja" name="ja" sourceRef="Gateway_Teile" targetRef="Gateway_Join" />
+    <bpmn:sequenceFlow id="Flow_Nein" name="nein" sourceRef="Gateway_Teile" targetRef="Task_Bestellen" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Bestellen" targetRef="Event_Lieferung" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Event_Lieferung" targetRef="Gateway_Join" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_Join" targetRef="Task_Reparieren" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Reparieren" targetRef="Task_Melden" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Melden" targetRef="End_Fertig" />
+  </bpmn:process>
+</bpmn:definitions>

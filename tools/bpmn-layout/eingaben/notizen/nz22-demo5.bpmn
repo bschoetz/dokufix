@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <collaboration id="graph">
+    <participant id="subgraph" name="Verlängerung" processRef="Process_1" />
+  </collaboration>
+  <process id="Process_1" isExecutable="false">
+    <startEvent id="start" name="Leserin fragt" />
+    <exclusiveGateway id="Flow_1" name="Vorgemerkt?" />
+    <task id="style" name="Frist verlängern" />
+    <task id="click" name="Bescheid geben" />
+    <endEvent id="end" name="Erledigt" />
+    <sequenceFlow id="S1" sourceRef="start" targetRef="Flow_1" />
+    <sequenceFlow id="S2" name="nein" sourceRef="Flow_1" targetRef="click" />
+    <sequenceFlow id="S3" name="ja, aber kurz" sourceRef="Flow_1" targetRef="style" />
+    <sequenceFlow id="S4" sourceRef="style" targetRef="click" />
+    <sequenceFlow id="S5" sourceRef="click" targetRef="end" />
+    <textAnnotation id="Notiz">
+      <text>Höchstens zweimal</text>
+    </textAnnotation>
+    <association id="Zur_Notiz" sourceRef="style" targetRef="Notiz" />
+  </process>
+</definitions>
+

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Reklamation" targetNamespace="http://dokufix.example/reklamation">
+  <bpmn:collaboration id="Collaboration_Reklamation">
+    <bpmn:participant id="Participant_Reklamation" name="Reklamationsbearbeitung" processRef="Process_Reklamation"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Reklamation" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Reklamation">
+      <bpmn:lane id="Lane_Service" name="Kundenservice">
+        <bpmn:flowNodeRef>Start_Reklamation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Art</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kunde</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Erledigt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Technik" name="Technik">
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Reparabel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reparieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Erfolg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ersatz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Technik</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Versand" name="Versand">
+        <bpmn:flowNodeRef>Task_Ruecksendung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Ware</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Richtig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Versand</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Versenden</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Reklamation" name="Reklamation eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Erfassen" name="Reklamation erfassen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Art" name="Art der Reklamation?">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Pruefen" name="Gerät prüfen">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Reparabel" name="Reparabel?">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Reparieren" name="Gerät reparieren">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Erfolg" name="Reparatur erfolgreich?">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Ersatz" name="Ersatzgerät bereitstellen">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Merge_Technik">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Ruecksendung" name="Rücksendung veranlassen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:intermediateCatchEvent id="Event_Ware" name="Ware eingetroffen">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageDef_Ware"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Richtig" name="Richtige Ware kommissionieren">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Merge_Versand">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Versenden" name="An Kunden versenden">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:sendTask id="Task_Kunde" name="Kunden informieren">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Erledigt" name="Reklamation erledigt">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Reklamation" targetRef="Task_Erfassen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Erfassen" targetRef="GW_Art"/>
+    <bpmn:sequenceFlow id="Flow_3" name="Defekt" sourceRef="GW_Art" targetRef="Task_Pruefen"/>
+    <bpmn:sequenceFlow id="Flow_4" name="Falschlieferung" sourceRef="GW_Art" targetRef="Task_Ruecksendung"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Pruefen" targetRef="GW_Reparabel"/>
+    <bpmn:sequenceFlow id="Flow_6" name="ja" sourceRef="GW_Reparabel" targetRef="Task_Reparieren"/>
+    <bpmn:sequenceFlow id="Flow_7" name="nein" sourceRef="GW_Reparabel" targetRef="Task_Ersatz"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_Reparieren" targetRef="GW_Erfolg"/>
+    <bpmn:sequenceFlow id="Flow_9" name="nein" sourceRef="GW_Erfolg" targetRef="Task_Reparieren"/>
+    <bpmn:sequenceFlow id="Flow_10" name="ja" sourceRef="GW_Erfolg" targetRef="GW_Merge_Technik"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Ersatz" targetRef="GW_Merge_Technik"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="GW_Merge_Technik" targetRef="GW_Merge_Versand"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Ruecksendung" targetRef="Event_Ware"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Event_Ware" targetRef="Task_Richtig"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_Richtig" targetRef="GW_Merge_Versand"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="GW_Merge_Versand" targetRef="Task_Versenden"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_Versenden" targetRef="Task_Kunde"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_Kunde" targetRef="End_Erledigt"/>
+  </bpmn:process>
+</bpmn:definitions>

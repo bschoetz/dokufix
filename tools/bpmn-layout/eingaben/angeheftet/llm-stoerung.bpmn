@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_Stoerung" targetNamespace="http://example.com/bpmn">
+  <bpmn:process id="Process_Stoerung" name="Störungsbehebung IT-Support" isExecutable="false">
+    <bpmn:startEvent id="Start_Meldung" name="Störungsmeldung eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:task id="Task_Klassifizieren" name="Störung klassifizieren">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:subProcess id="Sub_Behebung" name="Störung beheben">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:startEvent id="Sub_Start"/>
+      <bpmn:task id="Sub_Diagnose" name="Ursache suchen und beheben"/>
+      <bpmn:endEvent id="Sub_Ende"/>
+      <bpmn:sequenceFlow id="Sub_F1" sourceRef="Sub_Start" targetRef="Sub_Diagnose"/>
+      <bpmn:sequenceFlow id="Sub_F2" sourceRef="Sub_Diagnose" targetRef="Sub_Ende"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="Boundary_Zeit" name="Mehr als 4 Stunden" cancelActivity="false" attachedToRef="Sub_Behebung">
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_4h">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT4H</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="Boundary_Hardware" name="Hardwaretausch nötig" cancelActivity="true" attachedToRef="Sub_Behebung">
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorDef_Hardware" />
+    </bpmn:boundaryEvent>
+    <bpmn:task id="Task_VerzoegerungInfo" name="Kunden über Verzögerung informieren">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Info" name="Kunde informiert">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_Techniker" name="Techniker vor Ort beauftragen">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:task id="Task_KundeInfo" name="Kunden informieren">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Hardware" name="Techniker beauftragt, Kunde informiert">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:task id="Task_Schliessen" name="Ticket schließen">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:endEvent id="End_Geschlossen" name="Ticket geschlossen">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Meldung" targetRef="Task_Klassifizieren" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Klassifizieren" targetRef="Sub_Behebung" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Sub_Behebung" targetRef="Task_Schliessen" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Boundary_Zeit" targetRef="Task_VerzoegerungInfo" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_VerzoegerungInfo" targetRef="End_Info" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Boundary_Hardware" targetRef="Task_Techniker" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Techniker" targetRef="Task_KundeInfo" />
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Task_KundeInfo" targetRef="End_Hardware" />
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Task_Schliessen" targetRef="End_Geschlossen" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Bewerbung"
+                  targetNamespace="http://example.org/bpmn/bewerbung">
+
+  <bpmn:message id="Message_Bewerbung" name="Bewerbung" />
+  <bpmn:message id="Message_Einladung" name="Einladung zum Gespräch" />
+  <bpmn:message id="Message_Absage" name="Absage" />
+
+  <bpmn:collaboration id="Collaboration_Bewerbung">
+    <bpmn:participant id="Participant_Bewerberin" name="Bewerberin" processRef="Process_Bewerberin" />
+    <bpmn:participant id="Participant_Unternehmen" name="Unternehmen" processRef="Process_Unternehmen" />
+    <bpmn:messageFlow id="MessageFlow_Bewerbung" name="Bewerbung" sourceRef="Task_BewerbungSenden" targetRef="Start_BewerbungEingegangen" messageRef="Message_Bewerbung" />
+    <bpmn:messageFlow id="MessageFlow_Einladung" name="Einladung" sourceRef="Task_EinladungSenden" targetRef="Catch_EinladungErhalten" messageRef="Message_Einladung" />
+    <bpmn:messageFlow id="MessageFlow_Absage" name="Absage" sourceRef="Task_AbsageSenden" targetRef="Catch_AbsageErhalten" messageRef="Message_Absage" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Bewerberin" name="Bewerberin" isExecutable="false">
+    <bpmn:startEvent id="Start_StelleGefunden" name="Stelle gefunden">
+      <bpmn:outgoing>Flow_B1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_BewerbungSenden" name="Bewerbung senden" messageRef="Message_Bewerbung">
+      <bpmn:incoming>Flow_B1</bpmn:incoming>
+      <bpmn:outgoing>Flow_B2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:eventBasedGateway id="Gateway_AntwortAbwarten" name="Antwort abwarten">
+      <bpmn:incoming>Flow_B2</bpmn:incoming>
+      <bpmn:outgoing>Flow_B3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_B4</bpmn:outgoing>
+    </bpmn:eventBasedGateway>
+    <bpmn:intermediateCatchEvent id="Catch_EinladungErhalten" name="Einladung erhalten">
+      <bpmn:incoming>Flow_B3</bpmn:incoming>
+      <bpmn:outgoing>Flow_B5</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_EinladungErhalten" messageRef="Message_Einladung" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:intermediateCatchEvent id="Catch_AbsageErhalten" name="Absage erhalten">
+      <bpmn:incoming>Flow_B4</bpmn:incoming>
+      <bpmn:outgoing>Flow_B6</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_AbsageErhalten" messageRef="Message_Absage" />
+    </bpmn:intermediateCatchEvent>
+    <bpmn:endEvent id="End_ZumGespraechEingeladen" name="Zum Gespräch eingeladen">
+      <bpmn:incoming>Flow_B5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Abgesagt" name="Bewerbung abgelehnt">
+      <bpmn:incoming>Flow_B6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_B1" sourceRef="Start_StelleGefunden" targetRef="Task_BewerbungSenden" />
+    <bpmn:sequenceFlow id="Flow_B2" sourceRef="Task_BewerbungSenden" targetRef="Gateway_AntwortAbwarten" />
+    <bpmn:sequenceFlow id="Flow_B3" sourceRef="Gateway_AntwortAbwarten" targetRef="Catch_EinladungErhalten" />
+    <bpmn:sequenceFlow id="Flow_B4" sourceRef="Gateway_AntwortAbwarten" targetRef="Catch_AbsageErhalten" />
+    <bpmn:sequenceFlow id="Flow_B5" sourceRef="Catch_EinladungErhalten" targetRef="End_ZumGespraechEingeladen" />
+    <bpmn:sequenceFlow id="Flow_B6" sourceRef="Catch_AbsageErhalten" targetRef="End_Abgesagt" />
+  </bpmn:process>
+
+  <bpmn:process id="Process_Unternehmen" name="Unternehmen" isExecutable="false">
+    <bpmn:startEvent id="Start_BewerbungEingegangen" name="Bewerbung eingegangen">
+      <bpmn:outgoing>Flow_U1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_BewerbungEingegangen" messageRef="Message_Bewerbung" />
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_BewerbungPruefen" name="Bewerbung prüfen">
+      <bpmn:incoming>Flow_U1</bpmn:incoming>
+      <bpmn:outgoing>Flow_U2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Geeignet" name="Bewerberin geeignet?">
+      <bpmn:incoming>Flow_U2</bpmn:incoming>
+      <bpmn:outgoing>Flow_U3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_U4</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_EinladungSenden" name="Zum Gespräch einladen" messageRef="Message_Einladung">
+      <bpmn:incoming>Flow_U3</bpmn:incoming>
+      <bpmn:outgoing>Flow_U5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_AbsageSenden" name="Absage senden" messageRef="Message_Absage">
+      <bpmn:incoming>Flow_U4</bpmn:incoming>
+      <bpmn:outgoing>Flow_U6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Eingeladen" name="Bewerberin eingeladen">
+      <bpmn:incoming>Flow_U5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_AbsageVersandt" name="Absage versandt">
+      <bpmn:incoming>Flow_U6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_U1" sourceRef="Start_BewerbungEingegangen" targetRef="Task_BewerbungPruefen" />
+    <bpmn:sequenceFlow id="Flow_U2" sourceRef="Task_BewerbungPruefen" targetRef="Gateway_Geeignet" />
+    <bpmn:sequenceFlow id="Flow_U3" name="ja" sourceRef="Gateway_Geeignet" targetRef="Task_EinladungSenden" />
+    <bpmn:sequenceFlow id="Flow_U4" name="nein" sourceRef="Gateway_Geeignet" targetRef="Task_AbsageSenden" />
+    <bpmn:sequenceFlow id="Flow_U5" sourceRef="Task_EinladungSenden" targetRef="End_Eingeladen" />
+    <bpmn:sequenceFlow id="Flow_U6" sourceRef="Task_AbsageSenden" targetRef="End_AbsageVersandt" />
+  </bpmn:process>
+</bpmn:definitions>

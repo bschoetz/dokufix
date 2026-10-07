@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/sonder">
+  <bpmn:process id="P_Zwei" isExecutable="false">
+    <bpmn:startEvent id="S" name="Bestellung da"/>
+    <bpmn:task id="T_Liefern" name="Ware liefern"/>
+    <bpmn:boundaryEvent id="B_Frist" name="Drei Tage" attachedToRef="T_Liefern"><bpmn:timerEventDefinition id="B_Frist_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="B_Fehlt" name="Ware fehlt" attachedToRef="T_Liefern"><bpmn:errorEventDefinition id="B_Fehlt_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="T_Rechnung" name="Rechnung stellen"/>
+    <bpmn:endEvent id="E_Ok" name="Geliefert"/>
+    <bpmn:task id="T_Mahnen" name="Lieferanten mahnen"/>
+    <bpmn:endEvent id="E_Gemahnt" name="Gemahnt"/>
+    <bpmn:task id="T_Storno" name="Bestellung stornieren"/>
+    <bpmn:endEvent id="E_Storno" name="Storniert"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T_Liefern"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T_Liefern" targetRef="T_Rechnung"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="T_Rechnung" targetRef="E_Ok"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="B_Frist" targetRef="T_Mahnen"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="T_Mahnen" targetRef="E_Gemahnt"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="B_Fehlt" targetRef="T_Storno"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="T_Storno" targetRef="E_Storno"/>
+  </bpmn:process>
+</bpmn:definitions>

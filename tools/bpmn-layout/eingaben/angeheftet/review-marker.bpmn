@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/review">
+  <bpmn:process id="P_Marker" isExecutable="false">
+    <bpmn:startEvent id="S" name="Los"/>
+    <bpmn:task id="T_Wiederholen" name="Messung wiederholen"><bpmn:standardLoopCharacteristics/></bpmn:task>
+    <bpmn:boundaryEvent id="B_Zeit" name="Eine Stunde" attachedToRef="T_Wiederholen"><bpmn:timerEventDefinition id="B_Zeit_D"/></bpmn:boundaryEvent>
+    <bpmn:subProcess id="U_Proben" name="Proben prüfen">
+      <bpmn:multiInstanceLoopCharacteristics/>
+      <bpmn:startEvent id="U_S"/><bpmn:endEvent id="U_E"/><bpmn:sequenceFlow id="U_F" sourceRef="U_S" targetRef="U_E"/>
+    </bpmn:subProcess>
+    <bpmn:boundaryEvent id="B_Fehler" name="Probe kaputt" attachedToRef="U_Proben"><bpmn:errorEventDefinition id="B_Fehler_D"/></bpmn:boundaryEvent>
+    <bpmn:adHocSubProcess id="V_Frei" name="Nacharbeiten">
+      <bpmn:task id="V_T" name="Nacharbeit"/>
+    </bpmn:adHocSubProcess>
+    <bpmn:boundaryEvent id="B_Frist" name="Feierabend" attachedToRef="V_Frei"><bpmn:timerEventDefinition id="B_Frist_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="B_Ruf" name="Rückruf" cancelActivity="false" attachedToRef="V_Frei"><bpmn:escalationEventDefinition id="B_Ruf_D"/></bpmn:boundaryEvent>
+    <bpmn:endEvent id="E" name="Fertig"/>
+    <bpmn:endEvent id="E_Zeit" name="Abgebrochen"/>
+    <bpmn:endEvent id="E_Fehler" name="Verworfen"/>
+    <bpmn:endEvent id="E_Frist" name="Vertagt"/>
+    <bpmn:endEvent id="E_Ruf" name="Gemeldet"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T_Wiederholen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T_Wiederholen" targetRef="U_Proben"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="U_Proben" targetRef="V_Frei"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="V_Frei" targetRef="E"/>
+    <bpmn:sequenceFlow id="G1" sourceRef="B_Zeit" targetRef="E_Zeit"/>
+    <bpmn:sequenceFlow id="G2" sourceRef="B_Fehler" targetRef="E_Fehler"/>
+    <bpmn:sequenceFlow id="G3" sourceRef="B_Frist" targetRef="E_Frist"/>
+    <bpmn:sequenceFlow id="G4" sourceRef="B_Ruf" targetRef="E_Ruf"/>
+  </bpmn:process>
+</bpmn:definitions>

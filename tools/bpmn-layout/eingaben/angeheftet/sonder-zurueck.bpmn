@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/sonder">
+  <bpmn:process id="P_Zurueck" isExecutable="false">
+    <bpmn:startEvent id="S" name="Anfrage gestellt"/>
+    <bpmn:task id="T_Senden" name="Rückfrage senden"/>
+    <bpmn:receiveTask id="T_Warten" name="Auf Antwort warten"/>
+    <bpmn:boundaryEvent id="B_Erinnern" name="Eine Woche" attachedToRef="T_Warten"><bpmn:timerEventDefinition id="B_Erinnern_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="B_Abbruch" name="Abgebrochen" cancelActivity="false" attachedToRef="T_Warten"><bpmn:escalationEventDefinition id="B_Abbruch_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="T_Melden" name="Vorgesetzte informieren"/>
+    <bpmn:endEvent id="E_Gemeldet" name="Gemeldet"/>
+    <bpmn:task id="T_Auswerten" name="Antwort auswerten"/>
+    <bpmn:endEvent id="E" name="Erledigt"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T_Senden"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T_Senden" targetRef="T_Warten"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="T_Warten" targetRef="T_Auswerten"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="T_Auswerten" targetRef="E"/>
+    <bpmn:sequenceFlow id="F5" name="erneut fragen" sourceRef="B_Erinnern" targetRef="T_Senden"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="B_Abbruch" targetRef="T_Melden"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="T_Melden" targetRef="E_Gemeldet"/>
+  </bpmn:process>
+</bpmn:definitions>

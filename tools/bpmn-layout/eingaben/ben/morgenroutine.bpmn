@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Morgenroutine"
+                  targetNamespace="http://example.org/bpmn/morgenroutine"
+                  exporter="Manuell erstellt"
+                  exporterVersion="4.0">
+
+  <!-- ===================== Signale (Rufe durchs Haus) ===================== -->
+  <bpmn:signal id="Signal_Wecken" name="Wecken (Bad ist frei)" />
+  <bpmn:signal id="Signal_BadFrei" name="„Papa, Bad ist frei!“" />
+
+  <!-- ===================== Kollaboration (1 Pool) ===================== -->
+  <bpmn:collaboration id="Collaboration_Morgenroutine">
+    <bpmn:participant id="Participant_Familie" name="Familie – Werktagmorgen" processRef="Process_Morgenroutine" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Morgenroutine" name="Werktäglicher Morgenablauf der Familie" isExecutable="false">
+
+    <bpmn:documentation>Abgeleitet aus einem Stakeholder-Interview (Perspektive des Kindes), aktualisierte Fassung. Kommunikation zwischen den Personen (Rufe durchs Haus) als Signal-Throw/Catch-Events. Badreihenfolge: Mama → Kind → Papa.</bpmn:documentation>
+
+    <!-- ===================== Lanes ===================== -->
+    <bpmn:laneSet id="LaneSet_Familie">
+      <bpmn:lane id="Lane_Mama" name="Mama">
+        <bpmn:flowNodeRef>StartEvent_Wecker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Split_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_Duschen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_Foehnen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_Anziehen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_Unterlagen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ThrowEvent_Mama_Wecken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_Fruehstuecken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>TimerEvent_0745</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Split_Aufbruch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_MantelTasche</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Mama_ZurHaltestelle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Mama</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Kind" name="Kind">
+        <bpmn:flowNodeRef>CatchEvent_Kind_Wecken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Gesicht</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Zaehne</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Anziehen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ThrowEvent_Kind_BadFrei</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Join_AmTisch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Split_Fruehstueck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Fruehstuecken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Join_FruehstueckEnde</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Ranzen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Sneaker</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kind_Schulweg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Kind</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Papa" name="Papa">
+        <bpmn:flowNodeRef>Task_Papa_Kaffee</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_TischDecken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_Pausenbrot</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_Aepfel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>CatchEvent_Papa_BadFrei</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_FrischMachen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_Fruehstuecken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_Kueche</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_Spuelmaschine</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_KaffeeHolen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Papa_Laptop</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>EndEvent_Papa</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- ===================== Start ===================== -->
+    <bpmn:startEvent id="StartEvent_Wecker" name="Wecker der Eltern klingelt (6:30 Uhr)">
+      <bpmn:outgoing>Flow_S1</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_0630">
+        <bpmn:timeDate xsi:type="bpmn:tFormalExpression">06:30</bpmn:timeDate>
+      </bpmn:timerEventDefinition>
+    </bpmn:startEvent>
+
+    <bpmn:parallelGateway id="Gateway_Split_Start" name="Jeder startet in seinen Morgen">
+      <bpmn:incoming>Flow_S1</bpmn:incoming>
+      <bpmn:outgoing>Flow_S2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_S3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_S4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- ===================== Mama ===================== -->
+    <bpmn:manualTask id="Task_Mama_Duschen" name="Duschen">
+      <bpmn:documentation>Mama steht sofort als Erste auf und belegt als Erste das Bad. Badzeit insgesamt fast eine halbe Stunde.</bpmn:documentation>
+      <bpmn:incoming>Flow_S2</bpmn:incoming>
+      <bpmn:outgoing>Flow_M1</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Mama_Foehnen" name="Haare föhnen">
+      <bpmn:incoming>Flow_M1</bpmn:incoming>
+      <bpmn:outgoing>Flow_M2</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Mama_Anziehen" name="Sich fertig machen und Business-Outfit anziehen">
+      <bpmn:incoming>Flow_M2</bpmn:incoming>
+      <bpmn:outgoing>Flow_M3</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Mama_Unterlagen" name="Unterlagen für den Tag checken">
+      <bpmn:incoming>Flow_M3</bpmn:incoming>
+      <bpmn:outgoing>Flow_M4</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:intermediateThrowEvent id="ThrowEvent_Mama_Wecken" name="Kind wecken (ca. 6:55 Uhr)">
+      <bpmn:documentation>Startsignal für das Kind: Das Bad ist frei.</bpmn:documentation>
+      <bpmn:incoming>Flow_M4</bpmn:incoming>
+      <bpmn:outgoing>Flow_M5</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SigDef_Mama_Wecken" signalRef="Signal_Wecken" />
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:manualTask id="Task_Mama_Fruehstuecken" name="Gemeinsam frühstücken und Tag besprechen">
+      <bpmn:incoming>Flow_F2</bpmn:incoming>
+      <bpmn:outgoing>Flow_M6</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <!-- ===================== Gemeinsames Frühstück (Synchronisation) ===================== -->
+    <bpmn:parallelGateway id="Gateway_Join_AmTisch" name="Alle drei am Tisch">
+      <bpmn:documentation>Mama und Kind setzen sich schon an den Tisch, während Papa im Bad ist.</bpmn:documentation>
+      <bpmn:incoming>Flow_M5</bpmn:incoming>
+      <bpmn:incoming>Flow_K5</bpmn:incoming>
+      <bpmn:incoming>Flow_P6</bpmn:incoming>
+      <bpmn:outgoing>Flow_F1</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:parallelGateway id="Gateway_Split_Fruehstueck" name="Frühstück beginnt">
+      <bpmn:incoming>Flow_F1</bpmn:incoming>
+      <bpmn:outgoing>Flow_F2</bpmn:outgoing>
+      <bpmn:outgoing>Flow_F3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_F4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:parallelGateway id="Gateway_Join_FruehstueckEnde" name="Frühstück beendet">
+      <bpmn:incoming>Flow_M6</bpmn:incoming>
+      <bpmn:incoming>Flow_K6</bpmn:incoming>
+      <bpmn:incoming>Flow_P7</bpmn:incoming>
+      <bpmn:outgoing>Flow_F5</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:intermediateCatchEvent id="TimerEvent_0745" name="Blick auf die Uhr: 7:45 Uhr">
+      <bpmn:documentation>Mama schaut auf die Uhr; ab Viertel vor acht löst sich die Runde auf.</bpmn:documentation>
+      <bpmn:incoming>Flow_F5</bpmn:incoming>
+      <bpmn:outgoing>Flow_F6</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_0745">
+        <bpmn:timeDate xsi:type="bpmn:tFormalExpression">07:45</bpmn:timeDate>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:parallelGateway id="Gateway_Split_Aufbruch" name="Runde löst sich auf">
+      <bpmn:incoming>Flow_F6</bpmn:incoming>
+      <bpmn:outgoing>Flow_M7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_K7</bpmn:outgoing>
+      <bpmn:outgoing>Flow_P8</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:manualTask id="Task_Mama_MantelTasche" name="Mantel und Tasche nehmen">
+      <bpmn:incoming>Flow_M7</bpmn:incoming>
+      <bpmn:outgoing>Flow_M8</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Mama_ZurHaltestelle" name="Zügig zur Bushaltestelle gehen">
+      <bpmn:documentation>Ziel: den Bus in die Stadt nicht verpassen.</bpmn:documentation>
+      <bpmn:incoming>Flow_M8</bpmn:incoming>
+      <bpmn:outgoing>Flow_M9</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:endEvent id="EndEvent_Mama" name="Mama auf dem Weg in die Stadt">
+      <bpmn:incoming>Flow_M9</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ===================== Kind ===================== -->
+    <bpmn:intermediateCatchEvent id="CatchEvent_Kind_Wecken" name="Von Mama geweckt">
+      <bpmn:incoming>Flow_S3</bpmn:incoming>
+      <bpmn:outgoing>Flow_K1</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SigDef_Kind_Wecken" signalRef="Signal_Wecken" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:manualTask id="Task_Kind_Gesicht" name="Gesicht waschen">
+      <bpmn:incoming>Flow_K1</bpmn:incoming>
+      <bpmn:outgoing>Flow_K2</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Kind_Zaehne" name="Zähne putzen">
+      <bpmn:incoming>Flow_K2</bpmn:incoming>
+      <bpmn:outgoing>Flow_K3</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Kind_Anziehen" name="Schulsachen anziehen">
+      <bpmn:incoming>Flow_K3</bpmn:incoming>
+      <bpmn:outgoing>Flow_K4</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:intermediateThrowEvent id="ThrowEvent_Kind_BadFrei" name="„Papa, Bad ist frei!“ rufen">
+      <bpmn:documentation>Tägliche Übergabe des Badezimmers an Papa.</bpmn:documentation>
+      <bpmn:incoming>Flow_K4</bpmn:incoming>
+      <bpmn:outgoing>Flow_K5</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SigDef_Kind_BadFrei" signalRef="Signal_BadFrei" />
+    </bpmn:intermediateThrowEvent>
+
+    <bpmn:manualTask id="Task_Kind_Fruehstuecken" name="Gemeinsam frühstücken und Tag besprechen">
+      <bpmn:documentation>Beim Frühstück wird u. a. geklärt, wer wann nach Hause kommt und ob das Kind alles für die Schule eingepackt hat.</bpmn:documentation>
+      <bpmn:incoming>Flow_F3</bpmn:incoming>
+      <bpmn:outgoing>Flow_K6</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Kind_Ranzen" name="Brotbox und Trinkflasche in den Ranzen packen">
+      <bpmn:incoming>Flow_K7</bpmn:incoming>
+      <bpmn:outgoing>Flow_K8</bpmn:outgoing>
+      <bpmn:property id="Property_Ranzen_Brotbox" name="__targetRef_placeholder" />
+      <bpmn:property id="Property_Ranzen_Snackbox" name="__targetRef_placeholder" />
+      <bpmn:dataInputAssociation id="DataIn_Brotbox">
+        <bpmn:sourceRef>DataObjectRef_Brotbox</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Ranzen_Brotbox</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="DataIn_Snackbox">
+        <bpmn:sourceRef>DataObjectRef_Snackbox</bpmn:sourceRef>
+        <bpmn:targetRef>Property_Ranzen_Snackbox</bpmn:targetRef>
+      </bpmn:dataInputAssociation>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Kind_Sneaker" name="Sneaker anziehen">
+      <bpmn:incoming>Flow_K8</bpmn:incoming>
+      <bpmn:outgoing>Flow_K9</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Kind_Schulweg" name="Zur Schule laufen">
+      <bpmn:incoming>Flow_K9</bpmn:incoming>
+      <bpmn:outgoing>Flow_K10</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:endEvent id="EndEvent_Kind" name="Kind auf dem Weg zur Schule">
+      <bpmn:incoming>Flow_K10</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ===================== Papa ===================== -->
+    <bpmn:manualTask id="Task_Papa_Kaffee" name="Kaffee kochen">
+      <bpmn:incoming>Flow_S4</bpmn:incoming>
+      <bpmn:outgoing>Flow_P1</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_TischDecken" name="Frühstückstisch decken">
+      <bpmn:incoming>Flow_P1</bpmn:incoming>
+      <bpmn:outgoing>Flow_P2</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_Pausenbrot" name="Pausenbrot für Kind vorbereiten">
+      <bpmn:incoming>Flow_P2</bpmn:incoming>
+      <bpmn:outgoing>Flow_P3</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOut_Brotbox">
+        <bpmn:targetRef>DataObjectRef_Brotbox</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_Aepfel" name="Äpfel schneiden und in Snackbox füllen">
+      <bpmn:incoming>Flow_P3</bpmn:incoming>
+      <bpmn:outgoing>Flow_P4</bpmn:outgoing>
+      <bpmn:dataOutputAssociation id="DataOut_Snackbox">
+        <bpmn:targetRef>DataObjectRef_Snackbox</bpmn:targetRef>
+      </bpmn:dataOutputAssociation>
+    </bpmn:manualTask>
+
+    <bpmn:intermediateCatchEvent id="CatchEvent_Papa_BadFrei" name="„Bad ist frei!“ gehört">
+      <bpmn:incoming>Flow_P4</bpmn:incoming>
+      <bpmn:outgoing>Flow_P5</bpmn:outgoing>
+      <bpmn:signalEventDefinition id="SigDef_Papa_BadFrei" signalRef="Signal_BadFrei" />
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:manualTask id="Task_Papa_FrischMachen" name="Sich im Bad fürs Homeoffice frisch machen">
+      <bpmn:incoming>Flow_P5</bpmn:incoming>
+      <bpmn:outgoing>Flow_P6</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_Fruehstuecken" name="Gemeinsam frühstücken und Tag besprechen">
+      <bpmn:incoming>Flow_F4</bpmn:incoming>
+      <bpmn:outgoing>Flow_P7</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_Kueche" name="Küche aufräumen">
+      <bpmn:incoming>Flow_P8</bpmn:incoming>
+      <bpmn:outgoing>Flow_P9</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_Spuelmaschine" name="Spülmaschine starten">
+      <bpmn:incoming>Flow_P9</bpmn:incoming>
+      <bpmn:outgoing>Flow_P10</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_KaffeeHolen" name="Frischen Kaffee holen">
+      <bpmn:incoming>Flow_P10</bpmn:incoming>
+      <bpmn:outgoing>Flow_P11</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:manualTask id="Task_Papa_Laptop" name="Arbeit am Laptop beginnen">
+      <bpmn:incoming>Flow_P11</bpmn:incoming>
+      <bpmn:outgoing>Flow_P12</bpmn:outgoing>
+    </bpmn:manualTask>
+
+    <bpmn:endEvent id="EndEvent_Papa" name="Papa arbeitet im Homeoffice">
+      <bpmn:incoming>Flow_P12</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ===================== Datenobjekte ===================== -->
+    <bpmn:dataObject id="DataObject_Brotbox" />
+    <bpmn:dataObjectReference id="DataObjectRef_Brotbox" name="Brotbox mit Pausenbrot" dataObjectRef="DataObject_Brotbox" />
+    <bpmn:dataObject id="DataObject_Snackbox" />
+    <bpmn:dataObjectReference id="DataObjectRef_Snackbox" name="Snackbox mit Apfelstücken" dataObjectRef="DataObject_Snackbox" />
+
+    <!-- ===================== Sequenzflüsse ===================== -->
+    <bpmn:sequenceFlow id="Flow_S1" sourceRef="StartEvent_Wecker" targetRef="Gateway_Split_Start" />
+    <bpmn:sequenceFlow id="Flow_S2" sourceRef="Gateway_Split_Start" targetRef="Task_Mama_Duschen" />
+    <bpmn:sequenceFlow id="Flow_S3" sourceRef="Gateway_Split_Start" targetRef="CatchEvent_Kind_Wecken" />
+    <bpmn:sequenceFlow id="Flow_S4" sourceRef="Gateway_Split_Start" targetRef="Task_Papa_Kaffee" />
+
+    <bpmn:sequenceFlow id="Flow_M1" sourceRef="Task_Mama_Duschen" targetRef="Task_Mama_Foehnen" />
+    <bpmn:sequenceFlow id="Flow_M2" sourceRef="Task_Mama_Foehnen" targetRef="Task_Mama_Anziehen" />
+    <bpmn:sequenceFlow id="Flow_M3" sourceRef="Task_Mama_Anziehen" targetRef="Task_Mama_Unterlagen" />
+    <bpmn:sequenceFlow id="Flow_M4" sourceRef="Task_Mama_Unterlagen" targetRef="ThrowEvent_Mama_Wecken" />
+    <bpmn:sequenceFlow id="Flow_M5" sourceRef="ThrowEvent_Mama_Wecken" targetRef="Gateway_Join_AmTisch" />
+    <bpmn:sequenceFlow id="Flow_M6" sourceRef="Task_Mama_Fruehstuecken" targetRef="Gateway_Join_FruehstueckEnde" />
+    <bpmn:sequenceFlow id="Flow_M7" sourceRef="Gateway_Split_Aufbruch" targetRef="Task_Mama_MantelTasche" />
+    <bpmn:sequenceFlow id="Flow_M8" sourceRef="Task_Mama_MantelTasche" targetRef="Task_Mama_ZurHaltestelle" />
+    <bpmn:sequenceFlow id="Flow_M9" sourceRef="Task_Mama_ZurHaltestelle" targetRef="EndEvent_Mama" />
+
+    <bpmn:sequenceFlow id="Flow_F1" sourceRef="Gateway_Join_AmTisch" targetRef="Gateway_Split_Fruehstueck" />
+    <bpmn:sequenceFlow id="Flow_F2" sourceRef="Gateway_Split_Fruehstueck" targetRef="Task_Mama_Fruehstuecken" />
+    <bpmn:sequenceFlow id="Flow_F3" sourceRef="Gateway_Split_Fruehstueck" targetRef="Task_Kind_Fruehstuecken" />
+    <bpmn:sequenceFlow id="Flow_F4" sourceRef="Gateway_Split_Fruehstueck" targetRef="Task_Papa_Fruehstuecken" />
+    <bpmn:sequenceFlow id="Flow_F5" sourceRef="Gateway_Join_FruehstueckEnde" targetRef="TimerEvent_0745" />
+    <bpmn:sequenceFlow id="Flow_F6" sourceRef="TimerEvent_0745" targetRef="Gateway_Split_Aufbruch" />
+
+    <bpmn:sequenceFlow id="Flow_K1" sourceRef="CatchEvent_Kind_Wecken" targetRef="Task_Kind_Gesicht" />
+    <bpmn:sequenceFlow id="Flow_K2" sourceRef="Task_Kind_Gesicht" targetRef="Task_Kind_Zaehne" />
+    <bpmn:sequenceFlow id="Flow_K3" sourceRef="Task_Kind_Zaehne" targetRef="Task_Kind_Anziehen" />
+    <bpmn:sequenceFlow id="Flow_K4" sourceRef="Task_Kind_Anziehen" targetRef="ThrowEvent_Kind_BadFrei" />
+    <bpmn:sequenceFlow id="Flow_K5" sourceRef="ThrowEvent_Kind_BadFrei" targetRef="Gateway_Join_AmTisch" />
+    <bpmn:sequenceFlow id="Flow_K6" sourceRef="Task_Kind_Fruehstuecken" targetRef="Gateway_Join_FruehstueckEnde" />
+    <bpmn:sequenceFlow id="Flow_K7" sourceRef="Gateway_Split_Aufbruch" targetRef="Task_Kind_Ranzen" />
+    <bpmn:sequenceFlow id="Flow_K8" sourceRef="Task_Kind_Ranzen" targetRef="Task_Kind_Sneaker" />
+    <bpmn:sequenceFlow id="Flow_K9" sourceRef="Task_Kind_Sneaker" targetRef="Task_Kind_Schulweg" />
+    <bpmn:sequenceFlow id="Flow_K10" sourceRef="Task_Kind_Schulweg" targetRef="EndEvent_Kind" />
+
+    <bpmn:sequenceFlow id="Flow_P1" sourceRef="Task_Papa_Kaffee" targetRef="Task_Papa_TischDecken" />
+    <bpmn:sequenceFlow id="Flow_P2" sourceRef="Task_Papa_TischDecken" targetRef="Task_Papa_Pausenbrot" />
+    <bpmn:sequenceFlow id="Flow_P3" sourceRef="Task_Papa_Pausenbrot" targetRef="Task_Papa_Aepfel" />
+    <bpmn:sequenceFlow id="Flow_P4" sourceRef="Task_Papa_Aepfel" targetRef="CatchEvent_Papa_BadFrei" />
+    <bpmn:sequenceFlow id="Flow_P5" sourceRef="CatchEvent_Papa_BadFrei" targetRef="Task_Papa_FrischMachen" />
+    <bpmn:sequenceFlow id="Flow_P6" sourceRef="Task_Papa_FrischMachen" targetRef="Gateway_Join_AmTisch" />
+    <bpmn:sequenceFlow id="Flow_P7" sourceRef="Task_Papa_Fruehstuecken" targetRef="Gateway_Join_FruehstueckEnde" />
+    <bpmn:sequenceFlow id="Flow_P8" sourceRef="Gateway_Split_Aufbruch" targetRef="Task_Papa_Kueche" />
+    <bpmn:sequenceFlow id="Flow_P9" sourceRef="Task_Papa_Kueche" targetRef="Task_Papa_Spuelmaschine" />
+    <bpmn:sequenceFlow id="Flow_P10" sourceRef="Task_Papa_Spuelmaschine" targetRef="Task_Papa_KaffeeHolen" />
+    <bpmn:sequenceFlow id="Flow_P11" sourceRef="Task_Papa_KaffeeHolen" targetRef="Task_Papa_Laptop" />
+    <bpmn:sequenceFlow id="Flow_P12" sourceRef="Task_Papa_Laptop" targetRef="EndEvent_Papa" />
+
+    <!-- ===================== Signal-Verbindungen (Throw → Catch) ===================== -->
+    <bpmn:association id="Assoc_Signal_Wecken" associationDirection="One"
+                      sourceRef="ThrowEvent_Mama_Wecken" targetRef="CatchEvent_Kind_Wecken" />
+    <bpmn:association id="Assoc_Signal_BadFrei" associationDirection="One"
+                      sourceRef="ThrowEvent_Kind_BadFrei" targetRef="CatchEvent_Papa_BadFrei" />
+
+    <!-- ===================== Anmerkungen ===================== -->
+    <bpmn:textAnnotation id="Annotation_Taktung">
+      <bpmn:text>Nicht trödeln: Papa wartet auf das freie Bad.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Taktung" sourceRef="Annotation_Taktung" targetRef="ThrowEvent_Kind_BadFrei" />
+
+    <bpmn:textAnnotation id="Annotation_MamaBad">
+      <bpmn:text>Mama belegt das Bad als Erste, fast eine halbe Stunde lang.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Assoc_MamaBad" sourceRef="Annotation_MamaBad" targetRef="Task_Mama_Duschen" />
+
+    <bpmn:textAnnotation id="Annotation_Kreuzung">
+      <bpmn:text>An der Kreuzung trifft das Kind meist Klassenkameraden.</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Kreuzung" sourceRef="Annotation_Kreuzung" targetRef="Task_Kind_Schulweg" />
+
+  </bpmn:process>
+</bpmn:definitions>

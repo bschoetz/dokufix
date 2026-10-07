@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/t">
+  <bpmn:collaboration id="C"><bpmn:participant id="Pp" name="Pool" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="L1"><bpmn:flowNodeRef>a1</bpmn:flowNodeRef><bpmn:flowNodeRef>a2</bpmn:flowNodeRef><bpmn:flowNodeRef>a3</bpmn:flowNodeRef><bpmn:flowNodeRef>y1</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="L2"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>m</bpmn:flowNodeRef><bpmn:flowNodeRef>g2</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L3" name="L3"><bpmn:flowNodeRef>b1</bpmn:flowNodeRef><bpmn:flowNodeRef>y2</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/>
+    <bpmn:exclusiveGateway id="g" name="Prüfen?"/>
+    <bpmn:task id="a1" name="A1"/>
+    <bpmn:task id="a2" name="A2"/>
+    <bpmn:task id="a3" name="A3"/>
+    <bpmn:task id="b1" name="B1"/>
+    <bpmn:exclusiveGateway id="m" name="Merge"/>
+    <bpmn:exclusiveGateway id="g2" name="Nochmal?"/>
+    <bpmn:endEvent id="y1" name="Ja"/>
+    <bpmn:endEvent id="y2" name="Nein"/>
+    <bpmn:sequenceFlow id="f0" sourceRef="s" targetRef="g"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="g" targetRef="a1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="a1" targetRef="a2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="a2" targetRef="a3"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="a3" targetRef="m"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="g" targetRef="b1"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="b1" targetRef="m"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="g" targetRef="m"/>
+    <bpmn:sequenceFlow id="f8" sourceRef="m" targetRef="g2"/>
+    <bpmn:sequenceFlow id="f9" sourceRef="g2" targetRef="y1" name="ja"/>
+    <bpmn:sequenceFlow id="f10" sourceRef="g2" targetRef="y2" name="nein"/>
+    <bpmn:sequenceFlow id="f11" sourceRef="g2" targetRef="m" name="wieder"/>
+  </bpmn:process>
+</bpmn:definitions>

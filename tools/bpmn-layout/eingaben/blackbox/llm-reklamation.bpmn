@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Reklamation"
+                  targetNamespace="http://example.org/bpmn/reklamation">
+  <bpmn:collaboration id="Collaboration_Reklamation">
+    <bpmn:participant id="Participant_Kunde" name="Kunde" />
+    <bpmn:participant id="Participant_Haendler" name="Onlinehändler" processRef="Process_Reklamation" />
+    <bpmn:messageFlow id="MF_Reklamation" name="Reklamation" sourceRef="Participant_Kunde" targetRef="Start_Reklamation" />
+    <bpmn:messageFlow id="MF_Ruecksendung" name="Rücksendung" sourceRef="Participant_Kunde" targetRef="Task_WareEmpfangen" />
+    <bpmn:messageFlow id="MF_Ersatz" name="Ersatz" sourceRef="Task_ErsatzMitteilen" targetRef="Participant_Kunde" />
+    <bpmn:messageFlow id="MF_Gutschrift" name="Gutschrift" sourceRef="Task_GutschriftMitteilen" targetRef="Participant_Kunde" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Reklamation" name="Reklamation bearbeiten" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Haendler">
+      <bpmn:lane id="Lane_Kundenservice" name="Kundenservice">
+        <bpmn:flowNodeRef>Start_Reklamation</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ReklamationPruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Ergebnis</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_ErsatzMitteilen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GutschriftMitteilen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Zusammenfuehren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abgeschlossen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Lager" name="Lager">
+        <bpmn:flowNodeRef>Task_WareEmpfangen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_WarePruefen</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Reklamation" name="Reklamation eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Reklamation" />
+    </bpmn:startEvent>
+    <bpmn:task id="Task_ReklamationPruefen" name="Reklamation prüfen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:receiveTask id="Task_WareEmpfangen" name="Zurückgeschickte Ware empfangen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:task id="Task_WarePruefen" name="Ware prüfen">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="Gateway_Ergebnis" name="Ersatz oder Gutschrift?">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_Ersatz</bpmn:outgoing>
+      <bpmn:outgoing>Flow_Gutschrift</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ErsatzMitteilen" name="Ersatz mitteilen">
+      <bpmn:incoming>Flow_Ersatz</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_GutschriftMitteilen" name="Gutschrift mitteilen">
+      <bpmn:incoming>Flow_Gutschrift</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:exclusiveGateway id="Gateway_Zusammenfuehren">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Abgeschlossen" name="Reklamation abgeschlossen">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Reklamation" targetRef="Task_ReklamationPruefen" />
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_ReklamationPruefen" targetRef="Task_WareEmpfangen" />
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_WareEmpfangen" targetRef="Task_WarePruefen" />
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="Task_WarePruefen" targetRef="Gateway_Ergebnis" />
+    <bpmn:sequenceFlow id="Flow_Ersatz" name="Ersatz" sourceRef="Gateway_Ergebnis" targetRef="Task_ErsatzMitteilen" />
+    <bpmn:sequenceFlow id="Flow_Gutschrift" name="Gutschrift" sourceRef="Gateway_Ergebnis" targetRef="Task_GutschriftMitteilen" />
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_ErsatzMitteilen" targetRef="Gateway_Zusammenfuehren" />
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_GutschriftMitteilen" targetRef="Gateway_Zusammenfuehren" />
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Gateway_Zusammenfuehren" targetRef="End_Abgeschlossen" />
+  </bpmn:process>
+</bpmn:definitions>

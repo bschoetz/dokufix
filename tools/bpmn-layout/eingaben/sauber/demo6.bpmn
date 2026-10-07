@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="Prozess_Neu" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="N_Theke" name="Theke"><bpmn:flowNodeRef>N_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Pruefen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Magazin" name="Magazin"><bpmn:flowNodeRef>N_Einarbeiten</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Ende</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Frist</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="N_Werkstatt" name="Werkstatt"/>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="N_Start" name="Neues Buch"/>
+    <bpmn:task id="N_Pruefen" name="Lieferung prüfen"/>
+    <bpmn:boundaryEvent id="N_Frist" name="Eine Woche" attachedToRef="N_Pruefen"><bpmn:timerEventDefinition id="N_Frist_Def"/></bpmn:boundaryEvent>
+    <bpmn:subProcess id="N_Einarbeiten" name="Einarbeiten">
+      <bpmn:startEvent id="N_E_Start"/>
+      <bpmn:task id="N_E_Stempeln" name="Stempeln"/>
+      <bpmn:sequenceFlow id="N_E1" sourceRef="N_E_Start" targetRef="N_E_Stempeln"/>
+      <bpmn:endEvent id="N_E_Ende"/>
+      <bpmn:sequenceFlow id="N_E2" sourceRef="N_E_Stempeln" targetRef="N_E_Ende"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="N_Ende" name="Im Regal"/>
+    <bpmn:sequenceFlow id="N1" sourceRef="N_Start" targetRef="N_Pruefen"/>
+    <bpmn:sequenceFlow id="N2" sourceRef="N_Pruefen" targetRef="N_Einarbeiten"/>
+    <bpmn:sequenceFlow id="N3" sourceRef="N_Einarbeiten" targetRef="N_Ende"/>
+    <bpmn:sequenceFlow id="N4" sourceRef="N_Frist" targetRef="N_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>

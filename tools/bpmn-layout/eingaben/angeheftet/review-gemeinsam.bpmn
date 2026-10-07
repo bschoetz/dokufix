@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/review">
+  <bpmn:process id="P_Gemeinsam" isExecutable="false">
+    <bpmn:startEvent id="S" name="Auftrag"/>
+    <bpmn:task id="T" name="Lieferung abwickeln"/>
+    <bpmn:boundaryEvent id="B_Zeit" name="Zwei Tage" attachedToRef="T"><bpmn:timerEventDefinition id="B_Zeit_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="B_Fehler" name="Ware fehlt" attachedToRef="T"><bpmn:errorEventDefinition id="B_Fehler_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="T2" name="Rechnung stellen"/>
+    <bpmn:endEvent id="E" name="Erledigt"/>
+    <bpmn:task id="M" name="Eskalieren"/>
+    <bpmn:endEvent id="ME" name="Eskaliert"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="T2"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="T2" targetRef="E"/>
+    <bpmn:sequenceFlow id="G1" sourceRef="B_Zeit" targetRef="M"/>
+    <bpmn:sequenceFlow id="G2" sourceRef="B_Fehler" targetRef="M"/>
+    <bpmn:sequenceFlow id="G3" sourceRef="M" targetRef="ME"/>
+  </bpmn:process>
+</bpmn:definitions>

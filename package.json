@@ -18,6 +18,8 @@
     "assistant": "node tools/bpmn-assistant/bauen.mjs"
   },
   "devDependencies": {
+    "bpmn-moddle": "10.3.1",
+    "bpmnlint": "11.14.0",
     "esbuild": "0.28.2",
     "eslint": "10.11.0",
     "globals": "17.13.0",

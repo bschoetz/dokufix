@@ -1,0 +1,643 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Hundemelken"
+                  targetNamespace="http://example.com/bpmn">
+
+  <bpmn:error id="Error_Kollaps" name="Hündin kollabiert" errorCode="KOLLAPS" />
+
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Melkbetrieb" name="Hundemelkbetrieb" processRef="Process_Hundemelken" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Hundemelken" isExecutable="false">
+
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Melker" name="Melker">
+        <bpmn:flowNodeRef>Start_Melkzeit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Desinfizieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Huendin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rufen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Impfpass</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Impf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Reinigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reinigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Vormelken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Euter</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Isolieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Ruhig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Ruhig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Beruhigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Versuche</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AbbruchDok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Zitze</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Melken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Boundary_Kollaps</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Fluss</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Anregen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Alle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ParSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Belohnen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ParJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Melden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_TodSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kadaver</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bestand</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_TodJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Bestand</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Eingestellt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Ende</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MelkstandReinigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Weitere</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Huendin" name="Hündin">
+        <bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abgeben</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ausruhen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Tierarzt" name="Tierarzt">
+        <bpmn:flowNodeRef>GW_Merge_Impfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Impfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_WeitereImpf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Beobachten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Reaktion</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Untersuchen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Behandlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Behandeln</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kontrolle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Geheilt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Notfall</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Notfall</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Ueberlebt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Karenz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Karenz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Tod</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_TodFeststellen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Verarbeitung" name="Verarbeitung">
+        <bpmn:flowNodeRef>Task_Filtern</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Sammeln</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MilchVerwerfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Sammelprobe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Nachprobe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Verwerfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Verworfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pasteurisieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Abkuehlen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abfuellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Wiegen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wiegen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Plausibel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kalibrieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kuehlen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Labor" name="Qualitätssicherung">
+        <bpmn:flowNodeRef>GW_Merge_Probe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Labor</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Qualitaet</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Nachprobe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Dokumentieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Fertig</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <!-- ================= Lane Melker ================= -->
+    <bpmn:startEvent id="Start_Melkzeit" name="Melkzeit erreicht">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+
+    <bpmn:task id="Task_Desinfizieren" name="Melkstand &amp; Equipment desinfizieren">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Huendin">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:incoming>Flow_44</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Rufen" name="Nächste Hündin zum Melkstand rufen">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Impfpass" name="Impfpass prüfen">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_65</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Impf" name="Impfschutz vollständig?" default="Flow_67">
+      <bpmn:incoming>Flow_65</bpmn:incoming>
+      <bpmn:outgoing>Flow_66</bpmn:outgoing>
+      <bpmn:outgoing>Flow_67</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Reinigen">
+      <bpmn:incoming>Flow_66</bpmn:incoming>
+      <bpmn:incoming>Flow_73</bpmn:incoming>
+      <bpmn:outgoing>Flow_75</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Reinigen" name="Zitzen reinigen &amp; Euter massieren">
+      <bpmn:incoming>Flow_75</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Vormelken" name="Vormelken &amp; Euter auf Entzündung prüfen">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Euter" name="Euter gesund?" default="Flow_9">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Isolieren" name="Hündin isolieren &amp; Tierarzt rufen">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Ruhig">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:incoming>Flow_25</bpmn:incoming>
+      <bpmn:outgoing>Flow_18</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Pruefen" name="Verhalten der Hündin beurteilen">
+      <bpmn:incoming>Flow_18</bpmn:incoming>
+      <bpmn:outgoing>Flow_19</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Ruhig" name="Hündin ruhig?" default="Flow_21">
+      <bpmn:incoming>Flow_19</bpmn:incoming>
+      <bpmn:outgoing>Flow_20</bpmn:outgoing>
+      <bpmn:outgoing>Flow_21</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Beruhigen" name="Beruhigen &amp; Leckerli geben">
+      <bpmn:incoming>Flow_21</bpmn:incoming>
+      <bpmn:outgoing>Flow_22</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Versuche" name="3 Versuche erreicht?" default="Flow_25">
+      <bpmn:incoming>Flow_22</bpmn:incoming>
+      <bpmn:outgoing>Flow_23</bpmn:outgoing>
+      <bpmn:outgoing>Flow_25</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_AbbruchDok" name="Abbruch dokumentieren &amp; Hündin neu einplanen">
+      <bpmn:incoming>Flow_23</bpmn:incoming>
+      <bpmn:outgoing>Flow_24</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Zitze">
+      <bpmn:incoming>Flow_20</bpmn:incoming>
+      <bpmn:incoming>Flow_31</bpmn:incoming>
+      <bpmn:incoming>Flow_32</bpmn:incoming>
+      <bpmn:outgoing>Flow_26</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Melken" name="Nächste Zitze von Hand melken">
+      <bpmn:incoming>Flow_26</bpmn:incoming>
+      <bpmn:outgoing>Flow_27</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:boundaryEvent id="Boundary_Kollaps" name="Hündin kollabiert" attachedToRef="Task_Melken">
+      <bpmn:outgoing>Flow_76</bpmn:outgoing>
+      <bpmn:errorEventDefinition id="ErrorEventDefinition_Kollaps" errorRef="Error_Kollaps" />
+    </bpmn:boundaryEvent>
+
+    <bpmn:exclusiveGateway id="GW_Fluss" name="Milchfluss ausreichend?" default="Flow_30">
+      <bpmn:incoming>Flow_28</bpmn:incoming>
+      <bpmn:outgoing>Flow_29</bpmn:outgoing>
+      <bpmn:outgoing>Flow_30</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Anregen" name="Milchfluss anregen (Streicheln, Welpenfoto zeigen)">
+      <bpmn:incoming>Flow_30</bpmn:incoming>
+      <bpmn:outgoing>Flow_31</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Alle" name="Alle Zitzen gemolken?" default="Flow_32">
+      <bpmn:incoming>Flow_29</bpmn:incoming>
+      <bpmn:outgoing>Flow_32</bpmn:outgoing>
+      <bpmn:outgoing>Flow_33</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:parallelGateway id="GW_ParSplit">
+      <bpmn:incoming>Flow_33</bpmn:incoming>
+      <bpmn:outgoing>Flow_34</bpmn:outgoing>
+      <bpmn:outgoing>Flow_35</bpmn:outgoing>
+      <bpmn:outgoing>Flow_36</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_Belohnen" name="Hündin belohnen &amp; Zitzen desinfizieren">
+      <bpmn:incoming>Flow_34</bpmn:incoming>
+      <bpmn:outgoing>Flow_38</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="GW_ParJoin">
+      <bpmn:incoming>Flow_38</bpmn:incoming>
+      <bpmn:incoming>Flow_39</bpmn:incoming>
+      <bpmn:incoming>Flow_40</bpmn:incoming>
+      <bpmn:outgoing>Flow_41</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <!-- Todesabwicklung (Melker) -->
+    <bpmn:task id="Task_Melden" name="Halter &amp; Veterinäramt informieren">
+      <bpmn:incoming>Flow_84</bpmn:incoming>
+      <bpmn:outgoing>Flow_85</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="GW_TodSplit">
+      <bpmn:incoming>Flow_85</bpmn:incoming>
+      <bpmn:outgoing>Flow_86</bpmn:outgoing>
+      <bpmn:outgoing>Flow_87</bpmn:outgoing>
+      <bpmn:outgoing>Flow_88</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:task id="Task_Kadaver" name="Tierkörperbeseitigung beauftragen">
+      <bpmn:incoming>Flow_86</bpmn:incoming>
+      <bpmn:outgoing>Flow_89</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Bestand" name="Bestandsregister aktualisieren">
+      <bpmn:incoming>Flow_88</bpmn:incoming>
+      <bpmn:outgoing>Flow_91</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:parallelGateway id="GW_TodJoin">
+      <bpmn:incoming>Flow_89</bpmn:incoming>
+      <bpmn:incoming>Flow_90</bpmn:incoming>
+      <bpmn:incoming>Flow_91</bpmn:incoming>
+      <bpmn:outgoing>Flow_92</bpmn:outgoing>
+    </bpmn:parallelGateway>
+
+    <bpmn:exclusiveGateway id="GW_Bestand" name="Noch Hündinnen im Bestand?" default="Flow_93">
+      <bpmn:incoming>Flow_92</bpmn:incoming>
+      <bpmn:outgoing>Flow_93</bpmn:outgoing>
+      <bpmn:outgoing>Flow_94</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:endEvent id="End_Eingestellt" name="Melkbetrieb eingestellt">
+      <bpmn:incoming>Flow_94</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Ende">
+      <bpmn:incoming>Flow_17</bpmn:incoming>
+      <bpmn:incoming>Flow_24</bpmn:incoming>
+      <bpmn:incoming>Flow_41</bpmn:incoming>
+      <bpmn:incoming>Flow_93</bpmn:incoming>
+      <bpmn:outgoing>Flow_42</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_MelkstandReinigen" name="Melkstand reinigen">
+      <bpmn:incoming>Flow_42</bpmn:incoming>
+      <bpmn:outgoing>Flow_43</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Weitere" name="Weitere Hündin wartet?" default="Flow_44">
+      <bpmn:incoming>Flow_43</bpmn:incoming>
+      <bpmn:outgoing>Flow_44</bpmn:outgoing>
+      <bpmn:outgoing>Flow_45</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- ================= Lane Hündin ================= -->
+    <bpmn:task id="Task_Kommen" name="Zum Melkstand kommen &amp; ablegen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Abgeben" name="Stillhalten &amp; Milch abgeben">
+      <bpmn:incoming>Flow_27</bpmn:incoming>
+      <bpmn:outgoing>Flow_28</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Ausruhen" name="Wasser trinken &amp; ausruhen">
+      <bpmn:incoming>Flow_35</bpmn:incoming>
+      <bpmn:outgoing>Flow_39</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- ================= Lane Tierarzt ================= -->
+    <!-- Impfung -->
+    <bpmn:exclusiveGateway id="GW_Merge_Impfen">
+      <bpmn:incoming>Flow_67</bpmn:incoming>
+      <bpmn:incoming>Flow_71</bpmn:incoming>
+      <bpmn:outgoing>Flow_68</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Impfen" name="Fällige Impfung verabreichen">
+      <bpmn:incoming>Flow_68</bpmn:incoming>
+      <bpmn:outgoing>Flow_69</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_WeitereImpf" name="Weitere Impfung fällig?" default="Flow_70">
+      <bpmn:incoming>Flow_69</bpmn:incoming>
+      <bpmn:outgoing>Flow_70</bpmn:outgoing>
+      <bpmn:outgoing>Flow_71</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:intermediateCatchEvent id="Event_Beobachten" name="30 Min Impfreaktion beobachten">
+      <bpmn:incoming>Flow_70</bpmn:incoming>
+      <bpmn:outgoing>Flow_72</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_Beobachten">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT30M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:exclusiveGateway id="GW_Reaktion" name="Schwere Impfreaktion?" default="Flow_73">
+      <bpmn:incoming>Flow_72</bpmn:incoming>
+      <bpmn:outgoing>Flow_73</bpmn:outgoing>
+      <bpmn:outgoing>Flow_74</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Euterbehandlung -->
+    <bpmn:task id="Task_Untersuchen" name="Euter untersuchen &amp; Diagnose stellen">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Behandlung">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Behandeln" name="Behandlung durchführen">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Kontrolle" name="Heilungsverlauf kontrollieren">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Geheilt" name="Zustand der Hündin?" default="Flow_15">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+      <bpmn:outgoing>Flow_16</bpmn:outgoing>
+      <bpmn:outgoing>Flow_82</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Notfall -->
+    <bpmn:exclusiveGateway id="GW_Merge_Notfall">
+      <bpmn:incoming>Flow_74</bpmn:incoming>
+      <bpmn:incoming>Flow_76</bpmn:incoming>
+      <bpmn:outgoing>Flow_77</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Notfall" name="Notfallversorgung (Reanimation &amp; Medikamente)">
+      <bpmn:incoming>Flow_77</bpmn:incoming>
+      <bpmn:outgoing>Flow_78</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Ueberlebt" name="Hündin überlebt?" default="Flow_80">
+      <bpmn:incoming>Flow_78</bpmn:incoming>
+      <bpmn:outgoing>Flow_79</bpmn:outgoing>
+      <bpmn:outgoing>Flow_80</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <!-- Karenz -->
+    <bpmn:exclusiveGateway id="GW_Merge_Karenz">
+      <bpmn:incoming>Flow_16</bpmn:incoming>
+      <bpmn:incoming>Flow_79</bpmn:incoming>
+      <bpmn:outgoing>Flow_81</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Karenz" name="Karenzzeit dokumentieren &amp; Hündin pausieren">
+      <bpmn:incoming>Flow_81</bpmn:incoming>
+      <bpmn:outgoing>Flow_17</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- Tod -->
+    <bpmn:exclusiveGateway id="GW_Merge_Tod">
+      <bpmn:incoming>Flow_80</bpmn:incoming>
+      <bpmn:incoming>Flow_82</bpmn:incoming>
+      <bpmn:outgoing>Flow_83</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_TodFeststellen" name="Tod feststellen &amp; Todesursache dokumentieren">
+      <bpmn:incoming>Flow_83</bpmn:incoming>
+      <bpmn:outgoing>Flow_84</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- ================= Lane Verarbeitung ================= -->
+    <bpmn:task id="Task_Filtern" name="Milch filtern">
+      <bpmn:incoming>Flow_36</bpmn:incoming>
+      <bpmn:outgoing>Flow_37</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Sammeln" name="Milch in Sammelbehälter geben">
+      <bpmn:incoming>Flow_37</bpmn:incoming>
+      <bpmn:outgoing>Flow_40</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_MilchVerwerfen" name="Restmilch der verstorbenen Hündin verwerfen">
+      <bpmn:incoming>Flow_87</bpmn:incoming>
+      <bpmn:outgoing>Flow_90</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Sammelprobe" name="Sammelprobe entnehmen">
+      <bpmn:incoming>Flow_45</bpmn:incoming>
+      <bpmn:outgoing>Flow_46</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Nachprobe" name="Nachprobe entnehmen">
+      <bpmn:incoming>Flow_52</bpmn:incoming>
+      <bpmn:outgoing>Flow_53</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Verwerfen" name="Charge verwerfen &amp; entsorgen">
+      <bpmn:incoming>Flow_51</bpmn:incoming>
+      <bpmn:outgoing>Flow_54</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="End_Verworfen" name="Charge verworfen">
+      <bpmn:incoming>Flow_54</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <bpmn:task id="Task_Pasteurisieren" name="Milch pasteurisieren">
+      <bpmn:incoming>Flow_49</bpmn:incoming>
+      <bpmn:outgoing>Flow_55</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:intermediateCatchEvent id="Event_Abkuehlen" name="15 Min abkühlen lassen">
+      <bpmn:incoming>Flow_55</bpmn:incoming>
+      <bpmn:outgoing>Flow_56</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerEventDefinition_Abkuehlen">
+        <bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT15M</bpmn:timeDuration>
+      </bpmn:timerEventDefinition>
+    </bpmn:intermediateCatchEvent>
+
+    <bpmn:task id="Task_Abfuellen" name="In Flaschen abfüllen">
+      <bpmn:incoming>Flow_56</bpmn:incoming>
+      <bpmn:outgoing>Flow_57</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Merge_Wiegen">
+      <bpmn:incoming>Flow_57</bpmn:incoming>
+      <bpmn:incoming>Flow_62</bpmn:incoming>
+      <bpmn:outgoing>Flow_58</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Wiegen" name="Menge wiegen">
+      <bpmn:incoming>Flow_58</bpmn:incoming>
+      <bpmn:outgoing>Flow_59</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Plausibel" name="Menge plausibel?" default="Flow_61">
+      <bpmn:incoming>Flow_59</bpmn:incoming>
+      <bpmn:outgoing>Flow_60</bpmn:outgoing>
+      <bpmn:outgoing>Flow_61</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Kalibrieren" name="Waage kalibrieren">
+      <bpmn:incoming>Flow_61</bpmn:incoming>
+      <bpmn:outgoing>Flow_62</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:task id="Task_Kuehlen" name="Auf 4 °C kühlen &amp; etikettieren">
+      <bpmn:incoming>Flow_60</bpmn:incoming>
+      <bpmn:outgoing>Flow_63</bpmn:outgoing>
+    </bpmn:task>
+
+    <!-- ================= Lane Qualitätssicherung ================= -->
+    <bpmn:exclusiveGateway id="GW_Merge_Probe">
+      <bpmn:incoming>Flow_46</bpmn:incoming>
+      <bpmn:incoming>Flow_53</bpmn:incoming>
+      <bpmn:outgoing>Flow_47</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Labor" name="Probe auf Keimzahl, Fett &amp; Eiweiß untersuchen">
+      <bpmn:incoming>Flow_47</bpmn:incoming>
+      <bpmn:outgoing>Flow_48</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:exclusiveGateway id="GW_Qualitaet" name="Qualität in Ordnung?" default="Flow_50">
+      <bpmn:incoming>Flow_48</bpmn:incoming>
+      <bpmn:outgoing>Flow_49</bpmn:outgoing>
+      <bpmn:outgoing>Flow_50</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:exclusiveGateway id="GW_Nachprobe" name="Nachprobe bereits genommen?" default="Flow_52">
+      <bpmn:incoming>Flow_50</bpmn:incoming>
+      <bpmn:outgoing>Flow_51</bpmn:outgoing>
+      <bpmn:outgoing>Flow_52</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+
+    <bpmn:task id="Task_Dokumentieren" name="Charge dokumentieren &amp; freigeben">
+      <bpmn:incoming>Flow_63</bpmn:incoming>
+      <bpmn:outgoing>Flow_64</bpmn:outgoing>
+    </bpmn:task>
+
+    <bpmn:endEvent id="End_Fertig" name="Milch eingelagert">
+      <bpmn:incoming>Flow_64</bpmn:incoming>
+    </bpmn:endEvent>
+
+    <!-- ================= Sequenzflüsse ================= -->
+    <bpmn:sequenceFlow id="Flow_1"  sourceRef="Start_Melkzeit" targetRef="Task_Desinfizieren" />
+    <bpmn:sequenceFlow id="Flow_2"  sourceRef="Task_Desinfizieren" targetRef="GW_Merge_Huendin" />
+    <bpmn:sequenceFlow id="Flow_3"  sourceRef="GW_Merge_Huendin" targetRef="Task_Rufen" />
+    <bpmn:sequenceFlow id="Flow_4"  sourceRef="Task_Rufen" targetRef="Task_Kommen" />
+    <bpmn:sequenceFlow id="Flow_5"  sourceRef="Task_Kommen" targetRef="Task_Impfpass" />
+    <bpmn:sequenceFlow id="Flow_6"  sourceRef="Task_Reinigen" targetRef="Task_Vormelken" />
+    <bpmn:sequenceFlow id="Flow_7"  sourceRef="Task_Vormelken" targetRef="GW_Euter" />
+    <bpmn:sequenceFlow id="Flow_8"  name="ja" sourceRef="GW_Euter" targetRef="GW_Merge_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_9"  name="nein" sourceRef="GW_Euter" targetRef="Task_Isolieren" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Isolieren" targetRef="Task_Untersuchen" />
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Untersuchen" targetRef="GW_Merge_Behandlung" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="GW_Merge_Behandlung" targetRef="Task_Behandeln" />
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Behandeln" targetRef="Task_Kontrolle" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_Kontrolle" targetRef="GW_Geheilt" />
+    <bpmn:sequenceFlow id="Flow_15" name="weiter krank" sourceRef="GW_Geheilt" targetRef="GW_Merge_Behandlung" />
+    <bpmn:sequenceFlow id="Flow_16" name="geheilt" sourceRef="GW_Geheilt" targetRef="GW_Merge_Karenz" />
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_Karenz" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="GW_Merge_Ruhig" targetRef="Task_Pruefen" />
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_Pruefen" targetRef="GW_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_20" name="ja" sourceRef="GW_Ruhig" targetRef="GW_Merge_Zitze" />
+    <bpmn:sequenceFlow id="Flow_21" name="nein" sourceRef="GW_Ruhig" targetRef="Task_Beruhigen" />
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_Beruhigen" targetRef="GW_Versuche" />
+    <bpmn:sequenceFlow id="Flow_23" name="ja" sourceRef="GW_Versuche" targetRef="Task_AbbruchDok" />
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="Task_AbbruchDok" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_25" name="nein" sourceRef="GW_Versuche" targetRef="GW_Merge_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_26" sourceRef="GW_Merge_Zitze" targetRef="Task_Melken" />
+    <bpmn:sequenceFlow id="Flow_27" sourceRef="Task_Melken" targetRef="Task_Abgeben" />
+    <bpmn:sequenceFlow id="Flow_28" sourceRef="Task_Abgeben" targetRef="GW_Fluss" />
+    <bpmn:sequenceFlow id="Flow_29" name="ja" sourceRef="GW_Fluss" targetRef="GW_Alle" />
+    <bpmn:sequenceFlow id="Flow_30" name="nein" sourceRef="GW_Fluss" targetRef="Task_Anregen" />
+    <bpmn:sequenceFlow id="Flow_31" sourceRef="Task_Anregen" targetRef="GW_Merge_Zitze" />
+    <bpmn:sequenceFlow id="Flow_32" name="nein" sourceRef="GW_Alle" targetRef="GW_Merge_Zitze" />
+    <bpmn:sequenceFlow id="Flow_33" name="ja" sourceRef="GW_Alle" targetRef="GW_ParSplit" />
+    <bpmn:sequenceFlow id="Flow_34" sourceRef="GW_ParSplit" targetRef="Task_Belohnen" />
+    <bpmn:sequenceFlow id="Flow_35" sourceRef="GW_ParSplit" targetRef="Task_Ausruhen" />
+    <bpmn:sequenceFlow id="Flow_36" sourceRef="GW_ParSplit" targetRef="Task_Filtern" />
+    <bpmn:sequenceFlow id="Flow_37" sourceRef="Task_Filtern" targetRef="Task_Sammeln" />
+    <bpmn:sequenceFlow id="Flow_38" sourceRef="Task_Belohnen" targetRef="GW_ParJoin" />
+    <bpmn:sequenceFlow id="Flow_39" sourceRef="Task_Ausruhen" targetRef="GW_ParJoin" />
+    <bpmn:sequenceFlow id="Flow_40" sourceRef="Task_Sammeln" targetRef="GW_ParJoin" />
+    <bpmn:sequenceFlow id="Flow_41" sourceRef="GW_ParJoin" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_42" sourceRef="GW_Merge_Ende" targetRef="Task_MelkstandReinigen" />
+    <bpmn:sequenceFlow id="Flow_43" sourceRef="Task_MelkstandReinigen" targetRef="GW_Weitere" />
+    <bpmn:sequenceFlow id="Flow_44" name="ja" sourceRef="GW_Weitere" targetRef="GW_Merge_Huendin" />
+    <bpmn:sequenceFlow id="Flow_45" name="nein" sourceRef="GW_Weitere" targetRef="Task_Sammelprobe" />
+    <bpmn:sequenceFlow id="Flow_46" sourceRef="Task_Sammelprobe" targetRef="GW_Merge_Probe" />
+    <bpmn:sequenceFlow id="Flow_47" sourceRef="GW_Merge_Probe" targetRef="Task_Labor" />
+    <bpmn:sequenceFlow id="Flow_48" sourceRef="Task_Labor" targetRef="GW_Qualitaet" />
+    <bpmn:sequenceFlow id="Flow_49" name="ja" sourceRef="GW_Qualitaet" targetRef="Task_Pasteurisieren" />
+    <bpmn:sequenceFlow id="Flow_50" name="nein" sourceRef="GW_Qualitaet" targetRef="GW_Nachprobe" />
+    <bpmn:sequenceFlow id="Flow_51" name="ja" sourceRef="GW_Nachprobe" targetRef="Task_Verwerfen" />
+    <bpmn:sequenceFlow id="Flow_52" name="nein" sourceRef="GW_Nachprobe" targetRef="Task_Nachprobe" />
+    <bpmn:sequenceFlow id="Flow_53" sourceRef="Task_Nachprobe" targetRef="GW_Merge_Probe" />
+    <bpmn:sequenceFlow id="Flow_54" sourceRef="Task_Verwerfen" targetRef="End_Verworfen" />
+    <bpmn:sequenceFlow id="Flow_55" sourceRef="Task_Pasteurisieren" targetRef="Event_Abkuehlen" />
+    <bpmn:sequenceFlow id="Flow_56" sourceRef="Event_Abkuehlen" targetRef="Task_Abfuellen" />
+    <bpmn:sequenceFlow id="Flow_57" sourceRef="Task_Abfuellen" targetRef="GW_Merge_Wiegen" />
+    <bpmn:sequenceFlow id="Flow_58" sourceRef="GW_Merge_Wiegen" targetRef="Task_Wiegen" />
+    <bpmn:sequenceFlow id="Flow_59" sourceRef="Task_Wiegen" targetRef="GW_Plausibel" />
+    <bpmn:sequenceFlow id="Flow_60" name="ja" sourceRef="GW_Plausibel" targetRef="Task_Kuehlen" />
+    <bpmn:sequenceFlow id="Flow_61" name="nein" sourceRef="GW_Plausibel" targetRef="Task_Kalibrieren" />
+    <bpmn:sequenceFlow id="Flow_62" sourceRef="Task_Kalibrieren" targetRef="GW_Merge_Wiegen" />
+    <bpmn:sequenceFlow id="Flow_63" sourceRef="Task_Kuehlen" targetRef="Task_Dokumentieren" />
+    <bpmn:sequenceFlow id="Flow_64" sourceRef="Task_Dokumentieren" targetRef="End_Fertig" />
+
+    <!-- Neu: Impfung -->
+    <bpmn:sequenceFlow id="Flow_65" sourceRef="Task_Impfpass" targetRef="GW_Impf" />
+    <bpmn:sequenceFlow id="Flow_66" name="ja" sourceRef="GW_Impf" targetRef="GW_Merge_Reinigen" />
+    <bpmn:sequenceFlow id="Flow_67" name="nein" sourceRef="GW_Impf" targetRef="GW_Merge_Impfen" />
+    <bpmn:sequenceFlow id="Flow_68" sourceRef="GW_Merge_Impfen" targetRef="Task_Impfen" />
+    <bpmn:sequenceFlow id="Flow_69" sourceRef="Task_Impfen" targetRef="GW_WeitereImpf" />
+    <bpmn:sequenceFlow id="Flow_70" name="nein" sourceRef="GW_WeitereImpf" targetRef="Event_Beobachten" />
+    <bpmn:sequenceFlow id="Flow_71" name="ja" sourceRef="GW_WeitereImpf" targetRef="GW_Merge_Impfen" />
+    <bpmn:sequenceFlow id="Flow_72" sourceRef="Event_Beobachten" targetRef="GW_Reaktion" />
+    <bpmn:sequenceFlow id="Flow_73" name="nein" sourceRef="GW_Reaktion" targetRef="GW_Merge_Reinigen" />
+    <bpmn:sequenceFlow id="Flow_74" name="ja" sourceRef="GW_Reaktion" targetRef="GW_Merge_Notfall" />
+    <bpmn:sequenceFlow id="Flow_75" sourceRef="GW_Merge_Reinigen" targetRef="Task_Reinigen" />
+
+    <!-- Neu: Notfall &amp; Tod -->
+    <bpmn:sequenceFlow id="Flow_76" sourceRef="Boundary_Kollaps" targetRef="GW_Merge_Notfall" />
+    <bpmn:sequenceFlow id="Flow_77" sourceRef="GW_Merge_Notfall" targetRef="Task_Notfall" />
+    <bpmn:sequenceFlow id="Flow_78" sourceRef="Task_Notfall" targetRef="GW_Ueberlebt" />
+    <bpmn:sequenceFlow id="Flow_79" name="ja" sourceRef="GW_Ueberlebt" targetRef="GW_Merge_Karenz" />
+    <bpmn:sequenceFlow id="Flow_80" name="nein" sourceRef="GW_Ueberlebt" targetRef="GW_Merge_Tod" />
+    <bpmn:sequenceFlow id="Flow_81" sourceRef="GW_Merge_Karenz" targetRef="Task_Karenz" />
+    <bpmn:sequenceFlow id="Flow_82" name="verstorben" sourceRef="GW_Geheilt" targetRef="GW_Merge_Tod" />
+    <bpmn:sequenceFlow id="Flow_83" sourceRef="GW_Merge_Tod" targetRef="Task_TodFeststellen" />
+    <bpmn:sequenceFlow id="Flow_84" sourceRef="Task_TodFeststellen" targetRef="Task_Melden" />
+    <bpmn:sequenceFlow id="Flow_85" sourceRef="Task_Melden" targetRef="GW_TodSplit" />
+    <bpmn:sequenceFlow id="Flow_86" sourceRef="GW_TodSplit" targetRef="Task_Kadaver" />
+    <bpmn:sequenceFlow id="Flow_87" sourceRef="GW_TodSplit" targetRef="Task_MilchVerwerfen" />
+    <bpmn:sequenceFlow id="Flow_88" sourceRef="GW_TodSplit" targetRef="Task_Bestand" />
+    <bpmn:sequenceFlow id="Flow_89" sourceRef="Task_Kadaver" targetRef="GW_TodJoin" />
+    <bpmn:sequenceFlow id="Flow_90" sourceRef="Task_MilchVerwerfen" targetRef="GW_TodJoin" />
+    <bpmn:sequenceFlow id="Flow_91" sourceRef="Task_Bestand" targetRef="GW_TodJoin" />
+    <bpmn:sequenceFlow id="Flow_92" sourceRef="GW_TodJoin" targetRef="GW_Bestand" />
+    <bpmn:sequenceFlow id="Flow_93" name="ja" sourceRef="GW_Bestand" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_94" name="nein" sourceRef="GW_Bestand" targetRef="End_Eingestellt" />
+
+  </bpmn:process>
+</bpmn:definitions>

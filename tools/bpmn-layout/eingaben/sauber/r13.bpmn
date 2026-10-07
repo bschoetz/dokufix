@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="P" name="Pool" processRef="Proc" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Ereignisse">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>i1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>i2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="S" />
+    <bpmn:exclusiveGateway id="g1" name="A?" />
+    <bpmn:intermediateCatchEvent id="i1" name="Signal" />
+    <bpmn:exclusiveGateway id="g2" />
+    <bpmn:intermediateThrowEvent id="i2" name="Melden" />
+    <bpmn:exclusiveGateway id="g3" name="Noch einmal?" />
+    <bpmn:endEvent id="z" name="E" />
+    <bpmn:sequenceFlow id="F1_s_g1" sourceRef="s" targetRef="g1" />
+    <bpmn:sequenceFlow id="F2_g1_i1" sourceRef="g1" targetRef="i1" />
+    <bpmn:sequenceFlow id="F3_i1_g2" sourceRef="i1" targetRef="g2" />
+    <bpmn:sequenceFlow id="F4_g2_i2" sourceRef="g2" targetRef="i2" />
+    <bpmn:sequenceFlow id="F5_i2_g3" sourceRef="i2" targetRef="g3" />
+    <bpmn:sequenceFlow id="F6_g3_g1" name="ja" sourceRef="g3" targetRef="g1" />
+    <bpmn:sequenceFlow id="F7_g3_z" name="nein" sourceRef="g3" targetRef="z" />
+    <bpmn:sequenceFlow id="F8_g3_g2" name="teils" sourceRef="g3" targetRef="g2" />
+  </bpmn:process>
+</bpmn:definitions>
+
