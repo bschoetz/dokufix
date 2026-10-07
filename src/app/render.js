@@ -131,12 +131,10 @@ async function renderOnce(signal) {
     previewEl.prepend(buildWarning(document, 'Das Dokument konnte nicht vollständig dargestellt werden.', errorMessage(err)));
   } finally {
     // Build the scrollspy rail (read-mode only; CSS gates visibility). Last,
-    // and always, whatever failed before it: see buildRail(). Not for a
-    // render that was aborted: the newer render builds it, and a rail
-    // rebuilt by the aborted one would say "finished" too early.
-    if (!signal.aborted){
-      try { buildRail(previewEl); }
-      catch (err) { console.error('Rail failed:', err); }
-    }
+    // and always: see buildRail(). An aborted render builds it too, from the
+    // preview it leaves: the browser runs see the renders one after the
+    // other by their rails (tests/durchlaeufe.mjs, case 2), and it is cheap.
+    try { buildRail(previewEl); }
+    catch (err) { console.error('Rail failed:', err); }
   }
 }
