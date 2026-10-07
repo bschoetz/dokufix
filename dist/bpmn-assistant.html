@@ -924,7 +924,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
   }
   var DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
     gatewayLane: true,
-    // R1  a gateway or end event stands in the lane of its nearest predecessor; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
+    // R1  a gateway or end event stands in the lane of its nearest predecessor, a merge of several lanes in that of its next step; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
     pathRows: true,
     // R2  two ways of a decision that go on in one lane get rows of their own
     loopAbove: true,
@@ -936,7 +936,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     jumpAbove: true,
     // R6  the one step between the exit of a loop and a merge stands in the merge's column
     block: true,
-    // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join
+    // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join; a foreign node in the split's column moves the split right of it
     firstColumn: true,
     // R9  (spike 2.26, Ben) the first shapes of the arms of a parallel gateway are centred on one x, one above the other
     rowProbe: true,
@@ -953,8 +953,10 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     // R15 start events in the first column, each in a row of its own, spread around their successor
     stagger: true,
     // R16 two gateways above each other in one column: one tried a column further
-    boundaryBelow: true
+    boundaryBelow: true,
     // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
+    handOver: true
+    // R18 the one step of a decision's way in another lane or row tried in the gateway's column, the nodes of another flow between moved a column (Ben, 2026-10-07, x-wv6)
   });
   var GAP_BASE = 48;
   var CHANNEL_BASE = 44;
@@ -1066,6 +1068,11 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       }
       if (!from) from = preds.reduce((m, p) => g.cells.get(p.from).col > g.cells.get(m).col ? p.from : m, preds[0].from);
       c.lane = g.cells.get(from).lane;
+      const outs = g.fwdOut.get(id), next = outs.length === 1 && g.cells.get(outs[0].to);
+      if (c.n.type === "gateway" && c.n.tag !== "parallelGateway" && preds.length >= 2 && new Set(preds.map((p) => g.cells.get(p.from).lane)).size >= 2 && next && next.n.type !== "gateway" && next.n.tag !== "endEvent") {
+        c.lane = next.lane;
+        continue;
+      }
       const heads = g.fwdOut.get(id).map((f) => g.cells.get(f.to));
       if (c.n.type === "gateway" && heads.length >= 3 && heads.every((h) => h.n.type !== "gateway" && h.n.tag !== "endEvent") && heads.every((h) => h.lane === heads[0].lane) && heads[0].lane !== c.lane) {
         c.lane = heads[0].lane;
@@ -1425,7 +1432,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         const lanes = [b.P, b.J, ...b.inner].map((id) => g.cells.get(id).lane);
         if (c.lane >= Math.min(...lanes) && c.lane <= Math.max(...lanes) && col > P4.col && col < J.col) col = J.col + 1;
       }
-      col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0);
+      col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0, g.handCol?.get(c.n.id) ?? 0);
       put(c, col);
       for (const f of g.fwdIn.get(c.n.id)) {
         const p = g.cells.get(f.from);
@@ -1467,6 +1474,46 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
     return moved;
   }
+  function ruleBlockColumn(g, model) {
+    let moved = false;
+    const pos = (c) => c.lane * 1e6 + c.row;
+    for (const b of parallelBlocks(g, model)) {
+      const ids = [b.P, b.J, ...b.inner], P4 = g.cells.get(b.P);
+      const ps = [b.P, ...g.fwdOut.get(b.P).map((f) => f.to)].map((id) => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
+      const inside = [...g.cells.values()].filter((c) => !ids.includes(c.n.id) && !c.pin && c.col === P4.col && pos(c) > lo && pos(c) < hi);
+      if (!inside.length) continue;
+      g.blockCol.set(b.P, Math.max(g.blockCol.get(b.P) ?? 0, P4.col + 1));
+      moved = true;
+    }
+    return moved;
+  }
+  function ruleHandOver(g, model, measure, rules) {
+    let best = runGrid(g, model, measure, rules);
+    const keys = ["crossings", "through", "overlaps", "lines", "labels", "shared"];
+    const better = (t, b) => keys.every((k) => t.q[k] <= b.q[k]) && (t.q.crossings < b.q.crossings || t.q.crossings === b.q.crossings && t.q.bends < b.q.bends);
+    for (let round = 0; round < 4; round++) {
+      const col = (c) => best.cols.get(c), pos = (c) => best.at.get(c);
+      let pick = null;
+      for (const c of g.cells.values()) {
+        const ins = g.fwdIn.get(c.n.id);
+        if (ins.length !== 1 || c.pin) continue;
+        const p = g.cells.get(ins[0].from);
+        if (p.n.type !== "gateway" || p.n.tag === "parallelGateway" || pos(p) === pos(c) || col(c) !== col(p) + 1) continue;
+        const lo = Math.min(pos(p), pos(c)), hi = Math.max(pos(p), pos(c));
+        const between = [...g.cells.values()].filter((o) => o !== p && o !== c && col(o) === col(p) && pos(o) > lo && pos(o) < hi);
+        if (!between.length || between.some((o) => o.pin || o.n.tag === "startEvent" || g.reachable(p.n.id).has(o.n.id))) continue;
+        const was = new Map(between.map((o) => [o, g.handCol.get(o.n.id)]));
+        for (const o of between) g.handCol.set(o.n.id, col(p) + 1);
+        const t = runGrid(g, model, measure, rules);
+        if (better(t, pick ? pick.t : best)) pick = { between, to: col(p) + 1, t };
+        for (const [o, w] of was) if (w === void 0) g.handCol.delete(o.n.id);
+        else g.handCol.set(o.n.id, w);
+      }
+      if (!pick) break;
+      for (const o of pick.between) g.handCol.set(o.n.id, pick.to);
+      best = pick.t;
+    }
+  }
   function layoutGrid(model, raw, measure, rules) {
     model = gridModel(model);
     const g = buildGrid(model, raw);
@@ -1479,6 +1526,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     if (rules.jumpAbove) ruleJumpAbove(g, model);
     if (rules.firstColumn) ruleFirstColumn(g, model);
     if (rules.startAlign) ruleStartAlign(g, model);
+    g.handCol = /* @__PURE__ */ new Map();
+    if (rules.handOver) ruleHandOver(g, model, measure, rules);
     if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
     if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
     if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
@@ -1536,8 +1585,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       const before = new Map([...g.cells.values()].map((c) => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
       const di = finishGrid(g, model, measure, rules, reroute);
       const cols = new Map([...g.cells.values()].map((c) => [c, c.col]));
+      const at = new Map([...g.cells.values()].map((c) => [c, c.lane * 1e6 + c.row]));
       for (const [c, v] of before) Object.assign(c, v);
-      return { di, q: gridQuality(di, model), cols, last: Math.max(...cols.values()) };
+      return { di, q: gridQuality(di, model), cols, at, last: Math.max(...cols.values()) };
     };
     const a = once(true);
     const b = once(false);
@@ -1554,14 +1604,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     };
     const run = () => runGrid(g, model, measure, rules);
     let best = run();
+    const cross = (q) => q.crossings + q.msgCrossings;
+    const fewer = (t) => t.q.msgBends <= best.q.msgBends && (cross(t.q) < cross(best.q) || cross(t.q) === cross(best.q) && t.q.msgBends < best.q.msgBends && t.q.bends <= best.q.bends && t.q.shared <= best.q.shared);
     for (const grp of g.pathRowGroups) {
-      if (!best.q.crossings) break;
+      if (!cross(best.q) && !best.q.msgBends) break;
       const cells = grp.ids.map((x) => g.cells.get(x)).filter((c) => c.lane === grp.lane && c.row === grp.row && !c.pin);
       if (!cells.length) continue;
       const keep = snap();
       for (const c of cells) c.row = -c.row;
       const t = run();
-      if (t.q.crossings < best.q.crossings && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
+      if (fewer(t) && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
       else restore(keep);
     }
     return best;
@@ -1796,7 +1848,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (b && hits(b, (x) => x === f.id)) labels++;
     }
     const bends = model.flows.reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
-    return { crossings, through, overlaps, lines, labels, shared: shared.length, bends };
+    const msgBends = (model.messages || []).reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
+    let msgCrossings = 0;
+    const msgSegs = [];
+    for (const m of model.messages || []) {
+      const pts = di.flows[m.id] || [];
+      for (let i = 1; i < pts.length; i++) msgSegs.push({ f: m.id, a: pts[i - 1], b: pts[i] });
+    }
+    for (const p of msgSegs) for (const q of [...segs, ...msgSegs]) {
+      if (p.f === q.f || msgSegs.includes(q) && q.f < p.f) continue;
+      const ph = p.a[1] === p.b[1], qh = q.a[1] === q.b[1];
+      if (ph === qh) continue;
+      const [h, v] = ph ? [p, q] : [q, p];
+      const x = v.a[0], y = h.a[1];
+      if (x > Math.min(h.a[0], h.b[0]) && x < Math.max(h.a[0], h.b[0]) && y > Math.min(v.a[1], v.b[1]) && y < Math.max(v.a[1], v.b[1])) msgCrossings++;
+    }
+    return { crossings, through, overlaps, lines, labels, shared: shared.length, bends, msgBends, msgCrossings };
   }
   function finishGrid(g, model, measure, rules, reroute = true) {
     centreLaneSplits(g, model);
@@ -1807,7 +1874,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         for (const [c, col] of orig) c.col = col;
         ruleCompact(g, model, rules);
         let settled = true;
-        for (const grp of g.columnGroups || []) {
+        for (const all of g.columnGroups || []) {
+          const grp = all.filter((x2) => !g.blockCol.has(x2));
+          if (!grp.length) continue;
           const cols2 = grp.map((x2) => g.cells.get(x2).col), max = Math.max(...cols2);
           if (cols2.every((c) => c === max)) continue;
           settled = false;
@@ -1816,12 +1885,14 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         if (settled) break;
       }
     };
+    g.blockCol = /* @__PURE__ */ new Map();
     compactAll();
     let boxed = false;
     for (let round = 0; rules.block && round < 3 && ruleBlockBox(g, model); round++) {
       boxed = true;
       compactAll();
     }
+    for (let round = 0; rules.block && round < 3 && ruleBlockColumn(g, model); round++) compactAll();
     if (boxed && rules.startAlign && redockStarts(g, model)) compactAll();
     const laneRows = [];
     for (let l = 0; l < g.lanes; l++) {

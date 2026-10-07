@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="P" name="Pool" processRef="Proc" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="A">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>a1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>a2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>a3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>ga1</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_2" name="B">
+        <bpmn:flowNodeRef>b1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>b2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>b3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>b4</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gb</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gb3</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gb4</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_3" name="C">
+        <bpmn:flowNodeRef>c1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>c2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" />
+    <bpmn:task id="a1" name="a1" />
+    <bpmn:task id="a2" name="a2" />
+    <bpmn:task id="a3" name="a3" />
+    <bpmn:task id="b1" name="b1" />
+    <bpmn:task id="b2" name="b2" />
+    <bpmn:task id="b3" name="b3" />
+    <bpmn:task id="b4" name="b4" />
+    <bpmn:exclusiveGateway id="gb" name="gb?" />
+    <bpmn:task id="c1" name="c1" />
+    <bpmn:task id="c2" name="c2" />
+    <bpmn:endEvent id="z" />
+    <bpmn:sequenceFlow id="F1_s_a1" sourceRef="s" targetRef="a1" />
+    <bpmn:sequenceFlow id="F2_a1_b1" sourceRef="ga1" targetRef="b1" />
+    <bpmn:sequenceFlow id="F3_b1_b2" sourceRef="b1" targetRef="b2" />
+    <bpmn:sequenceFlow id="F4_b2_b3" sourceRef="b2" targetRef="b3" />
+    <bpmn:sequenceFlow id="F5_b3_b4" sourceRef="gb3" targetRef="b4" />
+    <bpmn:sequenceFlow id="F6_b4_gb" sourceRef="gb4" targetRef="gb" />
+    <bpmn:sequenceFlow id="F7_gb_b1" name="r1" sourceRef="gb" targetRef="b1" />
+    <bpmn:sequenceFlow id="F8_gb_b2" name="r2" sourceRef="gb" targetRef="b2" />
+    <bpmn:sequenceFlow id="F9_gb_b3" name="r3" sourceRef="gb" targetRef="b3" />
+    <bpmn:sequenceFlow id="F10_b3_b1" name="r4" sourceRef="gb3" targetRef="b1" />
+    <bpmn:sequenceFlow id="F11_b4_b2" name="r5" sourceRef="gb4" targetRef="b2" />
+    <bpmn:sequenceFlow id="F12_gb_c1" name="ok" sourceRef="gb" targetRef="c1" />
+    <bpmn:sequenceFlow id="F13_c1_c2" sourceRef="c1" targetRef="c2" />
+    <bpmn:sequenceFlow id="F14_c2_z" sourceRef="c2" targetRef="z" />
+    <bpmn:sequenceFlow id="F15_a1_a2" sourceRef="ga1" targetRef="a2" />
+    <bpmn:sequenceFlow id="F16_a2_a3" sourceRef="a2" targetRef="a3" />
+    <bpmn:sequenceFlow id="F17_a3_c2" sourceRef="a3" targetRef="c2" />
+    <bpmn:exclusiveGateway id="ga1" name="ga1?" />
+    <bpmn:sequenceFlow id="R1_a1_ga1" sourceRef="a1" targetRef="ga1" />
+    <bpmn:exclusiveGateway id="gb3" name="gb3?" />
+    <bpmn:sequenceFlow id="R2_b3_gb3" sourceRef="b3" targetRef="gb3" />
+    <bpmn:exclusiveGateway id="gb4" name="gb4?" />
+    <bpmn:sequenceFlow id="R3_b4_gb4" sourceRef="b4" targetRef="gb4" />
+  </bpmn:process>
+</bpmn:definitions>
+

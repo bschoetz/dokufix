@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Onboarding" targetNamespace="http://dokufix.example/onboarding">
+  <bpmn:collaboration id="Collaboration_Onboarding">
+    <bpmn:participant id="Participant_Onboarding" name="Onboarding neuer Mitarbeiter" processRef="Process_Onboarding"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Onboarding" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Onboarding">
+      <bpmn:lane id="Lane_HR" name="Personalabteilung">
+        <bpmn:flowNodeRef>Start_Vertrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Stammdaten</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Timer_ErsterTag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Beenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Beendet</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Uebernommen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_IT" name="IT">
+        <bpmn:flowNodeRef>Task_Arbeitsplatz</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zugaenge</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_FK" name="Führungskraft">
+        <bpmn:flowNodeRef>Task_Plan</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Gespraech</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Uebernahme</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Neu" name="Neuer Mitarbeiter">
+        <bpmn:flowNodeRef>Task_Einfuehrung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Schulung</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Vertrag" name="Vertrag unterschrieben">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Stammdaten" name="Stammdaten anlegen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="GW_Split">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_Arbeitsplatz" name="Arbeitsplatz einrichten">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Task_Zugaenge" name="Zugänge anlegen">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:userTask id="Task_Plan" name="Einarbeitungsplan erstellen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="GW_Join">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:intermediateCatchEvent id="Timer_ErsterTag" name="Erster Arbeitstag">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+      <bpmn:timerEventDefinition id="TimerDef_ErsterTag"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:userTask id="Task_Einfuehrung" name="Einführungstag absolvieren">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Schulung" name="Pflichtschulungen absolvieren">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Gespraech" name="Probezeitgespräch führen">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Uebernahme" name="Übernahme?">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Uebernommen" name="Mitarbeiter übernommen">
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_Beenden" name="Arbeitsverhältnis beenden">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:endEvent id="End_Beendet" name="Arbeitsverhältnis beendet">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Vertrag" targetRef="Task_Stammdaten"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Stammdaten" targetRef="GW_Split"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="GW_Split" targetRef="Task_Arbeitsplatz"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="GW_Split" targetRef="Task_Plan"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Arbeitsplatz" targetRef="Task_Zugaenge"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Zugaenge" targetRef="GW_Join"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Plan" targetRef="GW_Join"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="GW_Join" targetRef="Timer_ErsterTag"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Timer_ErsterTag" targetRef="Task_Einfuehrung"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Einfuehrung" targetRef="Task_Schulung"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Schulung" targetRef="Task_Gespraech"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Gespraech" targetRef="GW_Uebernahme"/>
+    <bpmn:sequenceFlow id="Flow_13" name="ja" sourceRef="GW_Uebernahme" targetRef="End_Uebernommen"/>
+    <bpmn:sequenceFlow id="Flow_14" name="nein" sourceRef="GW_Uebernahme" targetRef="Task_Beenden"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_Beenden" targetRef="End_Beendet"/>
+  </bpmn:process>
+</bpmn:definitions>

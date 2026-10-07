@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="Zusammenarbeit_X" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:participant id="Box_0" name="Kunde"/><bpmn:participant id="Pool_P" name="Betrieb" processRef="Proc"/></bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Sachbearbeitung"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Eingang"/>
+    <bpmn:task id="a" name="Unterlagen sichten"/>
+    <bpmn:task id="b" name="Entscheiden"/>
+    <bpmn:exclusiveGateway id="g" name="Entscheidung tragfähig und begründet?"/>
+    <bpmn:endEvent id="z" name="Erledigt"/>
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b"/>
+    <bpmn:sequenceFlow id="F3_b_g" sourceRef="b" targetRef="g"/>
+    <bpmn:sequenceFlow id="F4_g_a" sourceRef="g" targetRef="a" name="Nein, weitere Unterlagen beim Antragsteller anfordern und erneut sichten"/>
+    <bpmn:sequenceFlow id="F5_g_b" sourceRef="g" targetRef="b" name="Teilweise: Begründung nachbessern lassen"/>
+    <bpmn:sequenceFlow id="F6_g_z" sourceRef="g" targetRef="z" name="Ja"/>
+  </bpmn:process>
+</bpmn:definitions>

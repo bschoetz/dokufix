@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="P" name="Pool" processRef="Proc" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Up">
+        <bpmn:flowNodeRef>u1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>u2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>z2</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_2" name="Row">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>x</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>y</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>p2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>q</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>m</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" />
+    <bpmn:parallelGateway id="p1" />
+    <bpmn:task id="x" name="X" />
+    <bpmn:task id="y" name="Y" />
+    <bpmn:parallelGateway id="p2" />
+    <bpmn:exclusiveGateway id="q" name="nochmal?" />
+    <bpmn:endEvent id="z" />
+    <bpmn:task id="u1" name="Parallel oben" />
+    <bpmn:task id="u2" name="Melden" />
+    <bpmn:sequenceFlow id="F1_s_p1" sourceRef="s" targetRef="m" />
+    <bpmn:sequenceFlow id="F2_p1_x" sourceRef="p1" targetRef="x" />
+    <bpmn:sequenceFlow id="F3_p1_y" sourceRef="p1" targetRef="y" />
+    <bpmn:sequenceFlow id="F4_x_p2" sourceRef="x" targetRef="p2" />
+    <bpmn:sequenceFlow id="F5_y_p2" sourceRef="y" targetRef="p2" />
+    <bpmn:sequenceFlow id="F6_p2_q" sourceRef="p2" targetRef="q" />
+    <bpmn:sequenceFlow id="F7_q_p1" name="ja" sourceRef="q" targetRef="m" />
+    <bpmn:sequenceFlow id="F8_q_z" name="nein" sourceRef="q" targetRef="z" />
+    <bpmn:sequenceFlow id="F9_q_u2" name="melden" sourceRef="q" targetRef="u2" />
+    <bpmn:sequenceFlow id="F10_p1_u1" sourceRef="p1" targetRef="u1" />
+    <bpmn:sequenceFlow id="F11_u1_p2" sourceRef="u1" targetRef="p2" />
+    <bpmn:exclusiveGateway id="m" />
+    <bpmn:sequenceFlow id="R1_m_p1" sourceRef="m" targetRef="p1" />
+    <bpmn:endEvent id="z2" />
+    <bpmn:sequenceFlow id="R2_u2_z2" sourceRef="u2" targetRef="z2" />
+  </bpmn:process>
+</bpmn:definitions>
+

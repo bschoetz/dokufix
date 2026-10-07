@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/t">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="s" />
+    <bpmn:task id="a" name="A" />
+    <bpmn:task id="b" name="B" />
+    <bpmn:task id="c" name="C" />
+    <bpmn:exclusiveGateway id="g" name="Alle?" />
+    <bpmn:task id="x" name="X" />
+    <bpmn:task id="y" name="Y" />
+    <bpmn:task id="w" name="W" />
+    <bpmn:endEvent id="z1" />
+    <bpmn:endEvent id="z2" />
+    <bpmn:endEvent id="z3" />
+    <bpmn:sequenceFlow id="f0" sourceRef="ps" targetRef="a" />
+    <bpmn:sequenceFlow id="f1" sourceRef="ps" targetRef="b" />
+    <bpmn:sequenceFlow id="f2" sourceRef="ps" targetRef="c" />
+    <bpmn:sequenceFlow id="f3" sourceRef="a" targetRef="pj" />
+    <bpmn:sequenceFlow id="f4" sourceRef="b" targetRef="pj" />
+    <bpmn:sequenceFlow id="f5" sourceRef="c" targetRef="pj" />
+    <bpmn:sequenceFlow id="f6" name="eins" sourceRef="g" targetRef="x" />
+    <bpmn:sequenceFlow id="f7" name="zwei" sourceRef="g" targetRef="y" />
+    <bpmn:sequenceFlow id="f8" name="drei" sourceRef="g" targetRef="w" />
+    <bpmn:sequenceFlow id="f9" sourceRef="x" targetRef="z1" />
+    <bpmn:sequenceFlow id="f10" sourceRef="gy" targetRef="z2" />
+    <bpmn:sequenceFlow id="f11" sourceRef="gw" targetRef="z3" />
+    <bpmn:sequenceFlow id="f12" name="zurück" sourceRef="gy" targetRef="mg" />
+    <bpmn:sequenceFlow id="f13" name="auch zurück" sourceRef="gw" targetRef="mg" />
+    <bpmn:parallelGateway id="ps" />
+    <bpmn:sequenceFlow id="R1_s_ps" sourceRef="s" targetRef="ps" />
+    <bpmn:parallelGateway id="pj" />
+    <bpmn:sequenceFlow id="R2_pj_g" sourceRef="pj" targetRef="mg" />
+    <bpmn:exclusiveGateway id="gy" name="Y?" />
+    <bpmn:sequenceFlow id="R3_y_gy" sourceRef="y" targetRef="gy" />
+    <bpmn:exclusiveGateway id="gw" name="W?" />
+    <bpmn:sequenceFlow id="R4_w_gw" sourceRef="w" targetRef="gw" />
+    <bpmn:exclusiveGateway id="mg" />
+    <bpmn:sequenceFlow id="R5_mg_g" sourceRef="mg" targetRef="g" />
+  </bpmn:process>
+</bpmn:definitions>
+

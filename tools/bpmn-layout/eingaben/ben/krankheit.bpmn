@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Krank" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Collaboration_Krank">
+    <bpmn:participant id="Pool_Krank" name="Krankheit während der Arbeitszeit" processRef="Process_Krank"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Krank" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Krank">
+      <bpmn:lane id="Lane_MA" name="Mitarbeiter">
+        <bpmn:flowNodeRef>Start_Unwohl</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Melden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Arzt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Dauer</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_FK" name="Führungskraft">
+        <bpmn:flowNodeRef>Task_Einschaetzen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Notfall</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Notruf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Heimweg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Vertretung</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_PA" name="Personalabteilung">
+        <bpmn:flowNodeRef>Task_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Entgelt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Erfasst</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Unwohl" name="Unwohlsein bei der Arbeit"/>
+    <bpmn:manualTask id="Task_Melden" name="Führungskraft informieren"/>
+    <bpmn:manualTask id="Task_Einschaetzen" name="Lage einschätzen"/>
+    <bpmn:exclusiveGateway id="Gateway_Notfall" name="Notfall?"/>
+    <bpmn:manualTask id="Task_Notruf" name="Notruf absetzen"/>
+    <bpmn:manualTask id="Task_Heimweg" name="Heimweg organisieren"/>
+    <bpmn:exclusiveGateway id="Gateway_Merge"/>
+    <bpmn:parallelGateway id="Gateway_Split"/>
+    <bpmn:manualTask id="Task_Arzt" name="Arzt aufsuchen"/>
+    <bpmn:sendTask id="Task_Dauer" name="Dauer der AU melden"/>
+    <bpmn:userTask id="Task_Vertretung" name="Vertretung organisieren"/>
+    <bpmn:userTask id="Task_Erfassen" name="Abwesenheit erfassen"/>
+    <bpmn:parallelGateway id="Gateway_Join"/>
+    <bpmn:userTask id="Task_Pruefen" name="AU-Nachweis prüfen"/>
+    <bpmn:serviceTask id="Task_Entgelt" name="Entgeltfortzahlung veranlassen"/>
+    <bpmn:endEvent id="End_Erfasst" name="Krankheitsfall erfasst"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Unwohl" targetRef="Task_Melden"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Melden" targetRef="Task_Einschaetzen"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Einschaetzen" targetRef="Gateway_Notfall"/>
+    <bpmn:sequenceFlow id="Flow_4" name="nein" sourceRef="Gateway_Notfall" targetRef="Task_Heimweg"/>
+    <bpmn:sequenceFlow id="Flow_5" name="ja" sourceRef="Gateway_Notfall" targetRef="Task_Notruf"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Heimweg" targetRef="Gateway_Merge"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Notruf" targetRef="Gateway_Merge"/>
+    <bpmn:sequenceFlow id="Flow_8" sourceRef="Gateway_Merge" targetRef="Gateway_Split"/>
+    <bpmn:sequenceFlow id="Flow_9" sourceRef="Gateway_Split" targetRef="Task_Arzt"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Gateway_Split" targetRef="Task_Vertretung"/>
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Gateway_Split" targetRef="Task_Erfassen"/>
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="Task_Arzt" targetRef="Task_Dauer"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Dauer" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_Vertretung" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_Erfassen" targetRef="Gateway_Join"/>
+    <bpmn:sequenceFlow id="Flow_16" sourceRef="Gateway_Join" targetRef="Task_Pruefen"/>
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_Pruefen" targetRef="Task_Entgelt"/>
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="Task_Entgelt" targetRef="End_Erfasst"/>
+  </bpmn:process>
+</bpmn:definitions>

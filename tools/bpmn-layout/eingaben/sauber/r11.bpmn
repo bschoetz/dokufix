@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:startEvent id="s" />
+    <bpmn:task id="a" name="Eins" />
+    <bpmn:task id="b" name="Zwei" />
+    <bpmn:task id="c" name="Drei" />
+    <bpmn:exclusiveGateway id="g" />
+    <bpmn:endEvent id="z" />
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a" />
+    <bpmn:sequenceFlow id="F2_a_b" sourceRef="a" targetRef="b" />
+    <bpmn:sequenceFlow id="F3_b_c" sourceRef="b" targetRef="c" />
+    <bpmn:sequenceFlow id="F4_c_g" sourceRef="c" targetRef="g" />
+    <bpmn:sequenceFlow id="F5_g_z" sourceRef="g" targetRef="z" />
+    <bpmn:sequenceFlow id="F6_g_a" sourceRef="g" targetRef="a" />
+    <bpmn:sequenceFlow id="F7_c_b" sourceRef="g" targetRef="b" />
+  </bpmn:process>
+</bpmn:definitions>
+

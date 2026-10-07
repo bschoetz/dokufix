@@ -119,6 +119,7 @@ import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src
 // without coordinates, whether it can be laid out and what it holds, too.
 import { hasCoordinates, bpmnWarningText, BPMN_CREDIT } from '../src/app/bpmn.js';
 import { readProcess } from '../src/app/bpmn-layout.js';
+import { parseXml, XmlError } from '../src/app/xml-parser.js';
 // The names of the downloads below the diagrams and how a source stands in
 // its link are asked where the product decides them (story 2.10).
 import { diagramFileNames, sourceDataUrl, DOWNLOADS_LABEL } from '../src/app/diagram-downloads.js';
@@ -127,7 +128,7 @@ import { DIAGRAM_LANGUAGES } from '../src/app/diagram-kinds.js';
 // Which places of the preview a search lists, how many hits each holds and
 // under which group headings they stand is asked where the product decides it,
 // over the preview read back into linkedom.
-import { parseHTML, DOMParser as XmlParser } from 'linkedom';
+import { parseHTML } from 'linkedom';
 import { collectPlaces, groupResults, nodeRanges } from '../src/app/search-places.js';
 import { findHits } from '../src/app/search-match.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
@@ -552,7 +553,12 @@ function judgeDiagrams(exp, wellFormed){
     if (!wellFormed[i]) return;
     if (hasCoordinates(d.source)){ Object.assign(d, { drawn: true, reason: '' }); return; }
     let read = null;
-    try { read = readProcess(new XmlParser().parseFromString(d.source, 'text/xml')); }
+    // The page reads it with the layout's own parser (layoutBpmn()); XML that one
+    // rejects goes to bpmn-js as it is, whose message is the reason.
+    let doc;
+    try { doc = parseXml(d.source); }
+    catch (e){ if (e instanceof XmlError) return; throw e; }
+    try { read = readProcess(doc); }
     catch (e){ d.reason = e.message; return; }
     if (!read) return;
     const m = read.model;

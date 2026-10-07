@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/sonder">
+  <bpmn:process id="P_Wieder" isExecutable="false">
+    <bpmn:startEvent id="S" name="Datei bereit"/>
+    <bpmn:serviceTask id="T_Hochladen" name="Datei hochladen"/>
+    <bpmn:boundaryEvent id="B_Netz" name="Netzfehler" attachedToRef="T_Hochladen"><bpmn:errorEventDefinition id="B_Netz_D"/></bpmn:boundaryEvent>
+    <bpmn:subProcess id="T_Pruefen" name="Datei prüfen"><bpmn:startEvent id="T_P_S"/><bpmn:endEvent id="T_P_E"/><bpmn:sequenceFlow id="T_P_F" sourceRef="T_P_S" targetRef="T_P_E"/></bpmn:subProcess>
+    <bpmn:boundaryEvent id="B_Virus" name="Virus gefunden" attachedToRef="T_Pruefen"><bpmn:errorEventDefinition id="B_Virus_D"/></bpmn:boundaryEvent>
+    <bpmn:endEvent id="E" name="Abgelegt"/>
+    <bpmn:endEvent id="E_Virus" name="Gelöscht"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T_Hochladen"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T_Hochladen" targetRef="T_Pruefen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="T_Pruefen" targetRef="E"/>
+    <bpmn:sequenceFlow id="F4" name="erneut" sourceRef="B_Netz" targetRef="T_Hochladen"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="B_Virus" targetRef="E_Virus"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/n">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="PK" name="Kundin" processRef="PrK"/>
+    <bpmn:participant id="PL" name="Lieferant" processRef="PrL"/>
+    <bpmn:participant id="PB" name="Bank"/>
+    <bpmn:messageFlow id="m1" sourceRef="k2" targetRef="l1" name="Bestellung"/>
+    <bpmn:messageFlow id="m2" sourceRef="l3" targetRef="k3" name="Lieferung"/>
+    <bpmn:messageFlow id="m3" sourceRef="k4" targetRef="PB"/>
+    <bpmn:textAnnotation id="n1"><bpmn:text>Rahmenvertrag 2026</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a1" sourceRef="PL" targetRef="n1"/>
+    <bpmn:textAnnotation id="n2"><bpmn:text>Per EDI</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a2" sourceRef="m1" targetRef="n2"/>
+    <bpmn:textAnnotation id="n3"><bpmn:text>Nur SEPA</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a3" sourceRef="n3" targetRef="PB"/>
+  </bpmn:collaboration>
+  <bpmn:process id="PrK" isExecutable="false">
+    <bpmn:startEvent id="k1" name="Bedarf"/>
+    <bpmn:task id="k2" name="Bestellen"/>
+    <bpmn:task id="k3" name="Ware prüfen"/>
+    <bpmn:task id="k4" name="Bezahlen"/>
+    <bpmn:endEvent id="k5" name="Erledigt"/>
+    <bpmn:sequenceFlow id="kf1" sourceRef="k1" targetRef="k2"/>
+    <bpmn:sequenceFlow id="kf2" sourceRef="k2" targetRef="k3"/>
+    <bpmn:sequenceFlow id="kf3" sourceRef="k3" targetRef="k4"/>
+    <bpmn:sequenceFlow id="kf4" sourceRef="k4" targetRef="k5"/>
+  </bpmn:process>
+  <bpmn:process id="PrL" isExecutable="false">
+    <bpmn:startEvent id="l1" name="Bestellung da"/>
+    <bpmn:task id="l2" name="Kommissionieren"/>
+    <bpmn:task id="l3" name="Versenden"/>
+    <bpmn:endEvent id="l4" name="Versendet"/>
+    <bpmn:sequenceFlow id="lf1" sourceRef="l1" targetRef="l2"/>
+    <bpmn:sequenceFlow id="lf2" sourceRef="l2" targetRef="l3"/>
+    <bpmn:sequenceFlow id="lf3" sourceRef="l3" targetRef="l4"/>
+    <bpmn:textAnnotation id="n4"><bpmn:text>Lager B</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a4" sourceRef="l2" targetRef="n4"/>
+  </bpmn:process>
+</bpmn:definitions>

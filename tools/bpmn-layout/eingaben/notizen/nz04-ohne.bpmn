@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/n">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Empfang"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Ärztin"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Patientin kommt"/>
+    <bpmn:task id="t1" name="Aufnehmen"/>
+    <bpmn:task id="t2" name="Behandeln"/>
+    <bpmn:endEvent id="e" name="Entlassen"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="e"/>
+    <bpmn:textAnnotation id="n1"><bpmn:text>Stand: Oktober 2026, gilt für alle Standorte</bpmn:text></bpmn:textAnnotation>
+    <bpmn:textAnnotation id="n2"><bpmn:text>Versichertenkarte</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="a2" sourceRef="t1" targetRef="n2"/>
+  </bpmn:process>
+</bpmn:definitions>

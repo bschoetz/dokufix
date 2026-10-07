@@ -2,3 +2,5 @@ _bmad-output/
 node_modules/
 # The readable build (node build.mjs --dev); the committed file is dist/dokufix.html
 dist/dokufix.dev.html
+# The working folder of the layout tools: runs and pages hold the laid-out external inputs (tools/bpmn-layout/README.md)
+tools/bpmn-layout/arbeit/

@@ -1,0 +1,103 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Rechnung" targetNamespace="http://dokufix.example/rechnung">
+  <bpmn:collaboration id="Collaboration_Rechnung">
+    <bpmn:participant id="Participant_Rechnung" name="Rechnungsfreigabe" processRef="Process_Rechnung"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Rechnung" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Rechnung">
+      <bpmn:lane id="Lane_Buchhaltung" name="Buchhaltung">
+        <bpmn:flowNodeRef>Start_Rechnung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Split</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rechnerisch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Join</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Korrekt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reklamieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Zurueck</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Betrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Zahlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Bezahlt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Fachabteilung" name="Fachabteilung">
+        <bpmn:flowNodeRef>Task_Sachlich</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_GF" name="Geschäftsführung">
+        <bpmn:flowNodeRef>Task_Freigabe</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Rechnung" name="Rechnung eingegangen">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Erfassen" name="Rechnung erfassen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="GW_Split">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:userTask id="Task_Sachlich" name="Sachlich prüfen">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Rechnerisch" name="Rechnerisch prüfen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:parallelGateway id="GW_Join">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="GW_Korrekt" name="Rechnung korrekt?">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_Reklamieren" name="Rechnung beim Lieferanten reklamieren">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Zurueck" name="Rechnung zurückgewiesen">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:exclusiveGateway id="GW_Betrag" name="Betrag über 5.000 €?">
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_11</bpmn:outgoing>
+      <bpmn:outgoing>Flow_12</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:userTask id="Task_Freigabe" name="Freigabe erteilen">
+      <bpmn:incoming>Flow_11</bpmn:incoming>
+      <bpmn:outgoing>Flow_13</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Merge">
+      <bpmn:incoming>Flow_12</bpmn:incoming>
+      <bpmn:incoming>Flow_13</bpmn:incoming>
+      <bpmn:outgoing>Flow_14</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Zahlung" name="Zahlung anweisen">
+      <bpmn:incoming>Flow_14</bpmn:incoming>
+      <bpmn:outgoing>Flow_15</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:endEvent id="End_Bezahlt" name="Rechnung bezahlt">
+      <bpmn:incoming>Flow_15</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Rechnung" targetRef="Task_Erfassen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Erfassen" targetRef="GW_Split"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="GW_Split" targetRef="Task_Sachlich"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="GW_Split" targetRef="Task_Rechnerisch"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Sachlich" targetRef="GW_Join"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Rechnerisch" targetRef="GW_Join"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="GW_Join" targetRef="GW_Korrekt"/>
+    <bpmn:sequenceFlow id="Flow_8" name="ja" sourceRef="GW_Korrekt" targetRef="GW_Betrag"/>
+    <bpmn:sequenceFlow id="Flow_9" name="nein" sourceRef="GW_Korrekt" targetRef="Task_Reklamieren"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Reklamieren" targetRef="End_Zurueck"/>
+    <bpmn:sequenceFlow id="Flow_11" name="ja" sourceRef="GW_Betrag" targetRef="Task_Freigabe"/>
+    <bpmn:sequenceFlow id="Flow_12" name="nein" sourceRef="GW_Betrag" targetRef="GW_Merge"/>
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Freigabe" targetRef="GW_Merge"/>
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="GW_Merge" targetRef="Task_Zahlung"/>
+    <bpmn:sequenceFlow id="Flow_15" sourceRef="Task_Zahlung" targetRef="End_Bezahlt"/>
+  </bpmn:process>
+</bpmn:definitions>

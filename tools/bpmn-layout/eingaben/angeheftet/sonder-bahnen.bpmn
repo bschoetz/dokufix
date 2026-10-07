@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/sonder">
+  <bpmn:collaboration id="C"><bpmn:participant id="Pool" name="Werkstatt" processRef="P_Bahnen"/></bpmn:collaboration>
+  <bpmn:process id="P_Bahnen" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L_Meister" name="Meister"><bpmn:flowNodeRef>T_Freigeben</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Nachfragen</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Gefragt</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Geselle" name="Geselle"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Reparieren</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Teil</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Dauer</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Testen</bpmn:flowNodeRef><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Lager" name="Lager"><bpmn:flowNodeRef>T_Bestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Bestellt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S" name="Auftrag"/>
+    <bpmn:task id="T_Reparieren" name="Gerät reparieren"/>
+    <bpmn:boundaryEvent id="B_Teil" name="Ersatzteil fehlt" attachedToRef="T_Reparieren"><bpmn:errorEventDefinition id="B_Teil_D"/></bpmn:boundaryEvent>
+    <bpmn:boundaryEvent id="B_Dauer" name="Zwei Stunden" cancelActivity="false" attachedToRef="T_Reparieren"><bpmn:timerEventDefinition id="B_Dauer_D"/></bpmn:boundaryEvent>
+    <bpmn:task id="T_Testen" name="Gerät testen"/>
+    <bpmn:task id="T_Freigeben" name="Reparatur freigeben"/>
+    <bpmn:endEvent id="E" name="Fertig"/>
+    <bpmn:task id="T_Bestellen" name="Ersatzteil bestellen"/>
+    <bpmn:endEvent id="E_Bestellt" name="Bestellt"/>
+    <bpmn:task id="T_Nachfragen" name="Beim Gesellen nachfragen"/>
+    <bpmn:endEvent id="E_Gefragt" name="Nachgefragt"/>
+    <bpmn:sequenceFlow id="F8" sourceRef="T_Nachfragen" targetRef="E_Gefragt"/>
+    <bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T_Reparieren"/>
+    <bpmn:sequenceFlow id="F2" sourceRef="T_Reparieren" targetRef="T_Testen"/>
+    <bpmn:sequenceFlow id="F3" sourceRef="T_Testen" targetRef="T_Freigeben"/>
+    <bpmn:sequenceFlow id="F4" sourceRef="T_Freigeben" targetRef="E"/>
+    <bpmn:sequenceFlow id="F5" sourceRef="B_Teil" targetRef="T_Bestellen"/>
+    <bpmn:sequenceFlow id="F6" sourceRef="T_Bestellen" targetRef="E_Bestellt"/>
+    <bpmn:sequenceFlow id="F7" sourceRef="B_Dauer" targetRef="T_Nachfragen"/>
+  </bpmn:process>
+</bpmn:definitions>

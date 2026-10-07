@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/r">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="P" name="Pool" processRef="Proc" />
+  </bpmn:collaboration>
+  <bpmn:process id="Proc" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="Lane_1" name="Lane A">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>a</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>i1</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>b</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>i2</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gb</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gi</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Start" />
+    <bpmn:task id="a" name="Warten vorbereiten" />
+    <bpmn:intermediateCatchEvent id="i1" name="Frist abgelaufen" />
+    <bpmn:task id="b" name="Erinnern" />
+    <bpmn:intermediateThrowEvent id="i2" name="Erinnerung gesendet" />
+    <bpmn:endEvent id="z" name="Ende" />
+    <bpmn:sequenceFlow id="F1_s_a" sourceRef="s" targetRef="a" />
+    <bpmn:sequenceFlow id="F2_a_i1" sourceRef="a" targetRef="i1" />
+    <bpmn:sequenceFlow id="F3_i1_b" sourceRef="i1" targetRef="b" />
+    <bpmn:sequenceFlow id="F4_b_i2" sourceRef="gb" targetRef="i2" />
+    <bpmn:sequenceFlow id="F5_i2_i1" name="erneut" sourceRef="gi" targetRef="i1" />
+    <bpmn:sequenceFlow id="F6_i2_z" sourceRef="gi" targetRef="z" />
+    <bpmn:sequenceFlow id="F7_b_a" name="abbrechen" sourceRef="gb" targetRef="a" />
+    <bpmn:exclusiveGateway id="gb" name="Weiter?" />
+    <bpmn:sequenceFlow id="R1_b_gb" sourceRef="b" targetRef="gb" />
+    <bpmn:exclusiveGateway id="gi" name="Erneut?" />
+    <bpmn:sequenceFlow id="R2_i2_gi" sourceRef="i2" targetRef="gi" />
+  </bpmn:process>
+</bpmn:definitions>
+

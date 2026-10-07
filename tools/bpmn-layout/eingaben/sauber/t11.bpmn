@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/t">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="Pp" name="Pool" processRef="P11" />
+  </bpmn:collaboration>
+  <bpmn:process id="P11" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="L1">
+        <bpmn:flowNodeRef>u</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>v</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>gu</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="L2" name="L2">
+        <bpmn:flowNodeRef>s</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>a</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>g</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>b</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>z</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>mg</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" />
+    <bpmn:task id="a" name="A" />
+    <bpmn:exclusiveGateway id="g" name="Rückfrage?" />
+    <bpmn:task id="u" name="Nachfragen" />
+    <bpmn:task id="v" name="Antwort prüfen" />
+    <bpmn:task id="b" name="B" />
+    <bpmn:endEvent id="z" />
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="a" />
+    <bpmn:sequenceFlow id="f2" sourceRef="a" targetRef="mg" />
+    <bpmn:sequenceFlow id="f3" name="ja" sourceRef="g" targetRef="u" />
+    <bpmn:sequenceFlow id="f4" name="beantwortet" sourceRef="gu" targetRef="mg" />
+    <bpmn:sequenceFlow id="f5" name="nein" sourceRef="g" targetRef="b" />
+    <bpmn:sequenceFlow id="f6" sourceRef="gu" targetRef="v" />
+    <bpmn:sequenceFlow id="f7" name="geprüft" sourceRef="v" targetRef="mg" />
+    <bpmn:sequenceFlow id="f8" sourceRef="b" targetRef="z" />
+    <bpmn:exclusiveGateway id="gu" name="Beantwortet?" />
+    <bpmn:sequenceFlow id="R1_u_gu" sourceRef="u" targetRef="gu" />
+    <bpmn:exclusiveGateway id="mg" />
+    <bpmn:sequenceFlow id="R2_mg_g" sourceRef="mg" targetRef="g" />
+  </bpmn:process>
+</bpmn:definitions>
+

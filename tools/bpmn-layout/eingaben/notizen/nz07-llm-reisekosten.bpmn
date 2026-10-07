@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Reisekosten" targetNamespace="http://example.com/reisekosten">
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_1" name="Reisekostenabrechnung" processRef="Process_1" />
+  </bpmn:collaboration>
+  <bpmn:process id="Process_1" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_MA" name="Mitarbeiterin">
+        <bpmn:flowNodeRef>Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Belege</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Einreichen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Korrigieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Korr</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abgelehnt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Erstattet</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_VG" name="Vorgesetzte">
+        <bpmn:flowNodeRef>T_PruefenVG</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Freigabe</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_BH" name="Buchhaltung">
+        <bpmn:flowNodeRef>T_PruefenBH</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Beleg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Rueckfrage</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Berechnen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>T_Auszahlen</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start" name="Reise beendet">
+    </bpmn:startEvent>
+    <bpmn:task id="T_Erfassen" name="Reisekosten erfassen">
+    </bpmn:task>
+    <bpmn:task id="T_Belege" name="Belege anhängen">
+    </bpmn:task>
+    <bpmn:task id="T_Einreichen" name="Abrechnung einreichen">
+    </bpmn:task>
+    <bpmn:task id="T_PruefenVG" name="Abrechnung sachlich prüfen">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Freigabe" name="Freigegeben?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="T_PruefenBH" name="Belege und Beträge prüfen">
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Beleg" name="Belege vollständig?">
+    </bpmn:exclusiveGateway>
+    <bpmn:task id="T_Rueckfrage" name="Fehlende Belege anfordern">
+    </bpmn:task>
+    <bpmn:task id="T_Korrigieren" name="Abrechnung korrigieren">
+    </bpmn:task>
+    <bpmn:task id="T_Berechnen" name="Erstattungsbetrag berechnen">
+    </bpmn:task>
+    <bpmn:task id="T_Auszahlen" name="Erstattung auszahlen">
+    </bpmn:task>
+    <bpmn:endEvent id="End_Erstattet" name="Erstattet">
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Abgelehnt" name="Abgelehnt">
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="F1" sourceRef="Start" targetRef="T_Erfassen" />
+    <bpmn:sequenceFlow id="F2" sourceRef="T_Erfassen" targetRef="T_Belege" />
+    <bpmn:sequenceFlow id="F3" sourceRef="T_Belege" targetRef="T_Einreichen" />
+    <bpmn:sequenceFlow id="F4" sourceRef="T_Einreichen" targetRef="T_PruefenVG" />
+    <bpmn:sequenceFlow id="F5" sourceRef="T_PruefenVG" targetRef="GW_Freigabe" />
+    <bpmn:sequenceFlow id="F_Ja" name="ja" sourceRef="GW_Freigabe" targetRef="T_PruefenBH" />
+    <bpmn:sequenceFlow id="F_Nein" name="nein, Korrektur" sourceRef="GW_Freigabe" targetRef="T_Korrigieren" />
+    <bpmn:sequenceFlow id="F6" sourceRef="T_PruefenBH" targetRef="GW_Beleg" />
+    <bpmn:sequenceFlow id="F_Voll" name="ja" sourceRef="GW_Beleg" targetRef="T_Berechnen" />
+    <bpmn:sequenceFlow id="F_Fehlt" name="nein" sourceRef="GW_Beleg" targetRef="T_Rueckfrage" />
+    <bpmn:sequenceFlow id="F_Rueck2" sourceRef="T_Rueckfrage" targetRef="T_Korrigieren" />
+    <bpmn:exclusiveGateway id="GW_Korr" />
+    <bpmn:sequenceFlow id="F_KorrGW" sourceRef="T_Korrigieren" targetRef="GW_Korr" />
+    <bpmn:sequenceFlow id="F_Korr" sourceRef="GW_Korr" targetRef="T_Einreichen" />
+    <bpmn:sequenceFlow id="F7" sourceRef="T_Berechnen" targetRef="T_Auszahlen" />
+    <bpmn:sequenceFlow id="F8" sourceRef="T_Auszahlen" targetRef="End_Erstattet" />
+    <bpmn:sequenceFlow id="F_Abl" sourceRef="GW_Korr" targetRef="End_Abgelehnt" />
+    <bpmn:textAnnotation id="A1"><bpmn:text>Einreichung spätestens 30 Tage nach Reiseende</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As1" sourceRef="Start" targetRef="A1" />
+    <bpmn:textAnnotation id="A2"><bpmn:text>Belege ab 25 EUR sind Pflicht; Bewirtungsbelege mit Anlass und Teilnehmenden</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As2" sourceRef="T_Belege" targetRef="A2" />
+    <bpmn:textAnnotation id="A3"><bpmn:text>Ausnahme: Beträge über 1.000 EUR zusätzlich durch Bereichsleitung freigeben</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As3" sourceRef="T_PruefenVG" targetRef="A3" />
+    <bpmn:textAnnotation id="A4"><bpmn:text>Verpflegungspauschalen nach steuerlichen Sätzen; Abzug bei gestellten Mahlzeiten</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As4" sourceRef="T_Berechnen" targetRef="A4" />
+    <bpmn:textAnnotation id="A5"><bpmn:text>Auszahlung mit der nächsten Gehaltsabrechnung, bei Fremdwährung zum Tageskurs</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As5" sourceRef="T_Auszahlen" targetRef="A5" />
+    <bpmn:textAnnotation id="A6"><bpmn:text>Nach dreimaliger erfolgloser Korrektur gilt die Abrechnung als abgelehnt</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="As6" sourceRef="T_Korrigieren" targetRef="A6" />
+  </bpmn:process>
+</bpmn:definitions>

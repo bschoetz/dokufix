@@ -14,7 +14,7 @@
 //      columns as the x of each node's middle (raw), of which only the order
 //      counts, and appendDiagram() the author's model
 //   4. layoutGeometry() puts the nodes on a grid: those columns, the
-//      lanes, and rows within each lane. The rules R1–R17 give each node its
+//      lanes, and rows within each lane. The rules R1–R18 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
 //      the labels get their places, in the size bpmn-js will draw them in
 //      (src/app/label-size.js, the text layout of diagram-js replicated, the
@@ -785,7 +785,7 @@ export function wayHits(way, boxes){
 // measure: the size { w, h } a label's text takes as bpmn-js draws it, and
 // with a width a text annotation's: measureLabel() (src/app/label-size.js),
 // in the page as in Node; a test may give another.
-// options: which of the rules R1–R17 apply, keyed as in DEFAULT_RULES; a key
+// options: which of the rules R1–R18 apply, keyed as in DEFAULT_RULES; a key
 // left out keeps its default, so { startAlign: false } leaves out R15 in this
 // call only. R7 and the router's second pass always apply.
 // An object keyed by the author's ids, without a prototype: an id such as
@@ -817,13 +817,13 @@ export function layoutGeometry(model, raw, measure = measureLabel, options = DEF
 // bundle reaches this module through src/app/diagrams.js). Keyed in the order
 // of the rules' numbers; layoutGrid() gives the order they run in.
 export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
-  gatewayLane: true,  // R1  a gateway or end event stands in the lane of its nearest predecessor; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
+  gatewayLane: true,  // R1  a gateway or end event stands in the lane of its nearest predecessor, a merge of several lanes in that of its next step; a parallel join in that of its split; a parallel split whose arms begin in three or more lanes in the middle one
   pathRows: true,     // R2  two ways of a decision that go on in one lane get rows of their own
   loopAbove: true,    // R3  the steps of a loop stand in the row above their gateway, from there to the left
   branchBelow: true,  // R4  a step that leaves the lane while another way stays in the row stands in the gateway's column, on the side of its target lane
   fan: true,          // R5  fan: the arms of a parallel block in other lanes take the row nearest the split; they leave the split and enter the join vertically, only the nearest arm horizontally by the east and west ports when none lies in the gateways' row
   jumpAbove: true,    // R6  the one step between the exit of a loop and a merge stands in the merge's column
-  block: true,        // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join
+  block: true,        // R8  a parallel block is as wide as the room between its gateways: every element of an arm stands between split and join, no foreign node inside, foreign flows around it where they can; the node before and the node after never in the column of split or join; a foreign node in the split's column moves the split right of it
   firstColumn: true,  // R9  (spike 2.26, Ben) the first shapes of the arms of a parallel gateway are centred on one x, one above the other
   rowProbe: true,     // R10 row trial: with crossings, each row R2 gives a way is tried on the other side; taken only with strictly fewer crossings
   endAlign: true,     // R11 ends aligned: an end event in the last column where its row is free up to it and the picture gets no worse; a soft recommendation
@@ -833,6 +833,7 @@ export const DEFAULT_RULES = /* @__PURE__ */ Object.freeze({
   startAlign: true,   // R15 start events in the first column, each in a row of its own, spread around their successor
   stagger: true,      // R16 two gateways above each other in one column: one tried a column further
   boundaryBelow: true, // R17 the way after a boundary event stands in a row below its host, in another lane in a row facing it (story 2.30)
+  handOver: true,     // R18 the one step of a decision's way in another lane or row tried in the gateway's column, the nodes of another flow between moved a column (Ben, 2026-10-07, x-wv6)
 });
 
 
@@ -943,7 +944,8 @@ const byCol = (g, ids) => [...ids].sort((p, q) => g.cells.get(p).col - g.cells.g
 // in three or more lanes stands in the middle one of them (with an even number
 // the upper of the two in the middle), so each arm has a port of its own; its
 // join follows it. Intermediate events stay in their lane (Ben: they belong to
-// the role, throw and catch above all).
+// the role, throw and catch above all). A merge whose ways come from several
+// lanes stands in the lane of the step after it (Ben, 2026-10-07, x-miwg4).
 function ruleGatewayLane(g, model){
   for (const id of byCol(g, model.nodes.filter(n => n.type === 'gateway' || n.tag === 'endEvent').map(n => n.id))){
     const c = g.cells.get(id), preds = g.fwdIn.get(id);
@@ -959,6 +961,13 @@ function ruleGatewayLane(g, model){
     }
     if (!from) from = preds.reduce((m, p) => g.cells.get(p.from).col > g.cells.get(m).col ? p.from : m, preds[0].from);
     c.lane = g.cells.get(from).lane;
+    // A merge whose ways come from several lanes (Ben, 2026-10-07, x-miwg4: "In Zweifelsfällen ist es besser, das
+    // Merge-Gateway in die Zeile des nächsten Prozessschrittes zu packen"): one way changes lane anyway, so the merge
+    // stands in the lane of the step after it. Not a parallel join, which follows its split; only where the step's
+    // lane is settled (no gateway, no end).
+    const outs = g.fwdOut.get(id), next = outs.length === 1 && g.cells.get(outs[0].to);
+    if (c.n.type === 'gateway' && c.n.tag !== 'parallelGateway' && preds.length >= 2 && new Set(preds.map(p => g.cells.get(p.from).lane)).size >= 2
+      && next && next.n.type !== 'gateway' && next.n.tag !== 'endEvent'){ c.lane = next.lane; continue; }
     // Into the lane of its ways (Ben, 2026-10-05, x-tm1 and x-rg3: gateways centred): a split whose three or more ways
     // all begin in one other lane stands in that lane; R9 puts it in the middle row of its ways. Only heads whose lane
     // is settled (no gateways, no ends); a gateway may lie in any lane, intermediate events never change theirs.
@@ -1391,7 +1400,7 @@ function ruleCompact(g, model, rules){
       const lanes = [b.P, b.J, ...b.inner].map(id => g.cells.get(id).lane);
       if (c.lane >= Math.min(...lanes) && c.lane <= Math.max(...lanes) && col > P.col && col < J.col) col = J.col + 1;
     }
-    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0);
+    col = Math.max(col, g.minCol?.get(c.n.id) ?? 0, g.alignCol?.get(c.n.id) ?? 0, g.asideCol?.get(c.n.id) ?? 0, g.blockCol?.get(c.n.id) ?? 0, g.handCol?.get(c.n.id) ?? 0);
     put(c, col);
     for (const f of g.fwdIn.get(c.n.id)){ const p = g.cells.get(f.from); if (isPlaced(p) && p.col === c.col && (p.lane !== c.lane || p.row !== c.row)) spans.push({ col: c.col, a: p, b: c }); }
   }
@@ -1439,6 +1448,76 @@ function ruleBlockBox(g, model){
   return moved;
 }
 
+// R8, the split's column (Ben, 2026-10-07, ref3: "End-Event ragt in den
+// Parallel-Block rein und sorgt dadurch für hässlichen Knick"): the column of a
+// parallel split belongs to its block, from the split down or up to the first
+// nodes of its arms, over the lanes between. A foreign node that is not pinned
+// and stands there (a short exception that took the next column of the decision
+// before the split) keeps its place, and the split moves a column right of it,
+// its arms and join with it, as Ben laid ref3 out by hand; it leaves its group
+// of R9 (the first nodes of a decision's ways), which would follow it. Sets g.blockCol,
+// which R7 reads; after R7 and the box, R7 runs again after it. Returns whether
+// a split moved.
+function ruleBlockColumn(g, model){
+  let moved = false;
+  const pos = c => c.lane * 1e6 + c.row;
+  for (const b of parallelBlocks(g, model)){
+    // Between the split and the first nodes of its arms, where its ways leave it up or down (Ben, 2026-10-07,
+    // x-wv6: reckoned to the block's farthest node, a separate flow far below the arms moved the split away).
+    const ids = [b.P, b.J, ...b.inner], P = g.cells.get(b.P);
+    const ps = [b.P, ...g.fwdOut.get(b.P).map(f => f.to)].map(id => pos(g.cells.get(id))), lo = Math.min(...ps), hi = Math.max(...ps);
+    const inside = [...g.cells.values()].filter(c => !ids.includes(c.n.id) && !c.pin && c.col === P.col && pos(c) > lo && pos(c) < hi);
+    if (!inside.length) continue;
+    g.blockCol.set(b.P, Math.max(g.blockCol.get(b.P) ?? 0, P.col + 1));
+    moved = true;
+  }
+  return moved;
+}
+
+// R18. The hand-over of a decision (Ben, 2026-10-07, x-wv6: "Versicherung
+// abschließen" stood a column right of its gateway, because a gateway of
+// another flow stood between them in its column, and the way "Ja" ran across
+// that flow's block). A trial, after R16: where the one step of a way of a
+// decision, a gateway that is no parallel one, stands in another lane or row a
+// column right of the gateway, and nodes between them in the gateway's column
+// keep the hand-over from going straight, those nodes are tried a column right
+// (a minimum column in R7; what follows them moves along), as Ben laid x-wv6 out
+// by hand. Only nodes of another flow, none the gateway reaches, none pinned
+// (r19: of two ways that leave a gateway down, the other does not push the
+// first away) and no start event, which R15 places (p-miwg1: a start event of
+// another flow moved, and the picture got worse). Per round the best trial is
+// taken where no measure of quality rises and the picture has fewer crossings,
+// or as many and fewer bends; up to four rounds. After R15, before the other
+// trials, which then decide on its columns (x-wv6: run last, it left the
+// merges of the lowest lane in one column).
+function ruleHandOver(g, model, measure, rules){
+  let best = runGrid(g, model, measure, rules);
+  const keys = ['crossings', 'through', 'overlaps', 'lines', 'labels', 'shared'];
+  const better = (t, b) => keys.every(k => t.q[k] <= b.q[k]) && (t.q.crossings < b.q.crossings || (t.q.crossings === b.q.crossings && t.q.bends < b.q.bends));
+  for (let round = 0; round < 4; round++){
+    // Columns and rows of the picture the trials give, not the grid's before finishGrid().
+    const col = c => best.cols.get(c), pos = c => best.at.get(c);
+    let pick = null;
+    for (const c of g.cells.values()){
+      const ins = g.fwdIn.get(c.n.id);
+      if (ins.length !== 1 || c.pin) continue;
+      const p = g.cells.get(ins[0].from);
+      if (p.n.type !== 'gateway' || p.n.tag === 'parallelGateway' || pos(p) === pos(c) || col(c) !== col(p) + 1) continue;
+      const lo = Math.min(pos(p), pos(c)), hi = Math.max(pos(p), pos(c));
+      const between = [...g.cells.values()].filter(o => o !== p && o !== c && col(o) === col(p) && pos(o) > lo && pos(o) < hi);
+      if (!between.length || between.some(o => o.pin || o.n.tag === 'startEvent' || g.reachable(p.n.id).has(o.n.id))) continue;
+      const was = new Map(between.map(o => [o, g.handCol.get(o.n.id)]));
+      for (const o of between) g.handCol.set(o.n.id, col(p) + 1);
+      const t = runGrid(g, model, measure, rules);
+      if (better(t, pick ? pick.t : best)) pick = { between, to: col(p) + 1, t };
+      for (const [o, w] of was) if (w === undefined) g.handCol.delete(o.n.id); else g.handCol.set(o.n.id, w);
+    }
+    if (!pick) break;
+    for (const o of pick.between) g.handCol.set(o.n.id, pick.to);
+    best = pick.t;
+  }
+}
+
 // The rules on the grid, then the grid in pixels with the flows routed on it:
 // the finished DI.
 //
@@ -1462,6 +1541,8 @@ function ruleBlockBox(g, model){
 //        rows R2 and R5 gave, skips pins
 //   R15  the starts, after R9, whose rows it may move with the start's
 //        successor
+//   R18  a trial, after R15, whose starts it leaves in place, and before the
+//        other trials, which decide on its columns; g.handCol, which R7 reads
 // From here each rule is a trial: it lays the picture out to the end (runGrid():
 // R7, R8, the router; finishGrid()) and keeps a change only where the picture
 // gets no worse.
@@ -1485,6 +1566,8 @@ function layoutGrid(model, raw, measure, rules){
   if (rules.jumpAbove) ruleJumpAbove(g, model);
   if (rules.firstColumn) ruleFirstColumn(g, model);
   if (rules.startAlign) ruleStartAlign(g, model);
+  g.handCol = new Map();
+  if (rules.handOver) ruleHandOver(g, model, measure, rules);
   if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
   if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
   if (rules.combProbe) ruleCombProbe(g, model, measure, rules);
@@ -1557,8 +1640,10 @@ function runGrid(g, model, measure, rules){
     const before = new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
     const di = finishGrid(g, model, measure, rules, reroute);
     const cols = new Map([...g.cells.values()].map(c => [c, c.col]));
+    // Where each node ends up, by lane and row (R8 and R15 move rows in finishGrid()), for R18.
+    const at = new Map([...g.cells.values()].map(c => [c, c.lane * 1e6 + c.row]));
     for (const [c, v] of before) Object.assign(c, v);
-    return { di, q: gridQuality(di, model), cols, last: Math.max(...cols.values()) };
+    return { di, q: gridQuality(di, model), cols, at, last: Math.max(...cols.values()) };
   };
   // The router's second pass makes each flow cheaper, the picture not always better: both are reckoned, the better
   // one taken (crossings, flows through nodes, overlaps, lines, labels, shared pieces, bends).
@@ -1579,21 +1664,32 @@ function runGrid(g, model, measure, rules){
 // nodes, lines or labels on flows, and without overlapping nodes; else R2's
 // row stays. Guarantee: the trial never makes the picture worse. Ben's rule
 // (2026-10-05, after x-rg2 and x-wv4): no swap with more breaks, no swap with
-// more crossings. The lane gets narrower again by itself, since the bands come
+// more crossings. The crossings count the message flows too, and no swap adds
+// bends to them; a swap with as many crossings is taken where the message
+// flows bend less and nothing else gets worse (Ben, 2026-10-07, b-wv2: the way
+// that sends messages to a black box below was swapped above, each message
+// bending twice around the other way). The lane gets narrower again by itself, since the bands come
 // from the rows taken.
 function ruleRowProbe(g, model, measure, rules){
   const snap = () => new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
   const restore = m => { for (const [c, v] of m) Object.assign(c, v); };
   const run = () => runGrid(g, model, measure, rules);
   let best = run();
+  // A swap that leaves the crossings as they are counts where the message flows bend less (Ben, 2026-10-07, b-wv2:
+  // the way that sends the messages to a black box below took the row above, and each message bent twice around
+  // the other way): no measure of the sequence flows gets worse, their bends neither.
+  // The crossings of all flows, message flows too; a swap never adds bends to the message flows.
+  const cross = q => q.crossings + q.msgCrossings;
+  const fewer = t => t.q.msgBends <= best.q.msgBends && (cross(t.q) < cross(best.q)
+    || (cross(t.q) === cross(best.q) && t.q.msgBends < best.q.msgBends && t.q.bends <= best.q.bends && t.q.shared <= best.q.shared));
   for (const grp of g.pathRowGroups){
-    if (!best.q.crossings) break;
+    if (!cross(best.q) && !best.q.msgBends) break;
     const cells = grp.ids.map(x => g.cells.get(x)).filter(c => c.lane === grp.lane && c.row === grp.row && !c.pin);
     if (!cells.length) continue;
     const keep = snap();
     for (const c of cells) c.row = -c.row;
     const t = run();
-    if (t.q.crossings < best.q.crossings && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
+    if (fewer(t) && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
     else restore(keep);
   }
   return best;
@@ -1879,7 +1975,20 @@ function gridQuality(di, model){
   for (const n of model.nodes){ const b = di.labels[n.id]; if (b && hits(b, f => model.flows.some(x => x.id === f && (x.from === n.id || x.to === n.id)))) labels++; }
   for (const f of model.flows){ const b = di.flowLabels[f.id]; if (b && hits(b, x => x === f.id)) labels++; }
   const bends = model.flows.reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
-  return { crossings, through, overlaps, lines, labels, shared: shared.length, bends };
+  // The message flows' crossings (with any flow) and bends, for R10 alone (Ben, 2026-10-07, b-wv2).
+  const msgBends = (model.messages || []).reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
+  let msgCrossings = 0;
+  const msgSegs = [];
+  for (const m of model.messages || []){ const pts = di.flows[m.id] || []; for (let i = 1; i < pts.length; i++) msgSegs.push({ f: m.id, a: pts[i - 1], b: pts[i] }); }
+  for (const p of msgSegs) for (const q of [...segs, ...msgSegs]){
+    if (p.f === q.f || (msgSegs.includes(q) && q.f < p.f)) continue;
+    const ph = p.a[1] === p.b[1], qh = q.a[1] === q.b[1];
+    if (ph === qh) continue;
+    const [h, v] = ph ? [p, q] : [q, p];
+    const x = v.a[0], y = h.a[1];
+    if (x > Math.min(h.a[0], h.b[0]) && x < Math.max(h.a[0], h.b[0]) && y > Math.min(v.a[1], v.b[1]) && y < Math.max(v.a[1], v.b[1])) msgCrossings++;
+  }
+  return { crossings, through, overlaps, lines, labels, shared: shared.length, bends, msgBends, msgCrossings };
 }
 
 // From R7 to the finished DI: close the columns, bands, router, pixels, labels.
@@ -1897,7 +2006,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
       for (const [c, col] of orig) c.col = col;
       ruleCompact(g, model, rules);
       let settled = true;
-      for (const grp of g.columnGroups || []){
+      for (const all of g.columnGroups || []){
+        // A split R8 moved off a foreign node in its column (ruleBlockColumn()) leaves its group: else the group
+        // followed it, the foreign node with it.
+        const grp = all.filter(x => !g.blockCol.has(x));
+        if (!grp.length) continue;
         const cols = grp.map(x => g.cells.get(x).col), max = Math.max(...cols);
         if (cols.every(c => c === max)) continue;
         settled = false;
@@ -1906,9 +2019,11 @@ function finishGrid(g, model, measure, rules, reroute = true){
       if (settled) break;
     }
   };
+  g.blockCol = new Map();
   compactAll();
   let boxed = false;
   for (let round = 0; rules.block && round < 3 && ruleBlockBox(g, model); round++){ boxed = true; compactAll(); }
+  for (let round = 0; rules.block && round < 3 && ruleBlockColumn(g, model); round++) compactAll();
   // Where the box moved rows, the starts dock to their successor again (R15).
   if (boxed && rules.startAlign && redockStarts(g, model)) compactAll();
 

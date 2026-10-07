@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Urlaub" targetNamespace="http://dokufix.example/urlaub">
+  <bpmn:collaboration id="Collaboration_Urlaub">
+    <bpmn:participant id="Participant_Urlaub" name="Urlaubsantrag" processRef="Process_Urlaub"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Urlaub" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Urlaub">
+      <bpmn:lane id="Lane_Mitarbeiter" name="Mitarbeiter">
+        <bpmn:flowNodeRef>Start_Urlaubswunsch</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Antrag</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ablehnung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Neu</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Verzicht</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Genehmigt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Vorgesetzte" name="Vorgesetzte">
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Genehmigt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Personal" name="Personalabteilung">
+        <bpmn:flowNodeRef>Task_Eintragen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bestaetigung</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Urlaubswunsch" name="Urlaubswunsch">
+      <bpmn:outgoing>Flow_1</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:userTask id="Task_Antrag" name="Urlaubsantrag stellen">
+      <bpmn:incoming>Flow_1</bpmn:incoming>
+      <bpmn:incoming>Flow_8</bpmn:incoming>
+      <bpmn:outgoing>Flow_2</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:userTask id="Task_Pruefen" name="Antrag prüfen">
+      <bpmn:incoming>Flow_2</bpmn:incoming>
+      <bpmn:outgoing>Flow_3</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Genehmigt" name="Genehmigt?">
+      <bpmn:incoming>Flow_3</bpmn:incoming>
+      <bpmn:outgoing>Flow_4</bpmn:outgoing>
+      <bpmn:outgoing>Flow_6</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:serviceTask id="Task_Eintragen" name="Urlaub im System eintragen">
+      <bpmn:incoming>Flow_4</bpmn:incoming>
+      <bpmn:outgoing>Flow_5</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:sendTask id="Task_Bestaetigung" name="Bestätigung versenden">
+      <bpmn:incoming>Flow_5</bpmn:incoming>
+      <bpmn:outgoing>Flow_10</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Genehmigt" name="Urlaub genehmigt">
+      <bpmn:incoming>Flow_10</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:userTask id="Task_Ablehnung" name="Ablehnung zur Kenntnis nehmen">
+      <bpmn:incoming>Flow_6</bpmn:incoming>
+      <bpmn:outgoing>Flow_7</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="GW_Neu" name="Neuen Antrag stellen?">
+      <bpmn:incoming>Flow_7</bpmn:incoming>
+      <bpmn:outgoing>Flow_8</bpmn:outgoing>
+      <bpmn:outgoing>Flow_9</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:endEvent id="End_Verzicht" name="Kein Urlaub">
+      <bpmn:incoming>Flow_9</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Urlaubswunsch" targetRef="Task_Antrag"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Antrag" targetRef="Task_Pruefen"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Pruefen" targetRef="GW_Genehmigt"/>
+    <bpmn:sequenceFlow id="Flow_4" name="ja" sourceRef="GW_Genehmigt" targetRef="Task_Eintragen"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="Task_Eintragen" targetRef="Task_Bestaetigung"/>
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Bestaetigung" targetRef="End_Genehmigt"/>
+    <bpmn:sequenceFlow id="Flow_6" name="nein" sourceRef="GW_Genehmigt" targetRef="Task_Ablehnung"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="Task_Ablehnung" targetRef="GW_Neu"/>
+    <bpmn:sequenceFlow id="Flow_8" name="ja" sourceRef="GW_Neu" targetRef="Task_Antrag"/>
+    <bpmn:sequenceFlow id="Flow_9" name="nein" sourceRef="GW_Neu" targetRef="End_Verzicht"/>
+  </bpmn:process>
+</bpmn:definitions>

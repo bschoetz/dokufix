@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  id="Definitions_Kredit"
+                  targetNamespace="http://example.org/bpmn/kredit">
+  <bpmn:message id="Msg_Antrag" name="Kreditantrag" />
+  <bpmn:message id="Msg_Anfrage" name="Bonitätsanfrage" />
+  <bpmn:message id="Msg_Auskunft" name="Bonitätsauskunft" />
+  <bpmn:message id="Msg_Zusage" name="Zusage mit Vertrag" />
+  <bpmn:message id="Msg_Absage" name="Absage" />
+
+  <bpmn:collaboration id="Collaboration_Kredit">
+    <bpmn:participant id="Participant_Kunde" name="Kunde" />
+    <bpmn:participant id="Participant_Bank" name="Bank" processRef="Process_Bank" />
+    <bpmn:participant id="Participant_Auskunftei" name="Auskunftei" />
+    <bpmn:messageFlow id="Flow_Msg_Antrag" name="Kreditantrag" sourceRef="Participant_Kunde" targetRef="Start_Antrag" messageRef="Msg_Antrag" />
+    <bpmn:messageFlow id="Flow_Msg_Anfrage" name="Bonitätsanfrage" sourceRef="Task_BonitaetAnfragen" targetRef="Participant_Auskunftei" messageRef="Msg_Anfrage" />
+    <bpmn:messageFlow id="Flow_Msg_Auskunft" name="Bonitätsauskunft" sourceRef="Participant_Auskunftei" targetRef="Task_AuskunftEmpfangen" messageRef="Msg_Auskunft" />
+    <bpmn:messageFlow id="Flow_Msg_Zusage" name="Zusage mit Vertrag" sourceRef="Task_ZusageSenden" targetRef="Participant_Kunde" messageRef="Msg_Zusage" />
+    <bpmn:messageFlow id="Flow_Msg_Absage" name="Absage" sourceRef="Task_AbsageSenden" targetRef="Participant_Kunde" messageRef="Msg_Absage" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Bank" name="Kreditantrag bearbeiten" isExecutable="false">
+    <bpmn:startEvent id="Start_Antrag" name="Kreditantrag eingegangen">
+      <bpmn:outgoing>SF_1</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MED_Antrag" messageRef="Msg_Antrag" />
+    </bpmn:startEvent>
+    <bpmn:sendTask id="Task_BonitaetAnfragen" name="Bonität anfragen" messageRef="Msg_Anfrage">
+      <bpmn:incoming>SF_1</bpmn:incoming>
+      <bpmn:outgoing>SF_2</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:receiveTask id="Task_AuskunftEmpfangen" name="Bonitätsauskunft empfangen" messageRef="Msg_Auskunft">
+      <bpmn:incoming>SF_2</bpmn:incoming>
+      <bpmn:outgoing>SF_3</bpmn:outgoing>
+    </bpmn:receiveTask>
+    <bpmn:userTask id="Task_Entscheiden" name="Über Kreditantrag entscheiden">
+      <bpmn:incoming>SF_3</bpmn:incoming>
+      <bpmn:outgoing>SF_4</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:exclusiveGateway id="Gateway_Entscheidung" name="Kredit bewilligt?">
+      <bpmn:incoming>SF_4</bpmn:incoming>
+      <bpmn:outgoing>SF_Ja</bpmn:outgoing>
+      <bpmn:outgoing>SF_Nein</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sendTask id="Task_ZusageSenden" name="Zusage mit Vertrag senden" messageRef="Msg_Zusage">
+      <bpmn:incoming>SF_Ja</bpmn:incoming>
+      <bpmn:outgoing>SF_5</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:sendTask id="Task_AbsageSenden" name="Absage senden" messageRef="Msg_Absage">
+      <bpmn:incoming>SF_Nein</bpmn:incoming>
+      <bpmn:outgoing>SF_6</bpmn:outgoing>
+    </bpmn:sendTask>
+    <bpmn:endEvent id="End_Zusage" name="Kredit zugesagt">
+      <bpmn:incoming>SF_5</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:endEvent id="End_Absage" name="Kredit abgelehnt">
+      <bpmn:incoming>SF_6</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SF_1" sourceRef="Start_Antrag" targetRef="Task_BonitaetAnfragen" />
+    <bpmn:sequenceFlow id="SF_2" sourceRef="Task_BonitaetAnfragen" targetRef="Task_AuskunftEmpfangen" />
+    <bpmn:sequenceFlow id="SF_3" sourceRef="Task_AuskunftEmpfangen" targetRef="Task_Entscheiden" />
+    <bpmn:sequenceFlow id="SF_4" sourceRef="Task_Entscheiden" targetRef="Gateway_Entscheidung" />
+    <bpmn:sequenceFlow id="SF_Ja" name="ja" sourceRef="Gateway_Entscheidung" targetRef="Task_ZusageSenden" />
+    <bpmn:sequenceFlow id="SF_Nein" name="nein" sourceRef="Gateway_Entscheidung" targetRef="Task_AbsageSenden" />
+    <bpmn:sequenceFlow id="SF_5" sourceRef="Task_ZusageSenden" targetRef="End_Zusage" />
+    <bpmn:sequenceFlow id="SF_6" sourceRef="Task_AbsageSenden" targetRef="End_Absage" />
+  </bpmn:process>
+</bpmn:definitions>

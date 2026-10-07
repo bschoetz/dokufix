@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/spike222">
+  <bpmn:collaboration id="C"><bpmn:participant id="Pp" name="Pool" processRef="P"/></bpmn:collaboration>
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="L1"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>a</bpmn:flowNodeRef><bpmn:flowNodeRef>g</bpmn:flowNodeRef><bpmn:flowNodeRef>x</bpmn:flowNodeRef><bpmn:flowNodeRef>b</bpmn:flowNodeRef><bpmn:flowNodeRef>z</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s"/><bpmn:task id="a" name="Prüfen"/><bpmn:exclusiveGateway id="g" name="In Ordnung?"/><bpmn:task id="x" name="Nacharbeiten"/><bpmn:task id="b" name="Versenden"/><bpmn:endEvent id="z"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="a"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="a" targetRef="g"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="g" targetRef="b" name="ja"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="g" targetRef="x" name="nein, Mängel gefunden"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="x" targetRef="a" name="erneut prüfen"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="b" targetRef="z"/>
+  </bpmn:process>
+</bpmn:definitions>
