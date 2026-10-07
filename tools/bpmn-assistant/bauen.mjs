@@ -3,7 +3,8 @@
 // src/app/bpmn-layout.js, mit allen Regeln, mit einem Satz, was die Ansicht ausmacht, Brüchen, Zeit, Großansicht wie
 // in dokufix und Download als .bpmn und .svg; ein Fehler steht an Stelle des Diagramms. Dazu die Handreichung für
 // LLMs zum Kopieren und Herunterladen, sechs Beispiele und die Diagrammfarben (Vorlagen oder eigene). Wie die App:
-// bpmn-js 18.31.0 vom CDN (die Version von src/index.html), die Spalten und die Ordnung des Modells aus kanonisch()
+// bpmn-js 18.31.0 (die Version von src/index.html), seit 2026-10-07 in die Seite eingebettet statt vom CDN, damit sie
+// ohne Netz läuft, die Spalten und die Ordnung des Modells aus kanonisch()
 // (src/app/lmm.js, LMM, ohne Browser; seit 2026-10-07 ohne Mermaid, das die Seite deshalb nicht mehr lädt), die
 // Größe der Beschriftungen aus measureLabel() (src/app/label-size.js, ohne Browser, in der Schrift und den Größen
 // von bpmn-js), die Farben aus den Dokumentstilen von dist/dokufix.html. Dazu die Anordnung
@@ -72,6 +73,26 @@ const balBundle = fs.readFileSync(path.join(VENDOR, 'bpmn-auto-layout.min.js'), 
 const balNotice = fs.readFileSync(path.join(VENDOR, 'bpmn-auto-layout.LIZENZEN.txt'), 'utf8');
 const BAL_VERSION = /bpmn-auto-layout ([^)\s]+)\)/.exec(balNotice)[1];
 
+// bpmn-js 18.31.0, die Dateien, die die Seite bis 2026-10-07 vom CDN lud (Ben: „einfach einbetten, dann ist er
+// offlinetauglich“), unverändert aus dem Paket (dist/ und dist/assets/), in vendor/bpmn-js/: der Viewer mit seinem
+// Stylesheet im Kopf der Seite, der Modellierer mit seinen zwei Stylesheets (das zweite trägt die Schrift der
+// Werkzeugleiste als data:-URL) als Blöcke, die erst beim ersten Öffnen ausgeführt werden. Davor der Text der
+// bpmn.io License aus der Lizenzliste des Produkts (src/app/licences.js); das Logo, das sie verlangt, zeichnen
+// Viewer und Modellierer selbst. Keine Datei darf das Element beenden, in dem sie steht, noch ein Skript öffnen.
+const BPMN_JS = path.join(VENDOR, 'bpmn-js');
+const bpmnJs = name => {
+  const text = fs.readFileSync(path.join(BPMN_JS, name), 'utf8');
+  if (/<\/?(script|style)/i.test(text)) throw new Error('vendor/bpmn-js/' + name + ' enthält ein Tag script oder style');
+  return text;
+};
+const viewerJs = bpmnJs('bpmn-navigated-viewer.production.min.js');
+const viewerCss = bpmnJs('diagram-js.css');
+const modelerJs = bpmnJs('bpmn-modeler.production.min.js');
+const modelerCss = bpmnJs('bpmn-js.css') + '\n' + bpmnJs('bpmn-embedded.css');
+const bpmnJsEntry = NOTICES.find(n => n.package === 'bpmn-js');
+const bpmnJsNotice = [bpmnJsEntry.name + ' ' + bpmnJsEntry.version, ...bpmnJsEntry.copyright, LICENCE_TEXTS[bpmnJsEntry.licence].title, ...LICENCE_TEXTS[bpmnJsEntry.licence].paragraphs]
+  .join('\n\n').replace(/\*\//g, '* /');
+
 // Was im Bündel oben von anderen stammt: der Nachbau des Textlayouts von diagram-js (src/app/label-size.js) und der
 // Nachbau der Schichtung aus dem Swimlane-Layout von Mermaid (src/app/lmm.js), beide MIT, mit den Hinweisen, wie
 // sie die Lizenzliste des Produkts führt (src/app/licences.js); die wenigen Konstanten und Formeln aus dem
@@ -119,8 +140,14 @@ const html = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dokufix BPMN Assistant</title>
 <link rel="icon" type="image/svg+xml" href="${FAVICON}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/assets/diagram-js.css">
-<script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/bpmn-navigated-viewer.production.min.js"></script>
+<style>/*
+${bpmnJsNotice}
+*/
+${viewerCss}</style>
+<script>/*
+${bpmnJsNotice}
+*/
+${viewerJs}</script>
 <style>${docCss}</style>
 <style>
 :root{--bg:#fff;--fg:#1d1d1f;--mute:#6e6e73;--line:#e5e5ea;--acc:#0066cc;--err:#a50e0e;--errbg:#fce8e6}
@@ -287,6 +314,8 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 </dialog>
 <main id="out"></main>
 <script type="text/plain" id="dokufix-layout-js">${layoutJs}</script>
+<script type="text/plain" id="bpmn-modeler-js">${modelerJs}</script>
+<script type="text/plain" id="bpmn-modeler-css">${modelerCss}</script>
 <script>/*
 ${bundleNotice}
 */
@@ -886,25 +915,21 @@ function signalLines(xml, model){
   return { xml: add.length ? xml.replace('</bpmndi:BPMNPlane>', add.join('') + '</bpmndi:BPMNPlane>') : xml, count: add.length };
 }
 
-// Der Modellierer (bpmn-js Modeler 18.31.0, dieselbe Version wie der Viewer, vom
-// CDN): erst beim ersten Öffnen geladen. Sein Skript setzt wie das des Viewers
-// window.BpmnJS; der Viewer wird danach wieder eingesetzt, der Modeler bleibt
-// unter eigenem Namen. Über dem ganzen Fenster, in den Standardfarben von bpmn-js.
-const MODELER_CDN = 'https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/';
+// Der Modellierer (bpmn-js Modeler 18.31.0, dieselbe Version wie der Viewer, in
+// der Seite in den Blöcken #bpmn-modeler-js und #bpmn-modeler-css): erst beim
+// ersten Öffnen ausgeführt. Sein Skript setzt wie das des Viewers window.BpmnJS;
+// der Viewer wird danach wieder eingesetzt, der Modeler bleibt unter eigenem
+// Namen. Über dem ganzen Fenster, in den Standardfarben von bpmn-js.
 let Modeler = null, modeler = null;
 function loadModeler(){
   if (Modeler) return Promise.resolve(Modeler);
-  for (const css of ['assets/bpmn-js.css', 'assets/bpmn-font/css/bpmn-embedded.css']){
-    const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = MODELER_CDN + css; document.head.appendChild(l);
-  }
   const Viewer = window.BpmnJS;
-  return new Promise((resolve, reject) => {
-    const sc = document.createElement('script');
-    sc.src = MODELER_CDN + 'bpmn-modeler.production.min.js';
-    sc.onload = () => { Modeler = window.BpmnJS; window.BpmnJS = Viewer; resolve(Modeler); };
-    sc.onerror = () => { window.BpmnJS = Viewer; reject(new Error('Der Modellierer konnte nicht geladen werden (keine Verbindung zum CDN?).')); };
-    document.head.appendChild(sc);
-  });
+  const css = document.createElement('style'); css.textContent = $('bpmn-modeler-css').textContent; document.head.appendChild(css);
+  const sc = document.createElement('script'); sc.textContent = $('bpmn-modeler-js').textContent;
+  // Ein eingefügtes Skript läuft sofort; einen Fehler meldet es der Seite, nicht hier: dann ist BpmnJS noch der Viewer.
+  try { document.head.appendChild(sc); }
+  finally { if (window.BpmnJS !== Viewer) Modeler = window.BpmnJS; window.BpmnJS = Viewer; }
+  return Modeler ? Promise.resolve(Modeler) : Promise.reject(new Error('Der Modellierer konnte nicht geladen werden.'));
 }
 async function openModeler(title, xml){
   closeModeler(true);

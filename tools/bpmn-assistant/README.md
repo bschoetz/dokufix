@@ -14,6 +14,7 @@ npm run assistant    # schreibt dist/bpmn-assistant.html
 | `beispiele/` | die Beispieldiagramme; `beispiele.json` gibt Reihenfolge und Beschriftung |
 | `vendor/bpmn-auto-layout.min.js` | bpmn-auto-layout 2.0.0-alpha.2 von bpmn.io mit seinen Abhängigkeiten, fertig gebündelt (fremder Code, MIT) |
 | `vendor/bpmn-auto-layout.LIZENZEN.txt` | die Lizenzhinweise dieser Pakete, so wie sie vor dem Bündel in der Seite stehen |
+| `vendor/bpmn-js/` | bpmn-js 18.31.0, unverändert aus dem Paket: Viewer und Modellierer (`*.production.min.js`) mit ihren Stylesheets (`diagram-js.css`, `bpmn-js.css`, `bpmn-embedded.css` mit der Schrift der Werkzeugleiste); fremder Code, bpmn.io License |
 
 Die Module von dokufix kommen frisch aus `src/` (Layout, Messer der Beschriftungen, Downloads, Client des Layouts) und aus `tests/bpmn-rules.mjs` (Brüche); der Worker des Layouts als fertiger Block `#dokufix-layout-js` aus `dist/dokufix.html`, so wie die App ihn trägt.
 
@@ -26,3 +27,5 @@ Das Häkchen „Sprungbögen“ daneben (Prototyp, `src/app/line-jumps.js`) ist 
 Die Diagrammfarben beginnen mit der Vorlage „Gelb“ (von Ben gestaltet, 2026-10-07): Sie steht als erste in der Liste, gilt ohne gespeicherte Wahl und nach „Zurücksetzen“. „Blau (dokufix)“, die Farben der App, folgt als zweite. „Schwarzweiß mit Grau“ ist entfallen (2026-10-07). Eine im `localStorage` gespeicherte Wahl bleibt, auch eine dieser entfallenen Vorlage, dann als „Eigene“.
 
 Das Favicon ist ein exklusives Gateway mit Fragezeichen in den Gateway-Farben der Vorlage „Gelb“, als SVG in der Seite (`FAVICON` in `bauen.mjs`).
+
+Der Assistent braucht kein Netz (seit 2026-10-07): bpmn-js, Viewer wie Modellierer, ist mit seinen Stylesheets in die Seite eingebettet, vor ihm der Text der bpmn.io License; der Modellierer wird erst beim ersten „Bearbeiten“ ausgeführt. Die Seite wird dadurch rund 0,9 MB größer. Nur die Links der Seite (Camunda Modeler, demo.bpmn.io) führen ins Netz.
