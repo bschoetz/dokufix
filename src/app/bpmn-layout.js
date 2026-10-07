@@ -3511,7 +3511,15 @@ function insertCollaboration(text, model){
 // diagram }: the XML and the id of the inserted BPMNDiagram, which bpmn-js is
 // told to open, since it opens the first diagram, and that may be an empty
 // one of the author's.
-export function appendDiagram(xml, model, di){
+// options: mergeMarker, true unless the X of a merging exclusive gateway is
+// left off. bpmn-js draws the X only with isMarkerVisible="true", so every
+// exclusive gateway gets it by default; with false, a merge (two or more flows
+// in, at most one out, counted in the author's model, so a flow from a
+// boundary event counts at the event) gets none and is drawn as an empty
+// diamond, as Ben laid out by hand and finds easier to read. Both are valid
+// BPMN 2.0 and mean the same; the Camunda Modeler turns the X back on by hand.
+// Not a rule of DEFAULT_RULES: the geometry stays the same.
+export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
   const text = insertCollaboration(relane(String(xml), model, di), model);
   // Comments, CDATA sections and PIs are blanked out first: a closing tag or an
   // id written in one is not the XML's.
@@ -3529,7 +3537,9 @@ export function appendDiagram(xml, model, di){
     '    <bpmndi:BPMNPlane id="' + esc(fresh('dokufix_plane')) + '" bpmnElement="' + esc(model.plane) + '">\n';
   for (const p of model.pools) if (p.id && di.pools[p.id]) out += shape(p.id, di.pools[p.id], ' isHorizontal="true"');
   for (const l of model.lanes) if (!l.synthetic) out += shape(l.id, di.lanes[l.id], ' isHorizontal="true"');
-  for (const n of model.nodes) out += shape(n.id, di.nodes[n.id], n.tag === 'exclusiveGateway' ? ' isMarkerVisible="true"' : '', di.labels[n.id]);
+  const count = (end, id) => model.flows.filter(f => f[end] === id).length;
+  const marker = n => n.tag === 'exclusiveGateway' && (mergeMarker || count('to', n.id) < 2 || count('from', n.id) > 1);
+  for (const n of model.nodes) out += shape(n.id, di.nodes[n.id], marker(n) ? ' isMarkerVisible="true"' : '', di.labels[n.id]);
   for (const b of model.boundaries || []) out += shape(b.id, di.nodes[b.id], '', di.labels[b.id]);
   for (const n of model.notes || []) out += shape(n.id, di.notes[n.id]);
   for (const f of model.flows){

@@ -11,8 +11,8 @@
 //
 // The protocol: once loaded, { ready: true } out, unasked, so that the page
 // knows the worker started (a worker that never says so is taken for one that
-// does not start, src/app/layout-client.js); then a message { id, xml } in,
-// { id, ok, result | error } back (answerLayout() of
+// does not start, src/app/layout-client.js); then a message { id, xml,
+// options } in, { id, ok, result | error } back (answerLayout() of
 // src/app/bpmn-layout-job.js). The worker keeps no state between messages.
 import { answerLayout } from './app/bpmn-layout-job.js';
 

@@ -71,12 +71,12 @@ test('the time limit is 120 s, and the reason says it in seconds', () => {
   assert.equal(layoutTimeLimitText(50), 'Das Layout hat die Zeitgrenze von 0,05 s überschritten.');
 });
 
-test('a worker that answers: the result is layoutJob()\'s, the worker is made once and the requests go one after the other', async () => {
+test('a worker that answers: the result is layoutJob()\'s, the worker is made once, the requests go one after the other with their options', async () => {
   const { made, makeWorker } = fakeWorkers();
   const timers = fakeTimers(), log = quiet();
   const client = makeLayoutClient({ makeWorker, timers, log });
   assert.equal(made.length, 0, 'no worker before the first request');
-  const first = client.layout(XML), second = client.layout(OTHER);
+  const first = client.layout(XML), second = client.layout(OTHER, { options: { mergeMarker: false } });
   assert.equal(made.length, 1);
   const w = made[0];
   assert.deepEqual(w.sent.map(m => m.id), [1], 'the second waits for the first');
@@ -87,9 +87,9 @@ test('a worker that answers: the result is layoutJob()\'s, the worker is made on
   w.answer();
   assert.deepEqual(await first, layoutJob(XML));
   assert.deepEqual(w.sent.map(m => m.id), [1, 2]);
-  assert.deepEqual(w.sent[1], { id: 2, xml: OTHER });
+  assert.deepEqual(w.sent[1], { id: 2, xml: OTHER, options: { mergeMarker: false } });
   w.answer();
-  assert.deepEqual(await second, layoutJob(OTHER));
+  assert.deepEqual(await second, layoutJob(OTHER, { mergeMarker: false }));
   // The worker stays for the next render.
   const third = client.layout(XML);
   w.answer();
@@ -122,7 +122,7 @@ test('a silent worker: after the time limit it is terminated, the request reject
   assert.ok(performance.now() - t >= 25, 'not before the limit');
   assert.equal(made[0].terminated, true);
   assert.equal(made.length, 2, 'the next request got a new worker');
-  assert.deepEqual(made[1].sent, [{ id: 2, xml: OTHER }]);
+  assert.deepEqual(made[1].sent, [{ id: 2, xml: OTHER, options: {} }]);
   // A late answer of the old worker is heard by nobody.
   made[0].answer(made[0].sent[0]);
   assert.equal(await settledYet(next), false);
@@ -389,7 +389,7 @@ test('a worker that never says it is ready, after one was heard from: the reques
   assert.equal(made[1].terminated, true);
   assert.equal(client.withoutWorker(), false);
   assert.equal(made.length, 3, 'the next request got a new worker');
-  assert.deepEqual(made[2].sent, [{ id: 4, xml: OTHER }]);
+  assert.deepEqual(made[2].sent, [{ id: 4, xml: OTHER, options: {} }]);
   made[2].ready();
   made[2].answer();
   assert.deepEqual(await next, layoutJob(OTHER));

@@ -26,6 +26,7 @@ import {
   growLane, labelRoom, nearestOnFlow, LAYOUT_NOTHING, layoutStrayText,
   noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS,
 } from '../src/app/bpmn-layout.js';
+import { layoutJob, answerLayout } from '../src/app/bpmn-layout-job.js';
 import { breaksOf } from './bpmn-rules.mjs';
 import { readFixture, readModel, fixtureNames, gridInput } from './bpmn-fixtures.mjs';
 import { measureLabel } from '../src/app/label-size.js';
@@ -385,6 +386,27 @@ test('the diagram part is added before the closing definitions tag; the author\'
   const before = ids(parse(xml)), after = ids(parse(out));
   assert.deepEqual(after.slice(0, before.length), before);
   assert.deepEqual(after.slice(before.length), ['dokufix_diagram', 'dokufix_plane', 'Pool_di', 'L1_di', 'L2_di', 'S_di', 'G_di', 'A_di', 'B_di', 'E_di', 'F1_di', 'F2_di', 'F3_di', 'F4_di', 'F5_di']);
+});
+
+// The X of exclusive gateways: X1 splits, MX takes two flows in and gives two out, M merges.
+const GATEWAYS = xmlOf('<bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:exclusiveGateway id="X1"/><bpmn:task id="A"/><bpmn:task id="B"/>' +
+  '<bpmn:exclusiveGateway id="MX"/><bpmn:task id="C"/><bpmn:task id="D"/><bpmn:exclusiveGateway id="M"/><bpmn:endEvent id="E"/>' +
+  [['S', 'X1'], ['X1', 'A'], ['X1', 'B'], ['A', 'MX'], ['B', 'MX'], ['MX', 'C'], ['MX', 'D'], ['C', 'M'], ['D', 'M'], ['M', 'E']]
+    .map(([from, to], i) => '<bpmn:sequenceFlow id="F' + i + '" sourceRef="' + from + '" targetRef="' + to + '"/>').join('') + '</bpmn:process>');
+const marked = xml => [...xml.matchAll(/bpmnElement="(\w+)" isMarkerVisible="true"/g)].map(m => m[1]);
+
+test('by default every exclusive gateway has its X, the merge included', () => {
+  assert.deepEqual(marked(layoutJob(GATEWAYS).xml), ['X1', 'MX', 'M']);
+});
+
+test('mergeMarker false leaves the X off a merge (two in, at most one out); a split and a gateway with two in and two out keep it', () => {
+  assert.deepEqual(marked(layoutJob(GATEWAYS, { mergeMarker: false }).xml), ['X1', 'MX']);
+});
+
+test('answerLayout() hands the options of the worker\'s message to the layout', () => {
+  const answer = answerLayout({ id: 7, xml: GATEWAYS, options: { mergeMarker: false } });
+  assert.equal(answer.ok, true);
+  assert.deepEqual(marked(answer.result.xml), ['X1', 'MX']);
 });
 
 test('the lane set follows the grid: the layout names each node\'s lane in laneOf, and that lane gets its flowNodeRef, not the one its box lies in', () => {

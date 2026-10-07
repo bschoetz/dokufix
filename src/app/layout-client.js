@@ -7,7 +7,7 @@ import { layoutJob } from './bpmn-layout-job.js';
 // docs/konzept-worker.md).
 //
 //   const client = makeLayoutClient();
-//   const { xml, open, leftOut } = await client.layout(source, { signal });
+//   const { xml, open, leftOut } = await client.layout(source, { signal, options });
 //
 // layout() gives what layoutJob() of src/app/bpmn-layout-job.js gives, and
 // throws what it throws, as an Error with the same message; so renderBpmn()
@@ -158,13 +158,13 @@ export function makeLayoutClient({ makeWorker = pageWorker, job: onPageJob = lay
         // next request starts; a promise of one is not waited for, so the
         // next starts beside it, and settle() has let go of its signal.
         let result, error = null;
-        try { result = onPageJob(job.xml); } catch (e){ error = e; }
+        try { result = onPageJob(job.xml, job.options); } catch (e){ error = e; }
         settle(job, error, result);
         continue;
       }
       running = job;
       job.timer = timers.setTimeout(() => { drop(); settle(job, new Error(layoutTimeLimitText(timeLimit))); next(); }, timeLimit);
-      worker.postMessage({ id: job.id, xml: job.xml });
+      worker.postMessage({ id: job.id, xml: job.xml, options: job.options });
     }
   }
   function receive(from, data){
@@ -212,11 +212,12 @@ export function makeLayoutClient({ makeWorker = pageWorker, job: onPageJob = lay
   }
 
   // The layout of one diagram's XML, in the worker where there is one.
-  // signal: an AbortSignal, or none.
-  function layout(xml, { signal } = {}){
+  // signal: an AbortSignal, or none; options: what layoutJob() takes
+  // (mergeMarker), handed to the worker or the job as they are.
+  function layout(xml, { signal, options = {} } = {}){
     return new Promise((resolve, reject) => {
       if (signal && signal.aborted) return reject(abortError());
-      const job = { id: ++ids, xml: String(xml), resolve, reject, signal };
+      const job = { id: ++ids, xml: String(xml), options, resolve, reject, signal };
       if (signal){
         job.onAbort = () => abort(job);
         signal.addEventListener('abort', job.onAbort, { once: true });

@@ -375,7 +375,7 @@ test('XML without coordinates through a worker: the notice counts in the contain
   await withLibrary(Viewer, async () => {
     const drawn = renderBpmn(d, { client, timers: clock.timers, frame: clock.frame, now: clock.now });
     await until(() => w.sent.length === 1, 'the XML went to the worker');
-    assert.deepEqual(w.sent[0], { id: 1, xml: WITHOUT_DI });
+    assert.deepEqual(w.sent[0], { id: 1, xml: WITHOUT_DI, options: {} });
     const notice = d.holder.firstElementChild;
     assert.equal(notice.getAttribute('class'), LAYOUT_NOTICE_CLASS);
     assert.equal(d.holder.textContent, '', 'the live region first, empty');

@@ -143,6 +143,7 @@ textarea{width:100%;height:220px;font:12px/1.45 ui-monospace,monospace;padding:1
 textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;background:#fff}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .bar .hint{flex-basis:100%;margin-top:4px}
+#merge-x-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px;cursor:pointer}
 .bar #theme-now{display:inline-flex;flex-direction:column;justify-content:space-between;height:34px;padding:2px 0;margin-left:4px}
 .bar #theme-name{display:block;flex:none;font-size:12px;line-height:14px;margin:0}
 #theme-sw{display:flex;gap:3px}#theme-sw i{width:12px;height:12px;border-radius:3px;border:1px solid #0002}
@@ -250,6 +251,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 <button id="go" class="primary">${ICON.play} Rendern</button>
 <button id="up" title="Eine .bpmn-Datei laden und rendern">${ICON.upload} Datei hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" hidden>
 <button id="theme-btn" title="Farben der Diagramme">${ICON.palette} Diagrammfarben ändern</button><span id="theme-now"><span class="hint" id="theme-name"></span><span id="theme-sw" aria-hidden="true"></span></span>
+<label id="merge-x-l" title="Ohne Häkchen zeichnet A2 exklusive Gateways, die zusammenführen, als leere Raute"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
 <span class="hint">Strg+Enter rendert. Ein Klick auf ein Diagramm öffnet die Großansicht (Strg+Mausrad zoomt, Escape schließt).</span>
 </div>
 </header>
@@ -762,6 +764,15 @@ $('file').onchange = async () => {
   render();
 };
 $('xml').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)){ e.preventDefault(); render(); } });
+// Das X an zusammenführenden exklusiven Gateways (mergeMarker von appendDiagram(), src/app/bpmn-layout.js): gesetzt wie
+// in der App; abgewählt zeichnet A2 solche Gateways als leere Raute. Gemerkt wie die übrigen Einstellungen; eine
+// Änderung ordnet neu an wie eine neue Eingabe.
+const MERGE_X_KEY = 'bpmn-assistant-merge-x';
+try { if (localStorage.getItem(MERGE_X_KEY) === 'aus') $('merge-x').checked = false; } catch {}
+$('merge-x').onchange = () => {
+  try { localStorage.setItem(MERGE_X_KEY, $('merge-x').checked ? 'an' : 'aus'); } catch {}
+  render();
+};
 
 // Was jede Ansicht ausmacht, ein Satz unter ihrer Überschrift.
 const ABOUT = {
@@ -1018,7 +1029,7 @@ async function render(){
     let laid = null, ms;
     try {
       const t0 = performance.now();
-      laid = await LAYOUT.layout(xml, { signal });
+      laid = await LAYOUT.layout(xml, { signal, options: { mergeMarker: $('merge-x').checked } });
       ms = performance.now() - t0;
     } catch (e){
       // Abgebrochen von einem neueren Rendern: dessen Abschnitte stehen schon da.

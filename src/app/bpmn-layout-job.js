@@ -31,19 +31,20 @@ import { parseXml, XmlError } from './xml-parser.js';
 // (src/app/label-size.js); no library is asked. kanonisch() hands the grid the
 // model in LMM's order, so that the picture does not depend on the order of
 // the XML; the author's model writes the diagram part, so that it keeps the
-// order of the XML.
-export function layoutJob(xml){
+// order of the XML. options: what appendDiagram() takes (mergeMarker).
+export function layoutJob(xml, options = {}){
   let parsed;
   try { parsed = parseXml(xml); }
   catch (e){ if (e instanceof XmlError) return { xml }; throw e; }
   const read = readProcess(parsed);
   if (!read) return { xml };
   const sorted = kanonisch(read.model);
-  const laidOut = appendDiagram(xml, read.model, layoutGeometry(sorted.model, lmmPositions(sorted.model, sorted.rank)));
+  const laidOut = appendDiagram(xml, read.model, layoutGeometry(sorted.model, lmmPositions(sorted.model, sorted.rank)), options);
   return { xml: laidOut.xml, open: laidOut.diagram, leftOut: read.leftOut.map(leftOutLine) };
 }
 
-// The answer to one message of the worker's protocol, { id, xml }:
+// The answer to one message of the worker's protocol, { id, xml, options }
+// (options, if any, for layoutJob()):
 // { id, ok: true, result } with the result of layoutJob(), or
 // { id, ok: false, error } with the message of whatever it threw. Never
 // throws, so that a worker always answers. Without the Worker API, so that
@@ -51,7 +52,7 @@ export function layoutJob(xml){
 export function answerLayout(message){
   const id = message ? message.id : undefined;
   try {
-    return { id, ok: true, result: layoutJob(String(message.xml)) };
+    return { id, ok: true, result: layoutJob(String(message.xml), message.options || {}) };
   } catch (e){
     return { id, ok: false, error: e && e.message ? String(e.message) : String(e) };
   }
