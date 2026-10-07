@@ -75,9 +75,9 @@ test('--check passes on the committed file', () => {
 });
 // app/gzip.js stands for the modules under src/app/: the script is bundled from
 // app.js and everything it imports.
-for (const name of ['doc.css', 'app.css', 'search.css', 'app.js', 'app/gzip.js', 'reader.js', 'demo.md', 'index.html']){
+for (const name of ['doc.css', 'app.css', 'search.css', 'app.js', 'app/gzip.js', 'reader.js', 'layout-worker.js', 'demo.md', 'index.html']){
   test('--check fails when ' + name + ' changed and dist/ was not rebuilt', () => {
-    const addition = { 'doc.css': '.dokufix-doc h6{color:red}\n', 'app.css': '.x{color:red}\n', 'search.css': '.search-x{color:red}\n', 'app.js': 'console.log("x");\n', 'app/gzip.js': 'console.log("x");\n', 'reader.js': 'console.log("x");\n', 'demo.md': 'Ein Satz mehr.\n', 'index.html': '<!-- x -->\n' }[name];
+    const addition = { 'doc.css': '.dokufix-doc h6{color:red}\n', 'app.css': '.x{color:red}\n', 'search.css': '.search-x{color:red}\n', 'app.js': 'console.log("x");\n', 'app/gzip.js': 'console.log("x");\n', 'reader.js': 'console.log("x");\n', 'layout-worker.js': 'console.log("x");\n', 'demo.md': 'Ein Satz mehr.\n', 'index.html': '<!-- x -->\n' }[name];
     const before = fs.readFileSync(committed);
     const r = build({ [name]: original(name) + addition }, ['--check'], committed);
     assert.equal(r.status, 1, r.stdout);
@@ -427,6 +427,53 @@ test('"</script" or "<!--" in the reader bundle: refused, with the reason', () =
   assert.doesNotThrow(() => assemble(original('index.html'), { ...parts, 'reader.js': 'x="<\\/script>"' }));
 });
 
+test('"</script" or "<!--" in the layout\'s worker: refused, with the reason', () => {
+  const parts = { 'doc.css': 'a{}', 'app.css': 'b{}', 'app.js': 'x=1', 'reader.js': 'x=1', 'layout.js': 'x="</script>"', 'demo.md': '{"text":""}', 'assets': '{}' };
+  assert.throws(() => assemble(original('index.html'), parts), e => e instanceof BuildError && /the layout's worker contains "<\/script"/.test(e.message));
+  assert.throws(() => assemble(original('index.html'), { ...parts, 'layout.js': 'x="<!--"' }), e => e instanceof BuildError && /the layout's worker contains "<!--"/.test(e.message));
+  assert.doesNotThrow(() => assemble(original('index.html'), { ...parts, 'layout.js': 'x="<\\/script>"' }));
+});
+
+// ---------- the layout's worker ----------
+const layoutBlock = html => {
+  const open = '<script type="text/plain" id="dokufix-layout-js">';
+  const from = html.indexOf(open) + open.length;
+  assert.ok(from >= open.length, 'block #dokufix-layout-js not found');
+  return html.slice(from, html.toLowerCase().indexOf('</script', from));
+};
+// src/layout-worker.js with what it imports, one minified IIFE in the data
+// block #dokufix-layout-js, of which the page makes a worker.
+test('the built file carries the layout\'s worker in a block that does not run; run as a worker with nothing of a page, it answers as layoutJob() does', async () => {
+  const html = fs.readFileSync(committed, 'utf8');
+  assert.equal(html.split('<script type="text/plain" id="dokufix-layout-js">').length, 2, 'one block, of a type that does not run');
+  const code = layoutBlock(html);
+  // The four modules of the layout and the protocol, about 98 KB (docs/konzept-worker.md); the bound says
+  // when it has grown by a tenth.
+  assert.ok(code.length > 80000 && code.length < 108000, code.length + ' B');
+  assert.match(code, /^\(\(\)=>\{[\s\S]*\}\)\(\);$/, 'one minified IIFE');
+  assert.ok(!/<\/script/i.test(code) && !code.includes('<!--'));
+  // Nothing of the page's, nothing of the editor's: neither a renderer nor the client of the worker.
+  assert.ok(!code.includes('--dokufix-bpmn-fill') && !code.includes('konnte nicht gezeichnet werden') && !code.includes('dokufix-layout-js'), 'the worker carries no renderer and no client');
+  // Run as a worker is: a global self and nothing else of a page, no document, no window, no DOMParser.
+  const { layoutJob } = await import('../src/app/bpmn-layout-job.js');
+  const { LAYOUT_NOTHING } = await import('../src/app/bpmn-layout.js');
+  const posted = [];
+  const self = { postMessage: m => posted.push(structuredClone(m)) };
+  vm.runInNewContext(code, { self });
+  assert.equal(typeof self.onmessage, 'function', 'it listens for messages when it is loaded');
+  assert.deepEqual(posted, [], 'and says nothing before it is asked');
+  const xml = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:task id="A" name="Tun"/>' +
+    '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="A"/><bpmn:dataStoreReference id="B"/></bpmn:process></bpmn:definitions>';
+  self.onmessage({ data: { id: 3, xml } });
+  self.onmessage({ data: { id: 4, xml: '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P"/></bpmn:definitions>' } });
+  self.onmessage({ data: { id: 5, xml: '<kein' } });
+  assert.deepEqual(posted, [
+    { id: 3, ok: true, result: layoutJob(xml) },
+    { id: 4, ok: false, error: LAYOUT_NOTHING },
+    { id: 5, ok: true, result: { xml: '<kein' } },
+  ]);
+  assert.deepEqual(posted[0].result.leftOut, ['dataStoreReference B: not laid out']);
+});
 // ---------- the reader bundle: table filter and search ----------
 const readerBlock = html => {
   const open = '<script type="text/plain" id="dokufix-reader-js">';
@@ -597,7 +644,7 @@ test('the reader bundle is the same with --dev: minified, so the readable file c
 });
 
 // ---------- a missing source, and the build started through a symlink ----------
-for (const name of ['index.html', 'doc.css', 'app.css', 'search.css', 'app.js', 'reader.js', 'demo.md']){
+for (const name of ['index.html', 'doc.css', 'app.css', 'search.css', 'app.js', 'reader.js', 'layout-worker.js', 'demo.md']){
   test(name + ' missing: exit 1, "source not found", nothing written', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'dokufix-build-'));
     fs.cpSync(srcDir, path.join(dir, 'src'), { recursive: true });
@@ -682,4 +729,10 @@ test('a file in src/assets/ that is not named <sha256>.<ext> of an image type: e
     assert.equal(r.status, 1, name + ': ' + r.stdout);
     assert.ok(r.stderr.includes('src/assets/' + name + ': an image is named <sha256>.<ext>'), r.stderr);
   }
+});
+
+test('the script and the reader bundle carry nothing of the worker\'s block, and the reader bundle nothing of its client', () => {
+  const html = fs.readFileSync(committed, 'utf8');
+  assert.ok(!readerBlock(html).includes('dokufix-layout-js') && !readerBlock(html).includes('Diagramm wird angeordnet'), 'the reader bundle has no client of the worker');
+  assert.ok(!appScript(html).includes('self.onmessage'), 'the page\'s script does not answer as a worker');
 });

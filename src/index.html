@@ -97,6 +97,9 @@
 <!-- The reader bundle of the read-only exports "schlank" and "kompakt" (src/reader.js): the table filter and the search, with the panel's styles. It does not run here; the two exports copy it into their file. -->
 <script type="text/plain" id="dokufix-reader-js">{{slot:reader.js}}</script>
 
+<!-- The layout of BPMN without coordinates as the script of a Web Worker (src/layout-worker.js). It does not run here; the page makes a worker of it, so that a large process does not stop the page while it is laid out. -->
+<script type="text/plain" id="dokufix-layout-js">{{slot:layout.js}}</script>
+
 <!-- Storage-error banner (hidden until init detects IDB failure). It lies over the top of the page, the "Editor" button included, so it can be closed. -->
 <div id="storage-error" hidden role="alert"
      style="position:fixed;top:0;left:0;right:0;background:#fee;border-bottom:1px solid #c44;color:#8b1300;padding:12px 52px 12px 18px;font:14px/1.4 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;z-index:9999">

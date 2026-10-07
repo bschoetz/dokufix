@@ -44,6 +44,14 @@
 //                      SEARCH_CSS (an esbuild define), and adds it to the file
 //                      it runs in: the panel has one stylesheet, in the page
 //                      and in an export
+//   {{slot:layout.js}} the layout of BPMN without coordinates as the script of
+//                      a Web Worker: src/layout-worker.js with the modules it
+//                      imports, bundled into one IIFE, minified also with
+//                      --dev, inside <script type="text/plain"
+//                      id="dokufix-layout-js">, where it does not run; the
+//                      page makes a classic worker of it through a Blob URL
+//                      (src/app/layout-client.js). The script carries the same
+//                      modules for a page without a worker
 //   {{slot:assets}}    the images of the demo text, from src/assets/, as
 //                      {"<sha256>": {"m": mime, "d": base64}} inside the
 //                      #dokufix-assets block, which the page seeds into its
@@ -66,13 +74,14 @@
 //
 // The build exits 1, and writes nothing, neither file, when
 //   - a source is missing;
-//   - a slot is missing from the page, stands there twice, or is not one of the six;
+//   - a slot is missing from the page, stands there twice, or is not one of the seven;
 //   - a file in src/assets/ is not named <sha256>.<ext> by the SHA-256 of its
 //     bytes, or has a type an image of the page cannot have; the page refuses
 //     an image whose bytes do not give its hash;
 //   - the demo text or the showcase text refers to an image (#asset-<hash>) that
 //     src/assets/ does not hold; the message names the text;
-//   - the minified script or the reader bundle contains "</script" or "<!--",
+//   - the minified script, the reader bundle or the layout's worker contains
+//     "</script" or "<!--",
 //     or a minified stylesheet "</style": each would break its element, in the
 //     built file and in every file saved from it;
 //   - esbuild reports an error, such as a module that imports a name the other
@@ -97,7 +106,7 @@ const DEV = path.join(here, 'dist', 'dokufix.dev.html');
 // The committed showcase: the same page with src/showcase.md as its demo text.
 const SHOWCASE = path.join(here, 'dist', 'dokufix-showcase.html');
 
-export const SLOTS = ['doc.css', 'app.css', 'app.js', 'reader.js', 'demo.md', 'assets'];
+export const SLOTS = ['doc.css', 'app.css', 'app.js', 'reader.js', 'layout.js', 'demo.md', 'assets'];
 const SLOT_RE = /\{\{slot:([^{}]*)\}\}/g;
 
 export class BuildError extends Error {}
@@ -110,7 +119,8 @@ export function jsonForDataBlock(value){
 }
 
 // Puts the finished parts into the page. parts: { 'doc.css', 'app.css', 'app.js',
-// 'reader.js', 'demo.md', 'assets' }, each the text that replaces its slot.
+// 'reader.js', 'layout.js', 'demo.md', 'assets' }, each the text that replaces
+// its slot.
 export function assemble(template, parts){
   const found = [...template.matchAll(SLOT_RE)].map(m => m[1]);
   const problems = [];
@@ -122,7 +132,7 @@ export function assemble(template, parts){
   for (const name of new Set(found.filter(f => !SLOTS.includes(f)))){
     problems.push('unknown slot {{slot:' + name + '}} in index.html; the slots are ' + SLOTS.join(', '));
   }
-  for (const [name, what] of [['app.js', 'the minified script'], ['reader.js', 'the reader bundle']]){
+  for (const [name, what] of [['app.js', 'the minified script'], ['reader.js', 'the reader bundle'], ['layout.js', 'the layout\'s worker']]){
     const text = parts[name] || '';
     if (/<\/script/i.test(text)) problems.push(what + ' contains "</script"; it would end the script element early');
     if (text.includes('<!--')) problems.push(what + ' contains "<!--"; together with a "<script" behind it, it would keep the script element from ending');
@@ -224,6 +234,7 @@ export async function build(srcDir, options = {}){
   const docCss = read('doc.css'), appCss = read('app.css'), searchCss = read('search.css');
   read('app.js');   // esbuild reads them itself; this is for the message when one is missing
   read('reader.js');
+  read('layout-worker.js');
   let parts;
   try {
     // The panel's styles, minified once for the reader bundle, which is
@@ -238,6 +249,9 @@ export async function build(srcDir, options = {}){
       'app.js': await bundleScript(path.join(srcDir, 'app.js'), dev, options.out || DEV),
       // Minified with --dev as well: an export carries it as it is.
       'reader.js': await bundleScript(path.join(srcDir, 'reader.js'), false, null, { SEARCH_CSS: JSON.stringify(searchMin) }),
+      // Minified with --dev as well: the --dev script carries the same modules
+      // readable, for the page without a worker.
+      'layout.js': await bundleScript(path.join(srcDir, 'layout-worker.js'), false, null),
       'demo.md': jsonForDataBlock({ text: demo }),
       'assets': jsonForDataBlock(readAssets(path.join(srcDir, 'assets'), demo, demoName)),
     };
