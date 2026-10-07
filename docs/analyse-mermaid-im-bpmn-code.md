@@ -28,6 +28,7 @@ Mermaid bleibt auch nach der Ablösung in dokufix: Es zeichnet weiterhin die Dia
   - Es gibt keine Kopplung an eine Mermaid-Version und an eine Beta-Syntax mehr.
   - BPMN ohne Koordinaten wird auch ohne Mermaid gezeichnet.
   - Mehrere Fehler und Risiken der heutigen Nutzung verschwinden (Anhang B), etwa der Abbruch bei `%%{` in Beschriftungen.
+- **Die Komponente heißt arielle.** Der Name spielt auf die Meerjungfrau an. arielle kapselt alles, was von Mermaid übernommen ist, in einem eigenen Modul, sagt offen, dass es auf Mermaid beruht, und steht wie Mermaid unter der MIT-Lizenz (Abschnitt 4a).
 - **Empfehlung:** In einem ersten Schritt den Algorithmus exakt nachbauen und einhängen. Das Layout bleibt dabei unverändert und ist an den Fixtures prüfbar. Verbesserungen am Algorithmus folgen erst danach als eigene Schritte.
 
 ## Vorgehen
@@ -180,18 +181,44 @@ Daraus folgt:
 
 ## 4. Was sich beim Ersatz ändert
 
-Die Liste geht davon aus, dass der Nachbau als reine Funktion in `src/app/bpmn-layout.js` landet. Ein möglicher Name ist `layoutColumns(model)`. Sie gibt `{ nodes: { key: { cx } } }` zurück, sodass `layoutGeometry()` unverändert bleibt. Wo es eine Entscheidung braucht, steht sie in Abschnitt 7.
+Die Liste geht davon aus, dass der Nachbau als Komponente **arielle** in einem eigenen Modul `src/app/arielle.js` landet (Abschnitt 4a), als reine Funktion `arielle(model)`. Sie gibt `{ nodes: { key: { cx } } }` zurück, sodass `layoutGeometry()` unverändert bleibt. Wo es eine Entscheidung braucht, steht sie in Abschnitt 7.
+
+### 4a. Die Komponente arielle und ihre Lizenz
+
+**Ort.** Ein eigenes Modul `src/app/arielle.js` mit der reinen Funktion `arielle(model)` (Modell aus `readProcess()`, Rückgabe `{ nodes: { key: { cx } } }`). Ihre Tests liegen in einer eigenen Datei, etwa `tests/arielle.test.mjs`. `src/app/bpmn-layout.js` und `src/app/bpmn.js` enthalten danach keinen von Mermaid übernommenen Code. Sie rufen arielle nur auf.
+
+**Warum ein eigenes Modul:** Die Grenze zwischen übernommenem und eigenem Code ist dann eine Dateigrenze. Lizenzkopf, Herkunftsangabe und Lizenzeintrag beziehen sich auf genau diese Datei. Wer später den Algorithmus durch einen eigenen ersetzt, tauscht ein Modul aus, ohne das Layout anzufassen.
+
+**Lizenzrechtliche Einordnung** (eine fachliche Einschätzung, keine Rechtsberatung):
+
+- arielle ist eine Portierung von Teilen des Swimlane-Layouts von Mermaid 12.0.0. Das ist von Mermaid abgeleiteter Code, auch wenn er gekürzt und umgeschrieben ist.
+- Mermaid steht unter der MIT-Lizenz (`LICENSE` des npm-Pakets: „Copyright (c) 2014 - 2022 Knut Sveidqvist“). MIT erlaubt Verwenden, Ändern und Weitergeben unter einer einzigen Bedingung: Der Copyright-Hinweis und der Lizenztext müssen in allen Kopien oder wesentlichen Teilen enthalten sein.
+- arielle unter dieselbe Lizenz zu stellen ist der einfachste saubere Weg. Die Datei hat dann eine einheitliche Lizenz. Die eigenen Änderungen bekommen eine zusätzliche Copyright-Zeile für dokufix; die Zeile von Mermaid bleibt stehen.
+- Weil MIT eine freizügige Lizenz ist, verträgt sich ein MIT-Modul mit nahezu jeder Lizenz des übrigen dokufix-Codes, auch einer anderen. Offen ist, unter welcher Lizenz dokufix selbst steht: Das Repository hat keine `LICENSE`-Datei (Abschnitt 7).
+
+**Was dafür konkret nötig ist:**
+
+1. **Kopf von `src/app/arielle.js`:**
+   - der Name und wofür die Komponente da ist,
+   - die Herkunft: Mermaid 12.0.0, `src/rendering-util/layout-algorithms/swimlanes/` (`phase1.cycles.ts`, `phase2.laneAwareCompact.ts`, `helpers.ts`, `edgeLabelNodes.ts`) und die Kanten-IDs des Flowchart-Modells,
+   - der Hinweis, dass der Code angepasst und gekürzt ist,
+   - die Copyright-Zeile von Mermaid, eine Copyright-Zeile für dokufix und der vollständige MIT-Lizenztext.
+
+   Der volle Text im Kopf ist die sicherste Form, denn der Quelltext wird auch einzeln weitergegeben, etwa über das Repository. MIT verlangt nicht, Änderungen zu kennzeichnen; es ist trotzdem gute Praxis.
+2. **Lizenzliste `src/app/licences.js`:** Ein Eintrag für arielle mit `use: 'embedded'`, Lizenz MIT und beiden Copyright-Zeilen. Der Grund: dokufix wird als eine HTML-Datei weitergegeben, in der der Kommentarkopf nach dem Build nicht mehr sicher steht. Die Lizenzansicht steht in jeder Variante, auch in den Exporten (Kommentar am Anfang von `licences.js`), und trägt den Hinweis so mit. Den MIT-Text kennt `LICENCE_TEXTS` schon. `tests/licences.test.mjs` (Z. 69, die Liste der Einträge) wird um den Eintrag ergänzt.
+3. **Mermaid-Eintrag:** Der bestehende Eintrag `use: 'cdn'` bleibt, weil Mermaid für Mermaid-Diagramme weiter vom CDN geladen wird. Der arielle-Eintrag nennt Mermaid als Herkunft.
+4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* einen Satz zu arielle, dass sie auf Mermaid beruht und unter MIT steht.
 
 ### Produktcode
 
 | Datei, Stelle | Heute | Beim Ersatz |
 |---|---|---|
-| `src/app/bpmn.js:2` | importiert `mermaidSource` | entfällt; stattdessen die neue Funktion |
+| `src/app/bpmn.js:2` | importiert `mermaidSource` | entfällt; stattdessen `arielle` aus `./arielle.js` |
 | `src/app/bpmn.js:7–8, 32` | Kommentare „Mermaid as the layout engine“, „mermaid for the layout“ | anpassen |
 | `src/app/bpmn.js:39` | `BPMN_NO_MERMAID` | entfällt |
 | `src/app/bpmn.js:148` | Kommentar zu `offscreenHost()`: „and Mermaid lays out in“ | anpassen; der Host bleibt für bpmn-js |
 | `src/app/bpmn.js:245–247` | Prüfung auf Mermaid in `layoutBpmn()` | entfällt |
-| `src/app/bpmn.js:250` | `await mermaidPositions(…)` | Aufruf der neuen Funktion, synchron |
+| `src/app/bpmn.js:250` | `await mermaidPositions(…)` | Aufruf von `arielle(read.model)`, synchron |
 | `src/app/bpmn.js:256–308` | `mermaidPositions()`, Zähler `layoutRuns` | entfällt |
 | `src/app/bpmn-layout.js:1–26` | Modulkommentar, Schritte 2 und 3 über Mermaid | neu schreiben: Schritt „Spalten“ statt Mermaid |
 | `src/app/bpmn-layout.js:47–51` | `MERMAID_LAYOUT_VERSION` | entfällt |
@@ -212,10 +239,10 @@ Die Liste geht davon aus, dass der Nachbau als reine Funktion in `src/app/bpmn-l
 | `tests/bpmn.test.mjs:55` | Prüfung des Texts von `BPMN_NO_MERMAID` | entfällt |
 | `tests/bpmn-layout.test.mjs:128, 137–177, 495–509, 799–800, 840, 1123–1126, 1279–1287` | Tests des Mermaid-Texts | werden zu Tests der Spaltenberechnung: eine Spalte je Knoten und Bahn, Fluss über Bahngrenzen, Beschriftung, angeheftetes Ereignis, Schleife, keine Nachrichtenflüsse |
 | `tests/bpmn-layout.test.mjs:180–181` | `MERMAID_LAYOUT_VERSION` | entfällt |
-| `tests/bpmn-layout.test.mjs:289, 366–370, 467–490, 662, 785, 1085, 1254` | erfundene Rohpositionen „in the shape Mermaid gives“ | funktionieren weiter, weil das Format von `raw` bleibt; nur die Kommentare anpassen. Wo die Spalten aus dem Modell folgen sollen, die neue Funktion nehmen |
+| `tests/bpmn-layout.test.mjs:289, 366–370, 467–490, 662, 785, 1085, 1254` | erfundene Rohpositionen „in the shape Mermaid gives“ | funktionieren weiter, weil das Format von `raw` bleibt; nur die Kommentare anpassen. Wo die Spalten aus dem Modell folgen sollen, `arielle()` nehmen |
 | `tests/licences.test.mjs:33–34, 112–121, 147–168, 196–198` | Wächter „Mermaid pin = MERMAID_LAYOUT_VERSION“ (Story 2.8, AC6) | entfällt; die Prüfung „Lizenzliste = Pin“ bleibt |
 | `tests/fixtures/bpmn-layout/*.raw.json` (57 Dateien), `index.json` (`"mermaid"`) | Rohpositionen aus dem Browser | entfallen; `tests/bpmn-fixtures.mjs` berechnet die Spalten selbst. Alternativ als Referenz für den Differenztest behalten (Abschnitt 7) |
-| `tests/bpmn-fixtures.mjs:12–19, 50`, `tests/bpmn-fixtures.test.mjs:14, 21–26` | Lesen von `raw.json`, Versionsprüfung | auf die neue Funktion umstellen; vier statt fünf Dateien je Fixture |
+| `tests/bpmn-fixtures.mjs:12–19, 50`, `tests/bpmn-fixtures.test.mjs:14, 21–26` | Lesen von `raw.json`, Versionsprüfung | auf `arielle()` umstellen; vier statt fünf Dateien je Fixture |
 | `tests/capture-bpmn.mjs` | erfasst Rohpositionen und Größen der Beschriftungen | nur noch die Größen (`labelMeasurer()` braucht weiter den Browser); `mermaidPositions` und die Kantenprüfung entfallen |
 | `tests/durchlaeufe.mjs:89–93, 307–312` | Szenario 13: ohne Mermaid wird BPMN ohne Koordinaten zur Warnung | Erwartung umdrehen: Es wird gezeichnet; nur das Mermaid-Diagramm wird zur Warnung |
 | `tests/durchlaeufe.mjs:306, 1056` | `LAYOUT_TRACES`: keine Spuren von Mermaids Layout in Dateien | kann bleiben (schadet nicht) oder entfallen |
@@ -233,14 +260,14 @@ Die Liste geht davon aus, dass der Nachbau als reine Funktion in `src/app/bpmn-l
 
 **Schritt 1: exakter Nachbau, parallel zu Mermaid.**
 
-- Neue reine Funktion in `src/app/bpmn-layout.js` (Abschnitt 2, Schritte 0 bis 3), mit `<` statt `localeCompare`.
-- Tests in `tests/bpmn-layout.test.mjs` für die Eigenschaften aus Abschnitt 2.
+- Die Komponente arielle als eigenes Modul `src/app/arielle.js` (Abschnitt 4a), Algorithmus nach Abschnitt 2, Schritte 0 bis 3, mit `<` statt `localeCompare`. Dazu Lizenzkopf und Eintrag in der Lizenzliste.
+- Tests in `tests/arielle.test.mjs` für die Eigenschaften aus Abschnitt 2.
 - Ein Test in `tests/bpmn-fixtures.test.mjs`: Für alle 57 Fixtures ergibt die Funktion dieselbe Spaltenordnung wie `raw.json`. Damit ist der Nachbau gegen Mermaid gesichert, solange die Rohpositionen noch da sind.
 - Einmalig ein Differenztest im Browser gegen Mermaid 12.0.0 mit Zufallsprozessen, als Werkzeug neben `tests/capture-bpmn.mjs`, wie im Versuch in Abschnitt 3.
 
 **Schritt 2: umschalten.**
 
-- `layoutBpmn()` nutzt die neue Funktion statt `mermaidPositions()`.
+- `layoutBpmn()` nutzt `arielle()` statt `mermaidPositions()`.
 - `npm run fixtures` muss „no difference“ melden, ebenso der Vergleichslauf `tests/vergleich.mjs` und die Durchläufe (bis auf Szenario 13, das sich bewusst ändert).
 
 **Schritt 3: aufräumen.**
@@ -262,11 +289,11 @@ Für Schritte 1 bis 3:
 
 1. `npm run fixtures`: alle 57 Fixtures, beide Messarten, ohne Unterschied.
 2. `tests/fixtures/bpmn-layout/known-breaks.json` unverändert (`tests/bpmn-rules.test.mjs` grün).
-3. Vor dem Entfernen von `raw.json`: Die neue Funktion trifft die Spaltenordnung aller 57 Rohpositionen.
+3. Vor dem Entfernen von `raw.json`: `arielle()` trifft die Spaltenordnung aller 57 Rohpositionen.
 4. Der Differenztest gegen Mermaid 12.0.0 ist für eine feste Zahl von Zufallsprozessen grün (Vorschlag: 1 000).
 5. `tests/vergleich.mjs` auf `tests/referenz.md`: gleiche Bilder der BPMN-Diagramme ohne Koordinaten in beiden Browsern.
 6. `tests/durchlaeufe.mjs`: grün, mit geändertem Szenario 13 (BPMN ohne Koordinaten wird ohne Mermaid gezeichnet).
-7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr, außer in einem Kommentar zur Herkunft des Algorithmus.
+7. `src/app/bpmn.js` und `src/app/bpmn-layout.js` enthalten kein `mermaid` mehr. Der von Mermaid übernommene Code steht nur in `src/app/arielle.js`, mit Lizenzkopf; die Lizenzliste hat einen Eintrag für arielle.
 8. `npm test` und `npm run check` grün.
 
 ## 7. Offene Entscheidungen
@@ -278,7 +305,8 @@ Für Schritte 1 bis 3:
 | Was passiert mit `raw.json`? | löschen; als Referenz von Mermaid 12.0.0 behalten | Bis Schritt 2 behalten (Abnahmekriterium 3), danach löschen. Die Referenz steckt dann in den angeordneten XML-Dateien |
 | Beschriftungsspalte beibehalten? | ja (exakt); nein | Im Nachbau ja; als Kandidat für Schritt 4 vormerken |
 | Flüsse von einem Knoten auf sich selbst | weiter auslassen; zeichnen | Zunächst weiter auslassen (heutiges Verhalten); eigene Story, weil der Router dafür einen Weg braucht |
-| Herkunftsvermerk | keiner; Kommentar; Eintrag in der Lizenzliste | Der Nachbau setzt den Algorithmus von Mermaid (MIT) um. Ein Kommentar an der Funktion mit Herkunft und Copyright-Zeile von Mermaid ist sauber und kostet nichts. Ob mehr nötig ist, sollte jemand mit Blick auf die MIT-Lizenz entscheiden; dieses Dokument ist keine Rechtsberatung |
+| Herkunft und Lizenz | Kommentar; eigenes Modul unter MIT mit Lizenzkopf und Eintrag in der Lizenzliste | **Entschieden:** arielle als eigenes Modul, offen als Portierung von Mermaid gekennzeichnet, unter MIT (Abschnitt 4a). Bei Unsicherheit, etwa vor einer kommerziellen Nutzung, sollte das jemand mit Rechtskenntnis bestätigen |
+| Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. Für arielle genügt MIT; für das übrige dokufix bestimmt die Wahl, wie andere es nutzen dürfen. Ist dokufix selbst MIT, ist das Gesamtbild am einfachsten |
 | Was tun, solange Mermaid noch das Layout macht? | nichts; die kleine Korrektur für `%%{` (Anhang B, Hinweis 3b) vorziehen | Nur wenn der Ersatz nicht bald kommt. Mit dem Ersatz verschwindet der Fehler von selbst |
 
 ## Anhang A: Bestandsaufnahme aller Mermaid-Stellen
