@@ -1597,14 +1597,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     };
     const run = () => runGrid(g, model, measure, rules);
     let best = run();
+    const cross = (q) => q.crossings + q.msgCrossings;
+    const fewer = (t) => t.q.msgBends <= best.q.msgBends && (cross(t.q) < cross(best.q) || cross(t.q) === cross(best.q) && t.q.msgBends < best.q.msgBends && t.q.bends <= best.q.bends && t.q.shared <= best.q.shared);
     for (const grp of g.pathRowGroups) {
-      if (!best.q.crossings) break;
+      if (!cross(best.q) && !best.q.msgBends) break;
       const cells = grp.ids.map((x) => g.cells.get(x)).filter((c) => c.lane === grp.lane && c.row === grp.row && !c.pin);
       if (!cells.length) continue;
       const keep = snap();
       for (const c of cells) c.row = -c.row;
       const t = run();
-      if (t.q.crossings < best.q.crossings && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
+      if (fewer(t) && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
       else restore(keep);
     }
     return best;
@@ -1839,7 +1841,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (b && hits(b, (x) => x === f.id)) labels++;
     }
     const bends = model.flows.reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
-    return { crossings, through, overlaps, lines, labels, shared: shared.length, bends };
+    const msgBends = (model.messages || []).reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
+    let msgCrossings = 0;
+    const msgSegs = [];
+    for (const m of model.messages || []) {
+      const pts = di.flows[m.id] || [];
+      for (let i = 1; i < pts.length; i++) msgSegs.push({ f: m.id, a: pts[i - 1], b: pts[i] });
+    }
+    for (const p of msgSegs) for (const q of [...segs, ...msgSegs]) {
+      if (p.f === q.f || msgSegs.includes(q) && q.f < p.f) continue;
+      const ph = p.a[1] === p.b[1], qh = q.a[1] === q.b[1];
+      if (ph === qh) continue;
+      const [h, v] = ph ? [p, q] : [q, p];
+      const x = v.a[0], y = h.a[1];
+      if (x > Math.min(h.a[0], h.b[0]) && x < Math.max(h.a[0], h.b[0]) && y > Math.min(v.a[1], v.b[1]) && y < Math.max(v.a[1], v.b[1])) msgCrossings++;
+    }
+    return { crossings, through, overlaps, lines, labels, shared: shared.length, bends, msgBends, msgCrossings };
   }
   function finishGrid(g, model, measure, rules, reroute = true) {
     centreLaneSplits(g, model);

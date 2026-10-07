@@ -1637,21 +1637,32 @@ function runGrid(g, model, measure, rules){
 // nodes, lines or labels on flows, and without overlapping nodes; else R2's
 // row stays. Guarantee: the trial never makes the picture worse. Ben's rule
 // (2026-10-05, after x-rg2 and x-wv4): no swap with more breaks, no swap with
-// more crossings. The lane gets narrower again by itself, since the bands come
+// more crossings. The crossings count the message flows too, and no swap adds
+// bends to them; a swap with as many crossings is taken where the message
+// flows bend less and nothing else gets worse (Ben, 2026-10-07, b-wv2: the way
+// that sends messages to a black box below was swapped above, each message
+// bending twice around the other way). The lane gets narrower again by itself, since the bands come
 // from the rows taken.
 function ruleRowProbe(g, model, measure, rules){
   const snap = () => new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
   const restore = m => { for (const [c, v] of m) Object.assign(c, v); };
   const run = () => runGrid(g, model, measure, rules);
   let best = run();
+  // A swap that leaves the crossings as they are counts where the message flows bend less (Ben, 2026-10-07, b-wv2:
+  // the way that sends the messages to a black box below took the row above, and each message bent twice around
+  // the other way): no measure of the sequence flows gets worse, their bends neither.
+  // The crossings of all flows, message flows too; a swap never adds bends to the message flows.
+  const cross = q => q.crossings + q.msgCrossings;
+  const fewer = t => t.q.msgBends <= best.q.msgBends && (cross(t.q) < cross(best.q)
+    || (cross(t.q) === cross(best.q) && t.q.msgBends < best.q.msgBends && t.q.bends <= best.q.bends && t.q.shared <= best.q.shared));
   for (const grp of g.pathRowGroups){
-    if (!best.q.crossings) break;
+    if (!cross(best.q) && !best.q.msgBends) break;
     const cells = grp.ids.map(x => g.cells.get(x)).filter(c => c.lane === grp.lane && c.row === grp.row && !c.pin);
     if (!cells.length) continue;
     const keep = snap();
     for (const c of cells) c.row = -c.row;
     const t = run();
-    if (t.q.crossings < best.q.crossings && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
+    if (fewer(t) && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps) best = t;
     else restore(keep);
   }
   return best;
@@ -1937,7 +1948,20 @@ function gridQuality(di, model){
   for (const n of model.nodes){ const b = di.labels[n.id]; if (b && hits(b, f => model.flows.some(x => x.id === f && (x.from === n.id || x.to === n.id)))) labels++; }
   for (const f of model.flows){ const b = di.flowLabels[f.id]; if (b && hits(b, x => x === f.id)) labels++; }
   const bends = model.flows.reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
-  return { crossings, through, overlaps, lines, labels, shared: shared.length, bends };
+  // The message flows' crossings (with any flow) and bends, for R10 alone (Ben, 2026-10-07, b-wv2).
+  const msgBends = (model.messages || []).reduce((n, f) => n + Math.max(0, (di.flows[f.id] || []).length - 2), 0);
+  let msgCrossings = 0;
+  const msgSegs = [];
+  for (const m of model.messages || []){ const pts = di.flows[m.id] || []; for (let i = 1; i < pts.length; i++) msgSegs.push({ f: m.id, a: pts[i - 1], b: pts[i] }); }
+  for (const p of msgSegs) for (const q of [...segs, ...msgSegs]){
+    if (p.f === q.f || (msgSegs.includes(q) && q.f < p.f)) continue;
+    const ph = p.a[1] === p.b[1], qh = q.a[1] === q.b[1];
+    if (ph === qh) continue;
+    const [h, v] = ph ? [p, q] : [q, p];
+    const x = v.a[0], y = h.a[1];
+    if (x > Math.min(h.a[0], h.b[0]) && x < Math.max(h.a[0], h.b[0]) && y > Math.min(v.a[1], v.b[1]) && y < Math.max(v.a[1], v.b[1])) msgCrossings++;
+  }
+  return { crossings, through, overlaps, lines, labels, shared: shared.length, bends, msgBends, msgCrossings };
 }
 
 // From R7 to the finished DI: close the columns, bands, router, pixels, labels.

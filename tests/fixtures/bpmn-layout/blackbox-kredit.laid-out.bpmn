@@ -69,28 +69,28 @@
       <bpmndi:BPMNShape id="Participant_Kunde_di" bpmnElement="Participant_Kunde" isHorizontal="true"><dc:Bounds x="0" y="0" width="1182" height="60"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Participant_Bank_di" bpmnElement="Participant_Bank" isHorizontal="true"><dc:Bounds x="0" y="100" width="1182" height="268"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Participant_Auskunftei_di" bpmnElement="Participant_Auskunftei" isHorizontal="true"><dc:Bounds x="0" y="408" width="1182" height="60"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Start_Antrag_di" bpmnElement="Start_Antrag"><dc:Bounds x="102" y="154" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="194" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_BonitaetAnfragen_di" bpmnElement="Task_BonitaetAnfragen"><dc:Bounds x="210" y="132" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_AuskunftEmpfangen_di" bpmnElement="Task_AuskunftEmpfangen"><dc:Bounds x="378" y="132" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_Entscheiden_di" bpmnElement="Task_Entscheiden"><dc:Bounds x="546" y="132" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Gateway_Entscheidung_di" bpmnElement="Gateway_Entscheidung" isMarkerVisible="true"><dc:Bounds x="749" y="147" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="729" y="129" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_ZusageSenden_di" bpmnElement="Task_ZusageSenden"><dc:Bounds x="882" y="132" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="Task_AbsageSenden_di" bpmnElement="Task_AbsageSenden"><dc:Bounds x="714" y="256" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Zusage_di" bpmnElement="End_Zusage"><dc:Bounds x="1074" y="154" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1047" y="194" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="End_Absage_di" bpmnElement="End_Absage"><dc:Bounds x="1074" y="278" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1047" y="318" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNEdge id="SF_1_di" bpmnElement="SF_1"><di:waypoint x="138" y="172"/><di:waypoint x="210" y="172"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_2_di" bpmnElement="SF_2"><di:waypoint x="330" y="172"/><di:waypoint x="378" y="172"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_3_di" bpmnElement="SF_3"><di:waypoint x="498" y="172"/><di:waypoint x="546" y="172"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_4_di" bpmnElement="SF_4"><di:waypoint x="666" y="172"/><di:waypoint x="749" y="172"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_Ja_di" bpmnElement="SF_Ja"><di:waypoint x="799" y="172"/><di:waypoint x="882" y="172"/><bpmndi:BPMNLabel><dc:Bounds x="809" y="154" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_Nein_di" bpmnElement="SF_Nein"><di:waypoint x="774" y="197"/><di:waypoint x="774" y="256"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="205" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_5_di" bpmnElement="SF_5"><di:waypoint x="1002" y="172"/><di:waypoint x="1074" y="172"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="SF_6_di" bpmnElement="SF_6"><di:waypoint x="834" y="296"/><di:waypoint x="1074" y="296"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Msg_Antrag_di" bpmnElement="Flow_Msg_Antrag"><di:waypoint x="120" y="60"/><di:waypoint x="120" y="154"/><bpmndi:BPMNLabel><dc:Bounds x="126" y="73" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Msg_Anfrage_di" bpmnElement="Flow_Msg_Anfrage"><di:waypoint x="270" y="212"/><di:waypoint x="270" y="408"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="381" width="78" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Msg_Auskunft_di" bpmnElement="Flow_Msg_Auskunft"><di:waypoint x="438" y="408"/><di:waypoint x="438" y="212"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="381" width="82" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Msg_Zusage_di" bpmnElement="Flow_Msg_Zusage"><di:waypoint x="942" y="132"/><di:waypoint x="942" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="948" y="66.5" width="55" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="Flow_Msg_Absage_di" bpmnElement="Flow_Msg_Absage"><di:waypoint x="744" y="256"/><di:waypoint x="744" y="240"/><di:waypoint x="702" y="240"/><di:waypoint x="702" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="708" y="73" width="38" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="Start_Antrag_di" bpmnElement="Start_Antrag"><dc:Bounds x="102" y="278" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="318" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_BonitaetAnfragen_di" bpmnElement="Task_BonitaetAnfragen"><dc:Bounds x="210" y="256" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AuskunftEmpfangen_di" bpmnElement="Task_AuskunftEmpfangen"><dc:Bounds x="378" y="256" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Entscheiden_di" bpmnElement="Task_Entscheiden"><dc:Bounds x="546" y="256" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Gateway_Entscheidung_di" bpmnElement="Gateway_Entscheidung" isMarkerVisible="true"><dc:Bounds x="749" y="271" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="729" y="325" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_ZusageSenden_di" bpmnElement="Task_ZusageSenden"><dc:Bounds x="882" y="256" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AbsageSenden_di" bpmnElement="Task_AbsageSenden"><dc:Bounds x="714" y="132" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Zusage_di" bpmnElement="End_Zusage"><dc:Bounds x="1074" y="278" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1047" y="318" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Absage_di" bpmnElement="End_Absage"><dc:Bounds x="1074" y="154" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="1047" y="194" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SF_1_di" bpmnElement="SF_1"><di:waypoint x="138" y="296"/><di:waypoint x="210" y="296"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_2_di" bpmnElement="SF_2"><di:waypoint x="330" y="296"/><di:waypoint x="378" y="296"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_3_di" bpmnElement="SF_3"><di:waypoint x="498" y="296"/><di:waypoint x="546" y="296"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_4_di" bpmnElement="SF_4"><di:waypoint x="666" y="296"/><di:waypoint x="749" y="296"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Ja_di" bpmnElement="SF_Ja"><di:waypoint x="799" y="296"/><di:waypoint x="882" y="296"/><bpmndi:BPMNLabel><dc:Bounds x="809" y="278" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_Nein_di" bpmnElement="SF_Nein"><di:waypoint x="774" y="271"/><di:waypoint x="774" y="212"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="249" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_5_di" bpmnElement="SF_5"><di:waypoint x="1002" y="296"/><di:waypoint x="1074" y="296"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SF_6_di" bpmnElement="SF_6"><di:waypoint x="834" y="172"/><di:waypoint x="1074" y="172"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Msg_Antrag_di" bpmnElement="Flow_Msg_Antrag"><di:waypoint x="120" y="60"/><di:waypoint x="120" y="278"/><bpmndi:BPMNLabel><dc:Bounds x="126" y="73" width="60" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Msg_Anfrage_di" bpmnElement="Flow_Msg_Anfrage"><di:waypoint x="270" y="336"/><di:waypoint x="270" y="408"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="381" width="78" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Msg_Auskunft_di" bpmnElement="Flow_Msg_Auskunft"><di:waypoint x="438" y="408"/><di:waypoint x="438" y="336"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="381" width="82" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Msg_Zusage_di" bpmnElement="Flow_Msg_Zusage"><di:waypoint x="942" y="256"/><di:waypoint x="942" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="948" y="66.5" width="55" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_Msg_Absage_di" bpmnElement="Flow_Msg_Absage"><di:waypoint x="774" y="132"/><di:waypoint x="774" y="60"/><bpmndi:BPMNLabel><dc:Bounds x="780" y="73" width="38" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>
