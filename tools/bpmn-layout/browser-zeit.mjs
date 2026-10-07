@@ -1,5 +1,5 @@
 // Die Laufzeit des Layouts in Chromium und Firefox, so wie die Seite anordnet (readProcess(), kanonisch(),
-// layoutGeometry(), appendDiagram(); layoutBpmn() in src/app/bpmn.js), je drei Läufe; eine Zeile je Browser und
+// layoutGeometry(), appendDiagram(); layoutJob() in src/app/bpmn-layout-job.js), je drei Läufe; eine Zeile je Browser und
 // Eingabe. Aus Spike 2.26 im Store übernommen (Story 2.12), 2026-10-07 auf LMM umgestellt.
 //   node tools/bpmn-layout/browser-zeit.mjs [--satz s,s] [name…]
 // Vorgabe: die Pool-Sätze. CHROMIUM und FIREFOX setzen die Browser; sonst /usr/bin/chromium und das Firefox von

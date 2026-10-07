@@ -553,7 +553,7 @@ function judgeDiagrams(exp, wellFormed){
     if (!wellFormed[i]) return;
     if (hasCoordinates(d.source)){ Object.assign(d, { drawn: true, reason: '' }); return; }
     let read = null;
-    // The page reads it with the layout's own parser (layoutBpmn()); XML that one
+    // The page reads it with the layout's own parser (layoutJob() of src/app/bpmn-layout-job.js); XML that one
     // rejects goes to bpmn-js as it is, whose message is the reason.
     let doc;
     try { doc = parseXml(d.source); }

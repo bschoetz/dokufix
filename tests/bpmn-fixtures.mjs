@@ -55,8 +55,8 @@ export function readModel(xml){
   return readProcess(parseXml(xml));
 }
 
-// What the page hands the grid for an input's XML (layoutBpmn() in
-// src/app/bpmn.js): { model, raw, author }, the model in LMM's order, its
+// What the page hands the grid for an input's XML (layoutJob() in
+// src/app/bpmn-layout-job.js): { model, raw, author }, the model in LMM's order, its
 // columns in the form layoutGeometry() reads, and the author's model, which
 // appendDiagram() gets.
 export function gridInput(xml){

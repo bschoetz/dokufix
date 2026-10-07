@@ -1,7 +1,6 @@
 import { TRANSIENT_ATTR } from './transient.js';
-import { readProcess, layoutGeometry, appendDiagram, leftOutLine, maskNotMarkup } from './bpmn-layout.js';
-import { kanonisch, lmmPositions } from './lmm.js';
-import { parseXml, XmlError } from './xml-parser.js';
+import { maskNotMarkup } from './bpmn-layout.js';
+import { layoutJob } from './bpmn-layout-job.js';
 import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
@@ -15,7 +14,8 @@ import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 //
 //   1. the library has to be there and the XML has to parse; otherwise the
 //      diagram is refused with the reason, and diagrams.js puts a warning in
-//      its place. XML without coordinates is laid out (layoutBpmn()), or
+//      its place. XML without coordinates is laid out (layoutJob() of
+//      src/app/bpmn-layout-job.js), or
 //      refused with the reason the layout gives; XML the browser cannot read
 //      goes to bpmn-js as it is, which words the reason
 //   2. bpmn-js draws into a host of its own: transient, fixed off-screen,
@@ -194,7 +194,9 @@ async function drawBpmn(diagram){
   try {
     // The XML that is drawn, with coordinates where they could be made, and the
     // diagram in it bpmn-js opens: the laid-out one, else its first.
-    const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : layoutBpmn(diagram.source);
+    const { xml, open, leftOut } = hasCoordinates(diagram.source) ? { xml: diagram.source } : layoutJob(diagram.source);
+    // What the layout leaves out is a line on the console each.
+    for (const line of leftOut || []) console.warn('BPMN layout, left out:', line);
     diagram.xml = xml;
     host = offscreenHost(doc);
     viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
@@ -211,30 +213,4 @@ async function drawBpmn(diagram){
     try { if (viewer) viewer.destroy(); }
     finally { if (host) host.remove(); }
   }
-}
-
-// XML without coordinates, laid out: { xml, open }, the author's XML with a
-// diagram part added (src/app/bpmn-layout.js) and that diagram's id. Refused
-// with the reason where it cannot be laid out. XML the layout's parser
-// rejects (src/app/xml-parser.js), or that is no BPMN definitions
-// (readProcess() gives null), comes back as it is, without open: bpmn-js then
-// says what is wrong with it. The parser is the layout's own, not the page's
-// DOMParser, so that the same XML gives the same layout in every browser and
-// in the tests.
-// What the layout leaves out is a line on the console each. No library and
-// no page is asked: LMM gives the columns (src/app/lmm.js) and the layout
-// measures the labels as bpmn-js will draw them (src/app/label-size.js).
-// kanonisch() hands the grid the model in LMM's order, so that the picture
-// does not depend on the order of the XML; the author's model writes the
-// diagram part, so that it keeps the order of the XML.
-function layoutBpmn(xml){
-  let parsed;
-  try { parsed = parseXml(xml); }
-  catch (e){ if (e instanceof XmlError) return { xml }; throw e; }
-  const read = readProcess(parsed);
-  if (!read) return { xml };
-  const sorted = kanonisch(read.model);
-  const laidOut = appendDiagram(xml, read.model, layoutGeometry(sorted.model, lmmPositions(sorted.model, sorted.rank)));
-  for (const item of read.leftOut) console.warn('BPMN layout, left out:', leftOutLine(item));
-  return { xml: laidOut.xml, open: laidOut.diagram };
 }

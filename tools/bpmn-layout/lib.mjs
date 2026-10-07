@@ -115,7 +115,7 @@ export const readModel = (stand, xml) => stand.parser
   ? stand.layout.readProcess(stand.parser.parseXml(xml))
   : stand.layout.readProcess(new DOMParser().parseFromString(xml.replace(/&amp;/g, ' '), 'text/xml'));
 
-// { xml, di, model, leftOut }: die Eingabe angeordnet wie auf der Seite (layoutBpmn() in src/app/bpmn.js): das
+// { xml, di, model, leftOut }: die Eingabe angeordnet wie auf der Seite (layoutJob() in src/app/bpmn-layout-job.js): das
 // Modell in LMMs Ordnung mit seinen Spalten an layoutGeometry(), das Modell des Autors an appendDiagram().
 // options: die Regel-Schalter (DEFAULT_RULES).
 // runs: wie oft finishGrid() lief, je Regel, deren Proben es aufriefen, und "final" (layoutGeometry(), options.runs);
