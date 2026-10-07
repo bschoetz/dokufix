@@ -394,7 +394,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
 
 **Zwei Stellen, an denen die Umgebung hineinspielt**, und wie das Paket sie offen hält:
 
-1. **XML parsen.** `readProcess()` erwartet ein geparstes Dokument. Im Browser liefert es `DOMParser`, in Node braucht es eine DOM-Bibliothek wie `linkedom`, die die Tests schon nutzen. Der Einstieg nimmt deshalb einen Parser als Option, mit `globalThis.DOMParser` als Vorgabe. Eine Eigenheit gehört in die Paket-Doku: linkedom liest `&amp;` anders als ein Browser (`readModel()` in `tests/bpmn-fixtures.mjs`).
+1. **XML lesen.** Das Paket bringt einen eigenen XML-Leser mit und nimmt keinen Parser von außen (Abschnitt 4c). Nur so liest es in jeder Umgebung gleich.
 2. **Größe der Beschriftungen.** Die Positionen hängen davon ab, wie groß bpmn-js die Beschriftungen später zeichnet. Die Lösung ist ein eigener Messer im Paket (Abschnitt 4b): das Textlayout von diagram-js, nachgebaut, mit einer Tabelle der Zeichenbreiten statt einer Messung im Browser. Er rechnet in Node und im Browser gleich und trifft bpmn-js exakt, solange bpmn-js in derselben Schrift zeichnet.
 
 **Was zum Repository des Pakets gehört, ohne Teil der Bibliothek zu sein:**
@@ -464,6 +464,51 @@ Der Nachbau rechnet in Node und in Chromium identisch (0 von 572 anders). Ich ha
 **Lizenz:** diagram-js steht unter MIT (Copyright (c) 2014-present Camunda Services GmbH), verträglich mit LGPL-3.0. Der Messer trägt den MIT-Hinweis im Dateikopf, wie LMM den von Mermaid. Der Teil aus dem Textrenderer von bpmn-js sind wenige Konstanten und Formeln; ob dafür der Hinweis der bpmn.io-Lizenz nötig ist, gehört zur Prüfung mit Rechtskenntnis. Die Breitentabelle besteht aus Messwerten einer Schrift unter OFL 1.1, deren Mitliefern erlaubt ist.
 
 **Im Paket:** der Messer als Modul, etwa `messer.mjs` mit `messer(tabelle)`, die Tabelle der Referenzschrift als Vorgabe und austauschbar, das Werkzeug zum Erzeugen einer Tabelle (`tabelle.mjs`) und ein Test gegen das gepinnte bpmn-js im Browser. Der Einstieg `layout(xml, options)` nutzt den Messer, wenn keine eigene Messfunktion übergeben wird.
+
+### 4c. XML lesen: ein eigener Leser
+
+Ein fünftes Review (`spikes/lmm/parsing/BERICHT.md`) hat geprüft, wie das Paket XML überall gleich liest.
+
+**Was `readProcess()` vom Parser braucht:** sieben Dinge, nämlich `documentElement`, je Element `localName` bzw. `nodeName`, `getAttribute()`, `children`, `parentElement` und `textContent`, dazu die Fehlererkennung über `parsererror`. Berührt sind damit aus XML 1.0 Entitäten und Zeichenreferenzen, die Normalisierung von Attributwerten, Zeilenenden, CDATA, Kommentare, Verarbeitungsanweisungen, DOCTYPE und Wohlgeformtheit. `appendDiagram()` arbeitet auf dem Text und setzt nur voraus, dass das XML wohlgeformt ist.
+
+**Gemessene Unterschiede** (157 Fälle: 57 Fixtures, 29 BPMN-Blöcke aus `tests/referenz.md` und `src/demo.md`, 71 heikle Fälle; Referenz Chromium 141):
+
+| Umgebung | Fälle anders als Chromium | Wichtigste Abweichungen |
+|---|---|---|
+| Firefox 155 (gemessen) | 1 | `version="1.1"` ist dort ein Fehler |
+| Safari/WebKit | nicht gemessen | nutzt wie Chromium libxml2; gleiches Verhalten zu erwarten (laut Dokumentation) |
+| linkedom 0.18.13 (heute in den Tests) | 37, darunter 4 Fixtures | `&amp;`, `&lt;`, `&gt;` in Attributen bleiben wörtlich (die Ursache des `&amp;`-Behelfs in `readModel()`); keine Normalisierung der Zeilenenden; kaputtes XML wird nie abgewiesen; `localName` mit Präfix |
+| saxen 11.2.0 (Parser von bpmn-js) | 22 | kein `\r\n` → `\n`; `id = "x"` mit Leerraum um `=` wird nicht gelesen; Zeichen außerhalb der BMP kaputt; kaputtes XML meist still |
+| @xmldom/xmldom, fast-xml-parser, txml | 8 / 14 / 20 | u. a. BOM abgewiesen, Zeichenreferenzen nicht aufgelöst |
+| Node 22 und Bun 1.4 | gleich | jede Bibliothek liest in beiden identisch |
+
+**Wie bpmn-js liest** (bpmn-moddle mit saxen): Es stimmt auf allen Fixtures und Blöcken überein. Zwei Abweichungen zählen aber: bpmn-js **wirft Textknoten weg, die nur aus Leerraum bestehen**, `readProcess()` behält sie im Text einer Notiz; und Zeilenumbrüche in einem `name` zeichnet bpmn-js als zwei Zeilen.
+
+**Die Wege:**
+
+| Weg | Bewertung |
+|---|---|
+| (a) Parser von außen, Ergebnis normalisieren | kann nicht nachholen, was ein Parser verloren oder still repariert hat; Tests in Node blieben anders als der Browser |
+| (c) saxen als Abhängigkeit | liest in 22 Fällen anders als die Browser; bpmn-js' Lesart entsteht erst eine Schicht darüber, das ergäbe ein drittes Verhalten |
+| **(b) eigener Leser im Paket** | **empfohlen**: gemessen gleich mit Chromium, ohne Abhängigkeit, 12,4 KB minifiziert (4,8 KB gzip), schneller als jede Bibliothek in Node, sichere Behandlung von Entitäten, einheitliche Fehlermeldungen mit Zeile und Spalte |
+
+**Prototyp** `spikes/lmm/parsing/leser.mjs` (469 Zeilen, ohne Rekursion): BOM, Zeilenenden, verbotene Zeichen, Normalisierung von Attributen, Entitäten und Zeichenreferenzen, CDATA, Kommentare, DOCTYPE mit internen Entitäten und einer Grenze gegen Aufblähen („Billion Laughs“) wie libxml2, externe Entitäten werden nie geladen, Namensräume, `XmlError` mit Zeile und Spalte. `readProcess()` läuft unverändert darauf.
+
+- **156 von 157 Fällen gleich mit Chromium**, in Node und Bun identisch. Die eine Abweichung ist gewollt: Eine externe Entität im Inhalt ergibt einen Fehler statt still leerem Text.
+- Ich habe das mit einem eigenen Skript nachgeprüft, mit eigenen Fällen (`&amp;`, `\r\n`, CDATA, Zeichenreferenz auf ein Emoji, Zeilenumbruch im Attribut, Standard-Namensraum ohne Präfix, BOM): **64 von 64 gleich** (`spikes/lmm/check/leser-check.mjs`).
+- **Der `&amp;`-Behelf in `readModel()` wird überflüssig:** Alle 57 Fixtures ergeben ohne ihn dasselbe Modell wie Chromium. Beim Umstellen ändert sich nur `ref8`, dessen gemessene Größen einen Text in der Behelfsform speichern.
+
+**Schnittstelle:** `layout(xml, options)` mit den Optionen `measure` und `rules`, **ohne** Option für einen Parser, denn Gleichheit ist der Zweck. Bei kaputtem XML wirft der Einstieg `XmlError`.
+
+**Vorgeschlagene Änderungen an `readProcess()`:**
+
+1. Namensräume prüfen statt Präfixe abzuschneiden (`namespaceURI` gleich dem BPMN-Namensraum), so wie bpmn-js.
+2. Im Text einer Notiz Textknoten weglassen, die nur aus Leerraum bestehen, so wie bpmn-js.
+3. Optional Hinweise für IDs, die bpmn-js nicht zeichnet (kein gültiger NCName, doppelt), für DOCTYPE mit Entitäten und für Zeilenumbrüche in `name`.
+
+**Tests im Paket:** das Korpus mit eingefrorenen Erwartungen von Chromium (läuft ohne Browser), ein Differenztest gegen Chromium und Firefox als Entwicklungswerkzeug, ein kleiner Konformitätstest des Lesers, ein Vergleich mit bpmn-js bei jedem Versionswechsel und die 57 Fixtures ohne `&amp;`-Behelf.
+
+**Offen:** XML 1.1 lesen oder abweisen (Chromium liest es, Firefox nicht); externe Entitäten im Inhalt als Fehler oder still leer; DOCTYPE überhaupt zulassen; Fehlermeldungen als Codes für die App.
 
 ### Produktcode
 
