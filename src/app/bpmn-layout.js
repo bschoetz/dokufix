@@ -97,6 +97,13 @@ function descendants(el){
   return out;
 }
 const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
+// The text bpmn-js draws for a name with line breaks ("&#10;"; a literal line break in an attribute is a blank by
+// then, xml-parser.js): the name as the author wrote it, which the labels are measured in (Ben, 2026-10-07,
+// nz19-pool1: "verzögertes &#10;Ergebnis&#10;erhalten", three lines drawn, measured as two, lay on its event); the
+// name itself stays clean for the order (LMM) and the rest. { label } where it differs, else nothing.
+const labelOf = text => String(text || '').includes('\n') ? { label: String(text) } : {};
+// The text a label of x is measured in.
+const textOf = x => x.label ?? x.name;
 
 // The flow nodes the layout places, by their tag, and the kind it gives each.
 function nodeType(tag){
@@ -266,7 +273,7 @@ export function readProcess(doc){
     else if (boundaries.some(x => x.id === from || x.id === to)) slot.reason = 'at a boundary event, which takes no message flow yet';
     else if (!a || !b) slot.reason = 'touches ' + [...new Set([from, to].filter(id => !end(id)))].join(' and ') + ', which is not laid out';
     else if (a.pool === b.pool) slot.reason = 'a message flow within one pool';
-    else messages.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...(a.frame ? { fromPool: a.pool } : {}), ...(b.frame ? { toPool: b.pool } : {}) });
+    else messages.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), ...(a.frame ? { fromPool: a.pool } : {}), ...(b.frame ? { toPool: b.pool } : {}) });
   }
   const { notes, associations } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages });
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
@@ -334,7 +341,7 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
       // "+", a loop or multi-instance marker, an ad-hoc sub-process's "~", a compensation marker.
       const markers = type !== 'task' ? 0 : (HOLDS_CONTENT.has(tag) || tag === 'callActivity' ? 1 : 0) + (tag === 'adHocSubProcess' ? 1 : 0) + (attr(el, 'isForCompensation') === 'true' ? 1 : 0) +
         (kids(el).some(k => ['standardLoopCharacteristics', 'multiInstanceLoopCharacteristics'].includes(local(k))) ? 1 : 0);
-      nodes.push({ id, name: clean(attr(el, 'name')), type, tag, key: 'n' + (before.length + nodes.length + 1), ...(markers ? { markers } : {}) });
+      nodes.push({ id, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), type, tag, key: 'n' + (before.length + nodes.length + 1), ...(markers ? { markers } : {}) });
       // A sub-process is drawn as one symbol; what it holds is left out.
       if (HOLDS_CONTENT.has(tag)){
         for (const inner of descendants(el)) if (attr(inner, 'id') && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || ['sequenceFlow', 'boundaryEvent'].includes(local(inner)))) leave(inner, 'inside the sub-process ' + id);
@@ -359,7 +366,7 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
     const id = attr(el, 'id'), host = attr(el, 'attachedToRef');
     if (!id) leave(el, 'has no id');
     else if (!byId.has(host) || byId.get(host).type !== 'task') leave(el, 'attached to ' + (host || 'nothing') + ', which is not laid out');
-    else boundaries.push({ id, name: clean(attr(el, 'name')), host, cancel: attr(el, 'cancelActivity') !== 'false' });
+    else boundaries.push({ id, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), host, cancel: attr(el, 'cancelActivity') !== 'false' });
   }
   const boundaryIds = new Set(boundaries.map(b => b.id));
 
@@ -402,7 +409,7 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
     // A flow from a node to itself is left out: the router has no way for it yet.
     if (from === to && byId.has(from) && attr(el, 'id')) leave(el, 'a flow from a node to itself');
     // A flow leaves a boundary event and never enters one.
-    else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
+    else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')) });
     else leave(el, !attr(el, 'id') ? 'has no id' : boundaryIds.has(to) ? 'enters the boundary event ' + to : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id) && !boundaryIds.has(id)))].join(' and ') + ', which is not laid out');
   }
   return { nodes, lanes, flows, boundaries, standIn };
@@ -2633,7 +2640,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     // A gap is as tall as the tallest label of a message flow across it, 6 px clear of either pool (story 2.12).
     if (bands[b].kind === 'gap') for (const m of model.messages || []){
       const s = endAt(m, 'from').band, e = endAt(m, 'to').band;
-      if (m.name && (b - s) * (b - e) < 0) rowH[b] = Math.max(rowH[b], measure(m.name).h + 12);
+      if (m.name && (b - s) * (b - e) < 0) rowH[b] = Math.max(rowH[b], measure(textOf(m)).h + 12);
     }
   }
   const gapW = [];
@@ -2651,7 +2658,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     if (Math.abs(p.x2 - p.x1) !== 2) continue;
     const a = g.cells.get(r.f.from), b = g.cells.get(r.f.to), [l, rt] = p.x1 < p.x2 ? [a, b] : [b, a];
     const spare = (colW[l.col] - SIZE[l.n.type][0]) / 2 + (colW[rt.col] - SIZE[rt.n.type][0]) / 2;
-    const need = (a.n.type === 'gateway' ? 10 : 6) + measure(r.f.name).w + 6;
+    const need = (a.n.type === 'gateway' ? 10 : 6) + measure(textOf(r.f)).w + 6;
     const k = Math.max(l.col, rt.col);
     gapW[k] = Math.max(gapW[k], Math.ceil(need - spare));
   }
@@ -2664,7 +2671,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     if (c.n.type !== 'gateway' || !c.n.name) continue;
     const at = side => routed.some(r => (r.f.from === c.n.id && r.sides[0] === side) || (r.f.to === c.n.id && r.sides[1] === side));
     if (!at('top') || !at('bottom')) continue;
-    const band = place.get(c.n.id).band, need = 2 + measure(c.n.name).w + 6;
+    const band = place.get(c.n.id).band, need = 2 + measure(textOf(c.n)).w + 6;
     // How much is missing between the gateway and its neighbour in column col + d; the gap between them has index k.
     // Only a task reaches so high that it meets the corner above or below the gateway.
     const short = d => {
@@ -2901,8 +2908,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     const alone = !routes.some(o => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
     const avoid = [...symbols, ...segments, ...taken];
     const place = message.has(f.id)
-      ? bestPlace([...inGaps(pts, measure(f.name)), ...flowLabelPlaces(pts, f.name, false, measure(f.name))], [...avoid, ...edges])
-      : flowLabel(pts, f.name, gateways.has(f.from) && alone, avoid, measure(f.name), !!loop);
+      ? bestPlace([...inGaps(pts, measure(textOf(f))), ...flowLabelPlaces(pts, textOf(f), false, measure(textOf(f)))], [...avoid, ...edges])
+      : flowLabel(pts, textOf(f), gateways.has(f.from) && alone, avoid, measure(textOf(f)), !!loop);
     di.flowLabels[f.id] = place;
     taken.push(place);
     takenPool.push(message.has(f.id) ? null : poolOf.get(f.from));
@@ -2910,7 +2917,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
   for (const n of model.nodes){
     if (n.type === 'task' || !n.name) continue;
-    const place = bestPlace(labelPlaces(box[n.id], measure(n.name), n.type === 'gateway'), [...symbols.filter(b => b !== di.nodes[n.id]), ...segments, ...taken]);
+    const place = bestPlace(labelPlaces(box[n.id], measure(textOf(n)), n.type === 'gateway'), [...symbols.filter(b => b !== di.nodes[n.id]), ...segments, ...taken]);
     // bpmn-js centres the text on the box: the box is as wide as a label can be, 90 px or the wider box of a long word (labelBox()).
     const [x, y, w, h] = place;
     di.labels[n.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH, w) / 2), R(y), Math.max(LABEL_WIDTH, w), R(h)];
@@ -2921,7 +2928,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // A boundary event's name 4 px below its host's edge, beside the event: right first, then left (story 2.30).
   for (const b of boundaries){
     if (!b.name) continue;
-    const c = box[b.id], size = measure(b.name);
+    const c = box[b.id], size = measure(textOf(b));
     const places = [[c.cx + c.w / 2 + 2, c.cy + 4, size.w, size.h], [c.cx - c.w / 2 - 2 - size.w, c.cy + 4, size.w, size.h], ...labelPlaces(c, size, false)];
     const place = bestPlace(places, [...symbols.filter(x => x !== di.nodes[b.id]), ...segments, ...taken]);
     const [x, y, w, h] = place;

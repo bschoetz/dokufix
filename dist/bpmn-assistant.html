@@ -463,6 +463,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     return out;
   }
   var clean = (text) => String(text || "").replace(/\s+/g, " ").trim();
+  var labelOf = (text) => String(text || "").includes("\n") ? { label: String(text) } : {};
+  var textOf = (x) => x.label ?? x.name;
   function nodeType(tag) {
     if (tag === "startEvent") return "start";
     if (tag === "endEvent") return "end";
@@ -570,7 +572,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       else if (boundaries.some((x) => x.id === from || x.id === to)) slot.reason = "at a boundary event, which takes no message flow yet";
       else if (!a || !b) slot.reason = "touches " + [...new Set([from, to].filter((id) => !end(id)))].join(" and ") + ", which is not laid out";
       else if (a.pool === b.pool) slot.reason = "a message flow within one pool";
-      else messages.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")), ...a.frame ? { fromPool: a.pool } : {}, ...b.frame ? { toPool: b.pool } : {} });
+      else messages.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")), ...labelOf(attr(el, "name")), ...a.frame ? { fromPool: a.pool } : {}, ...b.frame ? { toPool: b.pool } : {} });
     }
     const { notes, associations } = readNotes(noted, { pools, byId: byId2, poolOfNode, boundaries, flows, messages });
     for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
@@ -619,7 +621,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       const tag = local(el), type = nodeType(tag), id = attr(el, "id");
       if (type && id) {
         const markers = type !== "task" ? 0 : (HOLDS_CONTENT.has(tag) || tag === "callActivity" ? 1 : 0) + (tag === "adHocSubProcess" ? 1 : 0) + (attr(el, "isForCompensation") === "true" ? 1 : 0) + (kids(el).some((k) => ["standardLoopCharacteristics", "multiInstanceLoopCharacteristics"].includes(local(k))) ? 1 : 0);
-        nodes.push({ id, name: clean(attr(el, "name")), type, tag, key: "n" + (before.length + nodes.length + 1), ...markers ? { markers } : {} });
+        nodes.push({ id, name: clean(attr(el, "name")), ...labelOf(attr(el, "name")), type, tag, key: "n" + (before.length + nodes.length + 1), ...markers ? { markers } : {} });
         if (HOLDS_CONTENT.has(tag)) {
           for (const inner of descendants(el)) if (attr(inner, "id") && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || ["sequenceFlow", "boundaryEvent"].includes(local(inner)))) leave(inner, "inside the sub-process " + id);
         }
@@ -640,7 +642,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       const id = attr(el, "id"), host = attr(el, "attachedToRef");
       if (!id) leave(el, "has no id");
       else if (!byId2.has(host) || byId2.get(host).type !== "task") leave(el, "attached to " + (host || "nothing") + ", which is not laid out");
-      else boundaries.push({ id, name: clean(attr(el, "name")), host, cancel: attr(el, "cancelActivity") !== "false" });
+      else boundaries.push({ id, name: clean(attr(el, "name")), ...labelOf(attr(el, "name")), host, cancel: attr(el, "cancelActivity") !== "false" });
     }
     const boundaryIds = new Set(boundaries.map((b) => b.id));
     const allLanes = kids(proc).filter((el) => local(el) === "laneSet").flatMap((set) => descendants(set).filter((el) => local(el) === "lane"));
@@ -678,7 +680,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (local(el) !== "sequenceFlow") continue;
       const from = attr(el, "sourceRef"), to = attr(el, "targetRef");
       if (from === to && byId2.has(from) && attr(el, "id")) leave(el, "a flow from a node to itself");
-      else if ((byId2.has(from) || boundaryIds.has(from)) && byId2.has(to) && attr(el, "id")) flows.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")) });
+      else if ((byId2.has(from) || boundaryIds.has(from)) && byId2.has(to) && attr(el, "id")) flows.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")), ...labelOf(attr(el, "name")) });
       else leave(el, !attr(el, "id") ? "has no id" : boundaryIds.has(to) ? "enters the boundary event " + to : "touches " + [...new Set([from, to].filter((id) => !byId2.has(id) && !boundaryIds.has(id)))].join(" and ") + ", which is not laid out");
     }
     return { nodes, lanes, flows, boundaries, standIn };
@@ -2465,7 +2467,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       rowH[b] = Math.max(base, n ? 2 * margin + (n - 1) * step + (bands[b].edge ? 0 : 8) : 0);
       if (bands[b].kind === "gap") for (const m of model.messages || []) {
         const s = endAt(m, "from").band, e = endAt(m, "to").band;
-        if (m.name && (b - s) * (b - e) < 0) rowH[b] = Math.max(rowH[b], measure(m.name).h + 12);
+        if (m.name && (b - s) * (b - e) < 0) rowH[b] = Math.max(rowH[b], measure(textOf(m)).h + 12);
       }
     }
     const gapW = [];
@@ -2479,7 +2481,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (Math.abs(p.x2 - p.x1) !== 2) continue;
       const a = g.cells.get(r.f.from), b = g.cells.get(r.f.to), [l, rt] = p.x1 < p.x2 ? [a, b] : [b, a];
       const spare = (colW[l.col] - SIZE[l.n.type][0]) / 2 + (colW[rt.col] - SIZE[rt.n.type][0]) / 2;
-      const need = (a.n.type === "gateway" ? 10 : 6) + measure(r.f.name).w + 6;
+      const need = (a.n.type === "gateway" ? 10 : 6) + measure(textOf(r.f)).w + 6;
       const k = Math.max(l.col, rt.col);
       gapW[k] = Math.max(gapW[k], Math.ceil(need - spare));
     }
@@ -2487,7 +2489,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (c.n.type !== "gateway" || !c.n.name) continue;
       const at = (side) => routed.some((r) => r.f.from === c.n.id && r.sides[0] === side || r.f.to === c.n.id && r.sides[1] === side);
       if (!at("top") || !at("bottom")) continue;
-      const band = place.get(c.n.id).band, need = 2 + measure(c.n.name).w + 6;
+      const band = place.get(c.n.id).band, need = 2 + measure(textOf(c.n)).w + 6;
       const short = (d) => {
         const id = cellAt.get(band + "|" + (2 * (c.col + d) + 1));
         if (!id || g.cells.get(id).n.type !== "task") return 0;
@@ -2707,7 +2709,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (!f.name) continue;
       const alone = !routes.some((o) => o.f !== f && o.f.from === f.from && exitSide(o.pts) === exitSide(pts));
       const avoid = [...symbols, ...segments, ...taken];
-      const place = message.has(f.id) ? bestPlace([...inGaps(pts, measure(f.name)), ...flowLabelPlaces(pts, f.name, false, measure(f.name))], [...avoid, ...edges]) : flowLabel(pts, f.name, gateways.has(f.from) && alone, avoid, measure(f.name), !!loop);
+      const place = message.has(f.id) ? bestPlace([...inGaps(pts, measure(textOf(f))), ...flowLabelPlaces(pts, textOf(f), false, measure(textOf(f)))], [...avoid, ...edges]) : flowLabel(pts, textOf(f), gateways.has(f.from) && alone, avoid, measure(textOf(f)), !!loop);
       di.flowLabels[f.id] = place;
       taken.push(place);
       takenPool.push(message.has(f.id) ? null : poolOf.get(f.from));
@@ -2715,7 +2717,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
     for (const n of model.nodes) {
       if (n.type === "task" || !n.name) continue;
-      const place = bestPlace(labelPlaces(box[n.id], measure(n.name), n.type === "gateway"), [...symbols.filter((b) => b !== di.nodes[n.id]), ...segments, ...taken]);
+      const place = bestPlace(labelPlaces(box[n.id], measure(textOf(n)), n.type === "gateway"), [...symbols.filter((b) => b !== di.nodes[n.id]), ...segments, ...taken]);
       const [x, y, w, h] = place;
       di.labels[n.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH2, w) / 2), R(y), Math.max(LABEL_WIDTH2, w), R(h)];
       taken.push(place);
@@ -2724,7 +2726,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
     for (const b of boundaries) {
       if (!b.name) continue;
-      const c = box[b.id], size = measure(b.name);
+      const c = box[b.id], size = measure(textOf(b));
       const places = [[c.cx + c.w / 2 + 2, c.cy + 4, size.w, size.h], [c.cx - c.w / 2 - 2 - size.w, c.cy + 4, size.w, size.h], ...labelPlaces(c, size, false)];
       const place = bestPlace(places, [...symbols.filter((x2) => x2 !== di.nodes[b.id]), ...segments, ...taken]);
       const [x, y, w, h] = place;
@@ -3920,7 +3922,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     for (const n of model.nodes.concat(boundaries)) {
       const box = di.labels[n.id];
       if (!box) continue;
-      const [x, y, w, h] = box, s = sizes[n.name] || measureLabel(n.name);
+      const [x, y, w, h] = box, s = sizes[n.label ?? n.name] || measureLabel(n.label ?? n.name);
       labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
     }
     for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });

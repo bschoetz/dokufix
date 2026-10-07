@@ -272,7 +272,7 @@ export function breaksOf(xml, model, sizes = {}){
   for (const n of model.nodes.concat(boundaries)){
     const box = di.labels[n.id];
     if (!box) continue;
-    const [x, y, w, h] = box, s = sizes[n.name] || measureLabel(n.name);
+    const [x, y, w, h] = box, s = sizes[n.label ?? n.name] || measureLabel(n.label ?? n.name);
     labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
   }
   for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });

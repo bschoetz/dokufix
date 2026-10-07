@@ -1520,6 +1520,7 @@
     {
      "id": "Task_2",
      "name": "Zeile A Zeile B Tab AA ä 😀 😀",
+     "label": "Zeile A\nZeile B\tTab AA ä 😀 😀",
      "type": "task",
      "tag": "task",
      "key": "n3"
