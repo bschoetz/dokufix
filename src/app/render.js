@@ -16,6 +16,7 @@ import { renderDiagrams } from './diagrams.js';
 import { attachSvgDownloads } from './diagram-downloads.js';
 import { buildCodeLines, attachCodeCopy } from './code-blocks.js';
 import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
+import { makeRenderQueue } from './render-queue.js';
 
 // --- From source to preview ------------------------------------------------
 // One render is four steps:
@@ -85,37 +86,13 @@ export const RUNTIME_PASSES = [
   { name: 'BPMN-Ansicht', run: attachLiveViewers },
 ];
 
-// One render at a time. A render requested while another runs starts when
-// that one is finished, and reads the source then; the preview ends as the
-// last one's. A newer request aborts the render before it (its AbortSignal):
-// a layout of BPMN still running in its worker is given up at once, so that
-// Ctrl+Enter during a layout of many seconds acts now and not after it
-// (src/app/layout-client.js), and a render still waiting for its turn does
-// not run at all. The promise is fulfilled when the preview is the newest
-// render's, so that whoever waits for it, an export above all, never copies
-// a preview a newer render is about to replace, nor one with the warnings of
-// an aborted layout. It is never rejected: whatever fails ends as a warning in
-// the document and a line in the console.
-let lastRender = Promise.resolve();
-let lastController = null;
-export function render() {
-  if (lastController) lastController.abort();
-  const controller = lastController = new AbortController();
-  const run = () => renderOnce(controller.signal);
-  // renderOnce() contains its own failures; the second argument keeps the
-  // queue alive even if it ever did not.
-  lastRender = lastRender.then(run, run);
-  return newest();
-}
-// Settles when the render last requested has, however many come after this one.
-async function newest() {
-  let waited;
-  do { waited = lastRender; await waited; } while (waited !== lastRender);
-}
+// One render at a time, the newest aborting the one before it; the promise
+// is fulfilled when the preview is the newest render's, and is never
+// rejected: whatever fails ends as a warning in the document and a line in
+// the console. The queue is makeRenderQueue()'s (src/app/render-queue.js).
+export const render = makeRenderQueue(renderOnce);
 
 async function renderOnce(signal) {
-  // A newer render was requested before this one began: that one shows the source.
-  if (signal.aborted) return;
   try {
     // A live viewer still running goes first: whatever this render does, the
     // figure it stands in is replaced (src/app/live-viewer.js).
