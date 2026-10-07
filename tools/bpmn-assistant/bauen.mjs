@@ -55,7 +55,7 @@ const bundle = (await esbuild.build({
       import { parseXml } from '${REPO}/src/app/xml-parser.js';
       import { makeLayoutClient } from '${REPO}/src/app/layout-client.js';
       import { showLayoutNotice } from '${REPO}/src/app/layout-notice.js';
-      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, variants: { A2: a2 } };
+      window.T = { parseXml, kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, makeLayoutClient, showLayoutNotice, a2 };
     `,
     resolveDir: HERE, loader: 'js',
   },
@@ -981,7 +981,8 @@ async function render(){
   try { localStorage.setItem('bpmn-testtool-xml', input); } catch {}
   if (!input){ error(section('Eingabe'), 'Kein XML.'); return; }
   const xml = hasDi(input) ? stripDi(input) : input;
-  // Mit dem Leser des Layouts (src/app/xml-parser.js), wie layoutBpmn() in der App, nicht mit dem DOMParser der Seite.
+  // Mit dem Leser des Layouts (src/app/xml-parser.js), wie layoutJob() in der App (src/app/bpmn-layout-job.js), nicht mit
+  // dem DOMParser der Seite.
   let doc;
   try { doc = T.parseXml(xml); } catch (e){ error(section('Eingabe'), 'Das XML ist nicht lesbar:\\n' + e.message); return; }
   // Zuerst das Original, wenn die Datei eigene Koordinaten hat: so gezeichnet, in der gewählten Palette; sonst kein
@@ -993,7 +994,7 @@ async function render(){
   if (my !== run) return;
   let read;
   try {
-    read = T.variants.A2.readProcess(doc);
+    read = T.a2.readProcess(doc);
     if (!read) throw new Error('Keine BPMN-Definitionen (das Wurzelelement ist nicht definitions).');
     // Die Spalten gibt LMM, die Beschriftungen misst das Layout selbst (measureLabel(), wie in der App): weder Mermaid
     // noch ein Viewer zum Messen.
@@ -1004,15 +1005,17 @@ async function render(){
     d.innerHTML = '<summary>' + read.leftOut.length + ' Elemente nicht angeordnet (wie in der App)</summary>' + read.leftOut.map(l => esc(l.tag + ' ' + (l.id || '') + ': ' + l.reason)).join('<br>');
     $('out').appendChild(d);
   }
-  for (const name of Object.keys(T.variants)){
-    const s = section(name);
+  // A2, ein Abschnitt und keine Schleife über Varianten: der Worker der App ordnet nur A2 an, eine zweite Variante
+  // bekäme dort still A2s Bild.
+  {
+    const name = 'A2', s = section(name);
     // Im Worker, wie in der App (layoutJob() in src/app/bpmn-layout-job.js): das Modell in LMMs Ordnung mit seinen
     // Spalten fürs Raster, das des Autors für den Diagrammteil. Solange er rechnet, zählt der Hinweis die Sekunden, und
     // die Seite bleibt bedienbar; nach 120 s gibt der Client auf, mit dem Grund an Stelle des Diagramms.
     const wait = document.createElement('div');
     s.appendChild(wait);
     const notice = T.showLayoutNotice(wait);
-    let laid, ms;
+    let laid = null, ms;
     try {
       const t0 = performance.now();
       laid = await LAYOUT.layout(xml, { signal });
@@ -1021,10 +1024,10 @@ async function render(){
       // Abgebrochen von einem neueren Rendern: dessen Abschnitte stehen schon da.
       if (my !== run) return;
       error(s, (e && e.message) || String(e));
-      continue;
     } finally { notice.stop(); wait.remove(); }
     if (my !== run) return;
-    try {
+    // Abgelehnt (der Grund steht im Abschnitt): weiter mit bpmn.io.
+    if (laid) try {
       // Das Modell des Autors, auf der Seite gelesen (read oben), für die Behelfslinien und die Regelprüfung.
       const sig = signalLines(laid.xml, read.model);
       let info = Math.round(ms) + ' ms' + (LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker') + (sig.count ? ' · ' + sig.count + ' Assoziationen zwischen Flussknoten als Gerade (Behelf)' : '');
