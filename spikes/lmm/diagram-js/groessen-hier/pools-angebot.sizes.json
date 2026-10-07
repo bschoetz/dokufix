@@ -1,0 +1,26 @@
+{
+ "Bedarf erkannt": {
+  "w": 85,
+  "h": 15
+ },
+ "Angebot liegt vor": {
+  "w": 76,
+  "h": 29
+ },
+ "Anfrage eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Angebot versendet": {
+  "w": 57,
+  "h": 29
+ },
+ "Anfrage": {
+  "w": 46,
+  "h": 15
+ },
+ "Angebot": {
+  "w": 49,
+  "h": 15
+ }
+}

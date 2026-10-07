@@ -34,6 +34,8 @@ Erzeugt von `korpus-erzeugen.mjs`. Jede Datei ein Fall.
 | `doctype-leer.bpmn` | Ein DOCTYPE ohne internen Teil. |
 | `doctype-intern.bpmn` | Eigene Entitäten im internen DTD-Teil: Browser lösen sie auf (libxml2, expat), saxen nicht. Welches Verhalten das Paket wählt, ist zu entscheiden. |
 | `doctype-extern.bpmn` | Eine externe Entität (XXE): Kein Parser darf sie laden. Browser ersetzen sie durch nichts oder melden einen Fehler. |
+| `doctype-extern-inhalt.bpmn` | Dieselbe externe Entität, im Text statt im Attribut verwiesen: Browser laden sie nicht; ob sie still verschwindet oder ein Fehler ist, ist zu messen. |
+| `zeichenreferenz-cr.bpmn` | &#13; und &#xD; (Wagenrücklauf als Referenz): sie bleiben nach §2.11 erhalten, nur wörtliche \r werden normalisiert. |
 | `billion-laughs.bpmn` | Verschachtelte Entitäten (10^8 × "lol", 300 MB): ein Parser, der Entitäten auflöst, braucht eine Grenze. |
 | `praefix-bpmn2.bpmn` | Präfix bpmn2: (Eclipse BPMN2 Modeler). |
 | `praefix-ohne.bpmn` | Standard-Namensraum ohne Präfix. |

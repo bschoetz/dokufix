@@ -1,0 +1,34 @@
+{
+ "Wunsch eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Gefunden?": {
+  "w": 63,
+  "h": 15
+ },
+ "Freigegeben?": {
+  "w": 78,
+  "h": 15
+ },
+ "Bestellt": {
+  "w": 42,
+  "h": 15
+ },
+ "Abgesagt": {
+  "w": 55,
+  "h": 15
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 25,
+  "h": 15
+ },
+ "vergriffen": {
+  "w": 55,
+  "h": 15
+ }
+}

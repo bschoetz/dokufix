@@ -1,0 +1,26 @@
+{
+ "Melkzeit erreicht": {
+  "w": 48,
+  "h": 29
+ },
+ "Hündin ruhig?": {
+  "w": 79,
+  "h": 15
+ },
+ "Alle Zitzen gemolken?": {
+  "w": 62,
+  "h": 44
+ },
+ "Milch eingelagert": {
+  "w": 64,
+  "h": 29
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 25,
+  "h": 15
+ }
+}

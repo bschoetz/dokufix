@@ -1,0 +1,42 @@
+{
+ "Auftrag abgeschlossen": {
+  "w": 86,
+  "h": 29
+ },
+ "Rechnung versendet": {
+  "w": 58,
+  "h": 29
+ },
+ "Rechnung erhalten": {
+  "w": 58,
+  "h": 29
+ },
+ "Schon zwei Mahnungen verschickt?": {
+  "w": 68,
+  "h": 44
+ },
+ "Fall an Inkasso abgegeben": {
+  "w": 65,
+  "h": 44
+ },
+ "Auftrag abgeschlossen und bezahlt": {
+  "w": 86,
+  "h": 44
+ },
+ "14 Tage verstrichen": {
+  "w": 64,
+  "h": 29
+ },
+ "Zahlung eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Ja": {
+  "w": 14,
+  "h": 15
+ },
+ "Nein": {
+  "w": 27,
+  "h": 15
+ }
+}

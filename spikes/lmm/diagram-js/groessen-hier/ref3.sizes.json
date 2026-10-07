@@ -1,0 +1,50 @@
+{
+ "Reagiert auf eine Erinnerung": {
+  "w": 90,
+  "h": 29
+ },
+ "Wie meldet er sich?": {
+  "w": 79,
+  "h": 29
+ },
+ "Antwort im Postfach": {
+  "w": 62,
+  "h": 29
+ },
+ "Art der Antwort?": {
+  "w": 52,
+  "h": 29
+ },
+ "Abwesenheit, nichts zu tun": {
+  "w": 77,
+  "h": 29
+ },
+ "Abgemeldet": {
+  "w": 69,
+  "h": 15
+ },
+ "Bei der Tourenplanung": {
+  "w": 86,
+  "h": 29
+ },
+ "Antwort": {
+  "w": 45,
+  "h": 15
+ },
+ "Formular": {
+  "w": 51,
+  "h": 15
+ },
+ "Abwesenheit": {
+  "w": 74,
+  "h": 15
+ },
+ "Abmeldung": {
+  "w": 65,
+  "h": 15
+ },
+ "Anfrage": {
+  "w": 46,
+  "h": 15
+ }
+}

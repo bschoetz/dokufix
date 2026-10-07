@@ -1,0 +1,46 @@
+{
+ "Kreditantrag eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Kredit bewilligt?": {
+  "w": 90,
+  "h": 15
+ },
+ "Kredit zugesagt": {
+  "w": 90,
+  "h": 15
+ },
+ "Kredit abgelehnt": {
+  "w": 57,
+  "h": 29
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "nein": {
+  "w": 25,
+  "h": 15
+ },
+ "Kreditantrag": {
+  "w": 70,
+  "h": 15
+ },
+ "Bonitätsanfrage": {
+  "w": 90,
+  "h": 15
+ },
+ "Bonitätsauskunft": {
+  "w": 87,
+  "h": 29
+ },
+ "Zusage mit Vertrag": {
+  "w": 63,
+  "h": 29
+ },
+ "Absage": {
+  "w": 44,
+  "h": 15
+ }
+}

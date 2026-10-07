@@ -36,12 +36,14 @@ const merge = (key, info, results) => {
 };
 
 for (const name of wanted){
-  if (name === 'chromium'){
-    if (runtime !== 'node'){ console.log('chromium: nur unter Node'); continue; }
-    const { chromiumLesen } = await import('./umgebungen/chromium.mjs');
-    const { info, results } = await chromiumLesen(faelle, { log: s => process.stdout.write('\r' + s + '   ') });
-    merge('chromium', info, results);
-    console.log('\rchromium: ' + Object.keys(results).length + ' Fälle, ' + info);
+  if (name === 'chromium' || name === 'firefox' || name === 'webkit'){
+    if (runtime !== 'node'){ console.log(name + ': nur unter Node'); continue; }
+    const { browserLesen } = await import('./umgebungen/chromium.mjs');
+    let info, results;
+    try { ({ info, results } = await browserLesen(name, faelle, { log: s => process.stdout.write('\r' + s + '   ') })); }
+    catch (e){ console.log('\r' + name + ': nicht gestartet: ' + String(e.message).split('\n')[0]); continue; }
+    merge(name, info, results);
+    console.log('\r' + name + ': ' + Object.keys(results).length + ' Fälle, ' + info);
     continue;
   }
   let mod;

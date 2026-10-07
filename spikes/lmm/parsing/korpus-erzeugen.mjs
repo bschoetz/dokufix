@@ -115,6 +115,10 @@ put('doctype-intern', bpmn({ before: '<!DOCTYPE definitions [\n  <!ENTITY firma 
   'Eigene Entitäten im internen DTD-Teil: Browser lösen sie auf (libxml2, expat), saxen nicht. Welches Verhalten das Paket wählt, ist zu entscheiden.');
 put('doctype-extern', bpmn({ before: '<!DOCTYPE definitions [\n  <!ENTITY geheim SYSTEM "file:///etc/hostname">\n]>', name1: 'Inhalt: &geheim;' }),
   'Eine externe Entität (XXE): Kein Parser darf sie laden. Browser ersetzen sie durch nichts oder melden einen Fehler.');
+put('doctype-extern-inhalt', bpmn({ before: '<!DOCTYPE definitions [\n  <!ENTITY geheim SYSTEM "file:///etc/hostname">\n]>', note: 'Inhalt: &geheim;' }),
+  'Dieselbe externe Entität, im Text statt im Attribut verwiesen: Browser laden sie nicht; ob sie still verschwindet oder ein Fehler ist, ist zu messen.');
+put('zeichenreferenz-cr', bpmn({ note: 'Zeile A&#13;&#10;Zeile B&#xD;Ende', name1: 'A&#13;B' }),
+  '&#13; und &#xD; (Wagenrücklauf als Referenz): sie bleiben nach §2.11 erhalten, nur wörtliche \\r werden normalisiert.');
 put('billion-laughs', bpmn({ before: '<!DOCTYPE definitions [\n  <!ENTITY l0 "lol">\n  <!ENTITY l1 "&l0;&l0;&l0;&l0;&l0;&l0;&l0;&l0;&l0;&l0;">\n  <!ENTITY l2 "&l1;&l1;&l1;&l1;&l1;&l1;&l1;&l1;&l1;&l1;">\n  <!ENTITY l3 "&l2;&l2;&l2;&l2;&l2;&l2;&l2;&l2;&l2;&l2;">\n  <!ENTITY l4 "&l3;&l3;&l3;&l3;&l3;&l3;&l3;&l3;&l3;&l3;">\n  <!ENTITY l5 "&l4;&l4;&l4;&l4;&l4;&l4;&l4;&l4;&l4;&l4;">\n  <!ENTITY l6 "&l5;&l5;&l5;&l5;&l5;&l5;&l5;&l5;&l5;&l5;">\n  <!ENTITY l7 "&l6;&l6;&l6;&l6;&l6;&l6;&l6;&l6;&l6;&l6;">\n  <!ENTITY l8 "&l7;&l7;&l7;&l7;&l7;&l7;&l7;&l7;&l7;&l7;">\n]>', note: '&l8;' }),
   'Verschachtelte Entitäten (10^8 × "lol", 300 MB): ein Parser, der Entitäten auflöst, braucht eine Grenze.');
 

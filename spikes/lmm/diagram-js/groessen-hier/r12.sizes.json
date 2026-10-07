@@ -1,0 +1,26 @@
+{
+ "Eingang": {
+  "w": 46,
+  "h": 15
+ },
+ "Entscheidung tragfähig und begründet?": {
+  "w": 78,
+  "h": 44
+ },
+ "Erledigt": {
+  "w": 44,
+  "h": 15
+ },
+ "Nein, weitere Unterlagen beim Antragsteller anfordern und erneut sichten": {
+  "w": 82,
+  "h": 87
+ },
+ "Teilweise: Begründung nachbessern lassen": {
+  "w": 74,
+  "h": 58
+ },
+ "Ja": {
+  "w": 14,
+  "h": 15
+ }
+}

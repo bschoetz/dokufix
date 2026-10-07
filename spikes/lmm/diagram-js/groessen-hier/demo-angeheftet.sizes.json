@@ -1,0 +1,42 @@
+{
+ "Bestellung da": {
+  "w": 77,
+  "h": 15
+ },
+ "Geliefert": {
+  "w": 49,
+  "h": 15
+ },
+ "Gemahnt": {
+  "w": 52,
+  "h": 15
+ },
+ "Beantwortet": {
+  "w": 70,
+  "h": 15
+ },
+ "Reklamiert": {
+  "w": 60,
+  "h": 15
+ },
+ "Kein Netz": {
+  "w": 55,
+  "h": 15
+ },
+ "Drei Tage": {
+  "w": 55,
+  "h": 15
+ },
+ "Rückfrage": {
+  "w": 59,
+  "h": 15
+ },
+ "Schaden": {
+  "w": 50,
+  "h": 15
+ },
+ "erneut": {
+  "w": 37,
+  "h": 15
+ }
+}

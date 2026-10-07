@@ -1,0 +1,992 @@
+{
+ "alle": {
+  "Prototyp, Inter, mit Kerning": {
+   "labels": {
+    "n": 292,
+    "meanW": 0.03767123287671233,
+    "maxW": 11,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 291
+   },
+   "notes": {
+    "n": 280,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 280
+   },
+   "worst": [
+    {
+     "k": "請求書を確認する",
+     "ref": {
+      "w": 73,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 84,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 11
+    }
+   ]
+  },
+  "Prototyp, Inter, ohne Kerning": {
+   "labels": {
+    "n": 292,
+    "meanW": 0.4520547945205479,
+    "maxW": 36,
+    "meanH": 0.1506849315068493,
+    "maxH": 15,
+    "wrongLines": 3,
+    "exact": 224
+   },
+   "notes": {
+    "n": 280,
+    "meanH": 0.1,
+    "maxH": 14,
+    "wrongLines": 2,
+    "exact": 278
+   },
+   "worst": [
+    {
+     "k": "Kredit bewilligt?",
+     "ref": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 54,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 50
+    },
+    {
+     "k": "Erinnerung gesendet",
+     "ref": {
+      "w": 63,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 62,
+      "h": 44,
+      "lines": 3
+     },
+     "d": 16
+    },
+    {
+     "k": "Entscheidung tragfähig und begründet?",
+     "ref": {
+      "w": 78,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 78,
+      "h": 59,
+      "lines": 4
+     },
+     "d": 15
+    },
+    {
+     "k": "note:100:Frist zur Nachreichung laeuft ab Zugang der Nachforderung",
+     "ref": {
+      "w": 100,
+      "h": 86,
+      "lines": 5
+     },
+     "got": {
+      "w": 100,
+      "h": 100,
+      "lines": 6
+     },
+     "d": 14
+    },
+    {
+     "k": "note:100:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen",
+     "ref": {
+      "w": 100,
+      "h": 115,
+      "lines": 7
+     },
+     "got": {
+      "w": 100,
+      "h": 129,
+      "lines": 8
+     },
+     "d": 14
+    }
+   ]
+  },
+  "Prototyp, Liberation Sans (Chromium zeichnet Inter)": {
+   "labels": {
+    "n": 292,
+    "meanW": 4.705479452054795,
+    "maxW": 41,
+    "meanH": 1.178082191780822,
+    "maxH": 29,
+    "wrongLines": 23,
+    "exact": 11
+   },
+   "notes": {
+    "n": 280,
+    "meanH": 1.4464285714285714,
+    "maxH": 29,
+    "wrongLines": 35,
+    "exact": 245
+   },
+   "worst": [
+    {
+     "k": "Nach drei Tagen",
+     "ref": {
+      "w": 55,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 88,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 62
+    },
+    {
+     "k": "Absage erhalten",
+     "ref": {
+      "w": 47,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 88,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 55
+    },
+    {
+     "k": "Melkzeit erreicht",
+     "ref": {
+      "w": 48,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 88,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 54
+    },
+    {
+     "k": "Auftrag erhalten",
+     "ref": {
+      "w": 47,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 86,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 53
+    },
+    {
+     "k": "15 Min abkühlen lassen",
+     "ref": {
+      "w": 52,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 89,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 52
+    }
+   ]
+  },
+  "(a1) TextRenderer ohne Viewer, Chromium": {
+   "labels": {
+    "n": 292,
+    "meanW": 0,
+    "maxW": 0,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 292
+   },
+   "notes": {
+    "n": 280,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 280
+   },
+   "worst": []
+  },
+  "heute: labelSize()": {
+   "labels": {
+    "n": 292,
+    "meanW": 5.466438356164387,
+    "maxW": 41.800000000000004,
+    "meanH": 2.6267123287671232,
+    "maxH": 44,
+    "wrongLines": 38,
+    "exact": 1
+   },
+   "notes": {
+    "n": 280,
+    "meanH": 3.1964285714285716,
+    "maxH": 53,
+    "wrongLines": 56,
+    "exact": 119
+   },
+   "worst": [
+    {
+     "k": "Weitere Hündin wartet?",
+     "ref": {
+      "w": 88,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 46.199999999999996,
+      "h": 45,
+      "lines": 3
+     },
+     "d": 57.800000000000004
+    },
+    {
+     "k": "Bedarf erkannt",
+     "ref": {
+      "w": 85,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 46.199999999999996,
+      "h": 30,
+      "lines": 2
+     },
+     "d": 53.800000000000004
+    },
+    {
+     "k": "note:100:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan",
+     "ref": {
+      "w": 100,
+      "h": 172,
+      "lines": 11
+     },
+     "got": {
+      "w": 100,
+      "h": 119,
+      "lines": 7
+     },
+     "d": 53
+    },
+    {
+     "k": "Kredit zugesagt",
+     "ref": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 52.8,
+      "h": 30,
+      "lines": 2
+     },
+     "d": 52.2
+    },
+    {
+     "k": "Stelle gefunden",
+     "ref": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 52.8,
+      "h": 30,
+      "lines": 2
+     },
+     "d": 52.2
+    }
+   ]
+  }
+ },
+ "nur Fixtures": {
+  "Prototyp, Inter, mit Kerning": {
+   "labels": {
+    "n": 261,
+    "meanW": 0,
+    "maxW": 0,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 261
+   },
+   "notes": {
+    "n": 156,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 156
+   },
+   "worst": []
+  },
+  "Prototyp, Inter, ohne Kerning": {
+   "labels": {
+    "n": 261,
+    "meanW": 0.3793103448275862,
+    "maxW": 36,
+    "meanH": 0.1685823754789272,
+    "maxH": 15,
+    "wrongLines": 3,
+    "exact": 203
+   },
+   "notes": {
+    "n": 156,
+    "meanH": 0.1794871794871795,
+    "maxH": 14,
+    "wrongLines": 2,
+    "exact": 154
+   },
+   "worst": [
+    {
+     "k": "Kredit bewilligt?",
+     "ref": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 54,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 50
+    },
+    {
+     "k": "Erinnerung gesendet",
+     "ref": {
+      "w": 63,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 62,
+      "h": 44,
+      "lines": 3
+     },
+     "d": 16
+    },
+    {
+     "k": "Entscheidung tragfähig und begründet?",
+     "ref": {
+      "w": 78,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 78,
+      "h": 59,
+      "lines": 4
+     },
+     "d": 15
+    },
+    {
+     "k": "note:100:Frist zur Nachreichung laeuft ab Zugang der Nachforderung",
+     "ref": {
+      "w": 100,
+      "h": 86,
+      "lines": 5
+     },
+     "got": {
+      "w": 100,
+      "h": 100,
+      "lines": 6
+     },
+     "d": 14
+    },
+    {
+     "k": "note:100:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen",
+     "ref": {
+      "w": 100,
+      "h": 115,
+      "lines": 7
+     },
+     "got": {
+      "w": 100,
+      "h": 129,
+      "lines": 8
+     },
+     "d": 14
+    }
+   ]
+  },
+  "Prototyp, Liberation Sans (Chromium zeichnet Inter)": {
+   "labels": {
+    "n": 261,
+    "meanW": 4.850574712643678,
+    "maxW": 41,
+    "meanH": 1.0957854406130267,
+    "maxH": 29,
+    "wrongLines": 19,
+    "exact": 8
+   },
+   "notes": {
+    "n": 156,
+    "meanH": 1.9679487179487178,
+    "maxH": 29,
+    "wrongLines": 25,
+    "exact": 131
+   },
+   "worst": [
+    {
+     "k": "Nach drei Tagen",
+     "ref": {
+      "w": 55,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 88,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 62
+    },
+    {
+     "k": "Absage erhalten",
+     "ref": {
+      "w": 47,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 88,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 55
+    },
+    {
+     "k": "Melkzeit erreicht",
+     "ref": {
+      "w": 48,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 88,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 54
+    },
+    {
+     "k": "Auftrag erhalten",
+     "ref": {
+      "w": 47,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 86,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 53
+    },
+    {
+     "k": "15 Min abkühlen lassen",
+     "ref": {
+      "w": 52,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 89,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 52
+    }
+   ]
+  },
+  "(a1) TextRenderer ohne Viewer, Chromium": {
+   "labels": {
+    "n": 261,
+    "meanW": 0,
+    "maxW": 0,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 261
+   },
+   "notes": {
+    "n": 156,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 156
+   },
+   "worst": []
+  },
+  "heute: labelSize()": {
+   "labels": {
+    "n": 261,
+    "meanW": 5.39770114942529,
+    "maxW": 41.800000000000004,
+    "meanH": 1.8850574712643677,
+    "maxH": 18,
+    "wrongLines": 27,
+    "exact": 1
+   },
+   "notes": {
+    "n": 156,
+    "meanH": 3.621794871794872,
+    "maxH": 53,
+    "wrongLines": 27,
+    "exact": 58
+   },
+   "worst": [
+    {
+     "k": "Weitere Hündin wartet?",
+     "ref": {
+      "w": 88,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 46.199999999999996,
+      "h": 45,
+      "lines": 3
+     },
+     "d": 57.800000000000004
+    },
+    {
+     "k": "Bedarf erkannt",
+     "ref": {
+      "w": 85,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 46.199999999999996,
+      "h": 30,
+      "lines": 2
+     },
+     "d": 53.800000000000004
+    },
+    {
+     "k": "note:100:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan",
+     "ref": {
+      "w": 100,
+      "h": 172,
+      "lines": 11
+     },
+     "got": {
+      "w": 100,
+      "h": 119,
+      "lines": 7
+     },
+     "d": 53
+    },
+    {
+     "k": "Kredit zugesagt",
+     "ref": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 52.8,
+      "h": 30,
+      "lines": 2
+     },
+     "d": 52.2
+    },
+    {
+     "k": "Stelle gefunden",
+     "ref": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "got": {
+      "w": 52.8,
+      "h": 30,
+      "lines": 2
+     },
+     "d": 52.2
+    }
+   ]
+  }
+ },
+ "nur heikle Texte": {
+  "Prototyp, Inter, mit Kerning": {
+   "labels": {
+    "n": 31,
+    "meanW": 0.3548387096774194,
+    "maxW": 11,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 30
+   },
+   "notes": {
+    "n": 124,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 124
+   },
+   "worst": [
+    {
+     "k": "請求書を確認する",
+     "ref": {
+      "w": 73,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 84,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 11
+    }
+   ]
+  },
+  "Prototyp, Inter, ohne Kerning": {
+   "labels": {
+    "n": 31,
+    "meanW": 1.064516129032258,
+    "maxW": 11,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 21
+   },
+   "notes": {
+    "n": 124,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 124
+   },
+   "worst": [
+    {
+     "k": "請求書を確認する",
+     "ref": {
+      "w": 73,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 84,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 11
+    },
+    {
+     "k": "WWWWWWWWWWWWWWW",
+     "ref": {
+      "w": 73,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 83,
+      "h": 44,
+      "lines": 3
+     },
+     "d": 10
+    },
+    {
+     "k": "AVATAR Wavy Toffee",
+     "ref": {
+      "w": 80,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 85,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 5
+    },
+    {
+     "k": "Kunden-Nr. 4711-0815",
+     "ref": {
+      "w": 66,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 67,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 1
+    },
+    {
+     "k": "12.345,67 EUR überwiesen",
+     "ref": {
+      "w": 83,
+      "h": 29,
+      "lines": 2
+     },
+     "got": {
+      "w": 84,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 1
+    }
+   ]
+  },
+  "Prototyp, Liberation Sans (Chromium zeichnet Inter)": {
+   "labels": {
+    "n": 31,
+    "meanW": 3.4838709677419355,
+    "maxW": 11,
+    "meanH": 1.8709677419354838,
+    "maxH": 15,
+    "wrongLines": 4,
+    "exact": 3
+   },
+   "notes": {
+    "n": 124,
+    "meanH": 0.7903225806451613,
+    "maxH": 15,
+    "wrongLines": 10,
+    "exact": 114
+   },
+   "worst": [
+    {
+     "k": "Rechnungsprüfungs-Workflow",
+     "ref": {
+      "w": 83,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 89,
+      "h": 29,
+      "lines": 2
+     },
+     "d": 21
+    },
+    {
+     "k": "Donaudampfschifffahrtsgesellschaftskapitän",
+     "ref": {
+      "w": 87,
+      "h": 59,
+      "lines": 4
+     },
+     "got": {
+      "w": 88,
+      "h": 44,
+      "lines": 3
+     },
+     "d": 16
+    },
+    {
+     "k": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "ref": {
+      "w": 86,
+      "h": 58,
+      "lines": 4
+     },
+     "got": {
+      "w": 84,
+      "h": 44,
+      "lines": 3
+     },
+     "d": 16
+    },
+    {
+     "k": "Qualitätssicherung abgeschlossen und freigegeben",
+     "ref": {
+      "w": 86,
+      "h": 72,
+      "lines": 5
+     },
+     "got": {
+      "w": 87,
+      "h": 58,
+      "lines": 4
+     },
+     "d": 15
+    },
+    {
+     "k": "note:100:Donaudampfschifffahrtsgesellschaftskapitän",
+     "ref": {
+      "w": 100,
+      "h": 72,
+      "lines": 4
+     },
+     "got": {
+      "w": 100,
+      "h": 57,
+      "lines": 3
+     },
+     "d": 15
+    }
+   ]
+  },
+  "(a1) TextRenderer ohne Viewer, Chromium": {
+   "labels": {
+    "n": 31,
+    "meanW": 0,
+    "maxW": 0,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 31
+   },
+   "notes": {
+    "n": 124,
+    "meanH": 0,
+    "maxH": 0,
+    "wrongLines": 0,
+    "exact": 124
+   },
+   "worst": []
+  },
+  "heute: labelSize()": {
+   "labels": {
+    "n": 31,
+    "meanW": 6.0451612903225795,
+    "maxW": 20.200000000000003,
+    "meanH": 8.870967741935484,
+    "maxH": 44,
+    "wrongLines": 11,
+    "exact": 0
+   },
+   "notes": {
+    "n": 124,
+    "meanH": 2.661290322580645,
+    "maxH": 32,
+    "wrongLines": 29,
+    "exact": 61
+   },
+   "worst": [
+    {
+     "k": "Donaudampfschifffahrtsgesellschaftskapitän",
+     "ref": {
+      "w": 87,
+      "h": 59,
+      "lines": 4
+     },
+     "got": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 47
+    },
+    {
+     "k": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "ref": {
+      "w": 86,
+      "h": 58,
+      "lines": 4
+     },
+     "got": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 47
+    },
+    {
+     "k": "WWWWWWWWWWWWWWW",
+     "ref": {
+      "w": 73,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 46
+    },
+    {
+     "k": "Rechnungsprüfungs-Workflow",
+     "ref": {
+      "w": 83,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 36
+    },
+    {
+     "k": "e-mail-benachrichtigung-versendet",
+     "ref": {
+      "w": 84,
+      "h": 44,
+      "lines": 3
+     },
+     "got": {
+      "w": 90,
+      "h": 15,
+      "lines": 1
+     },
+     "d": 35
+    }
+   ]
+  }
+ },
+ "breiten": {
+  "Inter mit Kerning": {
+   "n": 784,
+   "mean": 0.026527882358300454,
+   "max": 13.891412815126046,
+   "over": 6,
+   "worst": "Zeile eins\r\nZeile zwei\n\nnach Leerzeile"
+  },
+  "Inter ohne Kerning": {
+   "n": 784,
+   "mean": 0.2634813063060045,
+   "max": 14.283990940126046,
+   "over": 118,
+   "worst": "Zeile eins\r\nZeile zwei\n\nnach Leerzeile"
+  },
+  "Liberation Sans mit Kerning (gegen Liberation Sans)": {
+   "n": 784,
+   "mean": 0.0216463468758039,
+   "max": 12.901588760504211,
+   "over": 3,
+   "worst": "Zeile eins\r\nZeile zwei\n\nnach Leerzeile"
+  },
+  "Liberation Sans (gegen Inter: Schrift anders)": {
+   "n": 784,
+   "mean": 4.488912054777268,
+   "max": 73.640625,
+   "over": 736,
+   "worst": "Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken."
+  }
+ }
+}

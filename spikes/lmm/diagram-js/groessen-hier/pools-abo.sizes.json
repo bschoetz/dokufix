@@ -1,0 +1,34 @@
+{
+ "Möchte ein Abo": {
+  "w": 90,
+  "h": 15
+ },
+ "Bestätigung": {
+  "w": 68,
+  "h": 15
+ },
+ "Liefertermin erhalten": {
+  "w": 69,
+  "h": 29
+ },
+ "Wird beliefert": {
+  "w": 77,
+  "h": 15
+ },
+ "Anfrage eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Abo angelegt": {
+  "w": 76,
+  "h": 15
+ },
+ "Anfrage": {
+  "w": 46,
+  "h": 15
+ },
+ "Liefertermin": {
+  "w": 69,
+  "h": 15
+ }
+}

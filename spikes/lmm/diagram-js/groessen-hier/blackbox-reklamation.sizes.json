@@ -1,0 +1,30 @@
+{
+ "Reklamation eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Ersatz oder Gutschrift?": {
+  "w": 65,
+  "h": 29
+ },
+ "Reklamation abgeschlossen": {
+  "w": 86,
+  "h": 29
+ },
+ "Ersatz": {
+  "w": 36,
+  "h": 15
+ },
+ "Gutschrift": {
+  "w": 56,
+  "h": 15
+ },
+ "Reklamation": {
+  "w": 70,
+  "h": 15
+ },
+ "Rücksendung": {
+  "w": 78,
+  "h": 15
+ }
+}

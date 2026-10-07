@@ -45,6 +45,7 @@ Die Browser-Skripte brauchen außerdem `dist/dokufix.html`, den CDN-Spiegel aus 
 | `invariance.mjs` | unabhängiger Permutationstest: Spalten von `arielleExakt` und `arielle` bei Umordnung des XML |
 | `canon.mjs` | Layoutänderung bei Umordnung, mit und ohne kanonisch sortiertes Modell |
 | `canon-quality.mjs` | Regelverstöße, Kreuzungen und Knicke mit kanonisch sortiertem Modell, je Fixture |
+| `messer-check.mjs` | unabhängige Nachprüfung des Messers aus `diagram-js/` gegen bpmn-js in Chromium |
 | `kanonisch-check.mjs` | unabhängige Nachprüfung von `kanonisch()`: Layout bei Umordnung, Verstöße, Kreuzungen, Knicke |
 | `debug.mjs` | Hilfsskript zum Lesen des XML mit linkedom |
 
@@ -54,6 +55,8 @@ Die Browser-Skripte brauchen außerdem `dist/dokufix.html`, den CDN-Spiegel aus 
 |---|---|---|
 | `probe.mjs` | ja | Was bpmn-js beim Messen nutzt: nur den Textrenderer, der auch nach dem Zerstören des Viewers weiter misst |
 | `schaetzung.mjs` | nein | Wie weit die Schätzung `labelSize()` von den gemessenen Größen der Fixtures abweicht |
+
+**Ordner `diagram-js/`:** das vierte Review: Beschriftungsgrößen mit einem Nachbau des Textlayouts von diagram-js und einer Breitentabelle (`messer.mjs`, `breiten-*-12px.json`, Bericht `diagram-js/BERICHT.md`). `groessen-hier/` hält die in diesem Chromium erfassten Größen und Rohpositionen der 57 Fixtures fest, gegen die `layout.mjs` vergleicht. `browser.mjs` und `variante-b.mjs` brauchen die npm-Pakete `bpmn-js@18.31.0` und `diagram-js@15.28.0` außerhalb des Repositorys (`npm pack`); der Pfad steht im Skript.
 
 **Ordner `kanonisch/`:** das zweite Review, das der kanonischen Sortierung. Bericht, Varianten, Messdaten und die Kopie `bpmn-layout-intern.js` für die Alternative „Ordnung als Schlüssel in den Regeln“ stehen in `kanonisch/BERICHT.md`.
 

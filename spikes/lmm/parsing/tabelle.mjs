@@ -54,15 +54,19 @@ for (const e of envs){
   md += '| ' + e + ' (' + store.umgebungen[e].info + ') | ' + per.join(' | ') + ' | ' + Object.keys(diffs[e]).length + ' von ' + cases.length + ' |\n';
 }
 
-md += '\n## Fall × Umgebung\n\nNur Fälle, in denen mindestens eine Umgebung abweicht. "=" gleich; sonst die Art: `status → status (Meldung)` oder `pfad: erwartet → ist`.\n\n';
+// Bun liefert für jeden Adapter dasselbe wie Node (geprüft, Übersicht oben); die Spalten der Fall-Tabelle zeigen Node.
+const bunSame = envs.filter(e => e.startsWith('bun:')).every(e => cases.every(n => JSON.stringify(store.umgebungen[e].results[n] && [store.umgebungen[e].results[n].status, store.umgebungen[e].results[n].model, store.umgebungen[e].results[n].leftOut]) === JSON.stringify(store.umgebungen['node:' + e.slice(4)] && store.umgebungen['node:' + e.slice(4)].results[n] && [store.umgebungen['node:' + e.slice(4)].results[n].status, store.umgebungen['node:' + e.slice(4)].results[n].model, store.umgebungen['node:' + e.slice(4)].results[n].leftOut])));
+const cols = bunSame ? envs.filter(e => !e.startsWith('bun:')) : envs;
+md += '\n## Fall × Umgebung\n\nNur Fälle, in denen mindestens eine Umgebung abweicht. "=" gleich; sonst die Art: `status → status (Meldung)` oder `pfad: erwartet → ist`. Die Meldung der Referenz steht gekürzt in der zweiten Spalte.' + (bunSame ? ' Die Spalten bun:… fehlen: jeder Adapter liefert unter Bun in jedem Fall dasselbe wie unter Node (Status, Modell, leftOut).' : '') + '\n\n';
 const differing = cases.filter(n => envs.some(e => diffs[e][n]));
-md += '| Fall | Referenz | ' + envs.join(' | ') + ' |\n|---|---|' + envs.map(() => '---').join('|') + '|\n';
+const short = s => s.replace(/^This page contains the following errors:/, '').replace(/Below is a rendering.*$/, '').replace(/\[Referenz: [^\]]*\]/, '').trim();
+md += '| Fall | Referenz | ' + cols.map(e => e.replace(/^node:/, '')).join(' | ') + ' |\n|---|---|' + cols.map(() => '---').join('|') + '|\n';
 for (const n of differing){
   const r = ref[n];
-  md += '| ' + n + ' | ' + r.status + (r.message ? ' (' + r.message.slice(0, 70).replace(/\|/g, '\\|') + ')' : '') + ' | ' + envs.map(e => (diffs[e][n] || '=').replace(/\|/g, '\\|').replace(/\n/g, '\\n')).join(' | ') + ' |\n';
+  md += '| ' + n + ' | ' + r.status + (r.message ? ' (' + short(r.message).slice(0, 80).replace(/\|/g, '\\|') + ')' : '') + ' | ' + cols.map(e => short(diffs[e][n] || '=').replace(/\|/g, '\\|').replace(/\n/g, '\\n')).join(' | ') + ' |\n';
 }
-md += '\nGleich in allen Umgebungen: ' + (cases.length - differing.length) + ' von ' + cases.length + ' Fällen' + (cases.length - differing.length ? ' (' + cases.filter(n => !differing.includes(n)).map(n => gruppe(n)).reduce((m, g) => (m[g] = (m[g] || 0) + 1, m), {}) : '') + '.\n';
-md = md.replace(/\(\[object Object\]\)/, '');
+const perGroup = cases.filter(n => !differing.includes(n)).reduce((m, n) => (m[gruppe(n)] = (m[gruppe(n)] || 0) + 1, m), {});
+md += '\nGleich in allen Umgebungen: ' + (cases.length - differing.length) + ' von ' + cases.length + ' Fällen (' + Object.entries(perGroup).map(([g, c]) => g + ' ' + c).join(', ') + ').\n';
 
 // Laufzeiten: Summe über die Fixtures, und der große Fall.
 md += '\n## Laufzeit\n\nSumme von `lesen()` (Parsen und `readProcess()`) über die 57 Fixtures, und der Fall gross-5000 (eine Kette aus 5000 Aufgaben, 700 KB), je Umgebung, Millisekunden. Ein Lauf, ohne Aufwärmen, nur als Größenordnung.\n\n| Umgebung | Fixtures gesamt | davon Parsen | gross-5000 | davon Parsen |\n|---|---|---|---|---|\n';

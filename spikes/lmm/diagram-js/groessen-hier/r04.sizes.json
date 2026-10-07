@@ -1,0 +1,26 @@
+{
+ "Start": {
+  "w": 28,
+  "h": 15
+ },
+ "Frist abgelaufen": {
+  "w": 64,
+  "h": 29
+ },
+ "Erinnerung gesendet": {
+  "w": 63,
+  "h": 29
+ },
+ "Ende": {
+  "w": 29,
+  "h": 15
+ },
+ "erneut": {
+  "w": 37,
+  "h": 15
+ },
+ "abbrechen": {
+  "w": 61,
+  "h": 15
+ }
+}

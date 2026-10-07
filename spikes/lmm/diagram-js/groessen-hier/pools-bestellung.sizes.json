@@ -1,0 +1,82 @@
+{
+ "Braucht Ware": {
+  "w": 77,
+  "h": 15
+ },
+ "Paket erhalten": {
+  "w": 82,
+  "h": 15
+ },
+ "Absage erhalten": {
+  "w": 47,
+  "h": 29
+ },
+ "Versorgt": {
+  "w": 49,
+  "h": 15
+ },
+ "Sucht woanders": {
+  "w": 56,
+  "h": 29
+ },
+ "Bestellung eingegangen": {
+  "w": 74,
+  "h": 29
+ },
+ "Lieferbar?": {
+  "w": 58,
+  "h": 15
+ },
+ "Abgesagt": {
+  "w": 55,
+  "h": 15
+ },
+ "Auf Lager?": {
+  "w": 62,
+  "h": 15
+ },
+ "Ware eingetroffen": {
+  "w": 69,
+  "h": 29
+ },
+ "Versendet": {
+  "w": 58,
+  "h": 15
+ },
+ "Nachbestellung eingegangen": {
+  "w": 89,
+  "h": 29
+ },
+ "Geliefert": {
+  "w": 49,
+  "h": 15
+ },
+ "nein": {
+  "w": 25,
+  "h": 15
+ },
+ "ja": {
+  "w": 10,
+  "h": 15
+ },
+ "Bestellung": {
+  "w": 60,
+  "h": 15
+ },
+ "Nachbestellung": {
+  "w": 89,
+  "h": 15
+ },
+ "Lieferung": {
+  "w": 54,
+  "h": 15
+ },
+ "Paket": {
+  "w": 32,
+  "h": 15
+ },
+ "Absage": {
+  "w": 44,
+  "h": 15
+ }
+}

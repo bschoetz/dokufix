@@ -1,0 +1,8618 @@
+{
+ "chromium": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36",
+ "font": {
+  "stack": "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif",
+  "stackWidth": 378.65625,
+  "candidates": {
+   "Liberation Sans": 357.515625,
+   "Inter": 378.65625,
+   "DejaVu Sans": 400.76953125,
+   "FreeSans": 350.45050048828125,
+   "Carlito": 324.380859375,
+   "WenQuanYi Zen Hei": 350.71875,
+   "Arial": 357.515625,
+   "Helvetica": 357.515625,
+   "Roboto": 334.91015625,
+   "'Segoe UI'": 378.65625,
+   "sans-serif": 357.515625
+  },
+  "checks": {
+   "Roboto": true,
+   "Segoe UI": true,
+   "Helvetica": true,
+   "Arial": true,
+   "Liberation Sans": true,
+   "Inter": true
+  }
+ },
+ "korpus": {
+  "labels": 261,
+  "notes": 39
+ },
+ "referenz": {
+  "Antrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Antrag bearbeitet": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Erinnerung an Teamleitung gesendet": {
+   "w": 80,
+   "h": 44,
+   "lines": 3
+  },
+  "Technischer Fehler": {
+   "w": 70,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach drei Tagen": {
+   "w": 55,
+   "h": 44,
+   "lines": 3
+  },
+  "Auftrag abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Rechnung versendet": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Rechnung erhalten": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Schon zwei Mahnungen verschickt?": {
+   "w": 68,
+   "h": 44,
+   "lines": 3
+  },
+  "Fall an Inkasso abgegeben": {
+   "w": 65,
+   "h": 44,
+   "lines": 3
+  },
+  "Auftrag abgeschlossen und bezahlt": {
+   "w": 86,
+   "h": 44,
+   "lines": 3
+  },
+  "14 Tage verstrichen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Zahlung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ja": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Nein": {
+   "w": 27,
+   "h": 15,
+   "lines": 1
+  },
+  "Störungsmeldung eingegangen": {
+   "w": 86,
+   "h": 44,
+   "lines": 3
+  },
+  "Kunde informiert": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Techniker beauftragt, Kunde informiert": {
+   "w": 63,
+   "h": 58,
+   "lines": 4
+  },
+  "Ticket geschlossen": {
+   "w": 72,
+   "h": 29,
+   "lines": 2
+  },
+  "Mehr als 4 Stunden": {
+   "w": 60,
+   "h": 29,
+   "lines": 2
+  },
+  "Hardwaretausch nötig": {
+   "w": 87,
+   "h": 29,
+   "lines": 2
+  },
+  "Kreditantrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Kredit bewilligt?": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Kredit zugesagt": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Kredit abgelehnt": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "ja": {
+   "w": 10,
+   "h": 15,
+   "lines": 1
+  },
+  "nein": {
+   "w": 25,
+   "h": 15,
+   "lines": 1
+  },
+  "Kreditantrag": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Bonitätsanfrage": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Bonitätsauskunft": {
+   "w": 87,
+   "h": 29,
+   "lines": 2
+  },
+  "Zusage mit Vertrag": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Absage": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamation eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatz oder Gutschrift?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Reklamation abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatz": {
+   "w": 36,
+   "h": 15,
+   "lines": 1
+  },
+  "Gutschrift": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamation": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Rücksendung": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "Reparaturauftrag eingegangen": {
+   "w": 82,
+   "h": 44,
+   "lines": 3
+  },
+  "Freigabe erhalten": {
+   "w": 50,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatzteile vorrätig?": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatzteile geliefert": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Reparatur abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Reparaturauftrag": {
+   "w": 82,
+   "h": 29,
+   "lines": 2
+  },
+  "Kostenvoranschlag": {
+   "w": 85,
+   "h": 29,
+   "lines": 2
+  },
+  "Freigabe": {
+   "w": 50,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellung": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Lieferung": {
+   "w": 54,
+   "h": 15,
+   "lines": 1
+  },
+  "Fertigmeldung": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "Fertig": {
+   "w": 33,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellt": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "Nachgefragt": {
+   "w": 72,
+   "h": 15,
+   "lines": 1
+  },
+  "Ersatzteil fehlt": {
+   "w": 81,
+   "h": 15,
+   "lines": 1
+  },
+  "Zwei Stunden": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellung da": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Geliefert": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Gemahnt": {
+   "w": 52,
+   "h": 15,
+   "lines": 1
+  },
+  "Beantwortet": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamiert": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Kein Netz": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Drei Tage": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Rückfrage": {
+   "w": 59,
+   "h": 15,
+   "lines": 1
+  },
+  "Schaden": {
+   "w": 50,
+   "h": 15,
+   "lines": 1
+  },
+  "erneut": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "Auto macht Geräusche": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Auto zurück": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag da": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Angerufen": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Erledigt": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Ein Tag": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "behoben": {
+   "w": 51,
+   "h": 15,
+   "lines": 1
+  },
+  "Rechnung": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Buch gewünscht": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Im Bestand?": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Ausgeliehen": {
+   "w": 71,
+   "h": 15,
+   "lines": 1
+  },
+  "Medium zurück": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "Zwei Tage": {
+   "w": 59,
+   "h": 15,
+   "lines": 1
+  },
+  "Wieder ausleihbar": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Leserin fragt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "Vorgemerkt?": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "ja, aber kurz": {
+   "w": 71,
+   "h": 15,
+   "lines": 1
+  },
+  "Neues Buch": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Im Regal": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Eine Woche": {
+   "w": 67,
+   "h": 15,
+   "lines": 1
+  },
+  "Buch vorgemerkt": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "Buch zurück": {
+   "w": 72,
+   "h": 15,
+   "lines": 1
+  },
+  "Abgeholt?": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Melkzeit erreicht": {
+   "w": 48,
+   "h": 29,
+   "lines": 2
+  },
+  "Hündin ruhig?": {
+   "w": 79,
+   "h": 15,
+   "lines": 1
+  },
+  "Alle Zitzen gemolken?": {
+   "w": 62,
+   "h": 44,
+   "lines": 3
+  },
+  "Milch eingelagert": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Euter gesund?": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "3 Versuche erreicht?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Milchfluss ausreichend?": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Weitere Hündin wartet?": {
+   "w": 88,
+   "h": 29,
+   "lines": 2
+  },
+  "Entzündung abgeklungen?": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Charge verworfen": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "15 Min abkühlen lassen": {
+   "w": 52,
+   "h": 44,
+   "lines": 3
+  },
+  "Menge plausibel?": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Qualität in Ordnung?": {
+   "w": 57,
+   "h": 44,
+   "lines": 3
+  },
+  "Nachprobe bereits genommen?": {
+   "w": 70,
+   "h": 44,
+   "lines": 3
+  },
+  "Frist abgelaufen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Zurückgegeben?": {
+   "w": 83,
+   "h": 29,
+   "lines": 2
+  },
+  "Titel fehlt": {
+   "w": 53,
+   "h": 15,
+   "lines": 1
+  },
+  "Angaben vollständig?": {
+   "w": 68,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauvorhaben geplant": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachforderung erhalten": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Ablehnungsbescheid erhalten": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Baugenehmigung erhalten": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Antrag abgelehnt": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauvorhaben genehmigt": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauantrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Vollstaendig?": {
+   "w": 76,
+   "h": 15,
+   "lines": 1
+  },
+  "Unterlagen eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ausnahme oder Befreiung noetig?": {
+   "w": 90,
+   "h": 44,
+   "lines": 3
+  },
+  "Genehmigungsfaehig?": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Genehmigung erteilt": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauantrag mit Unterlagen": {
+   "w": 79,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachforderung": {
+   "w": 86,
+   "h": 15,
+   "lines": 1
+  },
+  "Nachgereichte Unterlagen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Ablehnungsbescheid": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Baugenehmigung": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Anfrage": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Technisch?": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Temperatur geprüft": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach 30 Minuten": {
+   "w": 49,
+   "h": 29,
+   "lines": 2
+  },
+  "Hündin beißt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "Wecker klingelt": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "„Bad ist frei!“": {
+   "w": 75,
+   "h": 15,
+   "lines": 1
+  },
+  "Bad frei": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Alle aus dem Haus": {
+   "w": 73,
+   "h": 29,
+   "lines": 2
+  },
+  "Bedarf": {
+   "w": 39,
+   "h": 15,
+   "lines": 1
+  },
+  "Versendet": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Eingang": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Entscheidung tragfähig und begründet?": {
+   "w": 78,
+   "h": 44,
+   "lines": 3
+  },
+  "Verzögerung mitgeteilt": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach zehn Arbeitstagen ohne Entscheidung": {
+   "w": 78,
+   "h": 58,
+   "lines": 4
+  },
+  "Frist verstrichen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Nein, weitere Unterlagen beim Antragsteller anfordern und erneut sichten": {
+   "w": 82,
+   "h": 87,
+   "lines": 6
+  },
+  "Teilweise: Begründung nachbessern lassen": {
+   "w": 74,
+   "h": 58,
+   "lines": 4
+  },
+  "Eilig?": {
+   "w": 30,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag erledigt": {
+   "w": 89,
+   "h": 15,
+   "lines": 1
+  },
+  "Möchte ein Abo": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestätigung": {
+   "w": 68,
+   "h": 15,
+   "lines": 1
+  },
+  "Liefertermin erhalten": {
+   "w": 69,
+   "h": 29,
+   "lines": 2
+  },
+  "Wird beliefert": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Anfrage eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Abo angelegt": {
+   "w": 76,
+   "h": 15,
+   "lines": 1
+  },
+  "Liefertermin": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Bedarf erkannt": {
+   "w": 85,
+   "h": 15,
+   "lines": 1
+  },
+  "Angebot liegt vor": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Angebot versendet": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Angebot": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Braucht Ware": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Paket erhalten": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Absage erhalten": {
+   "w": 47,
+   "h": 29,
+   "lines": 2
+  },
+  "Versorgt": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Sucht woanders": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Bestellung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Lieferbar?": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Abgesagt": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Auf Lager?": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "Ware eingetroffen": {
+   "w": 69,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachbestellung eingegangen": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachbestellung": {
+   "w": 89,
+   "h": 15,
+   "lines": 1
+  },
+  "Paket": {
+   "w": 32,
+   "h": 15,
+   "lines": 1
+  },
+  "Stelle gefunden": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Antwort abwarten": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Einladung erhalten": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Zum Gespräch eingeladen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung abgelehnt": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerberin geeignet?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerberin eingeladen": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Absage versandt": {
+   "w": 50,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Einladung": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Wasserschaden entdeckt": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Schaden gemeldet": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Schadensmeldung erhalten": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Auftrag erhalten": {
+   "w": 47,
+   "h": 29,
+   "lines": 2
+  },
+  "Schadensmeldung": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Start": {
+   "w": 28,
+   "h": 15,
+   "lines": 1
+  },
+  "Vollständig?": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Freigabe?": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Zugestellt?": {
+   "w": 63,
+   "h": 15,
+   "lines": 1
+  },
+  "Ende": {
+   "w": 29,
+   "h": 15,
+   "lines": 1
+  },
+  "zurück": {
+   "w": 39,
+   "h": 15,
+   "lines": 1
+  },
+  "Los": {
+   "w": 21,
+   "h": 15,
+   "lines": 1
+  },
+  "ok?": {
+   "w": 20,
+   "h": 15,
+   "lines": 1
+  },
+  "stimmt?": {
+   "w": 45,
+   "h": 15,
+   "lines": 1
+  },
+  "ausgeglichen?": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Angenommen?": {
+   "w": 86,
+   "h": 15,
+   "lines": 1
+  },
+  "Erinnerung gesendet": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "abbrechen": {
+   "w": 61,
+   "h": 15,
+   "lines": 1
+  },
+  "Ergebnis?": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "unklar": {
+   "w": 35,
+   "h": 15,
+   "lines": 1
+  },
+  "gut": {
+   "w": 19,
+   "h": 15,
+   "lines": 1
+  },
+  "schlecht": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Urteil?": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "überarbeiten": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "neu beginnen": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "ok": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Kanal 1": {
+   "w": 40,
+   "h": 15,
+   "lines": 1
+  },
+  "Kanal 2": {
+   "w": 43,
+   "h": 15,
+   "lines": 1
+  },
+  "Fehler": {
+   "w": 36,
+   "h": 15,
+   "lines": 1
+  },
+  "Beginn": {
+   "w": 40,
+   "h": 15,
+   "lines": 1
+  },
+  "Wiederholen?": {
+   "w": 79,
+   "h": 15,
+   "lines": 1
+  },
+  "weiter?": {
+   "w": 41,
+   "h": 15,
+   "lines": 1
+  },
+  "fertig?": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "neu": {
+   "w": 22,
+   "h": 15,
+   "lines": 1
+  },
+  "S": {
+   "w": 8,
+   "h": 15,
+   "lines": 1
+  },
+  "A?": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Signal": {
+   "w": 35,
+   "h": 15,
+   "lines": 1
+  },
+  "Melden": {
+   "w": 43,
+   "h": 15,
+   "lines": 1
+  },
+  "Noch einmal?": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "E": {
+   "w": 8,
+   "h": 15,
+   "lines": 1
+  },
+  "teils": {
+   "w": 23,
+   "h": 15,
+   "lines": 1
+  },
+  "gut?": {
+   "w": 25,
+   "h": 15,
+   "lines": 1
+  },
+  "fast": {
+   "w": 22,
+   "h": 15,
+   "lines": 1
+  },
+  "Eilfall": {
+   "w": 30,
+   "h": 15,
+   "lines": 1
+  },
+  "gb?": {
+   "w": 21,
+   "h": 15,
+   "lines": 1
+  },
+  "r1": {
+   "w": 10,
+   "h": 15,
+   "lines": 1
+  },
+  "r2": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r3": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r4": {
+   "w": 13,
+   "h": 15,
+   "lines": 1
+  },
+  "r5": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "nochmal?": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "melden": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "x1": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "x2": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "x3": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "x4": {
+   "w": 15,
+   "h": 15,
+   "lines": 1
+  },
+  "r6": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r7": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "eskalieren": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Eintritt": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "korrigieren": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "G?": {
+   "w": 16,
+   "h": 15,
+   "lines": 1
+  },
+  "x": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "y": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "Reagiert auf eine Erinnerung": {
+   "w": 90,
+   "h": 29,
+   "lines": 2
+  },
+  "Wie meldet er sich?": {
+   "w": 79,
+   "h": 29,
+   "lines": 2
+  },
+  "Antwort im Postfach": {
+   "w": 62,
+   "h": 29,
+   "lines": 2
+  },
+  "Art der Antwort?": {
+   "w": 52,
+   "h": 29,
+   "lines": 2
+  },
+  "Abwesenheit, nichts zu tun": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "Abgemeldet": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Bei der Tourenplanung": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Antwort": {
+   "w": 45,
+   "h": 15,
+   "lines": 1
+  },
+  "Formular": {
+   "w": 51,
+   "h": 15,
+   "lines": 1
+  },
+  "Abwesenheit": {
+   "w": 74,
+   "h": 15,
+   "lines": 1
+  },
+  "Abmeldung": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Mahnung Gebühr": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Buch beschädigt": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Hält es?": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Wunsch eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Gefunden?": {
+   "w": 63,
+   "h": 15,
+   "lines": 1
+  },
+  "Freigegeben?": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "vergriffen": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Überprüfung der Größenänderung": {
+   "w": 82,
+   "h": 58,
+   "lines": 4
+  },
+  "Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 87,
+   "h": 59,
+   "lines": 4
+  },
+  "Rechnungsprüfungs-Workflow": {
+   "w": 83,
+   "h": 44,
+   "lines": 3
+  },
+  "Ein-, Aus- und Durchgang": {
+   "w": 88,
+   "h": 29,
+   "lines": 2
+  },
+  "Kunden-Nr. 4711-0815": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "1234567890 €": {
+   "w": 83,
+   "h": 15,
+   "lines": 1
+  },
+  "12.345,67 EUR überwiesen": {
+   "w": 83,
+   "h": 29,
+   "lines": 2
+  },
+  "Erste Zeile\nzweite Zeile": {
+   "w": 68,
+   "h": 29,
+   "lines": 2
+  },
+  "Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 83,
+   "h": 58,
+   "lines": 4
+  },
+  "Abschluss 🎉 gefeiert": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "請求書を確認する": {
+   "w": 73,
+   "h": 29,
+   "lines": 2
+  },
+  "审核申请并转发给团队负责人": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Fehler!!! Sofort???": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "a": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "ab": {
+   "w": 15,
+   "h": 15,
+   "lines": 1
+  },
+  " führende Leerzeichen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "nachgestellte Leerzeichen   ": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "doppelte  Leerzeichen  innen": {
+   "w": 70,
+   "h": 44,
+   "lines": 3
+  },
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 86,
+   "h": 58,
+   "lines": 4
+  },
+  "Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 86,
+   "h": 72,
+   "lines": 5
+  },
+  "Soft­break im Wort": {
+   "w": 72,
+   "h": 29,
+   "lines": 2
+  },
+  "Tab\tgetrennt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "ÄÖÜ äöü ß": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "e-mail-benachrichtigung-versendet": {
+   "w": 84,
+   "h": 44,
+   "lines": 3
+  },
+  "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 90,
+   "h": 58,
+   "lines": 4
+  },
+  "WWWWWWWWWWWWWWW": {
+   "w": 73,
+   "h": 44,
+   "lines": 3
+  },
+  "iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "AVATAR Wavy Toffee": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 79,
+   "h": 44,
+   "lines": 3
+  },
+  "„Anführungszeichen“ und ‚einfache‘": {
+   "w": 88,
+   "h": 44,
+   "lines": 3
+  },
+  "Prozentsatz 12,5 % – fertig": {
+   "w": 81,
+   "h": 29,
+   "lines": 2
+  },
+  "note:100:Meisterbetrieb seit 1987": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Meisterbetrieb seit 1987": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Meisterbetrieb seit 1987": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Meisterbetrieb seit 1987": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur bei Unfallschäden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Nur bei Unfallschäden": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur bei Unfallschäden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur bei Unfallschäden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Schriftlich, mit Unterschrift": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Schriftlich, mit Unterschrift": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Schriftlich, mit Unterschrift": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Schriftlich, mit Unterschrift": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit dem Diagnosegerät": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit dem Diagnosegerät": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Mit dem Diagnosegerät": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit dem Diagnosegerät": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Probefahrt nicht vergessen": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Probefahrt nicht vergessen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Probefahrt nicht vergessen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Probefahrt nicht vergessen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ab Annahme gerechnet": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Ab Annahme gerechnet": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Ab Annahme gerechnet": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ab Annahme gerechnet": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit Protokoll der Messwerte": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit Protokoll der Messwerte": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Mit Protokoll der Messwerte": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit Protokoll der Messwerte": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Höchstens zweimal": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Höchstens zweimal": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Höchstens zweimal": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Höchstens zweimal": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 100,
+   "h": 158,
+   "lines": 10
+  },
+  "note:150:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 100,
+   "h": 172,
+   "lines": 11
+  },
+  "note:150:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 100,
+   "h": 172,
+   "lines": 11
+  },
+  "note:150:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 100,
+   "h": 230,
+   "lines": 15
+  },
+  "note:150:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 150,
+   "h": 144,
+   "lines": 9
+  },
+  "note:200:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 200,
+   "h": 100,
+   "lines": 6
+  },
+  "note:250:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 250,
+   "h": 86,
+   "lines": 5
+  },
+  "note:100:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 100,
+   "h": 187,
+   "lines": 12
+  },
+  "note:150:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 150,
+   "h": 129,
+   "lines": 8
+  },
+  "note:200:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 200,
+   "h": 100,
+   "lines": 6
+  },
+  "note:250:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 100,
+   "h": 129,
+   "lines": 8
+  },
+  "note:150:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 100,
+   "h": 129,
+   "lines": 8
+  },
+  "note:150:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 150,
+   "h": 86,
+   "lines": 5
+  },
+  "note:200:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 150,
+   "h": 72,
+   "lines": 4
+  },
+  "note:200:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 200,
+   "h": 57,
+   "lines": 3
+  },
+  "note:250:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Innerhalb von 4 Stunden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Innerhalb von 4 Stunden": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Innerhalb von 4 Stunden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Innerhalb von 4 Stunden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ticket an Technik übergeben": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Ticket an Technik übergeben": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Ticket an Technik übergeben": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ticket an Technik übergeben": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit Analyse-Protokoll": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit Analyse-Protokoll": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Mit Analyse-Protokoll": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit Analyse-Protokoll": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Bei Rötung oder Wärme immer Nein": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Bei Rötung oder Wärme immer Nein": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Bei Rötung oder Wärme immer Nein": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Bei Rötung oder Wärme immer Nein": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur mit Handschuhen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Nur mit Handschuhen": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur mit Handschuhen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur mit Handschuhen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 100,
+   "h": 115,
+   "lines": 7
+  },
+  "note:150:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 150,
+   "h": 86,
+   "lines": 5
+  },
+  "note:200:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 200,
+   "h": 57,
+   "lines": 3
+  },
+  "note:250:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Kühlkette": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Kühlkette": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Kühlkette": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kühlkette": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 100,
+   "h": 100,
+   "lines": 6
+  },
+  "note:150:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Rahmenvertrag 2026": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Rahmenvertrag 2026": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Rahmenvertrag 2026": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Rahmenvertrag 2026": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Per EDI": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Per EDI": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Per EDI": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Per EDI": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur SEPA": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Nur SEPA": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur SEPA": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur SEPA": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Lager B": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Lager B": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Lager B": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Lager B": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Höchstens zweimal, danach Ablehnung": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Höchstens zweimal, danach Ablehnung": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Höchstens zweimal, danach Ablehnung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Höchstens zweimal, danach Ablehnung": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:§ 10 VwVfG": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:§ 10 VwVfG": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:§ 10 VwVfG": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:§ 10 VwVfG": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Checkliste A verwenden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Checkliste A verwenden": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Checkliste A verwenden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Checkliste A verwenden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 100,
+   "h": 273,
+   "lines": 18
+  },
+  "note:150:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 150,
+   "h": 172,
+   "lines": 11
+  },
+  "note:200:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 200,
+   "h": 129,
+   "lines": 8
+  },
+  "note:250:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 250,
+   "h": 100,
+   "lines": 6
+  },
+  "note:100:Wöchentlich wiederholen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Wöchentlich wiederholen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Wöchentlich wiederholen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Wöchentlich wiederholen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Kunde per Mail informieren": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Kunde per Mail informieren": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Kunde per Mail informieren": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kunde per Mail informieren": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Überprüfung der Größenänderung": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Überprüfung der Größenänderung": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Überprüfung der Größenänderung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Überprüfung der Größenänderung": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Rechnungsprüfungs-Workflow": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Rechnungsprüfungs-Workflow": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Rechnungsprüfungs-Workflow": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Rechnungsprüfungs-Workflow": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ein-, Aus- und Durchgang": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Ein-, Aus- und Durchgang": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Ein-, Aus- und Durchgang": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ein-, Aus- und Durchgang": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Kunden-Nr. 4711-0815": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Kunden-Nr. 4711-0815": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Kunden-Nr. 4711-0815": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kunden-Nr. 4711-0815": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:1234567890 €": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:1234567890 €": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:1234567890 €": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:1234567890 €": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:12.345,67 EUR überwiesen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:12.345,67 EUR überwiesen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:12.345,67 EUR überwiesen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:12.345,67 EUR überwiesen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Erste Zeile\nzweite Zeile": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Erste Zeile\nzweite Zeile": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Erste Zeile\nzweite Zeile": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Erste Zeile\nzweite Zeile": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 150,
+   "h": 72,
+   "lines": 4
+  },
+  "note:200:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Abschluss 🎉 gefeiert": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Abschluss 🎉 gefeiert": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Abschluss 🎉 gefeiert": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Abschluss 🎉 gefeiert": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:請求書を確認する": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:請求書を確認する": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:請求書を確認する": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:請求書を確認する": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:审核申请并转发给团队负责人": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:审核申请并转发给团队负责人": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:审核申请并转发给团队负责人": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:审核申请并转发给团队负责人": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Fehler!!! Sofort???": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Fehler!!! Sofort???": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Fehler!!! Sofort???": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Fehler!!! Sofort???": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:a": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:a": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:a": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:a": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:ab": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:ab": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:ab": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:ab": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100: führende Leerzeichen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150: führende Leerzeichen": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200: führende Leerzeichen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250: führende Leerzeichen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:nachgestellte Leerzeichen   ": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:nachgestellte Leerzeichen   ": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:nachgestellte Leerzeichen   ": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:nachgestellte Leerzeichen   ": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:doppelte  Leerzeichen  innen": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:doppelte  Leerzeichen  innen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:doppelte  Leerzeichen  innen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:doppelte  Leerzeichen  innen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Soft­break im Wort": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Soft­break im Wort": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Soft­break im Wort": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Soft­break im Wort": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Tab\tgetrennt": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Tab\tgetrennt": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Tab\tgetrennt": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Tab\tgetrennt": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:ÄÖÜ äöü ß": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:ÄÖÜ äöü ß": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:ÄÖÜ äöü ß": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:ÄÖÜ äöü ß": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:e-mail-benachrichtigung-versendet": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:e-mail-benachrichtigung-versendet": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:e-mail-benachrichtigung-versendet": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:e-mail-benachrichtigung-versendet": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:WWWWWWWWWWWWWWW": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:WWWWWWWWWWWWWWW": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:WWWWWWWWWWWWWWW": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:WWWWWWWWWWWWWWW": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:AVATAR Wavy Toffee": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:AVATAR Wavy Toffee": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:AVATAR Wavy Toffee": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:AVATAR Wavy Toffee": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Prozentsatz 12,5 % – fertig": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Prozentsatz 12,5 % – fertig": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Prozentsatz 12,5 % – fertig": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Prozentsatz 12,5 % – fertig": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  }
+ },
+ "a1": {
+  "Antrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Antrag bearbeitet": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Erinnerung an Teamleitung gesendet": {
+   "w": 80,
+   "h": 44,
+   "lines": 3
+  },
+  "Technischer Fehler": {
+   "w": 70,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach drei Tagen": {
+   "w": 55,
+   "h": 44,
+   "lines": 3
+  },
+  "Auftrag abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Rechnung versendet": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Rechnung erhalten": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Schon zwei Mahnungen verschickt?": {
+   "w": 68,
+   "h": 44,
+   "lines": 3
+  },
+  "Fall an Inkasso abgegeben": {
+   "w": 65,
+   "h": 44,
+   "lines": 3
+  },
+  "Auftrag abgeschlossen und bezahlt": {
+   "w": 86,
+   "h": 44,
+   "lines": 3
+  },
+  "14 Tage verstrichen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Zahlung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ja": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Nein": {
+   "w": 27,
+   "h": 15,
+   "lines": 1
+  },
+  "Störungsmeldung eingegangen": {
+   "w": 86,
+   "h": 44,
+   "lines": 3
+  },
+  "Kunde informiert": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Techniker beauftragt, Kunde informiert": {
+   "w": 63,
+   "h": 58,
+   "lines": 4
+  },
+  "Ticket geschlossen": {
+   "w": 72,
+   "h": 29,
+   "lines": 2
+  },
+  "Mehr als 4 Stunden": {
+   "w": 60,
+   "h": 29,
+   "lines": 2
+  },
+  "Hardwaretausch nötig": {
+   "w": 87,
+   "h": 29,
+   "lines": 2
+  },
+  "Kreditantrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Kredit bewilligt?": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Kredit zugesagt": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Kredit abgelehnt": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "ja": {
+   "w": 10,
+   "h": 15,
+   "lines": 1
+  },
+  "nein": {
+   "w": 25,
+   "h": 15,
+   "lines": 1
+  },
+  "Kreditantrag": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Bonitätsanfrage": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Bonitätsauskunft": {
+   "w": 87,
+   "h": 29,
+   "lines": 2
+  },
+  "Zusage mit Vertrag": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Absage": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamation eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatz oder Gutschrift?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Reklamation abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatz": {
+   "w": 36,
+   "h": 15,
+   "lines": 1
+  },
+  "Gutschrift": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamation": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Rücksendung": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "Reparaturauftrag eingegangen": {
+   "w": 82,
+   "h": 44,
+   "lines": 3
+  },
+  "Freigabe erhalten": {
+   "w": 50,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatzteile vorrätig?": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatzteile geliefert": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Reparatur abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Reparaturauftrag": {
+   "w": 82,
+   "h": 29,
+   "lines": 2
+  },
+  "Kostenvoranschlag": {
+   "w": 85,
+   "h": 29,
+   "lines": 2
+  },
+  "Freigabe": {
+   "w": 50,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellung": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Lieferung": {
+   "w": 54,
+   "h": 15,
+   "lines": 1
+  },
+  "Fertigmeldung": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "Fertig": {
+   "w": 33,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellt": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "Nachgefragt": {
+   "w": 72,
+   "h": 15,
+   "lines": 1
+  },
+  "Ersatzteil fehlt": {
+   "w": 81,
+   "h": 15,
+   "lines": 1
+  },
+  "Zwei Stunden": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellung da": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Geliefert": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Gemahnt": {
+   "w": 52,
+   "h": 15,
+   "lines": 1
+  },
+  "Beantwortet": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamiert": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Kein Netz": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Drei Tage": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Rückfrage": {
+   "w": 59,
+   "h": 15,
+   "lines": 1
+  },
+  "Schaden": {
+   "w": 50,
+   "h": 15,
+   "lines": 1
+  },
+  "erneut": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "Auto macht Geräusche": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Auto zurück": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag da": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Angerufen": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Erledigt": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Ein Tag": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "behoben": {
+   "w": 51,
+   "h": 15,
+   "lines": 1
+  },
+  "Rechnung": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Buch gewünscht": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Im Bestand?": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Ausgeliehen": {
+   "w": 71,
+   "h": 15,
+   "lines": 1
+  },
+  "Medium zurück": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "Zwei Tage": {
+   "w": 59,
+   "h": 15,
+   "lines": 1
+  },
+  "Wieder ausleihbar": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Leserin fragt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "Vorgemerkt?": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "ja, aber kurz": {
+   "w": 71,
+   "h": 15,
+   "lines": 1
+  },
+  "Neues Buch": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Im Regal": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Eine Woche": {
+   "w": 67,
+   "h": 15,
+   "lines": 1
+  },
+  "Buch vorgemerkt": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "Buch zurück": {
+   "w": 72,
+   "h": 15,
+   "lines": 1
+  },
+  "Abgeholt?": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Melkzeit erreicht": {
+   "w": 48,
+   "h": 29,
+   "lines": 2
+  },
+  "Hündin ruhig?": {
+   "w": 79,
+   "h": 15,
+   "lines": 1
+  },
+  "Alle Zitzen gemolken?": {
+   "w": 62,
+   "h": 44,
+   "lines": 3
+  },
+  "Milch eingelagert": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Euter gesund?": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "3 Versuche erreicht?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Milchfluss ausreichend?": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Weitere Hündin wartet?": {
+   "w": 88,
+   "h": 29,
+   "lines": 2
+  },
+  "Entzündung abgeklungen?": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Charge verworfen": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "15 Min abkühlen lassen": {
+   "w": 52,
+   "h": 44,
+   "lines": 3
+  },
+  "Menge plausibel?": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Qualität in Ordnung?": {
+   "w": 57,
+   "h": 44,
+   "lines": 3
+  },
+  "Nachprobe bereits genommen?": {
+   "w": 70,
+   "h": 44,
+   "lines": 3
+  },
+  "Frist abgelaufen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Zurückgegeben?": {
+   "w": 83,
+   "h": 29,
+   "lines": 2
+  },
+  "Titel fehlt": {
+   "w": 53,
+   "h": 15,
+   "lines": 1
+  },
+  "Angaben vollständig?": {
+   "w": 68,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauvorhaben geplant": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachforderung erhalten": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Ablehnungsbescheid erhalten": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Baugenehmigung erhalten": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Antrag abgelehnt": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauvorhaben genehmigt": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauantrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Vollstaendig?": {
+   "w": 76,
+   "h": 15,
+   "lines": 1
+  },
+  "Unterlagen eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ausnahme oder Befreiung noetig?": {
+   "w": 90,
+   "h": 44,
+   "lines": 3
+  },
+  "Genehmigungsfaehig?": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Genehmigung erteilt": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauantrag mit Unterlagen": {
+   "w": 79,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachforderung": {
+   "w": 86,
+   "h": 15,
+   "lines": 1
+  },
+  "Nachgereichte Unterlagen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Ablehnungsbescheid": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Baugenehmigung": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Anfrage": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Technisch?": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Temperatur geprüft": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach 30 Minuten": {
+   "w": 49,
+   "h": 29,
+   "lines": 2
+  },
+  "Hündin beißt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "Wecker klingelt": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "„Bad ist frei!“": {
+   "w": 75,
+   "h": 15,
+   "lines": 1
+  },
+  "Bad frei": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Alle aus dem Haus": {
+   "w": 73,
+   "h": 29,
+   "lines": 2
+  },
+  "Bedarf": {
+   "w": 39,
+   "h": 15,
+   "lines": 1
+  },
+  "Versendet": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Eingang": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Entscheidung tragfähig und begründet?": {
+   "w": 78,
+   "h": 44,
+   "lines": 3
+  },
+  "Verzögerung mitgeteilt": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach zehn Arbeitstagen ohne Entscheidung": {
+   "w": 78,
+   "h": 58,
+   "lines": 4
+  },
+  "Frist verstrichen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Nein, weitere Unterlagen beim Antragsteller anfordern und erneut sichten": {
+   "w": 82,
+   "h": 87,
+   "lines": 6
+  },
+  "Teilweise: Begründung nachbessern lassen": {
+   "w": 74,
+   "h": 58,
+   "lines": 4
+  },
+  "Eilig?": {
+   "w": 30,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag erledigt": {
+   "w": 89,
+   "h": 15,
+   "lines": 1
+  },
+  "Möchte ein Abo": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestätigung": {
+   "w": 68,
+   "h": 15,
+   "lines": 1
+  },
+  "Liefertermin erhalten": {
+   "w": 69,
+   "h": 29,
+   "lines": 2
+  },
+  "Wird beliefert": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Anfrage eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Abo angelegt": {
+   "w": 76,
+   "h": 15,
+   "lines": 1
+  },
+  "Liefertermin": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Bedarf erkannt": {
+   "w": 85,
+   "h": 15,
+   "lines": 1
+  },
+  "Angebot liegt vor": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Angebot versendet": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Angebot": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Braucht Ware": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Paket erhalten": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Absage erhalten": {
+   "w": 47,
+   "h": 29,
+   "lines": 2
+  },
+  "Versorgt": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Sucht woanders": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Bestellung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Lieferbar?": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Abgesagt": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Auf Lager?": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "Ware eingetroffen": {
+   "w": 69,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachbestellung eingegangen": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachbestellung": {
+   "w": 89,
+   "h": 15,
+   "lines": 1
+  },
+  "Paket": {
+   "w": 32,
+   "h": 15,
+   "lines": 1
+  },
+  "Stelle gefunden": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Antwort abwarten": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Einladung erhalten": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Zum Gespräch eingeladen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung abgelehnt": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerberin geeignet?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerberin eingeladen": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Absage versandt": {
+   "w": 50,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Einladung": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Wasserschaden entdeckt": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Schaden gemeldet": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Schadensmeldung erhalten": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Auftrag erhalten": {
+   "w": 47,
+   "h": 29,
+   "lines": 2
+  },
+  "Schadensmeldung": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Start": {
+   "w": 28,
+   "h": 15,
+   "lines": 1
+  },
+  "Vollständig?": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Freigabe?": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Zugestellt?": {
+   "w": 63,
+   "h": 15,
+   "lines": 1
+  },
+  "Ende": {
+   "w": 29,
+   "h": 15,
+   "lines": 1
+  },
+  "zurück": {
+   "w": 39,
+   "h": 15,
+   "lines": 1
+  },
+  "Los": {
+   "w": 21,
+   "h": 15,
+   "lines": 1
+  },
+  "ok?": {
+   "w": 20,
+   "h": 15,
+   "lines": 1
+  },
+  "stimmt?": {
+   "w": 45,
+   "h": 15,
+   "lines": 1
+  },
+  "ausgeglichen?": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Angenommen?": {
+   "w": 86,
+   "h": 15,
+   "lines": 1
+  },
+  "Erinnerung gesendet": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "abbrechen": {
+   "w": 61,
+   "h": 15,
+   "lines": 1
+  },
+  "Ergebnis?": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "unklar": {
+   "w": 35,
+   "h": 15,
+   "lines": 1
+  },
+  "gut": {
+   "w": 19,
+   "h": 15,
+   "lines": 1
+  },
+  "schlecht": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Urteil?": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "überarbeiten": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "neu beginnen": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "ok": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Kanal 1": {
+   "w": 40,
+   "h": 15,
+   "lines": 1
+  },
+  "Kanal 2": {
+   "w": 43,
+   "h": 15,
+   "lines": 1
+  },
+  "Fehler": {
+   "w": 36,
+   "h": 15,
+   "lines": 1
+  },
+  "Beginn": {
+   "w": 40,
+   "h": 15,
+   "lines": 1
+  },
+  "Wiederholen?": {
+   "w": 79,
+   "h": 15,
+   "lines": 1
+  },
+  "weiter?": {
+   "w": 41,
+   "h": 15,
+   "lines": 1
+  },
+  "fertig?": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "neu": {
+   "w": 22,
+   "h": 15,
+   "lines": 1
+  },
+  "S": {
+   "w": 8,
+   "h": 15,
+   "lines": 1
+  },
+  "A?": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Signal": {
+   "w": 35,
+   "h": 15,
+   "lines": 1
+  },
+  "Melden": {
+   "w": 43,
+   "h": 15,
+   "lines": 1
+  },
+  "Noch einmal?": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "E": {
+   "w": 8,
+   "h": 15,
+   "lines": 1
+  },
+  "teils": {
+   "w": 23,
+   "h": 15,
+   "lines": 1
+  },
+  "gut?": {
+   "w": 25,
+   "h": 15,
+   "lines": 1
+  },
+  "fast": {
+   "w": 22,
+   "h": 15,
+   "lines": 1
+  },
+  "Eilfall": {
+   "w": 30,
+   "h": 15,
+   "lines": 1
+  },
+  "gb?": {
+   "w": 21,
+   "h": 15,
+   "lines": 1
+  },
+  "r1": {
+   "w": 10,
+   "h": 15,
+   "lines": 1
+  },
+  "r2": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r3": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r4": {
+   "w": 13,
+   "h": 15,
+   "lines": 1
+  },
+  "r5": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "nochmal?": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "melden": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "x1": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "x2": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "x3": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "x4": {
+   "w": 15,
+   "h": 15,
+   "lines": 1
+  },
+  "r6": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r7": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "eskalieren": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Eintritt": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "korrigieren": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "G?": {
+   "w": 16,
+   "h": 15,
+   "lines": 1
+  },
+  "x": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "y": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "Reagiert auf eine Erinnerung": {
+   "w": 90,
+   "h": 29,
+   "lines": 2
+  },
+  "Wie meldet er sich?": {
+   "w": 79,
+   "h": 29,
+   "lines": 2
+  },
+  "Antwort im Postfach": {
+   "w": 62,
+   "h": 29,
+   "lines": 2
+  },
+  "Art der Antwort?": {
+   "w": 52,
+   "h": 29,
+   "lines": 2
+  },
+  "Abwesenheit, nichts zu tun": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "Abgemeldet": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Bei der Tourenplanung": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Antwort": {
+   "w": 45,
+   "h": 15,
+   "lines": 1
+  },
+  "Formular": {
+   "w": 51,
+   "h": 15,
+   "lines": 1
+  },
+  "Abwesenheit": {
+   "w": 74,
+   "h": 15,
+   "lines": 1
+  },
+  "Abmeldung": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Mahnung Gebühr": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Buch beschädigt": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Hält es?": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Wunsch eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Gefunden?": {
+   "w": 63,
+   "h": 15,
+   "lines": 1
+  },
+  "Freigegeben?": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "vergriffen": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Überprüfung der Größenänderung": {
+   "w": 82,
+   "h": 58,
+   "lines": 4
+  },
+  "Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 87,
+   "h": 59,
+   "lines": 4
+  },
+  "Rechnungsprüfungs-Workflow": {
+   "w": 83,
+   "h": 44,
+   "lines": 3
+  },
+  "Ein-, Aus- und Durchgang": {
+   "w": 88,
+   "h": 29,
+   "lines": 2
+  },
+  "Kunden-Nr. 4711-0815": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "1234567890 €": {
+   "w": 83,
+   "h": 15,
+   "lines": 1
+  },
+  "12.345,67 EUR überwiesen": {
+   "w": 83,
+   "h": 29,
+   "lines": 2
+  },
+  "Erste Zeile\nzweite Zeile": {
+   "w": 68,
+   "h": 29,
+   "lines": 2
+  },
+  "Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 83,
+   "h": 58,
+   "lines": 4
+  },
+  "Abschluss 🎉 gefeiert": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "請求書を確認する": {
+   "w": 73,
+   "h": 29,
+   "lines": 2
+  },
+  "审核申请并转发给团队负责人": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Fehler!!! Sofort???": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "a": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "ab": {
+   "w": 15,
+   "h": 15,
+   "lines": 1
+  },
+  " führende Leerzeichen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "nachgestellte Leerzeichen   ": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "doppelte  Leerzeichen  innen": {
+   "w": 70,
+   "h": 44,
+   "lines": 3
+  },
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 86,
+   "h": 58,
+   "lines": 4
+  },
+  "Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 86,
+   "h": 72,
+   "lines": 5
+  },
+  "Soft­break im Wort": {
+   "w": 72,
+   "h": 29,
+   "lines": 2
+  },
+  "Tab\tgetrennt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "ÄÖÜ äöü ß": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "e-mail-benachrichtigung-versendet": {
+   "w": 84,
+   "h": 44,
+   "lines": 3
+  },
+  "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 90,
+   "h": 58,
+   "lines": 4
+  },
+  "WWWWWWWWWWWWWWW": {
+   "w": 73,
+   "h": 44,
+   "lines": 3
+  },
+  "iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "AVATAR Wavy Toffee": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 79,
+   "h": 44,
+   "lines": 3
+  },
+  "„Anführungszeichen“ und ‚einfache‘": {
+   "w": 88,
+   "h": 44,
+   "lines": 3
+  },
+  "Prozentsatz 12,5 % – fertig": {
+   "w": 81,
+   "h": 29,
+   "lines": 2
+  },
+  "note:100:Meisterbetrieb seit 1987": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Meisterbetrieb seit 1987": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Meisterbetrieb seit 1987": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Meisterbetrieb seit 1987": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur bei Unfallschäden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Nur bei Unfallschäden": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur bei Unfallschäden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur bei Unfallschäden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Schriftlich, mit Unterschrift": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Schriftlich, mit Unterschrift": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Schriftlich, mit Unterschrift": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Schriftlich, mit Unterschrift": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit dem Diagnosegerät": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit dem Diagnosegerät": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Mit dem Diagnosegerät": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit dem Diagnosegerät": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Probefahrt nicht vergessen": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Probefahrt nicht vergessen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Probefahrt nicht vergessen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Probefahrt nicht vergessen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ab Annahme gerechnet": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Ab Annahme gerechnet": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Ab Annahme gerechnet": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ab Annahme gerechnet": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit Protokoll der Messwerte": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit Protokoll der Messwerte": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Mit Protokoll der Messwerte": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit Protokoll der Messwerte": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Höchstens zweimal": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Höchstens zweimal": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Höchstens zweimal": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Höchstens zweimal": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 100,
+   "h": 158,
+   "lines": 10
+  },
+  "note:150:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 100,
+   "h": 172,
+   "lines": 11
+  },
+  "note:150:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 100,
+   "h": 172,
+   "lines": 11
+  },
+  "note:150:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 100,
+   "h": 230,
+   "lines": 15
+  },
+  "note:150:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 150,
+   "h": 144,
+   "lines": 9
+  },
+  "note:200:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 200,
+   "h": 100,
+   "lines": 6
+  },
+  "note:250:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 250,
+   "h": 86,
+   "lines": 5
+  },
+  "note:100:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 100,
+   "h": 187,
+   "lines": 12
+  },
+  "note:150:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 150,
+   "h": 129,
+   "lines": 8
+  },
+  "note:200:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 200,
+   "h": 100,
+   "lines": 6
+  },
+  "note:250:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 100,
+   "h": 129,
+   "lines": 8
+  },
+  "note:150:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 100,
+   "h": 129,
+   "lines": 8
+  },
+  "note:150:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 150,
+   "h": 86,
+   "lines": 5
+  },
+  "note:200:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 150,
+   "h": 72,
+   "lines": 4
+  },
+  "note:200:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 200,
+   "h": 57,
+   "lines": 3
+  },
+  "note:250:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Innerhalb von 4 Stunden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Innerhalb von 4 Stunden": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Innerhalb von 4 Stunden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Innerhalb von 4 Stunden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ticket an Technik übergeben": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Ticket an Technik übergeben": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Ticket an Technik übergeben": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ticket an Technik übergeben": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit Analyse-Protokoll": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit Analyse-Protokoll": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Mit Analyse-Protokoll": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit Analyse-Protokoll": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Bei Rötung oder Wärme immer Nein": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Bei Rötung oder Wärme immer Nein": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Bei Rötung oder Wärme immer Nein": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Bei Rötung oder Wärme immer Nein": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur mit Handschuhen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Nur mit Handschuhen": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur mit Handschuhen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur mit Handschuhen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 100,
+   "h": 115,
+   "lines": 7
+  },
+  "note:150:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 150,
+   "h": 86,
+   "lines": 5
+  },
+  "note:200:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 200,
+   "h": 57,
+   "lines": 3
+  },
+  "note:250:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Kühlkette": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Kühlkette": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Kühlkette": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kühlkette": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 100,
+   "h": 100,
+   "lines": 6
+  },
+  "note:150:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Rahmenvertrag 2026": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Rahmenvertrag 2026": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Rahmenvertrag 2026": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Rahmenvertrag 2026": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Per EDI": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Per EDI": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Per EDI": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Per EDI": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur SEPA": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Nur SEPA": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur SEPA": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur SEPA": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Lager B": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Lager B": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Lager B": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Lager B": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Höchstens zweimal, danach Ablehnung": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Höchstens zweimal, danach Ablehnung": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Höchstens zweimal, danach Ablehnung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Höchstens zweimal, danach Ablehnung": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:§ 10 VwVfG": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:§ 10 VwVfG": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:§ 10 VwVfG": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:§ 10 VwVfG": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Checkliste A verwenden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Checkliste A verwenden": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Checkliste A verwenden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Checkliste A verwenden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 100,
+   "h": 273,
+   "lines": 18
+  },
+  "note:150:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 150,
+   "h": 172,
+   "lines": 11
+  },
+  "note:200:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 200,
+   "h": 129,
+   "lines": 8
+  },
+  "note:250:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 250,
+   "h": 100,
+   "lines": 6
+  },
+  "note:100:Wöchentlich wiederholen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Wöchentlich wiederholen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Wöchentlich wiederholen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Wöchentlich wiederholen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Kunde per Mail informieren": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Kunde per Mail informieren": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Kunde per Mail informieren": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kunde per Mail informieren": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Überprüfung der Größenänderung": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Überprüfung der Größenänderung": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Überprüfung der Größenänderung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Überprüfung der Größenänderung": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Rechnungsprüfungs-Workflow": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Rechnungsprüfungs-Workflow": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Rechnungsprüfungs-Workflow": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Rechnungsprüfungs-Workflow": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ein-, Aus- und Durchgang": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Ein-, Aus- und Durchgang": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Ein-, Aus- und Durchgang": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ein-, Aus- und Durchgang": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Kunden-Nr. 4711-0815": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Kunden-Nr. 4711-0815": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Kunden-Nr. 4711-0815": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kunden-Nr. 4711-0815": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:1234567890 €": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:1234567890 €": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:1234567890 €": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:1234567890 €": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:12.345,67 EUR überwiesen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:12.345,67 EUR überwiesen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:12.345,67 EUR überwiesen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:12.345,67 EUR überwiesen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Erste Zeile\nzweite Zeile": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Erste Zeile\nzweite Zeile": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Erste Zeile\nzweite Zeile": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Erste Zeile\nzweite Zeile": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 150,
+   "h": 72,
+   "lines": 4
+  },
+  "note:200:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Abschluss 🎉 gefeiert": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Abschluss 🎉 gefeiert": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Abschluss 🎉 gefeiert": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Abschluss 🎉 gefeiert": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:請求書を確認する": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:請求書を確認する": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:請求書を確認する": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:請求書を確認する": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:审核申请并转发给团队负责人": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:审核申请并转发给团队负责人": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:审核申请并转发给团队负责人": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:审核申请并转发给团队负责人": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Fehler!!! Sofort???": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Fehler!!! Sofort???": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Fehler!!! Sofort???": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Fehler!!! Sofort???": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:a": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:a": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:a": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:a": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:ab": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:ab": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:ab": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:ab": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100: führende Leerzeichen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150: führende Leerzeichen": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200: führende Leerzeichen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250: führende Leerzeichen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:nachgestellte Leerzeichen   ": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:nachgestellte Leerzeichen   ": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:nachgestellte Leerzeichen   ": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:nachgestellte Leerzeichen   ": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:doppelte  Leerzeichen  innen": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:doppelte  Leerzeichen  innen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:doppelte  Leerzeichen  innen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:doppelte  Leerzeichen  innen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Soft­break im Wort": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Soft­break im Wort": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Soft­break im Wort": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Soft­break im Wort": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Tab\tgetrennt": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Tab\tgetrennt": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Tab\tgetrennt": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Tab\tgetrennt": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:ÄÖÜ äöü ß": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:ÄÖÜ äöü ß": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:ÄÖÜ äöü ß": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:ÄÖÜ äöü ß": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:e-mail-benachrichtigung-versendet": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:e-mail-benachrichtigung-versendet": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:e-mail-benachrichtigung-versendet": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:e-mail-benachrichtigung-versendet": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:WWWWWWWWWWWWWWW": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:WWWWWWWWWWWWWWW": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:WWWWWWWWWWWWWWW": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:WWWWWWWWWWWWWWW": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:AVATAR Wavy Toffee": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:AVATAR Wavy Toffee": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:AVATAR Wavy Toffee": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:AVATAR Wavy Toffee": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Prozentsatz 12,5 % – fertig": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Prozentsatz 12,5 % – fertig": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Prozentsatz 12,5 % – fertig": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Prozentsatz 12,5 % – fertig": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  }
+ },
+ "a2": {
+  "Antrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Antrag bearbeitet": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Erinnerung an Teamleitung gesendet": {
+   "w": 80,
+   "h": 44,
+   "lines": 3
+  },
+  "Technischer Fehler": {
+   "w": 70,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach drei Tagen": {
+   "w": 55,
+   "h": 44,
+   "lines": 3
+  },
+  "Auftrag abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Rechnung versendet": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Rechnung erhalten": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "Schon zwei Mahnungen verschickt?": {
+   "w": 68,
+   "h": 44,
+   "lines": 3
+  },
+  "Fall an Inkasso abgegeben": {
+   "w": 65,
+   "h": 44,
+   "lines": 3
+  },
+  "Auftrag abgeschlossen und bezahlt": {
+   "w": 86,
+   "h": 44,
+   "lines": 3
+  },
+  "14 Tage verstrichen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Zahlung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ja": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Nein": {
+   "w": 27,
+   "h": 15,
+   "lines": 1
+  },
+  "Störungsmeldung eingegangen": {
+   "w": 86,
+   "h": 44,
+   "lines": 3
+  },
+  "Kunde informiert": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Techniker beauftragt, Kunde informiert": {
+   "w": 63,
+   "h": 58,
+   "lines": 4
+  },
+  "Ticket geschlossen": {
+   "w": 72,
+   "h": 29,
+   "lines": 2
+  },
+  "Mehr als 4 Stunden": {
+   "w": 60,
+   "h": 29,
+   "lines": 2
+  },
+  "Hardwaretausch nötig": {
+   "w": 87,
+   "h": 29,
+   "lines": 2
+  },
+  "Kreditantrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Kredit bewilligt?": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Kredit zugesagt": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Kredit abgelehnt": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "ja": {
+   "w": 10,
+   "h": 15,
+   "lines": 1
+  },
+  "nein": {
+   "w": 25,
+   "h": 15,
+   "lines": 1
+  },
+  "Kreditantrag": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Bonitätsanfrage": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Bonitätsauskunft": {
+   "w": 87,
+   "h": 29,
+   "lines": 2
+  },
+  "Zusage mit Vertrag": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Absage": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamation eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatz oder Gutschrift?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Reklamation abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatz": {
+   "w": 36,
+   "h": 15,
+   "lines": 1
+  },
+  "Gutschrift": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamation": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Rücksendung": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "Reparaturauftrag eingegangen": {
+   "w": 82,
+   "h": 44,
+   "lines": 3
+  },
+  "Freigabe erhalten": {
+   "w": 50,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatzteile vorrätig?": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Ersatzteile geliefert": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Reparatur abgeschlossen": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Reparaturauftrag": {
+   "w": 82,
+   "h": 29,
+   "lines": 2
+  },
+  "Kostenvoranschlag": {
+   "w": 85,
+   "h": 29,
+   "lines": 2
+  },
+  "Freigabe": {
+   "w": 50,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellung": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Lieferung": {
+   "w": 54,
+   "h": 15,
+   "lines": 1
+  },
+  "Fertigmeldung": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "Fertig": {
+   "w": 33,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellt": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "Nachgefragt": {
+   "w": 72,
+   "h": 15,
+   "lines": 1
+  },
+  "Ersatzteil fehlt": {
+   "w": 81,
+   "h": 15,
+   "lines": 1
+  },
+  "Zwei Stunden": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestellung da": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Geliefert": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Gemahnt": {
+   "w": 52,
+   "h": 15,
+   "lines": 1
+  },
+  "Beantwortet": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Reklamiert": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Kein Netz": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Drei Tage": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Rückfrage": {
+   "w": 59,
+   "h": 15,
+   "lines": 1
+  },
+  "Schaden": {
+   "w": 50,
+   "h": 15,
+   "lines": 1
+  },
+  "erneut": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "Auto macht Geräusche": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Auto zurück": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag da": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Angerufen": {
+   "w": 60,
+   "h": 15,
+   "lines": 1
+  },
+  "Erledigt": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Ein Tag": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "behoben": {
+   "w": 51,
+   "h": 15,
+   "lines": 1
+  },
+  "Rechnung": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Buch gewünscht": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Im Bestand?": {
+   "w": 70,
+   "h": 15,
+   "lines": 1
+  },
+  "Ausgeliehen": {
+   "w": 71,
+   "h": 15,
+   "lines": 1
+  },
+  "Medium zurück": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "Zwei Tage": {
+   "w": 59,
+   "h": 15,
+   "lines": 1
+  },
+  "Wieder ausleihbar": {
+   "w": 59,
+   "h": 29,
+   "lines": 2
+  },
+  "Leserin fragt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "Vorgemerkt?": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "ja, aber kurz": {
+   "w": 71,
+   "h": 15,
+   "lines": 1
+  },
+  "Neues Buch": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Im Regal": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Eine Woche": {
+   "w": 67,
+   "h": 15,
+   "lines": 1
+  },
+  "Buch vorgemerkt": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "Buch zurück": {
+   "w": 72,
+   "h": 15,
+   "lines": 1
+  },
+  "Abgeholt?": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Melkzeit erreicht": {
+   "w": 48,
+   "h": 29,
+   "lines": 2
+  },
+  "Hündin ruhig?": {
+   "w": 79,
+   "h": 15,
+   "lines": 1
+  },
+  "Alle Zitzen gemolken?": {
+   "w": 62,
+   "h": 44,
+   "lines": 3
+  },
+  "Milch eingelagert": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Euter gesund?": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "3 Versuche erreicht?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Milchfluss ausreichend?": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Weitere Hündin wartet?": {
+   "w": 88,
+   "h": 29,
+   "lines": 2
+  },
+  "Entzündung abgeklungen?": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Charge verworfen": {
+   "w": 58,
+   "h": 29,
+   "lines": 2
+  },
+  "15 Min abkühlen lassen": {
+   "w": 52,
+   "h": 44,
+   "lines": 3
+  },
+  "Menge plausibel?": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Qualität in Ordnung?": {
+   "w": 57,
+   "h": 44,
+   "lines": 3
+  },
+  "Nachprobe bereits genommen?": {
+   "w": 70,
+   "h": 44,
+   "lines": 3
+  },
+  "Frist abgelaufen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Zurückgegeben?": {
+   "w": 83,
+   "h": 29,
+   "lines": 2
+  },
+  "Titel fehlt": {
+   "w": 53,
+   "h": 15,
+   "lines": 1
+  },
+  "Angaben vollständig?": {
+   "w": 68,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauvorhaben geplant": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachforderung erhalten": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Ablehnungsbescheid erhalten": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Baugenehmigung erhalten": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Antrag abgelehnt": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauvorhaben genehmigt": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauantrag eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Vollstaendig?": {
+   "w": 76,
+   "h": 15,
+   "lines": 1
+  },
+  "Unterlagen eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Ausnahme oder Befreiung noetig?": {
+   "w": 90,
+   "h": 44,
+   "lines": 3
+  },
+  "Genehmigungsfaehig?": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Genehmigung erteilt": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Bauantrag mit Unterlagen": {
+   "w": 79,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachforderung": {
+   "w": 86,
+   "h": 15,
+   "lines": 1
+  },
+  "Nachgereichte Unterlagen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Ablehnungsbescheid": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Baugenehmigung": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Anfrage": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Technisch?": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Temperatur geprüft": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach 30 Minuten": {
+   "w": 49,
+   "h": 29,
+   "lines": 2
+  },
+  "Hündin beißt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "Wecker klingelt": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "„Bad ist frei!“": {
+   "w": 75,
+   "h": 15,
+   "lines": 1
+  },
+  "Bad frei": {
+   "w": 44,
+   "h": 15,
+   "lines": 1
+  },
+  "Alle aus dem Haus": {
+   "w": 73,
+   "h": 29,
+   "lines": 2
+  },
+  "Bedarf": {
+   "w": 39,
+   "h": 15,
+   "lines": 1
+  },
+  "Versendet": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Eingang": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Entscheidung tragfähig und begründet?": {
+   "w": 78,
+   "h": 44,
+   "lines": 3
+  },
+  "Verzögerung mitgeteilt": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Nach zehn Arbeitstagen ohne Entscheidung": {
+   "w": 78,
+   "h": 58,
+   "lines": 4
+  },
+  "Frist verstrichen": {
+   "w": 64,
+   "h": 29,
+   "lines": 2
+  },
+  "Nein, weitere Unterlagen beim Antragsteller anfordern und erneut sichten": {
+   "w": 82,
+   "h": 87,
+   "lines": 6
+  },
+  "Teilweise: Begründung nachbessern lassen": {
+   "w": 74,
+   "h": 58,
+   "lines": 4
+  },
+  "Eilig?": {
+   "w": 30,
+   "h": 15,
+   "lines": 1
+  },
+  "Auftrag erledigt": {
+   "w": 89,
+   "h": 15,
+   "lines": 1
+  },
+  "Möchte ein Abo": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Bestätigung": {
+   "w": 68,
+   "h": 15,
+   "lines": 1
+  },
+  "Liefertermin erhalten": {
+   "w": 69,
+   "h": 29,
+   "lines": 2
+  },
+  "Wird beliefert": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Anfrage eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Abo angelegt": {
+   "w": 76,
+   "h": 15,
+   "lines": 1
+  },
+  "Liefertermin": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Bedarf erkannt": {
+   "w": 85,
+   "h": 15,
+   "lines": 1
+  },
+  "Angebot liegt vor": {
+   "w": 76,
+   "h": 29,
+   "lines": 2
+  },
+  "Angebot versendet": {
+   "w": 57,
+   "h": 29,
+   "lines": 2
+  },
+  "Angebot": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Braucht Ware": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "Paket erhalten": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Absage erhalten": {
+   "w": 47,
+   "h": 29,
+   "lines": 2
+  },
+  "Versorgt": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Sucht woanders": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Bestellung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Lieferbar?": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Abgesagt": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Auf Lager?": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "Ware eingetroffen": {
+   "w": 69,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachbestellung eingegangen": {
+   "w": 89,
+   "h": 29,
+   "lines": 2
+  },
+  "Nachbestellung": {
+   "w": 89,
+   "h": 15,
+   "lines": 1
+  },
+  "Paket": {
+   "w": 32,
+   "h": 15,
+   "lines": 1
+  },
+  "Stelle gefunden": {
+   "w": 90,
+   "h": 15,
+   "lines": 1
+  },
+  "Antwort abwarten": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Einladung erhalten": {
+   "w": 56,
+   "h": 29,
+   "lines": 2
+  },
+  "Zum Gespräch eingeladen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung abgelehnt": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerberin geeignet?": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerberin eingeladen": {
+   "w": 65,
+   "h": 29,
+   "lines": 2
+  },
+  "Absage versandt": {
+   "w": 50,
+   "h": 29,
+   "lines": 2
+  },
+  "Bewerbung": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Einladung": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Wasserschaden entdeckt": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Schaden gemeldet": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Schadensmeldung erhalten": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Auftrag erhalten": {
+   "w": 47,
+   "h": 29,
+   "lines": 2
+  },
+  "Schadensmeldung": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Start": {
+   "w": 28,
+   "h": 15,
+   "lines": 1
+  },
+  "Vollständig?": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Freigabe?": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "Zugestellt?": {
+   "w": 63,
+   "h": 15,
+   "lines": 1
+  },
+  "Ende": {
+   "w": 29,
+   "h": 15,
+   "lines": 1
+  },
+  "zurück": {
+   "w": 39,
+   "h": 15,
+   "lines": 1
+  },
+  "Los": {
+   "w": 21,
+   "h": 15,
+   "lines": 1
+  },
+  "ok?": {
+   "w": 20,
+   "h": 15,
+   "lines": 1
+  },
+  "stimmt?": {
+   "w": 45,
+   "h": 15,
+   "lines": 1
+  },
+  "ausgeglichen?": {
+   "w": 82,
+   "h": 15,
+   "lines": 1
+  },
+  "Angenommen?": {
+   "w": 86,
+   "h": 15,
+   "lines": 1
+  },
+  "Erinnerung gesendet": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "abbrechen": {
+   "w": 61,
+   "h": 15,
+   "lines": 1
+  },
+  "Ergebnis?": {
+   "w": 56,
+   "h": 15,
+   "lines": 1
+  },
+  "unklar": {
+   "w": 35,
+   "h": 15,
+   "lines": 1
+  },
+  "gut": {
+   "w": 19,
+   "h": 15,
+   "lines": 1
+  },
+  "schlecht": {
+   "w": 49,
+   "h": 15,
+   "lines": 1
+  },
+  "Urteil?": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "überarbeiten": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "neu beginnen": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "ok": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Kanal 1": {
+   "w": 40,
+   "h": 15,
+   "lines": 1
+  },
+  "Kanal 2": {
+   "w": 43,
+   "h": 15,
+   "lines": 1
+  },
+  "Fehler": {
+   "w": 36,
+   "h": 15,
+   "lines": 1
+  },
+  "Beginn": {
+   "w": 40,
+   "h": 15,
+   "lines": 1
+  },
+  "Wiederholen?": {
+   "w": 79,
+   "h": 15,
+   "lines": 1
+  },
+  "weiter?": {
+   "w": 41,
+   "h": 15,
+   "lines": 1
+  },
+  "fertig?": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "neu": {
+   "w": 22,
+   "h": 15,
+   "lines": 1
+  },
+  "S": {
+   "w": 8,
+   "h": 15,
+   "lines": 1
+  },
+  "A?": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "Signal": {
+   "w": 35,
+   "h": 15,
+   "lines": 1
+  },
+  "Melden": {
+   "w": 43,
+   "h": 15,
+   "lines": 1
+  },
+  "Noch einmal?": {
+   "w": 77,
+   "h": 15,
+   "lines": 1
+  },
+  "E": {
+   "w": 8,
+   "h": 15,
+   "lines": 1
+  },
+  "teils": {
+   "w": 23,
+   "h": 15,
+   "lines": 1
+  },
+  "gut?": {
+   "w": 25,
+   "h": 15,
+   "lines": 1
+  },
+  "fast": {
+   "w": 22,
+   "h": 15,
+   "lines": 1
+  },
+  "Eilfall": {
+   "w": 30,
+   "h": 15,
+   "lines": 1
+  },
+  "gb?": {
+   "w": 21,
+   "h": 15,
+   "lines": 1
+  },
+  "r1": {
+   "w": 10,
+   "h": 15,
+   "lines": 1
+  },
+  "r2": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r3": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r4": {
+   "w": 13,
+   "h": 15,
+   "lines": 1
+  },
+  "r5": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "nochmal?": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "melden": {
+   "w": 42,
+   "h": 15,
+   "lines": 1
+  },
+  "x1": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "x2": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "x3": {
+   "w": 14,
+   "h": 15,
+   "lines": 1
+  },
+  "x4": {
+   "w": 15,
+   "h": 15,
+   "lines": 1
+  },
+  "r6": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "r7": {
+   "w": 12,
+   "h": 15,
+   "lines": 1
+  },
+  "eskalieren": {
+   "w": 58,
+   "h": 15,
+   "lines": 1
+  },
+  "Eintritt": {
+   "w": 37,
+   "h": 15,
+   "lines": 1
+  },
+  "korrigieren": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "G?": {
+   "w": 16,
+   "h": 15,
+   "lines": 1
+  },
+  "x": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "y": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "Reagiert auf eine Erinnerung": {
+   "w": 90,
+   "h": 29,
+   "lines": 2
+  },
+  "Wie meldet er sich?": {
+   "w": 79,
+   "h": 29,
+   "lines": 2
+  },
+  "Antwort im Postfach": {
+   "w": 62,
+   "h": 29,
+   "lines": 2
+  },
+  "Art der Antwort?": {
+   "w": 52,
+   "h": 29,
+   "lines": 2
+  },
+  "Abwesenheit, nichts zu tun": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "Abgemeldet": {
+   "w": 69,
+   "h": 15,
+   "lines": 1
+  },
+  "Bei der Tourenplanung": {
+   "w": 86,
+   "h": 29,
+   "lines": 2
+  },
+  "Antwort": {
+   "w": 45,
+   "h": 15,
+   "lines": 1
+  },
+  "Formular": {
+   "w": 51,
+   "h": 15,
+   "lines": 1
+  },
+  "Abwesenheit": {
+   "w": 74,
+   "h": 15,
+   "lines": 1
+  },
+  "Abmeldung": {
+   "w": 65,
+   "h": 15,
+   "lines": 1
+  },
+  "Mahnung Gebühr": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "Buch beschädigt": {
+   "w": 63,
+   "h": 29,
+   "lines": 2
+  },
+  "Hält es?": {
+   "w": 46,
+   "h": 15,
+   "lines": 1
+  },
+  "Wunsch eingegangen": {
+   "w": 74,
+   "h": 29,
+   "lines": 2
+  },
+  "Gefunden?": {
+   "w": 63,
+   "h": 15,
+   "lines": 1
+  },
+  "Freigegeben?": {
+   "w": 78,
+   "h": 15,
+   "lines": 1
+  },
+  "vergriffen": {
+   "w": 55,
+   "h": 15,
+   "lines": 1
+  },
+  "Überprüfung der Größenänderung": {
+   "w": 82,
+   "h": 58,
+   "lines": 4
+  },
+  "Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 87,
+   "h": 59,
+   "lines": 4
+  },
+  "Rechnungsprüfungs-Workflow": {
+   "w": 83,
+   "h": 44,
+   "lines": 3
+  },
+  "Ein-, Aus- und Durchgang": {
+   "w": 88,
+   "h": 29,
+   "lines": 2
+  },
+  "Kunden-Nr. 4711-0815": {
+   "w": 66,
+   "h": 29,
+   "lines": 2
+  },
+  "1234567890 €": {
+   "w": 83,
+   "h": 15,
+   "lines": 1
+  },
+  "12.345,67 EUR überwiesen": {
+   "w": 83,
+   "h": 29,
+   "lines": 2
+  },
+  "Erste Zeile\nzweite Zeile": {
+   "w": 68,
+   "h": 29,
+   "lines": 2
+  },
+  "Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 83,
+   "h": 58,
+   "lines": 4
+  },
+  "Abschluss 🎉 gefeiert": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "請求書を確認する": {
+   "w": 73,
+   "h": 29,
+   "lines": 2
+  },
+  "审核申请并转发给团队负责人": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "Fehler!!! Sofort???": {
+   "w": 54,
+   "h": 29,
+   "lines": 2
+  },
+  "a": {
+   "w": 7,
+   "h": 15,
+   "lines": 1
+  },
+  "ab": {
+   "w": 15,
+   "h": 15,
+   "lines": 1
+  },
+  " führende Leerzeichen": {
+   "w": 84,
+   "h": 29,
+   "lines": 2
+  },
+  "nachgestellte Leerzeichen   ": {
+   "w": 77,
+   "h": 29,
+   "lines": 2
+  },
+  "doppelte  Leerzeichen  innen": {
+   "w": 70,
+   "h": 44,
+   "lines": 3
+  },
+  "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 86,
+   "h": 58,
+   "lines": 4
+  },
+  "Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 86,
+   "h": 72,
+   "lines": 5
+  },
+  "Soft­break im Wort": {
+   "w": 72,
+   "h": 29,
+   "lines": 2
+  },
+  "Tab\tgetrennt": {
+   "w": 73,
+   "h": 15,
+   "lines": 1
+  },
+  "ÄÖÜ äöü ß": {
+   "w": 62,
+   "h": 15,
+   "lines": 1
+  },
+  "e-mail-benachrichtigung-versendet": {
+   "w": 84,
+   "h": 44,
+   "lines": 3
+  },
+  "A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 90,
+   "h": 58,
+   "lines": 4
+  },
+  "WWWWWWWWWWWWWWW": {
+   "w": 73,
+   "h": 44,
+   "lines": 3
+  },
+  "iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 88,
+   "h": 15,
+   "lines": 1
+  },
+  "AVATAR Wavy Toffee": {
+   "w": 80,
+   "h": 29,
+   "lines": 2
+  },
+  "Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 79,
+   "h": 44,
+   "lines": 3
+  },
+  "„Anführungszeichen“ und ‚einfache‘": {
+   "w": 88,
+   "h": 44,
+   "lines": 3
+  },
+  "Prozentsatz 12,5 % – fertig": {
+   "w": 81,
+   "h": 29,
+   "lines": 2
+  },
+  "note:100:Meisterbetrieb seit 1987": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Meisterbetrieb seit 1987": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Meisterbetrieb seit 1987": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Meisterbetrieb seit 1987": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur bei Unfallschäden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Nur bei Unfallschäden": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur bei Unfallschäden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur bei Unfallschäden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Schriftlich, mit Unterschrift": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Schriftlich, mit Unterschrift": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Schriftlich, mit Unterschrift": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Schriftlich, mit Unterschrift": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit dem Diagnosegerät": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit dem Diagnosegerät": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Mit dem Diagnosegerät": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit dem Diagnosegerät": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Probefahrt nicht vergessen": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Probefahrt nicht vergessen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Probefahrt nicht vergessen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Probefahrt nicht vergessen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ab Annahme gerechnet": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Ab Annahme gerechnet": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Ab Annahme gerechnet": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ab Annahme gerechnet": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit Protokoll der Messwerte": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit Protokoll der Messwerte": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Mit Protokoll der Messwerte": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit Protokoll der Messwerte": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Höchstens zweimal": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Höchstens zweimal": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Höchstens zweimal": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Höchstens zweimal": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 100,
+   "h": 158,
+   "lines": 10
+  },
+  "note:150:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Vollstaendigkeitspruefung unverzueglich, Frist zur Nachreichung nach Setzung durch die Behoerde (Landesbauordnung)": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 100,
+   "h": 172,
+   "lines": 11
+  },
+  "note:150:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Nachforderung setzt eine angemessene Frist; bei fruchtlosem Ablauf gilt der Antrag als zurueckgenommen oder wird abgelehnt": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 100,
+   "h": 172,
+   "lines": 11
+  },
+  "note:150:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 200,
+   "h": 86,
+   "lines": 5
+  },
+  "note:250:Rechtsgrundlagen: Baugesetzbuch (Paragraphen 29 bis 38 je nach Lage), Landesbauordnung, Bebauungsplan": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 100,
+   "h": 230,
+   "lines": 15
+  },
+  "note:150:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 150,
+   "h": 144,
+   "lines": 9
+  },
+  "note:200:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 200,
+   "h": 100,
+   "lines": 6
+  },
+  "note:250:Beteiligung von Nachbarn und Fachbehoerden; Einvernehmen der Gemeinde muss binnen 2 Monaten erklaert werden, sonst gilt es als erteilt (Paragraph 36 BauGB)": {
+   "w": 250,
+   "h": 86,
+   "lines": 5
+  },
+  "note:100:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 100,
+   "h": 187,
+   "lines": 12
+  },
+  "note:150:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 150,
+   "h": 129,
+   "lines": 8
+  },
+  "note:200:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 200,
+   "h": 100,
+   "lines": 6
+  },
+  "note:250:Ausnahme oder Befreiung von Festsetzungen des Bebauungsplans moeglich (Paragraph 31 BauGB), Entscheidung nur durch die Amtsleitung": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 100,
+   "h": 129,
+   "lines": 8
+  },
+  "note:150:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 150,
+   "h": 100,
+   "lines": 6
+  },
+  "note:200:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Entscheidungsfrist je nach Land 2 bis 3 Monate ab Vollstaendigkeit, Verlaengerung moeglich": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 100,
+   "h": 129,
+   "lines": 8
+  },
+  "note:150:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 150,
+   "h": 86,
+   "lines": 5
+  },
+  "note:200:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Ablehnung mit Begruendung und Rechtsbehelfsbelehrung; Widerspruch oder Klage binnen 1 Monat": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 150,
+   "h": 72,
+   "lines": 4
+  },
+  "note:200:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 200,
+   "h": 57,
+   "lines": 3
+  },
+  "note:250:Gebuehrenbescheid nach Gebuehrensatzung der Gemeinde": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Frist zur Nachreichung laeuft ab Zugang der Nachforderung": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Innerhalb von 4 Stunden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Innerhalb von 4 Stunden": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Innerhalb von 4 Stunden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Innerhalb von 4 Stunden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ticket an Technik übergeben": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Ticket an Technik übergeben": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Ticket an Technik übergeben": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ticket an Technik übergeben": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Mit Analyse-Protokoll": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Mit Analyse-Protokoll": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Mit Analyse-Protokoll": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Mit Analyse-Protokoll": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Bei Rötung oder Wärme immer Nein": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Bei Rötung oder Wärme immer Nein": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Bei Rötung oder Wärme immer Nein": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Bei Rötung oder Wärme immer Nein": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur mit Handschuhen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Nur mit Handschuhen": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur mit Handschuhen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur mit Handschuhen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 100,
+   "h": 115,
+   "lines": 7
+  },
+  "note:150:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 150,
+   "h": 86,
+   "lines": 5
+  },
+  "note:200:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 200,
+   "h": 57,
+   "lines": 3
+  },
+  "note:250:Antibiotika nur nach Freigabe durch die Praxis; Wartezeit im Bestandsbuch eintragen": {
+   "w": 250,
+   "h": 57,
+   "lines": 3
+  },
+  "note:100:Kühlkette": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Kühlkette": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Kühlkette": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kühlkette": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Nicht trödeln: Papa wartet auf das freie Bad.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Mama belegt das Bad als Erste, fast eine halbe Stunde lang.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 100,
+   "h": 100,
+   "lines": 6
+  },
+  "note:150:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:An der Kreuzung trifft das Kind meist Klassenkameraden.": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Rahmenvertrag 2026": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Rahmenvertrag 2026": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Rahmenvertrag 2026": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Rahmenvertrag 2026": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Per EDI": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Per EDI": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Per EDI": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Per EDI": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Nur SEPA": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Nur SEPA": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Nur SEPA": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Nur SEPA": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Lager B": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Lager B": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Lager B": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Lager B": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Vier-Augen-Prinzip ab 5.000 Euro": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Höchstens zweimal, danach Ablehnung": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Höchstens zweimal, danach Ablehnung": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Höchstens zweimal, danach Ablehnung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Höchstens zweimal, danach Ablehnung": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:§ 10 VwVfG": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:§ 10 VwVfG": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:§ 10 VwVfG": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:§ 10 VwVfG": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Checkliste A verwenden": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Checkliste A verwenden": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Checkliste A verwenden": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Checkliste A verwenden": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Bei Großkunden zusätzlich Vertrag prüfen": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 100,
+   "h": 273,
+   "lines": 18
+  },
+  "note:150:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 150,
+   "h": 172,
+   "lines": 11
+  },
+  "note:200:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 200,
+   "h": 129,
+   "lines": 8
+  },
+  "note:250:Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel bei der Leitung nachfragen und die Antwort im Ticket vermerken.": {
+   "w": 250,
+   "h": 100,
+   "lines": 6
+  },
+  "note:100:Wöchentlich wiederholen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Wöchentlich wiederholen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Wöchentlich wiederholen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Wöchentlich wiederholen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Kunde per Mail informieren": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Kunde per Mail informieren": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Kunde per Mail informieren": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kunde per Mail informieren": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Überprüfung der Größenänderung": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Überprüfung der Größenänderung": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Überprüfung der Größenänderung": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Überprüfung der Größenänderung": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Donaudampfschifffahrtsgesellschaftskapitän": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Rechnungsprüfungs-Workflow": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Rechnungsprüfungs-Workflow": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Rechnungsprüfungs-Workflow": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Rechnungsprüfungs-Workflow": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Ein-, Aus- und Durchgang": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Ein-, Aus- und Durchgang": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Ein-, Aus- und Durchgang": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Ein-, Aus- und Durchgang": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Kunden-Nr. 4711-0815": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Kunden-Nr. 4711-0815": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Kunden-Nr. 4711-0815": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Kunden-Nr. 4711-0815": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:1234567890 €": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:1234567890 €": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:1234567890 €": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:1234567890 €": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:12.345,67 EUR überwiesen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:12.345,67 EUR überwiesen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:12.345,67 EUR überwiesen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:12.345,67 EUR überwiesen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Erste Zeile\nzweite Zeile": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Erste Zeile\nzweite Zeile": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Erste Zeile\nzweite Zeile": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Erste Zeile\nzweite Zeile": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 150,
+   "h": 72,
+   "lines": 4
+  },
+  "note:200:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 200,
+   "h": 72,
+   "lines": 4
+  },
+  "note:250:Zeile eins\r\nZeile zwei\n\nnach Leerzeile": {
+   "w": 250,
+   "h": 72,
+   "lines": 4
+  },
+  "note:100:Abschluss 🎉 gefeiert": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Abschluss 🎉 gefeiert": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Abschluss 🎉 gefeiert": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Abschluss 🎉 gefeiert": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:請求書を確認する": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:請求書を確認する": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:請求書を確認する": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:請求書を確認する": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:审核申请并转发给团队负责人": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:审核申请并转发给团队负责人": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:审核申请并转发给团队负责人": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:审核申请并转发给团队负责人": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Fehler!!! Sofort???": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Fehler!!! Sofort???": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Fehler!!! Sofort???": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Fehler!!! Sofort???": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:a": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:a": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:a": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:a": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:ab": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:ab": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:ab": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:ab": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100: führende Leerzeichen": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150: führende Leerzeichen": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200: führende Leerzeichen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250: führende Leerzeichen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:nachgestellte Leerzeichen   ": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:nachgestellte Leerzeichen   ": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:nachgestellte Leerzeichen   ": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:nachgestellte Leerzeichen   ": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:doppelte  Leerzeichen  innen": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:doppelte  Leerzeichen  innen": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:doppelte  Leerzeichen  innen": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:doppelte  Leerzeichen  innen": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 100,
+   "h": 86,
+   "lines": 5
+  },
+  "note:150:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Qualitätssicherung abgeschlossen und freigegeben": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:Soft­break im Wort": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Soft­break im Wort": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Soft­break im Wort": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Soft­break im Wort": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Tab\tgetrennt": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:Tab\tgetrennt": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:Tab\tgetrennt": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Tab\tgetrennt": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:ÄÖÜ äöü ß": {
+   "w": 100,
+   "h": 40,
+   "lines": 1
+  },
+  "note:150:ÄÖÜ äöü ß": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:ÄÖÜ äöü ß": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:ÄÖÜ äöü ß": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:e-mail-benachrichtigung-versendet": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:e-mail-benachrichtigung-versendet": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:e-mail-benachrichtigung-versendet": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:e-mail-benachrichtigung-versendet": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 100,
+   "h": 72,
+   "lines": 4
+  },
+  "note:150:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:A B C D E F G H I J K L M N O P Q R S T U V W X Y Z": {
+   "w": 250,
+   "h": 43,
+   "lines": 2
+  },
+  "note:100:WWWWWWWWWWWWWWW": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:WWWWWWWWWWWWWWW": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:WWWWWWWWWWWWWWW": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:WWWWWWWWWWWWWWW": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:iiiiiiiiiiiiiiiiiiiiiiiiiiiiii": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:AVATAR Wavy Toffee": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:AVATAR Wavy Toffee": {
+   "w": 150,
+   "h": 40,
+   "lines": 1
+  },
+  "note:200:AVATAR Wavy Toffee": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:AVATAR Wavy Toffee": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 150,
+   "h": 57,
+   "lines": 3
+  },
+  "note:200:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:Team-Leitung informiert (Frist: 3 Tage)": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 100,
+   "h": 57,
+   "lines": 3
+  },
+  "note:150:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 200,
+   "h": 43,
+   "lines": 2
+  },
+  "note:250:„Anführungszeichen“ und ‚einfache‘": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  },
+  "note:100:Prozentsatz 12,5 % – fertig": {
+   "w": 100,
+   "h": 43,
+   "lines": 2
+  },
+  "note:150:Prozentsatz 12,5 % – fertig": {
+   "w": 150,
+   "h": 43,
+   "lines": 2
+  },
+  "note:200:Prozentsatz 12,5 % – fertig": {
+   "w": 200,
+   "h": 40,
+   "lines": 1
+  },
+  "note:250:Prozentsatz 12,5 % – fertig": {
+   "w": 250,
+   "h": 40,
+   "lines": 1
+  }
+ }
+}

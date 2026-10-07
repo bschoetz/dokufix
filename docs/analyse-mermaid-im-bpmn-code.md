@@ -395,7 +395,7 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
 **Zwei Stellen, an denen die Umgebung hineinspielt**, und wie das Paket sie offen hält:
 
 1. **XML parsen.** `readProcess()` erwartet ein geparstes Dokument. Im Browser liefert es `DOMParser`, in Node braucht es eine DOM-Bibliothek wie `linkedom`, die die Tests schon nutzen. Der Einstieg nimmt deshalb einen Parser als Option, mit `globalThis.DOMParser` als Vorgabe. Eine Eigenheit gehört in die Paket-Doku: linkedom liest `&amp;` anders als ein Browser (`readModel()` in `tests/bpmn-fixtures.mjs`).
-2. **Größe der Beschriftungen.** Die Positionen hängen davon ab, wie groß die Beschriftungen gezeichnet werden. Ohne Hilfe schätzt das Paket sie (`labelSize()`, die Messart `estimated` der Fixtures). Wer genau sein will, übergibt eine Messfunktion als Option. Für bpmn-js kann das Paket einen kleinen optionalen Adapter mitliefern, der einen vom Aufrufer erzeugten Viewer bekommt, so wie heute `labelMeasurer(viewer)` in `src/app/bpmn.js`. So entsteht keine Abhängigkeit von bpmn-js. Ohne Messfunktion passen die Abstände zu bpmn-js' Beschriftungen weniger genau; die Regelprüfung der Fixtures misst heute mit gemessenen Größen.
+2. **Größe der Beschriftungen.** Die Positionen hängen davon ab, wie groß bpmn-js die Beschriftungen später zeichnet. Die Lösung ist ein eigener Messer im Paket (Abschnitt 4b): das Textlayout von diagram-js, nachgebaut, mit einer Tabelle der Zeichenbreiten statt einer Messung im Browser. Er rechnet in Node und im Browser gleich und trifft bpmn-js exakt, solange bpmn-js in derselben Schrift zeichnet.
 
 **Was zum Repository des Pakets gehört, ohne Teil der Bibliothek zu sein:**
 
@@ -428,6 +428,42 @@ Die Liste geht davon aus, dass der Nachbau als Komponente **LMM** in einem eigen
    - **Achtung Größe:** Die LGPL verlangt, beim Weitergeben eine Kopie der GPL-3.0 und der LGPL-3.0 beizulegen. Zusammen sind das gut 40 KB Text. Die Lizenzansicht steht in jeder Variante, auch in den Exporten. Ob die beiden Texte vollständig in jede Datei gehören oder ob ein Verweis auf den Quelltext und die Lizenzdateien des Repositorys genügt, sollte jemand mit Rechtskenntnis entscheiden (Abschnitt 7). Die Größenprüfungen des Builds (`tests/build.test.mjs`) müssen das berücksichtigen.
    - Das Austauschen der Komponente ist erfüllt, weil dokufix aus offenem Quelltext mit `npm run build` gebaut wird. Das sollte im README stehen.
 4. **`src/README.md`:** In der Modultabelle und im Abschnitt *Licence information* nennen, welche Dateien zur BPMN-Layout-Komponente gehören (`bpmn-layout.js`, `lmm.js`, der Einstieg), dass sie unter LGPL-3.0 steht und dass `lmm.js` auf Mermaid (MIT) beruht.
+
+### 4b. Die Größe der Beschriftungen: ein Messer nach diagram-js
+
+Ein viertes Review (`spikes/lmm/diagram-js/BERICHT.md`) hat geprüft, wie sich die Beschriftungsgrößen ohne bpmn-js bestimmen lassen.
+
+**Wie bpmn-js misst:**
+
+- bpmn-js 18.31.0 bündelt **diagram-js 15.28.0**. Das ganze Textlayout steckt in `diagram-js/lib/util/Text.js`. Der Textrenderer von bpmn-js ist nur eine Hülle mit den Konstanten: Box 90 px, Zeilenhöhe 1,2 × 12 = 14,4 px, Innenabstand der Notiz 7 px, Mindesthöhe 40 px.
+- Gemessen wird seit diagram-js 15.12.0 mit `canvas.measureText` auf einem Canvas, in der Schrift `normal 12px <fontFamily>`. Früher war es `getBBox` an einem Hilfs-SVG. Die Höhe folgt allein aus der Zeilenzahl.
+- Der Umbruch: Gefüllt wird, solange die Zeile höchstens so breit ist wie die Box. Danach wird an Leerzeichen, Bindestrich oder weichem Trennstrich gekürzt, sonst das Wort hart geschnitten. bpmn-js bricht beim Zeichnen in der importierten Breite noch einmal um.
+- **Versionskopplung:** Die Passbedingung hat sich zuletzt in diagram-js 15.27.1–15.27.3 geändert (`<` zu `<=`), eine Woche vor bpmn-js 18.31.0. Jeder Messer hängt deshalb an der diagram-js-Version des zeichnenden bpmn-js.
+
+**Die geprüften Varianten:**
+
+| Variante | Ergebnis |
+|---|---|
+| (a) diagram-js als Abhängigkeit, Messen im Browser | exakt (0 von 572 Messungen anders), 7,3 KB gebündelt. Läuft aber nur im Browser und misst in der Systemschrift; das Layout hängt dann wieder vom Rechner ab |
+| (b) diagram-js unverändert, Messung über einen ersetzten Canvas | geht in Node, aber nur über ein globales `document` vor dem Import; gegenüber (c) nur mehr Gepäck |
+| **(c) Nachbau des Textlayouts mit Breitentabelle** | **empfohlen**: 110 Zeilen, davon 70 Zeilen Code, 35 davon aus diagram-js abgeleitet; keine Abhängigkeit; die Tabelle (357 Zeichen und Kerning-Paare) wird in Chromium erzeugt |
+
+**Gemessen** (Prototyp `spikes/lmm/diagram-js/messer.mjs` mit der Tabelle für **Inter**, die Schrift, in der dieses Chromium `BPMN_FONT` zeichnet):
+
+| Messer | gegen bpmn-js im selben Chromium | Layout der 57 Fixtures gleich |
+|---|---|---|
+| **Nachbau, Inter, mit Kerning** | **291 von 292 Beschriftungen und 280 von 280 Notizgrößen exakt**; die eine Abweichung ist ein CJK-Text | **57 von 57** |
+| Nachbau, Inter, ohne Kerning | 224 von 292 exakt | 37 von 57 |
+| Nachbau mit Tabelle einer anderen Schrift (Liberation Sans) | 11 von 292 exakt, Breite im Mittel 4,7 px daneben | 4 von 57 |
+| heute `labelSize()` | 1 von 292 exakt, 13 % falsche Zeilenzahlen | 1 von 57 |
+
+Der Nachbau rechnet in Node und in Chromium identisch (0 von 572 anders). Ich habe die Exaktheit mit einem eigenen Korpus nachgemessen: 426 von 426 Messungen gleich mit bpmn-js, darunter eigene Texte mit Umlauten, „€“, typografischen Anführungszeichen und Zeilenumbruch (`spikes/lmm/check/messer-check.mjs`). Die Wirkung auf das Layout (57 von 57) habe ich mit dem Skript des Reviews reproduziert.
+
+**Die Schriftfrage** ist damit der eigentliche Punkt: Der Algorithmus ist exakt nachbaubar, die Tabelle gilt aber für eine Schrift. Mit der Tabelle einer anderen Schrift ist der Fehler fast so groß wie heute mit der Schätzung. Deckungsgleich mit der Zeichnung ist das Layout deshalb nur, wenn bpmn-js in der Schrift der Tabelle zeichnet. Für dokufix hieße das: `BPMN_FONT` auf die Referenzschrift setzen und die Schrift per `@font-face` im Dokument und in den Exporten mitliefern. Inter steht unter der SIL Open Font License 1.1 (OTF 605 KB, eine WOFF2-Teilmenge deutlich kleiner, nicht gemessen). Die Alternative Liberation Sans hat die Maße von Arial und liegt damit näher an der Vorgabe `Arial, sans-serif` von bpmn-js. Entscheidung: Abschnitt 7.
+
+**Lizenz:** diagram-js steht unter MIT (Copyright (c) 2014-present Camunda Services GmbH), verträglich mit LGPL-3.0. Der Messer trägt den MIT-Hinweis im Dateikopf, wie LMM den von Mermaid. Der Teil aus dem Textrenderer von bpmn-js sind wenige Konstanten und Formeln; ob dafür der Hinweis der bpmn.io-Lizenz nötig ist, gehört zur Prüfung mit Rechtskenntnis. Die Breitentabelle besteht aus Messwerten einer Schrift unter OFL 1.1, deren Mitliefern erlaubt ist.
+
+**Im Paket:** der Messer als Modul, etwa `messer.mjs` mit `messer(tabelle)`, die Tabelle der Referenzschrift als Vorgabe und austauschbar, das Werkzeug zum Erzeugen einer Tabelle (`tabelle.mjs`) und ein Test gegen das gepinnte bpmn-js im Browser. Der Einstieg `layout(xml, options)` nutzt den Messer, wenn keine eigene Messfunktion übergeben wird.
 
 ### Produktcode
 
@@ -537,6 +573,7 @@ Gesamtzahlen an den 57 Fixtures (`measured`) nicht schlechter als 43 Verstöße,
 | `LGPL-3.0-only` oder `LGPL-3.0-or-later` | nur Version 3; auch spätere Versionen | Offen. `-or-later` ist bei der FSF üblich und erlaubt später einen Wechsel auf eine neue Fassung; `-only` behält die Kontrolle über die Bedingungen |
 | Rechteinhaber der Copyright-Zeile | Person; Projekt („die dokufix-Autoren“) | Offen; nötig für alle Dateiköpfe |
 | Lizenztexte in jeder dokufix-Datei | GPL- und LGPL-Text vollständig (gut 40 KB); Verweis auf Repository und Lizenzdateien | Offen, mit Rechtskenntnis zu entscheiden; berührt die Größenprüfungen des Builds |
+| Referenzschrift für Layout und Zeichnung | Inter; Liberation Sans; keine (Systemschrift) | Offen. Mit fester, mitgelieferter Schrift sind Layout und Zeichnung überall deckungsgleich (Abschnitt 4b). Inter ist die Schrift der Messungen hier, Liberation Sans liegt näher an Arial. Kosten: eine Schriftdatei in jeder dokufix-Datei und eine andere Optik |
 | Lizenz von dokufix selbst | festlegen; offen lassen | Festlegen. Das Repository hat keine `LICENSE`-Datei. dokufix darf die LGPL-Komponente unter jeder Lizenz enthalten, solange es deren Bedingungen erfüllt; für alle anderen bestimmt die Wahl, wie sie dokufix nutzen dürfen |
 | Was tun, solange Mermaid noch das Layout macht? | nichts; die kleine Korrektur für `%%{` (Anhang B, Hinweis 3b) vorziehen | Nur wenn der Ersatz nicht bald kommt. Mit dem Ersatz verschwindet der Fehler von selbst |
 
