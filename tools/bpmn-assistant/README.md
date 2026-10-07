@@ -22,3 +22,5 @@ Beide Anordnungen laufen in einem Web Worker, damit die Seite bei großen Prozes
 Das Häkchen „X an zusammenführenden Gateways“ neben den Diagrammfarben ist gesetzt wie in der App; abgewählt zeichnet A2 exklusive Gateways, die zusammenführen (mindestens zwei Flüsse hinein, höchstens einer hinaus), als leere Raute (Option `mergeMarker` von `appendDiagram()`). Eine Änderung ordnet neu an, der Zustand bleibt im `localStorage`.
 
 Das Häkchen „Sprungbögen“ daneben (Prototyp, `src/app/line-jumps.js`) ist gesetzt wie in der App: Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte, in Bild und Großansicht; der Modellierer und der `.bpmn`-Download haben keine Bögen. Eine Änderung zeichnet neu, der Zustand bleibt im `localStorage`.
+
+Die Diagrammfarben beginnen mit der Vorlage „Gelb“ (von Ben gestaltet, 2026-10-07): Sie steht als erste in der Liste, gilt ohne gespeicherte Wahl und nach „Zurücksetzen“. „Blau (dokufix)“, die Farben der App, folgt als zweite. Eine im `localStorage` gespeicherte Wahl bleibt.

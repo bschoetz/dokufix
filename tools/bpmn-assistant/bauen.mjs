@@ -364,6 +364,22 @@ function fromRoles(r, over = {}){
   return out;
 }
 const PRESETS = {
+  // Gelb: von Ben im Werkzeug gestaltet und als .json exportiert (2026-10-07), alle Werte ausdrücklich; seitdem die
+  // Vorgabe des Assistenten. Aufgaben hellgelb mit Ocker, Gateways exklusiv blau, parallel und die übrigen violett,
+  // Nachrichtenflüsse und Zwischenereignisse Ocker, Poolkopf schwarz; Hintergrund transparent.
+  gelb: { name: 'Gelb',
+    'task-fill': '#fffbdb', 'task-stroke': '#b3a00f', 'task-label': '#1c1c1e', 'task-icon': '#000000',
+    'sub-fill': '#ffffff', 'sub-stroke': '#0066cc', 'sub-label': '#1c1c1e', 'start-fill': '#ffffff',
+    'start-stroke': '#000000', 'start-label': '#1c1c1e', 'start-icon': '#c38209', 'inter-fill': '#ffffff',
+    'inter-stroke': '#c38209', 'inter-label': '#1c1c1e', 'inter-icon': '#000000', 'end-fill': '#ffffff',
+    'end-stroke': '#1c1c1e', 'end-label': '#1c1c1e', 'end-icon': '#1c1c1e', 'gwx-fill': '#f0f8ff',
+    'gwx-stroke': '#0066cc', 'gwx-label': '#1c1c1e', 'gwx-icon': '#004080', 'gwp-fill': '#faf3fc',
+    'gwp-stroke': '#ad33cc', 'gwp-label': '#1c1c1e', 'gwp-icon': '#8a29a3', 'gwo-fill': '#ffffff',
+    'gwo-stroke': '#ad33cc', 'gwo-label': '#1c1c1e', 'gwo-icon': '#8a29a3', 'gwe-fill': '#ffffff',
+    'gwe-stroke': '#ad33cc', 'gwe-label': '#1c1c1e', 'gwe-icon': '#8a29a3', 'flow-stroke': '#3a3a3f',
+    'flow-label': '#1c1c1e', 'msg-stroke': '#c38209', 'msg-label': '#1c1c1e', 'pool-fill': '#ffffff',
+    'pool-stroke': '#2c2c2c', 'head-fill': '#000000', 'head-label': '#ffffff', 'lane-fill': '#ffffff',
+    'lane-stroke': '#2c2c2c', 'lane-label': '#1c1c1e', 'bg-fill': 'transparent' },
   // Wie dokufix zeichnet (src/doc.css:269–274), Nachrichtenflüsse dort #6e6e73.
   blau: { name: 'Blau (dokufix)', ...fromRoles({ sym: '#0066cc', end: '#1c1c1e', line: '#3a3a3f', poolLine: '#8e8e92', poolFill: '#fafafa', head: '#fafafa', fill: '#ffffff', label: '#1c1c1e', bg: '#ffffff' }, { 'msg-stroke': '#6e6e73' }) },
   sw: { name: 'Schwarzweiß', ...fromRoles({ sym: '#000000', end: '#000000', line: '#000000', poolLine: '#000000', poolFill: '#ffffff', head: '#ffffff', fill: '#ffffff', label: '#000000', bg: '#ffffff' }) },
@@ -417,7 +433,7 @@ function migrate(t){
   for (const [k, , ps] of TYPES) if (ps.includes('i') && t[k + '-stroke'] && !t[k + '-icon']) t[k + '-icon'] = t[k + '-stroke'];
   return t;
 }
-let theme = { preset: 'blau', ...PRESETS.blau };
+let theme = { preset: 'gelb', ...PRESETS.gelb };
 try {
   const t = JSON.parse(localStorage.getItem(THEME_KEY) || 'null');
   const m = t && migrate(t);
@@ -633,7 +649,7 @@ function syncThemeForm(){
     $('palette').appendChild(b);
   }
   $('theme-btn').onclick = () => { themeMsg(''); syncThemeForm(); $('theme').showModal(); };
-  $('theme-reset').onclick = () => { theme = { ...PRESETS.blau, preset: 'blau' }; delete theme.name; applyTheme(); };
+  $('theme-reset').onclick = () => { theme = { ...PRESETS.gelb, preset: 'gelb' }; delete theme.name; applyTheme(); };
 })();
 theme = { ...theme }; delete theme.name;
 applyTheme();
