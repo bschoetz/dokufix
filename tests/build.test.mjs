@@ -225,7 +225,7 @@ test('--dev writes a second file: the same page, not minified, with a source map
   const min = fs.readFileSync(committed, 'utf8');
   const script = appScript(r.html);
   // Not minified: the names and the lines of the sources are there.
-  assert.match(script, /^ {2}async function renderOnce\(\) \{$/m);
+  assert.match(script, /^ {2}async function renderOnce\(signal\) \{$/m);
   assert.ok(script.split('\n').length > 1000, 'the script has its lines');
   assert.match(r.html, /^\.dokufix-doc \.dokufix-warning \{$/m);
   assert.ok(!/async function renderOnce/.test(appScript(min)), 'the committed file is the minified one');

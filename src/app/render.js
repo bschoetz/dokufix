@@ -30,8 +30,9 @@ import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
 
 // Document passes produce the document: what a reader sees, and what an export
 // takes along when it copies the preview. A pass gets the root that holds the
-// document and the context of this render, { frontmatter }: what was split off
-// the source before Markdown was parsed.
+// document and the context of this render, { frontmatter, signal }: what was
+// split off the source before Markdown was parsed, and the AbortSignal of this
+// render, aborted once a newer render is requested (below).
 //
 // The order matters in eight places. Callouts come before the headings: which
 // headings count depends on where a heading stands, and one inside a callout
@@ -86,18 +87,35 @@ export const RUNTIME_PASSES = [
 
 // One render at a time. A render requested while another runs starts when
 // that one is finished, and reads the source then; the preview ends as the
-// last one's. The promise is fulfilled when this render is done and is never
-// rejected: whatever fails ends as a warning in the document and a line in
-// the console.
+// last one's. A newer request aborts the render before it (its AbortSignal):
+// a layout of BPMN still running in its worker is given up at once, so that
+// Ctrl+Enter during a layout of many seconds acts now and not after it
+// (src/app/layout-client.js), and a render still waiting for its turn does
+// not run at all. The promise is fulfilled when the preview is the newest
+// render's, so that whoever waits for it, an export above all, never copies
+// a preview a newer render is about to replace, nor one with the warnings of
+// an aborted layout. It is never rejected: whatever fails ends as a warning in
+// the document and a line in the console.
 let lastRender = Promise.resolve();
+let lastController = null;
 export function render() {
+  if (lastController) lastController.abort();
+  const controller = lastController = new AbortController();
+  const run = () => renderOnce(controller.signal);
   // renderOnce() contains its own failures; the second argument keeps the
   // queue alive even if it ever did not.
-  lastRender = lastRender.then(renderOnce, renderOnce);
-  return lastRender;
+  lastRender = lastRender.then(run, run);
+  return newest();
+}
+// Settles when the render last requested has, however many come after this one.
+async function newest() {
+  let waited;
+  do { waited = lastRender; await waited; } while (waited !== lastRender);
 }
 
-async function renderOnce() {
+async function renderOnce(signal) {
+  // A newer render was requested before this one began: that one shows the source.
+  if (signal.aborted) return;
   try {
     // A live viewer still running goes first: whatever this render does, the
     // figure it stands in is replaced (src/app/live-viewer.js).
@@ -121,7 +139,7 @@ async function renderOnce() {
     pruneAssetUrlCache(resolution.resolved);
     previewEl.innerHTML = resolution.html;
 
-    const context = { frontmatter: fm };
+    const context = { frontmatter: fm, signal };
     await runPasses(previewEl, DOCUMENT_PASSES, context);
     // A run-time pass that fails leaves the document complete. Its warning is
     // for the reader of this page, so it is transient: no export carries it.
