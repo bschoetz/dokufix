@@ -1,6 +1,6 @@
 # Grobkonzept: eine Ordnungsphase zwischen LMM und Raster
 
-Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); die Teile a), b) und b2) des ersten Schritts sind umgesetzt, mit den Messwerten unten. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
+Stand 7. Oktober 2026. Entstanden auf Commit `fb4b877`, überarbeitet nach einem Review am selben Tag (auf `bd8e9c7`); der erste Schritt (a, b, b2, c) ist umgesetzt, mit den Messwerten unten; c) als Versuch hinter `options.rowOrder`, ohne Wirkung auf das Produkt. Ein Grobkonzept, nichts davon ist gebaut. Die Einschätzungen sind aus Code und Verlauf abgeleitet und nicht gemessen, wo nicht anders gesagt.
 
 ## Ausgangslage
 
@@ -147,7 +147,7 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
 - Er zählt zu wenig (64 statt 121): Spuren in einem Kanal, Ports an der Seite einer Aufgabe und manche Rückflüsse fehlen. Bei R12 sieht er 5 von 7 Unterschieden nicht.
 - **Folge für die Phase:** Schritt 1 ist kein Zerlegen mit fester Lage, sondern ein kleiner Router auf Spaltenebene. Die 6 Paare von R10 sind schmal (5 davon hund2 und seine Abwandlungen); vor dem Produkt braucht es mehr Fälle, am besten die externen Eingaben.
 
-**c) R10 durch eine Rechnung ersetzen.**
+**c) R10 durch eine Rechnung ersetzen (umgesetzt als Versuch, 7. Oktober 2026).**
 - R10 heute (`ruleRowProbe()`): Für jede Gruppe von Zeilen, die R2 einem Weg gibt, ordnet R10 das ganze Bild ein weiteres Mal an, mit dem Weg auf der anderen Seite. Es behält das nur, wenn die Kreuzungen weniger werden. Das kostet einen vollen Lauf je Gruppe.
 - Die Rechnung: Für jede Gruppe zählt `mini` (b2) beide Seiten auf dem Raster, ohne zu routen; genommen wird die Seite mit weniger Kreuzungen, bei Gleichstand bleibt die Seite von R2. Nachrichtenflüsse zählen gewichtet zur Seite ihres Pools (die Vorgabe aus b-wv2). Dazu braucht `mini` eine Fassung im Layout, die mit Zellen (Bahn, Zeile, Spalte) statt mit dem Diagrammteil arbeitet.
 - Hinter einem eigenen Schalter in `DEFAULT_RULES` (etwa `rowOrder`), sodass `lauf.mjs --aus rowOrder` und `vergleich.mjs` alt und neu nebeneinanderstellen.
@@ -155,6 +155,13 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
   - wie viele Bilder sich ändern und ob sie besser oder schlechter werden (Brüche, Kreuzungen, Knicke),
   - wie viele Läufe von `finishGrid()` wegfallen,
   - ob Bens Befund b-wv2 ohne Probe so ausfällt wie heute.
+
+**Ergebnis von c):**
+- `ruleRowOrder()` und `gridCrossings()` in `src/app/bpmn-layout.js`, eingeschaltet mit `options.rowOrder: true` (in `lauf.mjs` mit `--an rowOrder`). Es ist keine Regel von `DEFAULT_RULES`; ohne den Schalter bleibt jedes Bild, wie es ist.
+- Erster Versuch, gezählt auf dem Raster vor `finishGrid()`: schlechter als heute (Kreuzungen 41 → 48, Knicke 495 → 517, Brüche 13 → 14, 5 Bilder anders). Vor `finishGrid()` stehen die Knoten noch in LMMs Spalten; erst R7 und R9 setzen sie in die Spalte ihres Gateways, und an diesen Flüssen innerhalb einer Spalte hängen die meisten Kreuzungen.
+- Zweiter Versuch, gezählt auf den Lagen nach einem Probelauf: 82 von 84 Bildern gleich, Kreuzungen 42, Brüche 14. Der Rest kam aus Gleichständen, bei denen die Zählung eine Kreuzung nicht sieht (u4: Spuren und Ports an der Seite), und aus einem Gleichstandskriterium für Nachrichtenflüsse, das ein Bild ohne Gewinn drehte.
+- **Fassung jetzt:** Die Zählung entscheidet, wo sie einen Unterschied sieht; bei Gleichstand probiert R10 wie bisher, mit allen seinen Maßen. Ergebnis über die 84 eigenen Eingaben: **jedes Bild byte-gleich mit heute**, und R10 braucht 40 statt 54 Läufe von `finishGrid()`. Insgesamt sind das 1654 statt 1668 Läufe, weil R10 der kleinste Posten ist.
+- **Bewertung:** Die Rechnung ist verlässlich, wo sie entscheidet. Ohne die Probe als Rückfall ist sie es noch nicht, weil sie zu wenig zählt. Für die Laufzeit lohnt sich derselbe Aufbau bei R12 und R16, auf die zusammen fast die Hälfte der Läufe entfällt. Ob `rowOrder` eingeschaltet wird, ist offen: Auf den 84 eigenen Eingaben ändert es nichts; die externen fehlen in dieser Umgebung.
 
 Warum R10 trotzdem zuerst: Es ist die Probe, die am klarsten Phase 3 ist (die Seite eines Wegs innerhalb seiner Bahn), sie hängt an einer einzigen Stelle, und ihr Ergebnis ist schon heute auf Kreuzungen gemessen. Das macht den Vergleich eindeutig, und es prüft das Zählmodell an einem kleinen Fall. Für die Laufzeit zählen danach R16 und R12: R16 gehört zum Nachschärfen der Spalten (Schritt 4 der Phase), R12 zur Reihenfolge je Spalte (Schritt 2). Trägt die Rechnung bei R10, folgt R12 mit demselben Zählmodell, dann R16 als Bedingung. Trägt sie nicht, zeigt b), ob das Zählmodell oder die Vorgabe schuld ist.
 

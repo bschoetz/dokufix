@@ -1304,6 +1304,16 @@ test('options.runs counts the runs of the grid per rule whose trials ran it, and
   assert.deepEqual(none, { final: 1 });
 });
 
+test('options.rowOrder decides R10 by counting where the count sees a difference, else by its trial: hund2 as without it, in fewer runs', () => {
+  const { model, raw } = gridInput(readFixture('hund2').xml);
+  const tried = {}, counted = {};
+  const di = layoutGeometry(model, raw, undefined, { ...DEFAULT_RULES, runs: tried });
+  assert.deepEqual(layoutGeometry(model, raw, undefined, { ...DEFAULT_RULES, rowOrder: true, runs: counted }), di);
+  assert.ok(counted.R10 < tried.R10, counted.R10 + ' < ' + tried.R10);
+  // Off unless set: no rule of DEFAULT_RULES.
+  assert.equal('rowOrder' in DEFAULT_RULES, false);
+});
+
 // What a hostile document of a few KB made slow, each bounded far below what it took (security review of
 // 2026-10-07): the bound is a tenth of the old time or less, so a slow machine passes and a return of the old
 // algorithm fails.

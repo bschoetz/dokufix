@@ -797,10 +797,14 @@ const byId = () => Object.create(null);
 // options: the rules (DEFAULT_RULES), each on unless set false; and runs, an
 // object the call fills with how often finishGrid() ran, per rule whose trials
 // ran it ("R10" …) and "final" for the picture returned: for the layout tools
-// (tools/bpmn-layout/lauf.mjs), no effect on the picture.
+// (tools/bpmn-layout/lauf.mjs), no effect on the picture. rowOrder: true
+// decides R10 by counting instead of trying (ruleRowOrder()), an experiment of
+// the ordering phase (docs/konzept-ordnungsphase.md), off unless set; it is no
+// rule of DEFAULT_RULES, so that every picture stays as it was without it.
 export function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES){
   const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, options[k] ?? DEFAULT_RULES[k]]));
   rules.runs = options.runs || null;
+  rules.rowOrder = options.rowOrder === true;
   // Each text measured once per width (none for a label): every trial of the rules lays the labels out again, and
   // each measure lays the text out anew, a text annotation in up to four widths (review of 2.31).
   const sizes = new Map();
@@ -1577,7 +1581,8 @@ function layoutGrid(model, raw, measure, rules){
   g.stage = 'R18';
   if (rules.handOver) ruleHandOver(g, model, measure, rules);
   g.stage = 'R10';
-  if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
+  if (rules.rowOrder && rules.rowProbe && (g.pathRowGroups || []).length) ruleRowOrder(g, model, measure, rules);
+  else if (rules.rowProbe && (g.pathRowGroups || []).length) ruleRowProbe(g, model, measure, rules);
   g.stage = 'R12';
   if (rules.crossProbe) ruleCrossProbe(g, model, measure, rules);
   g.stage = 'R14';
@@ -1708,6 +1713,134 @@ function ruleRowProbe(g, model, measure, rules){
     else restore(keep);
   }
   return best;
+}
+
+// R10 by counting (options.rowOrder; the ordering phase, step c of
+// docs/konzept-ordnungsphase.md). Per group of rows R2 gave a way, as R10
+// tries it, the crossings are counted with the group on its side and on the
+// other, without routing (gridCrossings()). Where the count sees a
+// difference, it decides; where it sees none, R10's trial decides as before,
+// with all its measures, the message flows' among them (Ben, 2026-10-07,
+// b-wv2). The count never pointed the wrong way in the spike, but misses
+// crossings (tracks, ports at a task's side), so a tie is no reason to keep a
+// side (spikes/ordnungsphase/BERICHT.md). It counts where the nodes stand after
+// the last trial run (columns and rows after R7, R8, R9 and R15), not on the
+// grid before it: R7 and R9 put nodes in their gateway's column, and the flows
+// within a column carry most crossings.
+function ruleRowOrder(g, model, measure, rules){
+  const snap = () => new Map([...g.cells.values()].map(c => [c, { lane: c.lane, row: c.row, col: c.col, pin: c.pin }]));
+  const restore = m => { for (const [c, v] of m) Object.assign(c, v); };
+  let best = runGrid(g, model, measure, rules), stale = false;
+  const fresh = () => { if (stale){ best = runGrid(g, model, measure, rules); stale = false; } for (const c of g.cells.values()) c.turned = false; };
+  const colOf = c => best.cols.get(c);
+  // The place after the last trial run, a row turned over since turned over.
+  const keyOf = c => { const k = best.at.get(c), lane = c.lane * 1e6; return c.turned ? lane - (k - lane) : k; };
+  // R10's measures (ruleRowProbe()).
+  const cross = q => q.crossings + q.msgCrossings;
+  const better = t => t.q.msgBends <= best.q.msgBends && (cross(t.q) < cross(best.q)
+    || (cross(t.q) === cross(best.q) && t.q.msgBends < best.q.msgBends && t.q.bends <= best.q.bends && t.q.shared <= best.q.shared))
+    && t.q.through <= best.q.through && t.q.lines <= best.q.lines && t.q.labels <= best.q.labels && !t.q.overlaps;
+  fresh();
+  for (const grp of g.pathRowGroups){
+    const cells = grp.ids.map(x => g.cells.get(x)).filter(c => c.lane === grp.lane && c.row === grp.row && !c.pin);
+    if (!cells.length) continue;
+    const before = gridCrossings(g, model, colOf, keyOf);
+    for (const c of cells) c.turned = !c.turned;
+    const after = gridCrossings(g, model, colOf, keyOf);
+    for (const c of cells) c.turned = !c.turned;
+    if (after < before){ for (const c of cells){ c.row = -c.row; c.turned = !c.turned; } stale = true; continue; }
+    if (after > before) continue;
+    fresh();
+    if (!cross(best.q) && !best.q.msgBends) continue;
+    const keep = snap();
+    for (const c of cells) c.row = -c.row;
+    const t = runGrid(g, model, measure, rules);
+    if (better(t)){ best = t; for (const c of g.cells.values()) c.turned = false; }
+    else restore(keep);
+  }
+  for (const c of g.cells.values()) delete c.turned;
+}
+
+// The crossings of the sequence flows, counted without routing, with each
+// cell's column (colOf) and place top to bottom (key; lane × 10⁶ + row, as the
+// grid stands, unless given) (spike ordnungsphase, "mini", spikes/ordnungsphase/
+// BERICHT.md): a router at the level of columns. Each flow over several columns has per column a place
+// entering it and one leaving it, a vertical piece between (a port above or
+// below); it runs at one place between its ends: its source's row, its
+// target's, or the channel above or below every node of its lane in the
+// columns it spans. Of these it takes the cheapest: a node it would run
+// through 1000, a crossing with a flow laid before 1, then the router's usual
+// choice (from a split or a boundary event the target's row, else the
+// source's; a flow back from its row in the channel above, from a row above in
+// its source's row, from one below in the channel below), short forward flows
+// first, flows back last. Two flows cross in a gap where their order differs
+// on its two sides, and in a column where one runs vertically and the other
+// through it. In the spike it never pointed the wrong way in the 18 pairs of
+// pictures that differ in their crossings, and got all six of R10.
+function gridCrossings(g, model, colOf = c => c.col, key = c => c.lane * 1e6 + c.row){
+  const byCol = new Map();
+  for (const c of g.cells.values()){ const x = colOf(c); if (!byCol.has(x)) byCol.set(x, []); byCol.get(x).push(c); }
+  const cols = [...byCol.keys()].sort((a, b) => a - b), index = new Map(cols.map((x, k) => [x, k]));
+  const inCol = k => byCol.get(cols[k]) || [];
+  const outs = new Map();
+  for (const f of model.flows) outs.set(f.from, (outs.get(f.from) || 0) + 1);
+  const placed = [], open = [];
+  for (const f of model.flows){
+    const a = g.cells.get(f.from), b = g.cells.get(f.to);
+    if (!a || !b || a === b) continue;
+    let sa = index.get(colOf(a)), sb = index.get(colOf(b));
+    if (sa === sb){ placed.push({ sa, sb, enter: new Map([[sa, key(a)]]), leave: new Map([[sa, key(b)]]) }); continue; }
+    const back = sa > sb, [L, R] = back ? [b, a] : [a, b];
+    if (back) [sa, sb] = [sb, sa];
+    const there = [];
+    for (let k = sa; k <= sb; k++) for (const c of inCol(k)) if (c.lane === L.lane) there.push(key(c));
+    const above = Math.min(...there) - 0.5, below = Math.max(...there) + 0.5, same = key(L) === key(R);
+    let options;
+    if (!back) options = same ? [[key(L), 0]] : (a.n.type === 'gateway' && outs.get(f.from) > 1) || f.event ? [[key(R), 0], [key(L), 0.01]] : [[key(L), 0], [key(R), 0.01]];
+    else if (same) options = [[above, 0], [below, 0.01], [key(L), 0.05]];
+    else if (key(R) < key(L)) options = [[key(R), 0], [key(L), 0.03]];
+    else options = [[key(R), 0.01], [key(L), 0.03]];
+    if (!back || !same) options.push([above, back && key(R) < key(L) ? 0.01 : back ? 0.02 : 0.05], [below, back && key(R) > key(L) ? 0 : back ? 0.02 : 0.06]);
+    open.push({ sa, sb, L, R, back, options });
+  }
+  const at = (o, y) => {
+    const enter = new Map(), leave = new Map();
+    for (let k = o.sa; k <= o.sb; k++){ enter.set(k, k === o.sa ? key(o.L) : y); leave.set(k, k === o.sb ? key(o.R) : y); }
+    return { sa: o.sa, sb: o.sb, enter, leave };
+  };
+  const hits = (k, y1, y2, but) => inCol(k).filter(c => c !== but && key(c) > Math.min(y1, y2) && key(c) < Math.max(y1, y2)).length;
+  open.sort((p, q) => (p.back - q.back) || ((p.sb - p.sa) - (q.sb - q.sa)));
+  for (const o of open){
+    let best = null;
+    for (const [y, liking] of o.options){
+      const way = at(o, y);
+      let cost = liking + 1000 * (hits(o.sa, key(o.L), y, o.L) + hits(o.sb, key(o.R), y, o.R));
+      for (let k = o.sa + 1; k < o.sb; k++) cost += 1000 * inCol(k).filter(c => key(c) === y).length;
+      for (const other of placed) cost += waysCross(way, other);
+      if (!best || cost < best.cost) best = { cost, way };
+    }
+    placed.push(best.way);
+  }
+  let n = 0;
+  for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) n += waysCross(placed[i], placed[j]);
+  return n;
+}
+// How often two ways of gridCrossings() cross: in each gap both span where
+// their order differs on its two sides, and in each column where one runs
+// vertically and the other through it, strictly between the vertical's ends.
+function waysCross(a, b){
+  let n = 0;
+  for (let k = Math.max(a.sa, b.sa); k < Math.min(a.sb, b.sb); k++)
+    if ((a.leave.get(k) - b.leave.get(k)) * (a.enter.get(k + 1) - b.enter.get(k + 1)) < 0) n++;
+  const through = (v, h) => {
+    let m = 0;
+    for (let k = Math.max(v.sa, h.sa + 1); k <= Math.min(v.sb, h.sb - 1); k++){
+      const e = v.enter.get(k), o = v.leave.get(k), y = h.enter.get(k);
+      if (e !== o && y === h.leave.get(k) && y > Math.min(e, o) && y < Math.max(e, o)) m++;
+    }
+    return m;
+  };
+  return n + through(a, b) + through(b, a);
 }
 
 // R12. Crossing trial (Ben, 2026-10-05, reklamation: with many crossings after

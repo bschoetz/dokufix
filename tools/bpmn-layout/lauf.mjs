@@ -3,7 +3,7 @@
 // finishGrid() je Regel lief (die Proben; seit dem 7. Oktober 2026) und die Nähe zu jeder Referenz von Hand, und
 // schreibt arbeit/<lauf>/<name>.bpmn und arbeit/<lauf>.json.
 //
-//   node tools/bpmn-layout/lauf.mjs [--lauf <name>] [--stand <commit>] [--satz s,s] [--aus regel,regel] [--quiet] [name…]
+//   node tools/bpmn-layout/lauf.mjs [--lauf <name>] [--stand <commit>] [--satz s,s] [--aus regel,regel] [--an versuch] [--quiet] [name…]
 //
 // --lauf   der Name des Laufs, Vorgabe "produkt" (mit --stand: "stand-<commit>")
 // --stand  ordnet mit src/app eines Commits an statt mit dem Arbeitsbaum (ab f0ff93e, LMM); so entsteht der
@@ -11,6 +11,8 @@
 // --satz   nur diese Sätze (sauber, ben, extern, pools, blackbox, angeheftet, notizen, laufzeit); Vorgabe: alle außer
 //          laufzeit
 // --aus    schaltet diese Regeln für den Lauf ab (DEFAULT_RULES in src/app/bpmn-layout.js)
+// --an     schaltet Versuche ein, die keine Regel von DEFAULT_RULES sind: rowOrder (R10 durch Zählen statt Probe,
+//          docs/konzept-ordnungsphase.md, Schritt c)
 // Namen statt --satz: nur diese Eingaben.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -19,7 +21,9 @@ import { INPUTS, STANDARD_SAETZE, externFehlt, EXTERN_ROOT, namesOf, readInput, 
 const a = args(process.argv.slice(2), ['quiet']);
 const stand = await loadStand(a.stand);
 const lauf = a.lauf || (a.stand ? 'stand-' + stand.commit.slice(0, 8) : 'produkt');
-const options = { ...stand.DEFAULT_RULES, ...Object.fromEntries((a.aus || '').split(',').filter(Boolean).map(k => { if (!(k in stand.DEFAULT_RULES)) throw new Error('keine Regel ' + k); return [k, false]; })) };
+const VERSUCHE = ['rowOrder'];
+const options = { ...stand.DEFAULT_RULES, ...Object.fromEntries((a.aus || '').split(',').filter(Boolean).map(k => { if (!(k in stand.DEFAULT_RULES)) throw new Error('keine Regel ' + k); return [k, false]; })),
+  ...Object.fromEntries((a.an || '').split(',').filter(Boolean).map(k => { if (!VERSUCHE.includes(k)) throw new Error('kein Versuch ' + k + ' (' + VERSUCHE.join(', ') + ')'); return [k, true]; })) };
 const breaksOf = await rules();
 const out = laufDir(lauf);
 fs.rmSync(out, { recursive: true, force: true });
