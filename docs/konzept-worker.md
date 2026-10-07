@@ -1,6 +1,6 @@
 # Konzept: das BPMN-Layout in einem Web Worker
 
-Stand 7. Oktober 2026, auf Commit `e18e69d`. Ein Konzept, nichts davon ist gebaut. Die Zahlen unten sind an diesem Tag auf dieser Maschine gemessen (Node 22.22, Chromium 141 headless über Playwright 1.63 aus `/opt/pw-browsers/chromium-1194`); was nicht gemessen ist, steht als Annahme. Die Prüfskripte des Versuchs liegen außerhalb des Repositorys (`scratchpad/worker/`: `bundle.mjs`, `versuch.mjs`, `zeichnen.mjs`, `anteil.mjs`, `demo-zeit.mjs`).
+Stand 7. Oktober 2026, auf Commit `e18e69d`, als Konzept. **Die Schritte 1 bis 5 sind am selben Tag gebaut** (Branch `claude/optimistic-allen-f7yfpw`, ab `2655a18`), dazu der BPMN-Assistent; was davon wie gebaut ist, was vom Konzept abweicht und was offen bleibt, steht im Abschnitt *Umsetzung* am Ende. Die Abschnitte 1 bis 8 sind das Konzept, wie es vor dem Bau stand. Die Zahlen unten sind an diesem Tag auf dieser Maschine gemessen (Node 22.22, Chromium 141 headless über Playwright 1.63 aus `/opt/pw-browsers/chromium-1194`); was nicht gemessen ist, steht als Annahme. Die Prüfskripte des Versuchs liegen außerhalb des Repositorys (`scratchpad/worker/`: `bundle.mjs`, `versuch.mjs`, `zeichnen.mjs`, `anteil.mjs`, `demo-zeit.mjs`).
 
 **Anlass.** Bens Prozess hund3 (77 Knoten, 94 Flüsse) braucht beim Anordnen so lange, dass der Tab steht: in Spike 2.26 10 s in Chromium und 15 s in Firefox (`src/README.md:376`). Heute sind es mehr (unten). Solange `layoutGeometry()` rechnet, reagiert die Seite auf nichts.
 
@@ -150,3 +150,64 @@ Jeder Schritt lässt `npm test`, `npm run check` und `npm run fixtures` grün; d
 4. Braucht der Rückfall ohne Worker die grobe Knotenschranke aus N3, oder reicht die Zeitgrenze im Worker?
 5. Gehört der Zwischenspeicher (Schritt 7) in dieses Vorhaben? Er macht jeden Render nach einer Textänderung schneller, auch für die 13 kleinen Diagramme des Demo-Textes, hat aber mit dem Worker nur den Anlass gemein.
 6. Soll der BPMN-Assistent denselben Worker-Einstieg nehmen?
+
+## Umsetzung (7. Oktober 2026)
+
+Gebaut sind die Schritte 1 bis 5 aus Abschnitt 8 und der BPMN-Assistent, nach Bens Entscheidungen vom selben Tag. Schritt 6 (Weg b) und Schritt 7 (Zwischenspeicher) sind nicht gebaut.
+
+**Bens Entscheidungen** (die Antworten auf die offenen Fragen oben):
+
+1. Weg (a): zweiter Einstieg `src/layout-worker.js`, als IIFE in den Block `<script type="text/plain" id="dokufix-layout-js">`, daraus per Blob-URL ein klassischer Worker. `app.js` behält die vier Module für den Rückfall; die Dopplung von etwa 98 KB ist angenommen.
+2. Zeitgrenze **120 s** (nicht 60 s): danach `terminate()`, ein neuer Worker für die nächste Anfrage, und das Diagramm ist die Warnung „Das Layout hat die Zeitgrenze von 120 s überschritten.“
+3. Der Hinweis „Diagramm wird angeordnet … 0 s“ im Container des Diagramms, dessen Sekunden sichtbar jede Sekunde hochzählen; nie in einer Datei, transient, sein Zeitgeber endet in jedem Fall.
+4. **Keine Knotenschranke**, auch nicht im Rückfall (die grobe Schranke aus Abschnitt 7 entfällt).
+5. Kein Zwischenspeicher.
+6. Der BPMN-Assistent bekommt denselben Weg mit: gleicher Worker-Einstieg und gleiches Protokoll, Zeitgrenze, Zähler.
+
+**Was gebaut ist**, in Commits:
+
+| Schritt | Commit | Was |
+|---|---|---|
+| 1 | `2655a18` | `src/app/bpmn-layout-job.js`: `layoutJob()` gibt `{ xml }` oder `{ xml, open, leftOut }` (die Zeilen von `leftOutLine()`), oder wirft die Ablehnung; `answerLayout()` die Antwort `{ id, ok, result \| error }`, die nie wirft. `layoutBpmn()` in `bpmn.js` ist weg. Test: `tests/bpmn-layout-job.test.mjs`, alle 57 Fixtures durch `layoutJob()` byte-gleich. |
+| 2 | `afb3f97` | `src/layout-worker.js` (eine Zeile um `answerLayout()`), der Slot `layout.js` in `SLOTS` und `src/index.html`, die Prüfung auf `</script` und `<!--` auch für diesen Block. Größentest in `tests/build.test.mjs` (80 000 bis 108 000 Zeichen) und ein Lauf des Blocks in `vm` mit nichts als `self`: er schweigt beim Laden und antwortet wie `layoutJob()`. |
+| 3 | `eeea0a2` | `src/app/layout-client.js` (`makeLayoutClient()`, `pageWorker()`), `src/app/layout-notice.js` (`showLayoutNotice()`); `renderBpmn(diagram, { client, timers, now })` wartet auf den Client. Tests: `tests/layout-client.test.mjs`, `tests/layout-notice.test.mjs`, neue Fälle in `tests/bpmn.test.mjs`. |
+| 5 | `8722c8b` | `render()` gibt jedem Render einen `AbortController`, `context.signal` geht an jeden Pass, der Pass `Diagramme` reicht es jedem Diagramm. |
+| 4 | `ff269d1` | Fälle 15 und 16 in `tests/durchlaeufe.mjs` (unten). |
+| Assistent | `cd26d52` | beide Anordnungen im Worker (unten). |
+
+**Abweichungen vom Konzept**, mit Grund:
+
+- *Wer den Hinweis schreibt.* Nicht der Pass für jeden BPMN-Block (Abschnitt 3), sondern `renderBpmn()`, und nur, wenn es anordnet: Ein Diagramm mit Koordinaten wird nicht angeordnet, und ein Zähler, der bei einem wartenden Diagramm auf 0 s stehen bliebe, beunruhigt mehr, als er sagt. Der Container eines BPMN-Diagramms, das auf seine Reihe wartet, bleibt **leer** (die Art `bpmn` trägt `sourceInHolder: false` in `src/app/diagrams.js`), statt bis zu 64 KB XML als Text zu zeigen, solange die Diagramme davor gezeichnet werden. Mermaid behält seine Quelle dort, weil es sie dort liest.
+- *Barrierefreiheit des Hinweises* (entschieden, wie Ben es offenließ): `role="status"`, eine höfliche Live-Region, die den Hinweis einmal ansagt, wenn er kommt; die Sekunden stehen in einem `<span aria-hidden="true">`, weil eine Live-Region, deren Text sich jede Sekunde ändert, jede Sekunde vorgelesen würde, und die Zahl nichts sagt, was der Hinweis nicht schon sagt. Die Sekunden werden an der Uhr gemessen, nicht an den Ticks gezählt (ein später Tick zeigt die vergangene Zeit), mit `tabular-nums`, damit die Zeile nicht springt.
+- *Das Aussehen des Hinweises* steht in seinem `style`-Attribut, nicht in einem Stylesheet: `src/doc.css` reist in jedes Exportbündel mit, das ihn nie zeigt, und die Stilprüfung verbietet Regeln für den Inhalt der Vorschau in `src/app.css` (`tests/check-doc-styles.mjs`). Die Klasse heißt deshalb `layout-notice`, ohne das Präfix der Dokumentbausteine.
+- *Ein Worker, der ausfällt, bevor er je geantwortet hat,* gilt als einer, der auf dieser Seite nicht startet: Die Seite ordnet ab da selbst an, die laufende Anfrage eingeschlossen, mit einer Zeile auf der Konsole. Abschnitt 3 sah dafür eine Warnung vor; die *Risiken* versprachen, dass der Rückfall jeden Fall fängt, in dem der Worker nicht startet. Fällt er nach einer Antwort aus, wird die Anfrage zur Warnung „Das Layout ist im Hintergrund fehlgeschlagen.“ mit dem Grund, und die nächste bekommt einen neuen Worker.
+- *Das Promise von `render()`* erfüllt sich erst, wenn die Vorschau die des neuesten Renders ist (Schritt 5 brachte sonst eine Lücke): Ein Export, der während eines Layouts angefordert wird, bricht das laufende ab, rendert neu und wartet darauf; er kopiert nie eine Vorschau mit dem Hinweis oder mit der Warnung eines abgebrochenen Layouts. Ein Render, der abgebrochen wird, bevor er dran ist, läuft gar nicht. Ein abgebrochenes Diagramm wird zur Warnung „Das Layout wurde abgebrochen.“ in einer Vorschau, die der neue Render ersetzt.
+- *`--dev`* minifiziert den Block auch, wie das Leserbündel; die Module stehen in der `--dev`-Datei lesbar im Skript, das der Rückfall ausführt.
+- *Der Assistent* nimmt den Block fertig aus `dist/dokufix.html`, wie schon die Dokumentstile; so ist es byte-gleich der Worker der App. Und **auch bpmn.io läuft im Worker**: `bpmn-auto-layout` ist reine Logik (bpmn-moddle, kein DOM; im Bündel steht nur `window.BAL=`) und brauchte für hund3 auf der Seite 17 s, die den Tab nach A2 noch einmal anhielten. Es läuft in einem eigenen klassischen Worker aus dem Text seines Skripts (`var window = self;` davor), über denselben Client und dasselbe Protokoll; dafür nimmt `makeLayoutClient()` die Aufgabe, die die Seite ohne Worker ausführt, als Option `job` (Vorgabe `layoutJob()`).
+- *Die Konsolenzeile in Node.* Node hat keinen `Worker`; der Client vermerkt den Rückfall einmal je Prozess mit `console.info`, die in `npm test` als eine Zeile `# BPMN layout on the page, without a worker: the page has no Worker` erscheint. Kein Test stellt etwas ein.
+
+**Was im Assistenten wo läuft:** Im Worker die reine Logik, die die Zeit kostet: Lesen, LMM, Raster, Diagrammteil (`layoutJob()`), und die Anordnung von bpmn.io. Auf der Seite, was die Seite braucht oder schnell ist: das Lesen des XML für die nicht angeordneten Elemente und für das Modell der Regelprüfung, die Behelfslinien der Assoziationen zwischen Flussknoten (`DOMParser`), die Brüche (`breaksOf()`), das Zeichnen mit `bpmn-js`, Großansicht und Modellierer. Ein neues Rendern bricht ein laufendes ab; die Zeit im Kopf eines Abschnitts sagt „im Worker“ oder „(ohne Worker)“.
+
+**Gemessen** (Chromium 141 headless über Playwright 1.63, `/opt/pw-browsers/chromium`, unter `file://`; Skripte außerhalb des Repositorys, `scratchpad/worker-bau/`):
+
+| Was | Ergebnis |
+|---|---|
+| `dist/dokufix.html` | 434 514 → 536 167 B (+101 653 B: Block 98 064 B, gzip 36 551 B; Skript +3 305 B; Tags und Kommentar 284 B) |
+| `dist/bpmn-assistant.html` | 507 176 → 614 232 B |
+| Leserbündel der Exporte | 33 955 Zeichen, unverändert (Schranke 34 000) |
+| hund3 in `dist/dokufix.html` | Render 20,9 s; der Hinweis zählt 0 bis 20 s; ein Intervall von 50 ms läuft 415 von 418 Ticks (längste Lücke 230 ms, beim Zeichnen am Ende); ein Klick auf „1.2.3“ währenddessen in 42 ms verarbeitet |
+| hund3 ohne `Worker` (Rückfall) | dasselbe XML; die Seite steht wie vorher |
+| ein Render während hund3 (Fall 15) | sofort gezeichnet, das Layout davor abgebrochen |
+| hund3 im Assistenten | A2 im Worker 20,8 s, bpmn.io danach im Worker 16,6 s; 759 von 755 erwarteten Ticks in 37,8 s, längste Lücke 207 ms; der Farbdialog öffnet sich währenddessen auf einen Klick (71 ms); 1 und 24 Brüche wie vorher |
+| Assistent, hund2 und r01 | A2 byte-gleich der Fixture, bpmn.io im Worker byte-gleich bpmn.io auf der Seite |
+
+**Prüfungen:** `npm test` 1 102 grün; `npm run check`, `npm run fixtures` (57 ohne Abweichung), `npm run build`, `npm run assistant` grün; `tests/durchlaeufe.mjs --browser chromium` 481 von 481 grün (alle sechzehn Fälle, in 1 min 36 s). **Firefox ist nicht gemessen und nicht gelaufen:** Auf dieser Maschine liegt kein Playwright-Firefox. `tests/vergleich.mjs` ist nicht gelaufen.
+
+**Offen:**
+
+- Firefox: die Tabelle in Abschnitt 2 (klassischer Worker aus einer Blob-URL unter `file://`), die Laufzeit von hund3 und die Durchläufe 15 und 16, sobald ein Firefox da ist; Safari ebenso.
+- `tests/vergleich.mjs --strict` gegen den Stand vor dem Worker (`745b24b`), in Chromium und Firefox: Bilder und Exporte sollten gleich sein, weil der Worker dasselbe XML liefert und die Exporte auf den Render warten.
+- Schritt 6, Weg (b) ohne Dopplung, wenn die 98 KB je `Mit Editor`-Datei zu viel werden.
+- Schritt 7, der Zwischenspeicher (Ben: nicht jetzt).
+- Ein Knopf „Abbrechen“ im Hinweis: heute bricht nur ein neuer Render ab oder die Zeitgrenze.
+
