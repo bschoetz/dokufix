@@ -2,8 +2,10 @@
 // Where a straight horizontal piece of a flow crosses a straight vertical one,
 // the horizontal one jumps over it with a half circle, always upwards (Ben,
 // 2026-10-07: only the horizontal one jumps, a message flow as well; slanted
-// pieces are left out). It is drawing only: the XML, its waypoints and the
-// layout stay as they are, so a modeler opening the .bpmn sees no jumps.
+// pieces are left out; a dashed line jumps as a solid one, and an association
+// as a flow, since the layout leads none across a flow). It is drawing only:
+// the XML, its waypoints and the layout stay as they are, so a modeler opening
+// the .bpmn sees no jumps.
 //
 // It works on what bpmn-js has drawn, in a viewer's container after the import
 // (and so in what saveSVG() gives) or in that SVG: the path of every
