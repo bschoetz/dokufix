@@ -17,8 +17,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML, DOMParser } from 'linkedom';
-import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, labelMeasurer, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT, BPMN_VIEWER_CONFIG } from '../src/app/bpmn.js';
-import { LAYOUT_NOTHING, labelSize } from '../src/app/bpmn-layout.js';
+import { hasCoordinates, bpmnTypeClasses, bpmnWarningText, finishBpmnSvg, renderBpmn, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT, BPMN_VIEWER_CONFIG, BPMN_FONT } from '../src/app/bpmn.js';
+import { LAYOUT_NOTHING } from '../src/app/bpmn-layout.js';
+import { measureLabel, LABEL_FONT } from '../src/app/label-size.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 
 const WITH_DI = '<bpmn:definitions xmlns:bpmn="m" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
@@ -58,10 +59,10 @@ test('the reasons and the warning say what the plan says', () => {
   assert.deepEqual(BPMN_CREDIT, { before: 'Gezeichnet mit ', href: 'https://bpmn.io', text: 'bpmn-js' });
 });
 
-test('the viewer draws with the three custom properties and the document\'s font at 12 px', () => {
+test('the viewer draws with the three custom properties and the measurer\'s font, bpmn-js\'s default, at 12 px', () => {
   assert.deepEqual(BPMN_VIEWER_CONFIG.bpmnRenderer, { defaultFillColor: 'var(--dokufix-bpmn-fill)', defaultStrokeColor: 'var(--dokufix-bpmn-stroke)', defaultLabelColor: 'var(--dokufix-bpmn-label)' });
-  assert.equal(BPMN_VIEWER_CONFIG.textRenderer.defaultStyle.fontSize, 12);
-  assert.match(BPMN_VIEWER_CONFIG.textRenderer.defaultStyle.fontFamily, /^-apple-system,.*sans-serif$/);
+  assert.deepEqual(BPMN_VIEWER_CONFIG.textRenderer, { defaultStyle: { fontFamily: 'Arial, sans-serif', fontSize: 12 }, externalStyle: { fontSize: 12 } });
+  assert.equal(BPMN_FONT, LABEL_FONT, 'the labels are drawn in the font they are measured in');
 });
 
 test('every element type gets the class of its kind, and its own where a kind has several', () => {
@@ -119,9 +120,9 @@ test('an SVG with a foreignObject is refused', () => {
 });
 
 // ---------- the renderer, with a stand-in for the library ----------
-// A stand-in for bpmn-js: records what it is asked, and answers as told.
-// text: a stand-in for its text renderer; without one, asking for it throws.
-function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpmn:Participant', 'bpmn:UserTask', 'label', 'bpmn:SequenceFlow'], text = null } = {}){
+// A stand-in for bpmn-js: records what it is asked, and answers as told. Its
+// text renderer is not there: asking for it throws, as nothing should.
+function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpmn:Participant', 'bpmn:UserTask', 'label', 'bpmn:SequenceFlow'] } = {}){
   const log = [];
   class Viewer {
     constructor(options){
@@ -134,7 +135,7 @@ function standIn({ importError = null, warnings = [], svg = SAVED, types = ['bpm
     }
     async importXML(xml, diagram){ log.push({ imported: xml, diagram }); if (importError) throw importError; return { warnings }; }
     get(name){
-      if (name === 'textRenderer'){ log.push({ measured: true }); if (!text) throw new Error('No provider for "textRenderer"'); return text; }
+      if (name === 'textRenderer'){ log.push({ measured: true }); throw new Error('No provider for "textRenderer"'); }
       assert.equal(name, 'elementRegistry');
       return { forEach: fn => this.gfx.forEach(g => fn({ type: g.type })), getGraphics: element => this.gfx.find(g => g.type === element.type).el };
     }
@@ -268,53 +269,19 @@ test('XML without coordinates is laid out by Mermaid in a transient host, then d
   assert.equal(warned.mock.calls.length, 0, 'nothing left out, nothing on the console');
 });
 
-// A stand-in for bpmn-js's text renderer: a line per 8 characters of the
-// text, each 14 px high, as wide as the box it is given; or one that throws.
-function textStandIn({ fails = false, width = 40 } = {}){
-  const lines = (text, w) => Math.max(1, Math.ceil(text.length * 6 / w));
-  return {
-    getExternalStyle: () => ({ fontSize: 12 }),
-    getExternalLabelBounds: (bounds, text) => { if (fails) throw new Error('kein Text'); return { width: width, height: 14 * lines(text, bounds.width) }; },
-    createText: (text, { box }) => ({ querySelectorAll: () => ({ length: lines(text, box.width) }) }),
-    // A text annotation: from the top left, 7 px in, at least 40 px high, as bpmn-js 18.31.
-    getTextAnnotationBounds: (bounds, text) => { if (fails) throw new Error('kein Text'); return { ...bounds, height: Math.max(40, 14 * lines(text, bounds.width - 14) + 14) }; },
-  };
-}
 const labelHeight = (xml, id) => Number(new RegExp('bpmnElement="' + id + '"><dc:Bounds[^>]*/><bpmndi:BPMNLabel><dc:Bounds [^>]*height="([\\d.]+)"').exec(xml)[1]);
 
-test('the labels of a layout are measured with the viewer\'s text renderer, in both of its passes; that viewer draws the diagram', async t => {
+test('the labels of a layout are measured by the layout itself, not by the viewer, which is made only to draw', async t => {
   t.mock.method(console, 'warn', () => {});
-  const { Viewer, log } = standIn({ text: textStandIn({ width: 25 }) });
+  const { Viewer, log } = standIn();
   const document = page();
   const d = diagramIn(document, WITHOUT_DI);
   await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(d), mermaidStandIn()));
-  // "Los": 18 px of text, one line in the import's 90 px, one line in 25 px: 14 px high.
-  assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), 14);
-  assert.deepEqual(log.map(x => Object.keys(x)[0]), ['made', 'measured', 'imported', 'saved', 'destroyed'], 'one viewer measures and draws');
+  // "Los": one line of 14.4 px, rounded up, as measureLabel() gives it; the viewer's text renderer is never asked.
+  assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), measureLabel('Los').h);
+  assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), 15);
+  assert.deepEqual(log.map(x => Object.keys(x)[0]), ['made', 'imported', 'saved', 'destroyed'], 'the viewer draws, nothing else');
   assert.equal(document.querySelectorAll('[data-dokufix-transient]').length, 0);
-});
-
-test('a label that cannot be measured keeps the estimate', async t => {
-  t.mock.method(console, 'warn', () => {});
-  for (const text of [null, textStandIn({ fails: true }), textStandIn({ width: NaN })]){
-    const { Viewer, log } = standIn({ text });
-    const document = page();
-    await withBoxes(document, () => withLibrary(Viewer, () => renderBpmn(diagramIn(document, WITHOUT_DI)), mermaidStandIn()));
-    assert.equal(labelHeight(log.find(x => x.imported).imported, 'S'), labelSize('Los').h);
-  }
-  // The measurer alone: a second line where the redraw in the measured width needs one; the estimate where measuring throws.
-  const measure = labelMeasurer({ get: () => textStandIn({ width: 50 }) });
-  assert.deepEqual(measure('Alle Zitzen gemolken?'), { w: 50, h: 42 }, '126 px of text: 2 lines in 90 px, 3 in 50 px');
-  assert.deepEqual(labelMeasurer({ get: () => { throw new Error('x'); } })('ja'), labelSize('ja'));
-});
-
-test('a text annotation is measured in the width asked for, as bpmn-js lays out its text; else estimated (story 2.31)', () => {
-  const measure = labelMeasurer({ get: () => textStandIn() });
-  // 31 characters, 186 px: 3 lines in 86 px, 2 in 136 px.
-  assert.deepEqual(measure('Bei Großkunden Vertrag prüfen!!', 100), { w: 100, h: 56 });
-  assert.deepEqual(measure('Bei Großkunden Vertrag prüfen!!', 150), { w: 150, h: 42 });
-  assert.deepEqual(measure('kurz', 100), { w: 100, h: 40 });
-  assert.deepEqual(labelMeasurer({ get: () => textStandIn({ fails: true }) })('kurz', 100), labelSize('kurz', 100));
 });
 
 test('XML with coordinates is drawn as written, and Mermaid is not asked', async () => {

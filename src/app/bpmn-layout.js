@@ -16,9 +16,10 @@
 //   4. layoutGeometry() puts the nodes on a grid: Mermaid's columns, the
 //      lanes, and rows within each lane. The rules R1–R17 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
-//      the labels get their places, in the size the page measures for them
-//      (bpmn-js's text renderer) or, without a page, as estimated; the text
-//      annotations last, each beside what it comments, no node moved for it
+//      the labels get their places, in the size bpmn-js will draw them in
+//      (src/app/label-size.js, the text layout of diagram-js replicated, the
+//      same in Node and in every browser); the text annotations last, each
+//      beside what it comments, no node moved for it
 //   5. appendDiagram() writes the result as a diagram part (BPMN-DI) into the
 //      author's XML, before its closing definitions tag; a node a rule put in
 //      another lane moves there in the lane set too, nothing else changes
@@ -35,7 +36,8 @@
 // touches one of them. readProcess() lists
 // them; the page names each on the console, not in the document.
 //
-// Pure logic: no page, no library. The XML comes in as a parsed document; the
+// Pure logic: no page, no library; the one import is the label measurer, pure
+// logic itself. The XML comes in as a parsed document; the
 // reader walks its elements and compares local names with their prefix taken
 // off, because the DOM library of the tests reports "bpmn:laneSet" where a
 // browser reports "laneSet", and finds nothing by namespace.
@@ -43,6 +45,8 @@
 //
 // The grid, its rules and its router come from spike 2.26 (variant A2, Ben,
 // 2026-10-06); src/README.md, Diagrams, describes them.
+
+import { measureLabel } from './label-size.js';
 
 // The Mermaid version the layout and its checks are made with. src/index.html
 // pins the same one; tests/licences.test.mjs fails when the two differ, so a
@@ -551,40 +555,11 @@ export function nearestOnFlow(pts, x, y){
   return best;
 }
 
-// A label as bpmn-js lays it out: at most 90 px wide, wrapped at blanks,
-// 12 px text. Estimated, since no font is measured here: { w, h }. The page
-// measures each label as bpmn-js will draw it (src/app/bpmn.js) and keeps
-// this estimate for a label it cannot measure; Node keeps it for all.
-const CHAR = 6.6, LINE = 15, LABEL_WIDTH = 90;
-// The widths a text annotation may take, the narrowest first (story 2.31); the page measures each.
+// The box of an event's or a gateway's label in the diagram part is as wide
+// as bpmn-js lays a label out, 90 px; bpmn-js centres the text in it.
+const LABEL_WIDTH = 90;
+// The widths a text annotation may take, the narrowest first (story 2.31).
 export const NOTE_WIDTHS = [100, 150, 200, 250];
-// With a width, the size of a text annotation that wide (story 2.31): bpmn-js writes its text from the top left,
-// 7 px inside, wrapped at blanks and at the author's line breaks, and makes it at least 40 px high. As diagram-js's
-// layoutText(), an empty line counts as a line, and a line keeps its leading blanks; only what wraps is trimmed.
-export function labelSize(text, width){
-  if (width){
-    let n = 0;
-    for (const para of String(text).split(/\r?\n/)){
-      let line = /^\s*/.exec(para)[0], words = 0;
-      n++;
-      for (const word of para.split(/\s+/).filter(Boolean)){
-        const next = words++ ? line + ' ' + word : line + word;
-        if (words > 1 && next.length * CHAR > width - 14){ n++; line = word; }
-        else line = next;
-      }
-    }
-    return { w: width, h: Math.max(40, n * LINE + 14) };
-  }
-  const lines = [];
-  let line = '';
-  for (const word of String(text).split(/\s+/).filter(Boolean)){
-    const next = line ? line + ' ' + word : word;
-    if (line && next.length * CHAR > LABEL_WIDTH) { lines.push(line); line = word; }
-    else line = next;
-  }
-  if (line) lines.push(line);
-  return { w: Math.min(LABEL_WIDTH, Math.max(...lines.map(l => l.length * CHAR), 0)), h: Math.max(1, lines.length) * LINE };
-}
 
 // How much a box [x, y, w, h] covers of what a label must keep off: the
 // summed area of its overlaps with boxes and with pieces of flows, each
@@ -621,9 +596,9 @@ export function bestPlace(places, avoid){
 // than the piece up to it), inside the ring first, between the leg and the
 // row: beside the stub it would take the corner the gateway's own label
 // needs where two flows back leave the gateway. Each [x, y, w, h], the size
-// labelSize() estimates, or the size given; bpmn-js centres the text on
+// measureLabel() gives, or the size given; bpmn-js centres the text on
 // x + w/2, starts it at y and wraps it at 90 px.
-export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text), loop = false){
+export function flowLabelPlaces(pts, text, atGateway, size = measureLabel(text), loop = false){
   const { w, h } = size;
   const pieces = pts.slice(1).map((b, i) => ({ a: pts[i], b, len: Math.abs(pts[i].x - b.x) + Math.abs(pts[i].y - b.y) }));
   const places = [];
@@ -652,12 +627,12 @@ export function flowLabelPlaces(pts, text, atGateway, size = labelSize(text), lo
 // The label of a flow: the first of flowLabelPlaces() that keeps off avoid
 // (boxes [x, y, w, h]: other labels, symbols, pieces of flows), or the one
 // covered least.
-export function flowLabel(pts, text, atGateway, avoid = [], size = labelSize(text), loop = false){
+export function flowLabel(pts, text, atGateway, avoid = [], size = measureLabel(text), loop = false){
   return bestPlace(flowLabelPlaces(pts, text, atGateway, size, loop), avoid);
 }
 
 // The places a label of an event or a gateway may take, in the order they
-// are tried; c: the symbol, size: labelSize(). Below, above, right, left
+// are tried; c: the symbol, size: measureLabel(). Below, above, right, left
 // (a gateway: above first), then the same farther out, then the four
 // corners. Each [x, y, w, h], centred.
 export function labelPlaces(c, size, gateway){
@@ -690,8 +665,8 @@ const NOTE_SIDES = ['right', 'upRight', 'downRight', 'up', 'down', 'upLeft', 'do
 export const NOTE_ROUNDS = [0, 25, 50, 100];
 
 // The size of a text annotation: the narrowest of NOTE_WIDTHS whose text stays at most a third as high as it is wide
-// (Ben, 2026-10-06, nz06-hund2: wider and flatter), else the widest. measure(text, width), as labelSize().
-export function noteSize(text, measure = labelSize){
+// (Ben, 2026-10-06, nz06-hund2: wider and flatter), else the widest. measure(text, width), as measureLabel().
+export function noteSize(text, measure = measureLabel){
   for (const w of NOTE_WIDTHS){
     const s = measure(text, w);
     if (s.h <= w / 3 || w === NOTE_WIDTHS[NOTE_WIDTHS.length - 1]) return { w, h: Math.ceil(s.h) };
@@ -807,17 +782,16 @@ export function wayHits(way, boxes){
 // or the waypoints of a flow [[x, y], …]; laneOf: per node the id of the lane
 // it stands in on the grid, which a rule may have changed (R1, R12), for
 // nodes in a lane with an id. Throws where raw lacks a node of the model.
-// measure: the size { w, h } a label's text takes as bpmn-js draws it; the
-// page gives one that asks bpmn-js's text renderer in the document's font
-// (src/app/bpmn.js), the tests and anything without a page keep the estimate
-// labelSize().
+// measure: the size { w, h } a label's text takes as bpmn-js draws it, and
+// with a width a text annotation's: measureLabel() (src/app/label-size.js),
+// in the page as in Node; a test may give another.
 // options: which of the rules R1–R17 apply, keyed as in DEFAULT_RULES; a key
 // left out keeps its default, so { startAlign: false } leaves out R15 in this
 // call only. R7 and the router's second pass always apply.
-export function layoutGeometry(model, raw, measure = labelSize, options = DEFAULT_RULES){
+export function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES){
   const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, options[k] ?? DEFAULT_RULES[k]]));
-  // Each text measured once per width (none for a label): every trial of the rules lays the labels out again, and the
-  // page measures each through bpmn-js's text renderer, a text annotation in up to four widths (review of 2.31).
+  // Each text measured once per width (none for a label): every trial of the rules lays the labels out again, and
+  // each measure lays the text out anew, a text annotation in up to four widths (review of 2.31).
   const sizes = new Map();
   const once = (text, width) => {
     const key = (width ?? '') + ':' + text;

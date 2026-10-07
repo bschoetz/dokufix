@@ -7,13 +7,14 @@
 // what a dokufix file loads or carries, in which version, under which licence,
 // with which copyright lines. The cases:
 //
-//   - the list is complete: the five entries, each with every field, and the
+//   - the list is complete: the six entries, each with every field, and the
 //     copyright lines as their projects publish them;
 //   - the versions are the ones the file really uses: every jsDelivr npm URL
-//     in src/index.html, whatever tag it stands in, and the Octicons version
-//     named in src/doc.css. Raise one of those and leave the list alone, and
-//     the case fails and names the entry. Not covered: a library from another
-//     host, and one the script itself would import or load;
+//     in src/index.html, whatever tag it stands in, the Octicons version
+//     named in src/doc.css and the diagram-js version the label measurer
+//     follows (src/app/label-size.js). Raise one of those and leave the list
+//     alone, and the case fails and names the entry. Not covered: a library
+//     from another host, and one the script itself would import or load;
 //   - every licence an entry names has its text, the bpmn.io licence in the
 //     wording of the package;
 //   - the markup: a closed <details>, no <script>, every text escaped;
@@ -32,6 +33,8 @@ import { parseHTML } from 'linkedom';
 import { NOTICES, LICENCE_TEXTS, LICENCES_CLASS, LICENCES_LINK_TEXT, licencesHtml } from '../src/app/licences.js';
 // The Mermaid version the layout of BPMN without coordinates is made with (AC6 of story 2.8).
 import { MERMAID_LAYOUT_VERSION } from '../src/app/bpmn-layout.js';
+// The diagram-js whose text layout the label measurer replicates, and the bpmn-js that bundles it.
+import { LABEL_SIZE_VERSION } from '../src/app/label-size.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const read = name => fs.readFileSync(path.join(here, '..', name), 'utf8');
@@ -60,13 +63,17 @@ const PUBLISHED = {
   'bpmn-js': { package: 'bpmn-js', use: 'cdn', licence: 'bpmn.io', copyright: [
     'Copyright (c) 2014-present Camunda Services GmbH',
   ] },
+  // The file LICENSE of diagram-js@15.28.0, from the package (npm pack, 2026-10-07).
+  'diagram-js': { package: 'diagram-js', use: 'embedded', licence: 'MIT', copyright: [
+    'Copyright (c) 2014-present Camunda Services GmbH',
+  ] },
   'Octicons': { package: '@primer/octicons', use: 'embedded', licence: 'MIT', copyright: [
     'Copyright (c) 2026 GitHub Inc.',
   ] },
 };
 
-test('the list has the five entries, in this order', () => {
-  assert.deepEqual(NOTICES.map(n => n.name), ['marked', 'marked-footnote', 'Mermaid', 'bpmn-js', 'Octicons']);
+test('the list has the six entries, in this order', () => {
+  assert.deepEqual(NOTICES.map(n => n.name), ['marked', 'marked-footnote', 'Mermaid', 'bpmn-js', 'diagram-js', 'Octicons']);
 });
 
 test('every entry is complete: name, package, version, licence, copyright lines, how it gets into a file', () => {
@@ -93,51 +100,63 @@ test('the entries say what their projects publish', () => {
 
 // ---------- the versions ----------
 // What the sources pin: every package the page names on jsDelivr's npm path,
-// with its version, and the Octicons version in the comment of src/doc.css.
-// Every such URL in src/index.html counts, whatever the tag and the attribute
-// it stands in: <script src>, <link href>, with other attributes in front, in
-// a comment. A URL without a version counts as version "none", so it cannot
-// agree with an entry. Not seen: a library from another host, and one the
-// script itself imports or loads; nothing does that today.
-function pinned(indexHtml, docCss){
+// with its version, the Octicons version in the comment of src/doc.css and
+// the diagram-js version the label measurer follows (LABEL_SIZE_VERSION of
+// src/app/label-size.js, in layout). Every such URL in src/index.html counts,
+// whatever the tag and the attribute it stands in: <script src>, <link href>,
+// with other attributes in front, in a comment. A URL without a version
+// counts as version "none", so it cannot agree with an entry. Not seen: a
+// library from another host, and one the script itself imports or loads;
+// nothing does that today.
+const LAYOUT_VERSIONS = { mermaid: MERMAID_LAYOUT_VERSION, ...LABEL_SIZE_VERSION };
+function pinned(indexHtml, docCss, layout = LAYOUT_VERSIONS){
   const cdn = [];
   for (const m of indexHtml.matchAll(/cdn\.jsdelivr\.net\/npm\/((?:@[\w.-]+\/)?[\w.-]+?)(?:@([^/"'\s<>]+))?(?=[/"'\s<>])/g)){
-    const pin = { package: m[1], version: m[2] || 'none' };
+    const pin = { package: m[1], version: m[2] || 'none', where: 'src/index.html' };
     if (!cdn.some(x => x.package === pin.package && x.version === pin.version)) cdn.push(pin);
   }
   const octicons = docCss.match(/@primer\/octicons (\d+\.\d+\.\d+)/);
-  return { cdn, embedded: octicons ? [{ package: '@primer/octicons', version: octicons[1] }] : [] };
+  const embedded = [...(octicons ? [{ package: '@primer/octicons', version: octicons[1], where: 'src/doc.css' }] : []),
+                    { package: 'diagram-js', version: layout['diagram-js'], where: 'src/app/label-size.js' }];
+  return { cdn, embedded };
 }
 // Every way the list and the sources can disagree, each as one sentence that
-// names the entry. And the guard of story 2.8 (AC6): the Mermaid the page pins
-// is the one the layout of BPMN without coordinates is made with. Mermaid is
+// names the entry. And two guards: that of story 2.8 (AC6), the Mermaid the
+// page pins is the one the layout of BPMN without coordinates is made with,
 // raised only together with that layout's regression check, the comparison
-// run on tests/referenz.md, and then MERMAID_LAYOUT_VERSION with it.
-function versionProblems(notices, indexHtml, docCss, layoutVersion = MERMAID_LAYOUT_VERSION){
-  const pins = pinned(indexHtml, docCss);
+// run on tests/referenz.md, and then MERMAID_LAYOUT_VERSION with it; and the
+// bpmn-js the page pins is the one the label measurer follows, raised only
+// together with the check of the measurer against it (npm run labels), and
+// then LABEL_SIZE_VERSION with it.
+function versionProblems(notices, indexHtml, docCss, layout = LAYOUT_VERSIONS){
+  const pins = pinned(indexHtml, docCss, layout);
   const problems = [];
-  for (const mermaid of pins.cdn.filter(pin => pin.package === 'mermaid' && pin.version !== layoutVersion)){
-    problems.push('src/index.html pins mermaid ' + mermaid.version + ', and the layout of BPMN without coordinates is made with ' + layoutVersion +
+  for (const mermaid of pins.cdn.filter(pin => pin.package === 'mermaid' && pin.version !== layout.mermaid)){
+    problems.push('src/index.html pins mermaid ' + mermaid.version + ', and the layout of BPMN without coordinates is made with ' + layout.mermaid +
       ' (MERMAID_LAYOUT_VERSION, src/app/bpmn-layout.js): raise both together, with the regression check of story 2.8');
   }
-  for (const [use, where] of [['cdn', 'src/index.html'], ['embedded', 'src/doc.css']]){
+  for (const bpmn of pins.cdn.filter(pin => pin.package === 'bpmn-js' && pin.version !== layout['bpmn-js'])){
+    problems.push('src/index.html pins bpmn-js ' + bpmn.version + ', and the labels of BPMN without coordinates are measured as bpmn-js ' + layout['bpmn-js'] +
+      ' draws them (LABEL_SIZE_VERSION, src/app/label-size.js): raise both together, with the check of the measurer against bpmn-js (npm run labels)');
+  }
+  for (const use of ['cdn', 'embedded']){
     for (const pin of pins[use]){
       const n = notices.find(x => x.package === pin.package);
-      if (!n) problems.push(where + ' uses ' + pin.package + ' ' + pin.version + ', and the list has no entry for it');
-      else if (n.use !== use) problems.push('entry "' + n.name + '": the list says "' + n.use + '", but ' + where + ' has it as "' + use + '"');
-      else if (n.version !== pin.version) problems.push('entry "' + n.name + '": the list says ' + n.version + ', ' + where + ' uses ' + pin.version);
+      if (!n) problems.push(pin.where + ' uses ' + pin.package + ' ' + pin.version + ', and the list has no entry for it');
+      else if (n.use !== use) problems.push('entry "' + n.name + '": the list says "' + n.use + '", but ' + pin.where + ' has it as "' + use + '"');
+      else if (n.version !== pin.version) problems.push('entry "' + n.name + '": the list says ' + n.version + ', ' + pin.where + ' uses ' + pin.version);
     }
     for (const n of notices.filter(x => x.use === use)){
-      if (!pins[use].some(pin => pin.package === n.package)) problems.push('entry "' + n.name + '": ' + where + ' does not name ' + n.package);
+      if (!pins[use].some(pin => pin.package === n.package)) problems.push('entry "' + n.name + '": ' + (use === 'cdn' ? 'src/index.html' : 'no source') + ' does not name ' + n.package);
     }
   }
   return problems;
 }
 
-test('the sources pin four libraries on the CDN and the Octicons', () => {
+test('the sources pin four libraries on the CDN, the Octicons and the text layout of diagram-js', () => {
   const pins = pinned(read('src/index.html'), read('src/doc.css'));
   assert.deepEqual(pins.cdn.map(p => p.package), ['marked', 'marked-footnote', 'mermaid', 'bpmn-js']);
-  assert.deepEqual(pins.embedded.map(p => p.package), ['@primer/octicons']);
+  assert.deepEqual(pins.embedded.map(p => [p.package, p.where]), [['@primer/octicons', 'src/doc.css'], ['diagram-js', 'src/app/label-size.js']]);
 });
 
 test('every version in the list is the one the sources use', () => {
@@ -167,7 +186,22 @@ test('the Mermaid pin and the version the BPMN layout is made with are one (stor
   assert.deepEqual(versionProblems(list, raised, docCss), [
     'src/index.html pins mermaid 12.1.0, and the layout of BPMN without coordinates is made with 12.0.0 (MERMAID_LAYOUT_VERSION, src/app/bpmn-layout.js): raise both together, with the regression check of story 2.8']);
   // All three raised together: agreed.
-  assert.deepEqual(versionProblems(list, raised, docCss, '12.1.0'), []);
+  assert.deepEqual(versionProblems(list, raised, docCss, { ...LAYOUT_VERSIONS, mermaid: '12.1.0' }), []);
+});
+
+test('the bpmn-js pin and the version the label measurer follows are one: raising either alone is reported, and so is a diagram-js the list does not know', () => {
+  const indexHtml = read('src/index.html'), docCss = read('src/doc.css');
+  assert.deepEqual(LABEL_SIZE_VERSION, { 'diagram-js': '15.28.0', 'bpmn-js': '18.31.0' });
+  // The page and the list raised, the measurer not: the guard alone speaks.
+  const raised = indexHtml.replace('/npm/bpmn-js@18.31.0/', '/npm/bpmn-js@18.32.0/');
+  assert.notEqual(raised, indexHtml, 'mutation target not found');
+  const list = NOTICES.map(n => n.package === 'bpmn-js' ? { ...n, version: '18.32.0' } : n);
+  assert.deepEqual(versionProblems(list, raised, docCss), [
+    'src/index.html pins bpmn-js 18.32.0, and the labels of BPMN without coordinates are measured as bpmn-js 18.31.0 draws them (LABEL_SIZE_VERSION, src/app/label-size.js): raise both together, with the check of the measurer against bpmn-js (npm run labels)']);
+  // The measurer raised with them: agreed. Its diagram-js raised too, and the list not: the entry is named.
+  assert.deepEqual(versionProblems(list, raised, docCss, { ...LAYOUT_VERSIONS, 'bpmn-js': '18.32.0' }), []);
+  assert.deepEqual(versionProblems(list, raised, docCss, { ...LAYOUT_VERSIONS, 'bpmn-js': '18.32.0', 'diagram-js': '15.29.0' }),
+    ['entry "diagram-js": the list says 15.28.0, src/app/label-size.js uses 15.29.0']);
 });
 
 test('a library the page loads and the list does not name is reported, and so is an entry the sources do not know', () => {
@@ -188,9 +222,12 @@ test('a jsDelivr URL counts in whatever tag and attribute it stands: a styleshee
     return versionProblems(NOTICES, changed, docCss);
   };
   assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/diagram-js@15.4.0/assets/diagram-js.css">'),
-    ['src/index.html uses diagram-js 15.4.0, and the list has no entry for it']);
+    ['entry "diagram-js": the list says "embedded", but src/index.html has it as "cdn"'], 'diagram-js is on the list as the embedded text layout');
+  assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/dmn-js-shared@17.4.0/dist/assets/dmn-js-shared.css">'),
+    ['src/index.html uses dmn-js-shared 17.4.0, and the list has no entry for it']);
   assert.deepEqual(withTag('<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.6.2/dist/assets/bpmn-js.css">'),
-    ['entry "bpmn-js": the list says 18.31.0, src/index.html uses 18.6.2']);
+    ['src/index.html pins bpmn-js 18.6.2, and the labels of BPMN without coordinates are measured as bpmn-js 18.31.0 draws them (LABEL_SIZE_VERSION, src/app/label-size.js): raise both together, with the check of the measurer against bpmn-js (npm run labels)',
+     'entry "bpmn-js": the list says 18.31.0, src/index.html uses 18.6.2']);
   assert.deepEqual(withTag('<script defer src="https://cdn.jsdelivr.net/npm/@scope/some.lib@1.2.3/dist/index.min.js"></script>'),
     ['src/index.html uses @scope/some.lib 1.2.3, and the list has no entry for it']);
   assert.deepEqual(withTag("<link rel='stylesheet' href='//cdn.jsdelivr.net/npm/mermaid@12.0.1/dist/mermaid.css'>"),
@@ -275,7 +312,7 @@ test('the view names every entry with version, licence and copyright lines, and 
   });
   assert.ok(items[NOTICES.findIndex(n => n.name === 'Octicons')].textContent.includes('@primer/octicons'), 'the Octicons with the name of their package');
   const whole = view.textContent;
-  assert.ok(whole.includes('The dokufix editor loads marked, marked-footnote, Mermaid and bpmn-js from a CDN; the file itself carries Octicons.'), whole.slice(0, 200));
+  assert.ok(whole.includes('The dokufix editor loads marked, marked-footnote, Mermaid and bpmn-js from a CDN; the file itself carries diagram-js and Octicons.'), whole.slice(0, 200));
   for (const key of ['MIT', 'bpmn.io']){
     const title = LICENCE_TEXTS[key].title;
     assert.equal(whole.split(title).length - 1, NOTICES.filter(n => n.licence === key).length + 1, title + ': once per entry, once above its text');

@@ -1,27 +1,26 @@
-// Takes the raw positions and the measured label sizes of BPMN XML without
-// coordinates from the built page, in Chromium: the inputs of the fixtures
-// (tests/bpmn-fixtures.mjs), for a new input or a new Mermaid version.
+// Takes the raw positions of BPMN XML without coordinates from the built page,
+// in Chromium: the input of the fixtures (tests/bpmn-fixtures.mjs) that Node
+// cannot make, for a new input or a new Mermaid version.
 //
-//   npm run capture -- <author.bpmn>…                  writes <n>.raw.json and <n>.sizes.json beside each
+//   npm run capture -- <author.bpmn>…                  writes <n>.raw.json beside each
 //   npm run capture -- --out <dir> <author.bpmn>…      writes them into <dir>
 //
 // The XML is read in Node as the fixtures read it (readModel()). The page is
 // dist/dokufix.html, for its libraries, served from tests/.cdn (tests/cdn.mjs),
 // and its mermaid.initialize(). Into it goes, bundled by esbuild, what
 // src/app/bpmn.js lays out with, not a copy: mermaidPositions() gives the raw
-// positions, labelMeasurer() on a viewer with BPMN_VIEWER_CONFIG the size of
-// every label the layout asks for (the names of events and gateways, then those
-// of flows, each text once). A text the renderer cannot measure gets the
-// estimate, as in the page.
+// positions. The label sizes need no page any more: the layout measures them
+// itself (src/app/label-size.js); tests/check-label-size.mjs checks that
+// measurer against bpmn-js in Chromium.
 //
 // An input that already has a diagram part (a BPMNDiagram, such as the laid-out
-// <n>.measured.bpmn and <n>.estimated.bpmn of the fixtures) is no author XML:
-// it is skipped, with a line naming it, so that tests/fixtures/bpmn-layout/*.bpmn
-// captures the author XML alone.
+// <n>.laid-out.bpmn of the fixtures) is no author XML: it is skipped, with a
+// line naming it, so that tests/fixtures/bpmn-layout/*.bpmn captures the
+// author XML alone.
 //
-// Chromium only: the sizes depend on its fonts. It is /usr/bin/chromium, or
-// the path in CHROMIUM; without it the command stops with exit 1. Exit 1 also
-// when an input cannot be read or laid out by Mermaid.
+// Chromium only: it is /usr/bin/chromium, or the path in CHROMIUM; without it
+// the command stops with exit 1. Exit 1 also when an input cannot be read or
+// laid out by Mermaid.
 
 import fs from 'node:fs';
 import path from 'node:path';
@@ -30,17 +29,16 @@ import * as esbuild from 'esbuild';
 import { chromium } from 'playwright-core';
 import { prepareLibraries } from './cdn.mjs';
 import { readModel } from './bpmn-fixtures.mjs';
-import { NOTE_WIDTHS } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const PAGE = path.join(here, '../dist/dokufix.html');
 const CHROMIUM = process.env.CHROMIUM || '/usr/bin/chromium';
 const shown = file => { const r = path.relative(process.cwd(), file); return r.startsWith('..') ? file : r; };
 
-// What goes into the page: the functions of src/app/bpmn.js, as window.dokufixCapture.
+// What goes into the page: the function of src/app/bpmn.js, as window.dokufixCapture.
 export async function captureBundle(){
   const result = await esbuild.build({
-    stdin: { contents: "import { mermaidPositions, labelMeasurer, BPMN_VIEWER_CONFIG } from './src/app/bpmn.js';\nwindow.dokufixCapture = { mermaidPositions, labelMeasurer, BPMN_VIEWER_CONFIG };\n", resolveDir: path.join(here, '..'), loader: 'js' },
+    stdin: { contents: "import { mermaidPositions } from './src/app/bpmn.js';\nwindow.dokufixCapture = { mermaidPositions };\n", resolveDir: path.join(here, '..'), loader: 'js' },
     bundle: true, format: 'iife', write: false, charset: 'utf8', logLevel: 'silent',
   });
   return result.outputFiles[0].text;
@@ -49,12 +47,6 @@ export async function captureBundle(){
 // Whether the XML has a diagram part: a BPMNDiagram, whatever its prefix,
 // outside comments and CDATA sections.
 export const hasDiagram = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
-
-// The texts the layout measures, in the order it may ask for them, each once;
-// a text annotation's in each width it may take, keyed note:<width>:<text>
-// (noteTexts()).
-export const noteTexts = model => (model.notes || []).flatMap(n => NOTE_WIDTHS.map(w => ({ key: 'note:' + w + ':' + n.text, text: n.text, width: w })));
-export const labelTexts = model => [...new Set(model.nodes.filter(n => n.type !== 'task' && n.name).map(n => n.name).concat((model.boundaries || []).map(b => b.name).filter(Boolean), model.flows.concat(model.messages || []).map(f => f.name).filter(Boolean)))];
 
 function parseArgs(argv){
   const a = { out: null, files: [] };
@@ -98,25 +90,13 @@ async function main(argv){
     if (args.out) fs.mkdirSync(args.out, { recursive: true });
     let n = 0;
     for (const input of inputs){
-      const { raw, sizes } = await page.evaluate(async ({ model, texts, notes, index }) => {
-        const { mermaidPositions, labelMeasurer, BPMN_VIEWER_CONFIG } = window.dokufixCapture;
-        const raw = await mermaidPositions(model, document, index);
-        const host = document.createElement('div');
-        host.style.cssText = 'position:fixed;left:-10000px;top:0;width:4000px;height:3000px;overflow:hidden';
-        document.body.appendChild(host);
-        const viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
-        try {
-          const measure = labelMeasurer(viewer);
-          return { raw, sizes: Object.fromEntries(texts.map(t => [t, measure(t)]).concat(notes.map(n => [n.key, measure(n.text, n.width)]))) };
-        } finally { viewer.destroy(); host.remove(); }
-      }, { model: input.model, texts: labelTexts(input.model), notes: noteTexts(input.model), index: 'capture-' + (++n) });
+      const raw = await page.evaluate(({ model, index }) => window.dokufixCapture.mermaidPositions(model, document, index), { model: input.model, index: 'capture-' + (++n) });
       // A flow from a boundary event back into its host is no edge of Mermaid's (mermaidSource()).
       const hostOf = new Map((input.model.boundaries || []).map(b => [b.id, b.host]));
       const missing = input.model.nodes.filter(m => !raw.nodes[m.key]).map(m => m.id).concat(input.model.flows.filter((f, i) => !raw.edges[i] && (hostOf.get(f.from) ?? f.from) !== f.to).map(f => f.id));
       if (missing.length) throw new Error(input.file + ': Mermaid did not lay out ' + missing.join(', '));
       fs.writeFileSync(input.out + '.raw.json', JSON.stringify(raw, null, 1));
-      fs.writeFileSync(input.out + '.sizes.json', JSON.stringify(sizes, null, 1));
-      console.log(shown(input.out) + '.raw.json, .sizes.json (' + Object.keys(sizes).length + ' sizes)');
+      console.log(shown(input.out) + '.raw.json');
     }
     if (errors.length) throw new Error('errors on the page: ' + errors.join('; '));
   } finally {

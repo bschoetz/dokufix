@@ -1,4 +1,4 @@
-// The rules a laid-out BPMN diagram keeps, checked on the measured fixtures
+// The rules a laid-out BPMN diagram keeps, checked on the laid-out fixtures
 // (tests/bpmn-fixtures.mjs), and the known list of what breaks them today.
 //
 // Each break is one string, "<rule> <element ids>": the rule, then the ids of
@@ -68,7 +68,7 @@
 // is no break.
 // A label is its box in the diagram part; an event's or a gateway's is as wide
 // as a label can be (90 px) and bpmn-js centres the text in it, so its box is
-// the text's measured width (<n>.sizes.json, else the estimate) centred there.
+// the text's width as measured (src/app/label-size.js) centred there.
 // Crossings and nearness to a symbol are not rules: a diagram has them by design.
 //
 // tests/fixtures/bpmn-layout/known-breaks.json: { "<fixture>": ["<break>", …] },
@@ -79,7 +79,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { FIXTURE_DIR, fixtureNames, readFixture, readModel, expectedFile } from './bpmn-fixtures.mjs';
-import { labelSize } from '../src/app/bpmn-layout.js';
+import { measureLabel } from '../src/app/label-size.js';
 
 export const KNOWN_FILE = path.join(FIXTURE_DIR, 'known-breaks.json');
 
@@ -104,7 +104,7 @@ export function readDiagram(xml){
 }
 
 // The breaks of one laid-out diagram, sorted, each once. model: readProcess()'s;
-// sizes: the measured label sizes by text.
+// sizes: label sizes by text where a test gives them; the rest are measured.
 // The pieces two flows share as a merge, as pairs "<i> <j>" of the index of
 // a piece of a and one of b (piece i: from waypoint i - 1 to i), or null
 // where they are none. a and b: waypoints [[x, y], …] that end on one point.
@@ -269,7 +269,7 @@ export function breaksOf(xml, model, sizes = {}){
   for (const n of model.nodes.concat(boundaries)){
     const box = di.labels[n.id];
     if (!box) continue;
-    const [x, y, w, h] = box, s = sizes[n.name] || labelSize(n.name);
+    const [x, y, w, h] = box, s = sizes[n.name] || measureLabel(n.name);
     labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
   }
   for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });
@@ -342,10 +342,9 @@ export function breaksOf(xml, model, sizes = {}){
   return [...out].sort();
 }
 
-// The breaks of a fixture: its measured XML, checked with its measured sizes.
+// The breaks of a fixture: its laid-out XML.
 export function fixtureBreaks(name){
-  const fx = readFixture(name);
-  return breaksOf(fs.readFileSync(expectedFile(name, 'measured'), 'utf8'), readModel(fx.xml).model, fx.sizes);
+  return breaksOf(fs.readFileSync(expectedFile(name), 'utf8'), readModel(readFixture(name).xml).model);
 }
 
 export const readKnownBreaks = () => JSON.parse(fs.readFileSync(KNOWN_FILE, 'utf8'));

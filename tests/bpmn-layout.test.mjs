@@ -6,7 +6,9 @@
 // writes the Mermaid text, lays the nodes out on a grid from Mermaid's columns
 // and writes them back as the diagram part. None of that needs a layout, so
 // all of it is checked here: the reading on XML parsed by linkedom, the
-// geometry on positions made up for the purpose. What Mermaid's rendering
+// geometry on positions made up for the purpose, the labels in the size the
+// layout's own measurer gives them (src/app/label-size.js, checked in
+// tests/label-size.test.mjs). What Mermaid's rendering
 // gives, and whatever linkedom reads differently from a browser (lookup by
 // namespace, XML that is not well-formed), is checked by the browser runs
 // (tests/vergleich.mjs, tests/durchlaeufe.mjs).
@@ -19,12 +21,13 @@ import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
   readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, DEFAULT_RULES,
-  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, labelSize, dedupe, orthogonal,
+  flowLabel, flowLabelPlaces, labelPlaces, bestPlace, dedupe, orthogonal,
   growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_NOTHING, layoutStrayText,
   noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS,
 } from '../src/app/bpmn-layout.js';
 import { breaksOf } from './bpmn-rules.mjs';
-import { readFixture, readModel, fixtureNames, measureOf, MODES } from './bpmn-fixtures.mjs';
+import { readFixture, readModel, fixtureNames } from './bpmn-fixtures.mjs';
+import { measureLabel } from '../src/app/label-size.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The reference input of story 2.8: 1 pool, 4 lanes, 16 symbols, 17 flows.
@@ -275,15 +278,15 @@ test('labelRoom: a label wholly in the next lane is checked again after a growth
   assert.deepEqual(a.lanes, [[0, 0, 1000, 140], [0, 140, 1000, 141], [0, 281, 1000, 100]], '14 px for G1\'s label, then 7 for G2\'s, which the border reached');
 });
 
-test('labels: estimated at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {
-  assert.deepEqual(labelSize('ja'), { w: 13.2, h: 15 });
-  assert.equal(labelSize('Abwesenheit, nichts zu tun').h, 30);
-  assert.equal(labelSize('Abwesenheit, nichts zu tun').w <= 90, true);
+test('labels: measured at most 90 px wide, wrapped; a flow label above a horizontal piece, beside a vertical one, at a gateway right at the exit', () => {
+  // In Arial at 12 px: "ja" 9.3 px wide, rounded up; a line 14.4 px high, rounded up.
+  assert.deepEqual(measureLabel('ja'), { w: 10, h: 15 });
+  assert.deepEqual(measureLabel('Abwesenheit, nichts zu tun'), { w: 73, h: 29 }, 'two lines of 14.4 px');
   const pts = ptsOf([[0, 100], [40, 100], [40, 300], [400, 300]]);
-  assert.deepEqual(flowLabel(pts, 'mitte', false), [204, 281, 33, 15]);   // the longest piece, above it
-  assert.deepEqual(flowLabel(pts, 'ja', true), [10, 81, 13, 15]);        // right at the exit
-  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 10], [200, 10]]), 'nein', true), [10, -9, 26, 15], 'a stub too short: the piece after it');
-  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 200]]), 'unten', true), [6, 8, 33, 15]);
+  assert.deepEqual(flowLabel(pts, 'mitte', false), [207, 281, 27, 15]);   // the longest piece, above it
+  assert.deepEqual(flowLabel(pts, 'ja', true), [10, 81, 10, 15]);        // right at the exit
+  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 10], [200, 10]]), 'nein', true), [10, -9, 23, 15], 'a stub too short: the piece after it');
+  assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 200]]), 'unten', true), [6, 8, 31, 15]);
 });
 
 // A model and Mermaid's positions for it: two lanes, a start, a gateway, two
@@ -342,7 +345,7 @@ test('the geometry: BPMN sizes, the pool around the lanes, every flow on the out
   assert.deepEqual(Object.keys(di.labels), ['S', 'G', 'E']);
   for (const [id, [x, y, w, h]] of Object.entries(di.labels)){
     assert.equal(w, 90);
-    const size = labelSize(model.nodes.find(n => n.id === id).name), box = [x + 45 - size.w / 2, y, size.w, h];
+    const size = measureLabel(model.nodes.find(n => n.id === id).name), box = [x + 45 - size.w / 2, y, size.w, h];
     for (const way of Object.values(di.flows)) for (let i = 1; i < way.length; i++){
       const seg = [Math.min(way[i - 1][0], way[i][0]), Math.min(way[i - 1][1], way[i][1]), Math.abs(way[i - 1][0] - way[i][0]), Math.abs(way[i - 1][1] - way[i][1])];
       const hit = box[0] < seg[0] + seg[2] && seg[0] < box[0] + box[2] && box[1] < seg[1] + seg[3] && seg[1] < box[1] + box[3];
@@ -351,7 +354,7 @@ test('the geometry: BPMN sizes, the pool around the lanes, every flow on the out
   }
 });
 
-test('the geometry takes the label sizes from a given measure, the estimate without one', () => {
+test('the geometry takes the label sizes from a given measure, the measurer\'s without one', () => {
   const { model, raw } = sample();
   const asked = [];
   const di = layoutGeometry(model, raw, text => { asked.push(text); return { w: 40, h: 44 }; });
@@ -359,8 +362,8 @@ test('the geometry takes the label sizes from a given measure, the estimate with
   assert.deepEqual([...new Set(asked)].sort(), ['Erledigt', 'Leserin fragt', 'Vorrätig?', 'ja', 'nein'].sort());
   for (const id of ['S', 'G', 'E']) assert.equal(di.labels[id][3], 44, id);
   for (const id of ['F2', 'F3']) assert.deepEqual(di.flowLabels[id].slice(2), [40, 44], id);
-  const estimated = layoutGeometry(model, raw);
-  assert.equal(estimated.labels.S[3], labelSize('Leserin fragt').h);
+  const measured = layoutGeometry(model, raw);
+  assert.equal(measured.labels.S[3], measureLabel('Leserin fragt').h);
 });
 
 test('the geometry refuses positions that lack a node; Mermaid\'s lanes and flows it does not read', () => {
@@ -385,7 +388,7 @@ test('without lanes no lane is written; without a participant no pool', () => {
 test('the diagram part is added before the closing definitions tag; the author\'s XML stays as written', () => {
   const { xml, model, raw } = sample();
   // R1 off: the end stays in its lane, and the lane set as written.
-  const { xml: out, diagram } = appendDiagram(xml, model, layoutGeometry(model, raw, labelSize, { gatewayLane: false }));
+  const { xml: out, diagram } = appendDiagram(xml, model, layoutGeometry(model, raw, measureLabel, { gatewayLane: false }));
   assert.equal(diagram, 'dokufix_diagram');
   const at = xml.lastIndexOf('</bpmn:definitions>');
   assert.equal(out.slice(0, at), xml.slice(0, at), 'everything before the tag unchanged');
@@ -556,7 +559,7 @@ test('flow labels keep off other labels, flows and symbols, the own gateway incl
   const pts = ptsOf([[125, 100], [300, 100]]);
   const first = flowLabel(pts, 'ja', true);
   // That place taken by another label: the other side of the piece.
-  assert.deepEqual(flowLabel(pts, 'ja', true, [first]), [135, 104, 13, 15]);
+  assert.deepEqual(flowLabel(pts, 'ja', true, [first]), [135, 104, 10, 15]);
   // The short-stub rule: the label of the piece after the stub does not lie on the gateway.
   const gw = [75, 75, 50, 50];
   const stub = ptsOf([[100, 125], [100, 135], [300, 135]]);
@@ -590,12 +593,12 @@ test('a long flow label is as wide as bpmn-js wraps it, 90 px at most, and as hi
   const text = 'eine sehr lange Beschriftung eines Flusses, die bpmn-js auf mehrere Zeilen umbricht';
   const [, , w, h] = flowLabel(ptsOf([[0, 0], [600, 0]]), text, false);
   assert.ok(w <= 90, String(w));
-  assert.equal(h, labelSize(text).h);
+  assert.equal(h, measureLabel(text).h);
   assert.ok(h >= 60);
 });
 
 test('an event label with its four near places taken goes to a farther one; with every place covered, to the one covered least', () => {
-  const c = node(100, 100, 36, 36), size = labelSize('Erledigt');
+  const c = node(100, 100, 36, 36), size = measureLabel('Erledigt');
   const places = labelPlaces(c, size, false);
   assert.equal(places.length, 12);
   // The four near places blocked: below, farther out, is free.
@@ -613,7 +616,7 @@ test('the event and gateway labels of the sample lie on no flow', () => {
   const { model, raw } = sample();
   const di = layoutGeometry(model, raw);
   for (const id of ['S', 'G', 'E']){
-    const [x, y, w, h] = di.labels[id], size = labelSize(model.nodes.find(n => n.id === id).name);
+    const [x, y, w, h] = di.labels[id], size = measureLabel(model.nodes.find(n => n.id === id).name);
     const box = [x + w / 2 - size.w / 2, y, size.w, h];
     for (const way of Object.values(di.flows)) for (let i = 1; i < way.length; i++){
       const seg = [Math.min(way[i - 1][0], way[i][0]), Math.min(way[i - 1][1], way[i][1]), Math.abs(way[i - 1][0] - way[i][0]), Math.abs(way[i - 1][1] - way[i][1])];
@@ -630,7 +633,7 @@ test('a lane without an id above a drawn lane in a pool: the drawn lane keeps it
   const raw = { nodes: { n1: { cx: 50, cy: 75, w: 60, h: 60 }, n2: { cx: 200, cy: 75, w: 120, h: 50 }, n3: { cx: 350, cy: 225, w: 60, h: 60 } } };
   // R1 off, the end stays in lane Y; with it, the end stands in its predecessor's lane X and Y keeps an empty row.
   for (const [options, inY] of [[{ gatewayLane: false }, true], [{}, false]]){
-    const di = layoutGeometry(model, raw, labelSize, options);
+    const di = layoutGeometry(model, raw, measureLabel, options);
     const y = di.lanes.Y, [px, py, pw, ph] = Object.values(di.pools)[0], t = di.nodes.T, e = di.nodes.E;
     assert.ok(y[1] >= t[1] + t[3], 'lane Y starts below the task of lane X: ' + JSON.stringify({ y, t }));
     assert.equal(e[1] >= y[1] && e[1] + e[3] <= y[1] + y[3], inY, 'E in lane Y: ' + inY);
@@ -674,7 +677,7 @@ function laidOut(lanes, flows, options){
   flows.split(' ').forEach((f, i) => { const [a, b] = f.split('>'); body += '<bpmn:sequenceFlow id="F' + i + '" sourceRef="' + a + '" targetRef="' + b + '"/>'; });
   const { model } = read(xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>'));
   const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: col[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
-  const di = layoutGeometry(model, raw, labelSize, options);
+  const di = layoutGeometry(model, raw, measureLabel, options);
   const inLane = y => Object.keys(di.lanes).find(l => y >= di.lanes[l][1] && y <= di.lanes[l][1] + di.lanes[l][3]);
   return Object.fromEntries(model.nodes.map(n => { const [x, y, w, h] = di.nodes[n.id]; return [n.id, { x: x + w / 2, y: y + h / 2, lane: inLane(y + h / 2) }]; }));
 }
@@ -765,7 +768,7 @@ test('the router merges two pieces of one direction: a Z whose middle piece has 
   const off = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, false]));
   for (const [name, id] of [['r03', 'F4_k1_c'], ['r09', 'F8_t2_b1']]){
     const fx = readFixture(name), { model } = readModel(fx.xml);
-    const pts = layoutGeometry(model, fx.raw, t => fx.sizes[t] || labelSize(t), off).flows[id];
+    const pts = layoutGeometry(model, fx.raw, measureLabel, off).flows[id];
     const [lo, hi] = [pts[0][1], pts[pts.length - 1][1]].sort((a, b) => a - b);
     assert.ok(pts.every(([, y]) => y >= lo && y <= hi), name + ' ' + id + ': ' + JSON.stringify(pts));
   }
@@ -921,7 +924,7 @@ const boxedFixture = (name, order) => {
   const own = new Map(readModel(fx.xml).model.nodes.map(n => [n.id, fx.raw.nodes[n.key]]));
   const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, own.get(n.id) || { cx: n.id === 'QS' ? 0 : 100, cy: 0, w: 50, h: 50 }])) };
   // A text annotation is measured in a width (story 2.31).
-  const di = layoutGeometry(model, raw, measureOf(fx.sizes, 'measured'));
+  const di = layoutGeometry(model, raw);
   return model.pools.map(p => [p.id, di.pools[p.id]]);
 };
 const gapsOf = frames => frames.slice(1).map(([, f], i) => f[1] - (frames[i][1][1] + frames[i][1][3]));
@@ -933,7 +936,7 @@ test('a pool below one that grows down keeps its height: its labels move with it
   const { model } = read(xml);
   const raw = rawOf(model, { S: 0, T: 1, E: 2, S2: 0, X: 1 });
   // The end's label below it, as tall as given: pool A grows down by it, and pool B moves down.
-  const heights = [15, 100, 200].map(h => layoutGeometry(model, raw, (t, w) => t === 'Ende' ? { w: 90, h } : labelSize(t, w)).pools.PB[3]);
+  const heights = [15, 100, 200].map(h => layoutGeometry(model, raw, (t, w) => t === 'Ende' ? { w: 90, h } : measureLabel(t, w)).pools.PB[3]);
   assert.deepEqual(heights, [144, 144, 144]);
 });
 
@@ -1191,7 +1194,7 @@ test('boundary events: the rule R17 puts the way below; without it the way stays
   const xml = xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>');
   const { model } = read(xml);
   const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: ({ S: 0, T: 1, E: 2, M: 2, EM: 3 })[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
-  const on = layoutGeometry(model, raw), off = layoutGeometry(model, raw, labelSize, { boundaryBelow: false });
+  const on = layoutGeometry(model, raw), off = layoutGeometry(model, raw, measureLabel, { boundaryBelow: false });
   assert.ok(bx(on.nodes.M).cy > bx(on.nodes.T).cy);
   assert.equal(bx(off.nodes.M).cy, bx(off.nodes.T).cy);
 });
@@ -1215,7 +1218,7 @@ test('R17 in another lane: the way of a boundary event takes a row of its own th
   const { model } = read(xml);
   const cols = { S: 0, T: 1, U: 2, F: 3, FE: 4, N: 2, NE: 3 };
   const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: cols[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
-  const on = layoutGeometry(model, raw), off = layoutGeometry(model, raw, labelSize, { boundaryBelow: false });
+  const on = layoutGeometry(model, raw), off = layoutGeometry(model, raw, measureLabel, { boundaryBelow: false });
   assert.ok(bx(on.nodes.N).cy > bx(on.nodes.F).cy, 'below the lane\'s other row, toward the host');
   assert.equal(bx(on.nodes.NE).cy, bx(on.nodes.N).cy);
   assert.ok(bx(off.nodes.N).cy <= bx(off.nodes.F).cy, 'without R17 R2 puts it in the row or above, away from the host');
@@ -1290,7 +1293,9 @@ test('in a collaboration: a text annotation at a pool, at a black box, at a mess
 test('a pretty-printed text annotation is measured as bpmn-js draws it: the empty line and the indentation count (review of 2.31)', () => {
   const { model } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:textAnnotation id="N">\n  <bpmn:text>\n        Bitte prüfen\n      </bpmn:text>\n</bpmn:textAnnotation>' + assoc('A', 'T', 'N') + '</bpmn:process>'));
   assert.equal(model.notes[0].text, '\n        Bitte prüfen\n      ');
-  assert.equal(labelSize(model.notes[0].text, 100).h, 4 * 15 + 14, 'the empty first line, the indented one wrapped, the blank last line');
+  // Four lines of 14.4 px and the padding: the empty first line, the indented one, which bpmn-js cuts in the word
+  // where no blank fits ("        Bitte prüfe" and "n"), and the blank last line.
+  assert.equal(measureLabel(model.notes[0].text, 100).h, 72);
   assert.ok(noteSize(model.notes[0].text).h > noteSize('Bitte prüfen').h);
   // Blanks alone are no text.
   assert.deepEqual(read(xmlOf('<bpmn:process id="P">' + LINE + note('L', '\n   ') + assoc('A', 'T', 'L') + '</bpmn:process>')).model.notes, []);
@@ -1398,16 +1403,14 @@ test('no text annotation lies on the border between two lanes: each keeps 6 px o
   for (const name of fixtureNames()){
     const fx = readFixture(name);
     if (!fx.xml.includes('textAnnotation')) continue;
-    for (const mode of MODES){
-      const { model } = readModel(fx.xml), di = layoutGeometry(model, fx.raw, measureOf(fx.sizes, mode));
-      // The borders between two lanes of one pool; a box keeps NOTE_CLEAR off the line, 1 px either side of it.
-      const borders = model.lanes.slice(1).filter((l, i) => (l.pool ?? 0) === (model.lanes[i].pool ?? 0) && di.lanes[l.id]).map(l => di.lanes[l.id][1]);
-      // Not checked here: a text annotation in another lane than its partner's, which that lane grows around until it
-      // lies LABEL_GAP (4 px) inside (labelRoom(); notiz-morgen's Notiz_Kreuzung).
-      for (const [id, [, y, , h]] of Object.entries(di.notes || {})) for (const b of borders){
-        if (y === b + 4 || y + h === b - 4) continue;
-        assert.ok(y + h <= b - 7 || y >= b + 7, name + ', ' + mode + ': ' + id + ' at ' + y + '–' + (y + h) + ', the border at ' + b);
-      }
+    const { model } = readModel(fx.xml), di = layoutGeometry(model, fx.raw);
+    // The borders between two lanes of one pool; a box keeps NOTE_CLEAR off the line, 1 px either side of it.
+    const borders = model.lanes.slice(1).filter((l, i) => (l.pool ?? 0) === (model.lanes[i].pool ?? 0) && di.lanes[l.id]).map(l => di.lanes[l.id][1]);
+    // Not checked here: a text annotation in another lane than its partner's, which that lane grows around until it
+    // lies LABEL_GAP (4 px) inside (labelRoom(); notiz-morgen's Notiz_Kreuzung).
+    for (const [id, [, y, , h]] of Object.entries(di.notes || {})) for (const b of borders){
+      if (y === b + 4 || y + h === b - 4) continue;
+      assert.ok(y + h <= b - 7 || y >= b + 7, name + ': ' + id + ' at ' + y + '–' + (y + h) + ', the border at ' + b);
     }
   }
 });
@@ -1415,14 +1418,14 @@ test('no text annotation lies on the border between two lanes: each keeps 6 px o
 test('each text is measured once per width, however many trials lay the labels out (review of 2.31)', () => {
   const fx = readFixture('notiz-r12');
   const { model } = readModel(fx.xml), calls = new Map();
-  const di = layoutGeometry(model, fx.raw, (t, w) => { const k = w + ':' + t; calls.set(k, (calls.get(k) || 0) + 1); return measureOf(fx.sizes, 'measured')(t, w); });
+  const di = layoutGeometry(model, fx.raw, (t, w) => { const k = w + ':' + t; calls.set(k, (calls.get(k) || 0) + 1); return measureLabel(t, w); });
   assert.ok(Object.keys(di.notes).length && calls.size > 1);
   assert.deepEqual([...calls].filter(([, n]) => n > 1), []);
 });
 
 test('where nothing near is free, the lane grows at its border for the text annotation; the symbols keep their order (notiz-r12)', () => {
   const fx = readFixture('notiz-r12');
-  const measure = (t, w) => (w ? fx.sizes['note:' + w + ':' + t] : fx.sizes[t]) || labelSize(t, w);
+  const measure = measureLabel;
   const plainXml = fx.xml.replace(/<bpmn:textAnnotation[^]*?<\/bpmn:textAnnotation>|<bpmn:association [^>]*\/>/g, '');
   const withNotes = readModel(fx.xml).model, plain = readModel(plainXml).model;
   const di = layoutGeometry(withNotes, fx.raw, measure), before = layoutGeometry(plain, fx.raw, measure);
@@ -1431,17 +1434,21 @@ test('where nothing near is free, the lane grows at its border for the text anno
   const order = (d, k) => Object.keys(d.nodes).sort((p, q) => d.nodes[p][k] - d.nodes[q][k] || (p < q ? -1 : 1));
   assert.deepEqual(order(di, 0), order(before, 0), 'the columns kept');
   assert.deepEqual(order(di, 1), order(before, 1), 'the rows kept');
-  assert.deepEqual(breaksOf(appendDiagram(fx.xml, withNotes, di).xml, withNotes).filter(b => /^(note|association)-/.test(b)), []);
+  // One break stays, on the list of known breaks: the association to the boundary event runs straight up past the
+  // label of the event's flow, "Frist verstrichen", which in Arial is 86 px wide, 2 px more than in the font it was
+  // placed with before; the line grazes its left edge by a third of a pixel.
+  assert.deepEqual(breaksOf(appendDiagram(fx.xml, withNotes, di).xml, withNotes).filter(b => /^(note|association)-/.test(b)), ['association-through A_bt F7_bt_n']);
 });
 
-test('the size of a text annotation: the narrowest width a third as high as wide, at least 40 px high; measured or estimated', () => {
+test('the size of a text annotation: the narrowest width a third as high as wide, at least 40 px high', () => {
   assert.deepEqual(NOTE_WIDTHS, [100, 150, 200, 250]);
-  assert.deepEqual(labelSize('kurz', 100), { w: 100, h: 40 });
-  assert.equal(labelSize('eins\nzwei\ndrei', 100).h, 3 * 15 + 14, 'the author\'s line breaks count');
+  assert.deepEqual(measureLabel('kurz', 100), { w: 100, h: 40 });
+  // Three lines of 14.4 px and 14 px of padding, rounded: 57.
+  assert.equal(measureLabel('eins\nzwei\ndrei', 100).h, 57, 'the author\'s line breaks count');
   // As diagram-js lays the text out: an empty line is a line, a line keeps its leading blanks (review of 2.31).
-  assert.equal(labelSize('\n\neins', 100).h, 3 * 15 + 14, 'empty lines count');
-  assert.equal(labelSize('          Bitte prüfen', 150).h, 2 * 15 + 14, 'the indentation counts');
-  assert.equal(labelSize('Bitte prüfen', 150).h, 40);
+  assert.equal(measureLabel('\n\neins', 100).h, 57, 'empty lines count');
+  assert.equal(measureLabel('          Bitte prüfen', 100).h, 43, 'the indentation counts: two lines in 86 px, where the text alone takes one');
+  assert.equal(measureLabel('Bitte prüfen', 100).h, 40);
   assert.deepEqual(noteSize('kurz'), { w: 150, h: 40 }, '40 px is more than a third of 100');
   const long = 'Eilig heißt: Frist kürzer als zwei Arbeitstage, oder die Geschäftsleitung hat den Auftrag ausdrücklich als dringend markiert. Im Zweifel nachfragen.';
   assert.equal(noteSize(long).w, 250);

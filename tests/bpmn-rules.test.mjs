@@ -1,5 +1,5 @@
 // The rules a laid-out BPMN diagram keeps (tests/bpmn-rules.mjs), on every
-// measured fixture of tests/fixtures/bpmn-layout/: what breaks them is exactly
+// laid-out fixture of tests/fixtures/bpmn-layout/: what breaks them is exactly
 // the known list, known-breaks.json. A new break fails, naming the input, the
 // rule and the elements; so does a listed break that is gone, which is taken
 // off the list (npm run fixtures -- --write writes it anew).
@@ -27,7 +27,7 @@ for (const name of names){
 
 // One fixture with a piece changed, as a change of the layout would change it.
 const r01 = readFixture('r01'), model = readModel(r01.xml).model;
-const laid = fs.readFileSync(expectedFile('r01', 'measured'), 'utf8');
+const laid = fs.readFileSync(expectedFile('r01'), 'utf8');
 const firstWay = laid.split('\n').find(l => l.includes('bpmnElement="F1_s_a"'));
 
 test('the diagram part is read back: boxes, label boxes, waypoints', () => {
@@ -42,7 +42,7 @@ test('a new break fails, naming the input, the rule and the elements', () => {
   // The second waypoint of F1_s_a 5 px lower: its first piece is slanted.
   const changed = laid.replace(firstWay, firstWay.replace(/(<di:waypoint x="-?\d+" y="-?\d+"\/><di:waypoint x="-?\d+" y=")(-?\d+)/, (all, head, y) => head + (Number(y) + 5)));
   assert.notEqual(changed, laid);
-  const found = breaksOf(changed, model, r01.sizes);
+  const found = breaksOf(changed, model);
   assert.ok(found.includes('slanted F1_s_a'), found.join('\n'));
   assert.ok(compareBreaks('r01', found, known.r01).includes('r01: new break: slanted F1_s_a'));
 });

@@ -1,5 +1,6 @@
 import { TRANSIENT_ATTR } from './transient.js';
-import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine, labelSize } from './bpmn-layout.js';
+import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
+import { LABEL_FONT } from './label-size.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
 // A fenced block of the language `bpmn` holds BPMN 2.0 XML, with its diagram
@@ -17,9 +18,7 @@ import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine,
 //      goes to bpmn-js as it is, which words the reason
 //   2. bpmn-js draws into a host of its own: transient, fixed off-screen,
 //      outside the document, in <body>; it is destroyed and the host removed
-//      after each diagram, whether it was drawn or not. For XML without
-//      coordinates the same viewer measures the labels of the layout first
-//      (labelMeasurer())
+//      after each diagram, whether it was drawn or not
 //   3. before the export each element gets a class by its type, which the
 //      document styles colour (src/doc.css): the viewer is told to draw with
 //      custom properties (var(--dokufix-bpmn-…)) instead of colours, so no
@@ -54,12 +53,21 @@ export function hasCoordinates(xml){
   return /<(?:[\w.-]+:)?BPMNShape\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
 }
 
-// The document's system font stack (src/app.css, the export frame), at 12 px:
-// labels are measured with it when the diagram is drawn.
-export const BPMN_FONT = "-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif";
+// The font bpmn-js draws in, at 12 px: its own default, "Arial, sans-serif",
+// the font the layout of XML without coordinates measures the labels in
+// (src/app/label-size.js), so the labels fit the boxes the layout gave them,
+// here as in the Camunda Modeler. Until the layout measured for itself it was
+// the document's system font stack (src/app.css), and the labels were measured
+// in it when the diagram was drawn, differently on every machine. No font is
+// embedded: Windows and macOS have Arial, Linux usually Liberation Sans in its
+// place, with the same widths; a machine with neither draws the labels in
+// another width than the boxes.
+export const BPMN_FONT = LABEL_FONT;
 
 // What the viewer is told: colours are custom properties that the document
-// styles define on the figure, and the text renderer uses the document's font.
+// styles define on the figure, and the text renderer uses the layout's font,
+// external labels (events, gateways, flows) at 12 px like the rest, where
+// bpmn-js's own default is 11 px.
 export const BPMN_VIEWER_CONFIG = {
   bpmnRenderer: {
     defaultFillColor: 'var(--dokufix-bpmn-fill)',
@@ -174,19 +182,16 @@ async function drawBpmn(diagram){
   // A page whose script tag of bpmn-js failed has no BpmnJS.
   if (typeof BpmnJS !== 'function') throw new Error(BPMN_NO_LIBRARY);
   const doc = diagram.holder.ownerDocument;
-  // The viewer is made once it is needed: to measure the labels of a layout,
-  // or to draw. A diagram refused before that makes no host.
+  // The viewer is made once there is something to draw: a diagram refused
+  // before that, and one the layout refuses, makes no host.
   let host = null, viewer = null;
-  const ready = () => {
-    if (!viewer){ host = offscreenHost(doc); viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG }); }
-    return viewer;
-  };
   try {
     // The XML that is drawn, with coordinates where they could be made, and the
     // diagram in it bpmn-js opens: the laid-out one, else its first.
-    const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : await layoutBpmn(diagram.source, doc, diagram.index, () => labelMeasurer(ready()));
+    const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : await layoutBpmn(diagram.source, doc, diagram.index);
     diagram.xml = xml;
-    ready();
+    host = offscreenHost(doc);
+    viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
     const result = await (open ? viewer.importXML(xml, open) : viewer.importXML(xml));
     // Elements bpmn-js does not know are drawn without them; that goes to the console only.
     for (const w of (result && result.warnings) || []) console.warn('BPMN import warning:', w && w.message ? w.message : w);
@@ -202,44 +207,15 @@ async function drawBpmn(diagram){
   }
 }
 
-// The size { w, h } of an event's, a gateway's or a flow's label as bpmn-js
-// will draw it, for layoutGeometry(): the viewer's text renderer, in the
-// document's font (BPMN_VIEWER_CONFIG), repeats both passes bpmn-js makes.
-// On import it computes the label's box from the text in a box 90 px wide
-// (its width, and its height per line); when it draws, it wraps the text
-// again in that width, which can take a line more. A label that cannot be
-// measured, the renderer missing or throwing or a size that is no finite
-// number, keeps the layout's estimate, labelSize().
-// With a width, the size of a text annotation that wide (story 2.31): the
-// renderer's own bounds for it, the text written from the top left, 7 px in.
-export function labelMeasurer(viewer){
-  let renderer = null;
-  return (text, width) => {
-    try {
-      if (!renderer){ const tr = viewer.get('textRenderer'); renderer = { tr, style: tr.getExternalStyle() }; }
-      const { tr, style } = renderer;
-      if (width){
-        const b = tr.getTextAnnotationBounds({ x: 0, y: 0, width, height: 30 }, text);
-        if (Number.isFinite(b.height) && b.height > 0) return { w: width, h: b.height };
-        return labelSize(text, width);
-      }
-      const lines = width => tr.createText(text, { box: { width, height: 30 }, style }).querySelectorAll('tspan').length;
-      const imported = tr.getExternalLabelBounds({ x: 0, y: 0, width: 90, height: 30 }, text);
-      const size = { w: imported.width, h: Math.ceil(imported.height / Math.max(1, lines(90)) * lines(imported.width)) };
-      if (Number.isFinite(size.w) && Number.isFinite(size.h) && size.w >= 0 && size.h > 0) return size;
-    } catch { /* the estimate below */ }
-    return labelSize(text, width);
-  };
-}
-
 // XML without coordinates, laid out: { xml, open }, the author's XML with a
 // diagram part added (src/app/bpmn-layout.js) and that diagram's id. Refused
 // with the reason where it cannot be laid out. XML the browser's parser
 // cannot read, or that is no BPMN definitions, comes back as it is, without
 // open: bpmn-js then says what is wrong with it. What the layout leaves out
-// is a line on the console each. measurer: gives the function that measures
-// the labels (labelMeasurer()), asked once the XML is read.
-async function layoutBpmn(xml, doc, index, measurer){
+// is a line on the console each. The labels are measured as bpmn-js will draw
+// them, by the layout itself (src/app/label-size.js): no viewer is needed
+// before the drawing.
+async function layoutBpmn(xml, doc, index){
   const parsed = new globalThis.DOMParser().parseFromString(xml, 'application/xml');
   if (parsed.getElementsByTagName('parsererror').length) return { xml };
   // readProcess() checks this too; here it puts "no definitions: bpmn-js words it" before "Mermaid missing".
@@ -248,7 +224,7 @@ async function layoutBpmn(xml, doc, index, measurer){
   const read = readProcess(parsed);
   if (!read) return { xml };
   const raw = await mermaidPositions(read.model, doc, index);
-  const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw, measurer()));
+  const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw));
   for (const item of read.leftOut) console.warn('BPMN layout, left out:', leftOutLine(item));
   return { xml: laidOut.xml, open: laidOut.diagram };
 }

@@ -1,8 +1,8 @@
 // The laid-out XML of BPMN without coordinates, kept as fixtures, and laid out
 // again in Node: the net under src/app/bpmn-layout.js.
 //
-//   npm run fixtures                 lays out every fixture in both modes and
-//                                    names each one whose XML differs; exit 1 then
+//   npm run fixtures                 lays out every fixture and names each one
+//                                    whose XML differs; exit 1 then
 //   npm run fixtures -- --write      writes the expected XML anew, and the known
 //                                    list of breaks (tests/bpmn-rules.mjs), after
 //                                    an intended change: git diff shows each change
@@ -11,39 +11,40 @@
 //   <n>.bpmn            the author's XML, without coordinates
 //   <n>.raw.json        Mermaid's raw positions, as mermaidPositions() in
 //                       src/app/bpmn.js reads them from the built page
-//   <n>.sizes.json      the label sizes the page measured, by text ({} where
-//                       nothing is measured)
-//   <n>.measured.bpmn   the laid-out XML with those sizes, what the page draws
-//   <n>.estimated.bpmn  the laid-out XML with the estimate labelSize(), what
-//                       a run without a page gives
+//   <n>.laid-out.bpmn   the laid-out XML, what the page draws: the labels in
+//                       the size the layout measures for them itself
+//                       (src/app/label-size.js), the same in Node as in the page
 // and index.json the Mermaid version of the raw positions and per input where
-// it comes from. tests/capture-bpmn.mjs ("npm run capture") makes raw and
-// sizes from the built page; tests/bpmn-fixtures.test.mjs compares both XML
-// byte for byte, tests/bpmn-rules.test.mjs checks the rules on the measured.
+// it comes from. tests/capture-bpmn.mjs ("npm run capture") makes the raw
+// positions from the built page; tests/bpmn-fixtures.test.mjs compares the
+// XML byte for byte, tests/bpmn-rules.test.mjs checks the rules on it. Until
+// the layout measured for itself, each input had the sizes the page measured
+// in its machine's font (<n>.sizes.json) and two expected XML, with those
+// sizes and with an estimate; the label sizes now follow the fixed font of the
+// measurer, so there is one.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
-import { readProcess, layoutGeometry, appendDiagram, labelSize } from '../src/app/bpmn-layout.js';
+import { readProcess, layoutGeometry, appendDiagram } from '../src/app/bpmn-layout.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // DOKUFIX_FIXTURE_DIR points the command at a copy (tests/bpmn-fixtures.test.mjs
 // checks --write on one).
 export const FIXTURE_DIR = process.env.DOKUFIX_FIXTURE_DIR || path.join(here, 'fixtures/bpmn-layout');
-export const MODES = ['measured', 'estimated'];
 // The files each input has, by their ending.
-export const FIXTURE_FILES = ['.bpmn', '.raw.json', '.sizes.json', '.measured.bpmn', '.estimated.bpmn'];
+export const FIXTURE_FILES = ['.bpmn', '.raw.json', '.laid-out.bpmn'];
 
 export const fixtureIndex = () => JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, 'index.json'), 'utf8'));
 export const fixtureNames = () => Object.keys(fixtureIndex().fixtures);
 export const fixtureFile = (name, ending) => path.join(FIXTURE_DIR, name + ending);
-export const expectedFile = (name, mode) => fixtureFile(name, '.' + mode + '.bpmn');
+export const expectedFile = name => fixtureFile(name, '.laid-out.bpmn');
 
-// The author's XML, the raw positions and the measured sizes of one input.
+// The author's XML and the raw positions of one input.
 export function readFixture(name){
   const text = ending => fs.readFileSync(fixtureFile(name, ending), 'utf8');
-  return { name, xml: text('.bpmn'), raw: JSON.parse(text('.raw.json')), sizes: JSON.parse(text('.sizes.json')) };
+  return { name, xml: text('.bpmn'), raw: JSON.parse(text('.raw.json')) };
 }
 
 // The model as the page reads it. A browser's parser reads "&amp;" as "&",
@@ -53,15 +54,12 @@ export function readModel(xml){
   return readProcess(new DOMParser().parseFromString(xml.replace(/&amp;/g, ' '), 'text/xml'));
 }
 
-// The measure of a mode: the sizes the page measured, a text it did not
-// measure estimated as the page does; or the estimate alone.
-export const measureOf = (sizes, mode) => mode === 'measured' ? (text, width) => (width ? sizes['note:' + width + ':' + text] : sizes[text]) || labelSize(text, width) : labelSize;
-
-// The laid-out XML of an input in a mode, as the page lays it out: readProcess
-// → layoutGeometry → appendDiagram on the author's XML.
-export function layOut(fx, mode){
+// The laid-out XML of an input, as the page lays it out: readProcess →
+// layoutGeometry → appendDiagram on the author's XML, the labels measured by
+// the layout's own measurer.
+export function layOut(fx){
   const { model } = readModel(fx.xml);
-  return appendDiagram(fx.xml, model, layoutGeometry(model, fx.raw, measureOf(fx.sizes, mode))).xml;
+  return appendDiagram(fx.xml, model, layoutGeometry(model, fx.raw)).xml;
 }
 
 // The first line two laid-out XML differ in, with the element it describes
@@ -76,8 +74,8 @@ export function firstDifference(expected, actual){
   }
 }
 
-export const differenceText = (name, mode, d) =>
-  name + ', ' + mode + ': ' + d.element + ' differs, first at line ' + d.line + '\n  expected: ' + d.expected.trim() + '\n  actual:   ' + d.actual.trim();
+export const differenceText = (name, d) =>
+  name + ': ' + d.element + ' differs, first at line ' + d.line + '\n  expected: ' + d.expected.trim() + '\n  actual:   ' + d.actual.trim();
 
 // The command: compare, or with --write write the expected XML and the known list.
 async function main(argv){
@@ -87,23 +85,20 @@ async function main(argv){
   const names = fixtureNames();
   const differing = [];
   for (const name of names){
-    const fx = readFixture(name);
-    for (const mode of MODES){
-      const xml = layOut(fx, mode), file = expectedFile(name, mode);
-      const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
-      const d = firstDifference(old, xml);
-      if (!d) continue;
-      differing.push(name + '.' + mode);
-      if (write) fs.writeFileSync(file, xml);
-      else console.log(differenceText(name, mode, d));
-    }
+    const xml = layOut(readFixture(name)), file = expectedFile(name);
+    const old = fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : '';
+    const d = firstDifference(old, xml);
+    if (!d) continue;
+    differing.push(name);
+    if (write) fs.writeFileSync(file, xml);
+    else console.log(differenceText(name, d));
   }
   let known = null;
   if (write && fs.existsSync(path.join(here, 'bpmn-rules.mjs'))){
     const { writeKnownBreaks } = await import('./bpmn-rules.mjs');
     known = writeKnownBreaks();
   }
-  console.log(names.length + ' fixtures, ' + MODES.join(' and ') + ': ' + (differing.length ? differing.length + ' laid-out XML ' + (write ? 'written: ' + differing.join(', ') : 'differ') : 'no difference') +
+  console.log(names.length + ' fixtures: ' + (differing.length ? differing.length + ' laid-out XML ' + (write ? 'written: ' + differing.join(', ') : 'differ') : 'no difference') +
     (known ? '; known breaks ' + (known.changed ? 'written' : 'unchanged') + ' (' + known.count + ')' : ''));
   return write || !differing.length ? 0 : 1;
 }

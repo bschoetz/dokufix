@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Zusammenarbeit">
+    <bpmn:participant id="Buchpflege" name="Reparatur" processRef="Prozess_Reparatur"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Prozess_Reparatur" isExecutable="false">
+    <bpmn:laneSet id="Bahnen">
+      <bpmn:lane id="B_Theke" name="Theke"><bpmn:flowNodeRef>B_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ausgeben</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Ende</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="B_Werkstatt" name="Werkstatt"><bpmn:flowNodeRef>B_Ansehen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Kleben</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Pressen</bpmn:flowNodeRef><bpmn:flowNodeRef>B_Frage</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="B_Start" name="Buch beschädigt"/>
+    <bpmn:task id="B_Ansehen" name="Schaden ansehen"/>
+    <bpmn:task id="B_Kleben" name="Rücken kleben"/>
+    <bpmn:task id="B_Pressen" name="Über Nacht pressen"/>
+    <bpmn:exclusiveGateway id="B_Frage" name="Hält es?"/>
+    <bpmn:task id="B_Ausgeben" name="Wieder ausgeben"/>
+    <bpmn:endEvent id="B_Ende" name="Im Regal"/>
+    <bpmn:sequenceFlow id="B1" sourceRef="B_Start" targetRef="B_Ansehen"/>
+    <bpmn:sequenceFlow id="B2" sourceRef="B_Ansehen" targetRef="B_Kleben"/>
+    <bpmn:sequenceFlow id="B3" sourceRef="B_Kleben" targetRef="B_Pressen"/>
+    <bpmn:sequenceFlow id="B4" sourceRef="B_Pressen" targetRef="B_Frage"/>
+    <bpmn:sequenceFlow id="B5" sourceRef="B_Frage" targetRef="B_Ausgeben" name="ja"/>
+    <bpmn:sequenceFlow id="B6" sourceRef="B_Frage" targetRef="B_Ansehen" name="nein"/>
+    <bpmn:sequenceFlow id="B7" sourceRef="B_Ausgeben" targetRef="B_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Zusammenarbeit">
+      <bpmndi:BPMNShape id="Buchpflege_di" bpmnElement="Buchpflege" isHorizontal="true"><dc:Bounds x="0" y="0" width="882" height="288"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Theke_di" bpmnElement="B_Theke" isHorizontal="true"><dc:Bounds x="30" y="0" width="852" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Werkstatt_di" bpmnElement="B_Werkstatt" isHorizontal="true"><dc:Bounds x="30" y="144" width="852" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Start_di" bpmnElement="B_Start"><dc:Bounds x="120" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="93" y="35" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Ansehen_di" bpmnElement="B_Ansehen"><dc:Bounds x="78" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Kleben_di" bpmnElement="B_Kleben"><dc:Bounds x="246" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Pressen_di" bpmnElement="B_Pressen"><dc:Bounds x="414" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Frage_di" bpmnElement="B_Frage" isMarkerVisible="true"><dc:Bounds x="617" y="191" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="651" y="209" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Ausgeben_di" bpmnElement="B_Ausgeben"><dc:Bounds x="582" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="B_Ende_di" bpmnElement="B_Ende"><dc:Bounds x="774" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="747" y="94" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="B1_di" bpmnElement="B1"><di:waypoint x="138" y="90"/><di:waypoint x="138" y="176"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B2_di" bpmnElement="B2"><di:waypoint x="198" y="216"/><di:waypoint x="246" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B3_di" bpmnElement="B3"><di:waypoint x="366" y="216"/><di:waypoint x="414" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B4_di" bpmnElement="B4"><di:waypoint x="534" y="216"/><di:waypoint x="617" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B5_di" bpmnElement="B5"><di:waypoint x="642" y="191"/><di:waypoint x="642" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="648" y="168" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B6_di" bpmnElement="B6"><di:waypoint x="642" y="241"/><di:waypoint x="642" y="268"/><di:waypoint x="138" y="268"/><di:waypoint x="138" y="256"/><bpmndi:BPMNLabel><dc:Bounds x="609" y="249" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="B7_di" bpmnElement="B7"><di:waypoint x="702" y="72"/><di:waypoint x="774" y="72"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

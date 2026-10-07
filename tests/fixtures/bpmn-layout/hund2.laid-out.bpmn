@@ -1,0 +1,329 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"
+                  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                  id="Definitions_Hundemelken"
+                  targetNamespace="http://example.com/bpmn">
+
+  <bpmn:collaboration id="Collaboration_1">
+    <bpmn:participant id="Participant_Melkbetrieb" name="Hundemelkbetrieb" processRef="Process_Hundemelken" />
+  </bpmn:collaboration>
+
+  <bpmn:process id="Process_Hundemelken" isExecutable="false">
+
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Melker" name="Melker">
+        <bpmn:flowNodeRef>Start_Melkzeit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Desinfizieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Huendin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Rufen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Reinigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Vormelken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Euter</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Isolieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Ruhig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Ruhig</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Beruhigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Versuche</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_AbbruchDok</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Zitze</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Melken</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Anregen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Belohnen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_MelkstandReinigen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Weitere</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Huendin" name="Hündin">
+        <bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abgeben</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Ausruhen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Ende</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ParJoin</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_ParSplit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Alle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Fluss</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Tierarzt" name="Tierarzt">
+        <bpmn:flowNodeRef>Task_Untersuchen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Behandlung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Behandeln</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kontrolle</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Geheilt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Karenz</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Verarbeitung" name="Verarbeitung">
+        <bpmn:flowNodeRef>Task_Filtern</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Sammeln</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Sammelprobe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Nachprobe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Verwerfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Verworfen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pasteurisieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Event_Abkuehlen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Abfuellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Wiegen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Wiegen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Plausibel</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kalibrieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Kuehlen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Merge_Probe</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Labor" name="Qualitätssicherung">
+        <bpmn:flowNodeRef>Task_Labor</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Qualitaet</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>GW_Nachprobe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Dokumentieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Fertig</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+
+    <bpmn:startEvent id="Start_Melkzeit" name="Melkzeit erreicht"><bpmn:outgoing>Flow_1</bpmn:outgoing></bpmn:startEvent>
+    <bpmn:task id="Task_Desinfizieren" name="Melkstand &amp; Equipment desinfizieren"><bpmn:incoming>Flow_1</bpmn:incoming><bpmn:outgoing>Flow_2</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Merge_Huendin"><bpmn:incoming>Flow_2</bpmn:incoming><bpmn:incoming>Flow_44</bpmn:incoming><bpmn:outgoing>Flow_3</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Rufen" name="Nächste Hündin zum Melkstand rufen"><bpmn:incoming>Flow_3</bpmn:incoming><bpmn:outgoing>Flow_4</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Reinigen" name="Zitzen reinigen &amp; Euter massieren"><bpmn:incoming>Flow_5</bpmn:incoming><bpmn:outgoing>Flow_6</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Vormelken" name="Vormelken &amp; Euter auf Entzündung prüfen"><bpmn:incoming>Flow_6</bpmn:incoming><bpmn:outgoing>Flow_7</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Euter" name="Euter gesund?" default="Flow_9"><bpmn:incoming>Flow_7</bpmn:incoming><bpmn:outgoing>Flow_8</bpmn:outgoing><bpmn:outgoing>Flow_9</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Isolieren" name="Hündin isolieren &amp; Tierarzt rufen"><bpmn:incoming>Flow_9</bpmn:incoming><bpmn:outgoing>Flow_10</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Merge_Ruhig"><bpmn:incoming>Flow_8</bpmn:incoming><bpmn:incoming>Flow_25</bpmn:incoming><bpmn:outgoing>Flow_18</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Pruefen" name="Verhalten der Hündin beurteilen"><bpmn:incoming>Flow_18</bpmn:incoming><bpmn:outgoing>Flow_19</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Ruhig" name="Hündin ruhig?" default="Flow_21"><bpmn:incoming>Flow_19</bpmn:incoming><bpmn:outgoing>Flow_20</bpmn:outgoing><bpmn:outgoing>Flow_21</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Beruhigen" name="Beruhigen &amp; Leckerli geben"><bpmn:incoming>Flow_21</bpmn:incoming><bpmn:outgoing>Flow_22</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Versuche" name="3 Versuche erreicht?" default="Flow_25"><bpmn:incoming>Flow_22</bpmn:incoming><bpmn:outgoing>Flow_23</bpmn:outgoing><bpmn:outgoing>Flow_25</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_AbbruchDok" name="Abbruch dokumentieren &amp; Hündin neu einplanen"><bpmn:incoming>Flow_23</bpmn:incoming><bpmn:outgoing>Flow_24</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Merge_Zitze"><bpmn:incoming>Flow_20</bpmn:incoming><bpmn:incoming>Flow_31</bpmn:incoming><bpmn:incoming>Flow_32</bpmn:incoming><bpmn:outgoing>Flow_26</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Melken" name="Nächste Zitze von Hand melken"><bpmn:incoming>Flow_26</bpmn:incoming><bpmn:outgoing>Flow_27</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Fluss" name="Milchfluss ausreichend?" default="Flow_30"><bpmn:incoming>Flow_28</bpmn:incoming><bpmn:outgoing>Flow_29</bpmn:outgoing><bpmn:outgoing>Flow_30</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Anregen" name="Milchfluss anregen (Streicheln, Welpenfoto zeigen)"><bpmn:incoming>Flow_30</bpmn:incoming><bpmn:outgoing>Flow_31</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Alle" name="Alle Zitzen gemolken?" default="Flow_32"><bpmn:incoming>Flow_29</bpmn:incoming><bpmn:outgoing>Flow_32</bpmn:outgoing><bpmn:outgoing>Flow_33</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:parallelGateway id="GW_ParSplit"><bpmn:incoming>Flow_33</bpmn:incoming><bpmn:outgoing>Flow_34</bpmn:outgoing><bpmn:outgoing>Flow_35</bpmn:outgoing><bpmn:outgoing>Flow_36</bpmn:outgoing></bpmn:parallelGateway>
+    <bpmn:task id="Task_Belohnen" name="Hündin belohnen &amp; Zitzen desinfizieren"><bpmn:incoming>Flow_34</bpmn:incoming><bpmn:outgoing>Flow_38</bpmn:outgoing></bpmn:task>
+    <bpmn:parallelGateway id="GW_ParJoin"><bpmn:incoming>Flow_38</bpmn:incoming><bpmn:incoming>Flow_39</bpmn:incoming><bpmn:incoming>Flow_40</bpmn:incoming><bpmn:outgoing>Flow_41</bpmn:outgoing></bpmn:parallelGateway>
+    <bpmn:exclusiveGateway id="GW_Merge_Ende"><bpmn:incoming>Flow_17</bpmn:incoming><bpmn:incoming>Flow_24</bpmn:incoming><bpmn:incoming>Flow_41</bpmn:incoming><bpmn:outgoing>Flow_42</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_MelkstandReinigen" name="Melkstand reinigen"><bpmn:incoming>Flow_42</bpmn:incoming><bpmn:outgoing>Flow_43</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Weitere" name="Weitere Hündin wartet?" default="Flow_44"><bpmn:incoming>Flow_43</bpmn:incoming><bpmn:outgoing>Flow_44</bpmn:outgoing><bpmn:outgoing>Flow_45</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Kommen" name="Zum Melkstand kommen &amp; ablegen"><bpmn:incoming>Flow_4</bpmn:incoming><bpmn:outgoing>Flow_5</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Abgeben" name="Stillhalten &amp; Milch abgeben"><bpmn:incoming>Flow_27</bpmn:incoming><bpmn:outgoing>Flow_28</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Ausruhen" name="Wasser trinken &amp; ausruhen"><bpmn:incoming>Flow_35</bpmn:incoming><bpmn:outgoing>Flow_39</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Untersuchen" name="Euter untersuchen &amp; Diagnose stellen"><bpmn:incoming>Flow_10</bpmn:incoming><bpmn:outgoing>Flow_11</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Merge_Behandlung"><bpmn:incoming>Flow_11</bpmn:incoming><bpmn:incoming>Flow_15</bpmn:incoming><bpmn:outgoing>Flow_12</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Behandeln" name="Behandlung durchführen"><bpmn:incoming>Flow_12</bpmn:incoming><bpmn:outgoing>Flow_13</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Kontrolle" name="Heilungsverlauf kontrollieren"><bpmn:incoming>Flow_13</bpmn:incoming><bpmn:outgoing>Flow_14</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Geheilt" name="Entzündung abgeklungen?" default="Flow_15"><bpmn:incoming>Flow_14</bpmn:incoming><bpmn:outgoing>Flow_15</bpmn:outgoing><bpmn:outgoing>Flow_16</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Karenz" name="Karenzzeit dokumentieren &amp; Hündin pausieren"><bpmn:incoming>Flow_16</bpmn:incoming><bpmn:outgoing>Flow_17</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Filtern" name="Milch filtern"><bpmn:incoming>Flow_36</bpmn:incoming><bpmn:outgoing>Flow_37</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Sammeln" name="Milch in Sammelbehälter geben"><bpmn:incoming>Flow_37</bpmn:incoming><bpmn:outgoing>Flow_40</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Sammelprobe" name="Sammelprobe entnehmen"><bpmn:incoming>Flow_45</bpmn:incoming><bpmn:outgoing>Flow_46</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Nachprobe" name="Nachprobe entnehmen"><bpmn:incoming>Flow_52</bpmn:incoming><bpmn:outgoing>Flow_53</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Verwerfen" name="Charge verwerfen &amp; entsorgen"><bpmn:incoming>Flow_51</bpmn:incoming><bpmn:outgoing>Flow_54</bpmn:outgoing></bpmn:task>
+    <bpmn:endEvent id="End_Verworfen" name="Charge verworfen"><bpmn:incoming>Flow_54</bpmn:incoming></bpmn:endEvent>
+    <bpmn:task id="Task_Pasteurisieren" name="Milch pasteurisieren"><bpmn:incoming>Flow_49</bpmn:incoming><bpmn:outgoing>Flow_55</bpmn:outgoing></bpmn:task>
+    <bpmn:intermediateCatchEvent id="Event_Abkuehlen" name="15 Min abkühlen lassen"><bpmn:incoming>Flow_55</bpmn:incoming><bpmn:outgoing>Flow_56</bpmn:outgoing><bpmn:timerEventDefinition id="TimerEventDefinition_1"><bpmn:timeDuration xsi:type="bpmn:tFormalExpression">PT15M</bpmn:timeDuration></bpmn:timerEventDefinition></bpmn:intermediateCatchEvent>
+    <bpmn:task id="Task_Abfuellen" name="In Flaschen abfüllen"><bpmn:incoming>Flow_56</bpmn:incoming><bpmn:outgoing>Flow_57</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Merge_Wiegen"><bpmn:incoming>Flow_57</bpmn:incoming><bpmn:incoming>Flow_62</bpmn:incoming><bpmn:outgoing>Flow_58</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Wiegen" name="Menge wiegen"><bpmn:incoming>Flow_58</bpmn:incoming><bpmn:outgoing>Flow_59</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Plausibel" name="Menge plausibel?" default="Flow_61"><bpmn:incoming>Flow_59</bpmn:incoming><bpmn:outgoing>Flow_60</bpmn:outgoing><bpmn:outgoing>Flow_61</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Kalibrieren" name="Waage kalibrieren"><bpmn:incoming>Flow_61</bpmn:incoming><bpmn:outgoing>Flow_62</bpmn:outgoing></bpmn:task>
+    <bpmn:task id="Task_Kuehlen" name="Auf 4 °C kühlen &amp; etikettieren"><bpmn:incoming>Flow_60</bpmn:incoming><bpmn:outgoing>Flow_63</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Merge_Probe"><bpmn:incoming>Flow_46</bpmn:incoming><bpmn:incoming>Flow_53</bpmn:incoming><bpmn:outgoing>Flow_47</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Labor" name="Probe auf Keimzahl, Fett &amp; Eiweiß untersuchen"><bpmn:incoming>Flow_47</bpmn:incoming><bpmn:outgoing>Flow_48</bpmn:outgoing></bpmn:task>
+    <bpmn:exclusiveGateway id="GW_Qualitaet" name="Qualität in Ordnung?" default="Flow_50"><bpmn:incoming>Flow_48</bpmn:incoming><bpmn:outgoing>Flow_49</bpmn:outgoing><bpmn:outgoing>Flow_50</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:exclusiveGateway id="GW_Nachprobe" name="Nachprobe bereits genommen?" default="Flow_52"><bpmn:incoming>Flow_50</bpmn:incoming><bpmn:outgoing>Flow_51</bpmn:outgoing><bpmn:outgoing>Flow_52</bpmn:outgoing></bpmn:exclusiveGateway>
+    <bpmn:task id="Task_Dokumentieren" name="Charge dokumentieren &amp; freigeben"><bpmn:incoming>Flow_63</bpmn:incoming><bpmn:outgoing>Flow_64</bpmn:outgoing></bpmn:task>
+    <bpmn:endEvent id="End_Fertig" name="Milch eingelagert"><bpmn:incoming>Flow_64</bpmn:incoming></bpmn:endEvent>
+
+    <bpmn:sequenceFlow id="Flow_1"  sourceRef="Start_Melkzeit" targetRef="Task_Desinfizieren" />
+    <bpmn:sequenceFlow id="Flow_2"  sourceRef="Task_Desinfizieren" targetRef="GW_Merge_Huendin" />
+    <bpmn:sequenceFlow id="Flow_3"  sourceRef="GW_Merge_Huendin" targetRef="Task_Rufen" />
+    <bpmn:sequenceFlow id="Flow_4"  sourceRef="Task_Rufen" targetRef="Task_Kommen" />
+    <bpmn:sequenceFlow id="Flow_5"  sourceRef="Task_Kommen" targetRef="Task_Reinigen" />
+    <bpmn:sequenceFlow id="Flow_6"  sourceRef="Task_Reinigen" targetRef="Task_Vormelken" />
+    <bpmn:sequenceFlow id="Flow_7"  sourceRef="Task_Vormelken" targetRef="GW_Euter" />
+    <bpmn:sequenceFlow id="Flow_8"  name="ja" sourceRef="GW_Euter" targetRef="GW_Merge_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_9"  name="nein" sourceRef="GW_Euter" targetRef="Task_Isolieren" />
+    <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Isolieren" targetRef="Task_Untersuchen" />
+    <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Untersuchen" targetRef="GW_Merge_Behandlung" />
+    <bpmn:sequenceFlow id="Flow_12" sourceRef="GW_Merge_Behandlung" targetRef="Task_Behandeln" />
+    <bpmn:sequenceFlow id="Flow_13" sourceRef="Task_Behandeln" targetRef="Task_Kontrolle" />
+    <bpmn:sequenceFlow id="Flow_14" sourceRef="Task_Kontrolle" targetRef="GW_Geheilt" />
+    <bpmn:sequenceFlow id="Flow_15" name="nein" sourceRef="GW_Geheilt" targetRef="GW_Merge_Behandlung" />
+    <bpmn:sequenceFlow id="Flow_16" name="ja" sourceRef="GW_Geheilt" targetRef="Task_Karenz" />
+    <bpmn:sequenceFlow id="Flow_17" sourceRef="Task_Karenz" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_18" sourceRef="GW_Merge_Ruhig" targetRef="Task_Pruefen" />
+    <bpmn:sequenceFlow id="Flow_19" sourceRef="Task_Pruefen" targetRef="GW_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_20" name="ja" sourceRef="GW_Ruhig" targetRef="GW_Merge_Zitze" />
+    <bpmn:sequenceFlow id="Flow_21" name="nein" sourceRef="GW_Ruhig" targetRef="Task_Beruhigen" />
+    <bpmn:sequenceFlow id="Flow_22" sourceRef="Task_Beruhigen" targetRef="GW_Versuche" />
+    <bpmn:sequenceFlow id="Flow_23" name="ja" sourceRef="GW_Versuche" targetRef="Task_AbbruchDok" />
+    <bpmn:sequenceFlow id="Flow_24" sourceRef="Task_AbbruchDok" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_25" name="nein" sourceRef="GW_Versuche" targetRef="GW_Merge_Ruhig" />
+    <bpmn:sequenceFlow id="Flow_26" sourceRef="GW_Merge_Zitze" targetRef="Task_Melken" />
+    <bpmn:sequenceFlow id="Flow_27" sourceRef="Task_Melken" targetRef="Task_Abgeben" />
+    <bpmn:sequenceFlow id="Flow_28" sourceRef="Task_Abgeben" targetRef="GW_Fluss" />
+    <bpmn:sequenceFlow id="Flow_29" name="ja" sourceRef="GW_Fluss" targetRef="GW_Alle" />
+    <bpmn:sequenceFlow id="Flow_30" name="nein" sourceRef="GW_Fluss" targetRef="Task_Anregen" />
+    <bpmn:sequenceFlow id="Flow_31" sourceRef="Task_Anregen" targetRef="GW_Merge_Zitze" />
+    <bpmn:sequenceFlow id="Flow_32" name="nein" sourceRef="GW_Alle" targetRef="GW_Merge_Zitze" />
+    <bpmn:sequenceFlow id="Flow_33" name="ja" sourceRef="GW_Alle" targetRef="GW_ParSplit" />
+    <bpmn:sequenceFlow id="Flow_34" sourceRef="GW_ParSplit" targetRef="Task_Belohnen" />
+    <bpmn:sequenceFlow id="Flow_35" sourceRef="GW_ParSplit" targetRef="Task_Ausruhen" />
+    <bpmn:sequenceFlow id="Flow_36" sourceRef="GW_ParSplit" targetRef="Task_Filtern" />
+    <bpmn:sequenceFlow id="Flow_37" sourceRef="Task_Filtern" targetRef="Task_Sammeln" />
+    <bpmn:sequenceFlow id="Flow_38" sourceRef="Task_Belohnen" targetRef="GW_ParJoin" />
+    <bpmn:sequenceFlow id="Flow_39" sourceRef="Task_Ausruhen" targetRef="GW_ParJoin" />
+    <bpmn:sequenceFlow id="Flow_40" sourceRef="Task_Sammeln" targetRef="GW_ParJoin" />
+    <bpmn:sequenceFlow id="Flow_41" sourceRef="GW_ParJoin" targetRef="GW_Merge_Ende" />
+    <bpmn:sequenceFlow id="Flow_42" sourceRef="GW_Merge_Ende" targetRef="Task_MelkstandReinigen" />
+    <bpmn:sequenceFlow id="Flow_43" sourceRef="Task_MelkstandReinigen" targetRef="GW_Weitere" />
+    <bpmn:sequenceFlow id="Flow_44" name="ja" sourceRef="GW_Weitere" targetRef="GW_Merge_Huendin" />
+    <bpmn:sequenceFlow id="Flow_45" name="nein" sourceRef="GW_Weitere" targetRef="Task_Sammelprobe" />
+    <bpmn:sequenceFlow id="Flow_46" sourceRef="Task_Sammelprobe" targetRef="GW_Merge_Probe" />
+    <bpmn:sequenceFlow id="Flow_47" sourceRef="GW_Merge_Probe" targetRef="Task_Labor" />
+    <bpmn:sequenceFlow id="Flow_48" sourceRef="Task_Labor" targetRef="GW_Qualitaet" />
+    <bpmn:sequenceFlow id="Flow_49" name="ja" sourceRef="GW_Qualitaet" targetRef="Task_Pasteurisieren" />
+    <bpmn:sequenceFlow id="Flow_50" name="nein" sourceRef="GW_Qualitaet" targetRef="GW_Nachprobe" />
+    <bpmn:sequenceFlow id="Flow_51" name="ja" sourceRef="GW_Nachprobe" targetRef="Task_Verwerfen" />
+    <bpmn:sequenceFlow id="Flow_52" name="nein" sourceRef="GW_Nachprobe" targetRef="Task_Nachprobe" />
+    <bpmn:sequenceFlow id="Flow_53" sourceRef="Task_Nachprobe" targetRef="GW_Merge_Probe" />
+    <bpmn:sequenceFlow id="Flow_54" sourceRef="Task_Verwerfen" targetRef="End_Verworfen" />
+    <bpmn:sequenceFlow id="Flow_55" sourceRef="Task_Pasteurisieren" targetRef="Event_Abkuehlen" />
+    <bpmn:sequenceFlow id="Flow_56" sourceRef="Event_Abkuehlen" targetRef="Task_Abfuellen" />
+    <bpmn:sequenceFlow id="Flow_57" sourceRef="Task_Abfuellen" targetRef="GW_Merge_Wiegen" />
+    <bpmn:sequenceFlow id="Flow_58" sourceRef="GW_Merge_Wiegen" targetRef="Task_Wiegen" />
+    <bpmn:sequenceFlow id="Flow_59" sourceRef="Task_Wiegen" targetRef="GW_Plausibel" />
+    <bpmn:sequenceFlow id="Flow_60" name="ja" sourceRef="GW_Plausibel" targetRef="Task_Kuehlen" />
+    <bpmn:sequenceFlow id="Flow_61" name="nein" sourceRef="GW_Plausibel" targetRef="Task_Kalibrieren" />
+    <bpmn:sequenceFlow id="Flow_62" sourceRef="Task_Kalibrieren" targetRef="GW_Merge_Wiegen" />
+    <bpmn:sequenceFlow id="Flow_63" sourceRef="Task_Kuehlen" targetRef="Task_Dokumentieren" />
+    <bpmn:sequenceFlow id="Flow_64" sourceRef="Task_Dokumentieren" targetRef="End_Fertig" />
+
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="Collaboration_1">
+      <bpmndi:BPMNShape id="Participant_Melkbetrieb_di" bpmnElement="Participant_Melkbetrieb" isHorizontal="true"><dc:Bounds x="0" y="-5" width="4424" height="1234"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Melker_di" bpmnElement="Lane_Melker" isHorizontal="true"><dc:Bounds x="30" y="-5" width="4394" height="516"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Huendin_di" bpmnElement="Lane_Huendin" isHorizontal="true"><dc:Bounds x="30" y="511" width="4394" height="149"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Tierarzt_di" bpmnElement="Lane_Tierarzt" isHorizontal="true"><dc:Bounds x="30" y="660" width="4394" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Verarbeitung_di" bpmnElement="Lane_Verarbeitung" isHorizontal="true"><dc:Bounds x="30" y="804" width="4394" height="268"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Labor_di" bpmnElement="Lane_Labor" isHorizontal="true"><dc:Bounds x="30" y="1072" width="4394" height="157"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Start_Melkzeit_di" bpmnElement="Start_Melkzeit"><dc:Bounds x="102" y="297" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="337" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Desinfizieren_di" bpmnElement="Task_Desinfizieren"><dc:Bounds x="210" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Huendin_di" bpmnElement="GW_Merge_Huendin" isMarkerVisible="true"><dc:Bounds x="378" y="290" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Rufen_di" bpmnElement="Task_Rufen"><dc:Bounds x="476" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Reinigen_di" bpmnElement="Task_Reinigen"><dc:Bounds x="644" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Vormelken_di" bpmnElement="Task_Vormelken"><dc:Bounds x="812" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Euter_di" bpmnElement="GW_Euter" isMarkerVisible="true"><dc:Bounds x="1015" y="290" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="995" y="271" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Isolieren_di" bpmnElement="Task_Isolieren"><dc:Bounds x="980" y="399" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Ruhig_di" bpmnElement="GW_Merge_Ruhig" isMarkerVisible="true"><dc:Bounds x="1148" y="290" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Pruefen_di" bpmnElement="Task_Pruefen"><dc:Bounds x="1246" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Ruhig_di" bpmnElement="GW_Ruhig" isMarkerVisible="true"><dc:Bounds x="1449" y="290" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1429" y="344" width="90" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Beruhigen_di" bpmnElement="Task_Beruhigen"><dc:Bounds x="1414" y="151" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Versuche_di" bpmnElement="GW_Versuche" isMarkerVisible="true"><dc:Bounds x="1281" y="166" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1261" y="220" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_AbbruchDok_di" bpmnElement="Task_AbbruchDok"><dc:Bounds x="2646" y="27" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Zitze_di" bpmnElement="GW_Merge_Zitze" isMarkerVisible="true"><dc:Bounds x="1582" y="290" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Melken_di" bpmnElement="Task_Melken"><dc:Bounds x="1680" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Fluss_di" bpmnElement="GW_Fluss" isMarkerVisible="true"><dc:Bounds x="1883" y="563" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1800" y="532" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Anregen_di" bpmnElement="Task_Anregen"><dc:Bounds x="1848" y="151" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Alle_di" bpmnElement="GW_Alle" isMarkerVisible="true"><dc:Bounds x="2016" y="563" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1996" y="515" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ParSplit_di" bpmnElement="GW_ParSplit"><dc:Bounds x="2114" y="563" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Belohnen_di" bpmnElement="Task_Belohnen"><dc:Bounds x="2212" y="399" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_ParJoin_di" bpmnElement="GW_ParJoin"><dc:Bounds x="2548" y="563" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Ende_di" bpmnElement="GW_Merge_Ende" isMarkerVisible="true"><dc:Bounds x="2681" y="563" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_MelkstandReinigen_di" bpmnElement="Task_MelkstandReinigen"><dc:Bounds x="2646" y="275" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Weitere_di" bpmnElement="GW_Weitere" isMarkerVisible="true"><dc:Bounds x="2849" y="290" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="2902" y="301" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Kommen_di" bpmnElement="Task_Kommen"><dc:Bounds x="476" y="548" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Abgeben_di" bpmnElement="Task_Abgeben"><dc:Bounds x="1680" y="548" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Ausruhen_di" bpmnElement="Task_Ausruhen"><dc:Bounds x="2212" y="548" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Untersuchen_di" bpmnElement="Task_Untersuchen"><dc:Bounds x="980" y="692" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Behandlung_di" bpmnElement="GW_Merge_Behandlung" isMarkerVisible="true"><dc:Bounds x="1148" y="707" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Behandeln_di" bpmnElement="Task_Behandeln"><dc:Bounds x="1246" y="692" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Kontrolle_di" bpmnElement="Task_Kontrolle"><dc:Bounds x="1414" y="692" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Geheilt_di" bpmnElement="GW_Geheilt" isMarkerVisible="true"><dc:Bounds x="1582" y="707" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="1562" y="761" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Karenz_di" bpmnElement="Task_Karenz"><dc:Bounds x="1680" y="692" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Filtern_di" bpmnElement="Task_Filtern"><dc:Bounds x="2212" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Sammeln_di" bpmnElement="Task_Sammeln"><dc:Bounds x="2380" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Sammelprobe_di" bpmnElement="Task_Sammelprobe"><dc:Bounds x="2814" y="960" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Nachprobe_di" bpmnElement="Task_Nachprobe"><dc:Bounds x="4256" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Verwerfen_di" bpmnElement="Task_Verwerfen"><dc:Bounds x="3318" y="960" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Verworfen_di" bpmnElement="End_Verworfen"><dc:Bounds x="3528" y="982" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="3501" y="1022" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Pasteurisieren_di" bpmnElement="Task_Pasteurisieren"><dc:Bounds x="3150" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_Abkuehlen_di" bpmnElement="Event_Abkuehlen"><dc:Bounds x="3360" y="858" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="3333" y="898" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Abfuellen_di" bpmnElement="Task_Abfuellen"><dc:Bounds x="3486" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Wiegen_di" bpmnElement="GW_Merge_Wiegen" isMarkerVisible="true"><dc:Bounds x="3654" y="851" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Wiegen_di" bpmnElement="Task_Wiegen"><dc:Bounds x="3752" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Plausibel_di" bpmnElement="GW_Plausibel" isMarkerVisible="true"><dc:Bounds x="3955" y="851" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="3881" y="903" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Kalibrieren_di" bpmnElement="Task_Kalibrieren"><dc:Bounds x="3920" y="960" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Kuehlen_di" bpmnElement="Task_Kuehlen"><dc:Bounds x="4088" y="836" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Merge_Probe_di" bpmnElement="GW_Merge_Probe" isMarkerVisible="true"><dc:Bounds x="3017" y="975" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Labor_di" bpmnElement="Task_Labor"><dc:Bounds x="2982" y="1104" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Qualitaet_di" bpmnElement="GW_Qualitaet" isMarkerVisible="true"><dc:Bounds x="3185" y="1119" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="3165" y="1173" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="GW_Nachprobe_di" bpmnElement="GW_Nachprobe" isMarkerVisible="true"><dc:Bounds x="3353" y="1119" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="3333" y="1173" width="90" height="44"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Task_Dokumentieren_di" bpmnElement="Task_Dokumentieren"><dc:Bounds x="4088" y="1104" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Fertig_di" bpmnElement="End_Fertig"><dc:Bounds x="4298" y="1126" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="4271" y="1166" width="90" height="29"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="315"/><di:waypoint x="210" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="330" y="315"/><di:waypoint x="378" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="428" y="315"/><di:waypoint x="476" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="536" y="355"/><di:waypoint x="536" y="548"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="596" y="588"/><di:waypoint x="704" y="588"/><di:waypoint x="704" y="355"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="764" y="315"/><di:waypoint x="812" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="932" y="315"/><di:waypoint x="1015" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_8_di" bpmnElement="Flow_8"><di:waypoint x="1065" y="315"/><di:waypoint x="1148" y="315"/><bpmndi:BPMNLabel><dc:Bounds x="1075" y="296" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_9_di" bpmnElement="Flow_9"><di:waypoint x="1040" y="340"/><di:waypoint x="1040" y="399"/><bpmndi:BPMNLabel><dc:Bounds x="1046" y="348" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_10_di" bpmnElement="Flow_10"><di:waypoint x="1040" y="479"/><di:waypoint x="1040" y="692"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_11_di" bpmnElement="Flow_11"><di:waypoint x="1100" y="732"/><di:waypoint x="1148" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_12_di" bpmnElement="Flow_12"><di:waypoint x="1198" y="732"/><di:waypoint x="1246" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_13_di" bpmnElement="Flow_13"><di:waypoint x="1366" y="732"/><di:waypoint x="1414" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_14_di" bpmnElement="Flow_14"><di:waypoint x="1534" y="732"/><di:waypoint x="1582" y="732"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_15_di" bpmnElement="Flow_15"><di:waypoint x="1607" y="707"/><di:waypoint x="1607" y="680"/><di:waypoint x="1173" y="680"/><di:waypoint x="1173" y="707"/><bpmndi:BPMNLabel><dc:Bounds x="1574" y="684" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_16_di" bpmnElement="Flow_16"><di:waypoint x="1632" y="732"/><di:waypoint x="1680" y="732"/><bpmndi:BPMNLabel><dc:Bounds x="1642" y="713" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_17_di" bpmnElement="Flow_17"><di:waypoint x="1740" y="772"/><di:waypoint x="1740" y="932"/><di:waypoint x="2706" y="932"/><di:waypoint x="2706" y="613"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_18_di" bpmnElement="Flow_18"><di:waypoint x="1198" y="315"/><di:waypoint x="1246" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_19_di" bpmnElement="Flow_19"><di:waypoint x="1366" y="315"/><di:waypoint x="1449" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_20_di" bpmnElement="Flow_20"><di:waypoint x="1499" y="315"/><di:waypoint x="1582" y="315"/><bpmndi:BPMNLabel><dc:Bounds x="1509" y="296" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_21_di" bpmnElement="Flow_21"><di:waypoint x="1474" y="290"/><di:waypoint x="1474" y="231"/><bpmndi:BPMNLabel><dc:Bounds x="1480" y="267" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_22_di" bpmnElement="Flow_22"><di:waypoint x="1414" y="191"/><di:waypoint x="1331" y="191"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_23_di" bpmnElement="Flow_23"><di:waypoint x="1306" y="166"/><di:waypoint x="1306" y="67"/><di:waypoint x="2646" y="67"/><bpmndi:BPMNLabel><dc:Bounds x="1312" y="143" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_24_di" bpmnElement="Flow_24"><di:waypoint x="2766" y="67"/><di:waypoint x="2778" y="67"/><di:waypoint x="2778" y="588"/><di:waypoint x="2731" y="588"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_25_di" bpmnElement="Flow_25"><di:waypoint x="1281" y="191"/><di:waypoint x="1173" y="191"/><di:waypoint x="1173" y="290"/><bpmndi:BPMNLabel><dc:Bounds x="1248" y="172" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_26_di" bpmnElement="Flow_26"><di:waypoint x="1632" y="315"/><di:waypoint x="1680" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_27_di" bpmnElement="Flow_27"><di:waypoint x="1740" y="355"/><di:waypoint x="1740" y="548"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_28_di" bpmnElement="Flow_28"><di:waypoint x="1800" y="588"/><di:waypoint x="1883" y="588"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_29_di" bpmnElement="Flow_29"><di:waypoint x="1933" y="588"/><di:waypoint x="2016" y="588"/><bpmndi:BPMNLabel><dc:Bounds x="1943" y="569" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_30_di" bpmnElement="Flow_30"><di:waypoint x="1908" y="563"/><di:waypoint x="1908" y="231"/><bpmndi:BPMNLabel><dc:Bounds x="1914" y="540" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_31_di" bpmnElement="Flow_31"><di:waypoint x="1848" y="191"/><di:waypoint x="1607" y="191"/><di:waypoint x="1607" y="290"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_32_di" bpmnElement="Flow_32"><di:waypoint x="2041" y="613"/><di:waypoint x="2041" y="640"/><di:waypoint x="1607" y="640"/><di:waypoint x="1607" y="340"/><bpmndi:BPMNLabel><dc:Bounds x="2008" y="621" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_33_di" bpmnElement="Flow_33"><di:waypoint x="2066" y="588"/><di:waypoint x="2114" y="588"/><bpmndi:BPMNLabel><dc:Bounds x="2076" y="569" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_34_di" bpmnElement="Flow_34"><di:waypoint x="2139" y="563"/><di:waypoint x="2139" y="439"/><di:waypoint x="2212" y="439"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_35_di" bpmnElement="Flow_35"><di:waypoint x="2164" y="588"/><di:waypoint x="2212" y="588"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_36_di" bpmnElement="Flow_36"><di:waypoint x="2139" y="613"/><di:waypoint x="2139" y="876"/><di:waypoint x="2212" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_37_di" bpmnElement="Flow_37"><di:waypoint x="2332" y="876"/><di:waypoint x="2380" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_38_di" bpmnElement="Flow_38"><di:waypoint x="2332" y="439"/><di:waypoint x="2573" y="439"/><di:waypoint x="2573" y="563"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_39_di" bpmnElement="Flow_39"><di:waypoint x="2332" y="588"/><di:waypoint x="2548" y="588"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_40_di" bpmnElement="Flow_40"><di:waypoint x="2500" y="876"/><di:waypoint x="2573" y="876"/><di:waypoint x="2573" y="613"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_41_di" bpmnElement="Flow_41"><di:waypoint x="2598" y="588"/><di:waypoint x="2681" y="588"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_42_di" bpmnElement="Flow_42"><di:waypoint x="2706" y="563"/><di:waypoint x="2706" y="355"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_43_di" bpmnElement="Flow_43"><di:waypoint x="2766" y="315"/><di:waypoint x="2849" y="315"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_44_di" bpmnElement="Flow_44"><di:waypoint x="2874" y="290"/><di:waypoint x="2874" y="15"/><di:waypoint x="403" y="15"/><di:waypoint x="403" y="290"/><bpmndi:BPMNLabel><dc:Bounds x="2854" y="19" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_45_di" bpmnElement="Flow_45"><di:waypoint x="2874" y="340"/><di:waypoint x="2874" y="960"/><bpmndi:BPMNLabel><dc:Bounds x="2880" y="348" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_46_di" bpmnElement="Flow_46"><di:waypoint x="2934" y="1000"/><di:waypoint x="3017" y="1000"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_47_di" bpmnElement="Flow_47"><di:waypoint x="3042" y="1025"/><di:waypoint x="3042" y="1104"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_48_di" bpmnElement="Flow_48"><di:waypoint x="3102" y="1144"/><di:waypoint x="3185" y="1144"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_49_di" bpmnElement="Flow_49"><di:waypoint x="3210" y="1119"/><di:waypoint x="3210" y="916"/><bpmndi:BPMNLabel><dc:Bounds x="3216" y="1096" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_50_di" bpmnElement="Flow_50"><di:waypoint x="3235" y="1144"/><di:waypoint x="3353" y="1144"/><bpmndi:BPMNLabel><dc:Bounds x="3245" y="1125" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_51_di" bpmnElement="Flow_51"><di:waypoint x="3378" y="1119"/><di:waypoint x="3378" y="1040"/><bpmndi:BPMNLabel><dc:Bounds x="3384" y="1096" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_52_di" bpmnElement="Flow_52"><di:waypoint x="3403" y="1144"/><di:waypoint x="3450" y="1144"/><di:waypoint x="3450" y="1060"/><di:waypoint x="4316" y="1060"/><di:waypoint x="4316" y="916"/><bpmndi:BPMNLabel><dc:Bounds x="3413" y="1125" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_53_di" bpmnElement="Flow_53"><di:waypoint x="4316" y="836"/><di:waypoint x="4316" y="824"/><di:waypoint x="3042" y="824"/><di:waypoint x="3042" y="975"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_54_di" bpmnElement="Flow_54"><di:waypoint x="3438" y="1000"/><di:waypoint x="3528" y="1000"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_55_di" bpmnElement="Flow_55"><di:waypoint x="3270" y="876"/><di:waypoint x="3360" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_56_di" bpmnElement="Flow_56"><di:waypoint x="3396" y="876"/><di:waypoint x="3486" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_57_di" bpmnElement="Flow_57"><di:waypoint x="3606" y="876"/><di:waypoint x="3654" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_58_di" bpmnElement="Flow_58"><di:waypoint x="3704" y="876"/><di:waypoint x="3752" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_59_di" bpmnElement="Flow_59"><di:waypoint x="3872" y="876"/><di:waypoint x="3955" y="876"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_60_di" bpmnElement="Flow_60"><di:waypoint x="4005" y="876"/><di:waypoint x="4088" y="876"/><bpmndi:BPMNLabel><dc:Bounds x="4015" y="857" width="10" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_61_di" bpmnElement="Flow_61"><di:waypoint x="3980" y="901"/><di:waypoint x="3980" y="960"/><bpmndi:BPMNLabel><dc:Bounds x="3986" y="909" width="23" height="15"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_62_di" bpmnElement="Flow_62"><di:waypoint x="3920" y="1000"/><di:waypoint x="3679" y="1000"/><di:waypoint x="3679" y="901"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_63_di" bpmnElement="Flow_63"><di:waypoint x="4148" y="916"/><di:waypoint x="4148" y="1104"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_64_di" bpmnElement="Flow_64"><di:waypoint x="4208" y="1144"/><di:waypoint x="4298" y="1144"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

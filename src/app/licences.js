@@ -12,10 +12,11 @@ import { escapeHtml } from './html.js';
 //
 // A story that adds a library adds one entry here, and its licence text below
 // if it is not there yet. tests/licences.test.mjs compares every version with
-// the place it is pinned at, src/index.html for what comes from the CDN and
-// src/doc.css for the Octicons, and fails on an entry that fell behind. The
-// path of the magnifier in src/app/search.js names the Octicons version too;
-// the test does not read it, so it is kept alike with this entry by hand.
+// the place it is pinned at, src/index.html for what comes from the CDN,
+// src/doc.css for the Octicons and src/app/label-size.js for diagram-js, and
+// fails on an entry that fell behind. The path of the magnifier in
+// src/app/search.js names the Octicons version too; the test does not read
+// it, so it is kept alike with this entry by hand.
 //
 // Pure logic: this module imports html.js only, touches no page, and loads in
 // Node as it is.
@@ -51,6 +52,16 @@ export const NOTICES = [
     // condition, about the bpmn.io watermark; the text is the file LICENSE of
     // the package, bpmn-js@18.31.0.
     name: 'bpmn-js', package: 'bpmn-js', version: '18.31.0', licence: 'bpmn.io', use: 'cdn',
+    copyright: ['Copyright (c) 2014-present Camunda Services GmbH'],
+  },
+  {
+    // The text layout of diagram-js (lib/util/Text.js), the version bpmn-js
+    // bundles, replicated in src/app/label-size.js with a width table in place
+    // of the browser's canvas: it gives the labels of BPMN without coordinates
+    // the size bpmn-js draws them in. With it go a few constants and formulas
+    // of bpmn-js's text renderer, covered by the entry of bpmn-js above, the
+    // same copyright holder.
+    name: 'diagram-js', package: 'diagram-js', version: '15.28.0', licence: 'MIT', use: 'embedded',
     copyright: ['Copyright (c) 2014-present Camunda Services GmbH'],
   },
   {
