@@ -543,8 +543,9 @@ function diagramExpectations(body){
 // lane, and model the process as read. reason: what the warning of one that
 // is not drawn says as its detail, the layout's refusal, or null where that is
 // the library's own message (XML that does not parse, no BPMN definitions).
-// The run assumes the page has Mermaid; without it no block without
-// coordinates is drawn.
+// The layout needs no Mermaid (its columns are LMM's, src/app/lmm.js), so a
+// block without coordinates is judged the same with or without it; the run
+// still assumes the page has Mermaid for the Mermaid diagrams.
 function judgeDiagrams(exp, wellFormed){
   exp.diagrams.filter(d => d.kind === 'bpmn').forEach((d, i) => {
     Object.assign(d, { drawn: false, reason: null, laidOut: false, expected: null, model: null });

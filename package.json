@@ -14,7 +14,6 @@
     "vergleich": "node tests/vergleich.mjs",
     "pruefung": "node tests/pruefung.mjs",
     "fixtures": "node tests/bpmn-fixtures.mjs",
-    "capture": "node tests/capture-bpmn.mjs",
     "labels": "node tests/check-label-size.mjs",
     "assistant": "node tools/bpmn-assistant/bauen.mjs"
   },

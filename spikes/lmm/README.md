@@ -1,6 +1,6 @@
 # Spike: LMM (Arbeitstitel arielle)
 
-Die Versuche zur Ablösung von Mermaid als Layout-Engine für BPMN ohne Koordinaten, gesichert aus dem Scratchpad der Sitzung vom 7. Oktober 2026. Die Komponente, die Mermaid dabei ersetzt, heißt **LMM** (kurz für „Little Mermaid“, ein Wortspiel auf LLM). Sie berechnet die Spalte jedes Knotens. Ihr Arbeitstitel war „arielle“; unter diesem Namen stehen die Dateien und Funktionen hier im Spike (`arielle()`, `arielleExakt()`). In `src/` wird sie `src/app/lmm.js` heißen.
+Die Versuche zur Ablösung von Mermaid als Layout-Engine für BPMN ohne Koordinaten, gesichert aus dem Scratchpad der Sitzung vom 7. Oktober 2026. Die Komponente, die Mermaid dabei ersetzt, heißt **LMM** (kurz für „Little Mermaid“, ein Wortspiel auf LLM). Sie berechnet die Spalte jedes Knotens. Ihr Arbeitstitel war „arielle“; unter diesem Namen stehen die Dateien und Funktionen hier im Spike (`arielle()`, `arielleExakt()`). In `src/` heißt sie `src/app/lmm.js`: Seit dem 7. Oktober 2026 ist LMM dort mit `lmm()` und `kanonisch()` (der Fassung aus `notizen/kanonisch-notizen.mjs`) eingebaut und ersetzt Mermaid als Layout-Engine.
 
 Auswertung und Begründungen: `docs/analyse-mermaid-im-bpmn-code.md`, vor allem die Abschnitte 2 bis 3b und 4a. Der ausführliche Bericht des Reviews: `review/BERICHT.md`.
 

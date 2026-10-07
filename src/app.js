@@ -22,8 +22,8 @@ import { filterFieldStep } from './app/filter.js';
 import { registerEscape } from './app/escape.js';
 
 // A page whose script tag of Mermaid failed has no mermaid; the script runs
-// on, and every diagram that needs it becomes a warning (app/diagrams.js,
-// app/bpmn.js).
+// on, and every Mermaid diagram becomes a warning (app/diagrams.js). BPMN
+// does not need it: its layout is the page's own (app/lmm.js).
 if (typeof mermaid !== 'undefined') mermaid.initialize({
   startOnLoad: false,
   theme: 'default',

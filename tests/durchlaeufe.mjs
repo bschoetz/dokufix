@@ -87,9 +87,10 @@
 //                                read-only file carries anything of bpmn-js or
 //                                of Mermaid's layout
 //  13. Mermaid cannot be loaded  the page's request for Mermaid fails, bpmn-js
-//                                is there: the script runs, the BPMN diagram
-//                                with coordinates is drawn, the one without and
-//                                the Mermaid diagram are each the warning that
+//                                is there: the script runs, both BPMN diagrams
+//                                are drawn, the one without coordinates laid
+//                                out without Mermaid (LMM, src/app/lmm.js), and
+//                                only the Mermaid diagram is the warning that
 //                                says so; the three read-only downloads too
 //  14. the live viewer cannot    bpmn-js is taken from the page after the
 //      start                     render, then replaced by one whose constructor
@@ -148,7 +149,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { prepareLibraries, librariesLine } from './cdn.mjs';
 // What the warning of a BPMN diagram says, and the reason of a page without
 // the library, are asked where the product decides them.
-import { bpmnWarningText, BPMN_NO_LIBRARY, BPMN_NO_MERMAID, BPMN_CREDIT } from '../src/app/bpmn.js';
+import { bpmnWarningText, BPMN_NO_LIBRARY, BPMN_CREDIT } from '../src/app/bpmn.js';
 import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { MERMAID_NO_LIBRARY } from '../src/app/diagrams.js';
 
@@ -301,9 +302,12 @@ const DOC_LAYOUT = [
   '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
   '[^a]: Die Fußnote.',
 ].join('\n\n') + '\n';
-// What a laid-out diagram leaves in a file only through Mermaid: its URL, its
-// swimlane classes, its node ids, the host's render id.
-const LAYOUT_TRACES = /npm\/mermaid@|swimlane|-flowchart-|dokufix-bpmn-layout/;
+// What a laid-out diagram left in a file only through Mermaid, while Mermaid
+// gave the columns: its URL, its swimlane keyword and classes, its node ids,
+// the host's render id. Kept as a guard since LMM gives them. The word
+// "swimlane" alone is no trace: the licence information names "Mermaid's
+// swimlane layout", the part of Mermaid that LMM replicates.
+const LAYOUT_TRACES = /npm\/mermaid@|swimlane-beta|cluster swimlane|swimlane-(?:body|title)|-flowchart-|dokufix-bpmn-layout/;
 // A page without Mermaid: a Mermaid diagram, BPMN with and without coordinates.
 const DOC_NO_MERMAID = [
   '# Ohne Mermaid', '[[toc]]',
@@ -1086,14 +1090,13 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       const credit = BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a>';
       const withoutMermaid = (s, x, text) => {
         const visible = x.warnings.filter(w => !w.transient);
-        check(s, 'two warnings: the Mermaid diagram and the BPMN diagram without coordinates, each saying that Mermaid was not loaded, where the diagram would be',
-          visible.length === 2 && visible[0].text.includes('Ein Diagramm konnte nicht gezeichnet werden.') && visible[0].text.includes(MERMAID_NO_LIBRARY) && visible[0].before === 'H2#fluss' &&
-          visible[1].text.includes(bpmnWarningText('Ohne Koordinaten')) && visible[1].text.includes(BPMN_NO_MERMAID) && visible[1].before === 'H2#ohne-koordinaten',
+        check(s, 'one warning: the Mermaid diagram, saying that Mermaid was not loaded, where the diagram would be',
+          visible.length === 1 && visible[0].text.includes('Ein Diagramm konnte nicht gezeichnet werden.') && visible[0].text.includes(MERMAID_NO_LIBRARY) && visible[0].before === 'H2#fluss',
           visible.map(w => [w.before, w.text]));
-        check(s, 'the BPMN diagram with coordinates is drawn with its credit, and the passes around it ran',
-          x.bpmn.join('|') === 'Mit Koordinaten true ' + credit && x.diagrams === 1 && x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
+        check(s, 'both BPMN diagrams are drawn with their credit, the one without coordinates laid out without Mermaid, and the passes around them ran',
+          x.bpmn.join('|') === 'Mit Koordinaten true ' + credit + '|Ohne Koordinaten true ' + credit && x.diagrams === 2 && x.headingsWithoutId === 0 && x.tocLinks >= 4 && x.previews === 1 && x.returnPaths === 1, x);
         checkViewControls(s, x);
-        check(s, 'the drawn BPMN diagram keeps its source link, the refused ones have none', JSON.stringify(x.sourceLinks) === JSON.stringify(['Mit-Koordinaten.bpmn']), x.sourceLinks);
+        check(s, 'both BPMN diagrams keep their source link, the refused Mermaid diagram has none', JSON.stringify(x.sourceLinks) === JSON.stringify(['Mit-Koordinaten.bpmn', 'Ohne-Koordinaten.bpmn']), x.sourceLinks);
         if (s.endsWith('nur-lesen')) check(s, 'contains no <script>', !/<script/i.test(text));
       };
       const f = await facts(o.page);
@@ -1101,7 +1104,8 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep){
       check(scope, 'the script ran: the rail is built', f.railHasItems && f.railLinks >= 4, { railHasItems: f.railHasItems, railLinks: f.railLinks });
       check(scope, 'Mermaid was asked for and not loaded; bpmn-js is there', await o.page.evaluate(() => typeof mermaid === 'undefined' && typeof BpmnJS === 'function'));
       check(scope, 'no host left in the page', f.hosts === 0, f.hosts);
-      checkErrors(scope, o, ['Mermaid error', 'BPMN error']);
+      checkErrors(scope, o, ['Mermaid error']);
+      check(scope, 'no BPMN error on the console', !o.consoleErrors.some(e => e.includes('BPMN error')), o.consoleErrors.join(' | ').slice(0, 400));
       await checkExports(scope, browser, o.page, dir, 'ohne-mermaid', READONLY, withoutMermaid);
       await o.context.close();
     });

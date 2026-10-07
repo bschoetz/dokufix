@@ -3,9 +3,10 @@
 // src/app/bpmn-layout.js, mit allen Regeln, mit einem Satz, was die Ansicht ausmacht, Brüchen, Zeit, Großansicht wie
 // in dokufix und Download als .bpmn und .svg; ein Fehler steht an Stelle des Diagramms. Dazu die Handreichung für
 // LLMs zum Kopieren und Herunterladen, sechs Beispiele und die Diagrammfarben (Vorlagen oder eigene). Wie die App:
-// Mermaid 12.0.0 und bpmn-js 18.31.0 vom CDN (die Versionen von src/index.html), die Rohpositionen aus
-// mermaidPositions(), die Größe der Beschriftungen aus measureLabel() (src/app/label-size.js, ohne Browser, in der
-// Schrift und den Größen von bpmn-js), die Farben aus den Dokumentstilen von dist/dokufix.html. Dazu die Anordnung
+// bpmn-js 18.31.0 vom CDN (die Version von src/index.html), die Spalten und die Ordnung des Modells aus kanonisch()
+// (src/app/lmm.js, LMM, ohne Browser; seit 2026-10-07 ohne Mermaid, das die Seite deshalb nicht mehr lädt), die
+// Größe der Beschriftungen aus measureLabel() (src/app/label-size.js, ohne Browser, in der Schrift und den Größen
+// von bpmn-js), die Farben aus den Dokumentstilen von dist/dokufix.html. Dazu die Anordnung
 // von bpmn.io, bpmn-auto-layout 2.0.0-alpha.2, gebündelt in die Seite, ohne CDN, mit den Lizenzhinweisen der
 // gebündelten Pakete davor.
 //
@@ -38,11 +39,12 @@ const stubs = {
 const bundle = (await esbuild.build({
   stdin: {
     contents: `
-      import { mermaidPositions, BPMN_VIEWER_CONFIG, BPMN_NO_MERMAID, addBpmnTypeClasses, bpmnTypeClasses } from '${REPO}/src/app/bpmn.js';
+      import { BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses } from '${REPO}/src/app/bpmn.js';
       import * as a2 from '${REPO}/src/app/bpmn-layout.js';
+      import { kanonisch, lmmPositions } from '${REPO}/src/app/lmm.js';
       import { breaksOf } from '${REPO}/tests/bpmn-rules.mjs';
       import { pictureOf } from '${REPO}/src/app/diagram-downloads.js';
-      window.T = { mermaidPositions, BPMN_VIEWER_CONFIG, BPMN_NO_MERMAID, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, variants: { A2: a2 } };
+      window.T = { kanonisch, lmmPositions, BPMN_VIEWER_CONFIG, addBpmnTypeClasses, bpmnTypeClasses, breaksOf, pictureOf, variants: { A2: a2 } };
     `,
     resolveDir: HERE, loader: 'js',
   },
@@ -58,14 +60,17 @@ const balBundle = fs.readFileSync(path.join(VENDOR, 'bpmn-auto-layout.min.js'), 
 const balNotice = fs.readFileSync(path.join(VENDOR, 'bpmn-auto-layout.LIZENZEN.txt'), 'utf8');
 const BAL_VERSION = /bpmn-auto-layout ([^)\s]+)\)/.exec(balNotice)[1];
 
-// Was im Bündel oben von anderen stammt: der Nachbau des Textlayouts von diagram-js (src/app/label-size.js), mit
-// dem Hinweis seiner MIT-Lizenz, wie ihn die Lizenzliste des Produkts führt (src/app/licences.js); die wenigen
-// Konstanten und Formeln aus dem Textrenderer von bpmn-js stehen unter dessen Lizenz, und bpmn-js lädt die Seite vom
-// CDN. Kommentare des Quelltexts fallen beim Bündeln weg, deshalb steht der Hinweis hier.
+// Was im Bündel oben von anderen stammt: der Nachbau des Textlayouts von diagram-js (src/app/label-size.js) und der
+// Nachbau der Schichtung aus dem Swimlane-Layout von Mermaid (src/app/lmm.js), beide MIT, mit den Hinweisen, wie
+// sie die Lizenzliste des Produkts führt (src/app/licences.js); die wenigen Konstanten und Formeln aus dem
+// Textrenderer von bpmn-js stehen unter dessen Lizenz, und bpmn-js lädt die Seite vom CDN. Kommentare des
+// Quelltexts fallen beim Bündeln weg, deshalb steht der Hinweis hier.
 const djs = NOTICES.find(n => n.package === 'diagram-js');
+const lmm = NOTICES.find(n => n.package === 'mermaid' && n.use === 'embedded');
 const bundleNotice = ['In diesem Skript steckt ein Nachbau des Textlayouts von ' + djs.name + ' ' + djs.version +
-  ' (src/app/label-size.js von dokufix, lib/util/Text.js von diagram-js), dazu wenige Konstanten und Formeln des Textrenderers von bpmn-js 18.31.0 (bpmn.io License, Copyright (c) 2014-present Camunda Services GmbH).',
-  djs.name + ' ' + djs.version, ...djs.copyright, LICENCE_TEXTS[djs.licence].title, ...LICENCE_TEXTS[djs.licence].paragraphs]
+  ' (src/app/label-size.js von dokufix, lib/util/Text.js von diagram-js), dazu wenige Konstanten und Formeln des Textrenderers von bpmn-js 18.31.0 (bpmn.io License, Copyright (c) 2014-present Camunda Services GmbH),' +
+  ' und LMM (src/app/lmm.js von dokufix), ein Nachbau der Schichtung aus ' + lmm.name + ' ' + lmm.version + ' (src/rendering-util/layout-algorithms/swimlanes/ von Mermaid).',
+  djs.name + ' ' + djs.version, ...djs.copyright, lmm.name + ' ' + lmm.version, ...lmm.copyright, LICENCE_TEXTS[djs.licence].title, ...LICENCE_TEXTS[djs.licence].paragraphs]
   .join('\n\n').replace(/\*\//g, '* /');
 
 const dist = fs.readFileSync(path.join(REPO, 'dist/dokufix.html'), 'utf8');
@@ -95,7 +100,6 @@ const html = `<!doctype html>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Dokufix BPMN Assistant</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/assets/diagram-js.css">
-<script src="https://cdn.jsdelivr.net/npm/mermaid@12.0.0/dist/mermaid.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bpmn-js@18.31.0/dist/bpmn-navigated-viewer.production.min.js"></script>
 <style>${docCss}</style>
 <style>
@@ -267,8 +271,6 @@ ${bundle}</script>
 ${balNotice}*/
 ${balBundle}</script>
 <script>
-// Wie die App (src/app.js): ohne Mermaid läuft die Seite weiter, und nur das Anordnen meldet, was fehlt.
-if (typeof mermaid !== 'undefined') mermaid.initialize({ startOnLoad: false, theme: 'default', securityLevel: 'strict', suppressErrorRendering: true, flowchart: { curve: 'basis' } });
 const BEISPIELE = ${JSON.stringify(beispiele)};
 const HANDREICHUNG = ${JSON.stringify(handreichung)};
 const $ = id => document.getElementById(id);
@@ -949,13 +951,12 @@ async function render(){
     try { await draw(orig, input, 'original'); } catch (e){ error(orig, (e && e.message) || String(e)); }
   }
   if (my !== run) return;
-  let read, raw;
+  let read;
   try {
     read = T.variants.A2.readProcess(doc);
     if (!read) throw new Error('Keine BPMN-Definitionen (das Wurzelelement ist nicht definitions).');
-    if (typeof mermaid === 'undefined' || !mermaid || typeof mermaid.render !== 'function') throw new Error(T.BPMN_NO_MERMAID);
-    raw = await T.mermaidPositions(read.model, document, 'tt' + my);
-    // Die Beschriftungen misst das Layout selbst (measureLabel(), wie in der App): kein Viewer zum Messen.
+    // Die Spalten gibt LMM, die Beschriftungen misst das Layout selbst (measureLabel(), wie in der App): weder Mermaid
+    // noch ein Viewer zum Messen.
   } catch (e){ error(section('Eingabe'), (e && e.message) || String(e)); return; }
   if (my !== run) return;
   if (read.leftOut.length){
@@ -967,8 +968,11 @@ async function render(){
     const s = section(name);
     try {
       const t0 = performance.now();
+      // Wie layoutBpmn() in src/app/bpmn.js: das Modell in LMMs Ordnung mit seinen Spalten fürs Raster, das des Autors
+      // für den Diagrammteil.
       const r = mod.readProcess(new DOMParser().parseFromString(xml, 'application/xml'));
-      const di = mod.layoutGeometry(r.model, raw);
+      const k = T.kanonisch(r.model);
+      const di = mod.layoutGeometry(k.model, T.lmmPositions(k.model, k.rank));
       const laid = mod.appendDiagram(xml, r.model, di);
       const ms = performance.now() - t0;
       const sig = signalLines(laid.xml, r.model);

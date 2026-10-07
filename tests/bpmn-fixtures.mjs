@@ -9,57 +9,71 @@
 //
 // tests/fixtures/bpmn-layout/ holds per input <n>:
 //   <n>.bpmn            the author's XML, without coordinates
-//   <n>.raw.json        Mermaid's raw positions, as mermaidPositions() in
-//                       src/app/bpmn.js reads them from the built page
-//   <n>.laid-out.bpmn   the laid-out XML, what the page draws: the labels in
-//                       the size the layout measures for them itself
-//                       (src/app/label-size.js), the same in Node as in the page
-// and index.json the Mermaid version of the raw positions and per input where
-// it comes from. tests/capture-bpmn.mjs ("npm run capture") makes the raw
-// positions from the built page; tests/bpmn-fixtures.test.mjs compares the
-// XML byte for byte, tests/bpmn-rules.test.mjs checks the rules on it. Until
-// the layout measured for itself, each input had the sizes the page measured
-// in its machine's font (<n>.sizes.json) and two expected XML, with those
-// sizes and with an estimate; the label sizes now follow the fixed font of the
-// measurer, so there is one.
+//   <n>.laid-out.bpmn   the laid-out XML, what the page draws: the columns
+//                       from LMM (src/app/lmm.js), the labels in the size the
+//                       layout measures for them itself (src/app/label-size.js),
+//                       the same in Node as in the page
+// and index.json per input where it comes from. tests/bpmn-fixtures.test.mjs
+// compares the XML byte for byte, tests/bpmn-rules.test.mjs checks the rules on
+// it. Until the layout measured for itself, each input had the sizes the page
+// measured in its machine's font (<n>.sizes.json) and two expected XML, with
+// those sizes and with an estimate; the label sizes now follow the fixed font
+// of the measurer, so there is one. Until LMM gave the columns (2026-10-07),
+// each input had Mermaid's raw positions as well (<n>.raw.json), taken from
+// the built page in Chromium (tests/capture-bpmn.mjs, "npm run capture"); LMM
+// needs no page, so the whole layout runs here.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import { readProcess, layoutGeometry, appendDiagram } from '../src/app/bpmn-layout.js';
+import { kanonisch, lmmPositions } from '../src/app/lmm.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // DOKUFIX_FIXTURE_DIR points the command at a copy (tests/bpmn-fixtures.test.mjs
 // checks --write on one).
 export const FIXTURE_DIR = process.env.DOKUFIX_FIXTURE_DIR || path.join(here, 'fixtures/bpmn-layout');
 // The files each input has, by their ending.
-export const FIXTURE_FILES = ['.bpmn', '.raw.json', '.laid-out.bpmn'];
+export const FIXTURE_FILES = ['.bpmn', '.laid-out.bpmn'];
 
 export const fixtureIndex = () => JSON.parse(fs.readFileSync(path.join(FIXTURE_DIR, 'index.json'), 'utf8'));
 export const fixtureNames = () => Object.keys(fixtureIndex().fixtures);
 export const fixtureFile = (name, ending) => path.join(FIXTURE_DIR, name + ending);
 export const expectedFile = name => fixtureFile(name, '.laid-out.bpmn');
 
-// The author's XML and the raw positions of one input.
+// The author's XML of one input.
 export function readFixture(name){
-  const text = ending => fs.readFileSync(fixtureFile(name, ending), 'utf8');
-  return { name, xml: text('.bpmn'), raw: JSON.parse(text('.raw.json')) };
+  return { name, xml: fs.readFileSync(fixtureFile(name, '.bpmn'), 'utf8') };
 }
 
-// The model as the page reads it. A browser's parser reads "&amp;" as "&",
-// which mermaidSource() writes as a blank; linkedom keeps the entity, so it
-// is read as a blank first. The stored raw positions depend on it.
+// The model as the page reads it. linkedom keeps "&amp;" in an attribute as it
+// stands, where a browser's parser reads "&"; it is read as a blank here, as
+// Mermaid saw it when its raw positions were the fixtures' columns
+// (mermaidSource() wrote "&" as a blank). The expected XML of hund, hund2,
+// notiz-hund2 and ref8 depends on it: their labels with "&" are measured with
+// a blank in its place.
 export function readModel(xml){
   return readProcess(new DOMParser().parseFromString(xml.replace(/&amp;/g, ' '), 'text/xml'));
 }
 
+// What the page hands the grid for an input's XML (layoutBpmn() in
+// src/app/bpmn.js): { model, raw, author }, the model in LMM's order, its
+// columns in the form layoutGeometry() reads, and the author's model, which
+// appendDiagram() gets.
+export function gridInput(xml){
+  const { model } = readModel(xml);
+  const sorted = kanonisch(model);
+  return { model: sorted.model, raw: lmmPositions(sorted.model, sorted.rank), author: model };
+}
+
 // The laid-out XML of an input, as the page lays it out: readProcess →
-// layoutGeometry → appendDiagram on the author's XML, the labels measured by
-// the layout's own measurer.
-export function layOut(fx){
-  const { model } = readModel(fx.xml);
-  return appendDiagram(fx.xml, model, layoutGeometry(model, fx.raw)).xml;
+// kanonisch → layoutGeometry on the model in LMM's order with its columns →
+// appendDiagram on the author's XML and model, the labels measured by the
+// layout's own measurer, or by measure.
+export function layOut(fx, measure){
+  const { model, raw, author } = gridInput(fx.xml);
+  return appendDiagram(fx.xml, author, layoutGeometry(model, raw, measure)).xml;
 }
 
 // The first line two laid-out XML differ in, with the element it describes

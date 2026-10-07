@@ -1,17 +1,18 @@
-// BPMN without coordinates, run in Node: no browser, no Mermaid, no bpmn-js.
+// BPMN without coordinates, run in Node: no browser, no bpmn-js.
 //
 //   npm test          (node --test tests/*.test.mjs)
 //
-// src/app/bpmn-layout.js reads the XML into lanes, flow nodes and flows,
-// writes the Mermaid text, lays the nodes out on a grid from Mermaid's columns
-// and writes them back as the diagram part. None of that needs a layout, so
-// all of it is checked here: the reading on XML parsed by linkedom, the
-// geometry on positions made up for the purpose, the labels in the size the
-// layout's own measurer gives them (src/app/label-size.js, checked in
-// tests/label-size.test.mjs). What Mermaid's rendering
-// gives, and whatever linkedom reads differently from a browser (lookup by
-// namespace, XML that is not well-formed), is checked by the browser runs
-// (tests/vergleich.mjs, tests/durchlaeufe.mjs).
+// src/app/bpmn-layout.js reads the XML into lanes, flow nodes and flows, lays
+// the nodes out on a grid from the columns it is given and writes them back
+// as the diagram part. All of it is pure logic, so all of it is checked here:
+// the reading on XML parsed by linkedom, the geometry on positions made up
+// for the purpose, the labels in the size the layout's own measurer gives
+// them (src/app/label-size.js, checked in tests/label-size.test.mjs). The
+// columns the page gives, LMM's (src/app/lmm.js), are checked in
+// tests/lmm.test.mjs and, with the whole layout, on the fixtures
+// (tests/bpmn-fixtures.test.mjs). Whatever linkedom reads differently from a
+// browser (lookup by namespace, XML that is not well-formed) is checked by the
+// browser runs (tests/vergleich.mjs, tests/durchlaeufe.mjs).
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -20,13 +21,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
-  readProcess, leftOutLine, mermaidSource, layoutGeometry, appendDiagram, DEFAULT_RULES,
+  readProcess, leftOutLine, layoutGeometry, appendDiagram, DEFAULT_RULES,
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, dedupe, orthogonal,
-  growLane, labelRoom, nearestOnFlow, MERMAID_LAYOUT_VERSION, LAYOUT_NOTHING, layoutStrayText,
+  growLane, labelRoom, nearestOnFlow, LAYOUT_NOTHING, layoutStrayText,
   noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS,
 } from '../src/app/bpmn-layout.js';
 import { breaksOf } from './bpmn-rules.mjs';
-import { readFixture, readModel, fixtureNames } from './bpmn-fixtures.mjs';
+import { readFixture, readModel, fixtureNames, gridInput } from './bpmn-fixtures.mjs';
 import { measureLabel } from '../src/app/label-size.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -121,14 +122,13 @@ test('what the layout cannot place is left out, with every flow that touches it;
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'SP_T')), 'task SP_T: inside the sub-process SP');
 });
 
-test('nested lanes: the inner lanes are laid out, the outer one is left out; an empty lane holds a stand-in', () => {
+test('nested lanes: the inner lanes are laid out, the outer one is left out; an empty lane is kept, empty', () => {
   const xml = xmlOf('<bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Aussen" name="Haus"><bpmn:flowNodeRef>A</bpmn:flowNodeRef><bpmn:flowNodeRef>B</bpmn:flowNodeRef>' +
     '<bpmn:childLaneSet id="CS"><bpmn:lane id="I1" name="Oben"><bpmn:flowNodeRef>A</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="I2" name="Unten"><bpmn:flowNodeRef>B</bpmn:flowNodeRef></bpmn:lane></bpmn:childLaneSet></bpmn:lane>' +
     '<bpmn:lane id="Leer" name="Leer"/></bpmn:laneSet><bpmn:task id="A"/><bpmn:task id="B"/></bpmn:process>');
   const { model, leftOut } = read(xml);
-  assert.deepEqual(model.lanes.map(l => [l.id, l.nodes, l.hold]), [['I1', ['A'], undefined], ['I2', ['B'], undefined], ['Leer', [], 'h3']]);
+  assert.deepEqual(model.lanes.map(l => [l.id, l.nodes, l.key]), [['I1', ['A'], 'l1'], ['I2', ['B'], 'l2'], ['Leer', [], 'l3']]);
   assert.deepEqual(leftOut.map(leftOutLine), ['lane Aussen: a lane with lanes inside']);
-  assert.match(mermaidSource(model), /subgraph l3\["Leer"\]\n {4}h3\[" "\]\n {2}end/);
 });
 
 test('a node two lanes name stands in the first; a reference to nothing is ignored', () => {
@@ -137,51 +137,27 @@ test('a node two lanes name stands in the first; a reference to nothing is ignor
   assert.deepEqual(read(xml).model.lanes.map(l => l.nodes), [['A'], ['B']]);
 });
 
-// ---------- the Mermaid text ----------
-test('the Mermaid text: lanes as subgraphs, every id Mermaid\'s own', () => {
-  // The spike's cases: ids that look like Mermaid's or like the XML's own.
+test('ids and names as read: every node and lane a key of the layout\'s own, in the order of the XML; names with their blanks collapsed', () => {
+  // The cases of the spike of story 2.8: ids that look like keywords or like the layout's own keys.
   const xml = xmlOf('<bpmn:process id="Process_1"><bpmn:laneSet id="LS"><bpmn:lane id="subgraph" name="Bahn eins">' +
     ['end', 'Flow_1', 'graph', 'style', 'L_n1_n2_0'].map(id => '<bpmn:flowNodeRef>' + id + '</bpmn:flowNodeRef>').join('') + '</bpmn:lane></bpmn:laneSet>' +
     '<bpmn:startEvent id="end" name="Start"/><bpmn:task id="Flow_1" name="end"/><bpmn:exclusiveGateway id="graph"/>' +
     '<bpmn:task id="style" name="  zwei\n  Zeilen "/><bpmn:endEvent id="L_n1_n2_0"/>' +
     '<bpmn:sequenceFlow id="Process_2" sourceRef="end" targetRef="Flow_1"/><bpmn:sequenceFlow id="subgraph2" sourceRef="Flow_1" targetRef="graph" name="ja|nein"/>' +
     '<bpmn:sequenceFlow id="F" sourceRef="graph" targetRef="style"/><bpmn:sequenceFlow id="G" sourceRef="style" targetRef="L_n1_n2_0"/></bpmn:process>');
-  const text = mermaidSource(read(xml).model);
-  assert.equal(text, [
-    'swimlane-beta LR',
-    '  subgraph l1["Bahn eins"]',
-    '    n1(("Start"))',
-    '    n2["end"]',
-    '    n3{"+"}',
-    '    n4["zwei Zeilen"]',
-    '    n5((" "))',
-    '  end',
-    '  n1 --> n2',
-    '  n2 -->|"ja|nein"| n3',
-    '  n3 --> n4',
-    '  n4 --> n5',
-    '',
-  ].join('\n'));
-  for (const id of ['Flow_1', 'Process_1', 'style', 'L_n1']) assert.equal(text.includes(id), false, id);
+  const { model } = read(xml);
+  assert.deepEqual(model.lanes.map(l => [l.id, l.name, l.key]), [['subgraph', 'Bahn eins', 'l1']]);
+  assert.deepEqual(model.nodes.map(n => [n.id, n.key, n.type, n.name]), [
+    ['end', 'n1', 'start', 'Start'], ['Flow_1', 'n2', 'task', 'end'], ['graph', 'n3', 'gateway', ''], ['style', 'n4', 'task', 'zwei Zeilen'], ['L_n1_n2_0', 'n5', 'end', '']]);
+  assert.deepEqual(model.flows.map(f => [f.id, f.from, f.to, f.name]), [
+    ['Process_2', 'end', 'Flow_1', ''], ['subgraph2', 'Flow_1', 'graph', 'ja|nein'], ['F', 'graph', 'style', ''], ['G', 'style', 'L_n1_n2_0', '']]);
 });
 
-test('the Mermaid text: a label loses what would end it or start an entity or a Markdown string', () => {
-  // As a browser reads them, entities decoded (linkedom leaves them in attributes, so the model is written here).
-  const model = { lanes: [{ key: 'l1', name: 'Bahn "eins"', nodes: ['a', 'b'] }], flows: [{ from: 'a', to: 'b', name: '<b>ja</b>' }],
-                  nodes: [{ id: 'a', key: 'n1', type: 'start', name: 'Start <jetzt>' }, { id: 'b', key: 'n2', type: 'task', name: 'A & B #1 `x` \\ y' }] };
-  assert.equal(mermaidSource(model), 'swimlane-beta LR\n  subgraph l1["Bahn eins"]\n    n1(("Start jetzt"))\n    n2["A B 1 x y"]\n  end\n  n1 -->|"b ja /b"| n2\n');
-});
-
-test('two flows between one pair are two edges', () => {
+test('two flows between one pair are two flows', () => {
   const xml = xmlOf('<bpmn:process id="P"><bpmn:exclusiveGateway id="G" name="Frage?"/><bpmn:task id="T" name="Ziel"/>' +
     '<bpmn:sequenceFlow id="F1" sourceRef="G" targetRef="T" name="ja"/><bpmn:sequenceFlow id="F2" sourceRef="G" targetRef="T" name="nein"/></bpmn:process>');
   const { model } = read(xml);
-  assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2']);
-  assert.match(mermaidSource(model), /n1 -->\|"ja"\| n2\n {2}n1 -->\|"nein"\| n2\n$/);
-});
-
-test('the Mermaid version the layout is made with is the one the epic pins', () => {
-  assert.equal(MERMAID_LAYOUT_VERSION, '12.0.0');
+  assert.deepEqual(model.flows.map(f => [f.id, f.from, f.to, f.name]), [['F1', 'G', 'T', 'ja'], ['F2', 'G', 'T', 'nein']]);
 });
 
 // ---------- the geometry, on positions made up for it ----------
@@ -289,7 +265,7 @@ test('labels: measured at most 90 px wide, wrapped; a flow label above a horizon
   assert.deepEqual(flowLabel(ptsOf([[0, 0], [0, 200]]), 'unten', true), [6, 8, 28, 14]);
 });
 
-// A model and Mermaid's positions for it: two lanes, a start, a gateway, two
+// A model and positions made up for it: two lanes, a start, a gateway, two
 // tasks, an end; the gateway's flows leave by one corner.
 function sample(){
   const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="Pool" name="Ausleihe" processRef="P"/></bpmn:collaboration><bpmn:process id="P">' +
@@ -366,9 +342,9 @@ test('the geometry takes the label sizes from a given measure, the measurer\'s w
   assert.equal(measured.labels.S[3], measureLabel('Leserin fragt').h);
 });
 
-test('the geometry refuses positions that lack a node; Mermaid\'s lanes and flows it does not read', () => {
+test('the geometry refuses positions that lack a node (LMM gives every node one); the lanes and edges of raw it does not read', () => {
   const { model, raw } = sample();
-  assert.throws(() => layoutGeometry(model, { ...raw, nodes: { ...raw.nodes, n3: undefined } }), /„A“ nicht angeordnet/);
+  assert.throws(() => layoutGeometry(model, { ...raw, nodes: { ...raw.nodes, n3: undefined } }), { message: 'layoutGeometry(): raw has no column for the node A (n3)' });
   assert.deepEqual(layoutGeometry(model, { nodes: raw.nodes }), layoutGeometry(model, raw));
 });
 
@@ -467,9 +443,9 @@ test('what follows the closing tag stays, a closing tag in a comment is not the 
   assert.throws(() => appendDiagram('<definitions/>', model, di), { message: LAYOUT_NOTHING });
 });
 
-test('the reference input end to end, with positions in the shape Mermaid gives: one shape per pool, lane and symbol, one edge per flow', () => {
+test('the reference input end to end, with positions made up in the shape Mermaid gave: one shape per pool, lane and symbol, one edge per flow', () => {
   const { model } = read(REFERENCE);
-  // A grid as Mermaid would lay it out: each lane a row, the nodes in it in the order of the XML.
+  // A grid made up: each lane a row, the nodes in it in the order of the XML; lanes and edges as Mermaid's SVG gave them, which the layout does not read.
   const raw = { nodes: {}, lanes: {}, edges: [] };
   model.lanes.forEach((l, row) => {
     raw.lanes[l.key] = { x1: 0, y1: row * 200, x2: 2000, y2: row * 200 + 180 };
@@ -495,11 +471,10 @@ test('the reference input end to end, with positions in the shape Mermaid gives:
 });
 
 // ---------- the findings of the review (pass 1) ----------
-test('a flow from a node to itself is left out, so Mermaid never sees it', () => {
+test('a flow from a node to itself is left out: the router has no way for it yet', () => {
   const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:sequenceFlow id="Nochmal" sourceRef="T" targetRef="T" name="nochmal"/></bpmn:process>'));
   assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2']);
   assert.deepEqual(leftOut.map(leftOutLine), ['sequenceFlow Nochmal: a flow from a node to itself']);
-  assert.equal(mermaidSource(model).includes('n2 --> n2'), false);
 });
 
 test('a lane without an id keeps its row and is not written; a participant without an id gets no pool', () => {
@@ -509,7 +484,6 @@ test('a lane without an id keeps its row and is not written; a participant witho
   assert.deepEqual(model.pools, [{ id: null, name: 'Ohne' }]);
   assert.deepEqual(model.lanes.map(l => [l.id, l.nodes, l.synthetic]), [['', ['S', 'T'], true], ['L2', ['E'], false]]);
   assert.deepEqual(leftOut.map(leftOutLine), ['lane (no id): has no id; its row is laid out, the lane is not drawn', 'participant (no id): has no id; it is not drawn as a pool']);
-  assert.match(mermaidSource(model), /subgraph l1\["X"\]/);
   const raw = { nodes: { n1: { cx: 50, cy: 50, w: 60, h: 60 }, n2: { cx: 200, cy: 50, w: 120, h: 50 }, n3: { cx: 350, cy: 250, w: 60, h: 60 } },
                 lanes: { l1: { x1: 0, y1: 0, x2: 400, y2: 150 }, l2: { x1: 0, y1: 150, x2: 400, y2: 350 } }, edges: [[P(80, 50), P(140, 50)], [P(260, 50), P(350, 50), P(350, 220)]] };
   const out = appendDiagram(xml, model, layoutGeometry(model, raw)).xml;
@@ -542,8 +516,8 @@ test('the last safeguard: a slanted piece gets a corner in the direction of the 
 test('the lanes and the pool grow until every waypoint and every label lies inside, 12 px from the edge', () => {
   // Review input r06, one lane: the grid's lane ends 1 px above a label and 1 px below the lowest one; the frame
   // grows 11 px up and 11 px down.
-  const fx = readFixture('r06'), { model } = readModel(fx.xml);
-  const di = layoutGeometry(model, fx.raw);
+  const { model, raw } = gridInput(readFixture('r06').xml);
+  const di = layoutGeometry(model, raw);
   const [px, py, pw, ph] = Object.values(di.pools)[0], lane = di.lanes.Lane_1;
   const inside = ([x, y]) => x >= lane[0] + 12 && x <= lane[0] + lane[2] - 12 && y >= py + 12 && y <= py + ph - 12;
   for (const way of Object.values(di.flows)) for (const p of way) assert.ok(inside(p), JSON.stringify(p) + ' outside ' + JSON.stringify(di.pools));
@@ -662,8 +636,8 @@ test('a flow from a node to itself whose node is not laid out names it once', ()
 // ---------- the rules of the grid (story 2.27) ----------
 // A process in one pool from a short description: per lane 'id:kind:column …'
 // (kind s start, e end, x exclusive gateway, p parallel gateway, t task, i
-// intermediate event; column Mermaid's), flows 'from>to …'. Mermaid's raw
-// positions are the columns alone: the grid reads no more. Returns per node
+// intermediate event; column made up, as LMM would give it), flows 'from>to
+// …'. The raw positions are the columns alone: the grid reads no more. Returns per node
 // the middle of its symbol and its lane.
 const KIND = { s: 'startEvent', e: 'endEvent', x: 'exclusiveGateway', p: 'parallelGateway', t: 'task', i: 'intermediateCatchEvent' };
 function laidOut(lanes, flows, options){
@@ -767,8 +741,8 @@ test('the router merges two pieces of one direction: a Z whose middle piece has 
   // between them took the second one's x as its y, below the target's row.
   const off = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, false]));
   for (const [name, id] of [['r03', 'F4_k1_c'], ['r09', 'F8_t2_b1']]){
-    const fx = readFixture(name), { model } = readModel(fx.xml);
-    const pts = layoutGeometry(model, fx.raw, measureLabel, off).flows[id];
+    const { model, raw } = gridInput(readFixture(name).xml);
+    const pts = layoutGeometry(model, raw, measureLabel, off).flows[id];
     const [lo, hi] = [pts[0][1], pts[pts.length - 1][1]].sort((a, b) => a - b);
     assert.ok(pts.every(([, y]) => y >= lo && y <= hi), name + ' ' + id + ': ' + JSON.stringify(pts));
   }
@@ -785,7 +759,7 @@ const POOLS = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PK" name="
   '<bpmn:lane id="L2" name="Versand"><bpmn:flowNodeRef>C</bpmn:flowNodeRef><bpmn:flowNodeRef>E2</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
   '<bpmn:startEvent id="S2"/><bpmn:task id="B" name="Prüfen"/><bpmn:sendTask id="C" name="Antworten"/><bpmn:endEvent id="E2"/>' +
   '<bpmn:sequenceFlow id="G1" sourceRef="S2" targetRef="B"/><bpmn:sequenceFlow id="G2" sourceRef="B" targetRef="C"/><bpmn:sequenceFlow id="G3" sourceRef="C" targetRef="E2"/></bpmn:process>');
-// Raw positions as Mermaid gives them without the message flows: each pool from column 0.
+// Raw positions made up as LMM gives them, no message flow setting a column: each pool from column 0.
 const rawOf = (model, cx) => ({ nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: cx[n.id], cy: 0, w: 50, h: 50 }])) });
 const box = (di, id) => di.nodes[id] || di.pools[id] || di.lanes[id];
 const within = ([x, y, w, h], [X, Y, W, H]) => x >= X && y >= Y && x + w <= X + W && y + h <= Y + H;
@@ -799,8 +773,6 @@ test('several pools: one per participant in its order, the lanes of each next to
   assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2', 'F3', 'G1', 'G2', 'G3']);
   assert.deepEqual(model.messages, [{ id: 'M1', from: 'A', to: 'S2', name: 'Anfrage' }, { id: 'M2', from: 'C', to: 'W', name: 'Antwort' }]);
   assert.deepEqual([model.insert, leftOut], [null, []]);
-  // Mermaid sees the lanes of both pools and no message flow.
-  assert.ok(!/n2 --> n5|n7 --> n3/.test(mermaidSource(model)));
 });
 
 test('several pools: what is left out, each a line, in the order of the XML', () => {
@@ -840,7 +812,6 @@ test('a black box below: a pool of its own without lanes, 60 px high, as wide as
   const { model, leftOut, di, xml } = layBoxes(BOXES(['PF', 'Kunde'], '<bpmn:messageFlow id="M1" name="Anfrage" sourceRef="Kunde" targetRef="S2"/><bpmn:messageFlow id="M2" name="Antwort" sourceRef="C" targetRef="Kunde"/>'));
   assert.deepEqual([model.pools, leftOut], [[{ id: 'PF', name: 'Firma' }, { id: 'Kunde', name: 'Kunde', box: true }], []]);
   assert.deepEqual(model.messages, [{ id: 'M1', from: 'Kunde', to: 'S2', name: 'Anfrage', fromPool: 1 }, { id: 'M2', from: 'C', to: 'Kunde', name: 'Antwort', toPool: 1 }]);
-  assert.ok(!mermaidSource(model).includes('Kunde'), 'Mermaid sees no black box');
   const [pf, box] = [di.pools.PF, di.pools.Kunde];
   assert.equal(box[3], 60);
   assert.deepEqual([box[0], box[2]], [pf[0], pf[2]], 'as wide');
@@ -920,8 +891,9 @@ const boxedFixture = (name, order) => {
   const xml = fx.xml.replace(/<(?:\w+:)?collaboration\b[\s\S]*?<\/(?:\w+:)?collaboration>\s*/, '').replace(/(<(?:\w+:)?process\b)/, '<bpmn:collaboration id="KX" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL">' + parts + '</bpmn:collaboration>$1')
     .replace(/(<\/(?:\w+:)?definitions>)/, '<bpmn:process id="QP" xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:startEvent id="QS"/><bpmn:task id="QT"/><bpmn:sequenceFlow id="QF" sourceRef="QS" targetRef="QT"/></bpmn:process>$1');
   const { model } = readModel(xml);
-  // The fixture's raw positions by id, under the keys the nodes get here; Q's nodes from column 0.
-  const own = new Map(readModel(fx.xml).model.nodes.map(n => [n.id, fx.raw.nodes[n.key]]));
+  // The fixture's columns (LMM's, as the page gives them) by id, under the keys the nodes get here; Q's nodes from column 0.
+  const fixture = gridInput(fx.xml);
+  const own = new Map(fixture.model.nodes.map(n => [n.id, fixture.raw.nodes[n.key]]));
   const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, own.get(n.id) || { cx: n.id === 'QS' ? 0 : 100, cy: 0, w: 50, h: 50 }])) };
   // A text annotation is measured in a width (story 2.31).
   const di = layoutGeometry(model, raw);
@@ -1085,7 +1057,7 @@ test('a message flow takes no needless bends: straight up across a flow that jum
 });
 
 // ---------- boundary events (story 2.30) ----------
-// A process from its body, laid out with Mermaid's columns made up: per node id its column.
+// A process from its body, laid out with columns made up: per node id its column.
 function boundaryLaid(body, cols){
   const xml = xmlOf('<bpmn:process id="P">' + body + '</bpmn:process>');
   const { model, leftOut } = read(xml);
@@ -1121,14 +1093,6 @@ test('a boundary event inside a sub-process is left out with its content', () =>
   const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:subProcess id="SP"><bpmn:task id="I"/><bpmn:boundaryEvent id="IB" attachedToRef="I"/></bpmn:subProcess></bpmn:process>'));
   assert.deepEqual(model.boundaries, []);
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'IB')), 'boundaryEvent IB: inside the sub-process SP');
-});
-
-test('Mermaid gets a flow from a boundary event as one from its host, and none back into the host', () => {
-  const { model } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:boundaryEvent id="B" attachedToRef="T"/><bpmn:task id="M"/>' +
-    '<bpmn:sequenceFlow id="FB" sourceRef="B" targetRef="M"/><bpmn:sequenceFlow id="FR" sourceRef="B" targetRef="T"/></bpmn:process>'));
-  const src = mermaidSource(model);
-  assert.match(src, /n2 --> n4\n/);
-  assert.doesNotMatch(src, /n2 --> n2/);
 });
 
 test('a boundary event sits on its host\'s lower edge; its flow leaves it downwards to a row below, a column further', () => {
@@ -1254,8 +1218,8 @@ test('a boundary event of a process with nothing else to lay out is named on the
 });
 
 // ---------- text annotations (story 2.31) ----------
-// A process (or, with collab, a collaboration around it and further processes) laid out with Mermaid's columns made
-// up, per node id its column; the breaks of the rules that concern text annotations.
+// A process (or, with collab, a collaboration around it and further processes) laid out with columns made up, per
+// node id its column; the breaks of the rules that concern text annotations.
 function notesLaid(body, cols, collab = null){
   const xml = xmlOf((collab || '') + (collab ? '' : '<bpmn:process id="P">' + body + '</bpmn:process>'));
   const { model, leftOut } = read(collab ? xmlOf(collab) : xml);
@@ -1279,15 +1243,13 @@ test('text annotations are read with their text, line breaks kept; an associatio
   assert.deepEqual(leftOut, []);
 });
 
-test('in a collaboration: a text annotation at a pool, at a black box, at a message flow; Mermaid never sees one', () => {
+test('in a collaboration: a text annotation at a pool, at a black box, at a message flow', () => {
   const collab = '<bpmn:collaboration id="K"><bpmn:participant id="PA" name="A" processRef="P"/><bpmn:participant id="PB" name="Bank"/>' +
     '<bpmn:messageFlow id="M" sourceRef="T" targetRef="PB"/>' + note('N1', 'Vertrag') + assoc('A1', 'PA', 'N1') + note('N2', 'Nur SEPA') + assoc('A2', 'N2', 'PB') +
     note('N3', 'per EDI') + assoc('A3', 'M', 'N3') + '</bpmn:collaboration><bpmn:process id="P">' + LINE + '</bpmn:process>';
   const { model } = read(xmlOf(collab));
   assert.deepEqual(model.associations.map(a => [a.id, a.kind]), [['A1', 'pool'], ['A2', 'pool'], ['A3', 'message']]);
   assert.deepEqual(model.notes.map(n => [n.id, n.pool]), [['N1', 0], ['N2', 1], ['N3', null]]);
-  const plain = read(xmlOf(collab.replace(/<bpmn:textAnnotation[^]*?<\/bpmn:textAnnotation>|<bpmn:association [^>]*\/>/g, ''))).model;
-  assert.equal(mermaidSource(model), mermaidSource(plain));
 });
 
 test('a pretty-printed text annotation is measured as bpmn-js draws it: the empty line and the indentation count (review of 2.31)', () => {
@@ -1403,7 +1365,7 @@ test('no text annotation lies on the border between two lanes: each keeps 6 px o
   for (const name of fixtureNames()){
     const fx = readFixture(name);
     if (!fx.xml.includes('textAnnotation')) continue;
-    const { model } = readModel(fx.xml), di = layoutGeometry(model, fx.raw);
+    const { model, raw } = gridInput(fx.xml), di = layoutGeometry(model, raw);
     // The borders between two lanes of one pool; a box keeps NOTE_CLEAR off the line, 1 px either side of it.
     const borders = model.lanes.slice(1).filter((l, i) => (l.pool ?? 0) === (model.lanes[i].pool ?? 0) && di.lanes[l.id]).map(l => di.lanes[l.id][1]);
     // Not checked here: a text annotation in another lane than its partner's, which that lane grows around until it
@@ -1416,9 +1378,8 @@ test('no text annotation lies on the border between two lanes: each keeps 6 px o
 });
 
 test('each text is measured once per width, however many trials lay the labels out (review of 2.31)', () => {
-  const fx = readFixture('notiz-r12');
-  const { model } = readModel(fx.xml), calls = new Map();
-  const di = layoutGeometry(model, fx.raw, (t, w) => { const k = w + ':' + t; calls.set(k, (calls.get(k) || 0) + 1); return measureLabel(t, w); });
+  const { model, raw } = gridInput(readFixture('notiz-r12').xml), calls = new Map();
+  const di = layoutGeometry(model, raw, (t, w) => { const k = w + ':' + t; calls.set(k, (calls.get(k) || 0) + 1); return measureLabel(t, w); });
   assert.ok(Object.keys(di.notes).length && calls.size > 1);
   assert.deepEqual([...calls].filter(([, n]) => n > 1), []);
 });
@@ -1427,8 +1388,8 @@ test('where nothing near is free, the lane grows at its border for the text anno
   const fx = readFixture('notiz-r12');
   const measure = measureLabel;
   const plainXml = fx.xml.replace(/<bpmn:textAnnotation[^]*?<\/bpmn:textAnnotation>|<bpmn:association [^>]*\/>/g, '');
-  const withNotes = readModel(fx.xml).model, plain = readModel(plainXml).model;
-  const di = layoutGeometry(withNotes, fx.raw, measure), before = layoutGeometry(plain, fx.raw, measure);
+  const { model: withNotes, raw } = gridInput(fx.xml), plain = gridInput(plainXml);
+  const di = layoutGeometry(withNotes, raw, measure), before = layoutGeometry(plain.model, plain.raw, measure);
   const lane = Object.keys(di.lanes)[0];
   assert.ok(di.lanes[lane][3] > before.lanes[lane][3], 'the lane higher: ' + di.lanes[lane] + ' / ' + before.lanes[lane]);
   const order = (d, k) => Object.keys(d.nodes).sort((p, q) => d.nodes[p][k] - d.nodes[q][k] || (p < q ? -1 : 1));

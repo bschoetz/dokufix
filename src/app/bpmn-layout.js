@@ -1,19 +1,19 @@
 // --- BPMN without coordinates ------------------------------------------------
 // A fenced `bpmn` block whose XML holds only the process (lanes, steps, flows)
-// and no diagram part is laid out before bpmn-js draws it. Mermaid gives the
-// order of the columns, not the picture, and is not the writing format:
+// and no diagram part is laid out before bpmn-js draws it, in pure logic:
 //
 //   1. readProcess() reads the XML into its pools, each with its lanes, flow
 //      nodes and sequence flows, a black box without lanes (story 2.29), the
 //      events on an activity's border with their host (story 2.30), the
 //      message flows between pools, and the text annotations with their
 //      associations (story 2.31), or refuses with the reason
-//   2. mermaidSource() writes that as Mermaid swimlane-beta text, with ids
-//      of its own (n1…, l1…), so that Mermaid never sees the author's ids
-//   3. Mermaid renders it off-screen (src/app/bpmn.js, the one part that needs
-//      a page); only the positions are taken from its SVG, and the layout
-//      reads no more of them than the x of each node's middle
-//   4. layoutGeometry() puts the nodes on a grid: Mermaid's columns, the
+//   2. LMM (src/app/lmm.js) gives every flow node its column, from the
+//      structure of the process, and kanonisch() there the model in LMM's
+//      order, so that no tie of the grid follows the order of the XML
+//   3. src/app/bpmn.js hands layoutGeometry() that sorted model and the
+//      columns as the x of each node's middle (raw), of which only the order
+//      counts, and appendDiagram() the author's model
+//   4. layoutGeometry() puts the nodes on a grid: those columns, the
 //      lanes, and rows within each lane. The rules R1–R17 give each node its
 //      lane, row and column, a router draws every flow on the grid anew, and
 //      the labels get their places, in the size bpmn-js will draw them in
@@ -24,8 +24,10 @@
 //      author's XML, before its closing definitions tag; a node a rule put in
 //      another lane moves there in the lane set too, nothing else changes
 //
-// Mermaid's picture never reaches the document. bpmn-js draws the XML from
-// step 5 exactly as it draws XML that came with coordinates.
+// bpmn-js draws the XML from step 5 exactly as it draws XML that came with
+// coordinates. Until 2026-10-07 the columns were read from the SVG of
+// Mermaid, which drew the process off-screen; LMM replicates its layering
+// (docs/analyse-mermaid-im-bpmn-code.md).
 //
 // What the layout cannot place is left out, and the rest is laid out and
 // drawn (Ben, 2026-10-03): data objects and stores, groups, parent lanes of
@@ -37,22 +39,18 @@
 // them; the page names each on the console, not in the document.
 //
 // Pure logic: no page, no library; the one import is the label measurer, pure
-// logic itself. The XML comes in as a parsed document; the
-// reader walks its elements and compares local names with their prefix taken
-// off, because the DOM library of the tests reports "bpmn:laneSet" where a
-// browser reports "laneSet", and finds nothing by namespace.
+// logic itself. LMM is called by src/app/bpmn.js, not here: the grid takes
+// any columns, the tests' made-up ones too. The XML comes in as a parsed
+// document; the reader walks its elements and compares local names with
+// their prefix taken off, because the DOM library of the tests reports
+// "bpmn:laneSet" where a browser reports "laneSet", and finds nothing by
+// namespace.
 // tests/bpmn-layout.test.mjs runs all of it in Node.
 //
 // The grid, its rules and its router come from spike 2.26 (variant A2, Ben,
 // 2026-10-06); src/README.md, Diagrams, describes them.
 
 import { measureLabel } from './label-size.js';
-
-// The Mermaid version the layout and its checks are made with. src/index.html
-// pins the same one; tests/licences.test.mjs fails when the two differ, so a
-// newer Mermaid is only taken together with the layout's regression check
-// (tests/vergleich.mjs on tests/referenz.md).
-export const MERMAID_LAYOUT_VERSION = '12.0.0';
 
 // The distances the layout keeps besides the grid's (below), 12 px but the
 // last, each by what it is for:
@@ -119,12 +117,11 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //            an id; box true for a participant without a process of its own
 //            (a black box, story 2.29), which has no lanes
 //     plane: the id the diagram part refers to: the collaboration, or the process
-//     lanes: [{ id, name, nodes: [node ids], key, synthetic, hold, pool }],
+//     lanes: [{ id, name, nodes: [node ids], key, synthetic, pool }],
 //            the lanes of all pools, those of one pool next to each other; a
-//            synthetic lane gives Mermaid its row and is left out of the
+//            synthetic lane has its row on the grid and is left out of the
 //            diagram part: the one lane holding every node where the process
-//            has no lanes, and a lane without an id; hold, the Mermaid id of
-//            the stand-in an empty lane holds (h1…); pool, the index of its
+//            has no lanes, and a lane without an id; pool, the index of its
 //            pool in pools
 //     nodes: [{ id, name, type, tag, key, markers }], type one of start, end,
 //            inter, gateway, task; markers, only where there are any, how many
@@ -149,7 +146,9 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //     insert: null, or where processes have no collaboration (Ben,
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
-//     key:   the id Mermaid gets for it (n1…, l1…)
+//     key:   an id of the layout's own for it (n1…, l1…), by which the
+//            columns are given (raw, src/app/lmm.js) and the grid keeps its
+//            lanes
 //   leftOut: [{ id, tag, reason }]; reason says why, in English, for the
 //            console. First what the collaboration holds, in its order (a
 //            message flow, a text annotation and an association keep their
@@ -372,15 +371,12 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
     const stray = nodes.filter(n => !placed.has(n.id));
     if (stray.length) throw new Error(layoutStrayText(stray.map(n => n.id)));
   } else lanes.push(standIn = { id: '', name: participant ? clean(attr(participant, 'name')) : '', nodes: nodes.map(n => n.id), key: key(), synthetic: true });
-  // An empty lane holds a stand-in for Mermaid, or Mermaid draws it as a strip
-  // of its own; the stand-in is not drawn, and the grid gives the lane its row.
-  for (const l of lanes) if (!l.nodes.length) l.hold = 'h' + l.key.slice(1);
 
   const flows = [];
   for (const el of kids(proc)){
     if (local(el) !== 'sequenceFlow') continue;
     const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef');
-    // Mermaid's swimlane layout fails on a flow from a node to itself.
+    // A flow from a node to itself is left out: the router has no way for it yet.
     if (from === to && byId.has(from) && attr(el, 'id')) leave(el, 'a flow from a node to itself');
     // A flow leaves a boundary event and never enters one.
     else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')) });
@@ -392,25 +388,6 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
 // One line per left-out element for the console.
 export function leftOutLine(item){
   return item.tag + ' ' + (item.id || '(no id)') + ': ' + item.reason;
-}
-
-// The model as Mermaid swimlane-beta text, left to right: a subgraph per lane
-// with its nodes, then the flows. Every id is Mermaid's own (n1…, l1…), so
-// ids such as "end", "subgraph" or "1" never reach Mermaid's parser; labels
-// lose what could end a quoted label or start an entity or a Markdown string.
-// The lanes of all pools go to Mermaid as one list, without the message flows:
-// they set no column there (Ben, 2026-10-06), R7 does (ruleCompact()). A
-// boundary event is no Mermaid node: its flows leave its host there (story
-// 2.30), so that what follows it stands right of the host.
-export function mermaidSource(model){
-  const q = text => '"' + (clean(String(text).replace(/["<>&#`\\]/g, ' ')) || ' ') + '"';
-  const byId = new Map(model.nodes.map(n => [n.id, n]));
-  for (const b of model.boundaries || []) byId.set(b.id, byId.get(b.host));
-  const shape = n => n.key + (n.type === 'task' ? '[' + q(n.name) + ']' : n.type === 'gateway' ? '{' + q(n.name || '+') + '}' : '((' + q(n.name) + '))');
-  return 'swimlane-beta LR\n' +
-    model.lanes.map(l => '  subgraph ' + l.key + '[' + q(l.name) + ']\n' + l.nodes.map(id => '    ' + shape(byId.get(id)) + '\n').join('') +
-      (l.hold ? '    ' + l.hold + '[" "]\n' : '') + '  end\n').join('') +
-    model.flows.filter(f => byId.get(f.from) !== byId.get(f.to)).map(f => '  ' + byId.get(f.from).key + ' -->' + (f.name ? '|' + q(f.name) + '|' : '') + ' ' + byId.get(f.to).key + '\n').join('');
 }
 
 // ---------- the geometry ----------
@@ -772,16 +749,18 @@ export function wayHits(way, boxes){
 
 // The diagram part's coordinates: the nodes on the grid, the flows routed on
 // it, the labels placed.
-// raw: what Mermaid's SVG says, in its own units; read is only
-//   nodes: { key: { cx, … } }   the x of each node's centre: nodes less than
-//                               a unit apart share a column, and the columns
-//                               keep Mermaid's order; an empty lane's stand-in
-//                               is not read, its row is EMPTY_ROW
+// raw: the columns, as the x of each node's middle in units of their own;
+// read is only
+//   nodes: { key: { cx, … } }   nodes less than a unit apart share a column,
+//                               and the columns keep the order of the x: in
+//                               the page LMM's ranks (lmmPositions() of
+//                               src/app/lmm.js), in a test any made up
 // Returns { pool, lanes, nodes, labels, flows, flowLabels, laneOf }: the
 // pool's box or null, and per element id its box [x, y, w, h], its label box,
 // or the waypoints of a flow [[x, y], …]; laneOf: per node the id of the lane
 // it stands in on the grid, which a rule may have changed (R1, R12), for
-// nodes in a lane with an id. Throws where raw lacks a node of the model.
+// nodes in a lane with an id. Throws where raw lacks a node of the model,
+// which LMM never does.
 // measure: the size { w, h } a label's text takes as bpmn-js draws it, and
 // with a width a text annotation's: measureLabel() (src/app/label-size.js),
 // in the page as in Node; a test may give another.
@@ -801,8 +780,8 @@ export function layoutGeometry(model, raw, measure = measureLabel, options = DEF
   return layoutGrid(model, raw, once, rules);
 }
 
-// ---------- the grid: Mermaid's columns, rows in each lane, routes in channels ----------
-// Mermaid gives the order of the columns and each node's lane; the rules give
+// ---------- the grid: the columns, rows in each lane, routes in channels ----------
+// raw gives the order of the columns, the model each node's lane; the rules give
 // nodes rows above and below the backbone of their lane and gateways the lane
 // of their predecessor; a router draws every flow on the grid (cells, the
 // channels between rows, the gaps between columns). The rules that can be left
@@ -847,8 +826,8 @@ const BEND = 0.005;         // the cost of a bend in the router: half a grid ste
 const MSG_BEND = 0.5;       // the cost of a bend of a message flow: two cost as much as a crossing (Ben, 2026-10-06, p-rs1: needless bends)
 const EVENT_BEND = 1;       // the cost of a bend of a flow from a boundary event: as much as a crossing (Ben, 2026-10-06, on r12, llm-antrag, sonder-bahnen: the exception path straighter)
 
-// The grid from the model and Mermaid's raw positions:
-//   cells: id → { n, lane, row, col, pin }   lane index, row (a number, 0 the backbone, negative above it), column (Mermaid's rank)
+// The grid from the model and the raw positions of its columns:
+//   cells: id → { n, lane, row, col, pin }   lane index, row (a number, 0 the backbone, negative above it), column (the rank raw gives)
 //   fwdOut, fwdIn: id → [flow]  forward flows (back edges by depth-first search left out); back: the set of back edge ids
 function buildGrid(model, raw){
   const laneOf = new Map();
@@ -856,7 +835,8 @@ function buildGrid(model, raw){
   const xs = [];
   for (const n of model.nodes){
     const r = raw.nodes[n.key];
-    if (!r) throw new Error('Mermaid hat das Element „' + n.id + '“ nicht angeordnet.');
+    // An assertion: LMM gives every node a column; only a caller's own raw can lack one.
+    if (!r) throw new Error('layoutGeometry(): raw has no column for the node ' + n.id + ' (' + n.key + ')');
     if (!xs.some(x => Math.abs(x - r.cx) < 1)) xs.push(r.cx);
   }
   xs.sort((a, b) => a - b);
@@ -1316,15 +1296,16 @@ function redockStarts(g, model){
   return moved;
 }
 
-// R7. Close the columns: each column is the longest way in Mermaid's order; a
-// successor in another row may share its predecessor's column, one in the same
-// row stands one further right, and the order of each row stays Mermaid's.
-// Pinned nodes (R3, R4, R6) keep their distance to their anchor. Guarantee: no
-// column without a node; the order from left to right is Mermaid's.
+// R7. Close the columns: each column is the longest way in the columns'
+// order; a successor in another row may share its predecessor's column, one
+// in the same row stands one further right, and the order of each row stays
+// the columns'. Pinned nodes (R3, R4, R6) keep their distance to their anchor.
+// Guarantee: no column without a node; the order from left to right is the
+// columns'.
 function ruleCompact(g, model, rules){
-  // Mermaid's order, but no node before one of its forward predecessors.
-  const byMermaid = (a, b) => a.col - b.col || a.lane - b.lane || a.row - b.row;
-  const waiting = [...g.cells.values()].sort(byMermaid), order = [];
+  // The columns' order, but no node before one of its forward predecessors.
+  const byColumns = (a, b) => a.col - b.col || a.lane - b.lane || a.row - b.row;
+  const waiting = [...g.cells.values()].sort(byColumns), order = [];
   const done = new Set();
   while (waiting.length){
     let i = waiting.findIndex(c => g.fwdIn.get(c.n.id).every(f => done.has(f.from)) && g.msgIn.get(c.n.id).every(m => done.has(m.from)));
@@ -1881,7 +1862,7 @@ function gridQuality(di, model){
 function finishGrid(g, model, measure, rules, reroute = true){
   centreLaneSplits(g, model);
   // R9: R7 until each group of first nodes of ways stands in one column; each
-  // round from Mermaid's columns, the minimum columns only grow.
+  // round from the columns raw gave, the minimum columns only grow.
   const orig = new Map([...g.cells.values()].map(c => [c, c.col]));
   const compactAll = () => {
     g.minCol = new Map();

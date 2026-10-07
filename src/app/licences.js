@@ -13,8 +13,9 @@ import { escapeHtml } from './html.js';
 // A story that adds a library adds one entry here, and its licence text below
 // if it is not there yet. tests/licences.test.mjs compares every version with
 // the place it is pinned at, src/index.html for what comes from the CDN,
-// src/doc.css for the Octicons and src/app/label-size.js for diagram-js, and
-// fails on an entry that fell behind. The path of the magnifier in
+// src/doc.css for the Octicons, src/app/label-size.js for diagram-js and
+// src/app/lmm.js for the part of Mermaid it replicates, and fails on an
+// entry that fell behind. The path of the magnifier in
 // src/app/search.js names the Octicons version too; the test does not read
 // it, so it is kept alike with this entry by hand.
 //
@@ -63,6 +64,16 @@ export const NOTICES = [
     // same copyright holder.
     name: 'diagram-js', package: 'diagram-js', version: '15.28.0', licence: 'MIT', use: 'embedded',
     copyright: ['Copyright (c) 2014-present Camunda Services GmbH'],
+  },
+  {
+    // The layering of Mermaid's swimlane layout (phase1.cycles.ts and
+    // phase2.laneAwareCompact.ts), replicated in src/app/lmm.js, LMM: it gives
+    // the columns of BPMN without coordinates. The entry of Mermaid above is
+    // the library the editor loads for the Mermaid diagrams; this one is the
+    // part the file carries, from the version it was replicated from, which
+    // stays when the page loads another.
+    name: "Mermaid's swimlane layout", package: 'mermaid', version: '12.0.0', licence: 'MIT', use: 'embedded',
+    copyright: ['Copyright (c) 2014 - 2022 Knut Sveidqvist'],
   },
   {
     // The path data of seven icons: six in the document styles (src/doc.css),

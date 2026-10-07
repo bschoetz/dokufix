@@ -1,12 +1,13 @@
 import { TRANSIENT_ATTR } from './transient.js';
-import { readProcess, mermaidSource, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
+import { readProcess, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
+import { kanonisch, lmmPositions } from './lmm.js';
 import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 
 // --- BPMN diagrams ---------------------------------------------------------
 // A fenced block of the language `bpmn` holds BPMN 2.0 XML, with its diagram
 // part (BPMN-DI), the coordinates a modeler wrote, or without it; XML without
-// one is laid out first (src/app/bpmn-layout.js, Mermaid as the layout
-// engine) and then drawn as if it had come with it. bpmn-js, the navigated
+// one is laid out first (src/app/bpmn-layout.js, the columns from LMM,
+// src/app/lmm.js) and then drawn as if it had come with it. bpmn-js, the navigated
 // viewer the page loads from the CDN (global BpmnJS), draws it off-screen;
 // the document gets only the SVG of its export function saveSVG(). The
 // library is used as it is; it never runs in a read-only export.
@@ -24,18 +25,18 @@ import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 //      custom properties (var(--dokufix-bpmn-…)) instead of colours, so no
 //      colour is fixed in the SVG
 //   4. the SVG is finished (finishBpmnSvg()): the viewer's hit areas out, the
-//      title as its accessible name, the width of a Mermaid diagram, ids made
-//      unique in the document
+//      title as its accessible name, the width as every diagram of the
+//      document has it (drawnWidth() in src/app/diagrams.js), ids made unique
+//      in the document
 //
-// Pure logic, apart from renderBpmn(), which needs a page: the libraries
-// (BpmnJS, and mermaid for the layout) and the page's DOMParser, the exception
+// Pure logic, apart from renderBpmn(), which needs a page: the library
+// (BpmnJS) and the page's DOMParser, the exception
 // to the rule for such modules (src/README.md). It draws in the holder's
 // document. The rest works on the strings and elements it is handed.
-// tests/bpmn.test.mjs runs all of it in Node, renderBpmn() with stand-ins
-// for the libraries.
+// tests/bpmn.test.mjs runs all of it in Node, renderBpmn() with a stand-in
+// for the library.
 
 export const BPMN_NO_LIBRARY = 'Die Bibliothek bpmn-js wurde nicht geladen.';
-export const BPMN_NO_MERMAID = 'Die Bibliothek Mermaid wurde nicht geladen; sie ordnet BPMN ohne Koordinaten an.';
 // The attribution below every BPMN diagram: "Gezeichnet mit bpmn-js", the
 // name of the library a link to bpmn.io (Ben, 2026-10-03; it read "gerendert
 // mit bpmn.io" before, which sounded as if data went to an outside service).
@@ -114,8 +115,10 @@ export function addBpmnTypeClasses(viewer){
 // The SVG as saveSVG() made it, parsed, made ready for the document:
 //   - the hit areas go, which only the running viewer uses
 //   - role img and the title as its accessible name
-//   - width 100 % and no height, its own width as the largest, as Mermaid
-//     writes its SVG: never wider than the column, never larger than drawn
+//   - width 100 % and no height, its own width as the largest, as the other
+//     diagrams of the document write their SVG (drawnWidth() in
+//     src/app/diagrams.js reads them alike): never wider than the column,
+//     never larger than drawn
 //   - every id gets the prefix, and every reference to it with it, so two
 //     diagrams in one document never share one
 // Refused: an SVG with a foreignObject, which no picture outside a browser
@@ -154,7 +157,7 @@ export function finishBpmnSvg(svg, title, prefix){
   return svg;
 }
 
-// The host the viewer draws into, and Mermaid lays out in: in <body>, outside
+// The host the viewer draws into: in <body>, outside
 // the document, fixed and off-screen, so that it neither shows nor makes the
 // page larger, and transient, so that no save takes it along if a save meets
 // a render.
@@ -189,7 +192,7 @@ async function drawBpmn(diagram){
   try {
     // The XML that is drawn, with coordinates where they could be made, and the
     // diagram in it bpmn-js opens: the laid-out one, else its first.
-    const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : await layoutBpmn(diagram.source, doc, diagram.index);
+    const { xml, open } = hasCoordinates(diagram.source) ? { xml: diagram.source } : layoutBpmn(diagram.source);
     diagram.xml = xml;
     host = offscreenHost(doc);
     viewer = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
@@ -211,75 +214,21 @@ async function drawBpmn(diagram){
 // XML without coordinates, laid out: { xml, open }, the author's XML with a
 // diagram part added (src/app/bpmn-layout.js) and that diagram's id. Refused
 // with the reason where it cannot be laid out. XML the browser's parser
-// cannot read, or that is no BPMN definitions, comes back as it is, without
-// open: bpmn-js then says what is wrong with it. What the layout leaves out
-// is a line on the console each. The labels are measured as bpmn-js will draw
-// them, by the layout itself (src/app/label-size.js): no viewer is needed
-// before the drawing.
-async function layoutBpmn(xml, doc, index){
+// cannot read, or that is no BPMN definitions (readProcess() gives null),
+// comes back as it is, without open: bpmn-js then says what is wrong with it.
+// What the layout leaves out is a line on the console each. No library and
+// no page is asked: LMM gives the columns (src/app/lmm.js) and the layout
+// measures the labels as bpmn-js will draw them (src/app/label-size.js).
+// kanonisch() hands the grid the model in LMM's order, so that the picture
+// does not depend on the order of the XML; the author's model writes the
+// diagram part, so that it keeps the order of the XML.
+function layoutBpmn(xml){
   const parsed = new globalThis.DOMParser().parseFromString(xml, 'application/xml');
   if (parsed.getElementsByTagName('parsererror').length) return { xml };
-  // readProcess() checks this too; here it puts "no definitions: bpmn-js words it" before "Mermaid missing".
-  if (!parsed.documentElement || String(parsed.documentElement.localName).replace(/^.*:/, '') !== 'definitions') return { xml };
-  if (typeof mermaid === 'undefined' || !mermaid || typeof mermaid.render !== 'function') throw new Error(BPMN_NO_MERMAID);
   const read = readProcess(parsed);
   if (!read) return { xml };
-  const raw = await mermaidPositions(read.model, doc, index);
-  const laidOut = appendDiagram(xml, read.model, layoutGeometry(read.model, raw));
+  const sorted = kanonisch(read.model);
+  const laidOut = appendDiagram(xml, read.model, layoutGeometry(sorted.model, lmmPositions(sorted.model, sorted.rank)));
   for (const item of read.leftOut) console.warn('BPMN layout, left out:', leftOutLine(item));
   return { xml: laidOut.xml, open: laidOut.diagram };
-}
-
-// Mermaid lays the model out in the transient host; what its SVG says comes
-// back as the raw positions layoutGeometry() takes. The render id is new for
-// every layout, so that nothing of an earlier one can be taken for it, and
-// must not contain "-flowchart-", by which a node is found (Mermaid 12.0.0
-// gives a node no data-id, only id="<render id>-flowchart-<node id>-<n>").
-// Mermaid puts its temporary element into the host; the host goes in any case.
-// Exported for tests/capture-bpmn.mjs, which bundles it into the built page to
-// take the raw positions of the fixtures as the page takes them.
-let layoutRuns = 0;
-export async function mermaidPositions(model, doc, index){
-  const host = offscreenHost(doc);
-  try {
-    const id = 'dokufix-bpmn-layout-' + index + '-' + (++layoutRuns);
-    const { svg } = await mermaid.render(id, mermaidSource(model), host);
-    host.innerHTML = svg;
-    const root = host.querySelector('svg');
-    if (!root) throw new Error('Mermaid hat kein SVG geliefert.');
-    const raw = { nodes: {}, lanes: {}, edges: [] };
-    const nodes = Array.from(root.querySelectorAll('g.node'));
-    for (const key of model.nodes.map(n => n.key).concat(model.lanes.filter(l => l.hold).map(l => l.hold))){
-      const g = nodes.find(e => e.id.includes('-flowchart-' + key + '-'));
-      const m = g && /translate\(\s*([-\d.eE]+)[ ,]+([-\d.eE]+)\s*\)/.exec(g.getAttribute('transform') || '');
-      if (!m) continue;
-      const bb = g.getBBox();
-      raw.nodes[key] = { cx: Number(m[1]), cy: Number(m[2]), w: bb.width, h: bb.height };
-    }
-    const lanes = Array.from(root.querySelectorAll('g.cluster.swimlane[data-id]'));
-    for (const l of model.lanes){
-      const g = lanes.find(e => e.getAttribute('data-id') === l.key);
-      const rects = g ? Array.from(g.querySelectorAll('rect.swimlane-body, rect.swimlane-title')).map(r => r.getBBox()) : [];
-      if (!rects.length) continue;
-      raw.lanes[l.key] = { x1: Math.min(...rects.map(r => r.x)), y1: Math.min(...rects.map(r => r.y)),
-                           x2: Math.max(...rects.map(r => r.x + r.width)), y2: Math.max(...rects.map(r => r.y + r.height)) };
-    }
-    // Two flows between one pair are L_n2_n4_0 and L_n2_n4_2: each takes the
-    // first that is not taken.
-    const paths = Array.from(root.querySelectorAll('path[data-edge="true"][data-id]'));
-    const taken = new Set();
-    const keyOf = new Map(model.nodes.map(n => [n.id, n.key]));
-    for (const b of model.boundaries || []) keyOf.set(b.id, keyOf.get(b.host));
-    for (const f of model.flows){
-      const prefix = 'L_' + keyOf.get(f.from) + '_' + keyOf.get(f.to) + '_';
-      const path = paths.find(e => !taken.has(e) && e.getAttribute('data-id').startsWith(prefix));
-      if (path) taken.add(path);
-      let points = null;
-      try { points = path ? JSON.parse(atob(path.getAttribute('data-points'))) : null; } catch { points = null; }
-      raw.edges.push(Array.isArray(points) ? points.map(p => ({ x: Number(p.x), y: Number(p.y) })) : null);
-    }
-    return raw;
-  } finally {
-    host.remove();
-  }
 }
