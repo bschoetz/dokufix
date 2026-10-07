@@ -24,7 +24,7 @@ export function parse(xml){
       for (const [k, v] of Object.entries(obj.attrs || {})) attrs[k] = decode(v);
       const el = new Element(obj.name, attrs, cur);
       if (!cur) doc.documentElement = el;
-      if (!selfClosing) cur = el;
+      cur = el; // saxen meldet closeTag auch für ein selbstschließendes Element
     })
     .on('closeTag', () => { cur = cur ? cur.parentElement : null; })
     .on('text', (t, decode) => { if (cur) cur.addText(decode(t)); })

@@ -48,6 +48,13 @@ Die Browser-Skripte brauchen außerdem `dist/dokufix.html`, den CDN-Spiegel aus 
 | `kanonisch-check.mjs` | unabhängige Nachprüfung von `kanonisch()`: Layout bei Umordnung, Verstöße, Kreuzungen, Knicke |
 | `debug.mjs` | Hilfsskript zum Lesen des XML mit linkedom |
 
+**Ordner `messen/` (Größe der Beschriftungen):**
+
+| Skript | Browser | Was |
+|---|---|---|
+| `probe.mjs` | ja | Was bpmn-js beim Messen nutzt: nur den Textrenderer, der auch nach dem Zerstören des Viewers weiter misst |
+| `schaetzung.mjs` | nein | Wie weit die Schätzung `labelSize()` von den gemessenen Größen der Fixtures abweicht |
+
 **Ordner `kanonisch/`:** das zweite Review, das der kanonischen Sortierung. Bericht, Varianten, Messdaten und die Kopie `bpmn-layout-intern.js` für die Alternative „Ordnung als Schlüssel in den Regeln“ stehen in `kanonisch/BERICHT.md`.
 
 **Ordner `review/`:** die Skripte, Protokolle und Messdaten des Reviews. Die Liste mit Erklärungen steht am Ende von `review/BERICHT.md`. `browser-raws.json` hält die Rohpositionen aus dem Browserlauf fest, damit `browser-eval.mjs` ohne Browser auswerten kann.

@@ -33,6 +33,8 @@ function bpmn({ p = 'bpmn:', xmlns = ' xmlns:bpmn="' + NS + '"', decl = '<?xml v
     '      </' + p + 'lane>',
     '      <' + p + 'lane id="Lane_2" name="' + lane2 + '">',
     '        <' + p + 'flowNodeRef>' + ref2 + '</' + p + 'flowNodeRef>',
+    // Ein Fall, der eine Task_3 einfügt, bekommt ihren flowNodeRef, sonst wirft readProcess() "in keiner Bahn".
+    /id\s*=\s*["']Task_3["']/.test(inside) ? '        <' + p + 'flowNodeRef>Task_3</' + p + 'flowNodeRef>' : '',
     '        <' + p + 'flowNodeRef>EndEvent_1</' + p + 'flowNodeRef>',
     '      </' + p + 'lane>',
     '    </' + p + 'laneSet>',

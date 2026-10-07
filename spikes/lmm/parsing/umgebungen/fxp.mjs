@@ -5,7 +5,7 @@ import { createRequire } from 'node:module';
 import { Element, Document } from './minidom.mjs';
 
 const V = '/tmp/claude-0/-home-user-dokufix/c7ad9c8e-4112-59bc-bff9-b496db1abe70/scratchpad/parsing-vendor/fast-xml-parser-5.11.2/package/';
-const { XMLParser, XMLValidator } = await import(V + 'src/fxp.js');
+const { XMLParser, XMLValidator } = createRequire(import.meta.url)(V + 'lib/fxp.cjs');
 const pkg = createRequire(import.meta.url)(V + 'package.json');
 
 export const name = 'fxp';

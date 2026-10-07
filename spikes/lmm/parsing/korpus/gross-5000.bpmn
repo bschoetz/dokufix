@@ -5006,6 +5006,7 @@
         <bpmn:flowNodeRef>Task_4998</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_4999</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>Task_5000</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_3</bpmn:flowNodeRef>
         <bpmn:flowNodeRef>EndEvent_1</bpmn:flowNodeRef>
       </bpmn:lane>
     </bpmn:laneSet>
