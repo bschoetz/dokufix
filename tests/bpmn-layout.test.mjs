@@ -355,8 +355,9 @@ test('without lanes no lane is written; without a participant no pool', () => {
   const raw = { nodes: { n1: { cx: 50, cy: 50, w: 60, h: 60 }, n2: { cx: 200, cy: 50, w: 120, h: 50 }, n3: { cx: 350, cy: 50, w: 60, h: 60 } },
                 lanes: { l1: { x1: 0, y1: 0, x2: 400, y2: 100 } }, edges: [[P(80, 50), P(140, 50)], [P(260, 50), P(320, 50)]] };
   const di = layoutGeometry(model, raw);
-  assert.deepEqual(di.pools, {});
-  assert.deepEqual(di.lanes, {});
+  // The parts of the diagram have no prototype (an id may be "constructor"): compared as plain objects.
+  assert.deepEqual({ ...di.pools }, {});
+  assert.deepEqual({ ...di.lanes }, {});
   const { xml } = appendDiagram(xmlOf('<bpmn:process id="P">' + LINE + '</bpmn:process>'), model, di);
   assert.equal((xml.match(/<bpmndi:BPMNShape /g) || []).length, 3);
   assert.match(xml, /<bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">/);
@@ -392,7 +393,7 @@ test('the lane set follows the grid: the layout names each node\'s lane in laneO
   assert.deepEqual(Object.keys(di.laneOf).sort(), ['A', 'B', 'E', 'G', 'S']);
   assert.ok(Object.values(di.laneOf).every(id => id === 'L1' || id === 'L2'));
   const lanesOf = out => Object.fromEntries(read(out).model.lanes.flatMap(l => l.nodes.map(id => [id, l.id])));
-  assert.deepEqual(lanesOf(appendDiagram(xml, model, di).xml), di.laneOf, 'as laid out');
+  assert.deepEqual(lanesOf(appendDiagram(xml, model, di).xml), { ...di.laneOf }, 'as laid out');
   // The grid moved G to L2, its box still in L1: G goes to L2.
   const moved = { ...di, laneOf: { ...di.laneOf, G: 'L2' } };
   assert.equal(lanesOf(appendDiagram(xml, model, moved).xml).G, 'L2');
@@ -1276,6 +1277,30 @@ test('a text annotation\'s text as bpmn-moddle reads it: text nodes of blanks on
   assert.deepEqual(textOf('\n  <!-- c -->\n  Hallo\n'), ['\n  Hallo\n']);
   assert.deepEqual(textOf('Zeile 1<![CDATA[\n]]>Zeile 2'), ['Zeile 1\nZeile 2']);
   assert.deepEqual(textOf('A &amp; &amp; B'), ['A & & B']);
+});
+
+// What a hostile document of a few KB made slow, each bounded far below what it took (security review of
+// 2026-10-07): the bound is a tenth of the old time or less, so a slow machine passes and a return of the old
+// algorithm fails.
+const msOf = fn => { const t = performance.now(); fn(); return performance.now() - t; };
+
+test('1000 pools and processes are read in linear time: each process looked up by its id, not searched', () => {
+  const n = 1000;
+  let parts = '', procs = '';
+  for (let i = 0; i < n; i++){ parts += '<bpmn:participant id="pa' + i + '" processRef="p' + i + '"/>'; procs += '<bpmn:process id="p' + i + '"/>'; }
+  const xml = xmlOf('<bpmn:collaboration id="C">' + parts + '</bpmn:collaboration>' + procs);
+  // Old: 6.6 s.
+  assert.ok(msOf(() => assert.throws(() => read(xml), { message: LAYOUT_NOTHING })) < 600);
+});
+
+test('a flowNodeRef with a long run of blanks around an element: the lane set is read in linear time', () => {
+  const blanks = ' '.repeat(4000);
+  const xml = xmlOf('<bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef>' +
+    '<bpmn:flowNodeRef>E</bpmn:flowNodeRef><bpmn:flowNodeRef>' + blanks + '<bpmn:x/>' + blanks + '</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' + LINE + '</bpmn:process>');
+  const { model, raw, author } = gridInput(xml);
+  const di = layoutGeometry(model, raw);
+  // Old: 10 s.
+  assert.ok(msOf(() => appendDiagram(xml, author, di)) < 1000);
 });
 
 test('a document deeper than the call stack is read as the parser reads it: every element found without recursion', () => {

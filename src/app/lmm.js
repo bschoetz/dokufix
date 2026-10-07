@@ -118,14 +118,19 @@ function walk(model){
   // flows into, then from the rest; an edge back into the path counts the
   // other way round.
   const seeds = [...nodes].sort(first), state = new Map(), seq = new Map();
-  const visit = v => {
-    state.set(v, 1);
-    for (const e of v.out){
+  // With a stack of its own, not by recursion, in the same order: a long chain
+  // would overflow the call stack (security review of 2026-10-07).
+  const visit = root => {
+    const path = [{ v: root, k: 0 }];
+    state.set(root, 1);
+    while (path.length){
+      const top = path[path.length - 1];
+      if (top.k === top.v.out.length){ state.set(top.v, 2); path.pop(); continue; }
+      const e = top.v.out[top.k++];
       seq.set(e.f, seq.size);
       const s = state.get(e.dst);
-      if (s === undefined) visit(e.dst); else if (s === 1) e.back = true;
+      if (s === undefined){ state.set(e.dst, 1); path.push({ v: e.dst, k: 0 }); } else if (s === 1) e.back = true;
     }
-    state.set(v, 2);
   };
   for (const v of [...seeds.filter(v => !v.in), ...seeds.filter(v => v.in)]) if (!state.has(v)) visit(v);
   for (const f of loops) seq.set(f, seq.size);

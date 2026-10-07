@@ -1,5 +1,5 @@
 import { TRANSIENT_ATTR } from './transient.js';
-import { readProcess, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
+import { readProcess, layoutGeometry, appendDiagram, leftOutLine, maskNotMarkup } from './bpmn-layout.js';
 import { kanonisch, lmmPositions } from './lmm.js';
 import { parseXml, XmlError } from './xml-parser.js';
 import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
@@ -50,9 +50,10 @@ export function bpmnWarningText(title){
 }
 
 // Whether the XML places anything: a BPMNShape, whatever its prefix, outside
-// comments and CDATA sections.
+// comments, CDATA sections and PIs (maskNotMarkup(), linear in the text: this
+// runs before any parser, on whatever the block holds).
 export function hasCoordinates(xml){
-  return /<(?:[\w.-]+:)?BPMNShape\b/.test(String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, ''));
+  return /<(?:[\w.-]+:)?BPMNShape\b/.test(maskNotMarkup(String(xml)));
 }
 
 // The font bpmn-js draws in: its own default, "Arial, sans-serif",

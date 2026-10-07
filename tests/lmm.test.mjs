@@ -26,6 +26,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import { spawnSync } from 'node:child_process';
 import { DOMParser } from 'linkedom';
 import { readProcess, layoutGeometry, appendDiagram } from '../src/app/bpmn-layout.js';
 import { parseXml } from '../src/app/xml-parser.js';
@@ -282,3 +283,22 @@ for (const [i, name] of fixtureNames().entries()){
     }
   });
 }
+
+// The depth-first search walks with a stack of its own (security review of
+// 2026-10-07): a chain longer than the call stack is deep is ranked, not a
+// RangeError. A long enough chain for the default stack takes seconds to rank,
+// so the case runs in a child with a small stack, where 3000 nodes are deeper
+// than the stack and the recursive search gave the RangeError.
+test('a chain deeper than the call stack is ranked: the search keeps a stack of its own', () => {
+  const script = `
+    const { kanonisch } = await import(${JSON.stringify(new URL('../src/app/lmm.js', import.meta.url).href)});
+    const n = 3000, nodes = [], flows = [];
+    for (let i = 0; i < n; i++) nodes.push({ id: 'T' + i, name: '', type: 'task', key: 'n' + (i + 1) });
+    for (let i = 1; i < n; i++) flows.push({ id: 'F' + i, from: 'T' + (i - 1), to: 'T' + i, name: '' });
+    const lanes = [{ id: 'L', name: '', nodes: nodes.map(x => x.id), key: 'l1', pool: 0 }];
+    const { rank } = kanonisch({ pools: [{ id: null, name: '' }], lanes, nodes, flows, boundaries: [], messages: [], notes: [], associations: [] });
+    console.log(rank.n1 + ' ' + rank.n3000);`;
+  const r = spawnSync(process.execPath, ['--stack-size=200', '--input-type=module', '-e', script], { encoding: 'utf8' });
+  assert.equal(r.stderr, '');
+  assert.equal(r.stdout.trim(), '0 2999');
+});

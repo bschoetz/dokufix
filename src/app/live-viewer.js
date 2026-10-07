@@ -1,5 +1,6 @@
 import { TRANSIENT_ATTR } from './transient.js';
 import { BPMN_VIEWER_CONFIG, BPMN_NO_LIBRARY, addBpmnTypeClasses } from './bpmn.js';
+import { maskNotMarkup } from './bpmn-layout.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS, DIAGRAM_TOGGLE_CLASS, DIAGRAM_ZOOM_CLASS, DIAGRAM_VIEW_CLASS, removeViewerLeftovers } from './diagrams.js';
 
 // --- The live viewer in the large view of a BPMN diagram (story 2.11) -------
@@ -69,10 +70,11 @@ export function sourceXml(href){
 }
 
 // The id of the first BPMNDiagram of the XML that holds a BPMNShape, whatever
-// their prefix, outside comments and CDATA sections; null where none does, or
-// where that diagram has no id: bpmn-js then opens the first.
+// their prefix, outside comments, CDATA sections and PIs (maskNotMarkup(),
+// linear in the text); null where none does, or where that diagram has no id:
+// bpmn-js then opens the first.
 export function diagramToOpen(xml){
-  const text = String(xml).replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>/g, '');
+  const text = maskNotMarkup(String(xml));
   // Each start tag; a self-closing one (<bpmndi:BPMNDiagram id="x"/>) holds nothing.
   const START = /<((?:[\w.-]+:)?BPMNDiagram)\b((?:[^>"'/]|"[^"]*"|'[^']*'|\/(?!>))*)(\/?)>/g;
   for (let m; (m = START.exec(text));){

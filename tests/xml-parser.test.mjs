@@ -140,6 +140,21 @@ if (process.argv.includes('--write')){
     assert.equal(parseXml('﻿<a/>').documentElement.nodeName, 'a');
   });
 
+  test('a namespace declared on each of 8000 levels: read in linear time, nothing copied per element', () => {
+    const depth = 8000;
+    let xml = '';
+    for (let k = 0; k < depth; k++) xml += '<a xmlns:p' + k + '="u' + k + '">';
+    xml += '<p0:b/>' + '</a>'.repeat(depth);
+    const t = performance.now();
+    const doc = parseXml(xml);
+    // Old (a map copied per element): 6.7 s and 1.2 GB.
+    assert.ok(performance.now() - t < 700);
+    let el = doc.documentElement;
+    while (el.children.length) el = el.children[0];
+    assert.deepEqual([el.localName, el.namespaceURI], ['b', 'u0']);
+    assert.throws(() => parseXml('<a><b xmlns:p="u"/><p:c/></a>'), e => e.code === 'namespace');
+  });
+
   test('a document 100 000 elements deep: read without overflowing the stack', () => {
     const depth = 100000;
     const doc = parseXml('<a>'.repeat(depth) + 'x' + '</a>'.repeat(depth));

@@ -216,6 +216,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     layoutGeometry: () => layoutGeometry,
     layoutStrayText: () => layoutStrayText,
     leftOutLine: () => leftOutLine,
+    maskNotMarkup: () => maskNotMarkup,
     nearestOnFlow: () => nearestOnFlow,
     notePlaces: () => notePlaces,
     noteSize: () => noteSize,
@@ -481,13 +482,16 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       } else if (NOTED.has(local(el))) noteSlot(el);
       else if (LEFT_OUT.has(local(el))) leave(el, "not laid out");
     }
-    const procOf = (pa) => processes.find((p) => attr(p, "id") && attr(p, "id") === attr(pa, "processRef")) || null;
+    const processById = /* @__PURE__ */ new Map();
+    for (const p of processes) if (attr(p, "id") && !processById.has(attr(p, "id"))) processById.set(attr(p, "id"), p);
+    const procOf = (pa) => processById.get(attr(pa, "processRef")) || null;
     const candidates = participants.length ? participants.map((pa) => ({ participant: pa, proc: procOf(pa) })) : processes.filter((proc) => attr(proc, "id") || (leave(proc, "has no id"), false)).map((proc) => ({ participant: null, proc }));
+    const referred = new Set(candidates.map((c) => c.proc));
     if (participants.length) {
-      for (const p of processes) if (!participants.some((pa) => procOf(pa) === p)) leave(p, "no participant refers to it");
+      for (const p of processes) if (!referred.has(p)) leave(p, "no participant refers to it");
     }
     const nodes = [], lanes = [], flows = [], pools = [], boundaries = [];
-    const byId = /* @__PURE__ */ new Map(), poolOfNode = /* @__PURE__ */ new Map();
+    const byId2 = /* @__PURE__ */ new Map(), poolOfNode = /* @__PURE__ */ new Map();
     const blackBoxes = [];
     for (const { participant, proc } of candidates) {
       const own = readPool(proc, participant, nodes, lanes, leave, noteSlot);
@@ -505,7 +509,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         lanes.push(l);
       }
       for (const n of own.nodes) {
-        byId.set(n.id, n);
+        byId2.set(n.id, n);
         poolOfNode.set(n.id, index);
       }
       flows.push(...own.flows);
@@ -539,7 +543,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     if (!plane) throw new Error(LAYOUT_NOTHING);
     const messages = [];
     const poolIndex = new Map(pools.map((p, i) => [p.id, i]).filter(([id]) => id));
-    const end = (id) => byId.has(id) ? { pool: poolOfNode.get(id) } : poolIndex.has(id) ? { pool: poolIndex.get(id), frame: true } : null;
+    const end = (id) => byId2.has(id) ? { pool: poolOfNode.get(id) } : poolIndex.has(id) ? { pool: poolIndex.get(id), frame: true } : null;
     for (const [el, slot] of slots) {
       const from = attr(el, "sourceRef"), to = attr(el, "targetRef"), a = end(from), b = end(to);
       if (!attr(el, "id")) slot.reason = "has no id";
@@ -548,12 +552,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       else if (a.pool === b.pool) slot.reason = "a message flow within one pool";
       else messages.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")), ...a.frame ? { fromPool: a.pool } : {}, ...b.frame ? { toPool: b.pool } : {} });
     }
-    const { notes, associations } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages });
+    const { notes, associations } = readNotes(noted, { pools, byId: byId2, poolOfNode, boundaries, flows, messages });
     for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
     for (const p of pools) if (p.el && !attr(p.el, "id")) leave(p.el, "has no id; it is not drawn as a pool");
     return { model: { pools: pools.map((p) => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, insert }, leftOut };
   }
-  function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages }) {
+  function readNotes(noted, { pools, byId: byId2, poolOfNode, boundaries, flows, messages }) {
     const notes = [], associations = [];
     const poolIndex = new Map(pools.map((p, i) => [p.id, i]).filter(([id]) => id));
     const boundaryOf = new Map(boundaries.map((b) => [b.id, b]));
@@ -566,7 +570,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         empty.add(attr(el, "id"));
       } else texts.set(attr(el, "id"), { el, slot });
     }
-    const partnerOf = (id) => byId.has(id) ? { kind: "node", pool: poolOfNode.get(id) } : boundaryOf.has(id) ? { kind: "boundary", pool: poolOfNode.get(boundaryOf.get(id).host) } : flowOf.has(id) ? { kind: "flow", pool: poolOfNode.get(flowOf.get(id).to) } : messageOf.has(id) ? { kind: "message", pool: null } : poolIndex.has(id) ? { kind: "pool", pool: poolIndex.get(id) } : null;
+    const partnerOf = (id) => byId2.has(id) ? { kind: "node", pool: poolOfNode.get(id) } : boundaryOf.has(id) ? { kind: "boundary", pool: poolOfNode.get(boundaryOf.get(id).host) } : flowOf.has(id) ? { kind: "flow", pool: poolOfNode.get(flowOf.get(id).to) } : messageOf.has(id) ? { kind: "message", pool: null } : poolIndex.has(id) ? { kind: "pool", pool: poolIndex.get(id) } : null;
     const linked = /* @__PURE__ */ new Map();
     for (const { el, slot } of noted) {
       if (local(el) !== "association") continue;
@@ -609,13 +613,13 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       return null;
     }
     before.push(...nodes);
-    const byId = new Map(nodes.map((n) => [n.id, n]));
+    const byId2 = new Map(nodes.map((n) => [n.id, n]));
     const boundaries = [];
     for (const el of kids(proc)) {
       if (local(el) !== "boundaryEvent") continue;
       const id = attr(el, "id"), host = attr(el, "attachedToRef");
       if (!id) leave(el, "has no id");
-      else if (!byId.has(host) || byId.get(host).type !== "task") leave(el, "attached to " + (host || "nothing") + ", which is not laid out");
+      else if (!byId2.has(host) || byId2.get(host).type !== "task") leave(el, "attached to " + (host || "nothing") + ", which is not laid out");
       else boundaries.push({ id, name: clean(attr(el, "name")), host, cancel: attr(el, "cancelActivity") !== "false" });
     }
     const boundaryIds = new Set(boundaries.map((b) => b.id));
@@ -623,7 +627,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const placed = /* @__PURE__ */ new Set();
     const lanes = [], laneOf = /* @__PURE__ */ new Map();
     const key = () => "l" + (beforeLanes.length + lanes.length + 1);
-    const refsOf = (el) => kids(el).filter((k) => local(k) === "flowNodeRef").map((k) => k.textContent.trim()).filter((id) => byId.has(id) && !placed.has(id));
+    const refsOf = (el) => kids(el).filter((k) => local(k) === "flowNodeRef").map((k) => k.textContent.trim()).filter((id) => byId2.has(id) && !placed.has(id));
     const outer = (el) => descendants(el).some((inner) => local(inner) === "lane");
     for (const el of allLanes) {
       if (outer(el)) {
@@ -653,9 +657,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     for (const el of kids(proc)) {
       if (local(el) !== "sequenceFlow") continue;
       const from = attr(el, "sourceRef"), to = attr(el, "targetRef");
-      if (from === to && byId.has(from) && attr(el, "id")) leave(el, "a flow from a node to itself");
-      else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, "id")) flows.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")) });
-      else leave(el, !attr(el, "id") ? "has no id" : boundaryIds.has(to) ? "enters the boundary event " + to : "touches " + [...new Set([from, to].filter((id) => !byId.has(id) && !boundaryIds.has(id)))].join(" and ") + ", which is not laid out");
+      if (from === to && byId2.has(from) && attr(el, "id")) leave(el, "a flow from a node to itself");
+      else if ((byId2.has(from) || boundaryIds.has(from)) && byId2.has(to) && attr(el, "id")) flows.push({ id: attr(el, "id"), from, to, name: clean(attr(el, "name")) });
+      else leave(el, !attr(el, "id") ? "has no id" : boundaryIds.has(to) ? "enters the boundary event " + to : "touches " + [...new Set([from, to].filter((id) => !byId2.has(id) && !boundaryIds.has(id)))].join(" and ") + ", which is not laid out");
     }
     return { nodes, lanes, flows, boundaries, standIn };
   }
@@ -907,6 +911,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
     return false;
   }
+  var byId = () => /* @__PURE__ */ Object.create(null);
   function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES) {
     const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map((k) => [k, options[k] ?? DEFAULT_RULES[k]]));
     const sizes = /* @__PURE__ */ new Map();
@@ -2377,7 +2382,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       y += rowH[b];
     }
     const totalH = y;
-    const box = {};
+    const box = byId();
     for (const c of g.cells.values()) {
       const b = place.get(c.n.id).band, [w, h] = SIZE[c.n.type];
       box[c.n.id] = { cx: colX[c.col] + colW[c.col] / 2, cy: bandY[b] + rowH[b] / 2, w, h, task: c.n.type === "task", gateway: c.n.type === "gateway" };
@@ -2510,12 +2515,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       });
       routes.push({ f: r.f, pts, obstacles, loop: r.back });
     }
-    const di = { pools: {}, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {}, laneOf: {} };
+    const di = { pools: byId(), lanes: byId(), nodes: byId(), labels: byId(), flows: byId(), flowLabels: byId(), laneOf: byId() };
     for (const n of model.nodes) {
       const l = model.lanes[g.cells.get(n.id).lane];
       if (!l.synthetic) di.laneOf[n.id] = l.id;
     }
-    const laneBox = {};
+    const laneBox = byId();
     model.lanes.forEach((l, i) => {
       const first = bands.findIndex((b) => b.lane === i), last = bands.length - 1 - [...bands].reverse().findIndex((b) => b.lane === i);
       laneBox[l.key] = [R(HEAD), R(bandY[first]), R(totalW - HEAD), R(bandY[last] + rowH[last] - bandY[first])];
@@ -2599,8 +2604,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const aimOf = /* @__PURE__ */ new Map();
     let stripes = false;
     if (notes.length) {
-      di.notes = {};
-      di.associations = {};
+      di.notes = byId();
+      di.associations = byId();
       const nodeOf = new Map([...model.nodes, ...boundaries].map((n) => [n.id, n]));
       const routeOf = new Map(routes.map((r) => [r.f.id, r]));
       const kindOf = (id) => {
@@ -2880,7 +2885,27 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     }
   }
   var esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
-  var maskNotMarkup = (text) => text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/g, (m) => " ".repeat(m.length));
+  var NOT_MARKUP = [["<!--", "-->"], ["<![CDATA[", "]]>"], ["<?", "?>"]];
+  function maskNotMarkup(text) {
+    const next = NOT_MARKUP.map(() => -2);
+    let out = "", i = 0;
+    for (; ; ) {
+      let kind = -1;
+      for (let k = 0; k < NOT_MARKUP.length; k++) {
+        if (next[k] !== -1 && next[k] < i) next[k] = text.indexOf(NOT_MARKUP[k][0], i);
+        if (next[k] !== -1 && (kind === -1 || next[k] < next[kind])) kind = k;
+      }
+      if (kind === -1) return out + text.slice(i);
+      const [open, close] = NOT_MARKUP[kind], start = next[kind];
+      const end = text.indexOf(close, start + open.length);
+      if (end === -1) {
+        next[kind] = -1;
+        continue;
+      }
+      out += text.slice(i, start) + " ".repeat(end + close.length - start);
+      i = end + close.length;
+    }
+  }
   function relane(text, model, di) {
     const masked = maskNotMarkup(text);
     const lanes = [], stack = [];
@@ -2896,19 +2921,19 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
       if (!m[4]) stack.push(l);
       else l.close = l.openEnd;
     }
-    const byId = new Map(lanes.filter((l) => l.id).map((l) => [l.id, l]));
+    const byId2 = new Map(lanes.filter((l) => l.id).map((l) => [l.id, l]));
     const inLane = (i) => lanes.filter((l) => l.open < i && l.close !== null && i < l.close).sort((p, q) => q.open - p.open)[0] || null;
-    const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\b(?:"[^"]*"|'[^']*'|[^'">/])*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)].map((m) => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3], lane: inLane(m.index) }));
+    const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\b(?:"[^"]*"|'[^']*'|[^'">/])*>([^<]*)<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)].map((m) => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3].trim(), lane: inLane(m.index) }));
     const edits = [], opened = /* @__PURE__ */ new Map();
     for (const n of model.nodes) {
       const target = di.laneOf && Object.hasOwn(di.laneOf, n.id) ? di.laneOf[n.id] : null;
       const now = model.lanes.find((l) => l.nodes.includes(n.id));
-      if (!target || now && now.id === target || !byId.has(target)) continue;
+      if (!target || now && now.id === target || !byId2.has(target)) continue;
       const keep = /* @__PURE__ */ new Set();
-      for (let l = byId.get(target); l; l = l.parent) keep.add(l);
+      for (let l = byId2.get(target); l; l = l.parent) keep.add(l);
       const mine = refs.filter((x) => x.id === esc(n.id));
       for (const x of mine) if (!keep.has(x.lane)) edits.push({ at: x.start, end: x.end, put: "" });
-      const t = byId.get(target);
+      const t = byId2.get(target);
       if (t.close === t.openEnd) {
         opened.set(t, [...opened.get(t) || [], n.id]);
         continue;
@@ -3012,15 +3037,24 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     const first = (p, q) => p.lane - q.lane || q.reach - p.reach || cmp(p.name, q.name) || cmp(p.id, q.id);
     for (const v of nodes) v.out.sort(ahead);
     const seeds = [...nodes].sort(first), state = /* @__PURE__ */ new Map(), seq = /* @__PURE__ */ new Map();
-    const visit = (v) => {
-      state.set(v, 1);
-      for (const e of v.out) {
+    const visit = (root) => {
+      const path = [{ v: root, k: 0 }];
+      state.set(root, 1);
+      while (path.length) {
+        const top = path[path.length - 1];
+        if (top.k === top.v.out.length) {
+          state.set(top.v, 2);
+          path.pop();
+          continue;
+        }
+        const e = top.v.out[top.k++];
         seq.set(e.f, seq.size);
         const s = state.get(e.dst);
-        if (s === void 0) visit(e.dst);
-        else if (s === 1) e.back = true;
+        if (s === void 0) {
+          state.set(e.dst, 1);
+          path.push({ v: e.dst, k: 0 });
+        } else if (s === 1) e.back = true;
       }
-      state.set(v, 2);
     };
     for (const v of [...seeds.filter((v2) => !v2.in), ...seeds.filter((v2) => v2.in)]) if (!state.has(v)) visit(v);
     for (const f of loops) seq.set(f, seq.size);
@@ -3302,7 +3336,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
     if (i >= n) fail("structure", text.trim() ? "Start tag expected, '<' not found" : "Document is empty", i);
     if (text[i] !== "<") fail("structure", "Start tag expected, '<' not found", i);
     const stack = [];
-    let cur = null, curNs = /* @__PURE__ */ new Map([["xml", XML_NS]]);
+    let cur = null;
+    const bindings = /* @__PURE__ */ new Map([["xml", [XML_NS]]]);
+    const lookup = (prefix) => {
+      const uris = bindings.get(prefix);
+      return uris && uris.length ? uris[uris.length - 1] : void 0;
+    };
+    const unbind = (declared) => {
+      for (const prefix of declared) bindings.get(prefix).pop();
+    };
     const lineOf = (pos) => (text.slice(0, pos).match(/\n/g) || []).length + 1;
     let split = false;
     const addText = (data, cdata) => {
@@ -3341,11 +3383,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           if (ename !== cur.nodeName) fail("tag", "Opening and ending tag mismatch: " + cur.nodeName + " line " + lineOf(stack[stack.length - 1].pos) + " and " + ename, start2);
           skipS();
           expect(">", "tag", "expected '>'");
-          stack.pop();
-          if (stack.length) {
-            cur = stack[stack.length - 1].el;
-            curNs = stack[stack.length - 1].ns;
-          } else afterRoot();
+          unbind(stack.pop().declared);
+          if (stack.length) cur = stack[stack.length - 1].el;
+          else afterRoot();
           continue;
         }
         if (at("<!--")) {
@@ -3375,7 +3415,8 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
         const [prefix, local2] = splitName(qname, start);
         const el = new XmlElement(qname, prefix, local2);
         const seen = /* @__PURE__ */ new Set();
-        let ns = curNs, selfClosing = false;
+        const declared = [];
+        let selfClosing = false;
         for (; ; ) {
           const blank = skipS();
           if (at("/>")) {
@@ -3406,20 +3447,22 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
             if (ap === "xmlns" && value === "") fail("namespace", "xmlns:" + al + ": Empty XML namespace is not allowed", apos);
             if (!ap && value === XML_NS) fail("namespace", "xml namespace URI cannot be the default namespace", apos);
             if (value === XMLNS_NS) fail("namespace", "reuse of the xmlns namespace name is forbidden", apos);
-            if (ns === curNs) ns = new Map(curNs);
-            ns.set(ap ? al : "", value);
+            const bound = ap ? al : "";
+            if (!bindings.has(bound)) bindings.set(bound, []);
+            bindings.get(bound).push(value);
+            declared.push(bound);
             el.attributes.push({ name: aname, prefix: ap, localName: al, namespaceURI: XMLNS_NS, value });
           } else el.attributes.push({ name: aname, prefix: ap, localName: al, namespaceURI: null, value });
         }
         if (prefix) {
-          if (!ns.has(prefix)) fail("namespace", "Namespace prefix " + prefix + " on " + local2 + " is not defined", start);
-          el.namespaceURI = ns.get(prefix);
-        } else el.namespaceURI = ns.get("") || null;
+          el.namespaceURI = lookup(prefix);
+          if (el.namespaceURI === void 0) fail("namespace", "Namespace prefix " + prefix + " on " + local2 + " is not defined", start);
+        } else el.namespaceURI = lookup("") || null;
         const expanded = /* @__PURE__ */ new Set();
         for (const a of el.attributes) {
           if (a.namespaceURI === XMLNS_NS || !a.prefix) continue;
-          if (!ns.has(a.prefix)) fail("namespace", "Namespace prefix " + a.prefix + " for " + a.localName + " on " + local2 + " is not defined", start);
-          a.namespaceURI = ns.get(a.prefix);
+          a.namespaceURI = lookup(a.prefix);
+          if (a.namespaceURI === void 0) fail("namespace", "Namespace prefix " + a.prefix + " for " + a.localName + " on " + local2 + " is not defined", start);
           const key = a.namespaceURI + " " + a.localName;
           if (expanded.has(key)) fail("attribute", "Namespaced Attribute " + a.localName + " in '" + a.namespaceURI + "' redefined", start);
           expanded.add(key);
@@ -3431,10 +3474,12 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
           cur.childNodes.push(el);
         } else doc.documentElement = el;
         if (!selfClosing) {
-          stack.push({ el, ns, pos: start });
+          stack.push({ el, declared, pos: start });
           cur = el;
-          curNs = ns;
-        } else if (!stack.length) afterRoot();
+        } else {
+          unbind(declared);
+          if (!stack.length) afterRoot();
+        }
         continue;
       }
       if (c === "&") {

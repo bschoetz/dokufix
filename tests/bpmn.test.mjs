@@ -49,6 +49,12 @@ test('coordinates: an XML with a BPMNShape has them, whatever its prefix; one wi
   // A shape in a comment or a CDATA section places nothing.
   assert.equal(hasCoordinates(WITHOUT_DI.replace('</bpmn:definitions>', '<!-- <bpmndi:BPMNShape bpmnElement="A"/> --></bpmn:definitions>')), false);
   assert.equal(hasCoordinates(WITHOUT_DI.replace('</bpmn:definitions>', '<![CDATA[<bpmndi:BPMNShape/>]]></bpmn:definitions>')), false);
+  assert.equal(hasCoordinates(WITHOUT_DI.replace('</bpmn:definitions>', '<?pi <bpmndi:BPMNShape/> ?></bpmn:definitions>')), false);
+  // Openings without their end, before any parser has seen the text: linear (security review of 2026-10-07; a lazy
+  // pattern took 6.5 s for these 320 KB).
+  const t = performance.now();
+  assert.equal(hasCoordinates('<!--'.repeat(80000) + '<bpmndi:BPMNShape/>'), true);
+  assert.ok(performance.now() - t < 600);
   assert.equal(hasCoordinates('<!-- x --><bpmndi:BPMNShape/>'), true);
 });
 

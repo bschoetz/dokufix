@@ -238,9 +238,17 @@ export function parseXml(input){
   if (text[i] !== '<') fail('structure', 'Start tag expected, \'<\' not found', i);
 
   // --- Elements and content -----------------------------------------------------
-  // Each frame of the stack: { el, ns (Map prefix → URI, inherited), pos }.
+  // Each frame of the stack: { el, declared (the prefixes its tag binds), pos }.
   const stack = [];
-  let cur = null, curNs = new Map([['xml', XML_NS]]);
+  let cur = null;
+  // The namespaces in scope: per prefix ('' the default) the URIs bound to it,
+  // the innermost last. A tag pushes what it declares and its end pops it, so
+  // a lookup costs the same at every depth and nothing is copied per element:
+  // a map copied per element made a deep document with a declaration on each
+  // level quadratic in time and memory (security review of 2026-10-07).
+  const bindings = new Map([['xml', [XML_NS]]]);
+  const lookup = prefix => { const uris = bindings.get(prefix); return uris && uris.length ? uris[uris.length - 1] : undefined; };
+  const unbind = declared => { for (const prefix of declared) bindings.get(prefix).pop(); };
   const lineOf = pos => (text.slice(0, pos).match(/\n/g) || []).length + 1;
   // Text joins the text node before it, as in a browser: "A &amp; B" is one
   // node. A CDATA section is a node of its own, and a comment or a PI ends a
@@ -282,8 +290,8 @@ export function parseXml(input){
         if (ename !== cur.nodeName) fail('tag', 'Opening and ending tag mismatch: ' + cur.nodeName + ' line ' + lineOf(stack[stack.length - 1].pos) + ' and ' + ename, start);
         skipS();
         expect('>', 'tag', 'expected \'>\'');
-        stack.pop();
-        if (stack.length){ cur = stack[stack.length - 1].el; curNs = stack[stack.length - 1].ns; }
+        unbind(stack.pop().declared);
+        if (stack.length) cur = stack[stack.length - 1].el;
         else afterRoot();
         continue;
       }
@@ -307,7 +315,8 @@ export function parseXml(input){
       const [prefix, local] = splitName(qname, start);
       const el = new XmlElement(qname, prefix, local);
       const seen = new Set();
-      let ns = curNs, selfClosing = false;
+      const declared = [];
+      let selfClosing = false;
       for (;;){
         const blank = skipS();
         if (at('/>')){ selfClosing = true; i += 2; break; }
@@ -331,30 +340,32 @@ export function parseXml(input){
           if (ap === 'xmlns' && value === '') fail('namespace', 'xmlns:' + al + ': Empty XML namespace is not allowed', apos);
           if (!ap && value === XML_NS) fail('namespace', 'xml namespace URI cannot be the default namespace', apos);
           if (value === XMLNS_NS) fail('namespace', 'reuse of the xmlns namespace name is forbidden', apos);
-          if (ns === curNs) ns = new Map(curNs);
-          ns.set(ap ? al : '', value);
+          const bound = ap ? al : '';
+          if (!bindings.has(bound)) bindings.set(bound, []);
+          bindings.get(bound).push(value);
+          declared.push(bound);
           el.attributes.push({ name: aname, prefix: ap, localName: al, namespaceURI: XMLNS_NS, value });
         } else el.attributes.push({ name: aname, prefix: ap, localName: al, namespaceURI: null, value });
       }
       // The namespaces (Namespaces in XML 1.0 §6), now that the tag's own
       // declarations are known.
-      if (prefix){ if (!ns.has(prefix)) fail('namespace', 'Namespace prefix ' + prefix + ' on ' + local + ' is not defined', start); el.namespaceURI = ns.get(prefix); }
-      else el.namespaceURI = ns.get('') || null;
+      if (prefix){ el.namespaceURI = lookup(prefix); if (el.namespaceURI === undefined) fail('namespace', 'Namespace prefix ' + prefix + ' on ' + local + ' is not defined', start); }
+      else el.namespaceURI = lookup('') || null;
       // Two attributes may not share namespace and local name, whatever their
       // prefixes (§6.3): b:x and c:x with b and c bound to one URI.
       const expanded = new Set();
       for (const a of el.attributes){
         if (a.namespaceURI === XMLNS_NS || !a.prefix) continue;
-        if (!ns.has(a.prefix)) fail('namespace', 'Namespace prefix ' + a.prefix + ' for ' + a.localName + ' on ' + local + ' is not defined', start);
-        a.namespaceURI = ns.get(a.prefix);
+        a.namespaceURI = lookup(a.prefix);
+        if (a.namespaceURI === undefined) fail('namespace', 'Namespace prefix ' + a.prefix + ' for ' + a.localName + ' on ' + local + ' is not defined', start);
         const key = a.namespaceURI + ' ' + a.localName;
         if (expanded.has(key)) fail('attribute', 'Namespaced Attribute ' + a.localName + " in '" + a.namespaceURI + "' redefined", start);
         expanded.add(key);
       }
       if (cur){ el.parentElement = cur; el.parentNode = cur; cur.children.push(el); cur.childNodes.push(el); }
       else doc.documentElement = el;
-      if (!selfClosing){ stack.push({ el, ns, pos: start }); cur = el; curNs = ns; }
-      else if (!stack.length) afterRoot();
+      if (!selfClosing){ stack.push({ el, declared, pos: start }); cur = el; }
+      else { unbind(declared); if (!stack.length) afterRoot(); }
       continue;
     }
     if (c === '&'){

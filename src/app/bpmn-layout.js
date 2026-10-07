@@ -202,11 +202,16 @@ export function readProcess(doc){
   }
 
   // Each participant with its process, or, without a collaboration, each process.
-  const procOf = pa => processes.find(p => attr(p, 'id') && attr(p, 'id') === attr(pa, 'processRef')) || null;
+  // By id, the first of an id: looked up once per participant, not searched, so
+  // that many pools stay linear (security review of 2026-10-07).
+  const processById = new Map();
+  for (const p of processes) if (attr(p, 'id') && !processById.has(attr(p, 'id'))) processById.set(attr(p, 'id'), p);
+  const procOf = pa => processById.get(attr(pa, 'processRef')) || null;
   // Without a collaboration a process without an id can be referred to by no participant: it is left out.
   const candidates = participants.length ? participants.map(pa => ({ participant: pa, proc: procOf(pa) }))
     : processes.filter(proc => attr(proc, 'id') || (leave(proc, 'has no id'), false)).map(proc => ({ participant: null, proc }));
-  if (participants.length) for (const p of processes) if (!participants.some(pa => procOf(pa) === p)) leave(p, 'no participant refers to it');
+  const referred = new Set(candidates.map(c => c.proc));
+  if (participants.length) for (const p of processes) if (!referred.has(p)) leave(p, 'no participant refers to it');
 
   const nodes = [], lanes = [], flows = [], pools = [], boundaries = [];
   const byId = new Map(), poolOfNode = new Map();
@@ -783,6 +788,12 @@ export function wayHits(way, boxes){
 // options: which of the rules R1–R17 apply, keyed as in DEFAULT_RULES; a key
 // left out keeps its default, so { startAlign: false } leaves out R15 in this
 // call only. R7 and the router's second pass always apply.
+// An object keyed by the author's ids, without a prototype: an id such as
+// "constructor", "toString" or "__proto__" is a key like any other, not a
+// property every object has (security review of 2026-10-07: such an id gave
+// x="undefined" in the diagram part).
+const byId = () => Object.create(null);
+
 export function layoutGeometry(model, raw, measure = measureLabel, options = DEFAULT_RULES){
   const rules = Object.fromEntries(Object.keys(DEFAULT_RULES).map(k => [k, options[k] ?? DEFAULT_RULES[k]]));
   // Each text measured once per width (none for a label): every trial of the rules lays the labels out again, and
@@ -2489,7 +2500,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   for (let b = 0; b < bands.length; b++){ bandY[b] = y; y += rowH[b]; }
   const totalH = y;
 
-  const box = {};
+  const box = byId();
   for (const c of g.cells.values()){
     const b = place.get(c.n.id).band, [w, h] = SIZE[c.n.type];
     box[c.n.id] = { cx: colX[c.col] + colW[c.col] / 2, cy: bandY[b] + rowH[b] / 2, w, h, task: c.n.type === 'task', gateway: c.n.type === 'gateway' };
@@ -2635,10 +2646,10 @@ function finishGrid(g, model, measure, rules, reroute = true){
     routes.push({ f: r.f, pts, obstacles, loop: r.back });
   }
 
-  // Lanes, pools, nodes.
-  const di = { pools: {}, lanes: {}, nodes: {}, labels: {}, flows: {}, flowLabels: {}, laneOf: {} };
+  // Lanes, pools, nodes. Each part keyed by the author's ids (byId()).
+  const di = { pools: byId(), lanes: byId(), nodes: byId(), labels: byId(), flows: byId(), flowLabels: byId(), laneOf: byId() };
   for (const n of model.nodes){ const l = model.lanes[g.cells.get(n.id).lane]; if (!l.synthetic) di.laneOf[n.id] = l.id; }
-  const laneBox = {};
+  const laneBox = byId();
   model.lanes.forEach((l, i) => {
     const first = bands.findIndex(b => b.lane === i), last = bands.length - 1 - [...bands].reverse().findIndex(b => b.lane === i);
     laneBox[l.key] = [R(HEAD), R(bandY[first]), R(totalW - HEAD), R(bandY[last] + rowH[last] - bandY[first])];
@@ -2741,7 +2752,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   const aimOf = new Map();
   let stripes = false;
   if (notes.length){
-    di.notes = {}; di.associations = {};
+    di.notes = byId(); di.associations = byId();
     const nodeOf = new Map([...model.nodes, ...boundaries].map(n => [n.id, n]));
     const routeOf = new Map(routes.map(r => [r.f.id, r]));
     const kindOf = id => { const t = nodeOf.get(id).type; return t === 'task' ? 'rect' : t === 'gateway' ? 'diamond' : 'circle'; };
@@ -2998,7 +3009,29 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 // out, each character a blank, so that every place stays where it was: a tag or
 // an id written in one is not the XML's. The parser takes a PI after the root
 // as well, so a closing definitions tag in it must not catch the diagram part.
-const maskNotMarkup = text => text.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/g, m => ' '.repeat(m.length));
+// src/app/bpmn.js and src/app/live-viewer.js ask it of XML no parser has seen.
+// A walk with indexOf, not a pattern: a lazy pattern ran to the end of the text
+// for every opening without its end, quadratic in time ('<!--' a thousand
+// times; security review of 2026-10-07). Here an end that is not found once is
+// not looked for again: none can follow.
+const NOT_MARKUP = [['<!--', '-->'], ['<![CDATA[', ']]>'], ['<?', '?>']];
+export function maskNotMarkup(text){
+  const next = NOT_MARKUP.map(() => -2); // per kind its next opening at or after i; -1 none
+  let out = '', i = 0;
+  for (;;){
+    let kind = -1;
+    for (let k = 0; k < NOT_MARKUP.length; k++){
+      if (next[k] !== -1 && next[k] < i) next[k] = text.indexOf(NOT_MARKUP[k][0], i);
+      if (next[k] !== -1 && (kind === -1 || next[k] < next[kind])) kind = k;
+    }
+    if (kind === -1) return out + text.slice(i);
+    const [open, close] = NOT_MARKUP[kind], start = next[kind];
+    const end = text.indexOf(close, start + open.length);
+    if (end === -1){ next[kind] = -1; continue; }
+    out += text.slice(i, start) + ' '.repeat(end + close.length - start);
+    i = end + close.length;
+  }
+}
 
 // The lane set as the layout placed the nodes (spike 2.26, Ben, 2026-10-05): a
 // node a rule put in another lane (R1, R12) would otherwise stay in the
@@ -3021,8 +3054,11 @@ function relane(text, model, di){
   }
   const byId = new Map(lanes.filter(l => l.id).map(l => [l.id, l]));
   const inLane = i => lanes.filter(l => l.open < i && l.close !== null && i < l.close).sort((p, q) => q.open - p.open)[0] || null;
-  const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\b(?:"[^"]*"|'[^']*'|[^'">/])*>\s*([^<]*?)\s*<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
-    .map(m => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3], lane: inLane(m.index) }));
+  // The content is taken whole and trimmed after: blanks matched around a lazy
+  // middle made a long run of blanks backtrack in cubic time (security review
+  // of 2026-10-07).
+  const refs = [...masked.matchAll(/([ \t]*)<((?:[\w.-]+:)?)flowNodeRef\b(?:"[^"]*"|'[^']*'|[^'">/])*>([^<]*)<\/(?:[\w.-]+:)?flowNodeRef\s*>[ \t]*\r?\n?/g)]
+    .map(m => ({ start: m.index, end: m.index + m[0].length, indent: m[1], prefix: m[2], id: m[3].trim(), lane: inLane(m.index) }));
   const edits = [], opened = new Map(); // an empty target lane → the ids it gets
   for (const n of model.nodes){
     const target = di.laneOf && Object.hasOwn(di.laneOf, n.id) ? di.laneOf[n.id] : null;
