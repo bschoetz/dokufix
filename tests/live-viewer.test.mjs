@@ -2,14 +2,18 @@
 // the XML of a source link, the diagram the viewer opens, the viewbox of each
 // zoom step, the fingers that count on a touch screen and a move of them.
 // That the viewer starts, zooms, moves and goes is checked by the browser
-// runs (tests/vergleich.mjs, tests/durchlaeufe.mjs, tests/speichern.mjs).
+// runs (tests/vergleich.mjs, tests/durchlaeufe.mjs, tests/speichern.mjs);
+// here only whether the run-time pass starts one for a view already open,
+// with a stand-in for bpmn-js.
 //
 //   npm test          (node --test tests/*.test.mjs)
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { sourceXml, diagramToOpen, stepViewbox, countedFingers, touchStep, FIT_MARGIN, FIT_MOST, START_MARGIN, LIVE_HINT } from '../src/app/live-viewer.js';
+import { parseHTML } from 'linkedom';
+import { sourceXml, diagramToOpen, stepViewbox, countedFingers, touchStep, attachLiveViewers, stopLiveViewers, FIT_MARGIN, FIT_MOST, START_MARGIN, LIVE_HINT, LIVE_CLASS } from '../src/app/live-viewer.js';
 import { sourceDataUrl } from '../src/app/diagram-downloads.js';
+import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 
 const MIME = 'application/xml;charset=utf-8';
 
@@ -169,4 +173,53 @@ test('a counted finger lifted while a third touches starts afresh with the first
 test('two fingers on one point zoom nothing, they only move', () => {
   assert.deepEqual(touchStep([f(1, 5, 5), f(2, 5, 5)], [f(1, 0, 0), f(2, 10, 0)]), { dx: 0, dy: -5, factor: 1, center: { x: 5, y: 0 } });
   assert.equal(touchStep([f(1, 0, 0), f(2, 10, 0)], [f(1, 7, 7), f(2, 7, 7)]).factor, 1);
+});
+
+// ---------- a view opened before the pass ran ----------
+// The view of a BPMN diagram opened while it was laid out: the notice stands
+// in the stage, a label of the checkbox, so a click on it checks the box
+// before the run-time pass listens (review of 2026-10-07).
+test('a large view already open when the pass runs gets its viewer at once; a closed one gets none until it is opened', async () => {
+  const { document } = parseHTML('<!DOCTYPE html><html><body><article id="preview" class="dokufix-doc"></article></body></html>');
+  const root = document.getElementById('preview');
+  const XML = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d"/>';
+  root.innerHTML = '<h2>Offen</h2><pre><code class="language-bpmn">a</code></pre><h2>Zu</h2><pre><code class="language-bpmn">b</code></pre>';
+  // Drawn as renderBpmn() leaves it: an SVG in the container, the XML as drawn in the source link.
+  await drawDiagrams(root, { bpmn: { ...DIAGRAM_KINDS.bpmn, render: d => { d.holder.innerHTML = '<svg viewBox="0 0 100 50"></svg>'; d.xml = XML; } } });
+  const [open, closed] = Array.from(root.querySelectorAll('figure.dokufix-diagram-bpmn'));
+  open.querySelector('.dokufix-diagram-toggle').checked = true;
+  const imported = [];
+  class Viewer {
+    constructor({ container }){ this.container = container; }
+    async importXML(xml){ imported.push({ xml, container: this.container }); return { warnings: [] }; }
+    get(name){
+      if (name === 'elementRegistry') return { forEach(){}, getGraphics(){ return null; } };
+      const box = { x: 0, y: 0, width: 100, height: 50 };
+      return { getContainer: () => this.container, resized(){}, viewbox: v => v ? v : { inner: box, outer: { width: 800, height: 600 } }, zoom: () => 1 };
+    }
+    destroy(){}
+  }
+  const before = globalThis.BpmnJS;
+  globalThis.BpmnJS = Viewer;
+  try {
+    attachLiveViewers(root);
+    await new Promise(r => setImmediate(r));
+    assert.equal(imported.length, 1, 'one viewer, the open view\'s');
+    assert.equal(imported[0].xml, XML);
+    assert.equal(imported[0].container.parentNode, open.querySelector('.dokufix-diagram-view'));
+    assert.equal(open.querySelectorAll('.' + LIVE_CLASS + '[data-dokufix-transient]').length, 1);
+    assert.equal(closed.querySelectorAll('.' + LIVE_CLASS).length, 0);
+    // The checked property is no attribute: nothing of the open view is written into the figure.
+    assert.equal(open.querySelector('.dokufix-diagram-toggle').hasAttribute('checked'), false);
+    // The closed one starts when it is opened, as before.
+    const toggle = closed.querySelector('.dokufix-diagram-toggle');
+    toggle.checked = true;
+    toggle.dispatchEvent(new document.defaultView.Event('change'));
+    await new Promise(r => setImmediate(r));
+    assert.equal(imported.length, 2);
+  } finally {
+    stopLiveViewers();
+    if (before === undefined) delete globalThis.BpmnJS; else globalThis.BpmnJS = before;
+  }
+  assert.equal(root.querySelectorAll('.' + LIVE_CLASS).length, 0, 'stopped, the containers are gone');
 });

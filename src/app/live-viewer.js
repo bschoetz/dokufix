@@ -156,6 +156,16 @@ export function stopLiveViewers(){
 // closes the viewer, a step (chosen again too) sets its scale. Every way of
 // changing a control fires `change`: a click, Space and the arrows through
 // the browser, Escape and + and - through src/app/large-view.js.
+// A view already open when the pass runs gets its viewer at once. That is the
+// view opened while the diagram was laid out: the notice of the layout stands
+// in the stage, a label of the checkbox, so a click on it opens the view, and
+// the change came before this pass listened (review of 2026-10-07). The view
+// stays open to be used: it shows the notice large while the layout runs and
+// the live viewer once the diagram is drawn. Blocking the view while a
+// diagram waits would make a click do nothing visible, and would put a state
+// on the checkbox, which is document content, to be taken off again after
+// every layout and kept out of every file. Nothing here is written into the
+// figure: the checked property is no attribute (src/app/large-view.js).
 export function attachLiveViewers(root){
   stopLiveViewers();
   for (const figure of root.querySelectorAll('figure.' + DIAGRAM_CLASS + '-bpmn')){
@@ -167,6 +177,7 @@ export function attachLiveViewers(root){
       radio.addEventListener('change', apply);
       radio.addEventListener('click', apply);
     }
+    if (toggle.checked) startViewer(figure);
   }
 }
 
