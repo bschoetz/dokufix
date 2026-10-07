@@ -23,4 +23,4 @@ Das Häkchen „X an zusammenführenden Gateways“ neben den Diagrammfarben ist
 
 Das Häkchen „Sprungbögen“ daneben (Prototyp, `src/app/line-jumps.js`) ist gesetzt wie in der App: Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte, in Bild und Großansicht; der Modellierer und der `.bpmn`-Download haben keine Bögen. Eine Änderung zeichnet neu, der Zustand bleibt im `localStorage`.
 
-Die Diagrammfarben beginnen mit der Vorlage „Gelb“ (von Ben gestaltet, 2026-10-07): Sie steht als erste in der Liste, gilt ohne gespeicherte Wahl und nach „Zurücksetzen“. „Blau (dokufix)“, die Farben der App, folgt als zweite. Eine im `localStorage` gespeicherte Wahl bleibt.
+Die Diagrammfarben beginnen mit der Vorlage „Gelb“ (von Ben gestaltet, 2026-10-07): Sie steht als erste in der Liste, gilt ohne gespeicherte Wahl und nach „Zurücksetzen“. „Blau (dokufix)“, die Farben der App, folgt als zweite. „Schwarzweiß mit Grau“ ist entfallen (2026-10-07). Eine im `localStorage` gespeicherte Wahl bleibt, auch eine dieser entfallenen Vorlage, dann als „Eigene“.
