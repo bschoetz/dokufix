@@ -134,6 +134,14 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
 - Diese Zahl wird je Eingabe mit den gezeichneten Kreuzungen aus a) verglichen.
 - Ergebnis: ob das Ersatzmaß trägt, mit Zahlen. Das ist das größte Risiko der ganzen Phase, und es lässt sich so prüfen, bevor etwas am Produkt geändert ist.
 
+**Ergebnis von b) (umgesetzt, 7. Oktober 2026, `spikes/ordnungsphase/BERICHT.md`):**
+- Von den 41 gezeichneten Kreuzungen liegen nur 5 zwischen zwei Vorwärtsflüssen, also dort, wo ein klassisches Ebenen-Modell zählt. 20 betreffen einen Fluss innerhalb einer Spalte (R4, R6 und R9 setzen Knoten in die Spalte ihres Gateways), 16 einen Rückfluss in der Rinne.
+- Liegen die Hilfspunkte wie im gezeichneten Bild und zählen Flüsse innerhalb einer Spalte als senkrechte Stücke mit, trägt die Zählung: Die Korrelation liegt bei 0,88 über 123 Bilder. In 18 Bildpaaren, die sich in den Kreuzungen unterscheiden, zeigt sie nie in die falsche Richtung, und die 6 Entscheidungen von R10 erkennt sie alle.
+- Mit einer einfachen Regel für die Lage (Zeile der Quelle) liegt sie in 9 der 18 Paare falsch herum.
+- **Folge:** Die eigentliche Schwierigkeit der Phase ist die Lage der Hilfspunkte, nicht das Zählen. Die Phase muss vorhersagen, welche Zeile oder Rinne der Router zwischen zwei Spalten nimmt und welche Ports. Das wird ein eigener Schritt b2), vor c).
+
+**b2) Die Lage der Hilfspunkte wie der Router (Vorschlag).** Aus den Regeln des Routers (Kanäle, Spuren, Ports, die Rinne der Rückflüsse) eine Lage der Hilfspunkte ableiten, ohne zu routen, und mit `pruefen.mjs` gegen `router+spalte` messen. Ziel: in den 18 Paaren nie falsch herum, die 6 von R10 richtig.
+
 **c) R10 durch eine Rechnung ersetzen.**
 - R10 heute (`ruleRowProbe()`): Für jede Gruppe von Zeilen, die R2 einem Weg gibt, ordnet R10 das ganze Bild ein weiteres Mal an, mit dem Weg auf der anderen Seite. Es behält das nur, wenn die Kreuzungen weniger werden. Das kostet einen vollen Lauf je Gruppe.
 - Die Rechnung: Die Seite jeder Gruppe entscheidet ein Baryzentrum aus dem Zählmodell. Gezählt werden die Lagen der Nachbarn in den Spalten davor und danach, Nachrichtenflüsse gewichtet zur Seite ihres Pools (die Vorgabe aus b-wv2). Ein Durchgang, kein Probelauf.
