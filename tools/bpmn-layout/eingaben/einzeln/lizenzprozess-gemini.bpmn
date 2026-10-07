@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitions_Lizenzen" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Collaboration_Lizenzen">
+    <bpmn:participant id="Pool_Lizenzen" name="Lizenzprüfung und Integration" processRef="Process_Lizenzen"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Lizenzen" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_Lizenzen">
+      <bpmn:lane id="Lane_Dev" name="Softwareentwicklung">
+        <bpmn:flowNodeRef>Start_Bedarf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Pruefen_Bedarf</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Permissiv_Hinweis</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Weak_Mod</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Weak_Unveraendert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Weak_Modifiziert</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Weak_Merge</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Integrieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Integriert</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Compliance" name="Lizenz-Compliance">
+        <bpmn:flowNodeRef>Task_Lizenz_Analysieren</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Typ</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_GPL_Komp</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GPL_Freigabe</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_GPL_Ablehnen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_GPL_Abgelehnt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Prop_Erlaubt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Prop_Bedingung</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Prop_Ablehnen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Prop_Abgelehnt</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gateway_Merge_Erfolg</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Dokumentieren</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Bedarf" name="Bibliothek ausgewählt"/>
+    <bpmn:userTask id="Task_Pruefen_Bedarf" name="Lizenz der Bibliothek erfassen"/>
+    <bpmn:userTask id="Task_Lizenz_Analysieren" name="Lizenztyp klassifizieren"/>
+    <bpmn:exclusiveGateway id="Gateway_Typ" name="Welche Lizenzart?"/>
+    <bpmn:userTask id="Task_Permissiv_Hinweis" name="Lizenzhinweis beilegen"/>
+    <bpmn:exclusiveGateway id="Gateway_Weak_Mod" name="Library modifiziert?"/>
+    <bpmn:userTask id="Task_Weak_Unveraendert" name="Bibliothek dynamisch einbinden"/>
+    <bpmn:userTask id="Task_Weak_Modifiziert" name="Änderungen an Library offenlegen"/>
+    <bpmn:exclusiveGateway id="Gateway_Weak_Merge"/>
+    <bpmn:exclusiveGateway id="Gateway_GPL_Komp" name="Gesamtprojekt GPL-kompatibel?"/>
+    <bpmn:userTask id="Task_GPL_Freigabe" name="Gesamtprojekt unter GPL stellen"/>
+    <bpmn:userTask id="Task_GPL_Ablehnen" name="GPL-Komponente ablehnen"/>
+    <bpmn:endEvent id="End_GPL_Abgelehnt" name="GPL-Integration verworfen"/>
+    <bpmn:exclusiveGateway id="Gateway_Prop_Erlaubt" name="Lizenz erworben?"/>
+    <bpmn:userTask id="Task_Prop_Bedingung" name="Lizenzvertrag prüfen"/>
+    <bpmn:userTask id="Task_Prop_Ablehnen" name="Proprietäre Komponente sperren"/>
+    <bpmn:endEvent id="End_Prop_Abgelehnt" name="Proprietäre Nutzung gestoppt"/>
+    <bpmn:exclusiveGateway id="Gateway_Merge_Erfolg"/>
+    <bpmn:userTask id="Task_Dokumentieren" name="Compliance-Dokumentation erstellen"/>
+    <bpmn:userTask id="Task_Integrieren" name="Bibliothek im Projekt einbinden"/>
+    <bpmn:endEvent id="End_Integriert" name="Bibliothek regelkonform integriert"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Bedarf" targetRef="Task_Pruefen_Bedarf"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Pruefen_Bedarf" targetRef="Task_Lizenz_Analysieren"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Lizenz_Analysieren" targetRef="Gateway_Typ"/>
+    <bpmn:sequenceFlow id="Flow_Typ_Permissiv" name="Permissiv" sourceRef="Gateway_Typ" targetRef="Task_Permissiv_Hinweis"/>
+    <bpmn:sequenceFlow id="Flow_Permissiv_Merge" sourceRef="Task_Permissiv_Hinweis" targetRef="Gateway_Merge_Erfolg"/>
+    <bpmn:sequenceFlow id="Flow_Typ_Weak" name="Weak Copyleft" sourceRef="Gateway_Typ" targetRef="Gateway_Weak_Mod"/>
+    <bpmn:sequenceFlow id="Flow_Weak_Nein" name="nein" sourceRef="Gateway_Weak_Mod" targetRef="Task_Weak_Unveraendert"/>
+    <bpmn:sequenceFlow id="Flow_Weak_Ja" name="ja" sourceRef="Gateway_Weak_Mod" targetRef="Task_Weak_Modifiziert"/>
+    <bpmn:sequenceFlow id="Flow_Weak_Merge_1" sourceRef="Task_Weak_Unveraendert" targetRef="Gateway_Weak_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Weak_Merge_2" sourceRef="Task_Weak_Modifiziert" targetRef="Gateway_Weak_Merge"/>
+    <bpmn:sequenceFlow id="Flow_Weak_Erfolg" sourceRef="Gateway_Weak_Merge" targetRef="Gateway_Merge_Erfolg"/>
+    <bpmn:sequenceFlow id="Flow_Typ_Strong" name="Strong Copyleft" sourceRef="Gateway_Typ" targetRef="Gateway_GPL_Komp"/>
+    <bpmn:sequenceFlow id="Flow_GPL_Ja" name="ja" sourceRef="Gateway_GPL_Komp" targetRef="Task_GPL_Freigabe"/>
+    <bpmn:sequenceFlow id="Flow_GPL_Nein" name="nein" sourceRef="Gateway_GPL_Komp" targetRef="Task_GPL_Ablehnen"/>
+    <bpmn:sequenceFlow id="Flow_GPL_Erfolg" sourceRef="Task_GPL_Freigabe" targetRef="Gateway_Merge_Erfolg"/>
+    <bpmn:sequenceFlow id="Flow_GPL_End" sourceRef="Task_GPL_Ablehnen" targetRef="End_GPL_Abgelehnt"/>
+    <bpmn:sequenceFlow id="Flow_Typ_Prop" name="Proprietär" sourceRef="Gateway_Typ" targetRef="Gateway_Prop_Erlaubt"/>
+    <bpmn:sequenceFlow id="Flow_Prop_Ja" name="ja" sourceRef="Gateway_Prop_Erlaubt" targetRef="Task_Prop_Bedingung"/>
+    <bpmn:sequenceFlow id="Flow_Prop_Nein" name="nein" sourceRef="Gateway_Prop_Erlaubt" targetRef="Task_Prop_Ablehnen"/>
+    <bpmn:sequenceFlow id="Flow_Prop_Erfolg" sourceRef="Task_Prop_Bedingung" targetRef="Gateway_Merge_Erfolg"/>
+    <bpmn:sequenceFlow id="Flow_Prop_End" sourceRef="Task_Prop_Ablehnen" targetRef="End_Prop_Abgelehnt"/>
+    <bpmn:sequenceFlow id="Flow_Merge_Doku" sourceRef="Gateway_Merge_Erfolg" targetRef="Task_Dokumentieren"/>
+    <bpmn:sequenceFlow id="Flow_Doku_Integrieren" sourceRef="Task_Dokumentieren" targetRef="Task_Integrieren"/>
+    <bpmn:sequenceFlow id="Flow_Integrieren_End" sourceRef="Task_Integrieren" targetRef="End_Integriert"/>
+    <bpmn:textAnnotation id="Notiz_Permissiv"><bpmn:text>Kein Copyleft (z. B. MIT, Apache): Beliebige Einbindung erlaubt</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Permissiv" sourceRef="Task_Permissiv_Hinweis" targetRef="Notiz_Permissiv"/>
+    <bpmn:textAnnotation id="Notiz_Weak"><bpmn:text>Eingeschränktes Copyleft (z. B. LGPL): Nur Modifikationen teilen</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_Weak" sourceRef="Task_Weak_Modifiziert" targetRef="Notiz_Weak"/>
+    <bpmn:textAnnotation id="Notiz_GPL"><bpmn:text>Starkes Copyleft (z. B. GPL): Zwingt Gesamtsystem unter GPL</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="Assoc_GPL" sourceRef="Task_GPL_Freigabe" targetRef="Notiz_GPL"/>
+  </bpmn:process>
+</bpmn:definitions>

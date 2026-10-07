@@ -21,7 +21,8 @@ export const EXTERN_ROOT = process.env.DOKUFIX_EXTERN || path.join(REPO, '_bmad-
 
 // Die Sätze. Der Satz von 70 (Spike 2.26): sauber (48, 19 davon die Fixtures), ben (2), extern (20). Die Sätze mit
 // Pools, Black Boxes, angehefteten Ereignissen und Notizen (Stories 2.12, 2.29 bis 2.31), je eigen und extern.
-// laufzeit (Bens hund3, A2 braucht dafür 10 s) nur auf Nennung.
+// laufzeit (Bens hund3, A2 braucht dafür 10 s) und einzeln (Diagramme, über die Ben einzeln sprechen will) nur auf
+// Nennung.
 const FIXTURES = ['demo2', 'demo3', 'ereignis', 'hund', 'hund2', 'mehrere', 'r01', 'r02', 'r03', 'r08', 'r10', 'r12', 'r19', 'r20', 'ref3', 'ref4', 'ref8', 'reparatur', 'zwei'];
 const SATZ_ORDNER = [
   ['sauber', path.join(EINGABEN, 'sauber'), false],
@@ -36,6 +37,7 @@ const SATZ_ORDNER = [
   ['notizen', path.join(EINGABEN, 'notizen'), false],
   ['notizen', path.join(EXTERN_ROOT, 'extern/notizen'), true],
   ['laufzeit', path.join(EINGABEN, 'laufzeit'), false],
+  ['einzeln', path.join(EINGABEN, 'einzeln'), false],
 ];
 // Eigene Eingaben, die auf einer externen beruhen, bleiben bei den externen.
 const EXTERN_EINZELN = [['notizen', path.join(EXTERN_ROOT, 'eingaben/notizen/nz23-x-tm1.bpmn')]];
