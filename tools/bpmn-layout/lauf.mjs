@@ -8,7 +8,7 @@
 // --lauf   der Name des Laufs, Vorgabe "produkt" (mit --stand: "stand-<commit>")
 // --stand  ordnet mit src/app eines Commits an statt mit dem Arbeitsbaum (ab f0ff93e, LMM); so entsteht der
 //          Vergleichsstand für vergleich.mjs
-// --satz   nur diese Sätze (sauber, ben, extern, pools, blackbox, angeheftet, notizen, laufzeit); Vorgabe: alle außer
+// --satz   nur diese Sätze (sauber, ben, extern, pools, blackbox, angeheftet, notizen, daten, laufzeit); Vorgabe: alle außer
 //          laufzeit
 // --aus    schaltet diese Regeln für den Lauf ab (DEFAULT_RULES in src/app/bpmn-layout.js)
 // --an     schaltet Versuche ein, die keine Regel von DEFAULT_RULES sind: rowOrder (R10 durch Zählen statt Probe,

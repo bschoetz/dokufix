@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:dataStore id="ds1" name="Warenwirtschaft"/>
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Vertrieb"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>t4</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Lager"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Bestellung da"/>
+    <bpmn:task id="t1" name="Bestand prüfen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>w</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Ware reservieren">
+      <bpmn:dataOutputAssociation id="o2"><bpmn:targetRef>w</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t3" name="Lieferschein drucken">
+      <bpmn:dataOutputAssociation id="o3"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t4" name="Kundin benachrichtigen">
+      <bpmn:property id="p4" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i4"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p4</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Versandbereit"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="t3" targetRef="t4"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="t4" targetRef="e"/>
+    <bpmn:dataStoreReference id="w" name="Warenwirtschaft" dataStoreRef="ds1"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Lieferschein" dataObjectRef="do1"/>
+  </bpmn:process>
+</bpmn:definitions>

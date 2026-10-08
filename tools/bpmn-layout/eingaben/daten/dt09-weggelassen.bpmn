@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="s" name="Auftrag da"/>
+    <bpmn:task id="t1" name="Auftrag lesen">
+      <bpmn:ioSpecification id="io1">
+        <bpmn:dataInput id="in1" name="Auftrag"/>
+        <bpmn:inputSet id="is1"><bpmn:dataInputRefs>in1</bpmn:dataInputRefs></bpmn:inputSet>
+        <bpmn:outputSet id="os1"/>
+      </bpmn:ioSpecification>
+      <bpmn:property id="p1" name="Notiz"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>in1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="i1p"><bpmn:sourceRef>p1</bpmn:sourceRef><bpmn:targetRef>in1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="i1x"><bpmn:sourceRef>gibtsnicht</bpmn:sourceRef><bpmn:targetRef>in1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o1e"><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:subProcess id="sp" name="Auftrag ausführen">
+      <bpmn:dataOutputAssociation id="osp"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:startEvent id="sp_s"/>
+      <bpmn:task id="sp_t" name="Arbeiten">
+        <bpmn:dataOutputAssociation id="osp_t"><bpmn:targetRef>sp_d</bpmn:targetRef></bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:endEvent id="sp_e"/>
+      <bpmn:sequenceFlow id="sp_f1" sourceRef="sp_s" targetRef="sp_t"/>
+      <bpmn:sequenceFlow id="sp_f2" sourceRef="sp_t" targetRef="sp_e"/>
+      <bpmn:dataObject id="sp_do"/>
+      <bpmn:dataObjectReference id="sp_d" name="Arbeitszettel" dataObjectRef="sp_do"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="e" name="Erledigt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="sp"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="sp" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Auftrag" dataObjectRef="do1"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Abnahme" dataObjectRef="do2"/>
+  </bpmn:process>
+</bpmn:definitions>

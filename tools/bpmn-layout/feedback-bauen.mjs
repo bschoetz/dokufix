@@ -10,7 +10,7 @@
 //              Feedback beim Beispiel steht. Vorgabe: Pools, wenn alle gewählten Eingaben aus den Pool-Sätzen
 //              stammen, sonst A. Der Name A blieb von A2, dem Layout aus Spike 2.26. Eine andere Art, etwa LMM,
 //              nur mit genannten Eingaben, auf bpmn-feedback-<art>.html
-// --satz       alle Eingaben dieser Sätze (sauber, ben, extern, pools, blackbox, angeheftet, notizen)
+// --satz       alle Eingaben dieser Sätze (sauber, ben, extern, pools, blackbox, angeheftet, notizen, daten)
 // --gegen      vergleicht mit diesem Satz des Archivs statt mit dem letzten, zu dem Feedback kam
 // --ziel       der Name der Seite in arbeit/, Vorgabe bpmn-feedback.html (A) und bpmn-feedback-pools.html (Pools)
 // --varianten  weitere Anordnungen derselben Beispiele, je Beispiel unter dem Bild als eigenes Bild, zum

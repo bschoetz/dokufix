@@ -41,14 +41,14 @@ Nicht mitgekommen sind, was nur mit Mermaids Rohpositionen ging: die eingefroren
 
 ## Die Eingaben
 
-Die Sätze, wie Spike 2.26 und die Stories 2.12 und 2.29 bis 2.31 sie gebildet haben:
+Die Sätze, wie Spike 2.26 und die Stories 2.12 und 2.29 bis 2.32 sie gebildet haben:
 
 | Satz | Eigene (hier) | Externe | Was |
 |---|---|---|---|
 | `sauber` | 48: 19 Fixtures aus `tests/fixtures/bpmn-layout/`, 29 in `eingaben/sauber/` | | der saubere Satz von Spike 2.26, gültig nach `pruefen.mjs` |
 | `ben` | 2 | | Bens morgenroutine und krankheit |
 | `extern` | | 20 (`x-…`) | von Menschen gezeichnete Prozesse, je mit Handlayout als Referenz |
-| `pools`, `blackbox`, `angeheftet`, `notizen` | 5, 8, 11, 10 | 10, 7, 3, 13 | die Sätze der Stories 2.12, 2.29, 2.30, 2.31 |
+| `pools`, `blackbox`, `angeheftet`, `notizen`, `daten` | 5, 8, 11, 10, 9 | 10, 7, 3, 13, 14 | die Sätze der Stories 2.12, 2.29 bis 2.32 |
 | `laufzeit` | 1 | | Bens hund3 (77 Knoten), nur auf Nennung |
 | `einzeln` | 1 | | Diagramme, über die Ben einzeln sprechen will, nur auf Nennung: `lauf.mjs --lauf <name> <name>`, `feedback-bauen.mjs --lauf <name> --art <name> <name>` |
 

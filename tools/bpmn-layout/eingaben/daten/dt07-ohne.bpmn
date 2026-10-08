@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="PA" name="Praxis" processRef="PrA"/>
+    <bpmn:participant id="PB" name="Labor" processRef="PrB"/>
+    <bpmn:messageFlow id="m1" sourceRef="a2" targetRef="b1" name="Probe"/>
+    <bpmn:messageFlow id="m2" sourceRef="b3" targetRef="a3" name="Befund"/>
+    <bpmn:textAnnotation id="n0"><bpmn:text>Gilt ab 1. Januar 2027</bpmn:text></bpmn:textAnnotation>
+  </bpmn:collaboration>
+  <bpmn:process id="PrA" isExecutable="false">
+    <bpmn:laneSet id="LSA">
+      <bpmn:lane id="LA1" name="Empfang"><bpmn:flowNodeRef>a1</bpmn:flowNodeRef><bpmn:flowNodeRef>hb</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="LA2" name="Ärztin"><bpmn:flowNodeRef>a2</bpmn:flowNodeRef><bpmn:flowNodeRef>a3</bpmn:flowNodeRef><bpmn:flowNodeRef>a4</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="a1" name="Patientin da"/>
+    <bpmn:task id="a2" name="Blut abnehmen"/>
+    <bpmn:task id="a3" name="Befund besprechen"/>
+    <bpmn:endEvent id="a4" name="Fertig"/>
+    <bpmn:sequenceFlow id="af1" sourceRef="a1" targetRef="a2"/>
+    <bpmn:sequenceFlow id="af2" sourceRef="a2" targetRef="a3"/>
+    <bpmn:sequenceFlow id="af3" sourceRef="a3" targetRef="a4"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="hb" name="Hygieneplan" dataObjectRef="do1"/>
+    <bpmn:dataStoreReference id="ak" name="Patientenakte"/>
+    <bpmn:textAnnotation id="n1"><bpmn:text>Abläufe nach QM-Handbuch</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmn:process id="PrB" isExecutable="false">
+    <bpmn:startEvent id="b1" name="Probe da"/>
+    <bpmn:task id="b2" name="Analysieren"/>
+    <bpmn:endEvent id="b3" name="Befund gesendet"/>
+    <bpmn:sequenceFlow id="bf1" sourceRef="b1" targetRef="b2"/>
+    <bpmn:sequenceFlow id="bf2" sourceRef="b2" targetRef="b3"/>
+    <bpmn:dataStoreReference id="lis" name="Laborsystem"/>
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Antrag"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Prüfung"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>g1</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef><bpmn:flowNodeRef>t4</bpmn:flowNodeRef><bpmn:flowNodeRef>t5</bpmn:flowNodeRef><bpmn:flowNodeRef>g2</bpmn:flowNodeRef><bpmn:flowNodeRef>t6</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L3" name="Versand"><bpmn:flowNodeRef>t7</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Antrag da"/>
+    <bpmn:task id="t1" name="Antrag erfassen">
+      <bpmn:dataOutputAssociation id="o1"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Unterlagen sichten">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="g1" name="Vollständig?"/>
+    <bpmn:task id="t3" name="Fachlich prüfen">
+      <bpmn:property id="p3" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i3"><bpmn:sourceRef>w</bpmn:sourceRef><bpmn:targetRef>p3</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o3"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t4" name="Nachfordern"/>
+    <bpmn:task id="t5" name="Rechtlich prüfen">
+      <bpmn:property id="p5" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i5"><bpmn:sourceRef>d2</bpmn:sourceRef><bpmn:targetRef>p5</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:exclusiveGateway id="g2" name="Genehmigt?"/>
+    <bpmn:task id="t6" name="Ablehnen"/>
+    <bpmn:task id="t7" name="Bescheid senden"/>
+    <bpmn:endEvent id="e" name="Erledigt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="g1"/>
+    <bpmn:sequenceFlow id="f4" name="ja" sourceRef="g1" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f5" name="nein" sourceRef="g1" targetRef="t4"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="t4" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="t3" targetRef="t5"/>
+    <bpmn:sequenceFlow id="f8" sourceRef="t5" targetRef="g2"/>
+    <bpmn:sequenceFlow id="f9" name="ja" sourceRef="g2" targetRef="t7"/>
+    <bpmn:sequenceFlow id="f10" name="nein" sourceRef="g2" targetRef="t6"/>
+    <bpmn:sequenceFlow id="f11" sourceRef="t6" targetRef="t7"/>
+    <bpmn:sequenceFlow id="f12" sourceRef="t7" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Antrag" dataObjectRef="do1"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Prüfvermerk" dataObjectRef="do2"/>
+    <bpmn:dataStoreReference id="w" name="Vorschriften"/>
+  </bpmn:process>
+</bpmn:definitions>
