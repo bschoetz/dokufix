@@ -2,7 +2,7 @@
 // Assistenten (bauen.mjs daneben). Hochgeladene .bpmn-Dateien mit ihren eigenen Koordinaten, unverändert angeordnet,
 // in den Farben der Vorlage „Audi-Stil“ des Assistenten; wählbar nur das X an zusammenführenden Gateways (dieselbe
 // Regel wie fürs Original im Assistenten) und die Sprungbögen. Je Datei das Bild, die Großansicht und der Download
-// als .svg. Kein Anordnen, kein Modellierer, kein .bpmn-Download, keine Beispiele, keine Handreichung, keine
+// als .svg und .png. Kein Anordnen, kein Modellierer, kein .bpmn-Download, keine Beispiele, keine Handreichung, keine
 // Farbwahl. bpmn-js 18.31.0, der Viewer, eingebettet aus vendor/bpmn-js/ wie im Assistenten, damit die Seite ohne
 // Netz läuft; die Typklassen, das Bild zum Herunterladen und die Sprungbögen aus src/app/, die Dokumentstile aus
 // dist/dokufix.html.
@@ -155,7 +155,7 @@ h2 small{font-weight:400;color:var(--mute);font-size:13px}
 <body>
 <header>
 <h1>BPMN-Layouter Audi</h1>
-<p class="intro">Laden Sie eine oder mehrere BPMN-Dateien hoch, oder ziehen Sie sie auf die Seite. Jedes Diagramm erscheint so angeordnet, wie es gezeichnet wurde, in den Farben des Audi-Stils. Auf Wunsch fallen die X an zusammenführenden Gateways weg, und wo sich Linien kreuzen, springt die waagrechte mit einem Bogen. Ein Klick auf ein Diagramm öffnet die Großansicht; jedes Bild lässt sich als SVG herunterladen.</p>
+<p class="intro">Laden Sie eine oder mehrere BPMN-Dateien hoch, oder ziehen Sie sie auf die Seite. Jedes Diagramm erscheint so angeordnet, wie es gezeichnet wurde, in den Farben des Audi-Stils. Auf Wunsch fallen die X an zusammenführenden Gateways weg, und wo sich Linien kreuzen, springt die waagrechte mit einem Bogen. Ein Klick auf ein Diagramm öffnet die Großansicht; jedes Bild lässt sich als SVG oder PNG herunterladen.</p>
 <div class="bar">
 <button id="up" class="primary">${ICON.upload} BPMN-Dateien hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" multiple hidden>
 <label title="Ohne Häkchen werden exklusive Gateways, die zusammenführen, als leere Raute gezeichnet, wenn die Datei das X an jedem exklusiven Gateway setzt, wie es Modellierer tun"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
@@ -261,6 +261,43 @@ function section(title){
   return s;
 }
 function error(s, msg){ const d = document.createElement('div'); d.className = 'err'; d.textContent = msg; s.appendChild(d); }
+// Das Bild als .png (Ben, 2026-10-08): das SVG des Downloads, in doppelter Größe auf eine Leinwand gezeichnet, damit
+// es auch vergrößert scharf bleibt; ein durchsichtiger Hintergrund bleibt durchsichtig. Als data:-URL geladen, damit
+// die Leinwand auch unter file:// lesbar bleibt.
+const PNG_SCALE = 2;
+function pngOf(text){
+  return new Promise((resolve, reject) => {
+    const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
+    const vb = String(svg.getAttribute('viewBox') || '').trim().split(/[\\s,]+/).map(Number);
+    const w = parseFloat(svg.getAttribute('width')) || vb[2], h = parseFloat(svg.getAttribute('height')) || vb[3];
+    if (!(w > 0 && h > 0)) { reject(new Error('Das Bild hat keine Größe.')); return; }
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * PNG_SCALE); c.height = Math.round(h * PNG_SCALE);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => b ? resolve(b) : reject(new Error('Das PNG ließ sich nicht erzeugen.')), 'image/png');
+    };
+    img.onerror = () => reject(new Error('Das SVG ließ sich nicht als Bild laden.'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
+  });
+}
+// Ein Knopf, der beim Klick erst das PNG macht und es dann herunterlädt.
+function pngButton(name, svgText){
+  const p = document.createElement('a');
+  p.className = 'btn small'; p.innerHTML = ${JSON.stringify(ICON.download)} + ' .png'; p.title = 'Diagramm als .png herunterladen'; p.href = '#';
+  p.onclick = async e => {
+    e.preventDefault();
+    try {
+      const a = document.createElement('a');
+      a.download = name() + '.png';
+      a.href = URL.createObjectURL(await pngOf(svgText()));
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    } catch (err){ alert(err.message); }
+  };
+  return p;
+}
 
 async function draw(s, xml, fileName){
   const holder = document.createElement('div');
@@ -281,7 +318,8 @@ async function draw(s, xml, fileName){
   const v = document.createElement('a');
   v.className = 'btn small'; v.innerHTML = ${JSON.stringify(ICON.download)} + ' .svg'; v.title = 'Diagramm als .svg herunterladen'; v.href = '#';
   v.onclick = () => { v.download = fileBase(xml, fileName) + '.svg'; v.href = URL.createObjectURL(new Blob([T.pictureOf(pic.querySelector('svg'))], { type: 'image/svg+xml' })); };
-  s.querySelector('h2').append(v);
+  const png = pngButton(() => fileBase(xml, fileName), () => T.pictureOf(pic.querySelector('svg')));
+  s.querySelector('h2').append(v, png);
 }
 
 async function render(){

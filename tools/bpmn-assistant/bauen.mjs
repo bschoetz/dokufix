@@ -1,7 +1,7 @@
 // Baut dist/bpmn-assistant.html, den Dokufix BPMN Assistant: BPMN-XML einfügen oder als Datei hochladen; oben das
 // Original mit seinen eigenen Koordinaten (nur wenn es welche hat), darunter A2 angeordnet, das Modul des Produkts,
 // src/app/bpmn-layout.js, mit allen Regeln, mit einem Satz, was die Ansicht ausmacht, Brüchen, Zeit, Großansicht wie
-// in dokufix und Download als .bpmn und .svg; ein Fehler steht an Stelle des Diagramms. Dazu die Handreichung für
+// in dokufix und Download als .bpmn, .svg und .png; ein Fehler steht an Stelle des Diagramms. Dazu die Handreichung für
 // LLMs zum Kopieren und Herunterladen, sechs Beispiele und die Diagrammfarben (Vorlagen oder eigene). Wie die App:
 // bpmn-js 18.31.0 (die Version von src/index.html), seit 2026-10-07 in die Seite eingebettet statt vom CDN, damit sie
 // ohne Netz läuft, die Spalten und die Ordnung des Modells aus kanonisch()
@@ -265,7 +265,7 @@ button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px;font-weight:4
 <li><strong>LLM vorbereiten.</strong> Kopieren Sie die Handreichung für LLMs und geben Sie sie Ihrem Sprachmodell zusammen mit einer Beschreibung Ihres Prozesses: Wer ist beteiligt, wer tauscht mit wem Nachrichten, welche Schritte gibt es, wo wird entschieden, was läuft parallel?</li>
 <li><strong>Rendern.</strong> Fügen Sie das gelieferte XML unten ein oder laden Sie es als Datei hoch. Sie sehen die Anordnung von dokufix (<em>A2</em>), auch mit mehreren Pools, Pools ohne eigenen Prozess (Black Box) und Nachrichtenflüssen. Hat die Datei eigene Koordinaten, steht ihr Bild darüber als „Original BPMN“.</li>
 <li><strong>Feinschleifen.</strong> Die Bilder sind Vorschläge. Laden Sie die beste Variante als <code>.bpmn</code> herunter und bearbeiten Sie sie in einem BPMN-Modellierer wie dem <a href="https://camunda.com/download/modeler/" target="_blank" rel="noopener">Camunda Modeler</a> oder <a href="https://demo.bpmn.io/" target="_blank" rel="noopener">demo.bpmn.io</a> nach.</li>
-<li><strong>Weiterverwenden.</strong> Laden Sie die fertige Datei wieder hoch, um sie zu prüfen, und nehmen Sie das Bild als <code>.svg</code> in Ihre Dokumente, in den gewählten Diagrammfarben.</li>
+<li><strong>Weiterverwenden.</strong> Laden Sie die fertige Datei wieder hoch, um sie zu prüfen, und nehmen Sie das Bild als <code>.svg</code> oder <code>.png</code> in Ihre Dokumente, in den gewählten Diagrammfarben.</li>
 </ol>
 </div>
 <div class="aside">
@@ -897,6 +897,43 @@ function section(title){
   return s;
 }
 function error(s, msg){ const d = document.createElement('div'); d.className = 'err'; d.textContent = msg; s.appendChild(d); }
+// Das Bild als .png (Ben, 2026-10-08): das SVG des Downloads, in doppelter Größe auf eine Leinwand gezeichnet, damit
+// es auch vergrößert scharf bleibt; ein durchsichtiger Hintergrund bleibt durchsichtig. Als data:-URL geladen, damit
+// die Leinwand auch unter file:// lesbar bleibt.
+const PNG_SCALE = 2;
+function pngOf(text){
+  return new Promise((resolve, reject) => {
+    const svg = new DOMParser().parseFromString(text, 'image/svg+xml').documentElement;
+    const vb = String(svg.getAttribute('viewBox') || '').trim().split(/[\\s,]+/).map(Number);
+    const w = parseFloat(svg.getAttribute('width')) || vb[2], h = parseFloat(svg.getAttribute('height')) || vb[3];
+    if (!(w > 0 && h > 0)) { reject(new Error('Das Bild hat keine Größe.')); return; }
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement('canvas');
+      c.width = Math.round(w * PNG_SCALE); c.height = Math.round(h * PNG_SCALE);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      c.toBlob(b => b ? resolve(b) : reject(new Error('Das PNG ließ sich nicht erzeugen.')), 'image/png');
+    };
+    img.onerror = () => reject(new Error('Das SVG ließ sich nicht als Bild laden.'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(text);
+  });
+}
+// Ein Knopf, der beim Klick erst das PNG macht und es dann herunterlädt.
+function pngButton(name, svgText){
+  const p = document.createElement('a');
+  p.className = 'btn small'; p.innerHTML = ${JSON.stringify(ICON.download)} + ' .png'; p.title = 'Diagramm als .png herunterladen'; p.href = '#';
+  p.onclick = async e => {
+    e.preventDefault();
+    try {
+      const a = document.createElement('a');
+      a.download = name() + '.png';
+      a.href = URL.createObjectURL(await pngOf(svgText()));
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+    } catch (err){ alert(err.message); }
+  };
+  return p;
+}
 
 // Zuerst ein Bild (SVG, so breit wie die Seite, nie größer als gezeichnet);
 // ein Klick darauf öffnet es über dem ganzen Fenster im Viewer, wie die
@@ -943,7 +980,8 @@ async function draw(s, xml, name){
   v.className = 'btn small'; v.download = name + '.svg'; v.innerHTML = ${JSON.stringify(ICON.download)} + ' .svg'; v.title = 'Diagramm als .svg herunterladen'; v.href = '#';
   v.onclick = () => { v.download = fileBase(xml) + '.svg'; v.href = URL.createObjectURL(new Blob([withBackground(T.pictureOf(pic.querySelector('svg')))], { type: 'image/svg+xml' })); };
   const dl = document.createElement('span');
-  dl.className = 'dls'; dl.append(a, v);
+  const png = pngButton(() => fileBase(xml), () => withBackground(T.pictureOf(pic.querySelector('svg'))));
+  dl.className = 'dls'; dl.append(a, v, png);
   const ed = document.createElement('button');
   ed.className = 'small'; ed.innerHTML = ${JSON.stringify(ICON.pencil)} + ' Im Modellierer bearbeiten';
   ed.onclick = () => openModeler(s.querySelector('h2').firstChild.textContent.trim(), xml);
