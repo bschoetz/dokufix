@@ -116,9 +116,12 @@ function nodeType(tag){
 }
 const HOLDS_CONTENT = new Set(['subProcess', 'adHocSubProcess', 'transaction']);
 // What a process or a collaboration may hold that the layout leaves out. A text annotation and an association are
-// read since story 2.31 (NOTED), and left out only inside a sub-process.
-const LEFT_OUT = new Set(['textAnnotation', 'dataObject', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
+// read since story 2.31 (NOTED), a data object or data store reference since story 2.32 (DATA_REF), each left out only
+// inside a sub-process. A data object has no shape of its own, nor a data store at the definitions' level: bpmn-js draws
+// them through their references, and they are no line of the left-out list.
+const LEFT_OUT = new Set(['textAnnotation', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
 const NOTED = new Set(['textAnnotation', 'association']);
+const DATA_REF = Object.assign(Object.create(null), { dataObjectReference: 'object', dataStoreReference: 'store' });
 // A text annotation's text: its <text> child as written, every blank and line break kept. bpmn-js draws it so: moddle
 // keeps the text node verbatim, and diagram-js's layoutText() splits it at each line break and keeps empty and
 // indented lines; a pretty-printed <text> is drawn a line lower and indented, and its box is measured for that
@@ -130,12 +133,13 @@ const noteText = el => {
   const t = kids(el).find(k => local(k) === 'text');
   return t ? Array.from(t.childNodes).filter(k => k.nodeType === 4 || (k.nodeType === 3 && k.data.trim())).map(k => k.data).join('') : '';
 };
-// What a flow node may hold that is drawn and left out with it.
-const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation']);
+// What a flow node may hold that is drawn with it (story 2.32): its data associations, in, from a reference to the node,
+// and out, from the node to a reference.
+const DATA_ASSOCIATION = Object.assign(Object.create(null), { dataInputAssociation: 'in', dataOutputAssociation: 'out' });
 
 // The pools and their processes, read from the parsed XML:
 //   { model, leftOut }
-//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, insert }
+//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, data, dataAssociations, insert }
 //     pools: [{ id, name, box }], one per pool laid out, top to bottom in
 //            the order of the participants; id null where nothing is drawn as
 //            a pool: a process without a participant, a participant without
@@ -168,6 +172,19 @@ const LEFT_OUT_INSIDE = new Set(['dataInputAssociation', 'dataOutputAssociation'
 //     associations: [{ id, note, partner, kind, toNote }], each from a text
 //            annotation to its partner: kind node, boundary, flow, message or
 //            pool; toNote where the text annotation is the target
+//            A text annotation without an association to anything laid out
+//            (story 2.32) is a note too: { id, text, pool, lane, lone: true },
+//            pool the index of the pool its process is drawn as (null in the
+//            collaboration, or where its process is no pool with lanes), lane
+//            the key of the lane whose flowNodeRef names it, or null
+//     data:  [{ id, kind, name, state, pool, lane }], the data object (kind
+//            object) and data store references (store) of the processes
+//            (story 2.32): state, the name of its dataState, or ''; pool and
+//            lane as for a text annotation without an association
+//     dataAssociations: [{ id, node, ref, dir }], each between a flow node or
+//            a boundary event and a reference: dir in, read by the node (a
+//            dataInputAssociation, its first sourceRef the reference), or out,
+//            written (a dataOutputAssociation, its targetRef the reference)
 //     insert: null, or where processes have no collaboration (Ben,
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
@@ -201,7 +218,11 @@ export function readProcess(doc){
   const collaboration = participants.length ? participants[0].parentElement : null;
   // The text annotations and associations of the collaboration and of each process, read once the pools are (story 2.31).
   const noted = [];
-  const noteSlot = el => { const slot = { id: attr(el, 'id'), tag: local(el), reason: null }; leftOut.push(slot); noted.push({ el, slot }); };
+  const noteSlot = (el, proc = null) => { const slot = { id: attr(el, 'id'), tag: local(el), reason: null }; leftOut.push(slot); noted.push({ el, slot, proc }); };
+  // The data references and data associations of each process, read once the pools are (story 2.32), each with its
+  // place in leftOut; artifactLane: per id a lane's flowNodeRef names that is no flow node, that lane.
+  const data = { refs: [], associations: [], slot: (el, list, more) => { const slot = { id: attr(el, 'id'), tag: local(el), reason: null }; leftOut.push(slot); list.push({ el, slot, ...more }); } };
+  const artifactLane = new Map();
   // A message flow keeps its place in the list; whether it is left out is known once the pools are read.
   const slots = new Map();
   if (collaboration) for (const el of kids(collaboration)){
@@ -226,13 +247,14 @@ export function readProcess(doc){
   const byId = new Map(), poolOfNode = new Map();
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
-    const own = readPool(proc, participant, nodes, lanes, leave, noteSlot);
+    const own = readPool(proc, participant, nodes, lanes, leave, noteSlot, data);
     // A participant without a process of its own (a black box) is a pool without lanes (story 2.29).
     if (!own && participant && attr(participant, 'id')){ pools.push({ id: attr(participant, 'id'), name: clean(attr(participant, 'name')), el: participant, proc, box: true }); continue; }
     if (!own){ blackBoxes.push({ participant, proc }); continue; }
     const index = pools.length;
     for (const l of own.lanes){ l.pool = index; lanes.push(l); }
     for (const n of own.nodes){ byId.set(n.id, n); poolOfNode.set(n.id, index); }
+    for (const [id, lane] of own.artifactLane) if (!artifactLane.has(id)) artifactLane.set(id, lane);
     flows.push(...own.flows);
     boundaries.push(...own.boundaries);
     pools.push({ id: participant && attr(participant, 'id') ? attr(participant, 'id') : null, name: participant ? clean(attr(participant, 'name')) : '', el: participant, proc, standIn: own.standIn });
@@ -275,29 +297,36 @@ export function readProcess(doc){
     else if (a.pool === b.pool) slot.reason = 'a message flow within one pool';
     else messages.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), ...(a.frame ? { fromPool: a.pool } : {}), ...(b.frame ? { toPool: b.pool } : {}) });
   }
-  const { notes, associations } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages });
+  // The pool a process is drawn as, where it is one with lanes: what holds a text annotation or a reference without a
+  // partner.
+  const procPool = new Map(pools.map((p, i) => [p.proc, i]).filter(([proc], i) => proc && !pools[i].box));
+  const where = { procPool, artifactLane };
+  const { refs, dataAssociations } = readData(data, { byId, boundaries }, where);
+  const { notes, associations } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages, refIds: new Set(refs.map(r => r.id)) }, where);
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
   // A participant without an id gets no pool shape.
   for (const p of pools) if (p.el && !attr(p.el, 'id')) leave(p.el, 'has no id; it is not drawn as a pool');
-  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, insert }, leftOut };
+  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, insert }, leftOut };
 }
 
 // The text annotations and their associations (story 2.31): noted, [{ el, slot }] in the order of the XML, slot its
 // entry in leftOut, whose reason stays null where it is laid out. A text annotation's pool is that of the partner of its
 // first association (a message flow: none). An association with a text annotation at one end and at the other a flow node, a
 // boundary event, a sequence or message flow, or a pool laid out is kept; the rest is left out. A text annotation
-// without text, or without an association kept, is left out (Ben, 2026-10-06).
-function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages }){
+// without text is left out (Ben, 2026-10-06); one without an association kept is laid out on its own (story 2.32,
+// Ben, 2026-10-08: "Notizen ohne Verbindungen weglassen — das geht mal gar nicht!"), in the lane whose flowNodeRef
+// names it, else in the pool of its process, else beside the pools (where: procPool, artifactLane).
+function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages, refIds }, { procPool, artifactLane }){
   const notes = [], associations = [];
   const poolIndex = new Map(pools.map((p, i) => [p.id, i]).filter(([id]) => id));
   const boundaryOf = new Map(boundaries.map(b => [b.id, b]));
   const flowOf = new Map(flows.map(f => [f.id, f])), messageOf = new Map(messages.map(m => [m.id, m]));
   const texts = new Map(), empty = new Set();
-  for (const { el, slot } of noted) if (local(el) === 'textAnnotation'){
+  for (const { el, slot, proc } of noted) if (local(el) === 'textAnnotation'){
     if (!attr(el, 'id')) slot.reason = 'has no id';
     // A text annotation without text is no comment (Ben, 2026-10-06, nz13-rg1: Signavio's IT-system markers).
     else if (!clean(noteText(el))){ slot.reason = 'has no text'; empty.add(attr(el, 'id')); }
-    else texts.set(attr(el, 'id'), { el, slot });
+    else texts.set(attr(el, 'id'), { el, slot, proc });
   }
   // The other end: its kind and the pool it lies in (a message flow in none).
   const partnerOf = id => byId.has(id) ? { kind: 'node', pool: poolOfNode.get(id) }
@@ -314,41 +343,82 @@ function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages
     if (!id) slot.reason = 'has no id';
     else if (!note && (empty.has(from) || empty.has(to))) slot.reason = 'its text annotation ' + (empty.has(from) ? from : to) + ' has no text';
     else if (!note) slot.reason = texts.has(from) ? 'between two text annotations' : 'has no text annotation at either end';
-    else if (!partner) slot.reason = 'touches ' + (other || 'nothing') + ', which is not laid out';
+    else if (!partner) slot.reason = refIds.has(other) ? 'touches the reference ' + other + ', which takes no text annotation yet' : 'touches ' + (other || 'nothing') + ', which is not laid out';
     else {
       associations.push({ id, note, partner: other, kind: partner.kind, ...(note === to ? { toNote: true } : {}) });
       if (!linked.has(note)) linked.set(note, partner.pool);
     }
   }
-  for (const [id, { el, slot }] of texts){
-    if (!linked.has(id)) slot.reason = 'has no association to anything laid out';
+  for (const [id, { el, proc }] of texts){
+    if (!linked.has(id)) notes.push({ id, text: noteText(el), ...aside(id, proc, { procPool, artifactLane }), lone: true });
     else notes.push({ id, text: noteText(el), pool: linked.get(id) });
   }
   return { notes, associations };
+}
+
+// Where a text annotation or a reference without a partner stands (story 2.32): { pool, lane }, the pool its process is
+// drawn as (procPool; null in the collaboration, or where the process is no pool with lanes), the key of the lane whose
+// flowNodeRef names it (artifactLane), or null.
+function aside(id, proc, { procPool, artifactLane }){
+  const lane = artifactLane.get(id);
+  return { pool: lane ? lane.pool : procPool.has(proc) ? procPool.get(proc) : null, lane: lane ? lane.key : null };
+}
+
+// The data object and data store references and the data associations (story 2.32). data: { refs, associations } as
+// readPool() collected them, each { el, slot, … } in the order of the XML, slot its entry in leftOut, whose reason stays
+// null where it is laid out. Every reference with an id is laid out; a data association where its other end, the
+// first sourceRef of one in or the targetRef of one out, is a reference laid out, and its node one too (the node an
+// element laid out: a flow node or a boundary event). The rest is left out: a property, an input or output of an
+// ioSpecification, nothing, an id unknown.
+function readData(data, { byId, boundaries }, where){
+  const refs = [], dataAssociations = [], ids = new Set();
+  for (const { el, slot, proc } of data.refs){
+    const id = attr(el, 'id');
+    if (!id){ slot.reason = 'has no id'; continue; }
+    const state = kids(el).find(k => local(k) === 'dataState');
+    refs.push({ id, kind: DATA_REF[local(el)], name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), state: state ? clean(attr(state, 'name')) : '', ...aside(id, proc, where) });
+    ids.add(id);
+  }
+  const users = new Set([...byId.keys(), ...boundaries.map(b => b.id)]);
+  for (const { el, slot, node, dir } of data.associations){
+    const id = attr(el, 'id');
+    const end = kids(el).find(k => local(k) === (dir === 'in' ? 'sourceRef' : 'targetRef'));
+    const ref = end ? end.textContent.trim() : '';
+    if (!id) slot.reason = 'has no id';
+    else if (!users.has(node)) slot.reason = 'its node ' + node + ' is not laid out';
+    else if (!ref) slot.reason = 'names no ' + (dir === 'in' ? 'source' : 'target');
+    else if (!ids.has(ref)) slot.reason = (dir === 'in' ? 'reads ' : 'writes ') + ref + ', which is no data object or store reference laid out';
+    else dataAssociations.push({ id, node, ref, dir });
+  }
+  return { refs, dataAssociations };
 }
 
 // The flow nodes, lanes and sequence flows of one pool's process, keyed on
 // from the nodes and lanes of the pools before it, and standIn, the one lane
 // of a process without lanes, or null; null for a pool with nothing to place. Throws where a node stands in no lane although the
 // process has lanes.
-function readPool(proc, participant, before, beforeLanes, leave, note){
+function readPool(proc, participant, before, beforeLanes, leave, note, data){
   if (!proc) return null;
   const nodes = [];
   for (const el of kids(proc)){
     const tag = local(el), type = nodeType(tag), id = attr(el, 'id');
-    if (type && id){
+    if (DATA_REF[tag]) data.slot(el, data.refs, { proc });
+    else if (type && id){
       // markers: how many markers bpmn-js draws in the middle of an activity's lower edge (story 2.30): a sub-process's
       // "+", a loop or multi-instance marker, an ad-hoc sub-process's "~", a compensation marker.
       const markers = type !== 'task' ? 0 : (HOLDS_CONTENT.has(tag) || tag === 'callActivity' ? 1 : 0) + (tag === 'adHocSubProcess' ? 1 : 0) + (attr(el, 'isForCompensation') === 'true' ? 1 : 0) +
         (kids(el).some(k => ['standardLoopCharacteristics', 'multiInstanceLoopCharacteristics'].includes(local(k))) ? 1 : 0);
       nodes.push({ id, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), type, tag, key: 'n' + (before.length + nodes.length + 1), ...(markers ? { markers } : {}) });
-      // A sub-process is drawn as one symbol; what it holds is left out.
+      // A sub-process is drawn as one symbol; what it holds is left out, its data associations too.
       if (HOLDS_CONTENT.has(tag)){
         for (const inner of descendants(el)) if (attr(inner, 'id') && (nodeType(local(inner)) || LEFT_OUT.has(local(inner)) || ['sequenceFlow', 'boundaryEvent'].includes(local(inner)))) leave(inner, 'inside the sub-process ' + id);
       }
-      for (const inner of descendants(el)) if (LEFT_OUT_INSIDE.has(local(inner))) leave(inner, 'not laid out');
+      // Its own data associations are its children (story 2.32); one deeper lies inside a sub-process, or nowhere a
+      // node holds one.
+      for (const inner of kids(el)) if (DATA_ASSOCIATION[local(inner)]) data.slot(inner, data.associations, { node: id, dir: DATA_ASSOCIATION[local(inner)] });
+      for (const inner of descendants(el)) if (DATA_ASSOCIATION[local(inner)] && inner.parentElement !== el) leave(inner, HOLDS_CONTENT.has(tag) ? 'inside the sub-process ' + id : 'not laid out');
     } else if (type) leave(el, 'has no id');
-    else if (NOTED.has(tag)) note(el);
+    else if (NOTED.has(tag)) note(el, proc);
     else if (LEFT_OUT.has(tag)) leave(el, 'not laid out');
   }
   if (!nodes.length){
@@ -367,6 +437,8 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
     if (!id) leave(el, 'has no id');
     else if (!byId.has(host) || byId.get(host).type !== 'task') leave(el, 'attached to ' + (host || 'nothing') + ', which is not laid out');
     else boundaries.push({ id, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')), host, cancel: attr(el, 'cancelActivity') !== 'false' });
+    // Its data associations (story 2.32): readData() leaves out those of an event not laid out.
+    for (const inner of kids(el)) if (DATA_ASSOCIATION[local(inner)]) data.slot(inner, data.associations, { node: id, dir: DATA_ASSOCIATION[local(inner)] });
   }
   const boundaryIds = new Set(boundaries.map(b => b.id));
 
@@ -401,6 +473,14 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
     const stray = nodes.filter(n => !placed.has(n.id));
     if (stray.length) throw new Error(layoutStrayText(stray.map(n => n.id)));
   } else lanes.push(standIn = { id: '', name: participant ? clean(attr(participant, 'name')) : '', nodes: nodes.map(n => n.id), key: key(), synthetic: true });
+  // What a lane's flowNodeRef names that is no flow node, a reference or a text annotation (story 2.32): that lane, or
+  // for an outer lane its first inner one; the first lane that names it.
+  const artifactLane = new Map();
+  for (const el of allLanes){
+    const lane = laneOf.get(el) || (outer(el) && laneOf.get(descendants(el).find(inner => laneOf.has(inner))));
+    if (!lane) continue;
+    for (const k of kids(el)) if (local(k) === 'flowNodeRef' && !byId.has(k.textContent.trim()) && !artifactLane.has(k.textContent.trim())) artifactLane.set(k.textContent.trim(), lane);
+  }
 
   const flows = [];
   for (const el of kids(proc)){
@@ -412,7 +492,7 @@ function readPool(proc, participant, before, beforeLanes, leave, note){
     else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')) });
     else leave(el, !attr(el, 'id') ? 'has no id' : boundaryIds.has(to) ? 'enters the boundary event ' + to : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id) && !boundaryIds.has(id)))].join(' and ') + ', which is not laid out');
   }
-  return { nodes, lanes, flows, boundaries, standIn };
+  return { nodes, lanes, flows, boundaries, standIn, artifactLane };
 }
 
 // One line per left-out element for the console.
@@ -765,6 +845,64 @@ export function wayAlong(way, segs){
   }
   return false;
 }
+// ---------- data objects and data stores (story 2.32) ----------
+// The sizes bpmn-js draws a data object and a data store in.
+export const DATA_SIZE = { object: [36, 50], store: [50, 50] };
+// A reference stands this far above its user: room for its association's arrow.
+const DATA_GAP = 40;
+// Two data associations between one reference and one node, one read and one written, lie this far apart.
+const DATA_PAIR = 12;
+// What stands on its own, a text annotation or a reference without a partner: this far from the top left of its lane,
+// and from each other.
+const ASIDE_GAP = 12, ASIDE_STEP = 24;
+
+// Whether a point lies in the shape ({ kind, cx, cy, w, h }), its outline included.
+const inShape = (s, p) => s.kind === 'circle' ? Math.hypot(p.x - s.cx, p.y - s.cy) <= s.w / 2 + 1e-9
+  : s.kind === 'diamond' ? Math.abs(p.x - s.cx) / (s.w / 2) + Math.abs(p.y - s.cy) / (s.h / 2) <= 1 + 1e-9
+  : Math.abs(p.x - s.cx) <= s.w / 2 + 1e-9 && Math.abs(p.y - s.cy) <= s.h / 2 + 1e-9;
+// Where the line from a, inside the shape, to b leaves it.
+function leaveShape(s, a, b){
+  if (!inShape(s, a)) return outline(s, b.x, b.y);
+  let lo = 0, hi = 1;
+  for (let i = 0; i < 32; i++){ const m = (lo + hi) / 2; if (inShape(s, { x: a.x + (b.x - a.x) * m, y: a.y + (b.y - a.y) * m })) lo = m; else hi = m; }
+  return { x: a.x + (b.x - a.x) * lo, y: a.y + (b.y - a.y) * lo };
+}
+
+// The waypoints of a data association between a reference's box r ([x, y, w, h]) and its node's shape s, from the
+// reference to the node, [[x, y], [x, y]]: one above the other, a vertical line in the middle of where they overlap
+// across; beside each other, a horizontal one; otherwise straight between their middles, as bpmn-js draws it, cut at
+// both outlines. offset moves the line across by as much: two lines between one pair lie side by side.
+export function dataWay(r, s, offset = 0){
+  const [x, y, w, h] = r, ref = { kind: 'rect', cx: x + w / 2, cy: y + h / 2, w, h };
+  const sx1 = s.cx - s.w / 2, sx2 = s.cx + s.w / 2, sy1 = s.cy - s.h / 2, sy2 = s.cy + s.h / 2;
+  const room = 2 * Math.abs(offset) + 8;
+  const ox1 = Math.max(x, sx1), ox2 = Math.min(x + w, sx2), oy1 = Math.max(y, sy1), oy2 = Math.min(y + h, sy2);
+  if (ox2 - ox1 >= room && (y + h <= sy1 || y >= sy2)){
+    const v = R((ox1 + ox2) / 2 + offset), down = y + h <= sy1;
+    return [[v, down ? y + h : y], [v, R(edgeAt(s, v, down ? -1 : 1, false))]];
+  }
+  if (oy2 - oy1 >= room && (x + w <= sx1 || x >= sx2)){
+    const v = R((oy1 + oy2) / 2 + offset), right = x + w <= sx1;
+    return [[right ? x + w : x, v], [R(edgeAt(s, v, right ? -1 : 1, true)), v]];
+  }
+  const dx = s.cx - ref.cx, dy = s.cy - ref.cy, len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len * offset, ny = dx / len * offset;
+  const a = { x: ref.cx + nx, y: ref.cy + ny }, b = { x: s.cx + nx, y: s.cy + ny };
+  const p = leaveShape(ref, a, b), q = leaveShape(s, b, a);
+  return [[R(p.x), R(p.y)], [R(q.x), R(q.y)]];
+}
+// The boxes a way [[x, y], …] covers, for covered(): a straight piece its box, a slanted one a small box every 4 px.
+function wayBoxes(way){
+  const out = [];
+  for (let i = 1; i < way.length; i++){
+    const [x1, y1] = way[i - 1], [x2, y2] = way[i];
+    if (x1 === x2 || y1 === y2){ out.push([Math.min(x1, x2), Math.min(y1, y2), Math.abs(x1 - x2), Math.abs(y1 - y2)]); continue; }
+    const n = Math.max(1, Math.ceil(Math.hypot(x2 - x1, y2 - y1) / 4));
+    for (let k = 0; k <= n; k++) out.push([x1 + (x2 - x1) * k / n - 1, y1 + (y2 - y1) * k / n - 1, 2, 2]);
+  }
+  return out;
+}
+
 // Whether a way [[x, y], …] passes through one of the boxes [x, y, w, h] (1 px in from their edges).
 export function wayHits(way, boxes){
   for (let i = 1; i < way.length; i++){
@@ -3142,40 +3280,40 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // nearest that point, wherever lanes and pools have moved the two since.
   const aimOf = new Map();
   let stripes = false;
+  const nodeOf = new Map([...model.nodes, ...boundaries].map(n => [n.id, n]));
+  const kindOf = id => { const t = nodeOf.get(id).type; return t === 'task' ? 'rect' : t === 'gateway' ? 'diamond' : 'circle'; };
+  const laneBoxes = () => model.lanes.map(l => laneBox[l.key]);
+  const ay = a => 'cy' in a ? a.cy : a.y;
+  // Moves down by d everything at or below cut: lanes (the one cut runs through grows, or grow: the lane whose
+  // border it is), symbols, flows, labels and their owners, text annotations and references placed, black boxes;
+  // extra: points of no flow that move with them.
+  const openStripe = (cut, d, extra, grow = null) => {
+    stripes = true;
+    const before = owners.map(o => ay(o.anchor));
+    for (const b of laneBoxes()){ if (b === grow) b[3] += d; else if (b[1] >= cut) b[1] += d; else if (b[1] + b[3] > cut) b[3] += d; }
+    for (const c of Object.values(box)) if (c.cy >= cut) c.cy += d;
+    const moved = new Set();
+    for (const o of routes){
+      for (const q of o.pts) if (q.y >= cut && !moved.has(q)){ moved.add(q); q.y += d; }
+      for (const ob of o.obstacles || []) if ((ob.y1 + ob.y2) / 2 >= cut && !moved.has(ob)){ moved.add(ob); ob.y1 += d; ob.y2 += d; }
+    }
+    for (const q of [...owners.map(o => o.anchor).filter(a => !('cy' in a)), ...extra]) if (q.y >= cut && !moved.has(q)){ moved.add(q); q.y += d; }
+    owners.forEach((o, i) => { const m = ay(o.anchor) - before[i]; if (m) for (const b of o.boxes) b[1] += m; });
+    model.pools.forEach(p => { if (p.box && di.pools[p.id][1] >= cut) di.pools[p.id][1] += d; });
+    // A pool with lanes is as high as its lanes, and the edges the text annotations keep off follow its frame.
+    model.pools.forEach((p, i) => {
+      if (!p.id || p.box) return;
+      const ls = model.lanes.filter(l => (l.pool ?? 0) === i).map(l => laneBox[l.key]), top = Math.min(...ls.map(b => b[1]));
+      di.pools[p.id][1] = top; di.pools[p.id][3] = Math.max(...ls.map(b => b[1] + b[3])) - top;
+    });
+    edges.splice(0, edges.length, ...Object.values(di.pools).flatMap(frameEdges));
+    for (const n of [...model.nodes, ...boundaries]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id][0] = R(cx - w / 2); di.nodes[n.id][1] = R(cy - h / 2); }
+    segments.length = 0;
+    segments.push(...routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
+  };
   if (notes.length){
     di.notes = byId(); di.associations = byId();
-    const nodeOf = new Map([...model.nodes, ...boundaries].map(n => [n.id, n]));
     const routeOf = new Map(routes.map(r => [r.f.id, r]));
-    const kindOf = id => { const t = nodeOf.get(id).type; return t === 'task' ? 'rect' : t === 'gateway' ? 'diamond' : 'circle'; };
-    const lanesAll = () => model.lanes.map(l => laneBox[l.key]);
-    const ay = a => 'cy' in a ? a.cy : a.y;
-    // Moves down by d everything at or below cut: lanes (the one cut runs through grows, or grow: the lane whose
-    // border it is), symbols, flows, labels and their owners, text annotations placed, black boxes; extra: points of
-    // no flow that move with them.
-    const openStripe = (cut, d, extra, grow = null) => {
-      stripes = true;
-      const before = owners.map(o => ay(o.anchor));
-      for (const b of lanesAll()){ if (b === grow) b[3] += d; else if (b[1] >= cut) b[1] += d; else if (b[1] + b[3] > cut) b[3] += d; }
-      for (const c of Object.values(box)) if (c.cy >= cut) c.cy += d;
-      const moved = new Set();
-      for (const o of routes){
-        for (const q of o.pts) if (q.y >= cut && !moved.has(q)){ moved.add(q); q.y += d; }
-        for (const ob of o.obstacles || []) if ((ob.y1 + ob.y2) / 2 >= cut && !moved.has(ob)){ moved.add(ob); ob.y1 += d; ob.y2 += d; }
-      }
-      for (const q of [...owners.map(o => o.anchor).filter(a => !('cy' in a)), ...extra]) if (q.y >= cut && !moved.has(q)){ moved.add(q); q.y += d; }
-      owners.forEach((o, i) => { const m = ay(o.anchor) - before[i]; if (m) for (const b of o.boxes) b[1] += m; });
-      model.pools.forEach(p => { if (p.box && di.pools[p.id][1] >= cut) di.pools[p.id][1] += d; });
-      // A pool with lanes is as high as its lanes, and the edges the text annotations keep off follow its frame.
-      model.pools.forEach((p, i) => {
-        if (!p.id || p.box) return;
-        const ls = model.lanes.filter(l => (l.pool ?? 0) === i).map(l => laneBox[l.key]), top = Math.min(...ls.map(b => b[1]));
-        di.pools[p.id][1] = top; di.pools[p.id][3] = Math.max(...ls.map(b => b[1] + b[3])) - top;
-      });
-      edges.splice(0, edges.length, ...Object.values(di.pools).flatMap(frameEdges));
-      for (const n of [...model.nodes, ...boundaries]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id][0] = R(cx - w / 2); di.nodes[n.id][1] = R(cy - h / 2); }
-      segments.length = 0;
-      segments.push(...routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
-    };
     const add = (n, place, anchor) => {
       di.notes[n.id] = place;
       taken.push(place);
@@ -3183,6 +3321,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       owners.push({ boxes: [place], anchor });
     };
     for (const n of notes){
+      // One without an association stands on its own, after the references (story 2.32).
+      if (n.lone) continue;
       notePool.set(n.id, n.pool ?? undefined);
       const size = noteSize(n.text, measure), a = assocs.find(x => x.note === n.id);
       if (a.kind === 'pool') continue;
@@ -3226,7 +3366,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
         let first = null, least = Infinity;
         for (const down of [below, !below]) for (const an of anchors){
           if (place) break;
-          const c = centre(an), lane = lanesAll().find(b => b[1] <= c.cy && c.cy <= b[1] + b[3]);
+          const c = centre(an), lane = laneBoxes().find(b => b[1] <= c.cy && c.cy <= b[1] + b[3]);
           if (!lane) continue;
           const cut = down ? lane[1] + lane[3] : lane[1];
           const inLane = b => b[1] + b[3] / 2 >= lane[1] && b[1] + b[3] / 2 <= lane[1] + lane[3];
@@ -3260,6 +3400,188 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       if (!('cy' in anchor)) aimOf.set(n.id, { dx: anchor.x - place[0], dy: anchor.y - place[1] });
       add(n, place, anchor);
     }
+  }
+
+  // The data object and data store references (story 2.32), after the text annotations, each keeping off every
+  // symbol, piece of a flow, label, text annotation and reference placed before it, its data associations off symbols,
+  // labels, text annotations and references, along no flow, crossing none where the round has a place without (Ben,
+  // 2026-10-08, the choices left to Claude): a reference with one user above it, in its lane (below lie the labels of
+  // events, the boundary events and most labels of flows); one with several users at the middle of their columns, in
+  // the lane with most of them (one shape, the shortest lines); a data store as a data object. The first free place
+  // in the rounds NOTE_ROUNDS; where none is free, at the top of that lane, which grows there. Its name below it,
+  // measured as an event's, else where an event's label goes. Then what stands on its own, a reference without a user
+  // and a text annotation without an association: top left in its lane, else in its pool, side by side, the lane
+  // growing at its top where something stands there; one in neither beside the pools, once the frame is done.
+  const data = model.data || [], dataAssocs = model.dataAssociations || [];
+  const lone = notes.filter(n => n.lone);
+  // Per reference placed in a pool that pool, for the frame.
+  const dataPool = new Map();
+  const usersOf = new Map(data.map(d => [d.id, []]));
+  for (const a of dataAssocs) if (!usersOf.get(a.ref).includes(a.node)) usersOf.get(a.ref).push(a.node);
+  // Two data associations between one reference and one node lie side by side, the one in first.
+  const pairOffset = new Map();
+  for (const d of data) for (const u of usersOf.get(d.id)){
+    const pair = dataAssocs.filter(a => a.ref === d.id && a.node === u);
+    pair.forEach((a, i) => pairOffset.set(a.id, (i - (pair.length - 1) / 2) * DATA_PAIR));
+  }
+  // What stands beside the pools: placed once the frame is done.
+  const area = [];
+  if (data.length || lone.length){
+    if (!di.notes){ di.notes = byId(); di.associations = byId(); }
+    di.data = byId(); di.dataLabels = byId(); di.dataAssociations = byId();
+    const shapeOf = id => { const c = box[id]; return { kind: kindOf(id), cx: c.cx, cy: c.cy, w: c.w, h: c.h }; };
+    // A reference's lines at place, each with its node: [{ node, way }].
+    const waysOf = (d, place) => usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(place, shapeOf(u), pairOffset.get(a.id)) })));
+    // The pieces of the data associations placed so far.
+    const dataSegs = [];
+    const laneAt = c => laneBoxes().find(b => b[1] <= c.cy && c.cy <= b[1] + b[3]);
+    const laneOfBox = b => model.lanes.find(l => laneBox[l.key] === b);
+    const poolOfBox = b => { const l = laneOfBox(b); return l ? l.pool ?? 0 : null; };
+    // The left edge of what a lane holds: right of its head, where it is drawn.
+    const laneLeft = b => b[0] + (laneOfBox(b).synthetic ? 0 : HEAD);
+    const borders = () => model.lanes.slice(1).flatMap((l, i) => {
+      const above = model.lanes[i];
+      return (above.pool ?? 0) === (l.pool ?? 0) && !(above.synthetic && l.synthetic) ? [[-1e6, laneBox[l.key][1] - 1, 2e6, 2]] : [];
+    });
+    const labelSize = d => d.name ? measure(textOf(d)) : null;
+    // A reference's name below it (centred, as bpmn-js draws it), else where an event's label goes, off its own lines.
+    const addData = (d, place, anchor, pool, label = null) => {
+      di.data[d.id] = place;
+      taken.push(place);
+      takenPool.push(pool);
+      owners.push({ boxes: [place], anchor });
+      dataPool.set(d.id, pool ?? undefined);
+      const size = labelSize(d);
+      if (!size) return;
+      const c = { cx: place[0] + place[2] / 2, cy: place[1] + place[3] / 2, w: place[2], h: place[3] };
+      const own = waysOf(d, place).flatMap(x => wayBoxes(x.way));
+      const lp = label || bestPlace(labelPlaces(c, size, false), [...symbols, ...segments, ...dataSegs, ...own, ...taken]);
+      const [x, y, w, h] = lp;
+      di.dataLabels[d.id] = [R(x + w / 2 - Math.max(LABEL_WIDTH, w) / 2), R(y), Math.max(LABEL_WIDTH, w), R(h)];
+      taken.push(lp);
+      takenPool.push(pool);
+      owners.push({ boxes: [lp, di.dataLabels[d.id]], anchor });
+    };
+    // The faults of a reference's lines: through a symbol not its own node's or a box taken, along a flow, along a line
+    // placed or another of its own, touching a flow where crossing is not allowed. at: the shape of a node, symbolOf: its
+    // box, symbolsNow and takenNow: what the lines keep off.
+    const wayFaults = (list, symbolOf, symbolsNow, takenNow, crossing) => {
+      let n = 0;
+      list.forEach(({ node, way }, i) => {
+        const own = symbolOf(node);
+        if (wayHits(way, [...symbolsNow.filter(b => b !== own), ...takenNow])) n++;
+        if (wayAlong(way, segments) || wayAlong(way, dataSegs) || list.some((o, j) => j !== i && o.node !== node && wayAlong(way, wayBoxes(o.way)))) n++;
+        if (!crossing && wayTouches(way, segments)) n++;
+      });
+      return n;
+    };
+    for (const d of data){
+      const users = usersOf.get(d.id);
+      if (!users.length) continue;
+      const [w, h] = DATA_SIZE[d.kind];
+      // The lane with most of the users; of the tied, the one nearest to all of them (the middle of three), else the
+      // first user's. The middle of their columns.
+      const count = new Map();
+      for (const u of users){ const b = laneAt(box[u]); count.set(b, (count.get(b) || 0) + 1); }
+      const most = Math.max(...count.values());
+      const spread = b => users.reduce((sum, u) => sum + Math.abs(b[1] + b[3] / 2 - box[u].cy), 0);
+      const lane = [...count.keys()].filter(b => count.get(b) === most).reduce((m, b) => spread(b) < spread(m) ? b : m);
+      const xs = users.map(u => box[u].cx), mid = (Math.min(...xs) + Math.max(...xs)) / 2;
+      const mine = users.filter(u => laneAt(box[u]) === lane);
+      const top = Math.min(...mine.map(u => box[u].cy - box[u].h / 2)), bottom = Math.max(...mine.map(u => box[u].cy + box[u].h / 2));
+      const inLane = p => p[1] >= lane[1] + LABEL_GAP && p[1] + p[3] <= lane[1] + lane[3] - LABEL_GAP && p[0] >= laneLeft(lane) + LABEL_GAP;
+      const clear = (p, crossing) => inLane(p) && !covered(p, [...symbols, ...segments, ...dataSegs, ...taken, ...borders()], NOTE_CLEAR) &&
+        !wayFaults(waysOf(d, p), u => di.nodes[u], symbols, taken, crossing);
+      const ks = [0, 1, -1, 2, -2];
+      // Above the highest user in the lane; with several users, then below the lowest.
+      const ys = far => users.length > 1 ? [top - DATA_GAP - far - h, bottom + DATA_GAP + far] : [top - DATA_GAP - far - h];
+      let place = null;
+      for (const side of users.length > 1 ? [0, 1] : [0]){
+        rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const k of ks){
+          const p = [R(mid - w / 2 + k * (w + ASIDE_STEP)), R(ys(far)[side]), w, h];
+          if (clear(p, crossing)){ place = p; break rounds; }
+        }
+        if (place) break;
+      }
+      // None free: a stripe across the pools at the top of the lane, which grows there, with several users also at its
+      // bottom; at the middle, else beside it: where fewest flows and labels cross the lane's border and the lines are
+      // clearest, the lines as they will be once the stripe has moved what lies beyond.
+      if (!place){
+        const d0 = h + DATA_GAP;
+        let best = null;
+        for (const down of users.length > 1 ? [false, true] : [false]){
+          const cut = down ? lane[1] + lane[3] : lane[1], y = down ? cut + DATA_GAP / 2 : cut + ASIDE_GAP;
+          const move = b => b[1] + b[3] / 2 >= cut ? [b[0], b[1] + d0, b[2], b[3]] : b;
+          const nodesNow = new Map([...nodeOf.keys()].map(id => [id, move(di.nodes[id])]));
+          const at = u => { const c = shapeOf(u); return c.cy >= cut ? { ...c, cy: c.cy + d0 } : c; };
+          const symbolsNow = [...nodesNow.values()], takenNow = taken.map(move);
+          for (const k of [0, 1, -1, 2, -2, 3, -3]){
+            const x = R(mid - w / 2 + k * (w + ASIDE_STEP));
+            if (x < laneLeft(lane) + LABEL_GAP) continue;
+            const p = [x, R(y), w, h];
+            const across = segments.filter(sg => sg[3] > 0 && sg[1] < cut && sg[1] + sg[3] > cut && sg[0] >= x - 3 && sg[0] <= x + w + 3).length +
+              taken.filter(b => b[1] < cut && b[1] + b[3] > cut && b[0] < x + w && b[0] + b[2] > x).length;
+            const ways = usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(p, at(u), pairOffset.get(a.id)) })));
+            const faults = across + wayFaults(ways, u => nodesNow.get(u), symbolsNow, takenNow, true);
+            if (!best || faults < best.faults) best = { faults, cut, p };
+            if (!faults) break;
+          }
+          if (best && !best.faults) break;
+        }
+        openStripe(best.cut, d0, [], lane);
+        place = best.p;
+      }
+      const anchor = { x: place[0] + w / 2, y: place[1] + h / 2 };
+      addData(d, place, anchor, poolOfBox(lane));
+      dataSegs.push(...waysOf(d, place).flatMap(x => wayBoxes(x.way)));
+    }
+
+    // What stands on its own, by where: a lane (its own, or the first of its pool), or beside the pools.
+    const items = [...lone.map(n => ({ n, size: noteSize(n.text, measure) })), ...data.filter(d => !usersOf.get(d.id).length).map(d => {
+      const [w, h] = DATA_SIZE[d.kind], l = labelSize(d);
+      // Its footprint: the reference and its name below it.
+      return { d, w, h, label: l, size: { w: Math.max(w, l ? l.w : 0), h: h + (l ? LABEL_GAP + l.h : 0) } };
+    })];
+    const groups = new Map();
+    for (const it of items){
+      const x = it.n || it.d;
+      const lane = x.lane ? model.lanes.find(l => l.key === x.lane) : x.pool != null ? model.lanes.find(l => (l.pool ?? 0) === x.pool) : null;
+      const key = lane ? lane.key : '';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(it);
+    }
+    // A row from the left, ASIDE_STEP apart: each item's box at x, the boxes [x, y, w, h] of the footprints.
+    const row = (list, x0, y0) => {
+      let x = x0;
+      return list.map(it => { const p = [R(x), R(y0), it.size.w, Math.ceil(it.size.h)]; x += it.size.w + ASIDE_STEP; return p; });
+    };
+    const put = (it, p, pool) => {
+      const anchor = { x: p[0] + p[2] / 2, y: p[1] + p[3] / 2 };
+      if (it.n){
+        di.notes[it.n.id] = p;
+        taken.push(p);
+        takenPool.push(pool);
+        owners.push({ boxes: [p], anchor });
+        notePool.set(it.n.id, pool ?? undefined);
+        return;
+      }
+      const place = [R(p[0] + (p[2] - it.w) / 2), p[1], it.w, it.h];
+      const label = it.label ? [R(place[0] + it.w / 2 - it.label.w / 2), place[1] + it.h + LABEL_GAP, it.label.w, it.label.h] : null;
+      addData(it.d, place, anchor, pool, label);
+    };
+    for (const [key, list] of groups){
+      if (!key){ area.push(...list); continue; }
+      const lane = laneBox[key], pool = poolOfBox(lane);
+      const x0 = laneLeft(lane) + ASIDE_GAP, y0 = lane[1] + ASIDE_GAP;
+      let places = row(list, x0, y0);
+      const height = Math.max(...places.map(p => p[3]));
+      const free = places.every(p => p[1] + p[3] <= lane[1] + lane[3] - LABEL_GAP && !covered(p, [...symbols, ...segments, ...dataSegs, ...taken, ...borders()], NOTE_CLEAR));
+      if (!free){ openStripe(lane[1], height + 2 * ASIDE_GAP, [], lane); places = row(list, x0, y0); }
+      list.forEach((it, i) => put(it, places[i], pool));
+    }
+    // Where the frame placed them, done below.
+    area.put = put;
+    area.row = row;
   }
 
   // A lane a label reaches out of grows, and what lies beyond moves, each
@@ -3318,6 +3640,9 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     for (const [id, b] of [...Object.entries(di.nodes), ...Object.entries(di.labels)]) if (moves(poolOf.get(id), b[1])) b[1] += dy;
     for (const [id, b] of Object.entries(di.flowLabels)){ moved.add(b); if (moves(flowPool.get(id), b[1])) b[1] += dy; }
     for (const [id, b] of Object.entries(di.notes || {})){ moved.add(b); if (moves(notePool.get(id), b[1])) b[1] += dy; }
+    // A reference shares its array with taken, its name's box in the diagram part is one of its own (story 2.32).
+    for (const [id, b] of Object.entries(di.data || {})){ moved.add(b); if (moves(dataPool.get(id), b[1])) b[1] += dy; }
+    for (const [id, b] of Object.entries(di.dataLabels || {})) if (moves(dataPool.get(id), b[1])) b[1] += dy;
     taken.forEach((b, k) => { if (!moved.has(b) && moves(takenPool[k] ?? undefined, b[1])) b[1] += dy; });
     for (const l of model.lanes) if (own(l.pool ?? 0)) laneBox[l.key][1] += dy;
     model.pools.forEach((p, k) => { if (p.box && own(k)) di.pools[p.id][1] += dy; });
@@ -3389,6 +3714,22 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       // Its waypoints run from its source to its target.
       const way = associationWay(nb, s);
       di.associations[a.id] = a.toNote ? way.reverse() : way;
+    }
+  }
+
+  // What stands on its own beside the pools (story 2.32): top left above them, side by side; then every data
+  // association from its reference to where its node now stands, or the other way round.
+  if (area.length){
+    const frames = [...Object.values(di.pools), ...Object.values(laneBox)];
+    const top = Math.min(...frames.map(b => b[1])), left = Math.min(...frames.map(b => b[0]));
+    const height = Math.max(...area.map(it => Math.ceil(it.size.h)));
+    area.row(area, left, top - ASIDE_STEP - height).forEach((p, i) => area.put(area[i], p, null));
+  }
+  if (di.dataAssociations){
+    const shapeAt = id => { const [x, y, w, h] = di.nodes[id]; return { kind: kindOf(id), cx: x + w / 2, cy: y + h / 2, w, h }; };
+    for (const a of dataAssocs){
+      const way = dataWay(di.data[a.ref], shapeAt(a.node), pairOffset.get(a.id));
+      di.dataAssociations[a.id] = a.dir === 'in' ? way : way.reverse();
     }
   }
 }
@@ -3542,6 +3883,7 @@ export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
   for (const n of model.nodes) out += shape(n.id, di.nodes[n.id], marker(n) ? ' isMarkerVisible="true"' : '', di.labels[n.id]);
   for (const b of model.boundaries || []) out += shape(b.id, di.nodes[b.id], '', di.labels[b.id]);
   for (const n of model.notes || []) out += shape(n.id, di.notes[n.id]);
+  for (const d of model.data || []) out += shape(d.id, di.data[d.id], '', di.dataLabels[d.id]);
   for (const f of model.flows){
     out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + '_di')) + '" bpmnElement="' + esc(f.id) + '">' +
       di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + label(di.flowLabels[f.id]) + '</bpmndi:BPMNEdge>\n';
@@ -3553,6 +3895,10 @@ export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
   for (const a of model.associations || []){
     out += '      <bpmndi:BPMNEdge id="' + esc(fresh(a.id + '_di')) + '" bpmnElement="' + esc(a.id) + '">' +
       di.associations[a.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + '</bpmndi:BPMNEdge>\n';
+  }
+  for (const a of model.dataAssociations || []){
+    out += '      <bpmndi:BPMNEdge id="' + esc(fresh(a.id + '_di')) + '" bpmnElement="' + esc(a.id) + '">' +
+      di.dataAssociations[a.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + '</bpmndi:BPMNEdge>\n';
   }
   out += '    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n';
   return { xml: text.slice(0, at) + out + text.slice(at), diagram };

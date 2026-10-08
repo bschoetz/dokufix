@@ -178,6 +178,8 @@ export function lmmPositions(model, rank){
 // flow); a pool's text annotations are stacked apart from the others.
 const KIND = { node: 0, boundary: 1, flow: 2, message: 3, pool: 4 };
 const lex = (p, q) => { for (let i = 0; i < p.length; i++){ const d = p[i] - q[i]; if (d) return d; } return 0; };
+// The place of what stands on its own, a text annotation or a reference without a partner (story 2.32): its pool (the
+// diagram area, null, last), then its lane in the order of the lanes (none, the pool's, first).
 
 // The model in LMM's order, for layoutGeometry(), and the ranks with it, from
 // one walk: { model, rank }. Every list whose order a rule of the grid reads
@@ -206,7 +208,16 @@ const lex = (p, q) => { for (let i = 0; i < p.length; i++){ const d = p[i] - q[i
 //                 its place (a boundary event after its host, a flow after its
 //                 source, a message flow after the earlier of its ends), then
 //                 text, then id; those at a pool, stacked right of its frame,
-//                 last, by pool, then text, then id
+//                 last, by pool, then text, then id; those without an
+//                 association (story 2.32) after them, by where they stand
+//                 (asidePlace()), then text, then id
+//   data          the references, placed one after the other like the notes
+//                 (story 2.32): by the place of their first user (a boundary
+//                 event at its host's), then name, then id; those without a
+//                 user after them, by where they stand (asidePlace()), then name,
+//                 then id
+//   dataAssociations  by the order of their references, then the place of
+//                 their node, the one in before the one out, then id
 //   lanes, pools  unchanged: they give the picture its order from top to
 //                 bottom
 // The order hangs on ids only where LMM's own does, and where two text
@@ -251,10 +262,23 @@ export function kanonisch(model){
   for (const a of [...(model.associations || [])].sort(assocKey)) if (!firstOf.has(a.note)) firstOf.set(a.note, a);
   const P = n => place(firstOf.get(n.id)), kind = n => KIND[firstOf.get(n.id).kind];
   const noteKey = (x, y) => kind(x) - kind(y) || lex(P(x), P(y)) || cmp(x.text, y.text) || cmp(x.id, y.id);
-  const all = (model.notes || []).map(n => ({ ...n, pool: poolOf(firstOf.get(n.id)) }));
+  const all = (model.notes || []).filter(n => !n.lone).map(n => ({ ...n, pool: poolOf(firstOf.get(n.id)) }));
   const atPool = n => firstOf.get(n.id).kind === 'pool';
   const notes = [...all.filter(n => !atPool(n)).sort(noteKey), ...all.filter(atPool).sort(noteKey)];
+  const laneIdx = new Map(lanes.map((l, i) => [l.key, i]));
+  const asidePlace = x => [x.pool ?? model.pools.length, x.lane ? laneIdx.get(x.lane) + 1 : 0];
+  const asideKey = (x, y, text) => lex(asidePlace(x), asidePlace(y)) || cmp(text(x), text(y)) || cmp(x.id, y.id);
+  notes.push(...[...(model.notes || [])].filter(n => n.lone).sort((x, y) => asideKey(x, y, n => n.text)));
   const notePos = new Map(notes.map((n, i) => [n.id, i]));
   const associations = [...(model.associations || [])].sort((a, b) => notePos.get(a.note) - notePos.get(b.note) || assocKey(a, b));
-  return { model: { ...model, nodes, lanes, flows, boundaries, messages, notes, associations }, rank };
+  // The references: by the place of their first user.
+  const dataAssocs = model.dataAssociations || [];
+  const userPos = new Map();
+  for (const a of dataAssocs){ const p = pos.get(own(a.node)); if (!userPos.has(a.ref) || p < userPos.get(a.ref)) userPos.set(a.ref, p); }
+  const used = (model.data || []).filter(d => userPos.has(d.id)).sort((x, y) => userPos.get(x.id) - userPos.get(y.id) || cmp(x.name, y.name) || cmp(x.id, y.id));
+  const data = [...used, ...(model.data || []).filter(d => !userPos.has(d.id)).sort((x, y) => asideKey(x, y, d => d.name))];
+  const dataPos = new Map(data.map((d, i) => [d.id, i]));
+  const dataAssociations = [...dataAssocs].sort((a, b) => dataPos.get(a.ref) - dataPos.get(b.ref) || pos.get(own(a.node)) - pos.get(own(b.node)) ||
+    (a.node === b.node ? 0 : bPos.has(a.node) - bPos.has(b.node)) || (a.dir === b.dir ? 0 : a.dir === 'in' ? -1 : 1) || cmp(a.id, b.id));
+  return { model: { ...model, nodes, lanes, flows, boundaries, messages, notes, associations, data, dataAssociations }, rank };
 }
