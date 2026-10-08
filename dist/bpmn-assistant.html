@@ -6655,8 +6655,12 @@ const TYPES = [
   ['gwp', 'Gateway parallel', 'fsli'],
   ['gwo', 'Gateway inklusiv', 'fsli'],
   ['gwe', 'Gateway ereignisbasiert, komplex', 'fsli'],
-  ['flow', 'Sequenzfluss', 'sl'],
-  ['msg', 'Nachrichtenfluss', 'sl'],
+  ['flow', 'Sequenzfluss', 'fsl'],
+  ['msg', 'Nachrichtenfluss', 'fsl'],
+  ['assoc', 'Assoziation', 's'],
+  ['note', 'Textanmerkung', 'sl'],
+  ['data', 'Datenobjekt und Datenspeicher', 'fsl'],
+  ['group', 'Gruppe', 'sl'],
   ['pool', 'Pool', 'fs'],
   ['head', 'Poolkopf', 'fl'],
   ['lane', 'Bahn', 'fsl'],
@@ -6678,6 +6682,10 @@ const SEL = {
   gwe: ':is(.dokufix-bpmn-eventbasedgateway,.dokufix-bpmn-complexgateway)',
   flow: '.dokufix-bpmn-sequenceflow',
   msg: '.dokufix-bpmn-messageflow',
+  assoc: ':is(.dokufix-bpmn-association,.dokufix-bpmn-datainputassociation,.dokufix-bpmn-dataoutputassociation)',
+  note: '.dokufix-bpmn-textannotation',
+  data: ':is(.dokufix-bpmn-dataobjectreference,.dokufix-bpmn-datastorereference)',
+  group: '.dokufix-bpmn-group',
   lane: '.dokufix-bpmn-lane',
 };
 const HEX = /^#[0-9a-f]{6}$/i;
@@ -6696,8 +6704,11 @@ function fromRoles(r, over = {}){
   Object.assign(t, {
     'end-fill': r.fill, 'end-stroke': r.end, 'end-label': r.label,
     'task-icon': r.sym,
-    'flow-stroke': r.line, 'flow-label': r.label,
-    'msg-stroke': r.line, 'msg-label': r.label,
+    'flow-fill': r.fill, 'flow-stroke': r.line, 'flow-label': r.label,
+    'msg-fill': r.fill, 'msg-stroke': r.line, 'msg-label': r.label,
+    'assoc-stroke': r.line, 'note-stroke': r.line, 'note-label': r.label,
+    'data-fill': r.fill, 'data-stroke': r.line, 'data-label': r.label,
+    'group-stroke': r.poolLine, 'group-label': r.label,
     'pool-fill': r.poolFill, 'pool-stroke': r.poolLine,
     'head-fill': r.head || r.poolFill, 'head-label': headLabel({ label: r.label, head: r.head || r.poolFill }),
     'lane-fill': r.poolFill, 'lane-stroke': r.poolLine, 'lane-label': r.label,
@@ -6724,6 +6735,9 @@ const PRESETS = {
     'gwo-stroke': '#ad33cc', 'gwo-label': '#1c1c1e', 'gwo-icon': '#8a29a3', 'gwe-fill': '#ffffff',
     'gwe-stroke': '#ad33cc', 'gwe-label': '#1c1c1e', 'gwe-icon': '#8a29a3', 'flow-stroke': '#3a3a3f',
     'flow-label': '#1c1c1e', 'msg-stroke': '#c38209', 'msg-label': '#1c1c1e', 'pool-fill': '#ffffff',
+    'flow-fill': '#ffffff', 'msg-fill': '#ffffff', 'assoc-stroke': '#6e6e73', 'note-stroke': '#3a3a3f',
+    'note-label': '#1c1c1e', 'data-fill': '#ffffff', 'data-stroke': '#3a3a3f', 'data-label': '#1c1c1e',
+    'group-stroke': '#6e6e73', 'group-label': '#1c1c1e',
     'pool-stroke': '#2c2c2c', 'head-fill': '#000000', 'head-label': '#ffffff', 'lane-fill': '#ffffff',
     'lane-stroke': '#2c2c2c', 'lane-label': '#1c1c1e', 'bg-fill': 'transparent' },
   // Wie dokufix zeichnet (src/doc.css:269–274), Nachrichtenflüsse dort #6e6e73.
@@ -6742,7 +6756,9 @@ const PRESETS = {
     'gwp-stroke': '#f50537', 'gwp-label': '#1a1a1a', 'gwp-icon': '#4c4c4c', 'gwo-fill': '#ffffff', 'gwo-stroke': '#f50537', 'gwo-label': '#1a1a1a',
     'gwo-icon': '#4c4c4c', 'gwe-fill': '#ffffff', 'gwe-stroke': '#f50537', 'gwe-label': '#1a1a1a', 'gwe-icon': '#4c4c4c', 'flow-stroke': '#4c4c4c',
     'flow-label': '#4c4c4c', 'msg-stroke': '#808080', 'msg-label': '#1a1a1a', 'pool-fill': '#f2f2f2', 'pool-stroke': '#000000', 'head-fill': '#000000',
-    'head-label': '#ffffff', 'lane-fill': '#f2f2f2', 'lane-stroke': '#b3b3b3', 'lane-label': '#1a1a1a', 'bg-fill': 'transparent' },
+    'head-label': '#ffffff', 'lane-fill': '#f2f2f2', 'lane-stroke': '#b3b3b3', 'lane-label': '#1a1a1a', 'bg-fill': 'transparent',
+    'flow-fill': '#ffffff', 'msg-fill': '#ffffff', 'assoc-stroke': '#808080', 'note-stroke': '#4c4c4c', 'note-label': '#1a1a1a',
+    'data-fill': '#ffffff', 'data-stroke': '#333333', 'data-label': '#1a1a1a', 'group-stroke': '#808080', 'group-label': '#1a1a1a' },
   // STI Consulting: die Farben des Theme-Stylesheets von sti-consulting.com (2026-10-05): Primär Oliv #7E904C,
   // Dunkelblau #1D2C49 der dunklen Abschnitte (hier auch der Poolkopf), Text #333, Überschriften #1a1a1a, Hintergrund #FAFAFA.
   sti: { name: 'STI Consulting', ...fromRoles({ sym: '#7e904c', end: '#1d2c49', line: '#333333', poolLine: '#1d2c49', poolFill: '#fafafa', head: '#1d2c49', fill: '#ffffff', label: '#1a1a1a', bg: '#ffffff' },
@@ -6775,6 +6791,14 @@ function migrate(t){
   if (t['gw-fill'] && !t['gwx-fill']) for (const g of ['gwx', 'gwp', 'gwo', 'gwe']) for (const p of ['fill', 'stroke', 'label']) t[g + '-' + p] = t['gw-' + p];
   // Ein Stand ohne eigenes Symbol (Aufgabe, Ereignisse, Gateways): das Symbol wie die Linie.
   for (const [k, , ps] of TYPES) if (ps.includes('i') && t[k + '-stroke'] && !t[k + '-icon']) t[k + '-icon'] = t[k + '-stroke'];
+  // Ein Stand vor den Farben für Flussfüllung, Assoziation, Textanmerkung, Daten und Gruppe (2026-10-08): eine Vorlage
+  // nimmt deren neue Werte, Eigenes behält sein Bild, also die Grundwerte, die diese Elemente bis dahin hatten
+  // (Füllung und Schrift wie Aufgaben, Linie wie Sequenzflüsse).
+  const missing = KEYS.filter(k => !(k in t));
+  if (missing.length){
+    const base = Object.values(PRESETS).find(p => KEYS.every(k => missing.includes(k) || p[k] === t[k]));
+    for (const k of missing) t[k] = base ? base[k] : t[k.endsWith('-fill') ? 'task-fill' : k.endsWith('-label') ? 'task-label' : 'flow-stroke'];
+  }
   return t;
 }
 let theme = { preset: 'gelb', ...PRESETS.gelb };

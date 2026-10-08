@@ -62,6 +62,8 @@ const AUDI = {
   'gwo-icon': '#4c4c4c', 'gwe-fill': '#ffffff', 'gwe-stroke': '#f50537', 'gwe-label': '#1a1a1a', 'gwe-icon': '#4c4c4c', 'flow-stroke': '#4c4c4c',
   'flow-label': '#4c4c4c', 'msg-stroke': '#808080', 'msg-label': '#1a1a1a', 'pool-fill': '#f2f2f2', 'pool-stroke': '#000000', 'head-fill': '#000000',
   'head-label': '#ffffff', 'lane-fill': '#f2f2f2', 'lane-stroke': '#b3b3b3', 'lane-label': '#1a1a1a',
+  'flow-fill': '#ffffff', 'msg-fill': '#ffffff', 'assoc-stroke': '#808080', 'note-stroke': '#4c4c4c', 'note-label': '#1a1a1a',
+  'data-fill': '#ffffff', 'data-stroke': '#333333', 'data-label': '#1a1a1a', 'group-stroke': '#808080', 'group-label': '#1a1a1a',
 };
 // Die Klassen, die addBpmnTypeClasses() je Typ vergibt (src/app/bpmn.js), wie SEL in bauen.mjs.
 const SEL = {
@@ -76,6 +78,10 @@ const SEL = {
   gwe: ':is(.dokufix-bpmn-eventbasedgateway,.dokufix-bpmn-complexgateway)',
   flow: '.dokufix-bpmn-sequenceflow',
   msg: '.dokufix-bpmn-messageflow',
+  assoc: ':is(.dokufix-bpmn-association,.dokufix-bpmn-datainputassociation,.dokufix-bpmn-dataoutputassociation)',
+  note: '.dokufix-bpmn-textannotation',
+  data: ':is(.dokufix-bpmn-dataobjectreference,.dokufix-bpmn-datastorereference)',
+  group: '.dokufix-bpmn-group',
   lane: '.dokufix-bpmn-lane',
 };
 // Die Farben als Stilblock, wie applyTheme() in bauen.mjs ihn schreibt, hier einmal beim Bauen.
