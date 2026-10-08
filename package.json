@@ -15,7 +15,8 @@
     "pruefung": "node tests/pruefung.mjs",
     "fixtures": "node tests/bpmn-fixtures.mjs",
     "labels": "node tests/check-label-size.mjs",
-    "assistant": "node tools/bpmn-assistant/bauen.mjs"
+    "assistant": "node tools/bpmn-assistant/bauen.mjs",
+    "layouter-audi": "node tools/bpmn-assistant/audi.mjs"
   },
   "devDependencies": {
     "bpmn-moddle": "10.3.1",
