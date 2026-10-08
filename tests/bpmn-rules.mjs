@@ -62,7 +62,26 @@
 //                             end is not on its partner (a symbol's outline, a
 //                             piece of a flow, a pool's frame): <association>
 //                             <the end's element>
-// An association is no flow for any other rule; a text annotation no symbol.
+// and with data object and data store references (story 2.32), each its box,
+// its name's box a label, each data association its waypoints:
+//   data-on-node, data-on-flow, a reference on a symbol, on a piece of a flow
+//   data-on-label, data-on-note, (within 2 px), on a label, on a text
+//   data-on-data              annotation, on another reference: <reference>
+//                             <what it lies on>
+//   data-outside-lane         a reference in no lane of its pool (a pool with
+//                             lanes drawn): <reference>
+//   data-association-through  a data association through a symbol, a label, a
+//                             text annotation or a reference not its ends:
+//                             <association> <what it passes>
+//   data-association-off      a data association whose end at its reference
+//                             is not on the reference's box, or whose end at
+//                             its node is not on the node's outline:
+//                             <association> <the end's element>
+//   data-association-along    two data associations, or one and a flow, on
+//                             one line: <association> <the other>
+// An association is no flow for any other rule; a text annotation no symbol;
+// a data association no flow and a reference no symbol either, its name a
+// label as an event's.
 // A message flow counts as a flow for every rule but point-outside-lanes;
 // its label is in no lane and no pool. A boundary event (story 2.30) counts as
 // a symbol, an event, for every rule; that it lies across its host's outline
@@ -138,6 +157,9 @@ export function breaksOf(xml, model, sizes = {}){
   // The associations' edges are no flows (story 2.31).
   const associations = model.associations || [], assocWays = {};
   for (const a of associations) if (di.flows[a.id]){ assocWays[a.id] = di.flows[a.id]; delete di.flows[a.id]; }
+  // Nor are the data associations' (story 2.32).
+  const dataAssocs = model.dataAssociations || [], dataWays = {};
+  for (const a of dataAssocs) if (di.flows[a.id]){ dataWays[a.id] = di.flows[a.id]; delete di.flows[a.id]; }
   // An edge of no flow the model knows (another layout's association to what dokufix leaves out, as bpmn.io draws it in
   // the BPMN Assistant) is not checked.
   const known = new Set(model.flows.concat(model.messages || []).map(f => f.id));
@@ -276,6 +298,15 @@ export function breaksOf(xml, model, sizes = {}){
     labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
   }
   for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });
+  // A reference's name, as an event's (story 2.32); its pool, the one whose frame holds the reference.
+  const refs = (model.data || []).map(d => ({ ...d, box: di.shapes[d.id] })).filter(d => d.box);
+  const poolAt = b => { const k = pools.findIndex((p, i) => poolBox(i) && within(b, poolBox(i))); return k < 0 ? undefined : k; };
+  for (const d of refs){
+    const box = di.labels[d.id];
+    if (!box) continue;
+    const [x, y, w, h] = box, s = sizes[d.label ?? d.name] || measureLabel(d.label ?? d.name);
+    labels.push({ id: d.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: d.id, pool: poolAt(d.box), data: true });
+  }
   for (const f of messages) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], message: true });
   for (const l of labels){
     const [x, y, w, h] = l.box;
@@ -299,6 +330,8 @@ export function breaksOf(xml, model, sizes = {}){
       });
       continue;
     }
+    // A reference beside the pools has a label in none (story 2.32).
+    if (l.data && l.pool === undefined) continue;
     const own = lanesOfPool(l.pool);
     if (own.length && !own.some(ln => within(l.box, ln))) add('label-outside-lane', l.id);
     const pool = poolBox(l.pool);
@@ -341,6 +374,44 @@ export function breaksOf(xml, model, sizes = {}){
     for (const [nid, b] of Object.entries(nodes)) if (nid !== a.partner && passes(w, b)) add('association-through', a.id, nid);
     for (const l of labels) if (l.id !== a.partner && passes(w, l.box)) add('association-through', a.id, l.id);
     for (const m of notes) if (m.id !== a.note && passes(w, m.box)) add('association-through', a.id, m.id);
+  }
+
+  // Data object and data store references and their data associations (story 2.32).
+  const refBox = Object.fromEntries(refs.map(d => [d.id, d.box]));
+  for (const d of refs){
+    for (const [nid, b] of Object.entries(nodes)) if (overlaps(d.box, b)) add('data-on-node', d.id, nid);
+    for (const sg of segs){
+      const [x, y, w, h] = d.box, x1 = Math.min(sg.a[0], sg.b[0]), x2 = Math.max(sg.a[0], sg.b[0]), y1 = Math.min(sg.a[1], sg.b[1]), y2 = Math.max(sg.a[1], sg.b[1]);
+      if (x2 >= x - 2 && x1 <= x + w + 2 && y2 >= y - 2 && y1 <= y + h + 2) add('data-on-flow', d.id, sg.id);
+    }
+    for (const l of labels) if (l.id !== d.id && overlaps(d.box, l.box)) add('data-on-label', d.id, l.id);
+    for (const n of notes) if (overlaps(d.box, n.box)) add('data-on-note', d.id, n.id);
+    for (const e of refs) if (e !== d && overlaps(d.box, e.box)) add('data-on-data', ...[d.id, e.id].sort());
+    const k = poolAt(d.box), own = k === undefined ? [] : lanesOfPool(k);
+    if (own.length && !own.some(ln => within(d.box, ln))) add('data-outside-lane', d.id);
+  }
+  const dataPieces = dataAssocs.filter(a => dataWays[a.id]).flatMap(a => dataWays[a.id].slice(1).map((b, i) => ({ id: a.id, a: dataWays[a.id][i], b })));
+  for (const a of dataAssocs){
+    const w = dataWays[a.id];
+    if (!w || !refBox[a.ref] || !nodes[a.node]) continue;
+    const [atRef, atNode] = a.dir === 'in' ? [w[0], w.at(-1)] : [w.at(-1), w[0]];
+    if (!onBox(atRef, refBox[a.ref])) add('data-association-off', a.id, a.ref);
+    if (!onOutline(atNode, nodes[a.node], typeOf(a.node))) add('data-association-off', a.id, a.node);
+    for (const [nid, b] of Object.entries(nodes)) if (nid !== a.node && passes(w, b)) add('data-association-through', a.id, nid);
+    for (const l of labels) if (l.id !== a.ref && passes(w, l.box)) add('data-association-through', a.id, l.id);
+    for (const n of notes) if (passes(w, n.box)) add('data-association-through', a.id, n.id);
+    for (const e of refs) if (e.id !== a.ref && passes(w, e.box)) add('data-association-through', a.id, e.id);
+  }
+  // Two pieces on one line: both horizontal or both vertical, within 3 px, side by side for more than 4 px.
+  const along = (p, q) => {
+    const hp = p.a[1] === p.b[1], hq = q.a[1] === q.b[1], vp = p.a[0] === p.b[0], vq = q.a[0] === q.b[0];
+    if (hp && hq) return Math.abs(p.a[1] - q.a[1]) <= 3 && Math.min(Math.max(p.a[0], p.b[0]), Math.max(q.a[0], q.b[0])) - Math.max(Math.min(p.a[0], p.b[0]), Math.min(q.a[0], q.b[0])) > 4;
+    if (vp && vq) return Math.abs(p.a[0] - q.a[0]) <= 3 && Math.min(Math.max(p.a[1], p.b[1]), Math.max(q.a[1], q.b[1])) - Math.max(Math.min(p.a[1], p.b[1]), Math.min(q.a[1], q.b[1])) > 4;
+    return false;
+  };
+  for (let i = 0; i < dataPieces.length; i++){
+    for (let j = i + 1; j < dataPieces.length; j++) if (dataPieces[i].id !== dataPieces[j].id && along(dataPieces[i], dataPieces[j])) add('data-association-along', ...[dataPieces[i].id, dataPieces[j].id].sort());
+    for (const sg of segs) if (along(dataPieces[i], sg)) add('data-association-along', dataPieces[i].id, sg.id);
   }
   return [...out].sort();
 }
