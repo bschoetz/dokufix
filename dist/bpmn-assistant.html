@@ -7160,6 +7160,29 @@ $('merge-x').onchange = () => {
   try { localStorage.setItem(MERGE_X_KEY, $('merge-x').checked ? 'an' : 'aus'); } catch {}
   render();
 };
+// Das Häkchen gilt auch fürs Original (Ben, 2026-10-08), aber nur, wenn jedes exklusive Gateway der Datei
+// isMarkerVisible="true" trägt, wie bpmn-js es beim Modellieren an jedes setzt: dann hat der Editor das X geregelt,
+// nicht der Autor. Abgewählt verliert ein Merge (gezählt wie in appendDiagram(): mindestens zwei Flüsse hinein,
+// höchstens einer hinaus) das Attribut und wird zur leeren Raute, auch im .bpmn-Download und im Modellierer. Fehlt es
+// an einem Gateway oder steht dort "false", bleibt die Datei, wie sie ist. Gibt { xml, count } zurück: count Merges
+// ohne X.
+function mergeMarkerOff(xml, model){
+  const gateways = new Set(model.nodes.filter(n => n.tag === 'exclusiveGateway').map(n => n.id));
+  const count = (end, id) => model.flows.filter(f => f[end] === id).length;
+  const shape = /<(?:[\w.-]+:)?BPMNShape\b[^>]*>/g;
+  const elementOf = tag => (tag.match(/\sbpmnElement\s*=\s*["']([^"']*)["']/) || [])[1];
+  const visible = /\s+isMarkerVisible\s*=\s*["']true["']/;
+  const tags = [...xml.matchAll(shape)].map(m => m[0]).filter(t => gateways.has(elementOf(t)));
+  if (!tags.length || !tags.every(t => visible.test(t))) return { xml, count: 0 };
+  const merges = new Set();
+  const out = xml.replace(shape, t => {
+    const id = elementOf(t);
+    if (!gateways.has(id) || count('to', id) < 2 || count('from', id) > 1) return t;
+    merges.add(id);
+    return t.replace(visible, '');
+  });
+  return { xml: out, count: merges.size };
+}
 // Sprungbögen (src/app/line-jumps.js, Prototyp): gesetzt wie in der App, in Bild und Großansicht; der Modellierer
 // zeichnet ohne. Gemerkt wie das Häkchen davor; eine Änderung zeichnet neu.
 const JUMPS_KEY = 'bpmn-assistant-sprungboegen';
@@ -7406,21 +7429,24 @@ async function render(){
   // dem DOMParser der Seite.
   let doc;
   try { doc = T.parseXml(xml); } catch (e){ error(section('Eingabe'), 'Das XML ist nicht lesbar:\n' + e.message); return; }
-  // Zuerst das Original, wenn die Datei eigene Koordinaten hat: so gezeichnet, in der gewählten Palette; sonst kein
-  // Abschnitt (Ben, 2026-10-06: „nur noch Original (falls vorhanden) und A2“).
-  if (hasShapes(input)){
-    const orig = section('Original BPMN');
-    try { await draw(orig, input, 'original'); } catch (e){ error(orig, (e && e.message) || String(e)); }
-  }
-  if (my !== run) return;
-  let read;
+  // Vor dem Original gelesen, denn das Häkchen zum X zählt die Flüsse im Modell; der Fehler erst nach dem Original.
+  let read, readError;
   try {
     read = T.a2.readProcess(doc);
     if (!read) throw new Error('Keine BPMN-Definitionen (das Wurzelelement ist nicht definitions).');
     // Die Spalten gibt LMM, die Beschriftungen misst das Layout selbst (measureLabel(), wie in der App): weder Mermaid
     // noch ein Viewer zum Messen.
-  } catch (e){ error(section('Eingabe'), (e && e.message) || String(e)); return; }
+  } catch (e){ readError = e; }
+  // Zuerst das Original, wenn die Datei eigene Koordinaten hat: so gezeichnet, in der gewählten Palette; sonst kein
+  // Abschnitt (Ben, 2026-10-06: „nur noch Original (falls vorhanden) und A2“).
+  if (hasShapes(input)){
+    const orig = section('Original BPMN');
+    const own = read && !$('merge-x').checked ? mergeMarkerOff(input, read.model) : { xml: input, count: 0 };
+    if (own.count) orig.querySelector('small').textContent = own.count + (own.count === 1 ? ' zusammenführendes Gateway' : ' zusammenführende Gateways') + ' ohne X';
+    try { await draw(orig, own.xml, 'original'); } catch (e){ error(orig, (e && e.message) || String(e)); }
+  }
   if (my !== run) return;
+  if (readError){ error(section('Eingabe'), readError.message || String(readError)); return; }
   if (read.leftOut.length){
     const d = document.createElement('details');
     d.innerHTML = '<summary>' + read.leftOut.length + ' Elemente nicht angeordnet (wie in der App)</summary>' + read.leftOut.map(l => esc(l.tag + ' ' + (l.id || '') + ': ' + l.reason)).join('<br>');
