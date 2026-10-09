@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Vertrieb"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Leitung"><bpmn:flowNodeRef>t3</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Anfrage da"/>
+    <bpmn:task id="t1" name="Angebot erstellen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1a"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="i1b"><bpmn:sourceRef>w1</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="i1c"><bpmn:sourceRef>w2</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o1"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t3" name="Angebot freigeben">
+      <bpmn:property id="p3" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i3"><bpmn:sourceRef>d2</bpmn:sourceRef><bpmn:targetRef>p3</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o3"><bpmn:targetRef>d3</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Angebot senden">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d3</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Angebot versandt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t3" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="t2" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Anfrage" dataObjectRef="do1"/>
+    <bpmn:dataStoreReference id="w1" name="Preisliste"/>
+    <bpmn:dataStoreReference id="w2" name="Kundendaten"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Angebot" dataObjectRef="do2"><bpmn:dataState id="st2" name="Entwurf"/></bpmn:dataObjectReference>
+    <bpmn:dataObjectReference id="d3" name="Angebot" dataObjectRef="do2"><bpmn:dataState id="st3" name="freigegeben"/></bpmn:dataObjectReference>
+  </bpmn:process>
+</bpmn:definitions>

@@ -197,3 +197,32 @@ test('text annotations: on a symbol, a flow, a label, one another; an associatio
   assert.deepEqual(check([400, 150, 100, 40], [[220, 90], [400, 170]]), ['association-through AN B']);
   assert.deepEqual(check([110, -10, 100, 40], [[160, 55], [160, 25]]), ['association-off AN A', 'association-off AN N']);
 });
+
+// Story 2.32: a data object D, read by A (in, from D to A), and written by B (out, from B to D) where given.
+test('data: a reference on a symbol, a flow, a label, a note, another reference or out of its lanes; a data association through, off its ends or along a line', () => {
+  const check = (d, way, { out = null, extra = {}, labels = {}, notes = [], pool = 0 } = {}) => {
+    const shapes = { ...SHAPES, D: d, ...extra };
+    const model = { ...M, flows: [M.flows.find(f => f.id === 'F1')], notes: notes.map(id => ({ id, text: id })), associations: [],
+      data: [{ id: 'D', kind: 'object', name: 'D', state: '', pool, lane: null }, ...('E' in extra ? [{ id: 'E', kind: 'store', name: 'E', state: '', pool, lane: null }] : [])],
+      dataAssociations: [{ id: 'I', node: 'A', ref: 'D', dir: 'in' }, ...(out ? [{ id: 'O', node: 'B', ref: 'D', dir: 'out' }] : [])] };
+    const edge = (id, w) => '      <bpmndi:BPMNEdge id="' + id + '_di" bpmnElement="' + id + '">' + w.map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>\n';
+    return breaksOf('<x>\n' + Object.entries(shapes).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + label(labels[id]) + '</bpmndi:BPMNShape>\n').join('') +
+      edge('F1', [[220, 90], [300, 90]]) + edge('I', way) + (out ? edge('O', out) : '') + '</x>', model, SIZES);
+  };
+  // Above A, its line from its lower side to A's top: nothing breaks, and the line is no flow.
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]]), []);
+  assert.deepEqual(check([142, 60, 36, 40], [[160, 60], [160, 50]]).filter(b => b.startsWith('data-on')), ['data-on-node D A']);
+  assert.deepEqual(check([240, 70, 36, 40], [[240, 90], [220, 90]]).filter(b => b.startsWith('data-on')), ['data-on-flow D F1']);
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { extra: { E: [150, 10, 50, 30] } }).filter(b => b.startsWith('data-on')), ['data-on-data D E']);
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { extra: { N: [150, 10, 50, 30] }, notes: ['N'] }).filter(b => b.startsWith('data-on')), ['data-on-note D N']);
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { labels: { G: [120, 10, 90, 15] } }).filter(b => b.startsWith('data-on')), ['data-on-label D G']);
+  assert.deepEqual(check([142, 180, 36, 40], [[160, 180], [160, 130]]), ['data-outside-lane D']);
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { labels: { D: [115, 190, 90, 20] } }), ['label-outside-lane D']);
+  // A reference beside the pools (no pool) is in no lane.
+  assert.deepEqual(check([142, -80, 36, 40], [[160, -40], [160, 50]], { pool: null }), []);
+  assert.deepEqual(check([600, 150, 36, 40], [[600, 170], [220, 90]]), ['data-association-through I B']);
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 45], [160, 55]]), ['data-association-off I A', 'data-association-off I D']);
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { out: [[300, 130], [300, 170], [160, 170], [160, 40]] }).filter(b => b.startsWith('data-association-along')), ['data-association-along I O'], 'two data lines on one line');
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { out: [[360, 50], [360, 20], [178, 20]] }), [], 'written by B, from B to D, beside the other');
+  assert.deepEqual(check([142, 0, 36, 40], [[160, 40], [160, 50]], { out: [[260, 130], [260, 90], [178, 90]] }).filter(b => b.startsWith('data-association-along')), ['data-association-along O F1'], 'a data line on a flow');
+});

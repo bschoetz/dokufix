@@ -24,10 +24,10 @@ import {
   readProcess, leftOutLine, layoutGeometry, appendDiagram, DEFAULT_RULES,
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, dedupe, orthogonal,
   growLane, labelRoom, nearestOnFlow, LAYOUT_NOTHING, layoutStrayText,
-  noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS,
+  noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS, dataWay, dataStateLabel, DATA_SIZE,
 } from '../src/app/bpmn-layout.js';
 import { layoutJob, answerLayout } from '../src/app/bpmn-layout-job.js';
-import { breaksOf } from './bpmn-rules.mjs';
+import { breaksOf, readDiagram } from './bpmn-rules.mjs';
 import { readFixture, readModel, fixtureNames, gridInput } from './bpmn-fixtures.mjs';
 import { measureLabel } from '../src/app/label-size.js';
 import { parseXml } from '../src/app/xml-parser.js';
@@ -118,8 +118,11 @@ test('what the layout cannot place is left out, with every flow that touches it;
   // A text annotation with its association is read (story 2.31); one without text is left out.
   assert.deepEqual(model.notes, [{ id: 'N', text: 'Notiz', pool: 0 }]);
   assert.deepEqual(model.associations, [{ id: 'AS', note: 'N', partner: 'T', kind: 'node', toNote: true }]);
+  // The data references and the data association are read (story 2.32); a data object has no line of its own.
+  assert.deepEqual(model.data, [{ id: 'DO', kind: 'object', name: '', state: '', pool: 0, lane: null }, { id: 'DS', kind: 'store', name: '', state: '', pool: 0, lane: null }]);
+  assert.deepEqual(model.dataAssociations, [{ id: 'DA', node: 'T', ref: 'DO', dir: 'out' }]);
   // A process no participant refers to is named once, after what the collaboration holds (review of 2.31).
-  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'Q', 'DA', 'SP_S', 'SP_T', 'SP_F', 'DO', 'DOB', 'DS', 'GR', 'F4']);
+  assert.deepEqual(leftOut.map(x => x.id), ['KA', 'M', 'Q', 'SP_S', 'SP_T', 'SP_F', 'GR', 'F4']);
   assert.equal(leftOutLine(leftOut[0]), 'textAnnotation KA: has no text');
   assert.equal(leftOutLine(leftOut[2]), 'process Q: no participant refers to it');
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'SP_T')), 'task SP_T: inside the sub-process SP');
@@ -1369,17 +1372,17 @@ test('a document deeper than the call stack is read as the parser reads it: ever
   assert.deepEqual(read(xml).model.nodes.map(n => n.id), ['S', 'T', 'E']);
 });
 
-test('what is no comment is left out, saying why: no text, no association, an association between two annotations or none', () => {
+test('what is no comment is left out, saying why: no text, an association between two annotations or none; one without an association stands on its own (story 2.32)', () => {
   const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:task id="K" isForCompensation="true"/><bpmn:boundaryEvent id="B" attachedToRef="T"><bpmn:compensateEventDefinition id="CD"/></bpmn:boundaryEvent>' +
     '<bpmn:textAnnotation id="Leer"/>' + assoc('AL', 'Leer', 'T') + note('Allein', 'ohne Linie') + note('X', 'x') + note('Y', 'y') + assoc('AXY', 'X', 'Y') +
     assoc('AK', 'B', 'K') + note('Z', 'zu nichts') + assoc('AZ', 'Z', 'Nichts') +
     '<bpmn:subProcess id="SP"><bpmn:task id="I"/>' + note('IN', 'innen') + assoc('IA', 'I', 'IN') + '</bpmn:subProcess></bpmn:process>'));
-  assert.deepEqual(model.notes, []);
+  // Ben, 2026-10-08: "Notizen ohne Verbindungen weglassen — das geht mal gar nicht!"
+  assert.deepEqual(model.notes, [['Allein', 'ohne Linie'], ['X', 'x'], ['Y', 'y'], ['Z', 'zu nichts']].map(([id, text]) => ({ id, text, pool: 0, lane: null, lone: true })));
   assert.deepEqual(leftOut.map(leftOutLine), [
     'textAnnotation Leer: has no text', 'association AL: its text annotation Leer has no text',
-    'textAnnotation Allein: has no association to anything laid out', 'textAnnotation X: has no association to anything laid out',
-    'textAnnotation Y: has no association to anything laid out', 'association AXY: between two text annotations',
-    'association AK: has no text annotation at either end', 'textAnnotation Z: has no association to anything laid out', 'association AZ: touches Nichts, which is not laid out',
+    'association AXY: between two text annotations',
+    'association AK: has no text annotation at either end', 'association AZ: touches Nichts, which is not laid out',
     'task I: inside the sub-process SP', 'textAnnotation IN: inside the sub-process SP', 'association IA: inside the sub-process SP']);
 });
 
@@ -1546,4 +1549,173 @@ test('an association may cross a flow, not run along one', () => {
   assert.equal(wayAlong([[102, 50], [102, 150]], along), true, 'within 3 px');
   assert.equal(wayAlong([[50, 50], [150, 50]], along), false, 'across');
   assert.equal(wayAlong([[100, 50], [100, 150]], across), false);
+});
+
+// ---------- data objects and data stores (story 2.32) ----------
+// An input laid out as the page lays it out (layoutJob()), with its model, its diagram part read back and its breaks.
+function dataLaid(xml){
+  const { model, leftOut } = read(xml);
+  const out = layoutJob(xml).xml;
+  return { model, leftOut, xml: out, di: readDiagram(out), breaks: breaksOf(out, model) };
+}
+const dataObject = (id, name, state = '') => '<bpmn:dataObjectReference id="' + id + '" name="' + name + '" dataObjectRef="' + id + '_o">' +
+  (state ? '<bpmn:dataState id="' + id + '_s" name="' + state + '"/>' : '') + '</bpmn:dataObjectReference><bpmn:dataObject id="' + id + '_o"/>';
+const dataStore = (id, name) => '<bpmn:dataStoreReference id="' + id + '" name="' + name + '"/>';
+const reads = (id, ref) => '<bpmn:dataInputAssociation id="' + id + '"><bpmn:sourceRef>' + ref + '</bpmn:sourceRef><bpmn:targetRef>' + id + '_p</bpmn:targetRef></bpmn:dataInputAssociation>';
+const writes = (id, ref) => '<bpmn:dataOutputAssociation id="' + id + '"><bpmn:targetRef>' + ref + '</bpmn:targetRef></bpmn:dataOutputAssociation>';
+const prop = id => '<bpmn:property id="' + id + '_p" name="__targetRef_placeholder"/>';
+const onBox = ([x, y], [bx_, by, bw, bh]) => x >= bx_ - 1 && x <= bx_ + bw + 1 && y >= by - 1 && y <= by + bh + 1 && Math.min(Math.abs(x - bx_), Math.abs(x - bx_ - bw), Math.abs(y - by), Math.abs(y - by - bh)) <= 1;
+const ONE = (inner, more = '') => xmlOf('<bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:task id="T" name="Prüfen">' + inner + '</bpmn:task><bpmn:endEvent id="E"/>' +
+  '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="E"/>' + more + '</bpmn:process>');
+
+test('data: references and data associations are read, the reference at the other end of each; a data object has no line', () => {
+  const { model, leftOut } = read(ONE(prop('I') + reads('I', 'D') + writes('O', 'W'), dataObject('D', 'Antrag', 'neu') + dataStore('W', 'Akte')));
+  assert.deepEqual(model.data, [
+    { id: 'D', kind: 'object', name: 'Antrag', label: 'Antrag\n[neu]', state: 'neu', pool: 0, lane: null },
+    { id: 'W', kind: 'store', name: 'Akte', state: '', pool: 0, lane: null }]);
+  assert.deepEqual(model.dataAssociations, [{ id: 'I', node: 'T', ref: 'D', dir: 'in' }, { id: 'O', node: 'T', ref: 'W', dir: 'out' }]);
+  assert.deepEqual(leftOut, []);
+});
+
+test('data: one read by one task stands above it, its line from the reference into the task; one written, the other way', () => {
+  const { di, breaks } = dataLaid(ONE(prop('I') + reads('I', 'D') + writes('O', 'W'), dataObject('D', 'Antrag') + dataStore('W', 'Akte')));
+  const t = di.shapes.T, d = di.shapes.D, w = di.shapes.W;
+  assert.deepEqual([d[2], d[3], w[2], w[3]], [...DATA_SIZE.object, ...DATA_SIZE.store]);
+  for (const r of [d, w]) assert.ok(r[1] + r[3] < t[1], 'above the task');
+  assert.ok(onBox(di.flows.I[0], d) && onBox(di.flows.I.at(-1), t), 'in: from the reference to the task');
+  assert.ok(onBox(di.flows.O[0], t) && onBox(di.flows.O.at(-1), w), 'out: from the task to the reference');
+  assert.deepEqual(breaks, []);
+});
+
+test('data: read and written by one task, one shape and two lines side by side, 12 px apart', () => {
+  const { di, xml, breaks } = dataLaid(ONE(prop('I') + reads('I', 'D') + writes('O', 'D'), dataObject('D', 'Antrag')));
+  assert.equal((xml.match(/bpmnElement="D"/g) || []).length, 1);
+  const i = di.flows.I, o = di.flows.O;
+  assert.equal(i[0][0], i[1][0], 'vertical');
+  assert.equal(Math.abs(i[0][0] - o[0][0]), 12);
+  assert.deepEqual(breaks, []);
+});
+
+test('data: two lines between one reference and one node lie apart, also slanted', () => {
+  const r = [0, 0, 36, 50], s = { kind: 'rect', cx: 300, cy: 200, w: 120, h: 80 };
+  const a = dataWay(r, s, -6), b = dataWay(r, s, 6);
+  assert.notDeepEqual(a, b);
+  assert.deepEqual(dataWay([100, 0, 36, 50], { kind: 'rect', cx: 118, cy: 150, w: 120, h: 80 }), [[118, 50], [118, 110]], 'one above the other: vertical, in the middle of the overlap');
+});
+
+test('data: one reference used in three lanes has one shape, in the lane nearest to all of them, at the middle of their columns', () => {
+  const xml = xmlOf('<bpmn:process id="P"><bpmn:laneSet id="LS">' +
+    '<bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>A</bpmn:flowNodeRef></bpmn:lane>' +
+    '<bpmn:lane id="L2"><bpmn:flowNodeRef>B</bpmn:flowNodeRef></bpmn:lane>' +
+    '<bpmn:lane id="L3"><bpmn:flowNodeRef>C</bpmn:flowNodeRef><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    '<bpmn:startEvent id="S"/><bpmn:task id="A">' + writes('W', 'D') + '</bpmn:task><bpmn:task id="B">' + prop('R1') + reads('R1', 'D') + '</bpmn:task>' +
+    '<bpmn:task id="C">' + prop('R2') + reads('R2', 'D') + '</bpmn:task><bpmn:endEvent id="E"/>' + dataObject('D', 'Auftrag') +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="A"/><bpmn:sequenceFlow id="F2" sourceRef="A" targetRef="B"/><bpmn:sequenceFlow id="F3" sourceRef="B" targetRef="C"/><bpmn:sequenceFlow id="F4" sourceRef="C" targetRef="E"/></bpmn:process>');
+  const { di, xml: out } = dataLaid(xml);
+  assert.equal((out.match(/bpmnElement="D"/g) || []).length, 1);
+  const d = di.shapes.D, l2 = di.shapes.L2;
+  assert.ok(d[1] >= l2[1] && d[1] + d[3] <= l2[1] + l2[3], 'in the middle lane');
+  const xs = ['A', 'B', 'C'].map(id => di.shapes[id][0] + di.shapes[id][2] / 2);
+  assert.ok(Math.abs(d[0] + d[2] / 2 - (Math.min(...xs) + Math.max(...xs)) / 2) <= 3 * (36 + 24), 'at the middle of their columns, or up to three places beside it');
+});
+
+test('data: at an event as at a task; a boundary event as the only user has it below, away from its host', () => {
+  const xml = xmlOf('<bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:task id="T"/><bpmn:intermediateThrowEvent id="V">' + prop('I') + reads('I', 'D') + '</bpmn:intermediateThrowEvent>' +
+    '<bpmn:boundaryEvent id="B" attachedToRef="T">' + writes('O', 'M') + '<bpmn:timerEventDefinition id="TD"/></bpmn:boundaryEvent><bpmn:endEvent id="E"/><bpmn:endEvent id="E2"/>' +
+    dataObject('D', 'Bestätigung') + dataObject('M', 'Mahnliste') +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="V"/><bpmn:sequenceFlow id="F3" sourceRef="V" targetRef="E"/><bpmn:sequenceFlow id="F4" sourceRef="B" targetRef="E2"/></bpmn:process>');
+  const { di, breaks } = dataLaid(xml);
+  const v = di.shapes.V, b = di.shapes.B, m = di.shapes.M;
+  assert.ok(di.shapes.D[1] + di.shapes.D[3] < v[1], 'above the event');
+  const [cx, cy] = [v[0] + 18, v[1] + 18], end = di.flows.I.at(-1);
+  assert.ok(Math.abs(Math.hypot(end[0] - cx, end[1] - cy) - 18) <= 1, 'the line ends on the event\'s circle');
+  assert.ok(m[1] > b[1] + b[3], 'below the boundary event');
+  assert.deepEqual(breaks.filter(x => /^data/.test(x)), []);
+});
+
+test('data: a state is a line of its own under the name, measured with it; without a name or a state there is none', () => {
+  assert.equal(dataStateLabel('Antrag', ' geprüft '), 'Antrag\n[geprüft]');
+  assert.equal(dataStateLabel('Antrag  neu', 'a  b'), 'Antrag neu\n[a b]');
+  assert.equal(dataStateLabel('Zwei\nZeilen', 'x'), 'Zwei\nZeilen\n[x]');
+  assert.equal(dataStateLabel('  ', 'x'), null);
+  assert.equal(dataStateLabel('Antrag', '  '), null);
+  const { di } = dataLaid(ONE(prop('I') + reads('I', 'D'), dataObject('D', 'Antrag', 'geprüft')));
+  assert.equal(di.labels.D[3], measureLabel('Antrag\n[geprüft]').h);
+  assert.ok(di.labels.D[3] > measureLabel('Antrag').h);
+});
+
+test('data: a reference no node uses stands top left in the lane that names it, else in its pool, else above the pools', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" processRef="P"/><bpmn:participant id="PB" processRef="Q"/></bpmn:collaboration>' +
+    '<bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef></bpmn:lane>' +
+    '<bpmn:lane id="L2"><bpmn:flowNodeRef>T</bpmn:flowNodeRef><bpmn:flowNodeRef>D</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    '<bpmn:startEvent id="S"/><bpmn:task id="T"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/>' + dataObject('D', 'Handbuch') + dataStore('W', 'Archiv') + '</bpmn:process>' +
+    '<bpmn:process id="Q"><bpmn:task id="X"/></bpmn:process>');
+  const { model, di, breaks } = dataLaid(xml);
+  assert.deepEqual(model.data.map(d => [d.id, d.pool, d.lane]), [['D', 0, 'l2'], ['W', 0, null]]);
+  const d = di.shapes.D, w = di.shapes.W, l1 = di.shapes.L1, l2 = di.shapes.L2;
+  assert.ok(d[1] >= l2[1] && d[1] < l2[1] + 30 && d[0] < l2[0] + 60, 'top left in its lane');
+  assert.ok(w[1] >= l1[1] && w[1] < l1[1] + 30 && w[0] < l1[0] + 60, 'top left in its pool, its first lane');
+  assert.deepEqual(breaks, []);
+});
+
+test('data: a text annotation without an association stands top left in its pool, or above the pools', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" processRef="P"/>' + note('NK', 'Gilt ab 2027') + '</bpmn:collaboration>' +
+    '<bpmn:process id="P">' + LINE + note('NP', 'Nach Handbuch') + '</bpmn:process>');
+  const { model, di, breaks } = dataLaid(xml);
+  assert.deepEqual(model.notes.map(n => [n.id, n.pool, n.lone]), [['NK', null, true], ['NP', 0, true]]);
+  const pool = di.shapes.PA, np = di.shapes.NP, nk = di.shapes.NK;
+  assert.ok(np[1] >= pool[1] && np[1] < pool[1] + 30 && np[0] < pool[0] + 60, 'top left in its pool');
+  assert.ok(nk[1] + nk[3] < pool[1] && nk[0] <= pool[0], 'above the pools, at their left');
+  assert.deepEqual(breaks, []);
+});
+
+test('data: a text annotation at a reference stands beside it, its association drawn', () => {
+  const { model, di, breaks } = dataLaid(ONE(prop('I') + reads('I', 'D'), dataObject('D', 'Antrag') + note('N', 'ggf. nachreichen') + assoc('A', 'D', 'N')));
+  assert.deepEqual(model.associations, [{ id: 'A', note: 'N', partner: 'D', kind: 'data', toNote: true }]);
+  assert.ok(onBox(di.flows.A[0], di.shapes.D) && onBox(di.flows.A.at(-1), di.shapes.N));
+  assert.deepEqual(breaks, []);
+});
+
+test('data: a data association to a property, to an input of the ioSpecification, to nothing or to an unknown id is left out, with its reason; so is all inside a sub-process', () => {
+  const { model, leftOut } = read(ONE('<bpmn:ioSpecification id="IO"><bpmn:dataInput id="IN"/><bpmn:inputSet id="IS"/><bpmn:outputSet id="OS"/></bpmn:ioSpecification>' + prop('X') +
+    '<bpmn:dataInputAssociation id="P1"><bpmn:sourceRef>X_p</bpmn:sourceRef><bpmn:targetRef>IN</bpmn:targetRef></bpmn:dataInputAssociation>' +
+    '<bpmn:dataInputAssociation id="P2"><bpmn:sourceRef>IN</bpmn:sourceRef><bpmn:targetRef>IN</bpmn:targetRef></bpmn:dataInputAssociation>' +
+    '<bpmn:dataOutputAssociation id="P3"/><bpmn:dataOutputAssociation id="P4"><bpmn:targetRef>Nichts</bpmn:targetRef></bpmn:dataOutputAssociation>',
+  '<bpmn:subProcess id="SP"><bpmn:task id="SPT">' + writes('P5', 'SD') + '</bpmn:task>' + dataObject('SD', 'innen') + '</bpmn:subProcess>'));
+  assert.deepEqual(model.dataAssociations, []);
+  assert.deepEqual(leftOut.map(leftOutLine), [
+    'dataInputAssociation P1: reads X_p, which is no data object or store reference laid out',
+    'dataInputAssociation P2: reads IN, which is no data object or store reference laid out',
+    'dataOutputAssociation P3: names no target',
+    'dataOutputAssociation P4: writes Nichts, which is no data object or store reference laid out',
+    'task SPT: inside the sub-process SP', 'dataObjectReference SD: inside the sub-process SP', 'dataOutputAssociation P5: inside the sub-process SP']);
+});
+
+test('data: where nothing is free the lane grows; the flow nodes keep their columns and rows, and nothing without data moves', () => {
+  const lanes = '<bpmn:laneSet id="LS"><bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane>' +
+    '<bpmn:lane id="L2"><bpmn:flowNodeRef>U</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>';
+  const body = inner => '<bpmn:process id="P">' + lanes + '<bpmn:startEvent id="S"/><bpmn:task id="T"/><bpmn:task id="U">' + inner + '</bpmn:task><bpmn:endEvent id="E"/>' +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/><bpmn:sequenceFlow id="F2" sourceRef="T" targetRef="U"/><bpmn:sequenceFlow id="F3" sourceRef="U" targetRef="E"/>';
+  const plain = dataLaid(xmlOf(body('') + '</bpmn:process>')), withData = dataLaid(xmlOf(body(prop('I') + reads('I', 'D')) + dataObject('D', 'Akte') + '</bpmn:process>'));
+  const at = (r, id) => r.di.shapes[id][0];
+  for (const id of ['S', 'T', 'U', 'E']) assert.equal(at(withData, id), at(plain, id), id + ' keeps its column');
+  assert.ok(withData.di.shapes.L2[3] > plain.di.shapes.L2[3], 'the narrow lane grew');
+  const d = withData.di.shapes.D, l2 = withData.di.shapes.L2;
+  assert.ok(d[1] >= l2[1] && d[1] + d[3] <= l2[1] + l2[3], 'in its user\'s lane');
+  // A data object without a reference is drawn by none: the diagram part as without it.
+  const ref = xmlOf(body('') + '<bpmn:dataObject id="O"/></bpmn:process>');
+  assert.equal(readDiagram(layoutJob(ref).xml).flows.F1.join(), plain.di.flows.F1.join());
+  assert.equal(layoutJob(ref).leftOut.length, 0);
+});
+
+test('data: a reference stands in its own process\'s pool, its lines crossing to users in another (Ben, 2026-10-09)', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" processRef="P"/><bpmn:participant id="PB" processRef="Q"/>' +
+    '<bpmn:messageFlow id="M" sourceRef="T" targetRef="X"/></bpmn:collaboration>' +
+    '<bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:task id="T"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="T"/>' + dataObject('D', 'Unterlagen') + '</bpmn:process>' +
+    '<bpmn:process id="Q"><bpmn:startEvent id="X"/><bpmn:task id="Y">' + prop('I') + reads('I', 'D') + '</bpmn:task><bpmn:sequenceFlow id="G1" sourceRef="X" targetRef="Y"/></bpmn:process>');
+  const { di, breaks } = dataLaid(xml);
+  const d = di.shapes.D, pa = di.shapes.PA, pb = di.shapes.PB;
+  assert.ok(d[1] >= pa[1] && d[1] + d[3] <= pa[1] + pa[3], 'inside its own pool');
+  assert.ok(d[1] + d[3] < pb[1] || d[1] > pb[1] + pb[3], 'not in the other');
+  assert.deepEqual(breaks.filter(x => /^data-(outside|on)/.test(x)), []);
 });

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="s" name="Antrag eingegangen"/>
+    <bpmn:task id="t1" name="Antrag erfassen">
+      <bpmn:dataOutputAssociation id="o1"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Antrag prüfen">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o2"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t3" name="Bescheid senden">
+      <bpmn:property id="p3" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i3"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p3</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o3"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Bescheid versandt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="t3" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Antrag" dataObjectRef="do1"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Bescheid" dataObjectRef="do2"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="144" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="184" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t1_di" bpmnElement="t1"><dc:Bounds x="210" y="122" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t2_di" bpmnElement="t2"><dc:Bounds x="378" y="122" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t3_di" bpmnElement="t3"><dc:Bounds x="546" y="122" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="738" y="144" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="184" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d1_di" bpmnElement="d1"><dc:Bounds x="420" y="12" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="-6" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d2_di" bpmnElement="d2"><dc:Bounds x="588" y="32" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="561" y="14" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="162"/><di:waypoint x="210" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="162"/><di:waypoint x="378" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="498" y="162"/><di:waypoint x="546" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4"><di:waypoint x="666" y="162"/><di:waypoint x="738" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o1_di" bpmnElement="o1"><di:waypoint x="324" y="122"/><di:waypoint x="420" y="50"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i2_di" bpmnElement="i2"><di:waypoint x="432" y="62"/><di:waypoint x="432" y="122"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o2_di" bpmnElement="o2"><di:waypoint x="444" y="122"/><di:waypoint x="444" y="62"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i3_di" bpmnElement="i3"><di:waypoint x="456" y="50"/><di:waypoint x="552" y="122"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o3_di" bpmnElement="o3"><di:waypoint x="606" y="122"/><di:waypoint x="606" y="82"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

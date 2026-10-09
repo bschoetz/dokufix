@@ -571,6 +571,9 @@ function judgeDiagrams(exp, wellFormed){
       ...m.messages.map(f => ({ id: f.id, tag: 'messageFlow' })),
       ...(m.notes || []).map(n => ({ id: n.id, tag: 'textAnnotation' })),
       ...(m.associations || []).map(a => ({ id: a.id, tag: 'association' })),
+      // Story 2.32: the data object and data store references, and their data associations.
+      ...(m.data || []).map(d => ({ id: d.id, tag: d.kind === 'store' ? 'dataStoreReference' : 'dataObjectReference' })),
+      ...(m.dataAssociations || []).map(a => ({ id: a.id, tag: a.dir === 'in' ? 'dataInputAssociation' : 'dataOutputAssociation' })),
     ] });
   });
   return exp;

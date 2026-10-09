@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:dataStore id="ds1" name="Warenwirtschaft"/>
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Vertrieb"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>t4</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Lager"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Bestellung da"/>
+    <bpmn:task id="t1" name="Bestand prüfen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>w</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Ware reservieren">
+      <bpmn:dataOutputAssociation id="o2"><bpmn:targetRef>w</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t3" name="Lieferschein drucken">
+      <bpmn:dataOutputAssociation id="o3"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t4" name="Kundin benachrichtigen">
+      <bpmn:property id="p4" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i4"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p4</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Versandbereit"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="t3" targetRef="t4"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="t4" targetRef="e"/>
+    <bpmn:dataStoreReference id="w" name="Warenwirtschaft" dataStoreRef="ds1"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Lieferschein" dataObjectRef="do1"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">
+      <bpmndi:BPMNShape id="L1_di" bpmnElement="L1" isHorizontal="true"><dc:Bounds x="30" y="0" width="648" height="234"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L2_di" bpmnElement="L2" isHorizontal="true"><dc:Bounds x="30" y="234" width="648" height="234"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t1_di" bpmnElement="t1"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t2_di" bpmnElement="t2"><dc:Bounds x="210" y="356" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t3_di" bpmnElement="t3"><dc:Bounds x="378" y="356" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t4_di" bpmnElement="t4"><dc:Bounds x="378" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="570" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="w_di" bpmnElement="w"><dc:Bounds x="319" y="164" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="299" y="218" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d1_di" bpmnElement="d1"><dc:Bounds x="480" y="246" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="507" y="264" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="356"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="330" y="396"/><di:waypoint x="378" y="396"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4"><di:waypoint x="438" y="356"/><di:waypoint x="438" y="112"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5"><di:waypoint x="498" y="72"/><di:waypoint x="570" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i1_di" bpmnElement="i1"><di:waypoint x="325" y="164"/><di:waypoint x="325" y="112"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o2_di" bpmnElement="o2"><di:waypoint x="325" y="356"/><di:waypoint x="325" y="214"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o3_di" bpmnElement="o3"><di:waypoint x="489" y="356"/><di:waypoint x="489" y="296"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i4_di" bpmnElement="i4"><di:waypoint x="489" y="246"/><di:waypoint x="489" y="112"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

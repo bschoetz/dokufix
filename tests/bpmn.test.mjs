@@ -331,11 +331,11 @@ test('what the layout leaves out is a line on the console each, and the rest is 
   const warned = t.mock.method(console, 'warn', () => {});
   const { Viewer } = standIn();
   const document = page();
-  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:dataStoreReference id="B"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
+  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:group id="B"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
   const d = diagramIn(document, xml);
   await withLibrary(Viewer, () => renderBpmn(d));
   assert.equal(d.holder.firstElementChild.tagName.toLowerCase(), 'svg');
-  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: dataStoreReference B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
+  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: group B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
 });
 
 // ---------- XML without coordinates, through a worker ----------
@@ -399,7 +399,7 @@ test('XML without coordinates through a worker: the notice counts in the contain
 test('through a worker, what the layout leaves out is a line on the console each, as on the page', async t => {
   const warned = t.mock.method(console, 'warn', () => {});
   const w = fakeWorker();
-  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:dataStoreReference id="B"/></bpmn:process>');
+  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:group id="B"/></bpmn:process>');
   const d = diagramIn(page(), xml);
   await withLibrary(standIn().Viewer, async () => {
     const drawn = renderBpmn(d, { client: makeLayoutClient({ makeWorker: () => w }) });
@@ -407,7 +407,7 @@ test('through a worker, what the layout leaves out is a line on the console each
     w.answer();
     await drawn;
   });
-  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: dataStoreReference B: not laid out']);
+  assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: group B: not laid out']);
 });
 
 test('a worker that takes longer than the time limit: the diagram is refused with the reason, the count stopped, no host, the worker terminated', async t => {

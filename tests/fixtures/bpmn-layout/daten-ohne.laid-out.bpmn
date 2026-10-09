@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:collaboration id="C">
+    <bpmn:participant id="PA" name="Praxis" processRef="PrA"/>
+    <bpmn:participant id="PB" name="Labor" processRef="PrB"/>
+    <bpmn:messageFlow id="m1" sourceRef="a2" targetRef="b1" name="Probe"/>
+    <bpmn:messageFlow id="m2" sourceRef="b3" targetRef="a3" name="Befund"/>
+    <bpmn:textAnnotation id="n0"><bpmn:text>Gilt ab 1. Januar 2027</bpmn:text></bpmn:textAnnotation>
+  </bpmn:collaboration>
+  <bpmn:process id="PrA" isExecutable="false">
+    <bpmn:laneSet id="LSA">
+      <bpmn:lane id="LA1" name="Empfang"><bpmn:flowNodeRef>a1</bpmn:flowNodeRef><bpmn:flowNodeRef>hb</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="LA2" name="Ärztin"><bpmn:flowNodeRef>a2</bpmn:flowNodeRef><bpmn:flowNodeRef>a3</bpmn:flowNodeRef><bpmn:flowNodeRef>a4</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="a1" name="Patientin da"/>
+    <bpmn:task id="a2" name="Blut abnehmen"/>
+    <bpmn:task id="a3" name="Befund besprechen"/>
+    <bpmn:endEvent id="a4" name="Fertig"/>
+    <bpmn:sequenceFlow id="af1" sourceRef="a1" targetRef="a2"/>
+    <bpmn:sequenceFlow id="af2" sourceRef="a2" targetRef="a3"/>
+    <bpmn:sequenceFlow id="af3" sourceRef="a3" targetRef="a4"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="hb" name="Hygieneplan" dataObjectRef="do1"/>
+    <bpmn:dataStoreReference id="ak" name="Patientenakte"/>
+    <bpmn:textAnnotation id="n1"><bpmn:text>Abläufe nach QM-Handbuch</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+  <bpmn:process id="PrB" isExecutable="false">
+    <bpmn:startEvent id="b1" name="Probe da"/>
+    <bpmn:task id="b2" name="Analysieren"/>
+    <bpmn:endEvent id="b3" name="Befund gesendet"/>
+    <bpmn:sequenceFlow id="bf1" sourceRef="b1" targetRef="b2"/>
+    <bpmn:sequenceFlow id="bf2" sourceRef="b2" targetRef="b3"/>
+    <bpmn:dataStoreReference id="lis" name="Laborsystem"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C">
+      <bpmndi:BPMNShape id="PA_di" bpmnElement="PA" isHorizontal="true"><dc:Bounds x="0" y="0" width="714" height="336"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="PB_di" bpmnElement="PB" isHorizontal="true"><dc:Bounds x="0" y="376" width="714" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LA1_di" bpmnElement="LA1" isHorizontal="true"><dc:Bounds x="30" y="0" width="684" height="192"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="LA2_di" bpmnElement="LA2" isHorizontal="true"><dc:Bounds x="30" y="192" width="684" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a1_di" bpmnElement="a1"><dc:Bounds x="120" y="124" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="93" y="106" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a2_di" bpmnElement="a2"><dc:Bounds x="78" y="224" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a3_di" bpmnElement="a3"><dc:Bounds x="414" y="224" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a4_di" bpmnElement="a4"><dc:Bounds x="606" y="246" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="579" y="286" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b1_di" bpmnElement="b1"><dc:Bounds x="120" y="430" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="93" y="470" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b2_di" bpmnElement="b2"><dc:Bounds x="246" y="408" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b3_di" bpmnElement="b3"><dc:Bounds x="456" y="430" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="429" y="470" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n0_di" bpmnElement="n0"><dc:Bounds x="0" y="-64" width="150" height="40"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="n1_di" bpmnElement="n1"><dc:Bounds x="72" y="12" width="150" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="hb_di" bpmnElement="hb"><dc:Bounds x="351" y="12" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="324" y="66" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ak_di" bpmnElement="ak"><dc:Bounds x="255" y="12" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="235" y="66" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="lis_di" bpmnElement="lis"><dc:Bounds x="49" y="388" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="30" y="442" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="af1_di" bpmnElement="af1"><di:waypoint x="138" y="160"/><di:waypoint x="138" y="224"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="af2_di" bpmnElement="af2"><di:waypoint x="198" y="264"/><di:waypoint x="414" y="264"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="af3_di" bpmnElement="af3"><di:waypoint x="534" y="264"/><di:waypoint x="606" y="264"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="bf1_di" bpmnElement="bf1"><di:waypoint x="156" y="448"/><di:waypoint x="246" y="448"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="bf2_di" bpmnElement="bf2"><di:waypoint x="366" y="448"/><di:waypoint x="456" y="448"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m1_di" bpmnElement="m1"><di:waypoint x="138" y="304"/><di:waypoint x="138" y="430"/><bpmndi:BPMNLabel><dc:Bounds x="144" y="349" width="30" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="m2_di" bpmnElement="m2"><di:waypoint x="474" y="430"/><di:waypoint x="474" y="304"/><bpmndi:BPMNLabel><dc:Bounds x="480" y="349" width="35" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

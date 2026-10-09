@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="s" name="Rechnung da"/>
+    <bpmn:task id="t1" name="Rechnung prüfen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o1"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Zahlung anweisen">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d2</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o2"><bpmn:targetRef>w</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Bezahlt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Eingangsrechnung mit Anlagen und Lieferschein" dataObjectRef="do1"><bpmn:dataState id="st1" name="eingegangen"/></bpmn:dataObjectReference>
+    <bpmn:dataObjectReference id="d2" name="Rechnung&#10;(geprüft)" dataObjectRef="do1"><bpmn:dataState id="st2" name="geprüft"/></bpmn:dataObjectReference>
+    <bpmn:dataStoreReference id="w" name="Finanzbuchhaltung"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="144" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="184" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t1_di" bpmnElement="t1"><dc:Bounds x="210" y="122" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t2_di" bpmnElement="t2"><dc:Bounds x="378" y="122" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="570" y="144" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="184" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d1_di" bpmnElement="d1"><dc:Bounds x="252" y="12" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="224" y="-45" width="92" height="53"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d2_di" bpmnElement="d2"><dc:Bounds x="336" y="32" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="309" y="-12" width="90" height="40"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="w_di" bpmnElement="w"><dc:Bounds x="413" y="32" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="392" y="14" width="93" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="162"/><di:waypoint x="210" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="162"/><di:waypoint x="378" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="498" y="162"/><di:waypoint x="570" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i1_di" bpmnElement="i1"><di:waypoint x="270" y="62"/><di:waypoint x="270" y="122"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o1_di" bpmnElement="o1"><di:waypoint x="302" y="122"/><di:waypoint x="336" y="79"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i2_di" bpmnElement="i2"><di:waypoint x="372" y="79"/><di:waypoint x="406" y="122"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o2_di" bpmnElement="o2"><di:waypoint x="438" y="122"/><di:waypoint x="438" y="82"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

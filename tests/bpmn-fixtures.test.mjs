@@ -19,8 +19,8 @@ const names = fixtureNames();
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_COMMAND = path.join(here, 'bpmn-fixtures.mjs');
 
-test('the fixtures: 57 inputs, each with its two files, the index and the known breaks, nothing else in the folder; no Mermaid version, no raw positions', () => {
-  assert.equal(names.length, 57);
+test('the fixtures: 66 inputs, each with its two files, the index and the known breaks, nothing else in the folder; no Mermaid version, no raw positions', () => {
+  assert.equal(names.length, 66);
   const files = fs.readdirSync(FIXTURE_DIR).sort();
   const wanted = ['index.json', 'known-breaks.json', ...names.flatMap(n => FIXTURE_FILES.map(e => n + e))].sort();
   assert.deepEqual(files, wanted);
@@ -46,9 +46,9 @@ test('a difference names the element and the first line that differs', () => {
   assert.equal(firstDifference(xml, xml + 'x').element, '(no element)');
 });
 
-test('the fixtures with text annotations are the nine of story 2.31 (each is measured in every width the layout may take, by the measurer)', () => {
+test('the fixtures with text annotations are the nine of story 2.31 and daten-ohne of story 2.32 (each is measured in every width the layout may take, by the measurer)', () => {
   const withNotes = names.filter(name => readModel(readFixture(name).xml).model.notes.length);
-  assert.deepEqual(withNotes, ['demo5', 'notiz-morgen', 'notiz-zwei', 'notiz-fluss', 'notiz-pool', 'notiz-r12', 'demo-notizen', 'notiz-hund2', 'notiz-bauantrag']);
+  assert.deepEqual(withNotes, ['demo5', 'notiz-morgen', 'notiz-zwei', 'notiz-fluss', 'notiz-pool', 'notiz-r12', 'demo-notizen', 'notiz-hund2', 'notiz-bauantrag', 'daten-ohne']);
 });
 
 test('an input without labels asks the measurer for nothing, so its XML does not depend on it', () => {

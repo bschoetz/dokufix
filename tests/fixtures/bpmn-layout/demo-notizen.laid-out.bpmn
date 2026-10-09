@@ -55,46 +55,47 @@
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="N_Zusammenarbeit">
       <bpmndi:BPMNShape id="N_Kundin_di" bpmnElement="N_Kundin" isHorizontal="true"><dc:Bounds x="-32" y="0" width="721" height="147"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Werkstatt_di" bpmnElement="N_Werkstatt" isHorizontal="true"><dc:Bounds x="-32" y="187" width="721" height="448"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Versicherung_di" bpmnElement="N_Versicherung" isHorizontal="true"><dc:Bounds x="-32" y="675" width="721" height="60"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Annahme_di" bpmnElement="N_Annahme" isHorizontal="true"><dc:Bounds x="-2" y="187" width="691" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Technik_di" bpmnElement="N_Technik" isHorizontal="true"><dc:Bounds x="-2" y="331" width="691" height="304"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Werkstatt_di" bpmnElement="N_Werkstatt" isHorizontal="true"><dc:Bounds x="-32" y="187" width="721" height="568"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Versicherung_di" bpmnElement="N_Versicherung" isHorizontal="true"><dc:Bounds x="-32" y="795" width="721" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Annahme_di" bpmnElement="N_Annahme" isHorizontal="true"><dc:Bounds x="-2" y="187" width="691" height="264"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Technik_di" bpmnElement="N_Technik" isHorizontal="true"><dc:Bounds x="-2" y="451" width="691" height="304"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="N_Start_di" bpmnElement="N_Start"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="41"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="N_Bringen_di" bpmnElement="N_Bringen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="N_Bezahlen_di" bpmnElement="N_Bezahlen"><dc:Bounds x="378" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="N_Ende_di" bpmnElement="N_Ende"><dc:Bounds x="570" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Annehmen_di" bpmnElement="N_Annehmen"><dc:Bounds x="252" y="241" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="275" y="252" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Pruefen_di" bpmnElement="N_Pruefen"><dc:Bounds x="210" y="381" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Melden_di" bpmnElement="N_Melden"><dc:Bounds x="378" y="523" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Gemeldet_di" bpmnElement="N_Gemeldet"><dc:Bounds x="570" y="545" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="585" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Abrechnen_di" bpmnElement="N_Abrechnen"><dc:Bounds x="378" y="219" width="120" height="80"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Fertig_di" bpmnElement="N_Fertig"><dc:Bounds x="570" y="241" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="281" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Frist_di" bpmnElement="N_Frist"><dc:Bounds x="252" y="443" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="264" y="465" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Annehmen_di" bpmnElement="N_Annehmen"><dc:Bounds x="252" y="361" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="275" y="372" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Pruefen_di" bpmnElement="N_Pruefen"><dc:Bounds x="210" y="501" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Melden_di" bpmnElement="N_Melden"><dc:Bounds x="378" y="643" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Gemeldet_di" bpmnElement="N_Gemeldet"><dc:Bounds x="570" y="665" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="705" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Abrechnen_di" bpmnElement="N_Abrechnen"><dc:Bounds x="378" y="339" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Fertig_di" bpmnElement="N_Fertig"><dc:Bounds x="570" y="361" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="401" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Frist_di" bpmnElement="N_Frist"><dc:Bounds x="252" y="563" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="264" y="585" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="N_Notiz_Pool_di" bpmnElement="N_Notiz_Pool"><dc:Bounds x="739" y="187" width="150" height="40"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Notiz_Box_di" bpmnElement="N_Notiz_Box"><dc:Bounds x="739" y="675" width="150" height="40"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Notiz_Box_di" bpmnElement="N_Notiz_Box"><dc:Bounds x="739" y="795" width="150" height="40"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="N_Notiz_Auftrag_di" bpmnElement="N_Notiz_Auftrag"><dc:Bounds x="95" y="203" width="150" height="43"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Notiz_Pruefen_di" bpmnElement="N_Notiz_Pruefen"><dc:Bounds x="110" y="511" width="150" height="40"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Notiz_Probe_di" bpmnElement="N_Notiz_Probe"><dc:Bounds x="10" y="400" width="150" height="43"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Notiz_Frist_di" bpmnElement="N_Notiz_Frist"><dc:Bounds x="338" y="441" width="150" height="40"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="N_Notiz_Fluss_di" bpmnElement="N_Notiz_Fluss"><dc:Bounds x="527" y="400" width="150" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Notiz_Pruefen_di" bpmnElement="N_Notiz_Pruefen"><dc:Bounds x="110" y="631" width="150" height="40"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Notiz_Probe_di" bpmnElement="N_Notiz_Probe"><dc:Bounds x="10" y="520" width="150" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Notiz_Frist_di" bpmnElement="N_Notiz_Frist"><dc:Bounds x="338" y="561" width="150" height="40"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Notiz_Fluss_di" bpmnElement="N_Notiz_Fluss"><dc:Bounds x="527" y="520" width="150" height="43"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="N_Notiz_Allein_di" bpmnElement="N_Notiz_Allein"><dc:Bounds x="72" y="252" width="150" height="43"/></bpmndi:BPMNShape>
       <bpmndi:BPMNEdge id="N_K1_di" bpmnElement="N_K1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="N_K2_di" bpmnElement="N_K2"><di:waypoint x="330" y="72"/><di:waypoint x="378" y="72"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="N_K3_di" bpmnElement="N_K3"><di:waypoint x="498" y="72"/><di:waypoint x="570" y="72"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_W1_di" bpmnElement="N_W1"><di:waypoint x="270" y="277"/><di:waypoint x="270" y="381"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_W2_di" bpmnElement="N_W2"><di:waypoint x="330" y="421"/><di:waypoint x="423" y="421"/><di:waypoint x="423" y="299"/><bpmndi:BPMNLabel><dc:Bounds x="429" y="353" width="43" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_W3_di" bpmnElement="N_W3"><di:waypoint x="498" y="259"/><di:waypoint x="570" y="259"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_W4_di" bpmnElement="N_W4"><di:waypoint x="270" y="479"/><di:waypoint x="270" y="563"/><di:waypoint x="378" y="563"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_W5_di" bpmnElement="N_W5"><di:waypoint x="498" y="563"/><di:waypoint x="570" y="563"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Auftrag_di" bpmnElement="N_Auftrag"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="241"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="160" width="36" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Rechnung_di" bpmnElement="N_Rechnung"><di:waypoint x="438" y="219"/><di:waypoint x="438" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="160" width="51" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Meldung_di" bpmnElement="N_Meldung"><di:waypoint x="453" y="299"/><di:waypoint x="453" y="311"/><di:waypoint x="510" y="311"/><di:waypoint x="510" y="675"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_W1_di" bpmnElement="N_W1"><di:waypoint x="270" y="397"/><di:waypoint x="270" y="501"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_W2_di" bpmnElement="N_W2"><di:waypoint x="330" y="541"/><di:waypoint x="423" y="541"/><di:waypoint x="423" y="419"/><bpmndi:BPMNLabel><dc:Bounds x="429" y="473" width="43" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_W3_di" bpmnElement="N_W3"><di:waypoint x="498" y="379"/><di:waypoint x="570" y="379"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_W4_di" bpmnElement="N_W4"><di:waypoint x="270" y="599"/><di:waypoint x="270" y="683"/><di:waypoint x="378" y="683"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_W5_di" bpmnElement="N_W5"><di:waypoint x="498" y="683"/><di:waypoint x="570" y="683"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Auftrag_di" bpmnElement="N_Auftrag"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="361"/><bpmndi:BPMNLabel><dc:Bounds x="276" y="160" width="36" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Rechnung_di" bpmnElement="N_Rechnung"><di:waypoint x="438" y="339"/><di:waypoint x="438" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="160" width="51" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Meldung_di" bpmnElement="N_Meldung"><di:waypoint x="453" y="419"/><di:waypoint x="453" y="431"/><di:waypoint x="510" y="431"/><di:waypoint x="510" y="795"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="N_Zur_Pool_di" bpmnElement="N_Zur_Pool"><di:waypoint x="689" y="207"/><di:waypoint x="739" y="207"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Zur_Box_di" bpmnElement="N_Zur_Box"><di:waypoint x="739" y="695"/><di:waypoint x="689" y="695"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Zur_Box_di" bpmnElement="N_Zur_Box"><di:waypoint x="739" y="815"/><di:waypoint x="689" y="815"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="N_Zum_Auftrag_di" bpmnElement="N_Zum_Auftrag"><di:waypoint x="270" y="178"/><di:waypoint x="170" y="203"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Zum_Pruefen_di" bpmnElement="N_Zum_Pruefen"><di:waypoint x="222" y="461"/><di:waypoint x="185" y="511"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Zur_Probe_di" bpmnElement="N_Zur_Probe"><di:waypoint x="160" y="422"/><di:waypoint x="210" y="422"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Zur_Frist_di" bpmnElement="N_Zur_Frist"><di:waypoint x="288" y="461"/><di:waypoint x="338" y="461"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="N_Zum_Fluss_di" bpmnElement="N_Zum_Fluss"><di:waypoint x="377" y="421"/><di:waypoint x="527" y="422"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Zum_Pruefen_di" bpmnElement="N_Zum_Pruefen"><di:waypoint x="222" y="581"/><di:waypoint x="185" y="631"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Zur_Probe_di" bpmnElement="N_Zur_Probe"><di:waypoint x="160" y="542"/><di:waypoint x="210" y="542"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Zur_Frist_di" bpmnElement="N_Zur_Frist"><di:waypoint x="288" y="581"/><di:waypoint x="338" y="581"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="N_Zum_Fluss_di" bpmnElement="N_Zum_Fluss"><di:waypoint x="377" y="541"/><di:waypoint x="527" y="542"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

@@ -207,7 +207,7 @@ test('kanonisch(): a reordering of the XML gives the same model, but for its key
 const ROUNDS = Number(process.env.DOKUFIX_LMM_ROUNDS) || 1;
 const local = e => String(e.localName || '').replace(/^.*:/, '');
 const NODE = /^(startEvent|endEvent|intermediateCatchEvent|intermediateThrowEvent|\w*Gateway|task|\w+Task|callActivity|subProcess|adHocSubProcess|transaction)$/;
-const RENAMED = /^(startEvent|endEvent|intermediateCatchEvent|intermediateThrowEvent|\w*Gateway|task|\w+Task|callActivity|subProcess|adHocSubProcess|transaction|boundaryEvent|sequenceFlow|messageFlow|textAnnotation|association)$/;
+const RENAMED = /^(startEvent|endEvent|intermediateCatchEvent|intermediateThrowEvent|\w*Gateway|task|\w+Task|callActivity|subProcess|adHocSubProcess|transaction|boundaryEvent|sequenceFlow|messageFlow|textAnnotation|association|dataObjectReference|dataStoreReference|dataInputAssociation|dataOutputAssociation)$/;
 // A fixed sequence of numbers in [0, 1), from a seed.
 const random = seed => () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 // The children of parent that pass test, each put where another of them stood.
@@ -219,8 +219,9 @@ function reorder(parent, pass, rnd, doc){
   els.forEach((e, i) => slots[i].replaceWith(e));
 }
 // What has no meaning in BPMN XML, reordered: in each process the flow nodes, the boundary events, the sequence
-// flows, the text annotations and the associations, each among their places, and the flowNodeRef of each lane; in
-// the collaboration the message flows, text annotations and associations. Lanes and pools keep their places.
+// flows, the text annotations and the associations, the data references (story 2.32), each among their places, the
+// data associations of each node among theirs, and the flowNodeRef of each lane; in the collaboration the message
+// flows, text annotations and associations. Lanes and pools keep their places.
 function permuted(xml, rnd){
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   for (const part of [...doc.documentElement.children]){
@@ -229,6 +230,8 @@ function permuted(xml, rnd){
       reorder(part, e => NODE.test(local(e)), rnd, doc);
       reorder(part, e => local(e) === 'boundaryEvent', rnd, doc);
       reorder(part, e => local(e) === 'sequenceFlow', rnd, doc);
+      reorder(part, e => /^data(Object|Store)Reference$/.test(local(e)), rnd, doc);
+      for (const node of [...part.children]) for (const kind of ['dataInputAssociation', 'dataOutputAssociation']) reorder(node, e => local(e) === kind, rnd, doc);
       for (const lane of part.querySelectorAll('*')) if (local(lane) === 'lane') reorder(lane, e => local(e) === 'flowNodeRef', rnd, doc);
     }
     if (kind === 'collaboration') reorder(part, e => local(e) === 'messageFlow', rnd, doc);
@@ -239,8 +242,8 @@ function permuted(xml, rnd){
   }
   return doc.toString();
 }
-// New ids for the flow nodes, boundary events, sequence and message flows, text annotations and associations, every
-// reference kept: { xml, back }, back the old id of each new one. Lanes and pools keep theirs.
+// New ids for the flow nodes, boundary events, sequence and message flows, text annotations and associations, data
+// references and data associations, every reference kept (a data association's in its sourceRef and targetRef): { xml, back }, back the old id of each new one. Lanes and pools keep theirs.
 function renamed(xml, rnd){
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   const all = [...doc.querySelectorAll('*')], map = new Map(), back = new Map();
@@ -253,7 +256,7 @@ function renamed(xml, rnd){
   }
   for (const e of all){
     for (const a of ['sourceRef', 'targetRef', 'attachedToRef']) if (map.has(e.getAttribute(a))) e.setAttribute(a, map.get(e.getAttribute(a)));
-    if (local(e) === 'flowNodeRef' && map.has(e.textContent.trim())) e.textContent = map.get(e.textContent.trim());
+    if (['flowNodeRef', 'sourceRef', 'targetRef'].includes(local(e)) && map.has(e.textContent.trim())) e.textContent = map.get(e.textContent.trim());
   }
   return { xml: doc.toString(), back };
 }

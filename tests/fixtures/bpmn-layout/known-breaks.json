@@ -117,5 +117,18 @@
   "node-outside-lane Gateway_Ausnahme Lane_Amtsleitung",
   "note-on-note TA_Ausnahme TA_Rechtsgrundlage",
   "on-one-line-shared Flow_AS_ToNachf MF_Nachforderung"
- ]
+ ],
+ "daten-geteilt": [
+  "data-association-through i4a t3"
+ ],
+ "daten-lesen-schreiben": [],
+ "daten-speicher": [],
+ "daten-ereignis": [
+  "node-outside-lane e2 L2"
+ ],
+ "daten-viele": [],
+ "daten-eng": [],
+ "daten-ohne": [],
+ "daten-namen": [],
+ "daten-weggelassen": []
 }

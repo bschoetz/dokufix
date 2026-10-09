@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:message id="M1" name="Bestellung"/>
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Verkauf"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>b1</bpmn:flowNodeRef><bpmn:flowNodeRef>ev1</bpmn:flowNodeRef><bpmn:flowNodeRef>ev2</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L2" name="Buchhaltung"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef><bpmn:flowNodeRef>e2</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Bestellung erhalten">
+      <bpmn:dataOutputAssociation id="o0"><bpmn:targetRef>d0</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="s_m" messageRef="M1"/>
+    </bpmn:startEvent>
+    <bpmn:task id="t1" name="Bestellung bestätigen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>d0</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="b1" name="Frist abgelaufen" attachedToRef="t1">
+      <bpmn:dataOutputAssociation id="ob"><bpmn:targetRef>d4</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:timerEventDefinition id="b1_t"/>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateThrowEvent id="ev1" name="Bestätigung gesendet">
+      <bpmn:property id="pe1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="ie1"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>pe1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:messageEventDefinition id="ev1_m"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="ev2" name="Zahlung eingegangen">
+      <bpmn:dataOutputAssociation id="oe2"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="ev2_m"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="t2" name="Zahlung buchen">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d2</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Vorgang abgelegt">
+      <bpmn:property id="pe" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="ie"><bpmn:sourceRef>a</bpmn:sourceRef><bpmn:targetRef>pe</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:endEvent>
+    <bpmn:task id="t3" name="Mahnen">
+      <bpmn:property id="p3" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i3"><bpmn:sourceRef>d4</bpmn:sourceRef><bpmn:targetRef>p3</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e2" name="Gemahnt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="ev1"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="ev1" targetRef="ev2"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="ev2" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="t2" targetRef="e"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="b1" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="t3" targetRef="e2"/>
+    <bpmn:dataObject id="do0"/>
+    <bpmn:dataObjectReference id="d0" name="Bestellung" dataObjectRef="do0"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Bestätigung" dataObjectRef="do1"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Zahlungsavis" dataObjectRef="do2"/>
+    <bpmn:dataObject id="do4"/>
+    <bpmn:dataObjectReference id="d4" name="Mahnliste" dataObjectRef="do4"/>
+    <bpmn:dataStoreReference id="a" name="Archiv"/>
+  </bpmn:process>
+</bpmn:definitions>

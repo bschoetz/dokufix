@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:message id="M1" name="Bestellung"/>
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:laneSet id="LS">
+      <bpmn:lane id="L1" name="Verkauf"><bpmn:flowNodeRef>s</bpmn:flowNodeRef><bpmn:flowNodeRef>t1</bpmn:flowNodeRef><bpmn:flowNodeRef>b1</bpmn:flowNodeRef><bpmn:flowNodeRef>ev1</bpmn:flowNodeRef><bpmn:flowNodeRef>ev2</bpmn:flowNodeRef><bpmn:flowNodeRef>t3</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>e2</bpmn:flowNodeRef>
+</bpmn:lane>
+      <bpmn:lane id="L2" name="Buchhaltung"><bpmn:flowNodeRef>t2</bpmn:flowNodeRef><bpmn:flowNodeRef>e</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="s" name="Bestellung erhalten">
+      <bpmn:dataOutputAssociation id="o0"><bpmn:targetRef>d0</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="s_m" messageRef="M1"/>
+    </bpmn:startEvent>
+    <bpmn:task id="t1" name="Bestellung bestätigen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>d0</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:boundaryEvent id="b1" name="Frist abgelaufen" attachedToRef="t1">
+      <bpmn:dataOutputAssociation id="ob"><bpmn:targetRef>d4</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:timerEventDefinition id="b1_t"/>
+    </bpmn:boundaryEvent>
+    <bpmn:intermediateThrowEvent id="ev1" name="Bestätigung gesendet">
+      <bpmn:property id="pe1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="ie1"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>pe1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:messageEventDefinition id="ev1_m"/>
+    </bpmn:intermediateThrowEvent>
+    <bpmn:intermediateCatchEvent id="ev2" name="Zahlung eingegangen">
+      <bpmn:dataOutputAssociation id="oe2"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="ev2_m"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="t2" name="Zahlung buchen">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d2</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Vorgang abgelegt">
+      <bpmn:property id="pe" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="ie"><bpmn:sourceRef>a</bpmn:sourceRef><bpmn:targetRef>pe</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:endEvent>
+    <bpmn:task id="t3" name="Mahnen">
+      <bpmn:property id="p3" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i3"><bpmn:sourceRef>d4</bpmn:sourceRef><bpmn:targetRef>p3</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e2" name="Gemahnt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="ev1"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="ev1" targetRef="ev2"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="ev2" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f5" sourceRef="t2" targetRef="e"/>
+    <bpmn:sequenceFlow id="f6" sourceRef="b1" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f7" sourceRef="t3" targetRef="e2"/>
+    <bpmn:dataObject id="do0"/>
+    <bpmn:dataObjectReference id="d0" name="Bestellung" dataObjectRef="do0"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Bestätigung" dataObjectRef="do1"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Zahlungsavis" dataObjectRef="do2"/>
+    <bpmn:dataObject id="do4"/>
+    <bpmn:dataObjectReference id="d4" name="Mahnliste" dataObjectRef="do4"/>
+    <bpmn:dataStoreReference id="a" name="Archiv"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P">
+      <bpmndi:BPMNShape id="L1_di" bpmnElement="L1" isHorizontal="true"><dc:Bounds x="30" y="-28" width="948" height="502"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L2_di" bpmnElement="L2" isHorizontal="true"><dc:Bounds x="30" y="474" width="948" height="244"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="102" y="152" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="192" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t1_di" bpmnElement="t1"><dc:Bounds x="210" y="130" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ev1_di" bpmnElement="ev1"><dc:Bounds x="420" y="152" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="192" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ev2_di" bpmnElement="ev2"><dc:Bounds x="570" y="152" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="192" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t2_di" bpmnElement="t2"><dc:Bounds x="678" y="606" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e_di" bpmnElement="e"><dc:Bounds x="870" y="628" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="843" y="668" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="t3_di" bpmnElement="t3"><dc:Bounds x="378" y="272" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="e2_di" bpmnElement="e2"><dc:Bounds x="570" y="294" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="334" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="b1_di" bpmnElement="b1"><dc:Bounds x="252" y="192" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="285" y="214" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d0_di" bpmnElement="d0"><dc:Bounds x="177" y="2" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="150" y="-16" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d1_di" bpmnElement="d1"><dc:Bounds x="420" y="62" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="44" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d2_di" bpmnElement="d2"><dc:Bounds x="765" y="62" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="738" y="44" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="d4_di" bpmnElement="d4"><dc:Bounds x="336" y="404" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="309" y="458" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="a_di" bpmnElement="a"><dc:Bounds x="863" y="496" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="843" y="478" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="170"/><di:waypoint x="210" y="170"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="170"/><di:waypoint x="420" y="170"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="456" y="170"/><di:waypoint x="570" y="170"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4"><di:waypoint x="606" y="170"/><di:waypoint x="738" y="170"/><di:waypoint x="738" y="606"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5"><di:waypoint x="798" y="646"/><di:waypoint x="870" y="646"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f6_di" bpmnElement="f6"><di:waypoint x="270" y="228"/><di:waypoint x="270" y="312"/><di:waypoint x="378" y="312"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f7_di" bpmnElement="f7"><di:waypoint x="498" y="312"/><di:waypoint x="570" y="312"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="o0_di" bpmnElement="o0"><di:waypoint x="128" y="154"/><di:waypoint x="182" y="52"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i1_di" bpmnElement="i1"><di:waypoint x="208" y="52"/><di:waypoint x="249" y="130"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ie1_di" bpmnElement="ie1"><di:waypoint x="438" y="112"/><di:waypoint x="438" y="152"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="oe2_di" bpmnElement="oe2"><di:waypoint x="605" y="163"/><di:waypoint x="765" y="95"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i2_di" bpmnElement="i2"><di:waypoint x="782" y="112"/><di:waypoint x="782" y="606"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ie_di" bpmnElement="ie"><di:waypoint x="888" y="546"/><di:waypoint x="888" y="628"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="i3_di" bpmnElement="i3"><di:waypoint x="372" y="404"/><di:waypoint x="409" y="352"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="ob_di" bpmnElement="ob"><di:waypoint x="276" y="227"/><di:waypoint x="344" y="404"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

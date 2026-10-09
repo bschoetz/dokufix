@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="s" name="Antrag eingegangen"/>
+    <bpmn:task id="t1" name="Antrag erfassen">
+      <bpmn:dataOutputAssociation id="o1"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Antrag prüfen">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o2"><bpmn:targetRef>d1</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t3" name="Bescheid senden">
+      <bpmn:property id="p3" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i3"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p3</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o3"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Bescheid versandt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="t3"/>
+    <bpmn:sequenceFlow id="f4" sourceRef="t3" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Antrag" dataObjectRef="do1"/>
+    <bpmn:dataObject id="do2"/>
+    <bpmn:dataObjectReference id="d2" name="Bescheid" dataObjectRef="do2"/>
+  </bpmn:process>
+</bpmn:definitions>

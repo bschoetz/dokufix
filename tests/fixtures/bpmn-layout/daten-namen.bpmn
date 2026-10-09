@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" targetNamespace="http://example.org/d">
+  <bpmn:process id="P" isExecutable="false">
+    <bpmn:startEvent id="s" name="Rechnung da"/>
+    <bpmn:task id="t1" name="Rechnung prüfen">
+      <bpmn:property id="p1" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i1"><bpmn:sourceRef>d1</bpmn:sourceRef><bpmn:targetRef>p1</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o1"><bpmn:targetRef>d2</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="t2" name="Zahlung anweisen">
+      <bpmn:property id="p2" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="i2"><bpmn:sourceRef>d2</bpmn:sourceRef><bpmn:targetRef>p2</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="o2"><bpmn:targetRef>w</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="e" name="Bezahlt"/>
+    <bpmn:sequenceFlow id="f1" sourceRef="s" targetRef="t1"/>
+    <bpmn:sequenceFlow id="f2" sourceRef="t1" targetRef="t2"/>
+    <bpmn:sequenceFlow id="f3" sourceRef="t2" targetRef="e"/>
+    <bpmn:dataObject id="do1"/>
+    <bpmn:dataObjectReference id="d1" name="Eingangsrechnung mit Anlagen und Lieferschein" dataObjectRef="do1"><bpmn:dataState id="st1" name="eingegangen"/></bpmn:dataObjectReference>
+    <bpmn:dataObjectReference id="d2" name="Rechnung&#10;(geprüft)" dataObjectRef="do1"><bpmn:dataState id="st2" name="geprüft"/></bpmn:dataObjectReference>
+    <bpmn:dataStoreReference id="w" name="Finanzbuchhaltung"/>
+  </bpmn:process>
+</bpmn:definitions>

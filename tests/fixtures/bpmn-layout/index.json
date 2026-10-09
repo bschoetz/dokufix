@@ -337,6 +337,69 @@
    "shows": [
     "31"
    ]
+  },
+  "daten-geteilt": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt01-geteilt.bpmn",
+   "note": "three lanes; one data object written in the first lane and read in the second and third, one shape in the lane nearest to all its users; a second one written and read across two lanes",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-lesen-schreiben": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt02-lesen-schreiben.bpmn",
+   "note": "one process without lanes; one task reads and writes the same data object (two lines 12 px apart), others read or write one each",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-speicher": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt03-speicher.bpmn",
+   "note": "two lanes; a data store (50 × 50) read in one lane and written in the other, a data object between two lanes",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-ereignis": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt04-ereignis.bpmn",
+   "note": "data at a message start event, a throw and a catch event, an end event (a data store) and a boundary event, whose data object a task reads too",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-viele": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt05-viele.bpmn",
+   "note": "one task reading three references (two data stores) and writing a fourth; two references of one data object with the states \"Entwurf\" and \"freigegeben\", each a second line under the name",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-eng": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt06-eng.bpmn",
+   "note": "a full lane with a decision and a loop: no free place above the users, the lane grows by a stripe; the flow nodes keep their columns and rows",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-ohne": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt07-ohne.bpmn",
+   "note": "two pools; a data object no node uses, named by a lane, top left in that lane; a data store in no lane, top left in its pool; one in the other pool; a text annotation without an association in the process (top left in its pool) and one in the collaboration (above the pools)",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-namen": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt08-namen.bpmn",
+   "note": "a long name, a name with a line break and states under them; a data store",
+   "shows": [
+    "32"
+   ]
+  },
+  "daten-weggelassen": {
+   "source": "tools/bpmn-layout/eingaben/daten/dt09-weggelassen.bpmn",
+   "note": "what stays left out: data associations to a property, to an input of the ioSpecification, to an unknown id, and the data inside a sub-process; the sub-process itself writes a data object",
+   "shows": [
+    "32"
+   ]
   }
  }
 }

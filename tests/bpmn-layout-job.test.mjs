@@ -31,7 +31,7 @@ test('the job lays out XML without coordinates: the author\'s XML with the diagr
 
 test('every fixture: the job gives its laid-out XML byte for byte, as the page laid it out before the worker', () => {
   const names = fixtureNames();
-  assert.equal(names.length, 57);
+  assert.equal(names.length, 66);
   for (const name of names){
     const r = layoutJob(readFixture(name).xml);
     assert.equal(r.xml, fs.readFileSync(expectedFile(name), 'utf8'), name);
@@ -39,8 +39,8 @@ test('every fixture: the job gives its laid-out XML byte for byte, as the page l
 });
 
 test('what the layout leaves out comes back as a line each, for the console of the page', () => {
-  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:dataStoreReference id="B"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
-  assert.deepEqual(layoutJob(xml).leftOut, ['dataStoreReference B: not laid out', 'sequenceFlow G: touches B, which is not laid out']);
+  const xml = WITHOUT_DI.replace('</bpmn:process>', '<bpmn:group id="B"/><bpmn:sequenceFlow id="G" sourceRef="B" targetRef="A"/></bpmn:process>');
+  assert.deepEqual(layoutJob(xml).leftOut, ['group B: not laid out', 'sequenceFlow G: touches B, which is not laid out']);
 });
 
 test('XML the layout\'s parser rejects, and XML that is no BPMN definitions, come back as they are, without a diagram to open', () => {
