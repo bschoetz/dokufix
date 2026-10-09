@@ -21,16 +21,27 @@
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="Start_Bestellt" name="Bestellung aufgegeben"/>
-    <bpmn:serviceTask id="Task_Zahlung" name="Zahlung prüfen"/>
+    <bpmn:serviceTask id="Task_Zahlung" name="Zahlung prüfen">
+      <bpmn:property id="Property_Zahlung" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DataIn_Bestellung"><bpmn:sourceRef>Data_Bestellung</bpmn:sourceRef><bpmn:targetRef>Property_Zahlung</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_Zahlung" name="Zahlung in Ordnung?"/>
     <bpmn:sendTask id="Task_Informieren" name="Kundin informieren"/>
     <bpmn:endEvent id="End_Storniert" name="Bestellung storniert"/>
     <bpmn:parallelGateway id="Gateway_Split"/>
-    <bpmn:manualTask id="Task_Packen" name="Ware packen"/>
-    <bpmn:sendTask id="Task_Rechnung" name="Rechnung senden"/>
+    <bpmn:manualTask id="Task_Packen" name="Ware packen">
+      <bpmn:property id="Property_Packen" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DataIn_Packen"><bpmn:sourceRef>Data_Bestellung</bpmn:sourceRef><bpmn:targetRef>Property_Packen</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:manualTask>
+    <bpmn:sendTask id="Task_Rechnung" name="Rechnung senden">
+      <bpmn:dataOutputAssociation id="DataOut_Rechnung"><bpmn:targetRef>Store_Buchhaltung</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:sendTask>
     <bpmn:parallelGateway id="Gateway_Join"/>
     <bpmn:manualTask id="Task_Versenden" name="Paket versenden"/>
     <bpmn:endEvent id="End_Versendet" name="Bestellung versendet"/>
+    <bpmn:dataObject id="DataObject_Bestellung"/>
+    <bpmn:dataObjectReference id="Data_Bestellung" name="Bestellung" dataObjectRef="DataObject_Bestellung"/>
+    <bpmn:dataStoreReference id="Store_Buchhaltung" name="Buchhaltung"/>
     <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Bestellt" targetRef="Task_Zahlung"/>
     <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Zahlung" targetRef="Gateway_Zahlung"/>
     <bpmn:sequenceFlow id="Flow_3" name="ja" sourceRef="Gateway_Zahlung" targetRef="Gateway_Split"/>

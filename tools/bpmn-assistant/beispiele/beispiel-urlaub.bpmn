@@ -24,13 +24,20 @@
       </bpmn:lane>
     </bpmn:laneSet>
     <bpmn:startEvent id="Start_Geplant" name="Urlaub geplant"/>
-    <bpmn:userTask id="Task_Stellen" name="Antrag stellen"/>
+    <bpmn:userTask id="Task_Stellen" name="Antrag stellen">
+      <bpmn:dataOutputAssociation id="DataOut_Antrag"><bpmn:targetRef>Data_Antrag</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_Merge"/>
-    <bpmn:userTask id="Task_Pruefen" name="Antrag prüfen"/>
+    <bpmn:userTask id="Task_Pruefen" name="Antrag prüfen">
+      <bpmn:property id="Property_Pruefen" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="DataIn_Antrag"><bpmn:sourceRef>Data_Antrag</bpmn:sourceRef><bpmn:targetRef>Property_Pruefen</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:userTask>
     <bpmn:exclusiveGateway id="Gateway_Genehmigt" name="Genehmigt?"/>
     <bpmn:userTask id="Task_Ueberarbeiten" name="Antrag überarbeiten"/>
     <bpmn:parallelGateway id="Gateway_Split"/>
-    <bpmn:serviceTask id="Task_Eintragen" name="Urlaub eintragen"/>
+    <bpmn:serviceTask id="Task_Eintragen" name="Urlaub eintragen">
+      <bpmn:dataOutputAssociation id="DataOut_Personal"><bpmn:targetRef>Store_Personal</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:serviceTask>
     <bpmn:sendTask id="Task_Vertretung" name="Vertretung informieren"/>
     <bpmn:parallelGateway id="Gateway_Join"/>
     <bpmn:endEvent id="End_Genehmigt" name="Urlaub genehmigt"/>
@@ -46,6 +53,9 @@
     <bpmn:sequenceFlow id="Flow_10" sourceRef="Task_Eintragen" targetRef="Gateway_Join"/>
     <bpmn:sequenceFlow id="Flow_11" sourceRef="Task_Vertretung" targetRef="Gateway_Join"/>
     <bpmn:sequenceFlow id="Flow_12" sourceRef="Gateway_Join" targetRef="End_Genehmigt"/>
+    <bpmn:dataObject id="DataObject_Antrag"/>
+    <bpmn:dataObjectReference id="Data_Antrag" name="Urlaubsantrag" dataObjectRef="DataObject_Antrag"><bpmn:dataState id="State_Antrag" name="gestellt"/></bpmn:dataObjectReference>
+    <bpmn:dataStoreReference id="Store_Personal" name="Personalsystem"/>
     <bpmn:textAnnotation id="Notiz_Pruefen"><bpmn:text>Spätestens nach drei Arbeitstagen</bpmn:text></bpmn:textAnnotation>
     <bpmn:association id="Assoc_Pruefen" sourceRef="Task_Pruefen" targetRef="Notiz_Pruefen"/>
     <bpmn:textAnnotation id="Notiz_Nein"><bpmn:text>Mit Begründung</bpmn:text></bpmn:textAnnotation>

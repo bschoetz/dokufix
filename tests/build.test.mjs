@@ -447,9 +447,9 @@ test('the built file carries the layout\'s worker in a block that does not run; 
   const html = fs.readFileSync(committed, 'utf8');
   assert.equal(html.split('<script type="text/plain" id="dokufix-layout-js">').length, 2, 'one block, of a type that does not run');
   const code = layoutBlock(html);
-  // The four modules of the layout and the protocol, about 98 KB (docs/konzept-worker.md); the bound says
-  // when it has grown by a tenth.
-  assert.ok(code.length > 80000 && code.length < 108000, code.length + ' B');
+  // The four modules of the layout and the protocol, about 98 KB (docs/konzept-worker.md), 113 447 B with the data
+  // objects and data stores of story 2.32; the bound says when it has grown by a tenth.
+  assert.ok(code.length > 80000 && code.length < 125000, code.length + ' B');
   assert.match(code, /^\(\(\)=>\{[\s\S]*\}\)\(\);$/, 'one minified IIFE');
   assert.ok(!/<\/script/i.test(code) && !code.includes('<!--'));
   // Nothing of the page's, nothing of the editor's: neither a renderer nor the client of the worker.
@@ -465,7 +465,7 @@ test('the built file carries the layout\'s worker in a block that does not run; 
   assert.deepEqual(posted, [{ ready: true }], 'it says it is ready, and nothing else before it is asked');
   posted.length = 0;
   const xml = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P"><bpmn:startEvent id="S"/><bpmn:task id="A" name="Tun"/>' +
-    '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="A"/><bpmn:dataStoreReference id="B"/></bpmn:process></bpmn:definitions>';
+    '<bpmn:sequenceFlow id="F" sourceRef="S" targetRef="A"/><bpmn:group id="B"/></bpmn:process></bpmn:definitions>';
   self.onmessage({ data: { id: 3, xml } });
   self.onmessage({ data: { id: 4, xml: '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P"/></bpmn:definitions>' } });
   self.onmessage({ data: { id: 5, xml: '<kein' } });
@@ -474,7 +474,7 @@ test('the built file carries the layout\'s worker in a block that does not run; 
     { id: 4, ok: false, error: LAYOUT_NOTHING },
     { id: 5, ok: true, result: { xml: '<kein' } },
   ]);
-  assert.deepEqual(posted[0].result.leftOut, ['dataStoreReference B: not laid out']);
+  assert.deepEqual(posted[0].result.leftOut, ['group B: not laid out']);
 });
 // ---------- the reader bundle: table filter and search ----------
 const readerBlock = html => {
