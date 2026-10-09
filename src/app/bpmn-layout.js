@@ -3624,7 +3624,15 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       let places = row(list, x0, y0);
       const height = Math.max(...places.map(p => p[3]));
       const free = places.every(p => p[1] + p[3] <= lane[1] + lane[3] - LABEL_GAP && !covered(p, [...symbols, ...segments, ...dataSegs, ...taken, ...borders()], NOTE_CLEAR));
-      if (!free){ openStripe(lane[1], height + 2 * ASIDE_GAP, [], lane); places = row(list, x0, y0); }
+      // A stripe at the top of the lane; what reaches into it and belongs above stays (a text annotation at a message
+      // flow in the gap between pools, a label), and the row stands below it.
+      if (!free){
+        const right = places.at(-1)[0] + places.at(-1)[2];
+        const stays = owners.filter(o => ay(o.anchor) < lane[1]).flatMap(o => o.boxes).filter(b => b[1] + b[3] > lane[1] && b[0] < right && b[0] + b[2] > x0);
+        const reach = Math.max(0, ...stays.map(b => b[1] + b[3] + NOTE_CLEAR - y0));
+        openStripe(lane[1], reach + height + 2 * ASIDE_GAP, [], lane);
+        places = row(list, x0, y0 + reach);
+      }
       list.forEach((it, i) => put(it, places[i], pool));
     }
     // The text annotations at a reference, beside it, as at a node (story 2.32, Ben, 2026-10-09).
