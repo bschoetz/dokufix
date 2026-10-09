@@ -121,6 +121,8 @@ function naechster(){
 async function pumpen(){
   if (pumpt) return;
   pumpt = true;
+  // Die Zeit gilt für diesen Durchgang der Schlange, nicht seit dem Öffnen der Seite.
+  zeit.start = null; zeit.n = 0;
   let f;
   while ((f = naechster())){
     if (zeit.start === null) zeit.start = performance.now();
@@ -132,10 +134,13 @@ async function pumpen(){
     try {
       const r = await LAYOUT.layout(f.eingabe, { signal: ctl.signal });
       const ms = Math.round(performance.now() - t0);
-      const a = await sp.einfrieren({ fall: f.fall, stand: STAND, xml: r.xml, angeordnet: new Date().toISOString(), ms });
-      (anordnungen.get(f.fall) || anordnungen.set(f.fall, []).get(f.fall)).push(a);
+      // Ein Arbeitsstand, der inzwischen geladen ist, hat den Fall vielleicht nicht mehr: dann nichts einfrieren.
+      if (await sp.fall(f.fall)){
+        const a = await sp.einfrieren({ fall: f.fall, stand: STAND, xml: r.xml, angeordnet: new Date().toISOString(), ms });
+        (anordnungen.get(f.fall) || anordnungen.set(f.fall, []).get(f.fall)).push(a);
+        zeit.n++;
+      }
       lauf.delete(f.fall);
-      zeit.n++;
     } catch (e){
       if (e && e.name === 'AbortError') lauf.set(f.fall, { art: 'wartet' });
       else lauf.set(f.fall, { art: 'fehler', fehler: (e && e.message) || String(e) });
@@ -145,7 +150,7 @@ async function pumpen(){
     if (f.fall === gewaehlt) zeigen();
   }
   pumpt = false;
-  if (zeit.start !== null){
+  if (zeit.start !== null && zeit.n){
     zeit.ms = Math.round(performance.now() - zeit.start);
     // Für die Messung in Chromium und Firefox (README): wie viele in dieser Sitzung angeordnet wurden und in welcher Zeit.
     window.werkbankZeit = { n: zeit.n, ms: zeit.ms, ohneWorker: LAYOUT.withoutWorker(), fertig: true };
@@ -223,11 +228,12 @@ async function zeigen(){
   $('bearbeiten').hidden = !f;
   $('kommentar').disabled = !f;
   if (!f){ $('info').textContent = ''; $('kommentar').value = ''; $('fassungen').replaceChildren(); $('archiv').hidden = true; return; }
+  // Erst wenn der Kommentar des Falls im Feld steht, gilt das Feld für ihn (kommentarVon, das Ziel des Speicherns).
   if (kommentarVon !== f.fall){
-    kommentarVon = f.fall;
     const e = await sp.feedback(f.fall, STAND);
     if (my !== zeichnung) return;
     $('kommentar').value = (e && e.kommentar) || '';
+    kommentarVon = f.fall;
   }
   if (archivVon !== f.fall){
     archivListe = await sp.archiv(f.fall);
@@ -302,7 +308,9 @@ $('bearbeiten').onclick = () => {
   openModeler(anzeigeName(f), gezeigt, {
     fileBase: () => fileBase(f.name), takeLabel: 'Als meine Fassung übernehmen',
     take: async x => {
-      const e = await sp.legeFeedback({ fall: f.fall, stand: STAND, bearbeitet: x, geaendert: new Date().toISOString(), soll: null });
+      let e;
+      try { e = await sp.legeFeedback({ fall: f.fall, stand: STAND, bearbeitet: x, geaendert: new Date().toISOString(), soll: null }); }
+      catch (err){ meldung('Deine Fassung von ' + anzeigeName(f) + ' ist nicht gespeichert: ' + ((err && err.message) || String(err)) + ' Lade sie im Modellierer als .bpmn herunter, bevor du weitermachst.', true); return; }
       bens.set(f.fall, e);
       fassung = 'ben';
       markieren(f);
@@ -388,6 +396,9 @@ $('laden-datei').onchange = async () => {
   let z;
   try { z = JSON.parse(await file.text()); } catch { meldung('Laden fehlgeschlagen: keine JSON-Datei. Der Speicher ist unverändert.', true); return; }
   if (!window.confirm('Der Arbeitsstand ersetzt alles im Speicher der Werkbank. Laden?')) return;
+  // Ein Kommentar, der noch auf sein Speichern wartet, und ein Layout, das läuft, gehören zum Speicher davor.
+  clearTimeout(tippen);
+  if (laufend) laufend.ctl.abort();
   try { await sp.laden(z); } catch (e){ meldung('Laden fehlgeschlagen: ' + e.message + ' Der Speicher ist unverändert.', true); return; }
   // Die eingebauten Eingaben kommen wieder dazu, wo der Arbeitsstand sie nicht hat; die übrigen sind schon da.
   await eingebauteAufnehmen();

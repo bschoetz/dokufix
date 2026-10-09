@@ -311,6 +311,17 @@ test('to an old case: a laid-out version whose gateway moved lane joins by the f
   assert.equal((await sp.faelle()).length, 1);
 });
 
+test('to an old case, several fit without lanes: open, each offered with why, assignable', async () => {
+  const sp = speicherImArbeitsspeicher();
+  await sp.aufnehmenViele(['r19', 'r20'].map(n => ({ xml: eingabe(n), name: n, herkunft: 'sauber' })));
+  const ohneRefs = eingabe('r19').replace(/<((?:[\w.-]+:)?flowNodeRef)\b[^>]*>[\s\S]*?<\/\1>\s*/g, '');
+  const r = await sp.aufnehmen(ohneRefs, { modus: 'zuordnen', stand: STAND });
+  assert.equal(r.art, 'offen');
+  assert.deepEqual(r.kandidaten.map(k => [k.fall.name, k.warum]).sort(), [['r19', 'gleich ohne Bahnzugehörigkeit'], ['r20', 'gleich ohne Bahnzugehörigkeit']]);
+  const z = await sp.zuordnen(ohneRefs, r.kandidaten[0].fall.fall, { stand: STAND });
+  assert.ok(!z.fehler);
+});
+
 test('as a new case: no matching without lanes; an identical case is still not stored twice', async () => {
   const sp = speicherImArbeitsspeicher();
   await sp.aufnehmen(eingabe('hund'), { name: 'hund', herkunft: 'sauber' });
@@ -381,6 +392,10 @@ test('a pasted case, laid out, edited and commented, gives a package feedback-au
   assert.match(uebersicht, /Nähe der erzeugten zur bearbeiteten Fassung/);
   assert.match(uebersicht, /> zu eng/);
   for (const file of ['eingabe.bpmn', 'erzeugt.bpmn', 'bearbeitet.bpmn', 'kommentar.md']) assert.ok(fs.existsSync(path.join(dir, 'ws01', file)), file);
+  // A name from the workbench with path characters stays one folder inside the output.
+  const schief = auswerten({ ...paket, beispiele: paket.beispiele.map(b => ({ ...b, name: '../Ein-/Verkauf' })) });
+  assert.ok(fs.existsSync(path.join(schief.dir, '__Ein-_Verkauf', 'eingabe.bpmn')), fs.readdirSync(schief.dir).join(','));
+  assert.ok(!fs.existsSync(path.join(schief.dir, '..', 'eingabe.bpmn')));
   // An old package, without the origin, still reads.
   const alt = { ...paket, beispiele: paket.beispiele.map(({ herkunft, fall, ...b }) => ({ ...b, paket: 'erzeugt' })) };
   assert.match(auswerten(alt).uebersicht, /## ws01\n\nerzeugt; bearbeitet, kommentiert/);
@@ -399,7 +414,10 @@ function arbeitAufZeit(){
   w('feedback/s1-2026-10-01/paket.json', { format: 'dokufix-layout-feedback', version: 1, exportiert: T1, satz: { id: 's1', variant: 'A', logik: '1111aaaa' }, beispiele: [bsp('r01', { bearbeitet: A, kommentar: 'alt', geaendert: T1 }), bsp('r02', { kommentar: 'nur Kommentar', geaendert: T1 })] });
   w('feedback/s2-2026-10-02/paket.json', { format: 'dokufix-layout-feedback', version: 1, exportiert: T2, satz: { id: 's2', variant: 'A' }, beispiele: [bsp('r01', { bearbeitet: B, kommentar: 'neu', geaendert: T2 })] });
   w('feedback/leer/uebersicht.md', '#');
-  w('archiv/s1.json', { id: 's1', variant: 'A', logik: '1111aaaa', angeordnet: T1, erzeugt: { r01: L1, hund: angeordnet('hund') } });
+  w('archiv/s1.json', { id: 's1', variant: 'A', logik: '1111aaaa', angeordnet: T1, erzeugt: { r01: L1, hund: angeordnet('hund'), r19: angeordnet('r19'), r20: angeordnet('r20') } });
+  // An input of r03 that is no input today: Ben's edit of it is a case of its own, not r03's version.
+  const alt = umbenannt(eingabe('r03'));
+  w('feedback/s3-2026-10-03/paket.json', { format: 'dokufix-layout-feedback', version: 1, exportiert: T1, satz: { id: 's3', variant: 'A' }, beispiele: [{ ...bsp('r03'), eingabe: alt, bearbeitet: umbenannt(angeordnet('r03')), geaendert: T1 }] });
   w('archiv/s2.json', { id: 's2', variant: 'A', angeordnet: T2, erzeugt: { r01: L1 } });
   w('x-varianten.json', { hinweis: '<b>Bau 1</b> &amp; Bau 2', varianten: [{ key: 'v1', titel: 'Erster', dir: 'v1' }, { key: 'v2', dir: 'v2' }] });
   w('v1/r01.bpmn', L1); w('v1/r02.bpmn', angeordnet('r02'));
@@ -419,9 +437,12 @@ test('the import from arbeit/: the latest edit per case as Ben\'s version, soll 
   assert.equal(imp.format, 'dokufix-layout-werkbank-import');
   assert.deepEqual(imp.eingaben.map(e => e.name), externe.map(i => i.name));
   for (const e of imp.eingaben) assert.ok(!hatDi(e.xml), e.name);
-  assert.deepEqual(imp.faelle, []);
+  const altFall = caseFingerprint(umbenannt(eingabe('r03'))).hash;
+  assert.deepEqual(imp.faelle.map(f => [f.fall, f.name, f.herkunft]), [[altFall, 'r03', 'archiv']]);
   assert.deepEqual(imp.fehlt, []);
-  assert.deepEqual(imp.fassungen, [{ fall: fallOf('r01'), stand: 's2', bearbeitet: B, kommentar: 'neu', geaendert: T2, soll: false, quelle: 's2' }]);
+  assert.deepEqual(imp.fassungen.find(f => f.fall === fallOf('r01')), { fall: fallOf('r01'), stand: 's2', bearbeitet: B, kommentar: 'neu', geaendert: T2, soll: false, quelle: 's2' });
+  assert.deepEqual(imp.fassungen.map(f => f.fall).sort(), [fallOf('r01'), altFall].sort());
+  assert.ok(!imp.fassungen.some(f => f.fall === fallOf('r03')));
   const von = (name, art) => imp.archiv.filter(x => x.fall === fallOf(name) && x.art === art);
   assert.deepEqual(von('r01', 'bearbeitung').map(x => [x.xml === A, x.kommentar, x.stand, x.satz]), [[true, 'alt', '1111aaaa', 's1']]);
   assert.deepEqual(von('r02', 'kommentar').map(x => x.kommentar), ['nur Kommentar']);
@@ -436,6 +457,10 @@ test('the import from arbeit/: the latest edit per case as Ben\'s version, soll 
   assert.deepEqual(l2.varianten, ['x-varianten: v2']);
   // hund laid out moved a gateway to another lane: its case all the same.
   assert.equal(von('hund', 'anordnung').length, 1);
+  // r19 and r20 share the fingerprint without lanes: each layout goes to the input of its name.
+  assert.equal(ohneBahnen(eingabe('r19')).hash, ohneBahnen(eingabe('r20')).hash);
+  assert.deepEqual(von('r19', 'anordnung').map(x => x.xml === angeordnet('r19')), [true]);
+  assert.deepEqual(von('r20', 'anordnung').map(x => x.xml === angeordnet('r20')), [true]);
   // The comparison as text, where the variants differ: r01, not r02.
   assert.deepEqual(von('r01', 'varianten').map(x => [x.hinweis, x.varianten.map(v => v.titel)]), [['Bau 1 & Bau 2', ['Erster', 'v2']]]);
   assert.equal(von('r02', 'varianten').length, 0);
@@ -450,9 +475,13 @@ test('the import taken into the store: external inputs as cases, Ben\'s version 
   await sp.aufnehmenViele(eingabenDerSeite().map(e => ({ xml: e.xml, name: e.name, herkunft: e.satz, referenz: e.referenz })));
   const r = await sp.importieren(imp);
   const faelle = new Set(externe.map(i => caseFingerprint(fs.readFileSync(i.file, 'utf8'))?.hash).filter(Boolean));
-  assert.equal(r.neu, [...faelle].filter(h => !eingabenDerSeite().some(e => caseFingerprint(e.xml).hash === h)).length);
-  assert.equal(r.fassungen, 1);
+  assert.equal(r.neu, [...faelle].filter(h => !eingabenDerSeite().some(e => caseFingerprint(e.xml).hash === h)).length + 1);
+  assert.equal(r.fassungen, 2);
   assert.equal(r.ohneFall, 0);
+  // The old input of r03 a revision of r03, with Ben's edit.
+  const rev = (await sp.faelle()).find(f => f.fall === caseFingerprint(umbenannt(eingabe('r03'))).hash);
+  assert.equal(anzeigeName(rev), 'r03 (2)');
+  assert.equal(rev.vorher, fallOf('r03'));
   const e = await sp.feedback(fallOf('r01'), 's2');
   assert.equal(e.bearbeitet, B);
   assert.equal(e.soll, false);

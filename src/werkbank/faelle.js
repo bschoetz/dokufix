@@ -73,7 +73,7 @@ export function einordnen(xml, faelle, { name, herkunft = 'eigen', jetzt = new D
     const los = (ohneBahnen(text) || {}).hash;
     const treffer = los ? faelle.filter(f => losVon(f) === los) : [];
     if (treffer.length === 1) return { art: 'bekannt', fall: treffer[0], fassung: fassungFuer(text, treffer[0]), ueber: 'bahnen' };
-    return { art: 'offen', kandidaten: treffer.length ? treffer : kandidaten(text, faelle, 5, name) };
+    return { art: 'offen', kandidaten: treffer.length ? treffer.map(f => ({ fall: f, warum: 'gleich ohne Bahnzugehörigkeit' })) : kandidaten(text, faelle, 5, name) };
   }
   return neuerFall(text, fp, faelle, { name, herkunft, jetzt });
 }

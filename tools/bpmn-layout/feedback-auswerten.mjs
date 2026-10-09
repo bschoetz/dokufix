@@ -40,7 +40,8 @@ const bends = pts => Math.max(0, (pts || []).length - 2);
 
 const lines = [`# Layout-Feedback ${pkg.satz.id}`, '', `Variante ${pkg.satz.variant}, exportiert ${pkg.exportiert}, ${pkg.beispiele.length} Beispiele.`, ''];
 for (const b of pkg.beispiele){
-  const dir = path.join(out, b.name);
+  // Der Ordner des Beispiels: sein Name ohne Pfadzeichen (ein Name aus der Werkbank kann "/" tragen oder ".." sein).
+  const dir = path.join(out, String(b.name).replace(/[\/\\:]/g, '_').replace(/^\.+/, '_') || '_');
   fs.mkdirSync(dir, { recursive: true });
   fs.writeFileSync(path.join(dir, 'eingabe.bpmn'), b.eingabe);
   fs.writeFileSync(path.join(dir, 'erzeugt.bpmn'), b.erzeugt);

@@ -18,8 +18,9 @@
 //
 // Zu welchem Fall etwas gehört, sagt der Fingerabdruck (src/app/fingerprint.js): die Eingabe eines Pakets genau, eine
 // Anordnung ohne Bahnzugehörigkeit (ohneBahnen() in src/werkbank/faelle.js), denn das Layout schreibt einen Knoten, den
-// es in eine andere Bahn setzt, dort in flowNodeRef; sonst der Name einer heutigen Eingabe. Was nichts davon trifft,
-// wird mit der Eingabe seines Pakets ein Fall der Herkunft `archiv`; eine Anordnung ohne beides fehlt und wird gezählt.
+// es in eine andere Bahn setzt, dort in flowNodeRef; teilen mehrere Eingaben diesen Abdruck, die gleichen Namens. Die
+// Eingabe eines Pakets, die keine heutige ist, wird ein Fall der Herkunft `archiv` (die Seite legt ihn als Revision des
+// Namens an); eine Anordnung ohne Treffer geht an die heutige Eingabe ihres Namens, ohne sie fehlt sie und wird gezählt.
 // Die Seite der alten Feedback-Seite und ihre Datenbank (dokufix-layout-feedback) liest das Skript nicht: deren Inhalt
 // steht in ihren Paketen.
 import fs from 'node:fs';
@@ -39,13 +40,14 @@ const text = html => String(html || '').replace(/<[^>]+>/g, '').replace(/&nbsp;/
 // Der Import als Objekt. arbeit: der Arbeitsordner; jetzt: die Zeit, die er trägt.
 export function importBauen({ arbeit = ARBEIT, jetzt = new Date().toISOString() } = {}){
   // Die heutigen Eingaben: name → fall, und die Abdrücke, genau und ohne Bahnen.
+  // los: je Abdruck ohne Bahnen die Eingaben, die ihn haben ([{ name, fall }]; r19 und r20 teilen einen).
   const genau = new Map(), los = new Map(), vonName = new Map();
   for (const i of INPUTS.values()){
     const xml = fs.readFileSync(i.file, 'utf8'), fp = caseFingerprint(xml);
     if (!fp) continue;
     if (!genau.has(fp.hash)) genau.set(fp.hash, fp.hash);
     const l = ohneBahnen(xml);
-    if (l && !los.has(l.hash)) los.set(l.hash, fp.hash);
+    if (l) (los.get(l.hash) || los.set(l.hash, []).get(l.hash)).push({ name: i.name, fall: fp.hash });
     vonName.set(i.name, fp.hash);
   }
   const faelle = new Map(), fehlt = [];
@@ -55,9 +57,13 @@ export function importBauen({ arbeit = ARBEIT, jetzt = new Date().toISOString() 
       const fp = caseFingerprint(eingabe);
       if (fp && genau.has(fp.hash)) return fp.hash;
     }
-    const l = ohneBahnen(eingabe || xml);
-    if (l && los.has(l.hash)) return los.get(l.hash);
-    if (vonName.has(name)) return vonName.get(name);
+    // Ohne Bahnen: ein Treffer, oder unter mehreren der gleichen Namens; sonst keiner.
+    const l = ohneBahnen(eingabe || xml), treffer = l ? los.get(l.hash) || [] : [];
+    const fall = new Set(treffer.map(t => t.fall)).size === 1 ? treffer[0].fall : (treffer.find(t => t.name === name) || {}).fall;
+    if (fall) return fall;
+    // Der Name nur für eine Anordnung ohne Eingabe; die Eingabe eines Pakets, die keine heutige ist, wird ein Fall für
+    // sich (die Seite legt ihn als Revision des Namens an).
+    if (!eingabe && vonName.has(name)) return vonName.get(name);
     if (eingabe){
       const fp = caseFingerprint(eingabe);
       if (!fp) return null;
