@@ -1345,7 +1345,9 @@ Three pages beside the product, none of them part of `npm run build` (story 2.38
 | `bpmn-tools/layout.js` | the two layouts' clients: A2 in the page's worker (`makeA2Client()`), bpmn.io in a worker of its own from the block `#bpmn-io-js` (`makeBalClient()`, `balAnswer()`, the worker's text `balWorkerSource()`, written out, since the page's script is minified) |
 | `bpmn-assistant/main.js` | the assistant: the colour picker and its storage, the examples, the field "Name", the ticks, the sections and `render()` |
 | `bpmn-audi/main.js` | the Layouter Audi: the upload, the ticks, a section per file |
-| `werkbank/main.js` | the workbench's frame: the stand in the tab's title, nothing else yet |
+| `werkbank/main.js` | the workbench (story 2.39): the embedded inputs taken into its storage, the list of cases, the layout in the background (one at a time in the worker, the chosen case first, each frozen with the stand, the time per run and of all in `window.werkbankZeit`), the canvas with the generated version, Ben's and the reference |
+| `werkbank/faelle.js` | the cases, pure: a case from XML by its fingerprint (`einordnen()`: known, revision, new; the diagram part split off by `ohneDi()` as Ben's version), "changed" against the latest other stand (`geaendert()`), the package in the old feedback page's format with the origin (`paketBauen()`) |
+| `werkbank/speicher.js` | the storage: IndexedDB `dokufix-layout-werkbank` over an interface (`speicher()`), in memory where IndexedDB is refused (`speicherOeffnen()` says why), cases, layouts and feedback by case and stand, the archive, the working state (`zustand()`, `laden()`, `pruefeZustand()`) |
 
 The tool pages follow the rules of the script's modules as far as they fit: a module under `src/bpmn-tools/` does nothing when it is loaded, and the page's entry, `main.js`, does what acts at load. They are pages of their own and keep their own `localStorage` keys, element ids and German texts. The lint (`eslint src`) reads them as it reads the product's modules.
 

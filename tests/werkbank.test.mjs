@@ -7,16 +7,21 @@
 // positions, a new revision, an unknown input, no BPMN, a reload with IndexedDB refused, the working state saved,
 // cleared and loaded and a wrong one refused, the same input taken twice); the diagram part split off; the
 // reference of a case not taken for Ben's version; "changed" against the latest other stand; the frozen layout; the
-// package in the old page's format, with the origin.
+// package in the old page's format, with the origin. And the page as tools/werkbank/bauen.mjs builds it: every own
+// input without coordinates; dist/ without any external input, by name or by case; --mit-extern with all.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { DOMParser } from 'linkedom';
+import { DOMParser, parseHTML } from 'linkedom';
 import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen } from '../src/werkbank/faelle.js';
 import { speicherImArbeitsspeicher, speicherOeffnen, pruefeZustand, ZUSTAND_FORMAT } from '../src/werkbank/speicher.js';
 import { caseFingerprint } from '../src/app/fingerprint.js';
 import { readFixture, expectedFile } from './bpmn-fixtures.mjs';
+import { INPUTS, ARBEIT, externFehlt, logikOf } from '../tools/bpmn-layout/lib.mjs';
+import { bauen, eingaben as eingabenDerSeite, OUT_ALLES } from '../tools/werkbank/bauen.mjs';
+import { REPO } from '../tools/seiten.mjs';
 import fs from 'node:fs';
+import path from 'node:path';
 
 const STAND = 'aaaaaaaa', STAND2 = 'bbbbbbbb';
 const T1 = '2026-10-09T10:00:00.000Z', T2 = '2026-10-09T11:00:00.000Z';
@@ -236,4 +241,50 @@ test('the package in the old page\'s format, with the origin, for the cases with
   assert.equal(paketBauen({ stand: STAND, faelle: await sp.faelle(), layouts: await sp.anordnungen(), feedback: await sp.feedbacks() }).paket, null);
   await sp.legeFeedback({ fall: b.fall, stand: STAND, kommentar: 'ohne Bild' });
   assert.deepEqual(paketBauen({ stand: STAND, faelle: await sp.faelle(), layouts: await sp.anordnungen(), feedback: await sp.feedbacks() }).ohneAnordnung, [b.name]);
+});
+
+test('many inputs at once: the cases read once, a known one joins, a changed one of the same name is a revision', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const eingebaut = [{ xml: eingabe('r01'), name: 'r01', herkunft: 'sauber' }, { xml: eingabe('r02'), name: 'r02', herkunft: 'sauber' }];
+  assert.deepEqual((await sp.aufnehmenViele(eingebaut, T1)).map(r => r.art), ['neu', 'neu']);
+  assert.deepEqual((await sp.aufnehmenViele(eingebaut, T2)).map(r => r.art), ['bekannt', 'bekannt']);
+  const r = await sp.aufnehmenViele([{ xml: umbenannt(eingabe('r01')), name: 'r01', herkunft: 'sauber' }, { xml: 'nix', name: 'kaputt' }], T2);
+  assert.equal(r[0].art, 'revision');
+  assert.equal(r[0].fall.herkunft, 'sauber');
+  assert.ok(r[1].fehler);
+  assert.equal((await sp.faelle()).length, 3);
+});
+
+// ---------- the page as built ----------
+const dataOf = html => JSON.parse(parseHTML(html).document.getElementById('werkbank-data').textContent);
+const eigene = [...INPUTS.values()].filter(i => !i.extern), externe = [...INPUTS.values()].filter(i => i.extern);
+
+test('the inputs of the page: every own one without coordinates, hund2 with Ben\'s hand layout as reference', () => {
+  const list = eingabenDerSeite();
+  assert.deepEqual(list.map(e => e.name), eigene.map(i => i.name));
+  assert.ok(list.length >= 94, String(list.length));
+  for (const e of list) assert.ok(!hatDi(e.xml), e.name);
+  assert.ok(list.find(e => e.name === 'hund2').referenz.includes('BPMNShape'));
+  assert.ok(list.some(e => e.satz === 'laufzeit') && list.some(e => e.satz === 'einzeln'));
+});
+
+test('dist/: the page holds no external input, by name or by case', async () => {
+  const html = await bauen();
+  const data = dataOf(html);
+  assert.equal(data.mitExtern, false);
+  assert.equal(data.stand, logikOf(path.join(REPO, 'src/app')));
+  assert.deepEqual(data.eingaben.map(e => e.name), eigene.map(i => i.name));
+  for (const i of externe) assert.ok(!html.includes(i.name), i.name);
+  if (!externe.length) return;
+  const fremd = new Set(externe.map(i => caseFingerprint(fs.readFileSync(i.file, 'utf8'))?.hash).filter(Boolean));
+  for (const e of data.eingaben) assert.ok(!fremd.has(caseFingerprint(e.xml).hash), e.name);
+  for (const h of fremd) assert.ok(!html.includes(h) && !html.includes(h.slice(0, 12)), h);
+});
+
+test('--mit-extern: the page holds every input, the external ones with their hand layouts', { skip: externFehlt() && 'no external inputs here' }, async () => {
+  const data = dataOf(await bauen({ mitExtern: true }));
+  assert.equal(data.mitExtern, true);
+  assert.deepEqual(data.eingaben.map(e => e.name), [...INPUTS.keys()]);
+  for (const i of externe) assert.equal(!!data.eingaben.find(e => e.name === i.name).referenz, !!i.ref, i.name);
+  assert.equal(OUT_ALLES, path.join(ARBEIT, 'bpmn-layout-werkbank-alles.html'));
 });

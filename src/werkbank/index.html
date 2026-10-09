@@ -14,11 +14,17 @@
 <header>
 <h1>BPMN-Layout-Werkbank</h1>
 <span id="stand" title="Die Prüfsumme der Module des Layouts, mit denen diese Seite anordnet; tools/bpmn-layout/lauf.mjs nennt sie Logik">Layout-Stand {{slot:stand}}</span>
+<span id="fortschritt" aria-live="polite"></span>
+<span id="warnung" hidden></span>
 </header>
 <div id="frame">
 <nav id="liste" aria-label="Fälle"><ul id="faelle"></ul></nav>
-<main id="leinwand" aria-label="Diagramm"><div class="dokufix-doc"><div id="canvas" class="dokufix-diagram dokufix-diagram-bpmn"></div></div></main>
+<main id="leinwand" aria-label="Diagramm">
+<div id="leiste"><strong id="titel"></strong><span id="fassungen" role="group" aria-label="Fassung"></span><span id="info"></span></div>
+<div class="dokufix-doc"><div id="canvas" class="dokufix-diagram dokufix-diagram-bpmn"></div></div>
+</main>
 </div>
+<script type="application/json" id="werkbank-data">{{slot:werkbank-data}}</script>
 <script type="text/plain" id="dokufix-layout-js">{{slot:layout.js}}</script>
 <script>{{slot:page.js}}</script>
 </body>

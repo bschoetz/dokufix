@@ -115,18 +115,25 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
     // Eine Eingabe aufnehmen. opts: { name, herkunft, stand, jetzt, referenz, soll }. Ein neuer Fall wird angelegt
     // (mit referenz, wo gegeben); Positionen, die die Eingabe mitbringt, werden Bens Fassung am stand. Gibt das
     // Ergebnis von einordnen().
-    async aufnehmen(xml, { stand, jetzt = new Date().toISOString(), referenz, soll, ...opts } = {}){
-      const r = einordnen(xml, await sp.faelle(), { ...opts, jetzt });
-      if (r.fehler) return r;
-      if (r.art !== 'bekannt'){
-        if (referenz) r.fall.referenz = referenz;
-        await sp.legeFall(r.fall);
-      }
-      if (r.fassung && stand){
+    async aufnehmen(xml, { jetzt, ...opts } = {}){
+      return (await sp.aufnehmenViele([{ xml, ...opts }], jetzt))[0];
+    },
+    // Viele Eingaben auf einmal, die Fälle einmal gelesen: [{ xml, ...opts von aufnehmen() }] → die Ergebnisse.
+    async aufnehmenViele(items, jetzt = new Date().toISOString()){
+      const faelle = await sp.faelle(), out = [];
+      for (const { xml, stand, referenz, soll, ...opts } of items){
+        const r = einordnen(xml, faelle, { ...opts, jetzt });
+        out.push(r);
+        if (r.fehler) continue;
+        if (r.art !== 'bekannt'){
+          if (referenz) r.fall.referenz = referenz;
+          faelle.push(r.fall);
+          await sp.legeFall(r.fall);
+        }
         // soll null: nicht gesagt, ob die Fassung das Ziel ist.
-        await sp.legeFeedback({ fall: r.fall.fall, stand, bearbeitet: r.fassung, geaendert: jetzt, soll: soll ?? null });
+        if (r.fassung && stand) await sp.legeFeedback({ fall: r.fall.fall, stand, bearbeitet: r.fassung, geaendert: jetzt, soll: soll ?? null });
       }
-      return r;
+      return out;
     },
     async zustand(jetzt = new Date().toISOString()){
       return { format: ZUSTAND_FORMAT, version: 1, gespeichert: jetzt, faelle: await s.alle('faelle'), anordnungen: await s.alle('anordnungen'), feedback: await s.alle('feedback'), archiv: await s.alle('archiv') };
