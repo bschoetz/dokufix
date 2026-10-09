@@ -360,6 +360,23 @@ test('the ends of a data association with blanks around the id keep the case, as
   assert.deepEqual(both(spaced), both(xml));
 });
 
+test('data objects and the definitions referred to by id alone, reordered, keep both; a data object moved to another process changes the case', () => {
+  const head = '<definitions xmlns="' + BPMN_NS + '" id="D">';
+  const procA = (objs) => '<process id="A"><startEvent id="S"/><task id="T"/><sequenceFlow id="F" sourceRef="S" targetRef="T"/>' + objs + '</process>';
+  const defs = ['<message id="M1" name="Anfrage"/>', '<signal id="G1"/>', '<error id="E1" errorCode="x"/>', '<itemDefinition id="I1"/>', '<dataStore id="DS1"/>', '<escalation id="X1"/>'];
+  const objs = '<dataObject id="O1"/><dataObject id="O2"/><dataObject id="O3"/>';
+  const xml = head + defs.join('') + procA(objs) + '</definitions>';
+  const shuffled = head + [defs[3], defs[0], defs[5]].join('') + procA('<dataObject id="O3"/><dataObject id="O1"/><dataObject id="O2"/>') + [defs[2], defs[4], defs[1]].join('') + '</definitions>';
+  assert.deepEqual(both(shuffled), both(xml));
+  // A data object belongs to its process: in another process it is another case.
+  const two = head + procA('<dataObject id="O1"/>') + '<process id="B"><startEvent id="S2"/></process></definitions>';
+  const moved = head + procA('') + '<process id="B"><startEvent id="S2"/><dataObject id="O1"/></process></definitions>';
+  assert.notEqual(caseFingerprint(two).hash, caseFingerprint(moved).hash);
+  // The processes keep their order: without a collaboration it is the order of the pools.
+  const swapped = head + '<process id="B"><startEvent id="S2"/></process>' + procA('<dataObject id="O1"/>') + '</definitions>';
+  assert.notEqual(caseFingerprint(two).hash, caseFingerprint(swapped).hash);
+});
+
 test('a long chain: the pass stops after 32 rounds, so a chain of 1000 tasks takes no longer than a few seconds', () => {
   const n = 1000;
   const tasks = Array.from({ length: n }, (_, i) => '<task id="T' + i + '"/>').join('');

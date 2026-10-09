@@ -25,7 +25,17 @@
 // decision 1b): flow nodes, boundary events, sequence flows, flowNodeRef,
 // text annotations, associations, message flows, data references, data
 // associations, and the incoming and outgoing of a node, each by its id or
-// the id it names. The input itself is never changed.
+// the id it names. Since the Fable review (Ben, 2026-10-09: "soweit wir
+// sichere aussagen dazu treffen können") it also sorts by id what BPMN refers
+// to by its id alone and readProcess() never reads, so that neither BPMN nor
+// the layout gives it an order: the data objects of a process, and the
+// definitions beside the processes and the collaboration (message, signal,
+// error, escalation, item definition, data store, resource, interface,
+// correlation property, category, partner entity and role, end point,
+// relationship). What may have an order stays as it is written: the
+// processes (without a collaboration, the order of the pools), properties,
+// the inputs and outputs of an ioSpecification, documentation, event
+// definitions, imports. The input itself is never changed.
 //
 // The shape is the process without its words: a graph read from the model
 // readProcess() gives (src/app/bpmn-layout.js), hashed by a Weisfeiler-Lehman
@@ -137,8 +147,10 @@ function definitions(xml){
 // What the cleaning sorts, by local name: each group among itself, by the id
 // of its element or, for a reference, the id it names.
 const FLOW_NODE = /^(startEvent|endEvent|intermediateCatchEvent|intermediateThrowEvent|\w*Gateway|task|\w+Task|callActivity|subProcess|adHocSubProcess|transaction)$/;
-const GROUPS = ['boundaryEvent', 'sequenceFlow', 'dataReference', 'textAnnotation', 'association', 'messageFlow', 'flowNodeRef', 'incoming', 'outgoing', 'dataInputAssociation', 'dataOutputAssociation'];
-const groupOf = name => FLOW_NODE.test(name) ? 'flowNode' : /^data(Object|Store)Reference$/.test(name) ? 'dataReference' : GROUPS.includes(name) ? name : null;
+const GROUPS = ['boundaryEvent', 'sequenceFlow', 'dataReference', 'textAnnotation', 'association', 'messageFlow', 'flowNodeRef', 'incoming', 'outgoing', 'dataInputAssociation', 'dataOutputAssociation', 'dataObject', 'definition'];
+// The definitions referred to by id alone, which readProcess() never reads: one group, sorted by id.
+const DEFINITION = new Set(['message', 'signal', 'error', 'escalation', 'itemDefinition', 'dataStore', 'resource', 'interface', 'correlationProperty', 'category', 'partnerEntity', 'partnerRole', 'endPoint', 'relationship']);
+const groupOf = name => FLOW_NODE.test(name) ? 'flowNode' : /^data(Object|Store)Reference$/.test(name) ? 'dataReference' : DEFINITION.has(name) ? 'definition' : GROUPS.includes(name) ? name : null;
 const GROUP_ORDER = ['flowNode', ...GROUPS];
 const REFERENCE = new Set(['flowNodeRef', 'incoming', 'outgoing']);
 // The references whose text readProcess() reads trimmed: those above, and the
