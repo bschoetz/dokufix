@@ -10,7 +10,7 @@ Diese Handreichung sagt dir, welches BPMN-2.0-XML dokufix ohne Koordinaten zeich
 2. **Ein Pool je Beteiligtem, eine Bahn je Rolle.** Arbeiten Rollen einer Organisation zusammen, sind sie Bahnen (`lane`) eines Pools. Tauschen eigenständige Beteiligte Nachrichten aus (Kunde und Firma, Firma und Lieferant), bekommt jeder einen eigenen Pool (`participant`). Kennst du den Ablauf eines Beteiligten, bekommt sein Pool einen eigenen `process`; kennst du ihn nicht, ist sein Pool eine Black Box: ein `participant` ohne `processRef`.
 3. **Mit Bahnen: jeder Knoten in genau einer Bahn.** Gibt es ein `laneSet`, muss jeder Flussknoten in einer `flowNodeRef` stehen. Sonst lehnt dokufix das Diagramm ab.
 4. **Jede Verzweigung über ein Gateway.** Eine Aufgabe oder ein Ereignis hat genau einen ausgehenden Sequenzfluss.
-5. **Flussknoten, Sequenzflüsse und Nachrichtenflüsse tragen den Ablauf.** Ein Sequenzfluss bleibt in seinem Pool; zwischen Pools läuft nur ein Nachrichtenfluss (`messageFlow`), von einem Flussknoten oder einem Pool zu einem Flussknoten oder Pool eines anderen Pools. Datenobjekte lässt dokufix weg (Abschnitt 4), Notizen zeichnet es neben ihr Ziel (Abschnitt 3). Baue nichts, was ohne Datenobjekte unverständlich wird.
+5. **Flussknoten, Sequenzflüsse und Nachrichtenflüsse tragen den Ablauf.** Ein Sequenzfluss bleibt in seinem Pool; zwischen Pools läuft nur ein Nachrichtenfluss (`messageFlow`), von einem Flussknoten oder einem Pool zu einem Flussknoten oder Pool eines anderen Pools. Datenobjekte und Datenspeicher zeichnet dokufix neben die Schritte, die sie lesen und schreiben, Notizen neben ihr Ziel (Abschnitt 3).
 
 ## 2. So steht BPMN im Dokument
 
@@ -52,7 +52,10 @@ Das XML steht in einem eingezäunten Block mit der Sprache `bpmn`:
 | angeheftetes Ereignis | `bpmn:boundaryEvent attachedToRef="…"` mit Definition (Zeit, Fehler, Eskalation, Nachricht …) | auf der Unterkante seiner Aufgabe oder seines Teilprozesses; unterbrechend, mit `cancelActivity="false"` nicht (gestrichelt); mehrere an einer Aufgabe nebeneinander; der Ausnahmepfad steht eine Zeile darunter; Sequenzflüsse gehen von ihm aus, nie hinein |
 | Gateway | `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | jede Art; ein Gateway darf in jeder Bahn liegen |
 | Sequenzfluss | `bpmn:sequenceFlow sourceRef="…" targetRef="…"` | `name` wird als Beschriftung gezeichnet; Rückflüsse (Schleifen) sind erlaubt |
-| Notiz | `bpmn:textAnnotation` mit `<bpmn:text>…</bpmn:text>` und eine `bpmn:association` von oder zu ihr, im `process` oder im `collaboration` | Ziel: ein Flussknoten, ein angeheftetes Ereignis, ein Sequenz- oder Nachrichtenfluss oder ein `participant`; die Notiz steht neben ihrem Ziel, möglichst rechts davon, die Assoziation gepunktet; eine Notiz an einem Pool rechts neben dem Pool; Zeilenumbrüche im Text bleiben; kurze Notizen lesen sich am besten |
+| Notiz | `bpmn:textAnnotation` mit `<bpmn:text>…</bpmn:text>` und eine `bpmn:association` von oder zu ihr, im `process` oder im `collaboration` | Ziel: ein Flussknoten, ein angeheftetes Ereignis, ein Sequenz- oder Nachrichtenfluss, ein `participant`, ein Datenobjekt oder Datenspeicher; ohne `association` oben links in ihrem Pool, im `collaboration` über den Pools; die Notiz steht neben ihrem Ziel, möglichst rechts davon, die Assoziation gepunktet; eine Notiz an einem Pool rechts neben dem Pool; Zeilenumbrüche im Text bleiben; kurze Notizen lesen sich am besten |
+| Datenobjekt | `bpmn:dataObjectReference` mit `name` und `dataObjectRef` auf ein `bpmn:dataObject`, im `process`; ein Zustand als `<bpmn:dataState name="…"/>` darin | 36 × 50, der Name darunter, der Zustand als zweite Zeile `[Zustand]`; über dem Schritt, der es benutzt, bei mehreren Schritten in der Mitte ihrer Spalten, in der Bahn mit den meisten, stets im Pool seines Prozesses; ein Symbol für alle Schritte. Benutzt es kein Schritt, steht es oben links in der Bahn, deren `flowNodeRef` es nennt, sonst in seinem Pool |
+| Datenspeicher | `bpmn:dataStoreReference` mit `name` (und `dataStoreRef` auf einen `bpmn:dataStore`), im `process` | 50 × 50, sonst wie ein Datenobjekt |
+| Datenassoziation | lesen: `bpmn:dataInputAssociation` im Schritt (oder Ereignis) mit `<bpmn:sourceRef>` auf die Referenz und `<bpmn:targetRef>` auf eine `bpmn:property` des Schritts; schreiben: `bpmn:dataOutputAssociation` mit `<bpmn:targetRef>` auf die Referenz | gepunktet mit Pfeil, von der Referenz zum lesenden Schritt, vom schreibenden Schritt zur Referenz; liest und schreibt ein Schritt dieselbe Referenz, zwei Linien nebeneinander |
 | Namen | Attribut `name` | Leerraum wird zusammengezogen; ein Label ist bis 90 px breit, kurze Namen lesen sich am besten |
 
 Nicht nötig, aber unschädlich: `bpmn:incoming` und `bpmn:outgoing` in den Knoten (dokufix liest die Flüsse aus `sourceRef` und `targetRef`), `conditionExpression`, `documentation`, `isExecutable`, eigene Präfixe oder ein Standard-Namensraum ohne Präfix.
@@ -63,14 +66,14 @@ Nicht nötig, aber unschädlich: `bpmn:incoming` und `bpmn:outgoing` in den Knot
 |---|---|
 | `bpmn:boundaryEvent` an etwas, das keine Aufgabe und kein Teilprozess ist | fehlt samt seinen Flüssen |
 | Sequenzfluss in ein angeheftetes Ereignis, Nachrichtenfluss an einem | fehlt |
-| `bpmn:dataObject`, `dataObjectReference`, `dataStoreReference` | fehlen |
-| `dataInputAssociation`, `dataOutputAssociation` | fehlen |
-| `bpmn:textAnnotation` ohne Text oder ohne `association` | fehlt |
-| `bpmn:association` ohne Notiz an einem Ende | fehlt, etwa zwischen zwei Flussknoten (Signal-Wurf → Signal-Fang) oder zu einer Kompensationsaktivität |
+| `dataInputAssociation`, `dataOutputAssociation`, deren anderes Ende keine Referenz ist (eine `property`, ein Ein- oder Ausgang der `ioSpecification`, nichts) | fehlt |
+| `bpmn:dataObject` ohne `dataObjectReference` | fehlt; auch bpmn-js zeichnet nur Referenzen |
+| `bpmn:textAnnotation` ohne Text | fehlt |
+| `bpmn:association` ohne Notiz an einem Ende | fehlt, etwa zwischen zwei Flussknoten (Signal-Wurf → Signal-Fang), zu einer Kompensationsaktivität oder zwischen einem Schritt und einem Datenspeicher (dafür ist die Datenassoziation da) |
 | `bpmn:group` | fehlt |
 | `participant` ohne `id` | fehlt samt den Nachrichtenflüssen zu ihm; mit Prozess wird der Prozess ohne Pool-Rahmen gezeichnet |
 | `bpmn:messageFlow` innerhalb eines Pools | fehlt |
-| Inhalt eines Teilprozesses | fehlt; der Teilprozess steht als ein Symbol |
+| Inhalt eines Teilprozesses, seine Datenobjekte eingeschlossen | fehlt; der Teilprozess steht als ein Symbol |
 | äußere Bahn verschachtelter Bahnen | fehlt; ihre inneren Bahnen stehen |
 | Sequenzfluss von einem Knoten zu sich selbst | fehlt |
 | Element oder Fluss ohne `id` | fehlt |
@@ -81,7 +84,7 @@ Daraus folgt für dein Modell:
 - **Nachricht zwischen Beteiligten:** ein Nachrichtenfluss von der sendenden Aufgabe (`sendTask`) oder dem sendenden Ereignis zur empfangenden (`receiveTask`, Nachrichten-Start- oder Zwischenereignis) im anderen Pool. Einen Beteiligten, dessen Ablauf du nicht kennst, gib als Black Box an: ein `participant` ohne `processRef`; die Nachrichtenflüsse zu ihm und von ihm haben seine `id` als `targetRef` oder `sourceRef`. Erfinde für ihn keinen Ablauf.
 - **Signal zwischen Rollen eines Pools:** Wurf und Fang als Zwischenereignisse mit gleichem Namen, keine Linie dazwischen. Ein Nachrichtenfluss innerhalb eines Pools ist kein gültiges BPMN.
 - **Hinweise zu einem Schritt:** eine kurze Notiz an ihm (`textAnnotation` mit `association`), etwa eine Frist oder eine Rechtsgrundlage; längere Erklärungen in den Text des Dokuments.
-- **Daten:** in den Text des Dokuments, nicht ins Diagramm.
+- **Daten:** ein Datenobjekt oder Datenspeicher je Dokument oder System, das der Ablauf liest oder schreibt, mit Datenassoziationen zu den Schritten; ein Zustand (`dataState`) zeigt, wie weit ein Dokument ist. Wenige, die der Leser braucht, lesen sich am besten; Einzelheiten in den Text des Dokuments.
 
 ## 5. Was dokufix ablehnt (statt des Diagramms erscheint eine Warnung)
 
@@ -313,5 +316,5 @@ Der Onlineshop mit zwei Bahnen; Kunde und Paketdienst als Black Boxes, weil ihr 
 - [ ] Je Pool ein Start, jeder Pfad endet in einem Ende.
 - [ ] Jede Verzweigung über ein Gateway; kein Gateway verzweigt und führt zugleich zusammen.
 - [ ] Jeder parallele Split hat seinen parallelen Join.
-- [ ] Keine Datenobjekte oder Gruppen, auf die der Ablauf angewiesen ist; jede Notiz mit Text und einer Assoziation zu ihrem Ziel; jedes angeheftete Ereignis an einer Aufgabe oder einem Teilprozess, kein Fluss hinein, kein Nachrichtenfluss an ihm.
+- [ ] Keine Gruppen, auf die der Ablauf angewiesen ist; jedes Datenobjekt und jeder Datenspeicher als Referenz (`dataObjectReference`, `dataStoreReference`) im `process`, gelesen über eine `dataInputAssociation` mit `sourceRef` auf sie, geschrieben über eine `dataOutputAssociation` mit `targetRef` auf sie; jede Notiz mit Text, möglichst mit einer Assoziation zu ihrem Ziel; jedes angeheftete Ereignis an einer Aufgabe oder einem Teilprozess, kein Fluss hinein, kein Nachrichtenfluss an ihm.
 - [ ] Eine Überschrift direkt vor dem Block nennt den Prozess.

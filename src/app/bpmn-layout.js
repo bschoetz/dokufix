@@ -5,8 +5,10 @@
 //   1. readProcess() reads the XML into its pools, each with its lanes, flow
 //      nodes and sequence flows, a black box without lanes (story 2.29), the
 //      events on an activity's border with their host (story 2.30), the
-//      message flows between pools, and the text annotations with their
-//      associations (story 2.31), or refuses with the reason
+//      message flows between pools, the text annotations with their
+//      associations (story 2.31), and the data object and data store
+//      references with their data associations (story 2.32), or refuses
+//      with the reason
 //   2. LMM (src/app/lmm.js) gives every flow node its column, from the
 //      structure of the process, and kanonisch() there the model in LMM's
 //      order, so that no tie of the grid follows the order of the XML
@@ -18,8 +20,10 @@
 //      lane, row and column, a router draws every flow on the grid anew, and
 //      the labels get their places, in the size bpmn-js will draw them in
 //      (src/app/label-size.js, the text layout of diagram-js replicated, the
-//      same in Node and in every browser); the text annotations last, each
-//      beside what it comments, no node moved for it
+//      same in Node and in every browser); then the text annotations, each
+//      beside what it comments, and the references, each near the nodes
+//      that read and write it, no node moved for either; last what stands
+//      on its own, top left in its lane, its pool or beside the pools
 //   5. appendDiagram() writes the result as a diagram part (BPMN-DI) into the
 //      author's XML, before its closing definitions tag; a node a rule put in
 //      another lane moves there in the lane set too, nothing else changes
@@ -30,12 +34,12 @@
 // (docs/analyse-mermaid-im-bpmn-code.md).
 //
 // What the layout cannot place is left out, and the rest is laid out and
-// drawn (Ben, 2026-10-03): data objects and stores, groups, parent lanes of
-// nested lanes, the content of a sub-process, a boundary event on what is no
-// activity laid out, a message flow at a boundary event, a text annotation
-// without text or without an association to something laid out, an
-// association without a text annotation at one end, and every flow that
-// touches one of them. readProcess() lists
+// drawn (Ben, 2026-10-03): groups, parent lanes of nested lanes, the content
+// of a sub-process, a boundary event on what is no activity laid out, a
+// message flow at a boundary event, a text annotation without text, an
+// association without a text annotation at one end, a data association whose
+// other end is no reference laid out, and every flow that touches one of
+// them. readProcess() lists
 // them; the page names each on the console, not in the document.
 //
 // Pure logic: no page, no library; the one import is the label measurer, pure
@@ -188,8 +192,11 @@ const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { da
 //            the key of the lane whose flowNodeRef names it, or null
 //     data:  [{ id, kind, name, state, pool, lane }], the data object (kind
 //            object) and data store references (store) of the processes
-//            (story 2.32): state, the name of its dataState, or ''; pool and
-//            lane as for a text annotation without an association
+//            (story 2.32): state, the name of its dataState, or ''; label,
+//            where it has a name and a state, the name and "[state]" as a
+//            line of its own (dataStateLabel()), which its label is measured
+//            in; pool and lane as for a text annotation without an
+//            association
 //     dataAssociations: [{ id, node, ref, dir }], each between a flow node or
 //            a boundary event and a reference: dir in, read by the node (a
 //            dataInputAssociation, its first sourceRef the reference), or out,
