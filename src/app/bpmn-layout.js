@@ -3513,16 +3513,23 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       const users = usersOf.get(d.id);
       if (!users.length) continue;
       const [w, h] = DATA_SIZE[d.kind];
-      // The lane with most of the users; of the tied, the one nearest to all of them (the middle of three), else the
-      // first user's. The middle of their columns.
+      // Only in a lane of the pool of its process (Ben, 2026-10-09, as BPMN 2.0 has it: drawn in another pool, it lay
+      // under that pool's frame); its lines cross the pools' border to users in another. Of those lanes the one with
+      // most of the users; of the tied, the one nearest to all of them (the middle of three), else the first user's;
+      // with no user in its pool, the one nearest to them, the reference at its edge facing them. The middle of their
+      // columns.
+      const own = d.pool == null ? laneBoxes() : model.lanes.filter(l => (l.pool ?? 0) === d.pool).map(l => laneBox[l.key]);
       const count = new Map();
-      for (const u of users){ const b = laneAt(box[u]); count.set(b, (count.get(b) || 0) + 1); }
-      const most = Math.max(...count.values());
+      for (const u of users){ const b = laneAt(box[u]); if (own.includes(b)) count.set(b, (count.get(b) || 0) + 1); }
       const spread = b => users.reduce((sum, u) => sum + Math.abs(b[1] + b[3] / 2 - box[u].cy), 0);
-      const lane = [...count.keys()].filter(b => count.get(b) === most).reduce((m, b) => spread(b) < spread(m) ? b : m);
+      const most = count.size ? Math.max(...count.values()) : 0;
+      const lane = (count.size ? [...count.keys()].filter(b => count.get(b) === most) : own).reduce((m, b) => spread(b) < spread(m) ? b : m);
       const xs = users.map(u => box[u].cx), mid = (Math.min(...xs) + Math.max(...xs)) / 2;
       const mine = users.filter(u => laneAt(box[u]) === lane);
-      const top = Math.min(...mine.map(u => box[u].cy - box[u].h / 2)), bottom = Math.max(...mine.map(u => box[u].cy + box[u].h / 2));
+      // None in the lane: as if they stood just beyond its edge facing them.
+      const below = !mine.length && users.reduce((sum, u) => sum + box[u].cy, 0) / users.length > lane[1] + lane[3] / 2;
+      const top = mine.length ? Math.min(...mine.map(u => box[u].cy - box[u].h / 2)) : below ? lane[1] + lane[3] + DATA_GAP - LABEL_GAP - ASIDE_GAP : NaN;
+      const bottom = mine.length ? Math.max(...mine.map(u => box[u].cy + box[u].h / 2)) : below ? NaN : lane[1] - DATA_GAP + LABEL_GAP + ASIDE_GAP;
       const inLane = p => p[1] >= lane[1] + LABEL_GAP && p[1] + p[3] <= lane[1] + lane[3] - LABEL_GAP && p[0] >= laneLeft(lane) + LABEL_GAP;
       const clear = (p, crossing) => inLane(p) && !covered(p, [...symbols, ...segments, ...dataSegs, ...taken, ...borders()], NOTE_CLEAR) &&
         !wayFaults(waysOf(d, p), u => di.nodes[u], symbols, taken, crossing);
@@ -3531,7 +3538,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       // A boundary event as the only user: below it first, away from its host, which lies above it.
       const onBorder = users.length === 1 && boundaries.some(b => b.id === users[0]);
       const ys = far => [top - DATA_GAP - far - h, bottom + DATA_GAP + far];
-      const sides = onBorder ? [1, 0] : users.length > 1 ? [0, 1] : [0];
+      const sides = !mine.length ? [below ? 0 : 1] : onBorder ? [1, 0] : users.length > 1 ? [0, 1] : [0];
       let place = null;
       for (const side of sides){
         rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const k of ks){
@@ -3546,7 +3553,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       if (!place){
         const d0 = h + DATA_GAP;
         let best = null;
-        for (const down of onBorder ? [true, false] : users.length > 1 ? [false, true] : [false]){
+        for (const down of !mine.length ? [below] : onBorder ? [true, false] : users.length > 1 ? [false, true] : [false]){
           const cut = down ? lane[1] + lane[3] : lane[1], y = down ? cut + DATA_GAP / 2 : cut + ASIDE_GAP;
           const move = b => b[1] + b[3] / 2 >= cut ? [b[0], b[1] + d0, b[2], b[3]] : b;
           const nodesNow = new Map([...nodeOf.keys()].map(id => [id, move(di.nodes[id])]));
