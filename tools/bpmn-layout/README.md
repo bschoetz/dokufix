@@ -27,17 +27,29 @@ node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 
 | Datei | Was |
 |---|---|
-| `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), anordnen wie die Seite (`layoutJob()` in `src/app/bpmn-layout-job.js`, mit dem XML-Leser des Stands), Brüche, Größe, Blöcke, Kreuzungen und Knicke (`quality()`), Nähe zu einer Referenz |
+| `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), anordnen wie die Seite (`layoutJob()` in `src/app/bpmn-layout-job.js`, mit dem XML-Leser des Stands), Brüche, Größe, Blöcke, Kreuzungen und Knicke (`quality()`), Nähe zu einer Referenz, die Fingerabdrücke aller Eingaben (`fingerprints()`, einmal je Lauf) |
 | `lauf.mjs` | ordnet an und misst, auch Kreuzungen, Knicke und wie oft `finishGrid()` je Regel lief (die Proben); `--lauf`, `--stand`, `--satz`, `--aus <regel,…>` (DEFAULT_RULES abschalten), Namen |
 | `vergleich.mjs` | zwei Läufe Eingabe für Eingabe, Byte für Byte |
 | `feedback-bauen.mjs`, `feedback-seite.js` | die Seite des Layout-Feedbacks: Bild, Modellierer, Kommentar, früheres Feedback, Export als Paket; `--art`, `--satz`, `--gegen`, `--varianten`, `--alle`, Namen |
-| `feedback-auswerten.mjs` | ein Paket von der Seite: was Ben geändert hat, gemessen an der erzeugten Fassung |
+| `feedback-auswerten.mjs` | ein Paket von der Seite: was Ben geändert hat, gemessen an der erzeugten Fassung; je Beispiel der Fingerabdruck des Falls und die Eingabe, die es ist, sonst die drei nach der Form nächsten |
 | `vor-lmm.mjs`, `review-lmm.mjs` | die Stände vor LMM (8266ec4, und d296705 mit dem Messer, aber Mermaids Spalten) aus den aufbewahrten Rohpositionen, und die Review-Seite aller Bilder, die der Umbau vom 2026-10-07 geändert hat (`arbeit/bpmn-feedback-lmm.html`), mit dem Stand vor den Regeln aus Bens Feedback (Lauf `basis`, `--stand dd1dd25`) und den Handfassungen (Bens hund2, die Handlayouts der Quellen) |
-| `pruefen.mjs` | bpmnlint und die Prüfung paralleler Gateways; eine neue Eingabe kommt nur ohne Fehler in einen Satz |
+| `pruefen.mjs` | bpmnlint und die Prüfung paralleler Gateways (ein paralleler Split schließt mit einem parallelen Join, oder seine Zweige laufen in Endereignissen aus, Ben, 2026-10-09); eine neue Eingabe kommt nur ohne Fehler in einen Satz, außer sie ist so falsch gezeichnet, wie Leute zeichnen: dann steht ihr Fehler unter `BEKANNT` und zählt nicht (x-wv6: Nachrichten-Start in einen parallelen Join, Ben, 2026-10-09). Danach die Eingaben mit gleichem Fall und gleicher Form (unten) |
 | `kreuz.mjs` | gekreuzte Nachrichtenflüsse zwischen denselben zwei Symbolen (Story 2.12) |
 | `browser-zeit.mjs` | die Laufzeit in Chromium und Firefox |
 
 Nicht mitgekommen sind, was nur mit Mermaids Rohpositionen ging: die eingefrorenen Varianten main, A und B von Spike 2.26 mit ihrer Sichtung (`sichtung.mjs`, `bilder.mjs`), die Wege G und M der Pools (Story 2.12) und das alte Bauskript des Assistant (jetzt `tools/bpmn-assistant/`).
+
+## Gleicher Fall, gleiche Form
+
+`src/app/fingerprint.js` (Story 2.37) gibt jeder Eingabe zwei Fingerabdrücke. Der **Fall** ist ein SHA-256 über das bereinigte XML: ohne Diagrammteil, Farben, Erweiterungen der Werkzeuge, Kommentare, Leerraum zwischen den Tags und `name`, `exporter`, `exporterVersion`, `targetNamespace` der Definitionen, die Präfixe vereinheitlicht, die Attribute sortiert und nach ID sortiert, was in BPMN keine Reihenfolge hat und für das Layout keine (Knoten, angeheftete Ereignisse, Flüsse, `flowNodeRef`, Notizen, Assoziationen, Nachrichtenflüsse, Datenreferenzen und -assoziationen, `incoming`/`outgoing`); IDs, Namen und die Reihenfolge der Bahnen und Pools bleiben. Gleicher Fall heißt: dieselbe Eingabe, anders geschrieben. Die **Form** ist der Prozess ohne IDs und Texte (Weisfeiler–Lehman über das Modell von `readProcess()`): Klassen, Art der Ereignisse und Gateways, Flüsse mit Richtung, Nachrichtenflüsse, Assoziationen, die Bahn jedes Knotens, die Reihenfolge der Bahnen und Pools, ob ein Pool mit Rahmen gezeichnet wird (ein Prozess ohne Teilnehmer nicht), angeheftete Ereignisse an ihrem Wirt, Black Box oder nicht, Datenobjekt oder Datenspeicher; Aufgabentypen, Ereignisdefinitionen und `cancelActivity` nicht. Gleiche Form heißt sehr ähnlich, nicht dasselbe Bild: Texte wirken über die Größe der Beschriftungen und als Entscheid unter Gleichen. Aus den Merkmalen der Form folgt eine Ähnlichkeit (0 bis 100 %).
+
+```sh
+node tools/bpmn-layout/pruefen.mjs                       # nach den Zeilen der Prüfung: gleicher Fall, gleiche Form
+node tools/bpmn-layout/pruefen.mjs --aehnlich            # dazu je Eingabe die drei ähnlichsten mit Prozent
+node tools/bpmn-layout/pruefen.mjs --json <out.json>     # alles auch als JSON
+```
+
+Eine Gruppe steht unter dem kurzen Fingerabdruck (12 Stellen). Unter „gleiche Form“ nur Gruppen mit mehr als einem Fall; Eingaben gleichen Falls darin mit „=“ verbunden. Der Exit-Code bleibt der der Prüfung.
 
 ## Die Eingaben
 
@@ -48,7 +60,7 @@ Die Sätze, wie Spike 2.26 und die Stories 2.12 und 2.29 bis 2.32 sie gebildet h
 | `sauber` | 48: 19 Fixtures aus `tests/fixtures/bpmn-layout/`, 29 in `eingaben/sauber/` | | der saubere Satz von Spike 2.26, gültig nach `pruefen.mjs` |
 | `ben` | 2 | | Bens morgenroutine und krankheit |
 | `extern` | | 20 (`x-…`) | von Menschen gezeichnete Prozesse, je mit Handlayout als Referenz |
-| `pools`, `blackbox`, `angeheftet`, `notizen`, `daten` | 5, 8, 11, 10, 9 | 10, 7, 3, 13, 14 | die Sätze der Stories 2.12, 2.29 bis 2.32 |
+| `pools`, `blackbox`, `angeheftet`, `notizen`, `daten` | 5, 8, 11, 9, 9 | 10, 7, 3, 12, 14 | die Sätze der Stories 2.12, 2.29 bis 2.32 |
 | `laufzeit` | 1 | | Bens hund3 (77 Knoten), nur auf Nennung |
 | `einzeln` | 1 | | Diagramme, über die Ben einzeln sprechen will, nur auf Nennung: `lauf.mjs --lauf <name> <name>`, `feedback-bauen.mjs --lauf <name> --art <name> <name>` |
 

@@ -19,7 +19,7 @@ const block = (xml, tag) => (new RegExp('<(?:[\\w.-]+:)?' + tag + '\\b[\\s\\S]*?
 const read = (lauf, n) => { const f = path.join(laufDir(lauf), n + '.bpmn'); return fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : null; };
 const bild = xml => block(xml || '', 'BPMNDiagram');
 const SETS = ['sauber', 'ben', 'extern', 'pools', 'blackbox', 'angeheftet', 'notizen'];
-const order = n => SETS.indexOf(INPUTS.get(n).set);
+const order = n => SETS.indexOf((INPUTS.get(n) || {}).set);
 
 const changed = Object.keys(jetzt.inputs).filter(n => vor.inputs[n] && bild(read('vor-lmm', n)) !== bild(read('produkt', n)));
 const byLmm = changed.filter(n => bild(read('nur-messer', n)) !== bild(read('produkt', n)));

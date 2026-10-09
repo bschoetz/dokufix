@@ -9,6 +9,7 @@ import crypto from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DOMParser } from 'linkedom';
+import { caseFingerprint, shapeOf } from '../../src/app/fingerprint.js';
 
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(HERE, '../..');
@@ -70,6 +71,17 @@ export function readInput(name){
   const i = INPUTS.get(name);
   if (!i) throw new Error('keine Eingabe ' + name);
   return { ...i, xml: fs.readFileSync(i.file, 'utf8') };
+}
+// name → { fall, form } über alle Eingaben, einmal je Lauf (src/app/fingerprint.js, Story 2.37): fall der Fingerabdruck des
+// Falls ({ hash, short }), form der der Form ({ hash, short, features }); null, wo die Eingabe kein BPMN ist, form auch,
+// wo readProcess() nichts anzuordnen findet.
+let FINGERPRINTS = null;
+export function fingerprints(){
+  if (!FINGERPRINTS){
+    FINGERPRINTS = new Map();
+    for (const name of INPUTS.keys()){ const { xml } = readInput(name); FINGERPRINTS.set(name, { fall: caseFingerprint(xml), form: shapeOf(xml) }); }
+  }
+  return FINGERPRINTS;
 }
 export const referenceOf = name => { const i = INPUTS.get(name); return i && i.ref ? fs.readFileSync(i.ref, 'utf8') : null; };
 

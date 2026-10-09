@@ -2,13 +2,15 @@
 // auf LMM umgestellt): legt je Beispiel Eingabe, erzeugte und bearbeitete Fassung und den Kommentar ab und schreibt
 // eine Übersicht, was Ben geändert hat, gemessen an der erzeugten Fassung: Brüche vorher und nachher, Nähe (wie
 // closeness() für die Referenzen), Knoten mit anderer Bahn, Paare mit anderer Reihenfolge links–rechts oder
-// oben–unten in einer Bahn, Flüsse mit anderem Verlauf und ihre Knicke.
+// oben–unten in einer Bahn, Flüsse mit anderem Verlauf und ihre Knicke. Je Beispiel dazu der Fingerabdruck des Falls
+// (src/app/fingerprint.js, Story 2.37) und die Eingabe der Sammlung, die es ist, sonst die drei nach der Form nächsten.
 //   node tools/bpmn-layout/feedback-auswerten.mjs <paket.json> [--out <ordner>]
 // Ohne --out: arbeit/feedback/<satz>-<datum des Exports>/; feedback-bauen.mjs erkennt daran, zu welchem Satz Feedback
 // kam.
 import fs from 'node:fs';
 import path from 'node:path';
-import { REPO, ARBEIT, loadStand, readModel, rules, allBreaks as breaksAll, compact, readDi, closeness, pct, args } from './lib.mjs';
+import { REPO, ARBEIT, loadStand, readModel, rules, allBreaks as breaksAll, compact, readDi, closeness, pct, args, fingerprints } from './lib.mjs';
+import { caseFingerprint, shapeOf, nearest } from '../../src/app/fingerprint.js';
 
 const a = args(process.argv.slice(2));
 if (!a._[0]) throw new Error('Aufruf: node tools/bpmn-layout/feedback-auswerten.mjs <paket.json> [--out <ordner>]');
@@ -19,6 +21,17 @@ const mod = await loadStand();
 const breaksOf = await rules();
 const out = a.out || path.join(ARBEIT, 'feedback', pkg.satz.id + '-' + String(pkg.exportiert).slice(0, 10));
 fs.mkdirSync(out, { recursive: true });
+
+// Welche Eingabe der Sammlung ein Beispiel ist: gleicher Fall, sonst die drei nach der Form nächsten.
+const fps = fingerprints();
+function whichInput(xml){
+  const fall = caseFingerprint(xml);
+  if (!fall) return 'Fall: kein BPMN.';
+  const same = [...fps].filter(([, fp]) => fp.fall && fp.fall.hash === fall.hash).map(([name]) => name);
+  if (same.length) return `Fall ${fall.short}: die Eingabe ${same.join(' = ')}.`;
+  const form = shapeOf(xml), near = form ? nearest(form, fps) : [];
+  return `Fall ${fall.short}: keine Eingabe der Sammlung` + (near.length ? `; nach der Form am nächsten ${near.map(n => `${n.name} ${Math.round(n.similarity * 100)} %`).join(', ')}` : '') + '.';
+}
 
 const allBreaks = (xml, model) => breaksAll(breaksOf, compact(xml), model).breaks;
 const bends = pts => Math.max(0, (pts || []).length - 2);
@@ -33,6 +46,7 @@ for (const b of pkg.beispiele){
   if ((b.kommentar || '').trim()) fs.writeFileSync(path.join(dir, 'kommentar.md'), b.kommentar.trim() + '\n');
 
   lines.push(`## ${b.name}`, '', `${b.paket}; ${b.bearbeitet ? 'bearbeitet' : 'nicht bearbeitet'}${(b.kommentar || '').trim() ? ', kommentiert' : ''}; geändert ${b.geaendert}.`, '');
+  lines.push(whichInput(b.eingabe), '');
   if ((b.kommentar || '').trim()) lines.push('Kommentar:', '', ...b.kommentar.trim().split('\n').map(l => '> ' + l), '');
   if (!b.bearbeitet){ lines.push(''); continue; }
 
