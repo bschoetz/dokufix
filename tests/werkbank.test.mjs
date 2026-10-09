@@ -14,13 +14,20 @@
 // tools/bpmn-layout/feedback-auswerten.mjs, and an old package without the origin. The import from a work folder of
 // its own (tools/werkbank/import.mjs): the latest edit as Ben's version with soll false, the rest archived, layouts
 // once per content with their stands, variant comparisons as text; taken into the store twice without duplicates.
+// The view of story 2.40 (src/werkbank/ebenen.js): every layer at its own origin, the view kept relative to it, so a
+// version shifted as a whole does not jump; the fit to the common extent; the marking per layer, the same sets
+// tools/bpmn-layout/feedback-auswerten.mjs lists (src/bpmn-tools/aenderungen.js).
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser, parseHTML } from 'linkedom';
-import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen, ohneBahnen, kandidaten } from '../src/werkbank/faelle.js';
+import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen, ohneBahnen, kandidaten, zeichnungPruefen } from '../src/werkbank/faelle.js';
 import { speicherImArbeitsspeicher, speicherOeffnen, pruefeZustand, ZUSTAND_FORMAT } from '../src/werkbank/speicher.js';
 import { caseFingerprint } from '../src/app/fingerprint.js';
+import { ursprung, ausdehnung, einpassen, relativ, absolut, markenFuer, leinwand, ebeneFuerTaste } from '../src/werkbank/ebenen.js';
+import { aenderungen, readDi } from '../src/bpmn-tools/aenderungen.js';
+import { readProcess } from '../src/app/bpmn-layout.js';
+import { parseXml } from '../src/app/xml-parser.js';
 import { readFixture, expectedFile } from './bpmn-fixtures.mjs';
 import { INPUTS, ARBEIT, externFehlt, logikOf } from '../tools/bpmn-layout/lib.mjs';
 import { bauen, eingaben as eingabenDerSeite, OUT_ALLES } from '../tools/werkbank/bauen.mjs';
@@ -497,4 +504,182 @@ test('the import taken into the store: external inputs as cases, Ben\'s version 
   for (const bad of [null, { format: 'x' }, { ...imp, version: 2 }, { ...imp, archiv: 'x' }, { ...imp, fassungen: [{ fall: 'f' }] }]){
     await assert.rejects(sp.importieren(bad), /Kein Import der Werkbank/);
   }
+});
+
+// ---------- the view: layers on one canvas (story 2.40) ----------
+// Every coordinate of the diagram part moved by dx, dy: the same picture, elsewhere.
+const verschoben = (xml, dx, dy) => xml.replace(/(<(?:[\w.-]+:)?(?:Bounds|waypoint)\b[^>]*?)\bx="([-\d.]+)"([^>]*?)\by="([-\d.]+)"/g, (m, a, x, b, y) => `${a}x="${Number(x) + dx}"${b}y="${Number(y) + dy}"`);
+const modelOf = xml => readProcess(parseXml(xml)).model;
+
+test('matrix: a version shifted as a whole keeps the view; switching shows the same spot', () => {
+  const g = angeordnet('r02'), b = verschoben(g, 150, 40);
+  const ug = ursprung(g), ub = ursprung(b);
+  assert.deepEqual({ x: ub.x - ug.x, y: ub.y - ug.y, w: ub.w, h: ub.h }, { x: 150, y: 40, w: ug.w, h: ug.h });
+  // Zoomed and panned on the generated version, then switched: Ben's shows the same part of the diagram.
+  const vb = { x: ug.x + 120, y: ug.y + 30, width: 400, height: 250 };
+  const rel = relativ(vb, ug);
+  assert.deepEqual(absolut(rel, ub), { x: vb.x + 150, y: vb.y + 40, width: 400, height: 250 });
+  assert.deepEqual(relativ(absolut(rel, ub), ub), rel);
+  // Shifted as a whole, no node is marked: lanes and order are relative. The flows are, as feedback-auswerten.mjs
+  // compares their waypoints as they stand.
+  const model = modelOf(eingabe('r02')), a = aenderungen(g, b, model);
+  assert.deepEqual([a.lanes, a.x, a.y], [[], [], []]);
+  assert.deepEqual([...markenFuer([{ key: 'erzeugt', xml: g }, { key: 'ben', xml: b }], model).get('ben')].sort(), a.flows.map(f => f.id).sort());
+});
+
+test('the fit: the common extent, centred, at most 100 %', () => {
+  assert.equal(ursprung('<definitions/>'), null);
+  assert.deepEqual(ausdehnung([{ x: 0, y: 0, w: 300, h: 100 }, null, { x: 9, y: 9, w: 200, h: 400 }]), { w: 300, h: 400 });
+  // Small: 100 %, the extent in the middle of the field.
+  const klein = einpassen({ w: 200, h: 100 }, 1000, 500);
+  assert.deepEqual(klein, { x: -400, y: -200, width: 1000, height: 500 });
+  // Large: scaled to fit with its margin, the aspect of the field kept.
+  const gross = einpassen({ w: 4000, h: 1000 }, 1000, 500, 0);
+  assert.equal(gross.width / gross.height, 2);
+  assert.equal(gross.width, 4000);
+  assert.equal(gross.y, (1000 - gross.height) / 2);
+});
+
+test('matrix: a task moved to another lane marks the task and its rerouted flow, nothing else; no change marks nothing', () => {
+  const g = angeordnet('r02'), model = modelOf(eingabe('r02'));
+  const di = readDi(g), lanes = model.lanes.filter(l => !l.synthetic);
+  const laneOf = id => lanes.find(l => { const L = di.shapes[l.id], s = di.shapes[id]; return s.cy >= L.y && s.cy <= L.y + L.h; });
+  // A task and a lane it is not in.
+  const task = model.nodes.find(n => n.type === 'task' && di.shapes[n.id] && laneOf(n.id));
+  const ziel = di.shapes[lanes.find(l => l.id !== laneOf(task.id).id).id];
+  const s = di.shapes[task.id];
+  const dy = Math.round(ziel.y + ziel.h / 2 - s.cy);
+  // Only the task's shape moved, then one of its flows rerouted.
+  const shapeRe = new RegExp('(<(?:[\\w.-]+:)?BPMNShape\\b[^>]*bpmnElement="' + task.id + '"[^>]*>\\s*<(?:[\\w.-]+:)?Bounds\\b[^>]*?\\by=")([-\\d.]+)');
+  let b = g.replace(shapeRe, (m, a, y) => a + (Number(y) + dy));
+  assert.notEqual(b, g);
+  const flow = model.flows.find(f => f.from === task.id || f.to === task.id);
+  const edgeRe = new RegExp('(<(?:[\\w.-]+:)?BPMNEdge\\b[^>]*bpmnElement="' + flow.id + '"[^>]*>\\s*<(?:[\\w.-]+:)?waypoint\\b[^>]*?\\by=")([-\\d.]+)');
+  b = b.replace(edgeRe, (m, a, y) => a + (Number(y) + dy));
+  const a = aenderungen(g, b, model);
+  assert.deepEqual(a.lanes.map(m => m.id), [task.id]);
+  assert.deepEqual(a.flows.map(f => f.id), [flow.id]);
+  const marken = markenFuer([{ key: 'erzeugt', xml: g }, { key: 'ben', xml: b }], model);
+  assert.deepEqual([...marken.get('ben')].sort(), [task.id, flow.id].sort());
+  // The generated layer has nothing to compare with (no other stand); with one, identical, nothing marked.
+  assert.equal(marken.has('erzeugt'), false);
+  assert.equal(markenFuer([{ key: 'erzeugt', xml: g }, { key: 'stand', xml: g }], model).get('erzeugt').size, 0);
+  // A layer without a picture (waiting) has no entry.
+  assert.equal(markenFuer([{ key: 'erzeugt', xml: null }, { key: 'ben', xml: b }], model).size, 0);
+});
+
+// The ids the evaluation lists for one example, read from its section of uebersicht.md: node lines name the node as
+// "name (id)" or "id", flow lines begin with the flow's id.
+function gelisteteIds(abschnitt, model, ids){
+  const name = id => { const n = model.nodes.find(x => x.id === id); return n && n.name ? `${n.name} (${id})` : id; };
+  const zeilen = abschnitt.split('\n').filter(l => l.startsWith('- '));
+  const gefunden = new Set();
+  for (const l of zeilen){
+    const id = [...ids].find(i => l.startsWith(`- ${name(i)}: `) || l.startsWith(`- ${i} (`));
+    assert.ok(id, 'listed, not marked: ' + l);
+    gefunden.add(id);
+  }
+  return gefunden;
+}
+test('the marking is what feedback-auswerten.mjs lists, for the edited examples of the packages in arbeit/feedback/', () => {
+  const ordner = path.join(ARBEIT, 'feedback');
+  const pakete = fs.existsSync(ordner) ? fs.readdirSync(ordner).map(d => path.join(ordner, d, 'paket.json')).filter(f => fs.existsSync(f)) : [];
+  // The packages in arbeit/ where there are some, and always a fixture of the tests.
+  const beispiele = [];
+  for (const f of pakete.slice(0, 4)){
+    const pkg = JSON.parse(fs.readFileSync(f, 'utf8'));
+    const { uebersicht } = auswerten(pkg);
+    for (const b of pkg.beispiele.filter(x => x.bearbeitet)) beispiele.push({ b, abschnitt: uebersicht.split('\n## ').find(t => t.startsWith(b.name + '\n')) });
+  }
+  {
+    // Task b of r03 moved 500 px to the right: another order, its flows as they were.
+    const g = angeordnet('r03'), b = g.replace(/(<(?:[\w.-]+:)?BPMNShape\b[^>]*bpmnElement="b"[^>]*>\s*<(?:[\w.-]+:)?Bounds\b[^>]*?\bx=")([-\d.]+)/, (m, a, x) => a + (Number(x) + 500));
+    assert.notEqual(b, g);
+    const pkg = { format: 'dokufix-layout-feedback', version: 1, exportiert: T1, satz: { id: 'fx', variant: 'A' }, beispiele: [{ name: 'fx-r03', paket: 'erzeugt', eingabe: eingabe('r03'), erzeugt: g, bearbeitet: b, kommentar: '', geaendert: T1 }] };
+    beispiele.push({ b: pkg.beispiele[0], abschnitt: auswerten(pkg).uebersicht.split('\n## ')[1] });
+  }
+  let geprueft = 0;
+  for (const { b, abschnitt } of beispiele){
+    assert.ok(abschnitt, b.name);
+    // A list cut short ("… und n weitere") names fewer than are marked.
+    if (/… und \d+ weitere/.test(abschnitt)) continue;
+    const model = modelOf(b.eingabe);
+    const marken = markenFuer([{ key: 'erzeugt', xml: b.erzeugt }, { key: 'ben', xml: b.bearbeitet }], model).get('ben');
+    assert.deepEqual([...gelisteteIds(abschnitt, model, marken)].sort(), [...marken].sort(), b.name);
+    if (b.name === 'fx-r03') assert.ok(marken.has('b'), 'the moved task is marked');
+    geprueft++;
+  }
+  assert.ok(geprueft > 0);
+});
+
+// A viewer as bpmn-js's, as far as the canvas uses it: the import (refused without a diagram part), the view, the
+// markers, the event of a changed view.
+class Probeviewer {
+  static alle = [];
+  constructor({ container }){ this.container = container; this.vb = { x: 0, y: 0, width: 800, height: 500 }; this.h = {}; this.marken = new Set(); Probeviewer.alle.push(this); }
+  async importXML(xml){ if (!/BPMNShape/.test(xml)) throw new Error('kein Diagramm'); this.xml = xml; }
+  get(name){
+    if (name === 'elementRegistry') return { get: id => ({ id }) };
+    return {
+      viewbox: b => { if (b){ this.vb = { ...b }; for (const f of this.h['canvas.viewbox.changed'] || []) f({ viewbox: this.vb }); } return this.vb; },
+      addMarker: id => this.marken.add(id), removeMarker: id => this.marken.delete(id),
+    };
+  }
+  on(e, f){ (this.h[e] ||= []).push(f); }
+  destroy(){ this.zerstoert = true; }
+}
+test('matrix: switching keeps the view, a missing layer is no key, an unreadable layer is named and the others work', async () => {
+  const { document } = parseHTML('<!doctype html><div id="h"></div>');
+  const vorher = globalThis.document;
+  globalThis.document = document;
+  try {
+    Probeviewer.alle = [];
+    const host = document.getElementById('h');
+    const L = leinwand(host, { Viewer: Probeviewer, config: {} });
+    const g = angeordnet('r02'), b = verschoben(g, 150, 40);
+    const fehler = await L.setzen('f1', [{ key: 'erzeugt', xml: g }, { key: 'ben', xml: b }, { key: 'kaputt', xml: '<definitions/>' }]);
+    assert.deepEqual(fehler, { kaputt: 'kein Diagramm' });
+    const [vg, vb] = Probeviewer.alle;
+    L.zeigen('erzeugt');
+    assert.deepEqual([...host.children].map(e => e.style.visibility), ['visible', 'hidden', 'hidden']);
+    // Ben zooms and pans on the generated version, then switches: the same spot of Ben's.
+    const ug = ursprung(g);
+    vg.get('canvas').viewbox({ x: ug.x + 100, y: ug.y + 50, width: 400, height: 250 });
+    L.zeigen('ben');
+    assert.deepEqual(vb.vb, { x: ug.x + 250, y: ug.y + 90, width: 400, height: 250 });
+    assert.deepEqual([...host.children].map(e => e.style.visibility), ['hidden', 'visible', 'hidden']);
+    // The unreadable layer shows nothing; switching back works.
+    L.zeigen('kaputt');
+    L.zeigen('erzeugt');
+    assert.deepEqual(vg.vb, { x: ug.x + 100, y: ug.y + 50, width: 400, height: 250 });
+    // A layer that joins later (the last stand) neither refits nor moves the view; the layers kept are not imported again.
+    await L.setzen('f1', [{ key: 'erzeugt', xml: g }, { key: 'ben', xml: b }, { key: 'stand', xml: g }]);
+    assert.equal(Probeviewer.alle.length, 4);
+    assert.deepEqual(L.ansicht, { x: 100, y: 50, width: 400, height: 250 });
+    L.zeigen('stand');
+    assert.deepEqual(Probeviewer.alle[3].vb, { x: ug.x + 100, y: ug.y + 50, width: 400, height: 250 });
+    // Marking: the ids of a layer on its viewer, gone when switched off.
+    L.marken(new Map([['ben', new Set(['a', 'b'])]]), true);
+    assert.deepEqual([...vb.marken].sort(), ['a', 'b']);
+    L.marken(new Map([['ben', new Set(['a', 'b'])]]), false);
+    assert.equal(vb.marken.size, 0);
+    // Another case: everything anew, fitted again.
+    await L.setzen('f2', [{ key: 'erzeugt', xml: g }]);
+    assert.ok(vg.zerstoert && vb.zerstoert);
+    assert.deepEqual(L.ansicht, einpassen(ausdehnung([ug]), 800, 500));
+  } finally { globalThis.document = vorher; }
+  // The keys: the layer at that place of the tabs; where the case has fewer, none.
+  const arten = [{ key: 'erzeugt' }, { key: 'referenz' }];
+  assert.equal(ebeneFuerTaste(arten, '2'), 'referenz');
+  assert.equal(ebeneFuerTaste(arten, '3'), null);
+  assert.equal(ebeneFuerTaste(arten, 'x'), null);
+});
+
+test('matrix: a drawing that is no BPMN or has no node becomes no case, with a message', () => {
+  assert.match(zeichnungPruefen('kein xml'), /kein BPMN/);
+  assert.match(zeichnungPruefen('<?xml version="1.0"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d"><bpmn:process id="p"/></bpmn:definitions>'), /kein BPMN|keinen Knoten/);
+  // The empty modeler's start event alone: nothing drawn.
+  const nurStart = '<?xml version="1.0"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="d"><bpmn:process id="p"><bpmn:startEvent id="s"/></bpmn:process><bpmndi:BPMNDiagram id="dd"><bpmndi:BPMNPlane id="pl" bpmnElement="p"><bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="100" y="100" width="36" height="36"/></bpmndi:BPMNShape></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>';
+  assert.match(zeichnungPruefen(nurStart), /nichts gezeichnet/);
+  assert.equal(zeichnungPruefen(angeordnet('r01')), null);
 });

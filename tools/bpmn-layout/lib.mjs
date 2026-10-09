@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { DOMParser } from 'linkedom';
 import { caseFingerprint, shapeOf } from '../../src/app/fingerprint.js';
+import { readDi } from '../../src/bpmn-tools/aenderungen.js';
 
 export const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const REPO = path.resolve(HERE, '../..');
@@ -207,20 +208,8 @@ export function poolSize(di){
 }
 
 // Das DI einer Datei: Knoten (Mitte), Bahnen, Flüsse; jedes Präfix, Attribute in jeder Reihenfolge.
-const attr = (tag, name) => { const m = new RegExp('\\s' + name + '="([^"]*)"').exec(tag); return m ? m[1] : null; };
-export function readDi(xml){
-  const shapes = {};
-  for (const m of xml.matchAll(/<(?:[\w-]+:)?BPMNShape\b([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?BPMNShape>/g)){
-    const b = /<(?:[\w-]+:)?Bounds\b([^>]*)\/?>/.exec(m[2]);
-    if (!b) continue;
-    const id = attr(m[1], 'bpmnElement'), x = +attr(b[1], 'x'), y = +attr(b[1], 'y'), w = +attr(b[1], 'width'), h = +attr(b[1], 'height');
-    shapes[id] = { id, x, y, w, h, cx: x + w / 2, cy: y + h / 2 };
-  }
-  const flows = {};
-  for (const m of xml.matchAll(/<(?:[\w-]+:)?BPMNEdge\b([^>]*)>([\s\S]*?)<\/(?:[\w-]+:)?BPMNEdge>/g))
-    flows[attr(m[1], 'bpmnElement')] = [...m[2].matchAll(/<(?:[\w-]+:)?waypoint\b([^>]*)\/?>/g)].map(w => [+attr(w[1], 'x'), +attr(w[1], 'y')]);
-  return { shapes, flows };
-}
+// readDi() liegt seit Story 2.40 im gemeinsamen Modul der Messung, das auch die Werkbank lädt.
+export { readDi };
 
 // Rückkanten per Tiefensuche über die Flüsse des Modells (in XML-Reihenfolge).
 export function backEdges(model){

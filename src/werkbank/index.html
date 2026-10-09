@@ -16,16 +16,26 @@
 <span id="stand" title="Die Prüfsumme der Module des Layouts, mit denen diese Seite anordnet; tools/bpmn-layout/lauf.mjs nennt sie Logik">Layout-Stand {{slot:stand}}</span>
 <span id="fortschritt" aria-live="polite"></span>
 <span id="warnung" hidden></span>
-<span id="aktionen"><button type="button" id="einfuegen-btn" class="primary">Einfügen</button><button type="button" id="paket-btn">Paket herunterladen</button><button type="button" id="sichern-btn">Arbeitsstand sichern</button><button type="button" id="laden-btn">Arbeitsstand laden</button><input type="file" id="laden-datei" accept=".json,application/json" hidden><button type="button" id="import-btn" title="arbeit/werkbank-import.json aus tools/werkbank/import.mjs: externe Eingaben, frühere Fassungen, Archiv">Import laden</button><input type="file" id="import-datei" accept=".json,application/json" hidden></span>
+<span id="aktionen">
+<details class="menu" id="neu-menu"><summary>Neuer Fall</summary><div class="menu-liste"><button type="button" id="einfuegen-btn">Einfügen …</button><button type="button" id="zeichnen-btn">Zeichnen</button></div></details>
+<button type="button" id="paket-btn">Paket herunterladen</button>
+<details class="menu" id="mehr-menu"><summary aria-label="Mehr">⋯</summary><div class="menu-liste rechts"><button type="button" id="sichern-btn">Arbeitsstand sichern</button><button type="button" id="laden-btn">Arbeitsstand laden</button><button type="button" id="import-btn" title="arbeit/werkbank-import.json aus tools/werkbank/import.mjs: externe Eingaben, frühere Fassungen, Archiv">Import laden</button></div></details>
+<input type="file" id="laden-datei" accept=".json,application/json" hidden><input type="file" id="import-datei" accept=".json,application/json" hidden>
+</span>
 <p id="meldung" aria-live="polite"></p>
 </header>
 <div id="frame">
+<div id="links">
 <nav id="liste" aria-label="Fälle"><ul id="faelle"></ul></nav>
-<main id="leinwand" aria-label="Diagramm">
-<div id="leiste"><strong id="titel"></strong><span id="fassungen" role="group" aria-label="Fassung"></span><span id="info"></span><button type="button" id="bearbeiten" hidden>Im Modellierer bearbeiten</button></div>
+<section id="fall" aria-label="Der gewählte Fall">
+<div class="kopf"><strong id="titel"></strong><span id="fall-info"></span></div>
+<textarea id="kommentar" rows="3" aria-label="Kommentar" placeholder="Kommentar zum Fall am Stand" disabled></textarea>
 <details id="archiv" hidden><summary></summary><ul id="archiv-liste"></ul></details>
+</section>
+</div>
+<main id="leinwand" aria-label="Diagramm">
+<div id="leiste"><span id="fassungen" role="group" aria-label="Fassung (Tasten 1 bis 9)"></span><label id="markieren-schalter" title="Markiert, was anders liegt als in der erzeugten Fassung (die erzeugte gegen den letzten anderen Stand), wie tools/bpmn-layout/feedback-auswerten.mjs es misst. Taste M"><input type="checkbox" id="markieren" autocomplete="off"> Änderungen <span id="marken-zahl"></span></label><span id="info"></span><button type="button" id="einpassen" title="Taste 0">Einpassen</button><button type="button" id="bearbeiten" class="primary" hidden>Bearbeiten</button></div>
 <div class="dokufix-doc"><div id="canvas" class="dokufix-diagram dokufix-diagram-bpmn"></div></div>
-<label id="kommentarzeile">Kommentar <textarea id="kommentar" rows="2" placeholder="Was am Layout dieses Falls auffällt, am Stand dieser Seite" disabled></textarea></label>
 </main>
 </div>
 <dialog id="einfuegen" aria-labelledby="ein-titel">

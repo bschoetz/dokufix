@@ -11,7 +11,8 @@
 // kam.
 import fs from 'node:fs';
 import path from 'node:path';
-import { REPO, ARBEIT, loadStand, readModel, rules, allBreaks as breaksAll, compact, readDi, closeness, pct, args, fingerprints } from './lib.mjs';
+import { REPO, ARBEIT, loadStand, readModel, rules, allBreaks as breaksAll, compact, closeness, pct, args, fingerprints } from './lib.mjs';
+import { aenderungen } from '../../src/bpmn-tools/aenderungen.js';
 import { caseFingerprint, shapeOf, nearest } from '../../src/app/fingerprint.js';
 
 const a = args(process.argv.slice(2));
@@ -36,7 +37,6 @@ function whichInput(xml){
 }
 
 const allBreaks = (xml, model) => breaksAll(breaksOf, compact(xml), model).breaks;
-const bends = pts => Math.max(0, (pts || []).length - 2);
 
 const lines = [`# Layout-Feedback ${pkg.satz.id}`, '', `Variante ${pkg.satz.variant}, exportiert ${pkg.exportiert}, ${pkg.beispiele.length} Beispiele.`, ''];
 for (const b of pkg.beispiele){
@@ -65,36 +65,20 @@ for (const b of pkg.beispiele){
   const c = closeness(b.erzeugt, b.bearbeitet, model);
   lines.push(`Nähe der erzeugten zur bearbeiteten Fassung: Bahn ${pct(c.lane)}, Gateway-Bahn ${pct(c.gwLane)}, Zeilen ${pct(c.rows)}, Spalten ${pct(c.cols)}, Rückflüsse im Kanal ${pct(c.channel)}, Umweg ${c.detour.toFixed(2)}×, Fläche ${c.ratio.toFixed(2)}×`, '');
 
-  const g = readDi(b.erzeugt), e = readDi(b.bearbeitet);
-  const lanes = model.lanes.filter(l => !l.synthetic).map(l => l.id);
-  const laneOf = (di, id) => { const s = di.shapes[id]; return (s && lanes.find(l => { const L = di.shapes[l]; return L && s.cy >= L.y && s.cy <= L.y + L.h; })) || null; };
-  const ids = model.nodes.map(n => n.id).filter(id => g.shapes[id] && e.shapes[id]);
-  const laneMoves = ids.filter(id => laneOf(g, id) !== laneOf(e, id));
-  if (laneMoves.length) lines.push('Andere Bahn:', '', ...laneMoves.map(id => `- ${nameOf(id)}: ${laneName(laneOf(g, id))} → ${laneName(laneOf(e, id))}`), '');
+  // Was sich geändert hat, mit dem gemeinsamen Modul (Story 2.40), das auch die Werkbank auf ihrer Leinwand markiert.
+  const ae = aenderungen(b.erzeugt, b.bearbeitet, model);
+  const laneMoves = ae.lanes;
+  if (laneMoves.length) lines.push('Andere Bahn:', '', ...laneMoves.map(m => `- ${nameOf(m.id)}: ${laneName(m.von)} → ${laneName(m.nach)}`), '');
   // Paare mit anderer Beziehung (links–rechts über alle, oben–unten in derselben Bahn); jedes Paar zählt für
   // den Knoten, der sich in dieser Richtung mehr bewegt hat. Aufgeführt je Knoten, mit Verschiebung und Zahl der Paare.
-  const rel = (u, v, tol) => Math.abs(u - v) < tol ? 0 : Math.sign(u - v);
-  const moved = { x: new Map(), y: new Map() };
-  const blame = (axis, p, q) => {
-    const d = id => Math.abs(e.shapes[id]['c' + axis] - g.shapes[id]['c' + axis]);
-    const who = d(p) >= d(q) ? p : q, other = who === p ? q : p;
-    (moved[axis].get(who) || moved[axis].set(who, []).get(who)).push(other);
-  };
-  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++){
-    const p = ids[i], q = ids[j];
-    if (rel(g.shapes[p].cx, g.shapes[q].cx, 30) !== rel(e.shapes[p].cx, e.shapes[q].cx, 30)) blame('x', p, q);
-    if (laneOf(e, p) && laneOf(e, p) === laneOf(e, q) && rel(g.shapes[p].cy, g.shapes[q].cy, 20) !== rel(e.shapes[p].cy, e.shapes[q].cy, 20)) blame('y', p, q);
-  }
   const cap = (list, n) => list.length > n ? [...list.slice(0, n), `- … und ${list.length - n} weitere`] : list;
-  const listOf = axis => [...moved[axis]].sort((u, v) => v[1].length - u[1].length).map(([id, others]) => {
-    const d = Math.round(e.shapes[id]['c' + axis] - g.shapes[id]['c' + axis]);
-    return `- ${nameOf(id)}: ${axis === 'x' ? 'waagerecht' : 'senkrecht'} ${d > 0 ? '+' : ''}${d} px, andere Lage zu ${others.length} ${others.length === 1 ? 'Knoten' : 'Knoten'} (${others.slice(0, 4).map(nameOf).join(', ')}${others.length > 4 ? ', …' : ''})`;
-  });
+  const listOf = axis => ae[axis].map(({ id, d, mit: others }) =>
+    `- ${nameOf(id)}: ${axis === 'x' ? 'waagerecht' : 'senkrecht'} ${d > 0 ? '+' : ''}${d} px, andere Lage zu ${others.length} ${others.length === 1 ? 'Knoten' : 'Knoten'} (${others.slice(0, 4).map(nameOf).join(', ')}${others.length > 4 ? ', …' : ''})`);
   const cols = listOf('x'), rows = listOf('y');
   if (cols.length) lines.push('Andere Reihenfolge links–rechts:', '', ...cap(cols, 12), '');
   if (rows.length) lines.push('Andere Zeile in derselben Bahn:', '', ...cap(rows, 12), '');
-  const flows = model.flows.filter(f => g.flows[f.id] && e.flows[f.id] && JSON.stringify(g.flows[f.id]) !== JSON.stringify(e.flows[f.id]));
-  if (flows.length) lines.push(`Anderer Verlauf (${flows.length} Flüsse):`, '', ...cap(flows.map(f => `- ${f.id} (${nameOf(f.from)} → ${nameOf(f.to)}): Knicke ${bends(g.flows[f.id])} → ${bends(e.flows[f.id])}`), 20), '');
+  const flows = ae.flows;
+  if (flows.length) lines.push(`Anderer Verlauf (${flows.length} Flüsse):`, '', ...cap(flows.map(f => `- ${f.id} (${nameOf(f.from)} → ${nameOf(f.to)}): Knicke ${f.vor} → ${f.nach}`), 20), '');
   if (!laneMoves.length && !cols.length && !rows.length && !flows.length) lines.push('Keine Änderung an Bahnen, Reihenfolge oder Flüssen gefunden (nur Verschiebungen innerhalb der Toleranz oder Beschriftungen).', '');
 }
 fs.writeFileSync(path.join(out, 'uebersicht.md'), lines.join('\n') + '\n');

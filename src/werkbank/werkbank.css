@@ -1,18 +1,25 @@
-/* Die Layout-Werkbank (Stories 2.38 und 2.39): oben die Kopfleiste mit dem Layout-Stand und dem Fortschritt des
-   Anordnens, darunter zwei Spalten, links die Liste der Fälle, rechts die Leinwand mit ihrer Leiste (Titel, Fassungen,
-   Zeit), beide über die ganze Höhe des Fensters. Die gestaltete Ansicht kommt mit den Einträgen 40 und 41. */
-:root{--bg:#fff;--fg:#1d1d1f;--mute:#6e6e73;--line:#e5e5ea;--acc:#0066cc;--sel:#eef4fc;--warn:#b25000;--bad:#c4281c}
+/* Die Layout-Werkbank (Stories 2.38 bis 2.40), Variante C (Ben, 2026-10-09): oben die Kopfleiste mit dem Layout-Stand,
+   dem Fortschritt und den Aktionen, darunter zwei Spalten über die ganze Höhe des Fensters: links die Liste der Fälle
+   und unter ihr der gewählte Fall (Kommentar, Archiv), rechts die Leinwand mit einer schmalen Leiste (Ebenen,
+   Markieren, Bearbeiten als die eine farbige Aktion). Die Ebenen liegen übereinander in #canvas, der Modellierer über
+   der ganzen rechten Spalte. Ruhig: keine Karten, keine Tönungen. */
+:root{--bg:#fff;--fg:#1d1d1f;--mute:#6e6e73;--line:#e5e5ea;--acc:#0066cc;--sel:#eef4fc;--warn:#b25000;--bad:#c4281c;--mark:#e8590c}
 *{box-sizing:border-box}
 html,body{height:100%}
 body{margin:0;display:flex;flex-direction:column;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
-header{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;padding:14px 24px;border-bottom:1px solid var(--line)}
-h1{font-size:18px;font-weight:650;margin:0}
+header{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;padding:10px 20px;border-bottom:1px solid var(--line)}
+h1{font-size:16px;font-weight:650;margin:0}
 #stand,#fortschritt{color:var(--mute);font-size:13px;font-variant-numeric:tabular-nums}
 #warnung{color:var(--bad);font-size:13px}
-#frame{flex:1;min-height:0;display:grid;grid-template-columns:minmax(220px,300px) 1fr}
-#liste{border-right:1px solid var(--line);overflow:auto}
+#frame{flex:1;min-height:0;display:grid;grid-template-columns:minmax(240px,330px) 1fr}
+#links{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+#liste{flex:1;min-height:0;overflow:auto}
+#fall{border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:8px;max-height:45%;overflow:auto}
+#fall .kopf{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+#titel{flex:1;overflow-wrap:anywhere}
+#fall-info{color:var(--mute);font-size:12.5px;font-variant-numeric:tabular-nums}
 #faelle{list-style:none;margin:0;padding:8px 0}
-#faelle button{display:grid;grid-template-columns:1fr auto;gap:0 8px;width:100%;padding:5px 16px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
+#faelle button{display:grid;grid-template-columns:1fr auto;gap:0 8px;width:100%;padding:4px 14px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 #faelle button:hover{background:#f5f5f7}
 #faelle button[aria-current="true"]{background:var(--sel)}
 #faelle .n{overflow-wrap:anywhere}
@@ -20,26 +27,44 @@ h1{font-size:18px;font-weight:650;margin:0}
 #faelle .s,#faelle .t{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
 #faelle .t{text-align:right}
 #faelle .fehler .t{color:var(--bad)}
-#leinwand{min-width:0;min-height:0;display:flex;flex-direction:column}
-#leiste{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:8px 16px;border-bottom:1px solid var(--line);min-height:44px}
-#fassungen{display:flex;gap:4px}
-#fassungen button{padding:3px 10px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:inherit;font:inherit;font-size:13px;cursor:pointer}
-#fassungen button[aria-pressed="true"]{border-color:var(--acc);color:var(--acc)}
-#info{color:var(--mute);font-size:13px}
+#leinwand{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
+#leiste{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid var(--line);min-height:44px}
+#fassungen{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#fassungen:empty{display:none}
+#fassungen button{white-space:nowrap;padding:3px 10px;border:0;border-right:1px solid var(--line);border-radius:0;background:var(--bg);color:inherit;font:inherit;font-size:13px;cursor:pointer}
+#fassungen button:last-child{border-right:0}
+#fassungen button[aria-pressed="true"]{background:var(--fg);color:#fff}
+#fassungen button.fehler{color:var(--bad)}
+#fassungen button[aria-pressed="true"].fehler{background:var(--bad);color:#fff}
+#fassungen kbd{font:11px ui-monospace,monospace;color:inherit;opacity:.6;margin-right:5px}
+#markieren-schalter{display:inline-flex;gap:5px;align-items:center;font-size:13px;color:var(--mute);cursor:pointer}
+#markieren{accent-color:var(--mark);margin:0}
+#info{color:var(--mute);font-size:13px;flex:1;min-width:0}
 #leinwand>.dokufix-doc{flex:1;min-height:0;display:flex;max-width:none;margin:0;padding:0}
-#canvas{flex:1;min-height:0}
-@media (max-width:700px){header{padding:12px 16px}#frame{grid-template-columns:1fr;grid-template-rows:minmax(120px,30vh) 1fr}#liste{border-right:0;border-bottom:1px solid var(--line)}}
+#canvas{flex:1;min-height:0;position:relative;isolation:isolate}
+#canvas .ebene{position:absolute;inset:0}
+/* Was anders liegt (Story 2.40): Rahmen der Knoten, Linie der Flüsse. */
+#canvas .werkbank-geaendert .djs-visual>:first-child{stroke:var(--mark)!important;stroke-width:3px!important}
+#canvas .djs-connection.werkbank-geaendert .djs-visual>path{stroke:var(--mark)!important;stroke-width:2.5px!important}
+@media (max-width:700px){header{padding:10px 16px}#frame{grid-template-columns:1fr;grid-template-rows:minmax(160px,38vh) 1fr}#links{border-right:0;border-bottom:1px solid var(--line)}}
 button{padding:5px 12px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:inherit;font:inherit;font-size:13px;cursor:pointer}
 button:hover{border-color:#c7c7cc}
 button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
 button:disabled{opacity:.5;cursor:default}
-#aktionen{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+#aktionen{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-left:auto}
+.menu{position:relative}
+.menu summary{list-style:none;padding:5px 12px;border:1px solid var(--line);border-radius:7px;font-size:13px;cursor:pointer}
+.menu summary::-webkit-details-marker{display:none}
+.menu summary::after{content:" ▾";color:var(--mute)}
+#mehr-menu summary::after{content:""}
+.menu-liste{position:absolute;z-index:30;top:calc(100% + 4px);left:0;display:flex;flex-direction:column;min-width:190px;padding:4px;background:var(--bg);border:1px solid var(--line);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+.menu-liste.rechts{left:auto;right:0}
+.menu-liste button{border:0;text-align:left;border-radius:5px}
+.menu-liste button:hover{background:#f5f5f7}
 #meldung{flex-basis:100%;margin:0;font-size:13px;color:var(--mute)}
 #meldung:empty{display:none}
 #meldung.schlecht,#ein-meldung{color:var(--bad)}
-#bearbeiten{margin-left:auto}
-#kommentarzeile{display:flex;gap:10px;align-items:flex-start;padding:8px 16px;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
-#kommentar{flex:1;font:inherit;font-size:14px;color:var(--fg);padding:6px 8px;border:1px solid var(--line);border-radius:7px;resize:vertical}
+#kommentar{font:inherit;font-size:13px;color:var(--fg);padding:5px 8px;border:1px solid var(--line);border-radius:7px;resize:vertical}
 #einfuegen{width:min(760px,calc(100vw - 32px));border:1px solid var(--line);border-radius:12px;padding:20px}
 #einfuegen::backdrop{background:rgba(0,0,0,.25)}
 #einfuegen h2{font-size:17px;margin:0 0 12px}
@@ -52,12 +77,16 @@ button:disabled{opacity:.5;cursor:default}
 #vorschlaege{display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-top:8px}
 #alle{font:inherit;max-width:100%}
 #modeler{position:fixed;inset:0;z-index:20;background:#fff;display:flex;flex-direction:column}
+#modeler.eingebettet{position:absolute;z-index:10}
+#modeler.eingebettet .mbar{padding:7px 14px}
+#modeler.eingebettet .mbar strong{font-size:15px}
+#modeler.eingebettet .mbar .hint{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #modeler .mbar{display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 #modeler .mbar strong{font-size:17px}#modeler .mbar .hint{flex:1;color:var(--mute);font-size:13px}
 #modeler .mcanvas{flex:1;min-height:0;position:relative}
 .ic{vertical-align:-3px}
 .err{color:var(--bad);white-space:pre-wrap}
-#archiv{border-bottom:1px solid var(--line);padding:6px 16px;font-size:13px;max-height:40vh;overflow:auto}
+#archiv{font-size:13px}
 #archiv summary{cursor:pointer;color:var(--mute)}
 #archiv-liste{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
 #archiv-liste li{display:flex;gap:10px;align-items:baseline}

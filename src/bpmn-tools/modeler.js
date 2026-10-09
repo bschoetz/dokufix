@@ -9,6 +9,9 @@ import { ICON } from './icons.js';
 // bpmn-js. The BPMN Assistant opens it; moved here with story 2.38 for the
 // workbench.
 //
+// The workbench (story 2.40) opens it in a container of its own, its canvas,
+// instead of over the window, and without XML for an empty diagram to draw.
+//
 // One modeler at a time, kept here. Nothing done on loading.
 
 let Modeler = null, modeler = null;
@@ -27,26 +30,31 @@ export function loadModeler(){
 // title: the heading; take: what "Als Original übernehmen" does with the
 // modelled XML, after the modeler closed; takeLabel: that button's words
 // where they are others (the workbench: "Als meine Fassung übernehmen");
-// fileBase: the name of the .bpmn download, from the XML.
-export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als Original übernehmen' }){
+// fileBase: the name of the .bpmn download, from the XML; container: where
+// the modeler goes, else over the whole window; xml null: an empty diagram
+// (bpmn-js's createDiagram(), a start event).
+export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als Original übernehmen', container = null }){
   closeModeler(true);
   const box = document.createElement('div');
   box.id = 'modeler';
   box.innerHTML = '<div class="mbar"><strong></strong><span class="hint">Elemente aus der Leiste links ziehen, verbinden, doppelklicken zum Beschriften; Strg+Z macht rückgängig.</span>'
     + '<button class="primary take">' + ICON.play + ' </button><button class="dl">' + ICON.download + ' als .bpmn herunterladen</button><button class="close">Schließen</button></div><div class="mcanvas"></div>';
   box.querySelector('strong').textContent = 'Modellierer: ' + title;
+  // The hint in full where it is cut short (in the workbench's narrower bar).
+  if (container) box.querySelector('.hint').title = box.querySelector('.hint').textContent;
   box.querySelector('.take').append(takeLabel);
-  document.body.appendChild(box);
-  document.documentElement.style.overflow = 'hidden';
-  modeler = { box, m: null, dirty: false };
+  if (container) box.className = 'eingebettet';
+  (container || document.body).appendChild(box);
+  if (!container) document.documentElement.style.overflow = 'hidden';
+  modeler = { box, m: null, dirty: false, container };
   box.querySelector('.close').onclick = () => closeModeler(false);
   try {
     const M = await loadModeler();
     if (!modeler || modeler.box !== box) return;
     const m = new M({ container: box.querySelector('.mcanvas'), keyboard: { bindTo: document } });
     modeler.m = m;
-    await m.importXML(xml);
-    m.get('canvas').zoom('fit-viewport', 'auto');
+    if (xml == null) await m.createDiagram();
+    else { await m.importXML(xml); m.get('canvas').zoom('fit-viewport', 'auto'); }
     m.on('commandStack.changed', () => { if (modeler) modeler.dirty = true; });
   } catch (e){
     const d = document.createElement('div'); d.className = 'err'; d.style.margin = '16px'; d.textContent = (e && e.message) || String(e);
@@ -72,6 +80,7 @@ export function closeModeler(force){
   if (!modeler) return;
   if (!force && modeler.dirty && !window.confirm('Ihre Änderungen im Modellierer gehen verloren. Trotzdem schließen?')) return;
   try { modeler.m && modeler.m.destroy(); } catch {}
+  const embedded = !!modeler.container;
   modeler.box.remove(); modeler = null;
-  document.documentElement.style.overflow = '';
+  if (!embedded) document.documentElement.style.overflow = '';
 }

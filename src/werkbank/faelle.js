@@ -11,6 +11,8 @@
 //   geaendert(layouts, stand)         ob die Anordnung eines Falls am Stand anders ist als am letzten Stand davor
 //   anzeigeName(fall)                 der Name in der Liste, mit der Revision ab der zweiten
 //   paketBauen(opts)                  das Paket des Layout-Feedbacks im Format der alten Seite, mit Herkunft
+//   zeichnungPruefen(xml)             ob eine Zeichnung aus dem Modellierer ein Fall werden kann (ab zwei Knoten): die
+//                                     Meldung oder null
 //
 // Ein Fall ist sein Fingerabdruck (caseFingerprint(), src/app/fingerprint.js): eine Eingabe mit und ohne Positionen
 // ist derselbe Fall. Positionen, die eine Eingabe mitbringt, werden Bens Fassung des Falls, außer sie sind seine
@@ -30,6 +32,8 @@
 // Ein Feedback: { fall, stand, kommentar, bearbeitet, geaendert, soll? }, je Fall und Stand eines; bearbeitet ist
 // Bens Fassung an diesem Stand, soll false, wo sie nur eine Reparatur ist (Ben, 2026-10-09).
 import { caseFingerprint, shapeOf, similarity } from '../app/fingerprint.js';
+import { readProcess } from '../app/bpmn-layout.js';
+import { parseXml } from '../app/xml-parser.js';
 
 // Ein Element mit Namensraum-Präfix oder ohne, mit seinen Attributen (auch mit ">" in Anführungszeichen).
 const ATTRS = '(?:[^>"\'/]|"[^"]*"|\'[^\']*\'|\\/(?!>))*';
@@ -127,6 +131,16 @@ export function geaendert(layouts, stand){
   return { art: davor.xml === hier.xml ? 'gleich' : 'anders', gegen: davor.stand };
 }
 
+// Ob eine Zeichnung aus dem Modellierer ein Fall werden kann (Story 2.40): kein BPMN oder kein Knoten, die Meldung;
+// sonst null.
+export function zeichnungPruefen(xml){
+  let model = null;
+  try { model = readProcess(parseXml(String(xml))).model; } catch {}
+  if (!model || !caseFingerprint(xml)) return 'Die Zeichnung ist kein BPMN; nichts angelegt.';
+  // Der leere Modellierer bringt ein Startereignis mit: erst ab zwei Knoten ist etwas gezeichnet.
+  if (model.nodes.length < 2) return 'In der Zeichnung ist nichts gezeichnet; nichts angelegt.';
+  return null;
+}
 export const anzeigeName = f => f.revision > 1 ? f.name + ' (' + f.revision + ')' : f.name;
 
 // Das Paket des Layout-Feedbacks (das Format von tools/bpmn-layout/feedback-seite.js, feedback-auswerten.mjs liest
