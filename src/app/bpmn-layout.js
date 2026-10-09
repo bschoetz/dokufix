@@ -3319,6 +3319,9 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     segments.push(...routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
   };
   let placeNote = null;
+  // The pieces of the data associations placed so far (story 2.32): a text annotation at a reference, placed after
+  // them, keeps off them too.
+  const dataSegs = [];
   if (notes.length){
     di.notes = byId(); di.associations = byId();
     const routeOf = new Map(routes.map(r => [r.f.id, r]));
@@ -3359,7 +3362,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
         const above = model.lanes[i];
         return (above.pool ?? 0) === (l.pool ?? 0) && !(above.synthetic && l.synthetic) ? [[-1e6, laneBox[l.key][1] - 1, 2e6, 2]] : [];
       });
-      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...taken, ...borders], NOTE_CLEAR) === 0 && offFrames(place) && !wayHits(way, others()) && !wayAlong(way, foreign()) && (crossing || !wayTouches(way, foreign())); };
+      const clear = (place, an, crossing) => { const way = associationWay(place, shape(an)); return covered(place, [...symbols, ...segments, ...dataSegs, ...taken, ...borders], NOTE_CLEAR) === 0 && offFrames(place) && !wayHits(way, others()) && !wayAlong(way, foreign()) && !wayAlong(way, dataSegs) && (crossing || !wayTouches(way, foreign())); };
       let place = null, anchor = anchors[0];
       rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const an of anchors){
         place = notePlaces(centre(an), size, far).find(p => clear(p, an, crossing));
@@ -3448,8 +3451,6 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     const shapeOf = id => { const c = box[id]; return { kind: kindOf(id), cx: c.cx, cy: c.cy, w: c.w, h: c.h }; };
     // A reference's lines at place, each with its node: [{ node, way }].
     const waysOf = (d, place) => usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(place, shapeOf(u), pairOffset.get(a.id)) })));
-    // The pieces of the data associations placed so far.
-    const dataSegs = [];
     const laneAt = c => laneBoxes().find(b => b[1] <= c.cy && c.cy <= b[1] + b[3]);
     const laneOfBox = b => model.lanes.find(l => laneBox[l.key] === b);
     const poolOfBox = b => { const l = laneOfBox(b); return l ? l.pool ?? 0 : null; };
