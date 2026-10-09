@@ -25,15 +25,17 @@ export function loadModeler(){
   return Modeler ? Promise.resolve(Modeler) : Promise.reject(new Error('Der Modellierer konnte nicht geladen werden.'));
 }
 // title: the heading; take: what "Als Original übernehmen" does with the
-// modelled XML, after the modeler closed; fileBase: the name of the .bpmn
-// download, from the XML.
-export async function openModeler(title, xml, { take, fileBase }){
+// modelled XML, after the modeler closed; takeLabel: that button's words
+// where they are others (the workbench: "Als meine Fassung übernehmen");
+// fileBase: the name of the .bpmn download, from the XML.
+export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als Original übernehmen' }){
   closeModeler(true);
   const box = document.createElement('div');
   box.id = 'modeler';
   box.innerHTML = '<div class="mbar"><strong></strong><span class="hint">Elemente aus der Leiste links ziehen, verbinden, doppelklicken zum Beschriften; Strg+Z macht rückgängig.</span>'
-    + '<button class="primary take">' + ICON.play + ' Als Original übernehmen</button><button class="dl">' + ICON.download + ' als .bpmn herunterladen</button><button class="close">Schließen</button></div><div class="mcanvas"></div>';
+    + '<button class="primary take">' + ICON.play + ' </button><button class="dl">' + ICON.download + ' als .bpmn herunterladen</button><button class="close">Schließen</button></div><div class="mcanvas"></div>';
   box.querySelector('strong').textContent = 'Modellierer: ' + title;
+  box.querySelector('.take').append(takeLabel);
   document.body.appendChild(box);
   document.documentElement.style.overflow = 'hidden';
   modeler = { box, m: null, dirty: false };

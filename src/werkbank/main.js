@@ -11,17 +11,29 @@
 // im Kopf und in window.werkbankZeit.
 //
 // Die Leinwand zeigt den gewählten Fall: die erzeugte Fassung am Stand, Bens Fassung (die letzte, die er bearbeitet
-// oder mitgebracht hat) und die Referenz, wo es eine gibt (ein Handlayout).
+// oder mitgebracht hat) und die Referenz, wo es eine gibt (ein Handlayout). „Im Modellierer bearbeiten“ öffnet die
+// gezeigte Fassung; übernommen ist sie Bens Fassung des Falls am Stand, ohne Fingerabdruck: die Seite weiß, woher sie
+// kommt. Darunter der Kommentar zum Fall am Stand, gespeichert beim Tippen.
+//
+// Eigene Fälle: „Einfügen“ nimmt BPMN-XML aus dem Feld oder einer Datei, mit dem Schalter „Als neuen Fall anlegen“
+// (Ben, 2026-10-09): an, ein neuer Fall ohne Zuordnung; aus, er gehört zu einem Altfall, die Seite sucht ihn über den
+// Fingerabdruck, dann ohne Bahnzugehörigkeit, und wo keiner eindeutig passt, wählt Ben ihn aus einer Liste
+// (einordnen(), kandidaten(), zuordnen() in src/werkbank/faelle.js). Ein neuer Fall wird angeordnet wie die übrigen.
+//
+// Im Kopf: das Paket des Layout-Feedbacks am Stand herunterladen (paketBauen(), das Format der alten Feedback-Seite mit
+// der Herkunft, tools/bpmn-layout/feedback-auswerten.mjs wertet es aus), den Arbeitsstand als Datei sichern und laden.
 //
 // Der Einstieg des Skripts der Seite, gebündelt über tools/seiten.mjs (tools/werkbank/bauen.mjs). Eine Seite, der der
 // Browser einen Worker aus einer Blob-URL verweigert, ordnet selbst an (der Client sagt es, withoutWorker()); eine
 // Seite ohne IndexedDB hält die Fälle im Arbeitsspeicher und sagt es im Kopf.
 import { BPMN_VIEWER_CONFIG } from '../app/bpmn.js';
 import { decorate } from '../bpmn-tools/decorate.js';
+import { openModeler } from '../bpmn-tools/modeler.js';
+import { fileBase } from '../bpmn-tools/downloads.js';
 import { makeA2Client } from '../bpmn-tools/layout.js';
 import { themeCss, PRESETS } from '../bpmn-tools/theme.js';
 import { speicherOeffnen } from './speicher.js';
-import { geaendert, anzeigeName } from './faelle.js';
+import { geaendert, anzeigeName, paketBauen } from './faelle.js';
 
 const $ = id => document.getElementById(id);
 const DATA = JSON.parse($('werkbank-data').textContent);
@@ -147,7 +159,7 @@ function fortschritt(){
 }
 
 // ---------- die Leinwand ----------
-let viewer = null, zeichnung = 0;
+let viewer = null, zeichnung = 0, gezeigt = null, kommentarVon = null;
 function waehlen(fall){
   const vorher = gewaehlt;
   gewaehlt = fall;
@@ -177,7 +189,15 @@ async function zeigen(){
     b.onclick = () => { fassung = k; zeigen(); };
     return b;
   }));
-  if (!f){ $('info').textContent = ''; return; }
+  $('bearbeiten').hidden = !f;
+  $('kommentar').disabled = !f;
+  if (!f){ $('info').textContent = ''; $('kommentar').value = ''; return; }
+  if (kommentarVon !== f.fall){
+    kommentarVon = f.fall;
+    const e = await sp.feedback(f.fall, STAND);
+    if (my !== zeichnung) return;
+    $('kommentar').value = (e && e.kommentar) || '';
+  }
   let xml = null, info = '';
   if (fassung === 'erzeugt'){
     const a = anordnungAm(f), l = lauf.get(f.fall), g = geaendert(anordnungen.get(f.fall) || [], STAND);
@@ -194,6 +214,8 @@ async function zeigen(){
     info = 'Handlayout';
   }
   $('info').textContent = info;
+  gezeigt = xml;
+  $('bearbeiten').disabled = !xml;
   if (!viewer) viewer = new BpmnJS({ container: $('canvas'), ...BPMN_VIEWER_CONFIG });
   if (!xml){ viewer.clear(); return; }
   try {
@@ -206,6 +228,125 @@ async function zeigen(){
   }
 }
 
+// ---------- Meldungen und Downloads ----------
+function meldung(text, schlecht){ const m = $('meldung'); m.textContent = text; m.classList.toggle('schlecht', !!schlecht); }
+function herunterladen(name, text){
+  const a = document.createElement('a');
+  a.download = name;
+  a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1500);
+}
+const heute = () => new Date().toISOString().slice(0, 10);
+// Nach einer Änderung des Speichers: neu lesen, die Liste neu, den Fall wählen, anordnen, was fehlt.
+async function neu(fall){
+  await lesen();
+  liste();
+  waehlen(fall && faelle.some(f => f.fall === fall) ? fall : gewaehlt);
+}
+const eingebauteAufnehmen = () => sp.aufnehmenViele(DATA.eingaben.map(e => ({ xml: e.xml, name: e.name, herkunft: e.satz, referenz: e.referenz })));
+
+// ---------- Modellierer und Kommentar ----------
+$('bearbeiten').onclick = () => {
+  const f = faelle.find(x => x.fall === gewaehlt);
+  if (!f || !gezeigt) return;
+  openModeler(anzeigeName(f), gezeigt, {
+    fileBase: () => fileBase(f.name), takeLabel: 'Als meine Fassung übernehmen',
+    take: async x => {
+      const e = await sp.legeFeedback({ fall: f.fall, stand: STAND, bearbeitet: x, geaendert: new Date().toISOString(), soll: null });
+      bens.set(f.fall, e);
+      fassung = 'ben';
+      markieren(f);
+      zeigen();
+      meldung('Deine Fassung von ' + anzeigeName(f) + ' am Stand ' + STAND + ' gespeichert.');
+    },
+  });
+};
+let tippen = null;
+$('kommentar').addEventListener('input', () => {
+  const fall = kommentarVon, text = $('kommentar').value;
+  clearTimeout(tippen);
+  tippen = setTimeout(() => { sp.legeFeedback({ fall, stand: STAND, kommentar: text, geaendert: new Date().toISOString() }).catch(e => meldung('Kommentar nicht gespeichert: ' + e.message, true)); }, 400);
+});
+
+// ---------- Einfügen ----------
+const dlg = $('einfuegen');
+$('einfuegen-btn').onclick = () => { $('zuordnung').hidden = true; $('ein-meldung').textContent = ''; dlg.showModal(); $('xml').focus(); };
+$('ein-abbrechen').onclick = () => dlg.close();
+$('ein-datei-btn').onclick = () => $('ein-datei').click();
+$('ein-datei').onchange = async () => {
+  const file = $('ein-datei').files[0];
+  if (!file) return;
+  $('xml').value = await file.text();
+  if (!$('ein-name').value.trim()) $('ein-name').value = file.name.replace(/\.(bpmn|xml)$/i, '');
+  $('ein-datei').value = '';
+};
+// Was ein Einordnen oder Zuordnen ergab, als Meldung; bei einem Fall wird er gewählt.
+async function ergebnis(r){
+  if (r.fehler){ $('ein-meldung').textContent = r.fehler; return; }
+  if (r.art === 'offen'){ zuordnungZeigen(r.kandidaten); return; }
+  dlg.close();
+  $('xml').value = ''; $('ein-name').value = '';
+  const name = anzeigeName(r.fall);
+  const text = r.art === 'neu' ? 'Neuer Fall ' + name + '.'
+    : r.art === 'revision' ? 'Neue Revision ' + name + ' (der Fall davor: ' + (faelle.find(f => f.fall === r.fall.vorher) ? anzeigeName(faelle.find(f => f.fall === r.fall.vorher)) : 'unbekannt') + ').'
+    : 'Gehört zu ' + name + (r.ueber === 'bahnen' ? ' (erkannt ohne Bahnzugehörigkeit: ein Knoten liegt in einer anderen Bahn)' : r.ueber === 'hand' ? ' (von dir zugeordnet)' : '') + '.';
+  if (r.fassung) fassung = 'ben';
+  meldung(text + (r.fassung ? ' Die Positionen sind deine Fassung am Stand ' + STAND + '.' : r.art === 'bekannt' ? ' Nichts Neues.' : ''));
+  await neu(r.fall.fall);
+}
+$('ein-ok').onclick = async () => {
+  const xml = $('xml').value;
+  const r = await sp.aufnehmen(xml, { name: $('ein-name').value.trim() || undefined, herkunft: 'eigen', modus: $('ein-neu').checked ? 'neu' : 'zuordnen', stand: STAND });
+  await ergebnis(r);
+};
+// Kein Fall passt eindeutig: die Vorschläge (gleicher Name, die nach der Form ähnlichsten) und alle Fälle zur Wahl.
+function zuordnungZeigen(vorschlaege){
+  const box = $('zuordnung');
+  box.hidden = false;
+  $('ein-meldung').textContent = 'Keinem Fall eindeutig zuzuordnen. Wähle den Fall, zu dem es gehört; nichts ist angelegt.';
+  const zu = fall => async () => ergebnis(await sp.zuordnen($('xml').value, fall, { herkunft: 'eigen', stand: STAND }));
+  $('vorschlaege').replaceChildren(...vorschlaege.map(k => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.textContent = anzeigeName(k.fall) + ' · ' + k.warum;
+    b.onclick = zu(k.fall.fall);
+    return b;
+  }));
+  $('alle').replaceChildren(...faelle.map(f => { const o = document.createElement('option'); o.value = f.fall; o.textContent = anzeigeName(f) + ' · ' + f.herkunft; return o; }));
+  $('zuordnen-ok').onclick = () => zu($('alle').value)();
+}
+
+// ---------- Paket und Arbeitsstand ----------
+$('paket-btn').onclick = async () => {
+  const { paket, ohneAnordnung } = paketBauen({ stand: STAND, faelle, layouts: await sp.anordnungen(), feedback: await sp.feedbacks() });
+  const ohne = ohneAnordnung.length ? ' Ohne Anordnung am Stand, nicht im Paket: ' + ohneAnordnung.join(', ') + '.' : '';
+  if (!paket){ meldung('Am Stand ' + STAND + ' ist noch nichts bearbeitet oder kommentiert.' + ohne, !!ohne); return; }
+  const name = 'layout-feedback-werkbank-' + STAND + '-' + heute() + '.json';
+  herunterladen(name, JSON.stringify(paket, null, 1) + '\n');
+  meldung('Heruntergeladen: ' + name + ', ' + paket.beispiele.length + (paket.beispiele.length === 1 ? ' Beispiel' : ' Beispiele') + '. Nenne mir den Pfad; feedback-auswerten.mjs wertet es aus.' + ohne);
+};
+$('sichern-btn').onclick = async () => {
+  const z = await sp.zustand();
+  const name = 'werkbank-arbeitsstand-' + heute() + '.json';
+  herunterladen(name, JSON.stringify(z) + '\n');
+  meldung('Arbeitsstand gesichert: ' + name + ', ' + z.faelle.length + ' Fälle.');
+};
+$('laden-btn').onclick = () => $('laden-datei').click();
+$('laden-datei').onchange = async () => {
+  const file = $('laden-datei').files[0];
+  $('laden-datei').value = '';
+  if (!file) return;
+  let z;
+  try { z = JSON.parse(await file.text()); } catch { meldung('Laden fehlgeschlagen: keine JSON-Datei. Der Speicher ist unverändert.', true); return; }
+  if (!window.confirm('Der Arbeitsstand ersetzt alles im Speicher der Werkbank. Laden?')) return;
+  try { await sp.laden(z); } catch (e){ meldung('Laden fehlgeschlagen: ' + e.message + ' Der Speicher ist unverändert.', true); return; }
+  // Die eingebauten Eingaben kommen wieder dazu, wo der Arbeitsstand sie nicht hat; die übrigen sind schon da.
+  await eingebauteAufnehmen();
+  lauf.clear(); kommentarVon = null;
+  meldung('Arbeitsstand geladen: ' + (z.faelle || []).length + ' Fälle.');
+  await neu(gewaehlt);
+};
+
 // ---------- Start ----------
 async function start(){
   sp = await speicherOeffnen();
@@ -213,7 +354,7 @@ async function start(){
     $('warnung').hidden = false;
     $('warnung').textContent = sp.warnung + ': die Fälle gelten nur, solange die Seite offen ist.';
   }
-  await sp.aufnehmenViele(DATA.eingaben.map(e => ({ xml: e.xml, name: e.name, herkunft: e.satz, referenz: e.referenz })));
+  await eingebauteAufnehmen();
   await lesen();
   liste();
   let erst = null;

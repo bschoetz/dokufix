@@ -4,6 +4,8 @@
 // closeness() für die Referenzen), Knoten mit anderer Bahn, Paare mit anderer Reihenfolge links–rechts oder
 // oben–unten in einer Bahn, Flüsse mit anderem Verlauf und ihre Knicke. Je Beispiel dazu der Fingerabdruck des Falls
 // (src/app/fingerprint.js, Story 2.37) und die Eingabe der Sammlung, die es ist, sonst die drei nach der Form nächsten.
+// Ein Paket der Layout-Werkbank (Story 2.39) trägt je Beispiel seine Herkunft, eigen oder den Satz; sie steht beim
+// Beispiel.
 //   node tools/bpmn-layout/feedback-auswerten.mjs <paket.json> [--out <ordner>]
 // Ohne --out: arbeit/feedback/<satz>-<datum des Exports>/; feedback-bauen.mjs erkennt daran, zu welchem Satz Feedback
 // kam.
@@ -45,7 +47,8 @@ for (const b of pkg.beispiele){
   if (b.bearbeitet) fs.writeFileSync(path.join(dir, 'bearbeitet.bpmn'), b.bearbeitet);
   if ((b.kommentar || '').trim()) fs.writeFileSync(path.join(dir, 'kommentar.md'), b.kommentar.trim() + '\n');
 
-  lines.push(`## ${b.name}`, '', `${b.paket}; ${b.bearbeitet ? 'bearbeitet' : 'nicht bearbeitet'}${(b.kommentar || '').trim() ? ', kommentiert' : ''}; geändert ${b.geaendert}.`, '');
+  // Die Herkunft (Story 2.39): eigen oder der Satz, aus dem das Beispiel stammt; ältere Pakete haben sie nicht.
+  lines.push(`## ${b.name}`, '', `${b.herkunft ? 'Herkunft ' + b.herkunft : b.paket}; ${b.bearbeitet ? 'bearbeitet' : 'nicht bearbeitet'}${(b.kommentar || '').trim() ? ', kommentiert' : ''}; geändert ${b.geaendert}.`, '');
   lines.push(whichInput(b.eingabe), '');
   if ((b.kommentar || '').trim()) lines.push('Kommentar:', '', ...b.kommentar.trim().split('\n').map(l => '> ' + l), '');
   if (!b.bearbeitet){ lines.push(''); continue; }

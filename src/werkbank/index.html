@@ -16,15 +16,29 @@
 <span id="stand" title="Die Prüfsumme der Module des Layouts, mit denen diese Seite anordnet; tools/bpmn-layout/lauf.mjs nennt sie Logik">Layout-Stand {{slot:stand}}</span>
 <span id="fortschritt" aria-live="polite"></span>
 <span id="warnung" hidden></span>
+<span id="aktionen"><button type="button" id="einfuegen-btn" class="primary">Einfügen</button><button type="button" id="paket-btn">Paket herunterladen</button><button type="button" id="sichern-btn">Arbeitsstand sichern</button><button type="button" id="laden-btn">Arbeitsstand laden</button><input type="file" id="laden-datei" accept=".json,application/json" hidden></span>
+<p id="meldung" aria-live="polite"></p>
 </header>
 <div id="frame">
 <nav id="liste" aria-label="Fälle"><ul id="faelle"></ul></nav>
 <main id="leinwand" aria-label="Diagramm">
-<div id="leiste"><strong id="titel"></strong><span id="fassungen" role="group" aria-label="Fassung"></span><span id="info"></span></div>
+<div id="leiste"><strong id="titel"></strong><span id="fassungen" role="group" aria-label="Fassung"></span><span id="info"></span><button type="button" id="bearbeiten" hidden>Im Modellierer bearbeiten</button></div>
 <div class="dokufix-doc"><div id="canvas" class="dokufix-diagram dokufix-diagram-bpmn"></div></div>
+<label id="kommentarzeile">Kommentar <textarea id="kommentar" rows="2" placeholder="Was am Layout dieses Falls auffällt, am Stand dieser Seite" disabled></textarea></label>
 </main>
 </div>
+<dialog id="einfuegen" aria-labelledby="ein-titel">
+<h2 id="ein-titel">BPMN einfügen</h2>
+<textarea id="xml" rows="12" spellcheck="false" placeholder="BPMN-XML hier einfügen, mit oder ohne Koordinaten"></textarea>
+<div class="zeile"><button type="button" id="ein-datei-btn">Datei wählen …</button><input type="file" id="ein-datei" accept=".bpmn,.xml" hidden><label>Name <input id="ein-name" placeholder="aus dem XML oder der Datei"></label></div>
+<label class="zeile"><input type="checkbox" id="ein-neu"> Als neuen Fall anlegen (sonst gehört es zu einem Fall, den es schon gibt)</label>
+<p id="ein-meldung" aria-live="polite"></p>
+<div id="zuordnung" hidden><div id="vorschlaege"></div><div class="zeile"><select id="alle" aria-label="Alle Fälle"></select><button type="button" id="zuordnen-ok">Diesem Fall zuordnen</button></div></div>
+<div class="zeile ende"><button type="button" id="ein-abbrechen">Abbrechen</button><button type="button" id="ein-ok" class="primary">Übernehmen</button></div>
+</dialog>
 <script type="application/json" id="werkbank-data">{{slot:werkbank-data}}</script>
+<script type="text/plain" id="bpmn-modeler-js">{{slot:bpmn-modeler.js}}</script>
+<script type="text/plain" id="bpmn-modeler-css">{{slot:bpmn-modeler.css}}</script>
 <script type="text/plain" id="dokufix-layout-js">{{slot:layout.js}}</script>
 <script>{{slot:page.js}}</script>
 </body>

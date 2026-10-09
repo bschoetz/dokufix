@@ -8,6 +8,7 @@
 //   sp.feedback(fall, stand), sp.feedbacks(fall?), sp.legeFeedback(e)
 //   sp.archiv(fall), sp.legeArchiv(x)
 //   sp.aufnehmen(xml, opts)                  eine Eingabe: einordnen() aus faelle.js, dann ablegen
+//   sp.zuordnen(xml, fall, opts)             eine Eingabe dem Fall, den Ben gewählt hat: zuordnen() aus faelle.js
 //   sp.zustand(), sp.laden(zustand)          der Arbeitsstand als Objekt, für die Datei
 //   sp.leeren()
 //
@@ -15,7 +16,7 @@
 // [fall, id]: frühere Fassungen, nur zum Lesen, aus dem Import von tools/werkbank/import.mjs). Die Logik liegt über einer Schnittstelle
 // (alle, vonFall, hole, lege, ersetze); speicherImArbeitsspeicher() gibt sie ohne Browser, für die Tests und als
 // Ausweg, wo IndexedDB verweigert wird.
-import { einordnen } from './faelle.js';
+import { einordnen, zuordnen } from './faelle.js';
 
 export const DB_NAME = 'dokufix-layout-werkbank';
 const DB_VERSION = 1;
@@ -87,6 +88,7 @@ function idbSchnittstelle(db){
 // ---------- der Speicher ----------
 // Über einer Schnittstelle s. art: 'indexeddb' oder 'arbeitsspeicher'; warnung: der Grund, warum es nicht IndexedDB ist.
 export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
+  const ablegen = (r, faelle, opts) => ablegenIn(sp, r, faelle, opts);
   const sp = {
     art, warnung,
     faelle: () => s.alle('faelle'),
@@ -112,9 +114,9 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
     },
     archiv: fall => fall === undefined ? s.alle('archiv') : s.vonFall('archiv', fall),
     legeArchiv: x => s.lege('archiv', x),
-    // Eine Eingabe aufnehmen. opts: { name, herkunft, stand, jetzt, referenz, soll }. Ein neuer Fall wird angelegt
-    // (mit referenz, wo gegeben); Positionen, die die Eingabe mitbringt, werden Bens Fassung am stand. Gibt das
-    // Ergebnis von einordnen().
+    // Eine Eingabe aufnehmen. opts: { name, herkunft, modus, stand, jetzt, referenz, soll }. Ein neuer Fall wird
+    // angelegt (mit referenz, wo gegeben); Positionen, die die Eingabe mitbringt, werden Bens Fassung am stand; eine
+    // offene (modus 'zuordnen', kein Fall passt) legt nichts an. Gibt das Ergebnis von einordnen().
     async aufnehmen(xml, { jetzt, ...opts } = {}){
       return (await sp.aufnehmenViele([{ xml, ...opts }], jetzt))[0];
     },
@@ -124,16 +126,17 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
       for (const { xml, stand, referenz, soll, ...opts } of items){
         const r = einordnen(xml, faelle, { ...opts, jetzt });
         out.push(r);
-        if (r.fehler) continue;
-        if (r.art !== 'bekannt'){
-          if (referenz) r.fall.referenz = referenz;
-          faelle.push(r.fall);
-          await sp.legeFall(r.fall);
-        }
-        // soll null: nicht gesagt, ob die Fassung das Ziel ist.
-        if (r.fassung && stand) await sp.legeFeedback({ fall: r.fall.fall, stand, bearbeitet: r.fassung, geaendert: jetzt, soll: soll ?? null });
+        await ablegen(r, faelle, { stand, referenz, soll, jetzt });
       }
       return out;
+    },
+    // Eine Eingabe dem Fall fall zuordnen, den Ben gewählt hat (zuordnen() in faelle.js). opts: { herkunft, stand, jetzt, soll }.
+    async zuordnen(xml, fall, { stand, soll, jetzt = new Date().toISOString(), ...opts } = {}){
+      const faelle = await sp.faelle(), ziel = faelle.find(f => f.fall === fall);
+      if (!ziel) return { fehler: 'Den gewählten Fall gibt es nicht.' };
+      const r = zuordnen(xml, ziel, faelle, { ...opts, jetzt });
+      await ablegen(r, faelle, { stand, soll, jetzt });
+      return r;
     },
     async zustand(jetzt = new Date().toISOString()){
       return { format: ZUSTAND_FORMAT, version: 1, gespeichert: jetzt, faelle: await s.alle('faelle'), anordnungen: await s.alle('anordnungen'), feedback: await s.alle('feedback'), archiv: await s.alle('archiv') };
@@ -161,6 +164,18 @@ export function pruefeZustand(z){
   const faelle = new Set((z.faelle || []).map(f => f.fall));
   for (const f of z.faelle || []) if (!str(f.name) || typeof f.eingabe !== 'string') bad('ein Fall ohne Name oder Eingabe');
   for (const a of ['anordnungen', 'feedback', 'archiv']) for (const rec of z[a] || []) if (!faelle.has(rec.fall)) bad('ein Eintrag in ' + a + ' zu einem unbekannten Fall');
+}
+
+// Legt ab, was einordnen() oder zuordnen() ergab: einen neuen Fall in faelle und im Speicher, Bens Fassung am stand.
+async function ablegenIn(sp, r, faelle, { stand, referenz, soll, jetzt }){
+  if (r.fehler || r.art === 'offen') return;
+  if (r.art !== 'bekannt'){
+    if (referenz) r.fall.referenz = referenz;
+    faelle.push(r.fall);
+    await sp.legeFall(r.fall);
+  }
+  // soll null: nicht gesagt, ob die Fassung das Ziel ist.
+  if (r.fassung && stand) await sp.legeFeedback({ fall: r.fall.fall, stand, bearbeitet: r.fassung, geaendert: jetzt, soll: soll ?? null });
 }
 
 export const speicherImArbeitsspeicher = opts => speicher(arbeitsspeicher(), opts);

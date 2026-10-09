@@ -8,12 +8,15 @@
 // cleared and loaded and a wrong one refused, the same input taken twice); the diagram part split off; the
 // reference of a case not taken for Ben's version; "changed" against the latest other stand; the frozen layout; the
 // package in the old page's format, with the origin. And the page as tools/werkbank/bauen.mjs builds it: every own
-// input without coordinates; dist/ without any external input, by name or by case; --mit-extern with all.
+// input without coordinates; dist/ without any external input, by name or by case; --mit-extern with all. Paste and
+// upload with the switch (Ben, 2026-10-09): to an old case by the fingerprint without lanes, as a new case without
+// it, nothing stored where none fits, the choice, the assignment by hand. A pasted case's package evaluated by
+// tools/bpmn-layout/feedback-auswerten.mjs, and an old package without the origin.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser, parseHTML } from 'linkedom';
-import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen } from '../src/werkbank/faelle.js';
+import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen, ohneBahnen, kandidaten } from '../src/werkbank/faelle.js';
 import { speicherImArbeitsspeicher, speicherOeffnen, pruefeZustand, ZUSTAND_FORMAT } from '../src/werkbank/speicher.js';
 import { caseFingerprint } from '../src/app/fingerprint.js';
 import { readFixture, expectedFile } from './bpmn-fixtures.mjs';
@@ -22,6 +25,8 @@ import { bauen, eingaben as eingabenDerSeite, OUT_ALLES } from '../tools/werkban
 import { REPO } from '../tools/seiten.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
+import os from 'node:os';
+import { execFileSync } from 'node:child_process';
 
 const STAND = 'aaaaaaaa', STAND2 = 'bbbbbbbb';
 const T1 = '2026-10-09T10:00:00.000Z', T2 = '2026-10-09T11:00:00.000Z';
@@ -287,4 +292,94 @@ test('--mit-extern: the page holds every input, the external ones with their han
   assert.deepEqual(data.eingaben.map(e => e.name), [...INPUTS.keys()]);
   for (const i of externe) assert.equal(!!data.eingaben.find(e => e.name === i.name).referenz, !!i.ref, i.name);
   assert.equal(OUT_ALLES, path.join(ARBEIT, 'bpmn-layout-werkbank-alles.html'));
+});
+
+// ---------- paste and upload with the switch (Ben, 2026-10-09) ----------
+test('to an old case: a laid-out version whose gateway moved lane joins by the fingerprint without lanes', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const hund = (await sp.aufnehmen(eingabe('hund'), { name: 'hund', herkunft: 'sauber' })).fall;
+  const mit = angeordnet('hund');
+  assert.notEqual(caseFingerprint(mit).hash, hund.fall);
+  assert.equal(ohneBahnen(mit).hash, ohneBahnen(eingabe('hund')).hash);
+  const r = await sp.aufnehmen(mit, { modus: 'zuordnen', stand: STAND, jetzt: T2 });
+  assert.equal(r.art, 'bekannt');
+  assert.equal(r.ueber, 'bahnen');
+  assert.equal(r.fall.fall, hund.fall);
+  assert.equal((await sp.feedback(hund.fall, STAND)).bearbeitet, mit);
+  assert.equal((await sp.faelle()).length, 1);
+});
+
+test('as a new case: no matching without lanes; an identical case is still not stored twice', async () => {
+  const sp = speicherImArbeitsspeicher();
+  await sp.aufnehmen(eingabe('hund'), { name: 'hund', herkunft: 'sauber' });
+  const r = await sp.aufnehmen(angeordnet('hund'), { name: 'hund-neu', modus: 'neu', stand: STAND });
+  assert.equal(r.art, 'neu');
+  assert.equal((await sp.faelle()).length, 2);
+  const gleich = await sp.aufnehmen(umgestellt(eingabe('hund')), { name: 'hund-nochmal', modus: 'neu' });
+  assert.equal(gleich.art, 'bekannt');
+  assert.equal((await sp.faelle()).length, 2);
+});
+
+test('to an old case, none fits: nothing stored, the choice offers the same name first, then the nearest by shape', async () => {
+  const sp = speicherImArbeitsspeicher();
+  for (const n of ['r01', 'r02', 'hund', 'blackbox-kredit']) await sp.aufnehmen(eingabe(n), { name: n, herkunft: 'sauber' });
+  const fremd = umbenannt(eingabe('r02'));
+  const r = await sp.aufnehmen(fremd, { modus: 'zuordnen', stand: STAND });
+  assert.equal(r.art, 'offen');
+  assert.equal(r.kandidaten[0].fall.name, 'r02');
+  assert.match(r.kandidaten[0].warum, /100 % nach der Form/);
+  assert.equal((await sp.faelle()).length, 4);
+  const benannt = kandidaten(fremd, await sp.faelle(), 2, 'hund');
+  assert.deepEqual(benannt.map(k => k.warum.replace(/\d+ %/, 'n %')), ['gleicher Name', 'n % nach der Form', 'n % nach der Form']);
+  assert.equal(benannt[0].fall.name, 'hund');
+});
+
+test('assigned by hand: with positions Ben\'s version of the chosen case, without a new revision of it, no duplicate', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const r02 = (await sp.aufnehmen(eingabe('r02'), { name: 'r02', herkunft: 'sauber' })).fall;
+  const fremd = umbenannt(eingabe('r02'));
+  const rev = await sp.zuordnen(fremd, r02.fall, { stand: STAND, jetzt: T2 });
+  assert.equal(rev.art, 'revision');
+  assert.equal(rev.fall.name, 'r02');
+  assert.equal(rev.fall.vorher, r02.fall);
+  assert.equal(rev.fall.revision, 2);
+  // Again: the revision is known now; nothing new.
+  assert.equal((await sp.zuordnen(fremd, r02.fall, { stand: STAND })).art, 'bekannt');
+  // With positions of other content: Ben's version of the chosen case.
+  const ben = await sp.zuordnen(umbenannt(umbenannt(angeordnet('r02'))), r02.fall, { stand: STAND, jetzt: T2 });
+  assert.equal(ben.art, 'bekannt');
+  assert.equal(ben.ueber, 'hand');
+  assert.ok((await sp.feedback(r02.fall, STAND)).bearbeitet.includes('BPMNShape'));
+  assert.equal((await sp.faelle()).length, 2);
+  assert.ok((await sp.zuordnen(eingabe('r02'), 'gibt-es-nicht', {})).fehler);
+});
+
+// ---------- the package, evaluated ----------
+function auswerten(pkg){
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'werkbank-paket-'));
+  fs.writeFileSync(path.join(dir, 'paket.json'), JSON.stringify(pkg));
+  execFileSync(process.execPath, [path.join(REPO, 'tools/bpmn-layout/feedback-auswerten.mjs'), path.join(dir, 'paket.json'), '--out', path.join(dir, 'aus')], { encoding: 'utf8' });
+  const out = { uebersicht: fs.readFileSync(path.join(dir, 'aus/uebersicht.md'), 'utf8'), dir: path.join(dir, 'aus') };
+  return out;
+}
+test('a pasted case, laid out, edited and commented, gives a package feedback-auswerten.mjs evaluates like a given one', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const f = (await sp.aufnehmen(umbenannt(eingabe('r01')), { name: 'ws01', modus: 'neu' })).fall;
+  const erzeugt = umbenannt(angeordnet('r01'));
+  await sp.einfrieren({ fall: f.fall, stand: STAND, xml: erzeugt, angeordnet: T1, ms: 3 });
+  // Ben moves a shape: another x for the first task.
+  const bearbeitet = erzeugt.replace(/(<(?:[\w.-]+:)?BPMNShape\b[^>]*bpmnElement="[^"]*"[^>]*>\s*<(?:[\w.-]+:)?Bounds x=")(\d+)/, (m, a, x) => a + (Number(x) + 200));
+  assert.notEqual(bearbeitet, erzeugt);
+  await sp.legeFeedback({ fall: f.fall, stand: STAND, bearbeitet, kommentar: 'zu eng', geaendert: T2 });
+  const { paket } = paketBauen({ stand: STAND, faelle: await sp.faelle(), layouts: await sp.anordnungen(), feedback: await sp.feedbacks(), jetzt: T2 });
+  const { uebersicht, dir } = auswerten(paket);
+  assert.match(uebersicht, /^# Layout-Feedback werkbank-aaaaaaaa/);
+  assert.match(uebersicht, /## ws01\n\nHerkunft eigen; bearbeitet, kommentiert/);
+  assert.match(uebersicht, /Brüche: \d+ → \d+/);
+  assert.match(uebersicht, /Nähe der erzeugten zur bearbeiteten Fassung/);
+  assert.match(uebersicht, /> zu eng/);
+  for (const file of ['eingabe.bpmn', 'erzeugt.bpmn', 'bearbeitet.bpmn', 'kommentar.md']) assert.ok(fs.existsSync(path.join(dir, 'ws01', file)), file);
+  // An old package, without the origin, still reads.
+  const alt = { ...paket, beispiele: paket.beispiele.map(({ herkunft, fall, ...b }) => ({ ...b, paket: 'erzeugt' })) };
+  assert.match(auswerten(alt).uebersicht, /## ws01\n\nerzeugt; bearbeitet, kommentiert/);
 });
