@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Daten_Sonder" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="DS_Prozess" isExecutable="false">
+    <bpmn:startEvent id="DS_Start" name="Auftrag da"/>
+    <bpmn:task id="DS_Lesen" name="Auftrag lesen">
+      <bpmn:property id="DS_Notiz" name="Notiz"/>
+      <bpmn:dataInputAssociation id="DS_Aus_Property"><bpmn:sourceRef>DS_Notiz</bpmn:sourceRef><bpmn:targetRef>DS_Notiz</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="DS_Ohne_Ziel"/>
+    </bpmn:task>
+    <bpmn:subProcess id="DS_Ausfuehren" name="Auftrag ausführen">
+      <bpmn:dataOutputAssociation id="DS_Schreibt_Abnahme"><bpmn:targetRef>DS_Abnahme</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:startEvent id="DS_Innen_Start"/>
+      <bpmn:task id="DS_Innen_Arbeiten" name="Arbeiten">
+        <bpmn:dataOutputAssociation id="DS_Innen_Schreibt"><bpmn:targetRef>DS_Zettel</bpmn:targetRef></bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:endEvent id="DS_Innen_Ende"/>
+      <bpmn:sequenceFlow id="DS_Innen_F1" sourceRef="DS_Innen_Start" targetRef="DS_Innen_Arbeiten"/>
+      <bpmn:sequenceFlow id="DS_Innen_F2" sourceRef="DS_Innen_Arbeiten" targetRef="DS_Innen_Ende"/>
+      <bpmn:dataObject id="DS_Zettel_Objekt"/>
+      <bpmn:dataObjectReference id="DS_Zettel" name="Arbeitszettel" dataObjectRef="DS_Zettel_Objekt"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="DS_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="DS_F1" sourceRef="DS_Start" targetRef="DS_Lesen"/>
+    <bpmn:sequenceFlow id="DS_F2" sourceRef="DS_Lesen" targetRef="DS_Ausfuehren"/>
+    <bpmn:sequenceFlow id="DS_F3" sourceRef="DS_Ausfuehren" targetRef="DS_Ende"/>
+    <bpmn:dataObject id="DS_Abnahme_Objekt"/>
+    <bpmn:dataObjectReference id="DS_Abnahme" name="Abnahmeprotokoll" dataObjectRef="DS_Abnahme_Objekt"/>
+    <bpmn:dataStoreReference id="DS_Archiv" name="Archiv"/>
+    <bpmn:dataObject id="DS_Allein"/>
+  </bpmn:process>
+</bpmn:definitions>

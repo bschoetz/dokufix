@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Daten" targetNamespace="http://example.org/dokufix">
+  <bpmn:dataStore id="D_Katalog_Speicher" name="Verbundkatalog"/>
+  <bpmn:collaboration id="D_Zusammenarbeit">
+    <bpmn:participant id="D_Bibliothek" name="Bibliothek" processRef="D_Bibliothek_Prozess"/>
+  </bpmn:collaboration>
+  <bpmn:process id="D_Bibliothek_Prozess" isExecutable="false">
+    <bpmn:laneSet id="D_Bahnen">
+      <bpmn:lane id="D_Ausleihe" name="Ausleihe"><bpmn:flowNodeRef>D_Eingang</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Benachrichtigen</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Bereit</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Ordnung</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="D_Fernleihe" name="Fernleihe"><bpmn:flowNodeRef>D_Anfragen</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Eingetroffen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="D_Magazin" name="Magazin"><bpmn:flowNodeRef>D_Einstellen</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="D_Eingang" name="Bestellung eingegangen">
+      <bpmn:dataOutputAssociation id="D_Schreibt_Bestellung"><bpmn:targetRef>D_Bestellung</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="D_Eingang_D"/>
+    </bpmn:startEvent>
+    <bpmn:task id="D_Pruefen" name="Bestellung prüfen">
+      <bpmn:property id="D_Pruefen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Bestellung"><bpmn:sourceRef>D_Bestellung</bpmn:sourceRef><bpmn:targetRef>D_Pruefen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="D_Schreibt_Geprueft"><bpmn:targetRef>D_Geprueft</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="D_Anfragen" name="Partnerbibliothek anfragen">
+      <bpmn:property id="D_Anfragen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Geprueft"><bpmn:sourceRef>D_Geprueft</bpmn:sourceRef><bpmn:targetRef>D_Anfragen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="D_Liest_Katalog"><bpmn:sourceRef>D_Katalog</bpmn:sourceRef><bpmn:targetRef>D_Anfragen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="D_Eingetroffen" name="Buch eingetroffen">
+      <bpmn:dataOutputAssociation id="D_Schreibt_Lieferschein"><bpmn:targetRef>D_Lieferschein</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="D_Eingetroffen_D"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="D_Einstellen" name="Buch einstellen">
+      <bpmn:property id="D_Einstellen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Lieferschein"><bpmn:sourceRef>D_Lieferschein</bpmn:sourceRef><bpmn:targetRef>D_Einstellen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="D_Liest_Konto"><bpmn:sourceRef>D_Konto</bpmn:sourceRef><bpmn:targetRef>D_Einstellen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="D_Schreibt_Konto"><bpmn:targetRef>D_Konto</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="D_Benachrichtigen" name="Leserin benachrichtigen">
+      <bpmn:property id="D_Benachrichtigen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Konto_Ausleihe"><bpmn:sourceRef>D_Konto</bpmn:sourceRef><bpmn:targetRef>D_Benachrichtigen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="D_Bereit" name="Buch liegt bereit"/>
+    <bpmn:sequenceFlow id="D_F1" sourceRef="D_Eingang" targetRef="D_Pruefen"/>
+    <bpmn:sequenceFlow id="D_F2" sourceRef="D_Pruefen" targetRef="D_Anfragen"/>
+    <bpmn:sequenceFlow id="D_F3" sourceRef="D_Anfragen" targetRef="D_Eingetroffen"/>
+    <bpmn:sequenceFlow id="D_F4" sourceRef="D_Eingetroffen" targetRef="D_Einstellen"/>
+    <bpmn:sequenceFlow id="D_F5" sourceRef="D_Einstellen" targetRef="D_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="D_F6" sourceRef="D_Benachrichtigen" targetRef="D_Bereit"/>
+    <bpmn:dataObject id="D_Bestellung_Objekt"/>
+    <bpmn:dataObjectReference id="D_Bestellung" name="Bestellung" dataObjectRef="D_Bestellung_Objekt"/>
+    <bpmn:dataObjectReference id="D_Geprueft" name="Bestellung" dataObjectRef="D_Bestellung_Objekt"><bpmn:dataState id="D_Geprueft_Z" name="geprüft"/></bpmn:dataObjectReference>
+    <bpmn:dataObject id="D_Lieferschein_Objekt"/>
+    <bpmn:dataObjectReference id="D_Lieferschein" name="Lieferschein" dataObjectRef="D_Lieferschein_Objekt"/>
+    <bpmn:dataStoreReference id="D_Katalog" name="Verbundkatalog" dataStoreRef="D_Katalog_Speicher"/>
+    <bpmn:dataStoreReference id="D_Konto" name="Ausleihsystem"/>
+    <bpmn:dataObject id="D_Ordnung_Objekt"/>
+    <bpmn:dataObjectReference id="D_Ordnung" name="Benutzungsordnung" dataObjectRef="D_Ordnung_Objekt"/>
+    <bpmn:textAnnotation id="D_Notiz_Lieferschein"><bpmn:text>Bleibt beim Buch</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="D_Zum_Lieferschein" sourceRef="D_Lieferschein" targetRef="D_Notiz_Lieferschein"/>
+  </bpmn:process>
+</bpmn:definitions>

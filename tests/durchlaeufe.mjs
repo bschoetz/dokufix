@@ -404,7 +404,7 @@ const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, 
 // two loop special cases of story 2.20, three those of several pools of story
 // 2.12, two the boundary events of story 2.30, one the text annotations of
 // story 2.31).
-const DEMO_DIAGRAMS = 20;
+const DEMO_DIAGRAMS = 22;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';

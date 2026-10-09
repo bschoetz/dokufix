@@ -817,7 +817,7 @@ Ein Ausnahmepfad in eine andere Bahn: Sie sollten an „Gerät reparieren“ zwe
 
 ### BPMN ohne Koordinaten: Notizen
 
-Notizen neben dem, was sie kommentieren, jede gepunktet mit ihrem Ziel verbunden, die Linie möglichst auf die Klammer: Sie sollten zwei Notizen an „Fehler suchen und beheben“ sehen („Mit dem Diagnosegerät“, „Probefahrt nicht vergessen“), eine am Ereignis „Ein Tag“ („Ab Annahme gerechnet“), eine am Pfeil „behoben“ („Mit Protokoll der Messwerte“), eine am Nachrichtenfluss „Auftrag“ („Schriftlich, mit Unterschrift“) und rechts neben den Pools „Werkstatt“ und „Versicherung“ je eine („Meisterbetrieb seit 1987“, „Nur bei Unfallschäden“). Eine Notiz ohne Text und eine ohne Verbindung („Werkstattordnung, Stand 2026“) lässt dokufix weg; die Konsole nennt beide.
+Notizen neben dem, was sie kommentieren, jede gepunktet mit ihrem Ziel verbunden, die Linie möglichst auf die Klammer: Sie sollten zwei Notizen an „Fehler suchen und beheben“ sehen („Mit dem Diagnosegerät“, „Probefahrt nicht vergessen“), eine am Ereignis „Ein Tag“ („Ab Annahme gerechnet“), eine am Pfeil „behoben“ („Mit Protokoll der Messwerte“), eine am Nachrichtenfluss „Auftrag“ („Schriftlich, mit Unterschrift“) und rechts neben den Pools „Werkstatt“ und „Versicherung“ je eine („Meisterbetrieb seit 1987“, „Nur bei Unfallschäden“). Eine Notiz ohne Text lässt dokufix weg, die Konsole nennt sie; eine ohne Verbindung („Werkstattordnung, Stand 2026“) steht oben links in ihrem Pool.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -873,6 +873,111 @@ Notizen neben dem, was sie kommentieren, jede gepunktet mit ihrem Ziel verbunden
     <bpmn:textAnnotation id="N_Notiz_Leer"/>
     <bpmn:association id="N_Zur_Leeren" sourceRef="N_Abrechnen" targetRef="N_Notiz_Leer"/>
     <bpmn:textAnnotation id="N_Notiz_Allein"><bpmn:text>Werkstattordnung, Stand 2026</bpmn:text></bpmn:textAnnotation>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: Datenobjekte und Datenspeicher
+
+Datenobjekte und Datenspeicher neben den Schritten, die sie lesen und schreiben, jede Datenassoziation gepunktet mit Pfeil, vom Datenobjekt zum Schritt, der es liest, vom Schritt zum Datenobjekt, das er schreibt: Sie sollten über „Bestellung prüfen“ die „Bestellung“ sehen, die das Startereignis schreibt und der Schritt liest; die geprüfte „Bestellung“ mit ihrem Zustand als zweiter Zeile „[geprüft]“; den Datenspeicher „Verbundkatalog“ über „Partnerbibliothek anfragen“; den „Lieferschein“, den das Zwischenereignis „Buch eingetroffen“ schreibt, mit der Notiz „Bleibt beim Buch“ daneben; den Datenspeicher „Ausleihsystem“, den „Buch einstellen“ liest und schreibt (zwei Linien nebeneinander) und den „Leserin benachrichtigen“ in einer anderen Bahn liest, ein Symbol für beide Bahnen. „Benutzungsordnung“ benutzt kein Schritt: Sie steht oben links in der Bahn „Ausleihe“, die sie nennt.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Daten" targetNamespace="http://example.org/dokufix">
+  <bpmn:dataStore id="D_Katalog_Speicher" name="Verbundkatalog"/>
+  <bpmn:collaboration id="D_Zusammenarbeit">
+    <bpmn:participant id="D_Bibliothek" name="Bibliothek" processRef="D_Bibliothek_Prozess"/>
+  </bpmn:collaboration>
+  <bpmn:process id="D_Bibliothek_Prozess" isExecutable="false">
+    <bpmn:laneSet id="D_Bahnen">
+      <bpmn:lane id="D_Ausleihe" name="Ausleihe"><bpmn:flowNodeRef>D_Eingang</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Benachrichtigen</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Bereit</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Ordnung</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="D_Fernleihe" name="Fernleihe"><bpmn:flowNodeRef>D_Anfragen</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Eingetroffen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="D_Magazin" name="Magazin"><bpmn:flowNodeRef>D_Einstellen</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="D_Eingang" name="Bestellung eingegangen">
+      <bpmn:dataOutputAssociation id="D_Schreibt_Bestellung"><bpmn:targetRef>D_Bestellung</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="D_Eingang_D"/>
+    </bpmn:startEvent>
+    <bpmn:task id="D_Pruefen" name="Bestellung prüfen">
+      <bpmn:property id="D_Pruefen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Bestellung"><bpmn:sourceRef>D_Bestellung</bpmn:sourceRef><bpmn:targetRef>D_Pruefen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="D_Schreibt_Geprueft"><bpmn:targetRef>D_Geprueft</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="D_Anfragen" name="Partnerbibliothek anfragen">
+      <bpmn:property id="D_Anfragen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Geprueft"><bpmn:sourceRef>D_Geprueft</bpmn:sourceRef><bpmn:targetRef>D_Anfragen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="D_Liest_Katalog"><bpmn:sourceRef>D_Katalog</bpmn:sourceRef><bpmn:targetRef>D_Anfragen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:intermediateCatchEvent id="D_Eingetroffen" name="Buch eingetroffen">
+      <bpmn:dataOutputAssociation id="D_Schreibt_Lieferschein"><bpmn:targetRef>D_Lieferschein</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:messageEventDefinition id="D_Eingetroffen_D"/>
+    </bpmn:intermediateCatchEvent>
+    <bpmn:task id="D_Einstellen" name="Buch einstellen">
+      <bpmn:property id="D_Einstellen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Lieferschein"><bpmn:sourceRef>D_Lieferschein</bpmn:sourceRef><bpmn:targetRef>D_Einstellen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation id="D_Liest_Konto"><bpmn:sourceRef>D_Konto</bpmn:sourceRef><bpmn:targetRef>D_Einstellen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="D_Schreibt_Konto"><bpmn:targetRef>D_Konto</bpmn:targetRef></bpmn:dataOutputAssociation>
+    </bpmn:task>
+    <bpmn:task id="D_Benachrichtigen" name="Leserin benachrichtigen">
+      <bpmn:property id="D_Benachrichtigen_P" name="__targetRef_placeholder"/>
+      <bpmn:dataInputAssociation id="D_Liest_Konto_Ausleihe"><bpmn:sourceRef>D_Konto</bpmn:sourceRef><bpmn:targetRef>D_Benachrichtigen_P</bpmn:targetRef></bpmn:dataInputAssociation>
+    </bpmn:task>
+    <bpmn:endEvent id="D_Bereit" name="Buch liegt bereit"/>
+    <bpmn:sequenceFlow id="D_F1" sourceRef="D_Eingang" targetRef="D_Pruefen"/>
+    <bpmn:sequenceFlow id="D_F2" sourceRef="D_Pruefen" targetRef="D_Anfragen"/>
+    <bpmn:sequenceFlow id="D_F3" sourceRef="D_Anfragen" targetRef="D_Eingetroffen"/>
+    <bpmn:sequenceFlow id="D_F4" sourceRef="D_Eingetroffen" targetRef="D_Einstellen"/>
+    <bpmn:sequenceFlow id="D_F5" sourceRef="D_Einstellen" targetRef="D_Benachrichtigen"/>
+    <bpmn:sequenceFlow id="D_F6" sourceRef="D_Benachrichtigen" targetRef="D_Bereit"/>
+    <bpmn:dataObject id="D_Bestellung_Objekt"/>
+    <bpmn:dataObjectReference id="D_Bestellung" name="Bestellung" dataObjectRef="D_Bestellung_Objekt"/>
+    <bpmn:dataObjectReference id="D_Geprueft" name="Bestellung" dataObjectRef="D_Bestellung_Objekt"><bpmn:dataState id="D_Geprueft_Z" name="geprüft"/></bpmn:dataObjectReference>
+    <bpmn:dataObject id="D_Lieferschein_Objekt"/>
+    <bpmn:dataObjectReference id="D_Lieferschein" name="Lieferschein" dataObjectRef="D_Lieferschein_Objekt"/>
+    <bpmn:dataStoreReference id="D_Katalog" name="Verbundkatalog" dataStoreRef="D_Katalog_Speicher"/>
+    <bpmn:dataStoreReference id="D_Konto" name="Ausleihsystem"/>
+    <bpmn:dataObject id="D_Ordnung_Objekt"/>
+    <bpmn:dataObjectReference id="D_Ordnung" name="Benutzungsordnung" dataObjectRef="D_Ordnung_Objekt"/>
+    <bpmn:textAnnotation id="D_Notiz_Lieferschein"><bpmn:text>Bleibt beim Buch</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association id="D_Zum_Lieferschein" sourceRef="D_Lieferschein" targetRef="D_Notiz_Lieferschein"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: Daten, was weggelassen wird
+
+Ein Datenobjekt, das der Unterprozess „Auftrag ausführen“ schreibt, steht über ihm („Abnahmeprotokoll“); der Datenspeicher „Archiv“ ohne Schritt und ohne Bahn oben links. Weggelassen, je mit einer Zeile auf der Konsole: eine Datenassoziation, die eine Eigenschaft (`property`) des Schritts liest, eine ohne Ziel, und alles im Unterprozess, sein „Arbeitszettel“ eingeschlossen. Ein Datenobjekt ohne Referenz zeichnet niemand, auch bpmn-js nicht.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Daten_Sonder" targetNamespace="http://example.org/dokufix">
+  <bpmn:process id="DS_Prozess" isExecutable="false">
+    <bpmn:startEvent id="DS_Start" name="Auftrag da"/>
+    <bpmn:task id="DS_Lesen" name="Auftrag lesen">
+      <bpmn:property id="DS_Notiz" name="Notiz"/>
+      <bpmn:dataInputAssociation id="DS_Aus_Property"><bpmn:sourceRef>DS_Notiz</bpmn:sourceRef><bpmn:targetRef>DS_Notiz</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataOutputAssociation id="DS_Ohne_Ziel"/>
+    </bpmn:task>
+    <bpmn:subProcess id="DS_Ausfuehren" name="Auftrag ausführen">
+      <bpmn:dataOutputAssociation id="DS_Schreibt_Abnahme"><bpmn:targetRef>DS_Abnahme</bpmn:targetRef></bpmn:dataOutputAssociation>
+      <bpmn:startEvent id="DS_Innen_Start"/>
+      <bpmn:task id="DS_Innen_Arbeiten" name="Arbeiten">
+        <bpmn:dataOutputAssociation id="DS_Innen_Schreibt"><bpmn:targetRef>DS_Zettel</bpmn:targetRef></bpmn:dataOutputAssociation>
+      </bpmn:task>
+      <bpmn:endEvent id="DS_Innen_Ende"/>
+      <bpmn:sequenceFlow id="DS_Innen_F1" sourceRef="DS_Innen_Start" targetRef="DS_Innen_Arbeiten"/>
+      <bpmn:sequenceFlow id="DS_Innen_F2" sourceRef="DS_Innen_Arbeiten" targetRef="DS_Innen_Ende"/>
+      <bpmn:dataObject id="DS_Zettel_Objekt"/>
+      <bpmn:dataObjectReference id="DS_Zettel" name="Arbeitszettel" dataObjectRef="DS_Zettel_Objekt"/>
+    </bpmn:subProcess>
+    <bpmn:endEvent id="DS_Ende" name="Erledigt"/>
+    <bpmn:sequenceFlow id="DS_F1" sourceRef="DS_Start" targetRef="DS_Lesen"/>
+    <bpmn:sequenceFlow id="DS_F2" sourceRef="DS_Lesen" targetRef="DS_Ausfuehren"/>
+    <bpmn:sequenceFlow id="DS_F3" sourceRef="DS_Ausfuehren" targetRef="DS_Ende"/>
+    <bpmn:dataObject id="DS_Abnahme_Objekt"/>
+    <bpmn:dataObjectReference id="DS_Abnahme" name="Abnahmeprotokoll" dataObjectRef="DS_Abnahme_Objekt"/>
+    <bpmn:dataStoreReference id="DS_Archiv" name="Archiv"/>
+    <bpmn:dataObject id="DS_Allein"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

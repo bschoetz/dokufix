@@ -16,7 +16,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:884"
+    "src/demo.md:989"
    ],
    "shows": [
     "25.2"
@@ -25,7 +25,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:924"
+    "src/demo.md:1029"
    ]
   },
   "ereignis": {
@@ -397,6 +397,20 @@
   "daten-weggelassen": {
    "source": "tools/bpmn-layout/eingaben/daten/dt09-weggelassen.bpmn",
    "note": "what stays left out: data associations to a property, to an input of the ioSpecification, to an unknown id, and the data inside a sub-process; the sub-process itself writes a data object",
+   "shows": [
+    "32"
+   ]
+  },
+  "demo-daten": {
+   "source": "src/demo.md:884",
+   "note": "the demo text's section on data objects and data stores: read and written at a start event, a task and a catch event, a state as a second line, a data store read by two lanes and read and written by one task, a text annotation at a data object, a data object no node uses top left in the lane that names it",
+   "shows": [
+    "32"
+   ]
+  },
+  "demo-daten-sonder": {
+   "source": "src/demo.md:951",
+   "note": "the demo text's special cases of data: a data object a sub-process writes, a data store no node uses in a process without lanes; left out a data association from a property, one without a target, everything inside the sub-process; a data object without a reference",
    "shows": [
     "32"
    ]
