@@ -16,13 +16,14 @@
 <span id="stand" title="Die Prüfsumme der Module des Layouts, mit denen diese Seite anordnet; tools/bpmn-layout/lauf.mjs nennt sie Logik">Layout-Stand {{slot:stand}}</span>
 <span id="fortschritt" aria-live="polite"></span>
 <span id="warnung" hidden></span>
-<span id="aktionen"><button type="button" id="einfuegen-btn" class="primary">Einfügen</button><button type="button" id="paket-btn">Paket herunterladen</button><button type="button" id="sichern-btn">Arbeitsstand sichern</button><button type="button" id="laden-btn">Arbeitsstand laden</button><input type="file" id="laden-datei" accept=".json,application/json" hidden></span>
+<span id="aktionen"><button type="button" id="einfuegen-btn" class="primary">Einfügen</button><button type="button" id="paket-btn">Paket herunterladen</button><button type="button" id="sichern-btn">Arbeitsstand sichern</button><button type="button" id="laden-btn">Arbeitsstand laden</button><input type="file" id="laden-datei" accept=".json,application/json" hidden><button type="button" id="import-btn" title="arbeit/werkbank-import.json aus tools/werkbank/import.mjs: externe Eingaben, frühere Fassungen, Archiv">Import laden</button><input type="file" id="import-datei" accept=".json,application/json" hidden></span>
 <p id="meldung" aria-live="polite"></p>
 </header>
 <div id="frame">
 <nav id="liste" aria-label="Fälle"><ul id="faelle"></ul></nav>
 <main id="leinwand" aria-label="Diagramm">
 <div id="leiste"><strong id="titel"></strong><span id="fassungen" role="group" aria-label="Fassung"></span><span id="info"></span><button type="button" id="bearbeiten" hidden>Im Modellierer bearbeiten</button></div>
+<details id="archiv" hidden><summary></summary><ul id="archiv-liste"></ul></details>
 <div class="dokufix-doc"><div id="canvas" class="dokufix-diagram dokufix-diagram-bpmn"></div></div>
 <label id="kommentarzeile">Kommentar <textarea id="kommentar" rows="2" placeholder="Was am Layout dieses Falls auffällt, am Stand dieser Seite" disabled></textarea></label>
 </main>

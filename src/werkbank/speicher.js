@@ -9,18 +9,20 @@
 //   sp.archiv(fall), sp.legeArchiv(x)
 //   sp.aufnehmen(xml, opts)                  eine Eingabe: einordnen() aus faelle.js, dann ablegen
 //   sp.zuordnen(xml, fall, opts)             eine Eingabe dem Fall, den Ben gewählt hat: zuordnen() aus faelle.js
+//   sp.importieren(imp)                      der Import aus tools/werkbank/import.mjs, einmal oder wieder: ohne Dubletten
 //   sp.zustand(), sp.laden(zustand)          der Arbeitsstand als Objekt, für die Datei
 //   sp.leeren()
 //
 // Vier Ablagen: faelle (Schlüssel fall), anordnungen und feedback (Schlüssel [fall, stand]), archiv (Schlüssel
 // [fall, id]: frühere Fassungen, nur zum Lesen, aus dem Import von tools/werkbank/import.mjs). Die Logik liegt über einer Schnittstelle
-// (alle, vonFall, hole, lege, ersetze); speicherImArbeitsspeicher() gibt sie ohne Browser, für die Tests und als
+// (alle, vonFall, hole, lege, legeViele, ersetze); speicherImArbeitsspeicher() gibt sie ohne Browser, für die Tests und als
 // Ausweg, wo IndexedDB verweigert wird.
 import { einordnen, zuordnen } from './faelle.js';
 
 export const DB_NAME = 'dokufix-layout-werkbank';
 const DB_VERSION = 1;
 export const ZUSTAND_FORMAT = 'dokufix-layout-werkbank';
+export const IMPORT_FORMAT = 'dokufix-layout-werkbank-import';
 const ABLAGEN = { faelle: ['fall'], anordnungen: ['fall', 'stand'], feedback: ['fall', 'stand'], archiv: ['fall', 'id'] };
 const schluessel = (ablage, rec) => { const k = ABLAGEN[ablage].map(p => rec[p]); return k.length === 1 ? k[0] : k; };
 
@@ -34,6 +36,7 @@ export function arbeitsspeicher(){
     async vonFall(ablage, fall){ return [...maps[ablage].values()].filter(r => r.fall === fall).map(copy); },
     async hole(ablage, k){ return copy(maps[ablage].get(key(k))); },
     async lege(ablage, rec){ maps[ablage].set(key(schluessel(ablage, rec)), copy(rec)); },
+    async legeViele(ablage, recs){ for (const rec of recs) maps[ablage].set(key(schluessel(ablage, rec)), copy(rec)); },
     async ersetze(daten){
       for (const a of Object.keys(ABLAGEN)){
         maps[a].clear();
@@ -72,6 +75,7 @@ function idbSchnittstelle(db){
     vonFall: (a, fall) => anfrage(store(a).index('fall').getAll(fall)),
     hole: (a, k) => anfrage(store(a).get(k)),
     async lege(a, rec){ const tx = db.transaction(a, 'readwrite'); tx.objectStore(a).put(rec); await fertig(tx); },
+    async legeViele(a, recs){ const tx = db.transaction(a, 'readwrite'), st = tx.objectStore(a); for (const rec of recs) st.put(rec); await fertig(tx); },
     // Alles in einer Transaktion: schlägt ein Datensatz fehl, bleibt der Speicher, wie er war.
     async ersetze(daten){
       const names = Object.keys(ABLAGEN), tx = db.transaction(names, 'readwrite');
@@ -138,6 +142,30 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
       await ablegen(r, faelle, { stand, soll, jetzt });
       return r;
     },
+    // Der Import (tools/werkbank/import.mjs): die externen Eingaben und die Fälle ohne heutige Eingabe als Fälle, Bens
+    // letzte Fassungen als Feedback an ihrem Stand (eine neuere am selben Stand bleibt), das Archiv je Fall. Ein zweiter
+    // Import derselben Datei legt nichts doppelt an. Wirft bei falschem Format, bevor etwas geschrieben ist.
+    // { neu, fassungen, archiv, ohneFall }.
+    async importieren(imp){
+      pruefeImport(imp);
+      const r = await sp.aufnehmenViele([
+        ...imp.eingaben.map(e => ({ xml: e.xml, name: e.name, herkunft: e.satz, referenz: e.referenz })),
+        ...(imp.faelle || []).map(f => ({ xml: f.eingabe, name: f.name, herkunft: f.herkunft || 'archiv' })),
+      ]);
+      const da = new Set((await sp.faelle()).map(f => f.fall));
+      let fassungen = 0, ohneFall = 0;
+      for (const f of imp.fassungen){
+        if (!da.has(f.fall)){ ohneFall++; continue; }
+        const e = await sp.feedback(f.fall, f.stand);
+        if (e && String(e.geaendert) > String(f.geaendert)) continue;
+        await sp.legeFeedback({ fall: f.fall, stand: f.stand, bearbeitet: f.bearbeitet, kommentar: f.kommentar || '', geaendert: f.geaendert, soll: f.soll ?? false, quelle: f.quelle });
+        fassungen++;
+      }
+      const archiv = imp.archiv.filter(x => da.has(x.fall));
+      ohneFall += imp.archiv.length - archiv.length;
+      await s.legeViele('archiv', archiv);
+      return { neu: r.filter(x => x.art === 'neu' || x.art === 'revision').length, fassungen, archiv: archiv.length, ohneFall };
+    },
     async zustand(jetzt = new Date().toISOString()){
       return { format: ZUSTAND_FORMAT, version: 1, gespeichert: jetzt, faelle: await s.alle('faelle'), anordnungen: await s.alle('anordnungen'), feedback: await s.alle('feedback'), archiv: await s.alle('archiv') };
     },
@@ -176,6 +204,19 @@ async function ablegenIn(sp, r, faelle, { stand, referenz, soll, jetzt }){
   }
   // soll null: nicht gesagt, ob die Fassung das Ziel ist.
   if (r.fassung && stand) await sp.legeFeedback({ fall: r.fall.fall, stand, bearbeitet: r.fassung, geaendert: jetzt, soll: soll ?? null });
+}
+
+// Wirft mit einer Meldung für die Seite, wo imp kein Import der Werkbank ist.
+export function pruefeImport(imp){
+  const bad = text => { throw new Error('Kein Import der Werkbank: ' + text + '.'); };
+  if (!imp || typeof imp !== 'object' || imp.format !== IMPORT_FORMAT) bad('falsches Format');
+  if (imp.version !== 1) bad('Version ' + imp.version + ' unbekannt');
+  for (const k of ['eingaben', 'fassungen', 'archiv']) if (!Array.isArray(imp[k])) bad(k + ' ist keine Liste');
+  if (imp.faelle !== undefined && !Array.isArray(imp.faelle)) bad('faelle ist keine Liste');
+  const str = x => typeof x === 'string' && x.length > 0;
+  if (imp.eingaben.some(e => !e || !str(e.name) || !str(e.xml))) bad('eine Eingabe ohne Name oder XML');
+  if (imp.fassungen.some(f => !f || !str(f.fall) || !str(f.stand) || !str(f.bearbeitet))) bad('eine Fassung ohne Fall, Stand oder XML');
+  if (imp.archiv.some(x => !x || !str(x.fall) || !str(x.id))) bad('ein Eintrag im Archiv ohne Fall oder ID');
 }
 
 export const speicherImArbeitsspeicher = opts => speicher(arbeitsspeicher(), opts);

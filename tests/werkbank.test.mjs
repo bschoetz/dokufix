@@ -11,7 +11,9 @@
 // input without coordinates; dist/ without any external input, by name or by case; --mit-extern with all. Paste and
 // upload with the switch (Ben, 2026-10-09): to an old case by the fingerprint without lanes, as a new case without
 // it, nothing stored where none fits, the choice, the assignment by hand. A pasted case's package evaluated by
-// tools/bpmn-layout/feedback-auswerten.mjs, and an old package without the origin.
+// tools/bpmn-layout/feedback-auswerten.mjs, and an old package without the origin. The import from a work folder of
+// its own (tools/werkbank/import.mjs): the latest edit as Ben's version with soll false, the rest archived, layouts
+// once per content with their stands, variant comparisons as text; taken into the store twice without duplicates.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -382,4 +384,88 @@ test('a pasted case, laid out, edited and commented, gives a package feedback-au
   // An old package, without the origin, still reads.
   const alt = { ...paket, beispiele: paket.beispiele.map(({ herkunft, fall, ...b }) => ({ ...b, paket: 'erzeugt' })) };
   assert.match(auswerten(alt).uebersicht, /## ws01\n\nerzeugt; bearbeitet, kommentiert/);
+});
+
+// ---------- the import from arbeit/ ----------
+// A work folder of its own: two packages (r01 edited in both, the later one wins; r02 commented), two archived sets
+// with the same layout of r01 under two stands and hund laid out (a gateway in another lane), and a comparison of two
+// variants of which r01 differs.
+function arbeitAufZeit(){
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'werkbank-arbeit-'));
+  const w = (f, x) => { fs.mkdirSync(path.dirname(path.join(dir, f)), { recursive: true }); fs.writeFileSync(path.join(dir, f), typeof x === 'string' ? x : JSON.stringify(x)); };
+  const L1 = angeordnet('r01'), L2 = L1.replace(/(<(?:[\w.-]+:)?Bounds x=")(\d+)/, (m, a, x) => a + (Number(x) + 300));
+  const A = L1.replace(/(<(?:[\w.-]+:)?Bounds x=")(\d+)/, (m, a, x) => a + (Number(x) + 10)), B = L1.replace(/(<(?:[\w.-]+:)?Bounds x=")(\d+)/, (m, a, x) => a + (Number(x) + 20));
+  const bsp = (name, extra) => ({ name, paket: 'erzeugt', brueche: 0, eingabe: eingabe(name), erzeugt: angeordnet(name), bearbeitet: null, kommentar: '', ...extra });
+  w('feedback/s1-2026-10-01/paket.json', { format: 'dokufix-layout-feedback', version: 1, exportiert: T1, satz: { id: 's1', variant: 'A', logik: '1111aaaa' }, beispiele: [bsp('r01', { bearbeitet: A, kommentar: 'alt', geaendert: T1 }), bsp('r02', { kommentar: 'nur Kommentar', geaendert: T1 })] });
+  w('feedback/s2-2026-10-02/paket.json', { format: 'dokufix-layout-feedback', version: 1, exportiert: T2, satz: { id: 's2', variant: 'A' }, beispiele: [bsp('r01', { bearbeitet: B, kommentar: 'neu', geaendert: T2 })] });
+  w('feedback/leer/uebersicht.md', '#');
+  w('archiv/s1.json', { id: 's1', variant: 'A', logik: '1111aaaa', angeordnet: T1, erzeugt: { r01: L1, hund: angeordnet('hund') } });
+  w('archiv/s2.json', { id: 's2', variant: 'A', angeordnet: T2, erzeugt: { r01: L1 } });
+  w('x-varianten.json', { hinweis: '<b>Bau 1</b> &amp; Bau 2', varianten: [{ key: 'v1', titel: 'Erster', dir: 'v1' }, { key: 'v2', dir: 'v2' }] });
+  w('v1/r01.bpmn', L1); w('v1/r02.bpmn', angeordnet('r02'));
+  w('v2/r01.bpmn', L2); w('v2/r02.bpmn', angeordnet('r02'));
+  w('v2.json', { logik: '2222bbbb' });
+  return { dir, A, B, L1, L2 };
+}
+const fallOf = name => caseFingerprint(eingabe(name)).hash;
+
+test('the import from arbeit/: the latest edit per case as Ben\'s version, soll false; the rest archived, layouts once per content', () => {
+  const { dir, A, B, L1, L2 } = arbeitAufZeit();
+  const out = path.join(dir, 'imp.json');
+  const vorher = execFileSync('git', ['status', '--porcelain'], { cwd: REPO, encoding: 'utf8' });
+  execFileSync(process.execPath, [path.join(REPO, 'tools/werkbank/import.mjs'), '--aus', out], { env: { ...process.env, DOKUFIX_LAYOUT_ARBEIT: dir }, encoding: 'utf8' });
+  assert.equal(execFileSync('git', ['status', '--porcelain'], { cwd: REPO, encoding: 'utf8' }), vorher);
+  const imp = JSON.parse(fs.readFileSync(out, 'utf8'));
+  assert.equal(imp.format, 'dokufix-layout-werkbank-import');
+  assert.deepEqual(imp.eingaben.map(e => e.name), externe.map(i => i.name));
+  for (const e of imp.eingaben) assert.ok(!hatDi(e.xml), e.name);
+  assert.deepEqual(imp.faelle, []);
+  assert.deepEqual(imp.fehlt, []);
+  assert.deepEqual(imp.fassungen, [{ fall: fallOf('r01'), stand: 's2', bearbeitet: B, kommentar: 'neu', geaendert: T2, soll: false, quelle: 's2' }]);
+  const von = (name, art) => imp.archiv.filter(x => x.fall === fallOf(name) && x.art === art);
+  assert.deepEqual(von('r01', 'bearbeitung').map(x => [x.xml === A, x.kommentar, x.stand, x.satz]), [[true, 'alt', '1111aaaa', 's1']]);
+  assert.deepEqual(von('r02', 'kommentar').map(x => x.kommentar), ['nur Kommentar']);
+  const lay = von('r01', 'anordnung');
+  assert.equal(lay.length, 2);
+  const l1 = lay.find(x => x.xml === L1), l2 = lay.find(x => x.xml === L2);
+  assert.deepEqual(l1.staende, ['1111aaaa', 's2']);
+  assert.deepEqual(l1.saetze, ['s1', 's2']);
+  assert.deepEqual(l1.varianten, ['A', 'x-varianten: Erster']);
+  assert.equal(l1.angeordnet, T1);
+  assert.deepEqual(l2.staende, ['2222bbbb']);
+  assert.deepEqual(l2.varianten, ['x-varianten: v2']);
+  // hund laid out moved a gateway to another lane: its case all the same.
+  assert.equal(von('hund', 'anordnung').length, 1);
+  // The comparison as text, where the variants differ: r01, not r02.
+  assert.deepEqual(von('r01', 'varianten').map(x => [x.hinweis, x.varianten.map(v => v.titel)]), [['Bau 1 & Bau 2', ['Erster', 'v2']]]);
+  assert.equal(von('r02', 'varianten').length, 0);
+});
+
+test('the import taken into the store: external inputs as cases, Ben\'s version a repair, the archive per case; twice, nothing doubled', async () => {
+  const { dir, B } = arbeitAufZeit();
+  const out = path.join(dir, 'imp.json');
+  execFileSync(process.execPath, [path.join(REPO, 'tools/werkbank/import.mjs'), '--aus', out], { env: { ...process.env, DOKUFIX_LAYOUT_ARBEIT: dir }, encoding: 'utf8' });
+  const imp = JSON.parse(fs.readFileSync(out, 'utf8'));
+  const sp = speicherImArbeitsspeicher();
+  await sp.aufnehmenViele(eingabenDerSeite().map(e => ({ xml: e.xml, name: e.name, herkunft: e.satz, referenz: e.referenz })));
+  const r = await sp.importieren(imp);
+  const faelle = new Set(externe.map(i => caseFingerprint(fs.readFileSync(i.file, 'utf8'))?.hash).filter(Boolean));
+  assert.equal(r.neu, [...faelle].filter(h => !eingabenDerSeite().some(e => caseFingerprint(e.xml).hash === h)).length);
+  assert.equal(r.fassungen, 1);
+  assert.equal(r.ohneFall, 0);
+  const e = await sp.feedback(fallOf('r01'), 's2');
+  assert.equal(e.bearbeitet, B);
+  assert.equal(e.soll, false);
+  assert.equal(e.kommentar, 'neu');
+  assert.equal((await sp.archiv(fallOf('r01'))).length, imp.archiv.filter(x => x.fall === fallOf('r01')).length);
+  const z1 = await sp.zustand(T2);
+  await sp.importieren(imp);
+  assert.deepEqual(await sp.zustand(T2), z1);
+  // A newer edit at the same stand stays.
+  await sp.legeFeedback({ fall: fallOf('r01'), stand: 's2', bearbeitet: '<neuer/>', geaendert: '2026-10-10T00:00:00.000Z' });
+  await sp.importieren(imp);
+  assert.equal((await sp.feedback(fallOf('r01'), 's2')).bearbeitet, '<neuer/>');
+  for (const bad of [null, { format: 'x' }, { ...imp, version: 2 }, { ...imp, archiv: 'x' }, { ...imp, fassungen: [{ fall: 'f' }] }]){
+    await assert.rejects(sp.importieren(bad), /Kein Import der Werkbank/);
+  }
 });

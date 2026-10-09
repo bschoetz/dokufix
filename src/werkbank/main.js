@@ -21,7 +21,11 @@
 // (einordnen(), kandidaten(), zuordnen() in src/werkbank/faelle.js). Ein neuer Fall wird angeordnet wie die übrigen.
 //
 // Im Kopf: das Paket des Layout-Feedbacks am Stand herunterladen (paketBauen(), das Format der alten Feedback-Seite mit
-// der Herkunft, tools/bpmn-layout/feedback-auswerten.mjs wertet es aus), den Arbeitsstand als Datei sichern und laden.
+// der Herkunft, tools/bpmn-layout/feedback-auswerten.mjs wertet es aus), den Arbeitsstand als Datei sichern und laden,
+// und den Import laden (tools/werkbank/import.mjs: die externen Eingaben, Bens letzte Fassungen aus den Paketen der
+// alten Feedback-Seite als Reparatur, soll: false, und das Archiv). Das Archiv eines Falls steht eingeklappt über der
+// Leinwand, nur zum Lesen: frühere Anordnungen mit ihren Ständen, ältere Bearbeitungen, Kommentare, Variantenvergleiche;
+// „Zeigen“ legt eine Fassung daraus auf die Leinwand.
 //
 // Der Einstieg des Skripts der Seite, gebündelt über tools/seiten.mjs (tools/werkbank/bauen.mjs). Eine Seite, der der
 // Browser einen Worker aus einer Blob-URL verweigert, ordnet selbst an (der Client sagt es, withoutWorker()); eine
@@ -175,13 +179,63 @@ function fassungenVon(f){
   const out = [['erzeugt', 'Erzeugt']];
   if (bens.has(f.fall)) out.push(['ben', 'Bens Fassung']);
   if (f.referenz) out.push(['referenz', 'Referenz']);
+  if (fassung.startsWith('archiv:') && archivListe.some(x => 'archiv:' + x.id === fassung)) out.push([fassung, 'Archiv']);
   return out;
+}
+// Das Archiv des gewählten Falls, eingeklappt; neu gelesen, wenn ein anderer Fall gewählt ist.
+let archivListe = [], archivVon = null;
+const ARCHIV_ORDNUNG = { bearbeitung: 0, kommentar: 1, anordnung: 2, varianten: 3 };
+const ARCHIV_ART = { anordnung: 'Anordnung', bearbeitung: 'Bearbeitung', kommentar: 'Kommentar', varianten: 'Variantenvergleich' };
+function archivBeschreibung(x){
+  const dat = d => d ? String(d).slice(0, 10) : '';
+  if (x.art === 'anordnung') return 'Stände ' + (x.staende.join(', ') || '–') + (x.angeordnet ? ' · ' + dat(x.angeordnet) : '') + (x.varianten.length ? ' · ' + x.varianten.join('; ') : '');
+  if (x.art === 'bearbeitung' || x.art === 'kommentar') return 'Satz ' + x.satz + (x.stand !== x.satz ? ' · Stand ' + x.stand : '') + ' · ' + dat(x.geaendert);
+  return x.datei;
+}
+function archivZeichnen(f){
+  const box = $('archiv');
+  box.hidden = !archivListe.length;
+  box.querySelector('summary').textContent = 'Archiv (' + archivListe.length + ')';
+  $('archiv-liste').replaceChildren(...[...archivListe].sort((a, b) => ARCHIV_ORDNUNG[a.art] - ARCHIV_ORDNUNG[b.art] || String(b.geaendert || b.angeordnet || '').localeCompare(String(a.geaendert || a.angeordnet || ''))).map(x => {
+    const li = document.createElement('li');
+    const was = document.createElement('span');
+    was.className = 'was';
+    const art = document.createElement('strong');
+    art.textContent = ARCHIV_ART[x.art] || x.art;
+    was.append(art, ' ' + archivBeschreibung(x));
+    const text = x.art === 'varianten' ? x.hinweis + ' (' + x.varianten.map(v => v.titel).join(', ') + ')' : x.kommentar;
+    if (text){ const t = document.createElement('div'); t.className = 'text'; t.textContent = text; was.append(t); }
+    li.append(was);
+    if (x.xml){
+      const b = document.createElement('button');
+      b.type = 'button'; b.textContent = 'Zeigen';
+      b.onclick = () => { fassung = 'archiv:' + x.id; zeigen(); };
+      li.append(b);
+    }
+    return li;
+  }));
+  if (archivVon !== f.fall) box.open = false;
 }
 async function zeigen(){
   const my = ++zeichnung;
   const f = faelle.find(x => x.fall === gewaehlt);
   $('titel').textContent = f ? anzeigeName(f) : '';
-  const arten = f ? fassungenVon(f) : [];
+  $('bearbeiten').hidden = !f;
+  $('kommentar').disabled = !f;
+  if (!f){ $('info').textContent = ''; $('kommentar').value = ''; $('fassungen').replaceChildren(); $('archiv').hidden = true; return; }
+  if (kommentarVon !== f.fall){
+    kommentarVon = f.fall;
+    const e = await sp.feedback(f.fall, STAND);
+    if (my !== zeichnung) return;
+    $('kommentar').value = (e && e.kommentar) || '';
+  }
+  if (archivVon !== f.fall){
+    archivListe = await sp.archiv(f.fall);
+    if (my !== zeichnung) return;
+    archivZeichnen(f);
+    archivVon = f.fall;
+  }
+  const arten = fassungenVon(f);
   if (!arten.some(([k]) => k === fassung)) fassung = 'erzeugt';
   $('fassungen').replaceChildren(...arten.map(([k, label]) => {
     const b = document.createElement('button');
@@ -189,15 +243,6 @@ async function zeigen(){
     b.onclick = () => { fassung = k; zeigen(); };
     return b;
   }));
-  $('bearbeiten').hidden = !f;
-  $('kommentar').disabled = !f;
-  if (!f){ $('info').textContent = ''; $('kommentar').value = ''; return; }
-  if (kommentarVon !== f.fall){
-    kommentarVon = f.fall;
-    const e = await sp.feedback(f.fall, STAND);
-    if (my !== zeichnung) return;
-    $('kommentar').value = (e && e.kommentar) || '';
-  }
   let xml = null, info = '';
   if (fassung === 'erzeugt'){
     const a = anordnungAm(f), l = lauf.get(f.fall), g = geaendert(anordnungen.get(f.fall) || [], STAND);
@@ -209,6 +254,10 @@ async function zeigen(){
     const e = bens.get(f.fall);
     xml = e.bearbeitet;
     info = 'Stand ' + e.stand + (e.geaendert ? ' · ' + String(e.geaendert).slice(0, 10) : '') + (e.soll === false ? ' · Reparatur, kein Soll' : '');
+  } else if (fassung.startsWith('archiv:')){
+    const x = archivListe.find(a => 'archiv:' + a.id === fassung);
+    xml = x.xml;
+    info = 'Archiv · ' + (ARCHIV_ART[x.art] || x.art) + ' · ' + archivBeschreibung(x) + (x.art === 'bearbeitung' ? ' · Reparatur, kein Soll' : '');
   } else {
     xml = f.referenz;
     info = 'Handlayout';
@@ -342,9 +391,24 @@ $('laden-datei').onchange = async () => {
   try { await sp.laden(z); } catch (e){ meldung('Laden fehlgeschlagen: ' + e.message + ' Der Speicher ist unverändert.', true); return; }
   // Die eingebauten Eingaben kommen wieder dazu, wo der Arbeitsstand sie nicht hat; die übrigen sind schon da.
   await eingebauteAufnehmen();
-  lauf.clear(); kommentarVon = null;
+  lauf.clear(); kommentarVon = null; archivVon = null;
   meldung('Arbeitsstand geladen: ' + (z.faelle || []).length + ' Fälle.');
   await neu(gewaehlt);
+};
+
+$('import-btn').onclick = () => $('import-datei').click();
+$('import-datei').onchange = async () => {
+  const file = $('import-datei').files[0];
+  $('import-datei').value = '';
+  if (!file) return;
+  meldung('Lese den Import …');
+  let imp;
+  try { imp = JSON.parse(await file.text()); } catch { meldung('Import fehlgeschlagen: keine JSON-Datei.', true); return; }
+  let r;
+  try { r = await sp.importieren(imp); } catch (e){ meldung('Import fehlgeschlagen: ' + e.message, true); return; }
+  archivVon = null;
+  await neu(gewaehlt);
+  meldung('Import geladen: ' + r.neu + ' neue Fälle, ' + r.fassungen + ' Fassungen (Reparatur, kein Soll), ' + r.archiv + ' Einträge im Archiv' + (r.ohneFall ? '; ' + r.ohneFall + ' ohne Fall' : '') + '.');
 };
 
 // ---------- Start ----------
