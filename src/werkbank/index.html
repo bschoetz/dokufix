@@ -26,10 +26,20 @@
 </header>
 <div id="frame">
 <div id="links">
+<div id="suchkopf">
+<input type="search" id="suche" placeholder="Suchen …  /" aria-label="Fälle nach Namen suchen (Taste /)" autocomplete="off" spellcheck="false">
+<div id="filter"><select id="f-status" aria-label="Status" autocomplete="off"><option value="">Status</option><option value="geaendert">geändert</option><option value="offen">offen</option><option value="ruhig">weder noch</option></select><select id="f-satz" aria-label="Satz" autocomplete="off"><option value="">Satz</option></select><select id="f-art" aria-label="Art" autocomplete="off"><option value="">Art</option></select><select id="f-bewertung" aria-label="Bewertung" autocomplete="off"><option value="">Bewertung</option><option value="ab8">ab 8</option><option value="ab5">ab 5</option><option value="unter5">unter 5</option><option value="ohne">ohne</option></select><button type="button" id="filter-weg" class="link" hidden>zurücksetzen</button></div>
+<p id="treffer" aria-live="polite"></p>
+</div>
 <nav id="liste" aria-label="Fälle"><ul id="faelle"></ul></nav>
 <section id="fall" aria-label="Der gewählte Fall">
 <div class="kopf"><strong id="titel"></strong><span id="fall-info"></span></div>
+<p id="warum"></p>
+<div class="zeile"><span class="lbl">Bewertung</span><span id="bewertung" role="group" aria-label="Bewertung 1 bis 10 am Stand"></span></div>
+<p id="bewertung-info"></p>
 <textarea id="kommentar" rows="3" aria-label="Kommentar" placeholder="Kommentar zum Fall am Stand" disabled></textarea>
+<div id="posten-box" hidden><span id="posten-titel" class="lbl"></span><ul id="posten"></ul></div>
+<div id="aehnlich" class="zeile" hidden><span class="lbl">Ähnlich</span><span id="aehnlich-liste"></span></div>
 <details id="archiv" hidden><summary></summary><ul id="archiv-liste"></ul></details>
 </section>
 </div>

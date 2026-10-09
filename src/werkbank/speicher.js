@@ -7,23 +7,26 @@
 //   sp.anordnung(fall, stand), sp.anordnungen(fall), sp.einfrieren(a)
 //   sp.feedback(fall, stand), sp.feedbacks(fall?), sp.legeFeedback(e)
 //   sp.archiv(fall), sp.legeArchiv(x)
+//   sp.marken(fall?), sp.markiere(fall, id, status)   Bens Marken an den Posten des Feedbacks (Story 2.41)
 //   sp.aufnehmen(xml, opts)                  eine Eingabe: einordnen() aus faelle.js, dann ablegen
 //   sp.zuordnen(xml, fall, opts)             eine Eingabe dem Fall, den Ben gewählt hat: zuordnen() aus faelle.js
 //   sp.importieren(imp)                      der Import aus tools/werkbank/import.mjs, einmal oder wieder: ohne Dubletten
 //   sp.zustand(), sp.laden(zustand)          der Arbeitsstand als Objekt, für die Datei
 //   sp.leeren()
 //
-// Vier Ablagen: faelle (Schlüssel fall), anordnungen und feedback (Schlüssel [fall, stand]), archiv (Schlüssel
-// [fall, id]: frühere Fassungen, nur zum Lesen, aus dem Import von tools/werkbank/import.mjs). Die Logik liegt über einer Schnittstelle
-// (alle, vonFall, hole, lege, legeViele, ersetze); speicherImArbeitsspeicher() gibt sie ohne Browser, für die Tests und als
+// Fünf Ablagen: faelle (Schlüssel fall), anordnungen und feedback (Schlüssel [fall, stand]), archiv (Schlüssel
+// [fall, id]: frühere Fassungen, nur zum Lesen, aus dem Import von tools/werkbank/import.mjs), status (Schlüssel
+// [fall, id]: Bens Marke an einem Posten des Feedbacks, Story 2.41). Die Logik liegt über einer Schnittstelle
+// (alle, vonFall, hole, lege, legeViele, mische, ersetze); speicherImArbeitsspeicher() gibt sie ohne Browser, für die Tests und als
 // Ausweg, wo IndexedDB verweigert wird.
 import { einordnen, zuordnen } from './faelle.js';
 
 export const DB_NAME = 'dokufix-layout-werkbank';
-const DB_VERSION = 1;
+// Version 2 (Story 2.41): die Ablage status; das Upgrade legt sie an und lässt die übrigen, wie sie sind.
+const DB_VERSION = 2;
 export const ZUSTAND_FORMAT = 'dokufix-layout-werkbank';
 export const IMPORT_FORMAT = 'dokufix-layout-werkbank-import';
-const ABLAGEN = { faelle: ['fall'], anordnungen: ['fall', 'stand'], feedback: ['fall', 'stand'], archiv: ['fall', 'id'] };
+const ABLAGEN = { faelle: ['fall'], anordnungen: ['fall', 'stand'], feedback: ['fall', 'stand'], archiv: ['fall', 'id'], status: ['fall', 'id'] };
 const schluessel = (ablage, rec) => { const k = ABLAGEN[ablage].map(p => rec[p]); return k.length === 1 ? k[0] : k; };
 
 // ---------- die Schnittstelle, im Arbeitsspeicher ----------
@@ -37,6 +40,7 @@ export function arbeitsspeicher(){
     async hole(ablage, k){ return copy(maps[ablage].get(key(k))); },
     async lege(ablage, rec){ maps[ablage].set(key(schluessel(ablage, rec)), copy(rec)); },
     async legeViele(ablage, recs){ for (const rec of recs) maps[ablage].set(key(schluessel(ablage, rec)), copy(rec)); },
+    async mische(ablage, k, fn){ const rec = fn(copy(maps[ablage].get(key(k)))); maps[ablage].set(key(k), copy(rec)); return copy(rec); },
     async ersetze(daten){
       for (const a of Object.keys(ABLAGEN)){
         maps[a].clear();
@@ -62,9 +66,11 @@ export function oeffneIdb(idb, name = DB_NAME){
         if (keyPath.length > 1) s.createIndex('fall', 'fall');
       }
     };
-    req.onsuccess = () => resolve(req.result);
+    // Eine neuere Werkbank in einem anderen Tab will die Datenbank aufrüsten: diese gibt sie frei (danach arbeitet
+    // dieser Tab nicht mehr mit ihr; neu laden).
+    req.onsuccess = () => { const db = req.result; db.onversionchange = () => db.close(); resolve(db); };
     req.onerror = () => reject(req.error || new Error('IndexedDB lässt sich nicht öffnen'));
-    req.onblocked = () => reject(new Error('IndexedDB ist von einem anderen Tab blockiert'));
+    req.onblocked = () => reject(new Error('eine ältere Werkbank in einem anderen Tab hält die Datenbank; den Tab schließen und neu laden'));
   });
 }
 
@@ -76,6 +82,15 @@ function idbSchnittstelle(db){
     hole: (a, k) => anfrage(store(a).get(k)),
     async lege(a, rec){ const tx = db.transaction(a, 'readwrite'); tx.objectStore(a).put(rec); await fertig(tx); },
     async legeViele(a, recs){ const tx = db.transaction(a, 'readwrite'), st = tx.objectStore(a); for (const rec of recs) st.put(rec); await fertig(tx); },
+    // Lesen und Schreiben in einer Transaktion: zwei Änderungen am selben Eintrag (Bewertung und Kommentar, Story
+    // 2.41) überschreiben einander nicht.
+    async mische(a, k, fn){
+      const tx = db.transaction(a, 'readwrite'), st = tx.objectStore(a);
+      let rec;
+      st.get(k).onsuccess = ev => { rec = fn(ev.target.result); st.put(rec); };
+      await fertig(tx);
+      return rec;
+    },
     // Alles in einer Transaktion: schlägt ein Datensatz fehl, bleibt der Speicher, wie er war.
     async ersetze(daten){
       const names = Object.keys(ABLAGEN), tx = db.transaction(names, 'readwrite');
@@ -111,12 +126,17 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
     feedbacks: fall => fall === undefined ? s.alle('feedback') : s.vonFall('feedback', fall),
     // Mischt in das Feedback am Stand: was e nicht nennt, bleibt.
     async legeFeedback(e){
-      const da = await s.hole('feedback', [e.fall, e.stand]);
-      const rec = { kommentar: '', bearbeitet: null, ...da, ...e };
-      await s.lege('feedback', rec);
-      return rec;
+      return s.mische('feedback', [e.fall, e.stand], da => ({ kommentar: '', bearbeitet: null, ...da, ...e }));
     },
     archiv: fall => fall === undefined ? s.alle('archiv') : s.vonFall('archiv', fall),
+    // Bens Marken an den Posten des Feedbacks (Story 2.41): { fall, id, status: 'offen' | 'erledigt' | 'verworfen',
+    // gesetzt }; id die des Postens (postenVon() in faelle.js). Was keine Marke hat, ist offen.
+    marken: fall => fall === undefined ? s.alle('status') : s.vonFall('status', fall),
+    async markiere(fall, id, status, jetzt = new Date().toISOString()){
+      const rec = { fall, id, status, gesetzt: jetzt };
+      await s.lege('status', rec);
+      return rec;
+    },
     legeArchiv: x => s.lege('archiv', x),
     // Eine Eingabe aufnehmen. opts: { name, herkunft, modus, stand, jetzt, referenz, soll }. Ein neuer Fall wird
     // angelegt (mit referenz, wo gegeben); Positionen, die die Eingabe mitbringt, werden Bens Fassung am stand; eine
@@ -157,7 +177,8 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
       for (const f of imp.fassungen){
         if (!da.has(f.fall)){ ohneFall++; continue; }
         const e = await sp.feedback(f.fall, f.stand);
-        if (e && String(e.geaendert) > String(f.geaendert)) continue;
+        // Ein Feedback nur mit Bewertung (Story 2.41) hat kein geaendert: es hält Bens Fassung nicht auf.
+        if (e && e.geaendert && String(e.geaendert) > String(f.geaendert)) continue;
         await sp.legeFeedback({ fall: f.fall, stand: f.stand, bearbeitet: f.bearbeitet, kommentar: f.kommentar || '', geaendert: f.geaendert, soll: f.soll ?? false, quelle: f.quelle });
         fassungen++;
       }
@@ -167,7 +188,7 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
       return { neu: r.filter(x => x.art === 'neu' || x.art === 'revision').length, fassungen, archiv: archiv.length, ohneFall };
     },
     async zustand(jetzt = new Date().toISOString()){
-      return { format: ZUSTAND_FORMAT, version: 1, gespeichert: jetzt, faelle: await s.alle('faelle'), anordnungen: await s.alle('anordnungen'), feedback: await s.alle('feedback'), archiv: await s.alle('archiv') };
+      return { format: ZUSTAND_FORMAT, version: 1, gespeichert: jetzt, faelle: await s.alle('faelle'), anordnungen: await s.alle('anordnungen'), feedback: await s.alle('feedback'), archiv: await s.alle('archiv'), status: await s.alle('status') };
     },
     // Ersetzt den Speicher durch einen Arbeitsstand; wirft bei falschem Format, der Speicher bleibt dann unverändert.
     async laden(z){
@@ -191,7 +212,8 @@ export function pruefeZustand(z){
   }
   const faelle = new Set((z.faelle || []).map(f => f.fall));
   for (const f of z.faelle || []) if (!str(f.name) || typeof f.eingabe !== 'string') bad('ein Fall ohne Name oder Eingabe');
-  for (const a of ['anordnungen', 'feedback', 'archiv']) for (const rec of z[a] || []) if (!faelle.has(rec.fall)) bad('ein Eintrag in ' + a + ' zu einem unbekannten Fall');
+  // status (Story 2.41) fehlt in einem älteren Arbeitsstand: nichts markiert.
+  for (const a of ['anordnungen', 'feedback', 'archiv', 'status']) for (const rec of z[a] || []) if (!faelle.has(rec.fall)) bad('ein Eintrag in ' + a + ' zu einem unbekannten Fall');
 }
 
 // Legt ab, was einordnen() oder zuordnen() ergab: einen neuen Fall in faelle und im Speicher, Bens Fassung am stand.

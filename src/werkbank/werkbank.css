@@ -1,4 +1,4 @@
-/* Die Layout-Werkbank (Stories 2.38 bis 2.40), Variante C (Ben, 2026-10-09): oben die Kopfleiste mit dem Layout-Stand,
+/* Die Layout-Werkbank (Stories 2.38 bis 2.41), Variante C (Ben, 2026-10-09): oben die Kopfleiste mit dem Layout-Stand,
    dem Fortschritt und den Aktionen, darunter zwei Spalten über die ganze Höhe des Fensters: links die Liste der Fälle
    und unter ihr der gewählte Fall (Kommentar, Archiv), rechts die Leinwand mit einer schmalen Leiste (Ebenen,
    Markieren, Bearbeiten als die eine farbige Aktion). Die Ebenen liegen übereinander in #canvas, der Modellierer über
@@ -13,19 +13,45 @@ h1{font-size:16px;font-weight:650;margin:0}
 #warnung{color:var(--bad);font-size:13px}
 #frame{flex:1;min-height:0;display:grid;grid-template-columns:minmax(240px,330px) 1fr}
 #links{min-height:0;display:flex;flex-direction:column;border-right:1px solid var(--line)}
+#suchkopf{padding:10px 12px 6px;border-bottom:1px solid var(--line)}
+#suche{width:100%;font:inherit;font-size:14px;padding:5px 9px;border:1px solid var(--line);border-radius:7px}
+#filter{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:7px}
+#filter select{font:inherit;font-size:12px;color:var(--mute);padding:2px 4px;border:1px solid var(--line);border-radius:999px;background:var(--bg);max-width:8.5em}
+#filter select.an{border-color:var(--acc);color:var(--acc)}
+#treffer{margin:5px 0 0;font-size:12px;color:var(--mute)}
+#treffer:empty{display:none}
+button.link{border:0;padding:0 2px;background:none;color:var(--acc);font-size:12.5px}
 #liste{flex:1;min-height:0;overflow:auto}
 #fall{border-top:1px solid var(--line);padding:10px 14px;display:flex;flex-direction:column;gap:8px;max-height:45%;overflow:auto}
 #fall .kopf{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 #titel{flex:1;overflow-wrap:anywhere}
+#fall .zeile{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#fall .lbl{color:var(--mute);font-size:12px}
+#warum,#bewertung-info{margin:0;font-size:12.5px;color:var(--mute)}
+#warum:empty,#bewertung-info:empty{display:none}
+#bewertung{display:inline-flex;gap:2px}
+#bewertung button{width:22px;padding:1px 0;border:0;border-radius:5px;font-size:12px;color:var(--mute);font-variant-numeric:tabular-nums}
+#bewertung button:hover{background:#f5f5f7}
+#bewertung button[aria-pressed="true"]{background:var(--fg);color:#fff}
+#posten-box{display:flex;flex-direction:column;gap:4px}
+#posten{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-size:12.5px}
+#posten li{display:flex;gap:8px;align-items:flex-start}
+#posten li>div:first-child{flex:1;min-width:0}
+#posten li.zu{color:var(--mute)}
+#posten .text{white-space:pre-wrap;color:var(--mute);overflow-wrap:anywhere}
+#posten .knoepfe{display:flex;gap:4px;align-items:center;flex-shrink:0}
+#posten .knoepfe button{padding:1px 7px;font-size:12px}
+#aehnlich-liste{display:inline-flex;gap:6px;flex-wrap:wrap}
 #fall-info{color:var(--mute);font-size:12.5px;font-variant-numeric:tabular-nums}
 #faelle{list-style:none;margin:0;padding:8px 0}
 #faelle button{display:grid;grid-template-columns:1fr auto;gap:0 8px;width:100%;padding:4px 14px;border:0;background:none;color:inherit;font:inherit;text-align:left;cursor:pointer}
 #faelle button:hover{background:#f5f5f7}
 #faelle button[aria-current="true"]{background:var(--sel)}
 #faelle .n{overflow-wrap:anywhere}
-#faelle .m{color:var(--warn);font-size:12px}
+#faelle .m{color:var(--warn);font-size:12px;text-align:right}
 #faelle .s,#faelle .t{color:var(--mute);font-size:12px;font-variant-numeric:tabular-nums}
 #faelle .t{text-align:right}
+#faelle .leer{padding:8px 14px;color:var(--mute);font-size:13px}
 #faelle .fehler .t{color:var(--bad)}
 #leinwand{position:relative;min-width:0;min-height:0;display:flex;flex-direction:column}
 #leiste{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:7px 14px;border-bottom:1px solid var(--line);min-height:44px}

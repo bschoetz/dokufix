@@ -16,14 +16,15 @@
 // once per content with their stands, variant comparisons as text; taken into the store twice without duplicates.
 // The view of story 2.40 (src/werkbank/ebenen.js): every layer at its own origin, the view kept relative to it, so a
 // version shifted as a whole does not jump; the fit to the common extent; the marking per layer, the same sets
-// tools/bpmn-layout/feedback-auswerten.mjs lists (src/bpmn-tools/aenderungen.js).
+// tools/bpmn-layout/feedback-auswerten.mjs lists (src/bpmn-tools/aenderungen.js). Status, filters, search and rating
+// of story 2.41: open feedback until Ben marks it, across stands and reloads; the rating per stand, in the package.
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DOMParser, parseHTML } from 'linkedom';
-import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen, ohneBahnen, kandidaten, zeichnungPruefen } from '../src/werkbank/faelle.js';
-import { speicherImArbeitsspeicher, speicherOeffnen, pruefeZustand, ZUSTAND_FORMAT } from '../src/werkbank/speicher.js';
-import { caseFingerprint } from '../src/app/fingerprint.js';
+import { ohneDi, hatDi, nameAus, einordnen, geaendert, anzeigeName, paketBauen, ohneBahnen, kandidaten, zeichnungPruefen, postenVon, letzteBewertung, merkmale, filtern, warum } from '../src/werkbank/faelle.js';
+import { speicherImArbeitsspeicher, speicherOeffnen, pruefeZustand, ZUSTAND_FORMAT, IMPORT_FORMAT } from '../src/werkbank/speicher.js';
+import { caseFingerprint, shapeOf, nearest } from '../src/app/fingerprint.js';
 import { ursprung, ausdehnung, einpassen, relativ, absolut, markenFuer, leinwand, ebeneFuerTaste } from '../src/werkbank/ebenen.js';
 import { aenderungen, readDi } from '../src/bpmn-tools/aenderungen.js';
 import { readProcess } from '../src/app/bpmn-layout.js';
@@ -682,4 +683,115 @@ test('matrix: a drawing that is no BPMN or has no node becomes no case, with a m
   const nurStart = '<?xml version="1.0"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="d"><bpmn:process id="p"><bpmn:startEvent id="s"/></bpmn:process><bpmndi:BPMNDiagram id="dd"><bpmndi:BPMNPlane id="pl" bpmnElement="p"><bpmndi:BPMNShape id="s_di" bpmnElement="s"><dc:Bounds x="100" y="100" width="36" height="36"/></bpmndi:BPMNShape></bpmndi:BPMNPlane></bpmndi:BPMNDiagram></bpmn:definitions>';
   assert.match(zeichnungPruefen(nurStart), /nichts gezeichnet/);
   assert.equal(zeichnungPruefen(angeordnet('r01')), null);
+});
+
+// ---------- status, filters, search and rating (story 2.41) ----------
+test('matrix: search by part of a name and filters combine', () => {
+  const e = (name, herkunft, extra = {}) => ({ name, herkunft, geaendert: false, offen: 0, merkmale: [], bewertung: null, ...extra });
+  const alle = [e('rechnungsfreigabe', 'sauber', { geaendert: true }), e('r03', 'sauber', { offen: 2, bewertung: 8 }), e('dt01-geteilt', 'daten', { merkmale: ['Daten', 'Bahnen'], bewertung: 3 }), e('Freigabe neu', 'eigen', { offen: 1 })];
+  const namen = f => filtern(alle, f).map(x => x.name);
+  assert.deepEqual(namen({ suche: 'FREIG' }), ['rechnungsfreigabe', 'Freigabe neu']);
+  assert.deepEqual(namen({ suche: 'gibt es nicht' }), []);
+  assert.deepEqual(namen({ satz: 'sauber', status: 'offen' }), ['r03']);
+  assert.deepEqual(namen({ status: 'ruhig' }), ['dt01-geteilt']);
+  assert.deepEqual(namen({ art: 'Daten', bewertung: 'unter5' }), ['dt01-geteilt']);
+  assert.deepEqual(namen({ bewertung: 'ab8' }), ['r03']);
+  assert.deepEqual(namen({ bewertung: 'ohne', suche: 'freig' }), ['rechnungsfreigabe', 'Freigabe neu']);
+  assert.equal(namen({}).length, 4);
+});
+
+test('the kind of a case: the features of its diagram', () => {
+  const m = name => merkmale(modelOf(fs.readFileSync(INPUTS.get(name).file, 'utf8')));
+  assert.deepEqual(m('llm-kredit'), ['Pools', 'Black Box']);
+  assert.deepEqual(m('dt01-geteilt'), ['Bahnen', 'Daten']);
+  assert.deepEqual(m('nz01-zwei'), ['Bahnen', 'Notizen']);
+  assert.ok(m('llm-antrag').includes('Angeheftete Ereignisse'));
+  assert.deepEqual(merkmale(null), []);
+});
+
+test('matrix: feedback stays open across stands and reloads until marked; a mark survives until Ben changes it', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const f = (await sp.aufnehmen(eingabe('r03'), { modus: 'neu' })).fall;
+  await sp.legeFeedback({ fall: f.fall, stand: STAND, kommentar: 'zu eng', geaendert: T1 });
+  await sp.legeArchiv({ fall: f.fall, id: 'k1', art: 'kommentar', satz: 's1', stand: '1111aaaa', geaendert: '2026-10-01', kommentar: 'alte Runde' });
+  await sp.legeArchiv({ fall: f.fall, id: 'a1', art: 'anordnung', staende: ['1111aaaa'], xml: angeordnet('r03') });
+  const posten = async stand => postenVon({ feedbacks: await sp.feedbacks(f.fall), archiv: await sp.archiv(f.fall), marken: await sp.marken(f.fall), stand });
+  // At another stand: both open, both named as other logic; an archived layout is no item.
+  let p = await posten(STAND2);
+  assert.deepEqual(p.map(x => [x.id, x.status, x.andereLogik]), [['feedback:' + STAND, 'offen', true], ['archiv:k1', 'offen', true]]);
+  assert.equal((await posten(STAND)).find(x => x.id === 'feedback:' + STAND).andereLogik, false);
+  // Marked, then the working state saved and loaded (a reload): still marked, at any stand.
+  await sp.markiere(f.fall, 'feedback:' + STAND, 'erledigt', T2);
+  await sp.markiere(f.fall, 'archiv:k1', 'verworfen', T2);
+  const z = await sp.zustand();
+  await sp.leeren();
+  await sp.laden(z);
+  p = await posten(STAND2);
+  assert.deepEqual(p.map(x => x.status), ['erledigt', 'verworfen']);
+  // The page reopens nothing by itself, not after new content either; Ben opens one again.
+  await sp.legeFeedback({ fall: f.fall, stand: STAND, kommentar: 'doch noch', geaendert: '2026-10-09T12:00:00.000Z' });
+  await sp.markiere(f.fall, 'archiv:k1', 'offen', T2);
+  assert.deepEqual((await posten(STAND)).map(x => x.status), ['erledigt', 'offen']);
+});
+
+test('matrix: an old working state without status loads, nothing marked', async () => {
+  const sp = speicherImArbeitsspeicher();
+  await sp.aufnehmen(eingabe('r01'), { modus: 'neu' });
+  const { status, ...alt } = await sp.zustand();
+  assert.deepEqual(status, []);
+  await sp.markiere((await sp.faelle())[0].fall, 'feedback:x', 'erledigt');
+  await sp.laden(alt);
+  assert.deepEqual(await sp.marken(), []);
+  assert.equal((await sp.faelle()).length, 1);
+  // A mark for an unknown case is refused like any other entry.
+  assert.throws(() => pruefeZustand({ ...alt, status: [{ fall: 'nix', id: 'feedback:x', status: 'erledigt' }] }), /unbekannten Fall/);
+});
+
+test('matrix: the rating per stand, the latest shown with whether the picture changed since, in the package', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const f = (await sp.aufnehmen(eingabe('r02'), { name: 'bw01', modus: 'neu' })).fall;
+  const L = angeordnet('r02'), L2 = verschoben(L, 0, 0).replace(/(<(?:[\w.-]+:)?BPMNShape\b[^>]*bpmnElement="a"[^>]*>\s*<(?:[\w.-]+:)?Bounds\b[^>]*?\bx=")([-\d.]+)/, (m, a, x) => a + (Number(x) + 300));
+  assert.notEqual(L2, L);
+  await sp.einfrieren({ fall: f.fall, stand: STAND, xml: L, angeordnet: T1 });
+  await sp.legeFeedback({ fall: f.fall, stand: STAND, bewertung: 8, bewertet: T1 });
+  const bw = async stand => letzteBewertung({ feedbacks: await sp.feedbacks(f.fall), layouts: await sp.anordnungen(f.fall), stand });
+  assert.deepEqual(await bw(STAND), { wert: 8, stand: STAND, bildGeaendert: false });
+  // A new stand with another picture: the rating stays, the change is said; not laid out yet: unknown.
+  assert.deepEqual(await bw(STAND2), { wert: 8, stand: STAND, bildGeaendert: null });
+  await sp.einfrieren({ fall: f.fall, stand: STAND2, xml: L2, angeordnet: T2 });
+  assert.deepEqual(await bw(STAND2), { wert: 8, stand: STAND, bildGeaendert: true });
+  assert.match(warum(L, L2, modelOf(eingabe('r02'))), /andere Reihenfolge/);
+  // A rating alone is no feedback item, but it is in the package, without an edit.
+  assert.deepEqual(postenVon({ feedbacks: await sp.feedbacks(f.fall), stand: STAND }), []);
+  const { paket } = paketBauen({ stand: STAND, faelle: await sp.faelle(), layouts: await sp.anordnungen(), feedback: await sp.feedbacks(), jetzt: T2 });
+  assert.equal(paket.beispiele.length, 1);
+  assert.equal(paket.beispiele[0].bewertung, 8);
+  assert.equal(paket.beispiele[0].bearbeitet, null);
+  assert.match(auswerten(paket).uebersicht, /## bw01\n\nHerkunft eigen; nicht bearbeitet; Bewertung 8 von 10; geändert /);
+  // The filter by rating finds it, on what letzteBewertung() gives.
+  const eintrag = async () => ({ name: 'bw01', herkunft: 'eigen', geaendert: false, offen: 0, merkmale: [], bewertung: (await bw(STAND2)).wert });
+  assert.equal(filtern([await eintrag()], { bewertung: 'ab8' }).length, 1);
+  assert.equal(filtern([await eintrag()], { bewertung: 'unter5' }).length, 0);
+  // A rating and a comment at the same stand keep each other; a rating alone does not hold up an imported version.
+  await sp.legeFeedback({ fall: f.fall, stand: STAND, kommentar: 'passt', geaendert: T2 });
+  assert.deepEqual([(await sp.feedback(f.fall, STAND)).bewertung, (await sp.feedback(f.fall, STAND)).kommentar], [8, 'passt']);
+  await sp.legeFeedback({ fall: f.fall, stand: STAND2, bewertung: 7, bewertet: T2 });
+  const r = await sp.importieren({ format: IMPORT_FORMAT, version: 1, eingaben: [], archiv: [], fassungen: [{ fall: f.fall, stand: STAND2, bearbeitet: L2, geaendert: T1, soll: false }] });
+  assert.equal(r.fassungen, 1);
+  assert.deepEqual([(await sp.feedback(f.fall, STAND2)).bearbeitet === L2, (await sp.feedback(f.fall, STAND2)).bewertung], [true, 7]);
+  // Taken back: null, no rating.
+  await sp.legeFeedback({ fall: f.fall, stand: STAND, bewertung: null, bewertet: T2 });
+  // Taken back at STAND: the latest is the one at the other stand; the package at STAND carries none.
+  assert.deepEqual(await bw(STAND), { wert: 7, stand: STAND2, bildGeaendert: true });
+  const nach = paketBauen({ stand: STAND, faelle: await sp.faelle(), layouts: await sp.anordnungen(), feedback: await sp.feedbacks() }).paket;
+  assert.equal('bewertung' in nach.beispiele[0], false);
+});
+
+test('matrix: the similar cases by shape; a case without a shape has none', () => {
+  const formen = new Map(['r02', 'r03', 'hund', 'r01'].map(n => [n, shapeOf(eingabe(n))]));
+  formen.set('kaputt', shapeOf('kein xml'));
+  const nah = nearest('r02', formen, 3);
+  assert.equal(nah.length, 3);
+  assert.ok(nah.every(n => n.name !== 'r02' && n.name !== 'kaputt' && n.similarity > 0));
+  assert.deepEqual(nearest('kaputt', formen, 3), []);
 });

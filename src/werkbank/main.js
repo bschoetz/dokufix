@@ -1,4 +1,4 @@
-// Die Layout-Werkbank (dist/bpmn-layout-werkbank.html, Stories 2.38 bis 2.40). Links die Liste der Fälle, rechts die
+// Die Layout-Werkbank (dist/bpmn-layout-werkbank.html, Stories 2.38 bis 2.41). Links die Liste der Fälle, rechts die
 // Leinwand; im Kopf der Layout-Stand, die Prüfsumme der Module des Layouts, mit denen die Seite gebaut ist
 // (logikOf() in tools/bpmn-layout/lib.mjs, dieselbe Zahl, die tools/bpmn-layout/lauf.mjs als Logik nennt).
 //
@@ -19,6 +19,13 @@
 // (src/bpmn-tools/aenderungen.js); Pfeil hoch und runter gehen durch die Liste, 0 passt ein. „Bearbeiten“ öffnet die
 // gezeigte Fassung im Modellierer auf der Leinwand; übernommen ist sie Bens Fassung des Falls am Stand, ohne
 // Fingerabdruck: die Seite weiß, woher sie kommt. Der Kommentar zum Fall am Stand wird beim Tippen gespeichert.
+//
+// Status, Bewertung, Suche und Filter (Story 2.41): je Fall die Posten des Feedbacks (Kommentar oder Bearbeitung je
+// Stand, die früheren Runden aus dem Archiv), offen, bis Ben sie als erledigt oder verworfen markiert, einer von
+// einem anderen Stand mit „andere Logik“; geändert mit dem Grund (warum() in faelle.js); eine Bewertung 1 bis 10 am
+// Stand, in der Liste die letzte und ob sich das Bild seitdem geändert hat; die drei nach der Form nächsten
+// Fälle. Über der Liste die Suche im Namen (Taste /) und die Filter Status, Satz, Art (die Merkmale des Diagramms)
+// und Bewertung, alle zugleich, gemerkt im localStorage; im Kopf der Zähler über alle Fälle.
 //
 // Eigene Fälle, unter „Neuer Fall“: „Zeichnen“ öffnet einen leeren Modellierer auf der Leinwand; die Zeichnung wird
 // ein neuer Fall, sie selbst Bens Fassung, zuerst gezeigt, und er wird angeordnet. „Einfügen“ nimmt BPMN-XML aus dem
@@ -46,7 +53,8 @@ import { fileBase } from '../bpmn-tools/downloads.js';
 import { makeA2Client } from '../bpmn-tools/layout.js';
 import { themeCss, PRESETS } from '../bpmn-tools/theme.js';
 import { speicherOeffnen } from './speicher.js';
-import { geaendert, anzeigeName, paketBauen, nameAus, zeichnungPruefen } from './faelle.js';
+import { geaendert, anzeigeName, paketBauen, nameAus, zeichnungPruefen, postenVon, letzteBewertung, merkmale, MERKMALE, warum, filtern } from './faelle.js';
+import { shapeOf, nearest } from '../app/fingerprint.js';
 import { leinwand, markenFuer, ebeneFuerTaste } from './ebenen.js';
 
 const $ = id => document.getElementById(id);
@@ -65,6 +73,10 @@ let sp = null;
 // Die Fälle in der Reihenfolge der Liste, und je Fall seine Anordnungen (alle Stände) und Bens letzte Fassung.
 let faelle = [];
 const anordnungen = new Map(), bens = new Map(), zeilen = new Map();
+// Je Fall sein Feedback an allen Ständen, die Kommentare und Bearbeitungen seines Archivs (ohne XML) und Bens Marken
+// an den Posten (Story 2.41).
+const feedbacksVon = new Map(), archivPosten = new Map(), markenVon = new Map();
+const jeFall = (map, k) => map.get(k) || [];
 // Je Fall der Lauf in dieser Sitzung: { art: 'wartet' | 'laeuft' | 'fehler', fehler }; ohne Eintrag angeordnet.
 const lauf = new Map();
 let gewaehlt = null, fassung = 'erzeugt';
@@ -73,6 +85,22 @@ const sekunden = ms => (ms / 1000).toFixed(1).replace('.', ',') + ' s';
 const anordnungAm = f => (anordnungen.get(f.fall) || []).find(a => a.stand === STAND) || null;
 
 // ---------- die Liste ----------
+// Status, Bewertung und Filter (Story 2.41): je Fall die offenen Posten des Feedbacks (postenVon()), die letzte
+// Bewertung (letzteBewertung()), die Merkmale des Diagramms; über der Liste Suche und Filter, alle zugleich (filtern()).
+const postenFall = f => postenVon({ feedbacks: jeFall(feedbacksVon, f.fall), archiv: jeFall(archivPosten, f.fall), marken: jeFall(markenVon, f.fall), stand: STAND });
+const offeneZahl = f => postenFall(f).filter(p => p.status === 'offen').length;
+const bewertungVon = f => letzteBewertung({ feedbacks: jeFall(feedbacksVon, f.fall), layouts: jeFall(anordnungen, f.fall), stand: STAND });
+const istAnders = f => geaendert(jeFall(anordnungen, f.fall), STAND).art === 'anders';
+const merkmaleVon = new Map();
+function merkmaleFall(f){
+  if (!merkmaleVon.has(f.fall)) merkmaleVon.set(f.fall, merkmale(modelVon(f)));
+  return merkmaleVon.get(f.fall);
+}
+const FILTER_KEY = 'werkbank-filter';
+const FILTER = ['suche', 'f-status', 'f-satz', 'f-art', 'f-bewertung'];
+const filterWerte = () => ({ suche: $('suche').value, status: $('f-status').value, satz: $('f-satz').value, art: $('f-art').value, bewertung: $('f-bewertung').value });
+// Die Fälle, die die Liste zeigt, in ihrer Reihenfolge (die Pfeiltasten gehen durch sie).
+let sichtbar = [];
 function zeile(f){
   const li = document.createElement('li');
   const b = document.createElement('button');
@@ -89,18 +117,47 @@ function zeile(f){
 function markieren(f){
   const li = zeilen.get(f.fall);
   if (!li) return;
-  const a = anordnungAm(f), l = lauf.get(f.fall), g = geaendert(anordnungen.get(f.fall) || [], STAND);
+  const a = anordnungAm(f), l = lauf.get(f.fall), g = geaendert(jeFall(anordnungen, f.fall), STAND);
+  const n = offeneZahl(f), bw = bewertungVon(f);
   const m = li.querySelector('.m'), t = li.querySelector('.t');
-  m.textContent = g.art === 'anders' ? 'geändert' : '';
-  m.title = g.art === 'anders' ? 'Anders angeordnet als am Stand ' + g.gegen : '';
-  t.textContent = a ? (a.ms != null ? sekunden(a.ms) : '') : l && l.art === 'laeuft' ? 'ordnet an …' : l && l.art === 'fehler' ? 'Fehler' : 'wartet';
-  t.title = l && l.art === 'fehler' ? l.fehler : '';
+  m.textContent = [g.art === 'anders' ? 'geändert' : '', n ? n + ' offen' : ''].filter(Boolean).join(' · ');
+  m.title = [g.art === 'anders' ? 'Anders angeordnet als am Stand ' + g.gegen : '', n ? n + (n === 1 ? ' Posten' : ' Posten') + ' Feedback offen' : ''].filter(Boolean).join('; ');
+  const zeit = a ? (a.ms != null ? sekunden(a.ms) : '') : l && l.art === 'laeuft' ? 'ordnet an …' : l && l.art === 'fehler' ? 'Fehler' : 'wartet';
+  t.textContent = [bw ? bw.wert + (bw.bildGeaendert ? ', Bild geändert' : '') : '', zeit].filter(Boolean).join(' · ');
+  t.title = [l && l.art === 'fehler' ? l.fehler : '', bw ? 'Bewertung ' + bw.wert + ' am Stand ' + bw.stand + (bw.bildGeaendert ? '; das Bild hat sich seitdem geändert' : bw.bildGeaendert === false ? '; das Bild ist seitdem gleich' : '') : ''].filter(Boolean).join('; ');
   li.classList.toggle('anders', g.art === 'anders');
   li.classList.toggle('fehler', !!(l && l.art === 'fehler'));
   li.querySelector('button').setAttribute('aria-current', String(f.fall === gewaehlt));
 }
+const filterAktiv = () => Object.values(filterWerte()).some(v => v.trim());
 function liste(){
-  $('faelle').replaceChildren(...faelle.map(zeile));
+  const w = filterWerte();
+  const aktiv = filterAktiv();
+  sichtbar = filtern(faelle.map(f => ({ f, name: anzeigeName(f), herkunft: f.herkunft, geaendert: istAnders(f), offen: offeneZahl(f), merkmale: merkmaleFall(f), bewertung: (bewertungVon(f) || {}).wert ?? null })), w).map(e => e.f);
+  zeilen.clear();
+  if (sichtbar.length) $('faelle').replaceChildren(...sichtbar.map(zeile));
+  else { const li = document.createElement('li'); li.className = 'leer'; li.textContent = 'Kein Fall'; $('faelle').replaceChildren(li); }
+  $('treffer').textContent = !aktiv ? '' : sichtbar.length ? sichtbar.length + ' von ' + faelle.length + ' Fällen' : 'Kein Fall';
+  $('filter-weg').hidden = !aktiv;
+  try { localStorage.setItem(FILTER_KEY, JSON.stringify(w)); } catch {}
+}
+// Die Sätze im Filter: die Herkünfte der Fälle, in der Reihenfolge der Liste.
+function filterSaetze(){
+  const sel = $('f-satz'), wert = sel.value;
+  const saetze = [...new Set(faelle.map(f => f.herkunft))];
+  sel.replaceChildren(new Option('Satz', ''), ...saetze.map(x => new Option(x, x)));
+  sel.value = saetze.includes(wert) ? wert : '';
+}
+$('f-art').append(...MERKMALE.map(m => new Option(m, m)));
+for (const id of FILTER) $(id).addEventListener(id === 'suche' ? 'input' : 'change', () => { for (const s of FILTER.slice(1)) $(s).classList.toggle('an', !!$(s).value); liste(); });
+$('filter-weg').onclick = () => { for (const id of FILTER) $(id).value = ''; for (const s of FILTER.slice(1)) $(s).classList.remove('an'); liste(); };
+function filterLaden(){
+  let w = null;
+  try { w = JSON.parse(localStorage.getItem(FILTER_KEY) || 'null'); } catch {}
+  if (!w) return;
+  $('suche').value = w.suche || ''; $('f-status').value = w.status || ''; $('f-art').value = w.art || ''; $('f-bewertung').value = w.bewertung || '';
+  $('f-satz').value = [...$('f-satz').options].some(o => o.value === w.satz) ? w.satz : '';
+  for (const s of FILTER.slice(1)) $(s).classList.toggle('an', !!$(s).value);
 }
 
 // ---------- der Speicher ----------
@@ -108,9 +165,14 @@ async function lesen(){
   const reihe = new Map(DATA.eingaben.map((e, i) => [e.name, i]));
   const nr = f => f.herkunft !== 'eigen' && reihe.has(f.name) ? reihe.get(f.name) : Infinity;
   faelle = (await sp.faelle()).sort((a, b) => nr(a) - nr(b) || a.name.localeCompare(b.name) || a.revision - b.revision);
-  anordnungen.clear(); bens.clear();
-  for (const a of await sp.anordnungen()) (anordnungen.get(a.fall) || anordnungen.set(a.fall, []).get(a.fall)).push(a);
+  anordnungen.clear(); bens.clear(); feedbacksVon.clear(); archivPosten.clear(); markenVon.clear();
+  const zu = (map, k, x) => (map.get(k) || map.set(k, []).get(k)).push(x);
+  for (const a of await sp.anordnungen()) zu(anordnungen, a.fall, a);
+  // Aus dem Archiv nur, was ein Posten des Feedbacks ist, ohne sein XML.
+  for (const x of await sp.archiv()) if (x.art === 'kommentar' || x.art === 'bearbeitung') zu(archivPosten, x.fall, { id: x.id, art: x.art, satz: x.satz, stand: x.stand, geaendert: x.geaendert, kommentar: x.kommentar });
+  for (const m of await sp.marken()) zu(markenVon, m.fall, m);
   for (const e of await sp.feedbacks()){
+    zu(feedbacksVon, e.fall, e);
     if (!e.bearbeitet) continue;
     const da = bens.get(e.fall);
     if (!da || String(e.geaendert) > String(da.geaendert)) bens.set(e.fall, e);
@@ -156,6 +218,8 @@ async function pumpen(){
     }
     laufend = null;
     markieren(f);
+    // Unter Filtern kann der Fall nun dazugehören oder nicht mehr (geändert, Bild seit der Bewertung).
+    if (filterAktiv()) liste();
     if (f.fall === gewaehlt) zeigen();
   }
   pumpt = false;
@@ -173,6 +237,9 @@ function fortschritt(){
   if (pumpt && zeit.start !== null) text += ' · ' + sekunden(performance.now() - zeit.start) + wie;
   else if (zeit.n) text += ' · ' + zeit.n + ' in dieser Sitzung in ' + sekunden(zeit.ms) + wie;
   if (fehler) text += ' · ' + fehler + ' mit Fehler';
+  // Der Zähler über alle Fälle (Story 2.41), unabhängig von den Filtern.
+  const anders = faelle.filter(istAnders).length, offenN = faelle.filter(f => offeneZahl(f)).length;
+  text += ' · ' + anders + ' geändert · ' + offenN + ' offen';
   $('fortschritt').textContent = text;
 }
 
@@ -272,6 +339,93 @@ function leiste(){
   gezeigt = a && !ebenenFehler[a.key] ? a.xml : null;
   $('bearbeiten').disabled = !gezeigt;
 }
+// ---------- der Fall: Status, Bewertung, Posten, Ähnliche (Story 2.41) ----------
+function details(f){
+  // Geändert und warum: gegen die Anordnung am letzten anderen Stand, mit den Maßen von aenderungen().
+  const a = anordnungAm(f), g = geaendert(jeFall(anordnungen, f.fall), STAND), s = letzterStand(f);
+  $('warum').textContent = g.art === 'anders' && a && s ? 'Geändert gegen Stand ' + g.gegen + ': ' + warum(s.xml, a.xml, modelVon(f)) : '';
+  bewertungZeichnen(f);
+  postenZeichnen(f);
+  aehnlichZeichnen(f);
+}
+function bewertungZeichnen(f){
+  const hier = (jeFall(feedbacksVon, f.fall).find(e => e.stand === STAND) || {}).bewertung, bw = bewertungVon(f);
+  for (const b of $('bewertung').querySelectorAll('button')) b.setAttribute('aria-pressed', String(Number(b.dataset.n) === hier));
+  $('bewertung-info').textContent = !Number.isInteger(hier) && bw ? 'zuletzt ' + bw.wert + ' am Stand ' + bw.stand + (bw.bildGeaendert ? ', Bild seitdem geändert' : bw.bildGeaendert === false ? ', Bild gleich' : '') : '';
+}
+// Eine Zahl wählt die Bewertung am Stand, dieselbe noch einmal nimmt sie zurück.
+$('bewertung').append(...Array.from({ length: 10 }, (_, i) => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.dataset.n = String(i + 1); b.textContent = String(i + 1);
+  b.onclick = async () => {
+    const f = faelle.find(x => x.fall === gewaehlt);
+    if (!f) return;
+    const n = i + 1, hier = (jeFall(feedbacksVon, f.fall).find(e => e.stand === STAND) || {}).bewertung;
+    let e;
+    try { e = await sp.legeFeedback({ fall: f.fall, stand: STAND, bewertung: hier === n ? null : n, bewertet: new Date().toISOString() }); }
+    catch (err){ meldung('Bewertung nicht gespeichert: ' + ((err && err.message) || String(err)), true); return; }
+    feedbacksVon.set(f.fall, [...jeFall(feedbacksVon, f.fall).filter(x => x.stand !== STAND), e]);
+    nachMarke(f);
+  };
+  return b;
+}));
+const POSTEN_ART = p => p.kommentar && p.bearbeitet ? 'Kommentar und Bearbeitung' : p.bearbeitet ? 'Bearbeitung' : 'Kommentar';
+const STATUS_TEXT = { erledigt: 'erledigt', verworfen: 'verworfen' };
+function postenZeichnen(f){
+  const posten = postenFall(f), n = posten.filter(p => p.status === 'offen').length;
+  $('posten-box').hidden = !posten.length;
+  $('posten-titel').textContent = 'Feedback · ' + (n ? n + ' offen' : 'nichts offen');
+  $('posten').replaceChildren(...posten.map(p => {
+    const li = document.createElement('li');
+    li.classList.toggle('zu', p.status !== 'offen');
+    const was = document.createElement('div');
+    const art = document.createElement('strong');
+    art.textContent = POSTEN_ART(p);
+    const wo = [p.stand ? 'Stand ' + p.stand : '', p.andereLogik ? 'andere Logik' : '', p.archiv ? 'frühere Runde' : '', p.geaendert ? String(p.geaendert).slice(0, 10) : '', p.bearbeitet && p.soll === false ? 'Reparatur' : ''].filter(Boolean).join(' · ');
+    was.append(art, ' ', wo);
+    // Der Kommentar am Stand der Seite steht im Feld darüber; die übrigen hier.
+    if (p.kommentar && p.id !== 'feedback:' + STAND){ const t = document.createElement('div'); t.className = 'text'; t.textContent = p.kommentar; was.append(t); }
+    const knoepfe = document.createElement('div');
+    knoepfe.className = 'knoepfe';
+    const knopf = (text, status) => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; b.onclick = () => markiereFall(f, p.id, status); return b; };
+    if (p.status === 'offen') knoepfe.append(knopf('Erledigt', 'erledigt'), knopf('Verworfen', 'verworfen'));
+    else { const st = document.createElement('span'); st.textContent = STATUS_TEXT[p.status]; knoepfe.append(st, knopf('Wieder öffnen', 'offen')); }
+    li.append(was, knoepfe);
+    return li;
+  }));
+}
+async function markiereFall(f, id, status){
+  // Ein Fall, den ein geladener Arbeitsstand nicht mehr hat, bekommt keine Marke.
+  if (!faelle.some(x => x.fall === f.fall)) return;
+  let m;
+  try { m = await sp.markiere(f.fall, id, status); }
+  catch (err){ meldung('Marke nicht gespeichert: ' + ((err && err.message) || String(err)), true); return; }
+  markenVon.set(f.fall, [...jeFall(markenVon, f.fall).filter(x => x.id !== id), m]);
+  nachMarke(f);
+}
+// Nach einer Bewertung oder Marke: der Fall, seine Zeile, die Liste unter den Filtern und der Zähler.
+function nachMarke(f){
+  liste();
+  markieren(f);
+  if (f.fall === gewaehlt) details(f);
+  fortschritt();
+}
+// Die drei nach der Form nächsten Fälle (shapeOf(), nearest(), Story 2.37); ein Klick wählt den Fall.
+const formen = new Map();
+function aehnlichZeichnen(f){
+  for (const x of faelle) if (!formen.has(x.fall)){ let sh = null; try { sh = shapeOf(x.eingabe); } catch {} formen.set(x.fall, sh); }
+  const nah = formen.get(f.fall) ? nearest(f.fall, new Map(faelle.map(x => [x.fall, formen.get(x.fall)])), 3) : [];
+  $('aehnlich').hidden = !nah.length;
+  $('aehnlich-liste').replaceChildren(...nah.map(n => {
+    const x = faelle.find(y => y.fall === n.name);
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'link';
+    b.textContent = anzeigeName(x) + ' ' + Math.round(n.similarity * 100) + ' %';
+    b.onclick = () => waehlen(x.fall);
+    return b;
+  }));
+}
+
 // Eine andere Ebene des Falls: nur umschalten.
 function fassungWaehlen(key){
   if (!arten.some(a => a.key === key)) return;
@@ -285,9 +439,10 @@ async function zeigen(){
   $('titel').textContent = f ? anzeigeName(f) : '';
   $('bearbeiten').hidden = !f;
   $('kommentar').disabled = !f;
-  if (!f){ $('info').textContent = ''; $('fall-info').textContent = ''; $('kommentar').value = ''; $('fassungen').replaceChildren(); $('archiv').hidden = true; arten = []; EBENEN.leeren(); return; }
+  if (!f){ $('info').textContent = ''; $('fall-info').textContent = ''; $('kommentar').value = ''; $('warum').textContent = ''; $('bewertung-info').textContent = ''; $('posten-box').hidden = true; $('aehnlich').hidden = true; $('fassungen').replaceChildren(); $('archiv').hidden = true; arten = []; EBENEN.leeren(); return; }
   const a = anordnungAm(f), g = geaendert(anordnungen.get(f.fall) || [], STAND);
-  $('fall-info').textContent = [f.herkunft, a && a.ms != null ? sekunden(a.ms) : '', g.art === 'anders' ? 'geändert' : ''].filter(Boolean).join(' · ');
+  $('fall-info').textContent = [f.herkunft, a && a.ms != null ? sekunden(a.ms) : ''].filter(Boolean).join(' · ');
+  details(f);
   // Erst wenn der Kommentar des Falls im Feld steht, gilt das Feld für ihn (kommentarVon, das Ziel des Speicherns).
   if (kommentarVon !== f.fall){
     const e = await sp.feedback(f.fall, STAND);
@@ -325,15 +480,21 @@ $('markieren').onchange = () => { EBENEN.marken(marken, $('markieren').checked);
 $('einpassen').onclick = () => EBENEN.einpassen();
 
 // ---------- Tasten ----------
-// Pfeil hoch und runter gehen durch die Liste, 1 bis 9 wählen die Ebene, M schaltet das Markieren, 0 passt ein; nicht
+// Pfeil hoch und runter gehen durch die Liste, 1 bis 9 wählen die Ebene, M schaltet das Markieren, 0 passt ein, / setzt
+// den Fokus in die Suche (Story 2.41); nicht
 // beim Tippen, nicht mit Strg, Alt oder Meta, nicht bei offenem Modellierer oder Dialog.
 const tippt = t => t && (t.isContentEditable || /^(TEXTAREA|SELECT)$/.test(t.tagName) || (t.tagName === 'INPUT' && !/^(checkbox|radio|button)$/.test(t.type)));
 document.addEventListener('keydown', e => {
   if (e.ctrlKey || e.altKey || e.metaKey || e.isComposing || e.defaultPrevented || tippt(e.target) || modelerOpen() || $('einfuegen').open) return;
-  if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
-    const i = faelle.findIndex(f => f.fall === gewaehlt), j = i + (e.key === 'ArrowDown' ? 1 : -1);
+  if (e.key === '/'){
     e.preventDefault();
-    if (j >= 0 && j < faelle.length) waehlen(faelle[j].fall);
+    $('suche').focus();
+    $('suche').select();
+  } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp'){
+    // Durch die Liste, wie die Filter sie zeigen; ein gewählter Fall außerhalb von ihr beginnt am Anfang.
+    const i = sichtbar.findIndex(f => f.fall === gewaehlt), j = i < 0 ? 0 : i + (e.key === 'ArrowDown' ? 1 : -1);
+    e.preventDefault();
+    if (j >= 0 && j < sichtbar.length) waehlen(sichtbar[j].fall);
   } else if (ebeneFuerTaste(arten, e.key)){
     e.preventDefault();
     fassungWaehlen(ebeneFuerTaste(arten, e.key));
@@ -364,6 +525,7 @@ const heute = () => new Date().toISOString().slice(0, 10);
 // Nach einer Änderung des Speichers: neu lesen, die Liste neu, den Fall wählen, anordnen, was fehlt.
 async function neu(fall){
   await lesen();
+  filterSaetze();
   liste();
   waehlen(fall && faelle.some(f => f.fall === fall) ? fall : gewaehlt);
 }
@@ -391,8 +553,9 @@ $('bearbeiten').onclick = () => {
       try { e = await sp.legeFeedback({ fall: f.fall, stand: STAND, bearbeitet: x, geaendert: new Date().toISOString(), soll: null }); }
       catch (err){ retten(x, fileBase(f.name), 'Deine Fassung von ' + anzeigeName(f) + ' ist nicht gespeichert: ' + ((err && err.message) || String(err))); return; }
       bens.set(f.fall, e);
+      feedbacksVon.set(f.fall, [...jeFall(feedbacksVon, f.fall).filter(x => x.stand !== STAND), e]);
       fassung = 'ben';
-      markieren(f);
+      nachMarke(f);
       // Ben kann während des Bearbeitens in der Liste einen anderen Fall gewählt haben: zurück zum bearbeiteten.
       if (gewaehlt !== f.fall) waehlen(f.fall); else zeigen();
       meldung('Deine Fassung von ' + anzeigeName(f) + ' am Stand ' + STAND + ' gespeichert.');
@@ -424,7 +587,12 @@ let tippen = null;
 $('kommentar').addEventListener('input', () => {
   const fall = kommentarVon, text = $('kommentar').value;
   clearTimeout(tippen);
-  tippen = setTimeout(() => { sp.legeFeedback({ fall, stand: STAND, kommentar: text, geaendert: new Date().toISOString() }).catch(e => meldung('Kommentar nicht gespeichert: ' + e.message, true)); }, 400);
+  tippen = setTimeout(() => {
+    sp.legeFeedback({ fall, stand: STAND, kommentar: text, geaendert: new Date().toISOString() })
+      // Der Kommentar ist ein Posten des Feedbacks: die Zeile, die Posten und der Zähler folgen ihm.
+      .then(e => { feedbacksVon.set(fall, [...jeFall(feedbacksVon, fall).filter(x => x.stand !== STAND), e]); const f = faelle.find(x => x.fall === fall); if (f) nachMarke(f); })
+      .catch(e => meldung('Kommentar nicht gespeichert: ' + e.message, true));
+  }, 400);
 });
 
 // ---------- Einfügen ----------
@@ -478,7 +646,7 @@ function zuordnungZeigen(vorschlaege){
 $('paket-btn').onclick = async () => {
   const { paket, ohneAnordnung } = paketBauen({ stand: STAND, faelle, layouts: await sp.anordnungen(), feedback: await sp.feedbacks() });
   const ohne = ohneAnordnung.length ? ' Ohne Anordnung am Stand, nicht im Paket: ' + ohneAnordnung.join(', ') + '.' : '';
-  if (!paket){ meldung('Am Stand ' + STAND + ' ist noch nichts bearbeitet oder kommentiert.' + ohne, !!ohne); return; }
+  if (!paket){ meldung('Am Stand ' + STAND + ' ist noch nichts bearbeitet, kommentiert oder bewertet.' + ohne, !!ohne); return; }
   const name = 'layout-feedback-werkbank-' + STAND + '-' + heute() + '.json';
   herunterladen(name, JSON.stringify(paket, null, 1) + '\n');
   meldung('Heruntergeladen: ' + name + ', ' + paket.beispiele.length + (paket.beispiele.length === 1 ? ' Beispiel' : ' Beispiele') + '. Nenne mir den Pfad; feedback-auswerten.mjs wertet es aus.' + ohne);
@@ -533,6 +701,8 @@ async function start(){
   }
   await eingebauteAufnehmen();
   await lesen();
+  filterSaetze();
+  filterLaden();
   liste();
   let erst = null;
   try { erst = localStorage.getItem(GEWAEHLT_KEY); } catch {}
