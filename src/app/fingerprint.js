@@ -46,7 +46,13 @@
 // data store (decision 2). Dropped: ids, every text, task subtypes, event
 // definitions, cancelActivity (decision 2), metadata, colours. The same shape
 // means very alike, not the same picture: ids and texts act on the picture
-// through the size of a label and as the tie-break among equals.
+// through the size of a label and as the tie-break among equals. And it means
+// the same colouring by the pass, not the same graph: Weisfeiler-Lehman cannot
+// tell some graphs apart that differ, two loops of three tasks from one loop of
+// six, for one; the start and end events of a real process break that
+// symmetry. The pass stops after ROUNDS_MAX rounds at the latest, so that a
+// long chain costs no more than that (the collection needs 8 at most); a fixed
+// bound keeps the hash a matter of the graph alone.
 //
 // The features are the counts of the labels of rounds 0 to 3; the similarity
 // of two shapes is their weighted Jaccard index, the sum of the smaller counts
@@ -63,6 +69,8 @@ const BPMN_NS = 'http://www.omg.org/spec/BPMN/20100524/MODEL';
 const SHORT = 12;
 // The rounds whose labels are the features.
 const FEATURE_ROUNDS = 3;
+// The most rounds of the pass: on a chain of n nodes it would take about n / 2.
+const ROUNDS_MAX = 32;
 
 // ---------- SHA-256 (FIPS 180-4) ----------
 // The round constants, made on the first call, not when the module loads.
@@ -133,6 +141,9 @@ const GROUPS = ['boundaryEvent', 'sequenceFlow', 'dataReference', 'textAnnotatio
 const groupOf = name => FLOW_NODE.test(name) ? 'flowNode' : /^data(Object|Store)Reference$/.test(name) ? 'dataReference' : GROUPS.includes(name) ? name : null;
 const GROUP_ORDER = ['flowNode', ...GROUPS];
 const REFERENCE = new Set(['flowNodeRef', 'incoming', 'outgoing']);
+// The references whose text readProcess() reads trimmed: those above, and the
+// ends of a data association.
+const TRIMMED = new Set([...REFERENCE, 'sourceRef', 'targetRef']);
 // What the definitions carry that a tool writes, not the author.
 const TOOL_ATTRIBUTES = new Set(['name', 'exporter', 'exporterVersion', 'targetNamespace']);
 const byText = (a, b) => (a < b ? -1 : a > b ? 1 : 0);
@@ -162,7 +173,7 @@ function cleaned(root){
     const fixed = [], groups = new Map();
     let text = null;
     // A reference's text trimmed, as readProcess() reads it.
-    const flush = () => { if (text !== null){ fixed.push(JSON.stringify(REFERENCE.has(el.localName) ? text.trim() : text)); text = null; } };
+    const flush = () => { if (text !== null){ fixed.push(JSON.stringify(TRIMMED.has(el.localName) ? text.trim() : text)); text = null; } };
     for (const node of el.childNodes){
       if (node.nodeType === 3 || node.nodeType === 4){
         if (node.nodeType === 3 && !node.data.trim()) continue;
@@ -251,7 +262,8 @@ function graphOf(model){
 
 // The rounds of the Weisfeiler-Lehman pass: the first labels, then each
 // vertex's label anew from its own and its neighbours', until the number of
-// labels no longer grows, and at least up to the last round of the features.
+// labels no longer grows, and at least up to the last round of the features;
+// ROUNDS_MAX rounds at most.
 function rounds(graph){
   const out = [graph.labels];
   const distinct = list => new Set(list).size;
@@ -259,7 +271,7 @@ function rounds(graph){
     const last = out[out.length - 1];
     const next = last.map((label, v) => sha256(label + '(' + graph.adjacent[v].map(([e, u]) => e + last[u]).sort(byText).join(',') + ')').slice(0, 16));
     const grew = distinct(next) > distinct(last);
-    if (!grew && out.length > FEATURE_ROUNDS) break;
+    if ((!grew && out.length > FEATURE_ROUNDS) || out.length > ROUNDS_MAX) break;
     out.push(next);
   }
   return out;

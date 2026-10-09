@@ -351,6 +351,25 @@ test('decision 2: a data object made a data store changes the shape; cancelActiv
   assert.ok(objects >= 5 && boundaries >= 5, objects + ' fixtures with data objects, ' + boundaries + ' with boundary events');
 });
 
+test('the ends of a data association with blanks around the id keep the case, as readProcess() reads them trimmed', () => {
+  const xml = '<definitions xmlns="' + BPMN_NS + '" id="D"><process id="P"><dataObjectReference id="DO" dataObjectRef="O"/><dataObject id="O"/>' +
+    '<startEvent id="S"/><task id="T"><dataInputAssociation id="I"><sourceRef>DO</sourceRef><targetRef>T</targetRef></dataInputAssociation></task>' +
+    '<sequenceFlow id="F" sourceRef="S" targetRef="T"/></process></definitions>';
+  const spaced = xml.replace('<sourceRef>DO</sourceRef><targetRef>T</targetRef>', '<sourceRef>\n  DO\n  </sourceRef><targetRef> T </targetRef>');
+  assert.notEqual(spaced, xml);
+  assert.deepEqual(both(spaced), both(xml));
+});
+
+test('a long chain: the pass stops after 32 rounds, so a chain of 1000 tasks takes no longer than a few seconds', () => {
+  const n = 1000;
+  const tasks = Array.from({ length: n }, (_, i) => '<task id="T' + i + '"/>').join('');
+  const flows = Array.from({ length: n - 1 }, (_, i) => '<sequenceFlow id="F' + i + '" sourceRef="T' + i + '" targetRef="T' + (i + 1) + '"/>').join('');
+  const xml = '<definitions xmlns="' + BPMN_NS + '" id="D"><process id="P">' + tasks + flows + '</process></definitions>';
+  const t = Date.now(), shape = shapeOf(xml);
+  assert.match(shape.hash, /^[0-9a-f]{64}$/);
+  assert.ok(Date.now() - t < 5000, (Date.now() - t) + ' ms');
+});
+
 test('a pool: the same process with a participant, drawn with a frame, and without one has another shape', () => {
   const proc = '<process id="P"><startEvent id="S"/><task id="T"/><endEvent id="E"/>' +
     '<sequenceFlow id="F1" sourceRef="S" targetRef="T"/><sequenceFlow id="F2" sourceRef="T" targetRef="E"/></process>';
