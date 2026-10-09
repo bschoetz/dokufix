@@ -121,7 +121,7 @@ const HOLDS_CONTENT = new Set(['subProcess', 'adHocSubProcess', 'transaction']);
 // them through their references, and they are no line of the left-out list.
 const LEFT_OUT = new Set(['textAnnotation', 'dataObjectReference', 'dataStoreReference', 'association', 'group', 'messageFlow']);
 const NOTED = new Set(['textAnnotation', 'association']);
-const DATA_REF = Object.assign(Object.create(null), { dataObjectReference: 'object', dataStoreReference: 'store' });
+const DATA_REF = /* @__PURE__ */ Object.assign(Object.create(null), { dataObjectReference: 'object', dataStoreReference: 'store' });
 // A text annotation's text: its <text> child as written, every blank and line break kept. bpmn-js draws it so: moddle
 // keeps the text node verbatim, and diagram-js's layoutText() splits it at each line break and keeps empty and
 // indented lines; a pretty-printed <text> is drawn a line lower and indented, and its box is measured for that
@@ -135,7 +135,7 @@ const noteText = el => {
 };
 // What a flow node may hold that is drawn with it (story 2.32): its data associations, in, from a reference to the node,
 // and out, from the node to a reference.
-const DATA_ASSOCIATION = Object.assign(Object.create(null), { dataInputAssociation: 'in', dataOutputAssociation: 'out' });
+const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { dataInputAssociation: 'in', dataOutputAssociation: 'out' });
 
 // The pools and their processes, read from the parsed XML:
 //   { model, leftOut }

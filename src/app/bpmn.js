@@ -95,33 +95,37 @@ export const dataStateText = bo => {
   const state = bo && bo.dataState && String(bo.dataState.name || '').trim();
   return bo && bo.name && state ? bo.name + '\n[' + state + ']' : null;
 };
-function DataStateLabels(eventBus, textRenderer, config){
-  const isData = bo => !!bo && (bo.$type === 'bpmn:DataObjectReference' || bo.$type === 'bpmn:DataStoreReference');
-  eventBus.on('render.shape', 1500, (event, context) => {
-    const { element, gfx } = context;
-    if (element.type !== 'label' || !isData(element.businessObject)) return;
-    const text = dataStateText(element.businessObject);
-    if (!text) return;
-    let colour = null;
-    try { const label = element.di && element.di.get('label'); colour = label && label.get('color:color'); } catch { /* no colour package */ }
-    // bpmn-js sized the label to the name alone on import; the text is laid out in the width of a label, 90 px or the
-    // label's own where wider, as the layout measured it, centred on the label.
-    const width = Math.max(90, element.width);
-    const node = textRenderer.createText(text, {
-      box: { width, height: element.height, x: element.width / 2 + element.x, y: element.height / 2 + element.y },
-      style: { ...textRenderer.getExternalStyle(), fill: colour || (config && (config.defaultLabelColor || config.defaultStrokeColor)) || 'black' },
+// Built when the viewer's configuration is, so that a bundle without a viewer
+// (the reader's of schlank and kompakt) leaves it out.
+function dataStateModule(){
+  function DataStateLabels(eventBus, textRenderer, config){
+    const isData = bo => !!bo && (bo.$type === 'bpmn:DataObjectReference' || bo.$type === 'bpmn:DataStoreReference');
+    eventBus.on('render.shape', 1500, (event, context) => {
+      const { element, gfx } = context;
+      if (element.type !== 'label' || !isData(element.businessObject)) return;
+      const text = dataStateText(element.businessObject);
+      if (!text) return;
+      let colour = null;
+      try { const label = element.di && element.di.get('label'); colour = label && label.get('color:color'); } catch { /* no colour package */ }
+      // bpmn-js sized the label to the name alone on import; the text is laid out in the width of a label, 90 px or the
+      // label's own where wider, as the layout measured it, centred on the label.
+      const width = Math.max(90, element.width);
+      const node = textRenderer.createText(text, {
+        box: { width, height: element.height, x: element.width / 2 + element.x, y: element.height / 2 + element.y },
+        style: { ...textRenderer.getExternalStyle(), fill: colour || (config && (config.defaultLabelColor || config.defaultStrokeColor)) || 'black' },
+      });
+      node.classList.add('djs-label');
+      if (width !== element.width) node.setAttribute('transform', 'translate(' + (element.width - width) / 2 + ', 0)');
+      gfx.appendChild(node);
+      return node;
     });
-    node.classList.add('djs-label');
-    if (width !== element.width) node.setAttribute('transform', 'translate(' + (element.width - width) / 2 + ', 0)');
-    gfx.appendChild(node);
-    return node;
-  });
+  }
+  DataStateLabels.$inject = ['eventBus', 'textRenderer', 'config.bpmnRenderer'];
+  return { __init__: ['dokufixDataStateLabels'], dokufixDataStateLabels: ['type', DataStateLabels] };
 }
-DataStateLabels.$inject = ['eventBus', 'textRenderer', 'config.bpmnRenderer'];
-const DATA_STATE_MODULE = { __init__: ['dokufixDataStateLabels'], dokufixDataStateLabels: ['type', DataStateLabels] };
 
 export const BPMN_VIEWER_CONFIG = {
-  additionalModules: [DATA_STATE_MODULE],
+  additionalModules: [/* @__PURE__ */ dataStateModule()],
   bpmnRenderer: {
     defaultFillColor: 'var(--dokufix-bpmn-fill)',
     defaultStrokeColor: 'var(--dokufix-bpmn-stroke)',
