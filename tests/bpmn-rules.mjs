@@ -60,7 +60,8 @@
 //   association-off           an association whose end at its text annotation
 //                             is not on the annotation's box, or whose other
 //                             end is not on its partner (a symbol's outline, a
-//                             piece of a flow, a pool's frame): <association>
+//                             piece of a flow, a pool's frame, a reference's
+//                             box): <association>
 //                             <the end's element>
 // and with data object and data store references (story 2.32), each its box,
 // its name's box a label, each data association its waypoints:
@@ -368,7 +369,7 @@ export function breaksOf(xml, model, sizes = {}){
     const [atNote, atPartner] = a.toNote ? [w.at(-1), w[0]] : [w[0], w.at(-1)];
     if (!onBox(atNote, noteBox[a.note])) add('association-off', a.id, a.note);
     const partnerOk = a.kind === 'flow' || a.kind === 'message' ? !!di.flows[a.partner] && onWay(atPartner, di.flows[a.partner])
-      : a.kind === 'pool' ? !!di.shapes[a.partner] && onBox(atPartner, di.shapes[a.partner])
+      : a.kind === 'pool' || a.kind === 'data' ? !!di.shapes[a.partner] && onBox(atPartner, di.shapes[a.partner])
       : !!nodes[a.partner] && onOutline(atPartner, nodes[a.partner], typeOf(a.partner));
     if (!partnerOk) add('association-off', a.id, a.partner);
     for (const [nid, b] of Object.entries(nodes)) if (nid !== a.partner && passes(w, b)) add('association-through', a.id, nid);
@@ -390,6 +391,8 @@ export function breaksOf(xml, model, sizes = {}){
     const k = poolAt(d.box), own = k === undefined ? [] : lanesOfPool(k);
     if (own.length && !own.some(ln => within(d.box, ln))) add('data-outside-lane', d.id);
   }
+  // A text annotation's association through a reference not its partner.
+  for (const a of associations) if (assocWays[a.id]) for (const e of refs) if (e.id !== a.partner && passes(assocWays[a.id], e.box)) add('association-through', a.id, e.id);
   const dataPieces = dataAssocs.filter(a => dataWays[a.id]).flatMap(a => dataWays[a.id].slice(1).map((b, i) => ({ id: a.id, a: dataWays[a.id][i], b })));
   for (const a of dataAssocs){
     const w = dataWays[a.id];

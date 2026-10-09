@@ -80,7 +80,48 @@ export const BPMN_FONT = LABEL_FONT;
 // bpmn-js's own default sizes, 12 px and, for the labels of events, gateways
 // and flows, 11 px (src/app/label-size.js), as the Camunda Modeler draws them.
 // Until the layout measured in 11 px they were drawn at 12 px too.
+// The state of a data object or data store reference (story 2.32, Ben,
+// 2026-10-09: "alles was im bpmn standard auch passiert"): BPMN 2.0 shows its
+// dataState as a line of its own under the name, "[state]"; bpmn-js 18.31
+// draws the name alone. A renderer of the viewer's own, a module of
+// diagram-js, draws the label of such a reference with that line, before
+// bpmn-js's own renderer would, as bpmn-js draws an external label otherwise
+// (renderExternalLabel()): its box, its style, its colour. The XML stays as
+// written; the layout measures the label with the line (src/app/bpmn-layout.js,
+// readData()). A reference without a name has no label in bpmn-js, and so no
+// line either. Every viewer of dokufix is made with BPMN_VIEWER_CONFIG: the
+// page, the live viewer, the BPMN Assistant and the layout tools.
+export const dataStateText = bo => {
+  const state = bo && bo.dataState && String(bo.dataState.name || '').trim();
+  return bo && bo.name && state ? bo.name + '\n[' + state + ']' : null;
+};
+function DataStateLabels(eventBus, textRenderer, config){
+  const isData = bo => !!bo && (bo.$type === 'bpmn:DataObjectReference' || bo.$type === 'bpmn:DataStoreReference');
+  eventBus.on('render.shape', 1500, (event, context) => {
+    const { element, gfx } = context;
+    if (element.type !== 'label' || !isData(element.businessObject)) return;
+    const text = dataStateText(element.businessObject);
+    if (!text) return;
+    let colour = null;
+    try { const label = element.di && element.di.get('label'); colour = label && label.get('color:color'); } catch { /* no colour package */ }
+    // bpmn-js sized the label to the name alone on import; the text is laid out in the width of a label, 90 px or the
+    // label's own where wider, as the layout measured it, centred on the label.
+    const width = Math.max(90, element.width);
+    const node = textRenderer.createText(text, {
+      box: { width, height: element.height, x: element.width / 2 + element.x, y: element.height / 2 + element.y },
+      style: { ...textRenderer.getExternalStyle(), fill: colour || (config && (config.defaultLabelColor || config.defaultStrokeColor)) || 'black' },
+    });
+    node.classList.add('djs-label');
+    if (width !== element.width) node.setAttribute('transform', 'translate(' + (element.width - width) / 2 + ', 0)');
+    gfx.appendChild(node);
+    return node;
+  });
+}
+DataStateLabels.$inject = ['eventBus', 'textRenderer', 'config.bpmnRenderer'];
+const DATA_STATE_MODULE = { __init__: ['dokufixDataStateLabels'], dokufixDataStateLabels: ['type', DataStateLabels] };
+
 export const BPMN_VIEWER_CONFIG = {
+  additionalModules: [DATA_STATE_MODULE],
   bpmnRenderer: {
     defaultFillColor: 'var(--dokufix-bpmn-fill)',
     defaultStrokeColor: 'var(--dokufix-bpmn-stroke)',
