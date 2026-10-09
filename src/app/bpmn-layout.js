@@ -3317,11 +3317,14 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     for (const n of [...model.nodes, ...boundaries]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id][0] = R(cx - w / 2); di.nodes[n.id][1] = R(cy - h / 2); }
     segments.length = 0;
     segments.push(...routes.flatMap(r => r.pts.slice(1).map((q, i) => segmentBox(r.pts[i], q))));
+    refreshDataSegs();
   };
   let placeNote = null;
   // The pieces of the data associations placed so far (story 2.32): a text annotation at a reference, placed after
-  // them, keeps off them too.
+  // them, keeps off them too. A stripe moves the references and their nodes: the pieces are made anew from where they
+  // stand then (refreshDataSegs(), set once there are references).
   const dataSegs = [];
+  let refreshDataSegs = () => {};
   if (notes.length){
     di.notes = byId(); di.associations = byId();
     const routeOf = new Map(routes.map(r => [r.f.id, r]));
@@ -3451,6 +3454,10 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     const shapeOf = id => { const c = box[id]; return { kind: kindOf(id), cx: c.cx, cy: c.cy, w: c.w, h: c.h }; };
     // A reference's lines at place, each with its node: [{ node, way }].
     const waysOf = (d, place) => usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(place, shapeOf(u), pairOffset.get(a.id)) })));
+    refreshDataSegs = () => {
+      dataSegs.length = 0;
+      for (const d of data) if (di.data[d.id]) dataSegs.push(...waysOf(d, di.data[d.id]).flatMap(x => wayBoxes(x.way)));
+    };
     const laneAt = c => laneBoxes().find(b => b[1] <= c.cy && c.cy <= b[1] + b[3]);
     const laneOfBox = b => model.lanes.find(l => laneBox[l.key] === b);
     const poolOfBox = b => { const l = laneOfBox(b); return l ? l.pool ?? 0 : null; };
