@@ -179,8 +179,6 @@ export function lmmPositions(model, rank){
 // reference (story 2.32) are placed once the references are.
 const KIND = { node: 0, boundary: 1, flow: 2, message: 3, pool: 4, data: 5 };
 const lex = (p, q) => { for (let i = 0; i < p.length; i++){ const d = p[i] - q[i]; if (d) return d; } return 0; };
-// The place of what stands on its own, a text annotation or a reference without a partner (story 2.32): its pool (the
-// diagram area, null, last), then its lane in the order of the lanes (none, the pool's, first).
 
 // The model in LMM's order, for layoutGeometry(), and the ranks with it, from
 // one walk: { model, rank }. Every list whose order a rule of the grid reads
@@ -250,6 +248,8 @@ export function kanonisch(model){
     cmp(a.name || '', b.name || '') || cmp(a.id, b.id));
   const msgPos = new Map(messages.map((x, i) => [x.id, i])), msgOf = new Map(messages.map(x => [x.id, x]));
   const laneIdx = new Map(lanes.map((l, i) => [l.key, i]));
+  // The place of what stands on its own, a text annotation or a reference without a partner (story 2.32): its pool (the
+  // diagram area, null, last), then its lane in the order of the lanes (none, the pool's, first).
   const asidePlace = x => [x.pool ?? model.pools.length, x.lane ? laneIdx.get(x.lane) + 1 : 0];
   const asideKey = (x, y, text) => lex(asidePlace(x), asidePlace(y)) || cmp(text(x), text(y)) || cmp(x.id, y.id);
   // The references: by the place of their first user.
