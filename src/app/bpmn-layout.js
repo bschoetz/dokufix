@@ -3519,9 +3519,12 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
         !wayFaults(waysOf(d, p), u => di.nodes[u], symbols, taken, crossing);
       const ks = [0, 1, -1, 2, -2];
       // Above the highest user in the lane; with several users, then below the lowest.
-      const ys = far => users.length > 1 ? [top - DATA_GAP - far - h, bottom + DATA_GAP + far] : [top - DATA_GAP - far - h];
+      // A boundary event as the only user: below it first, away from its host, which lies above it.
+      const onBorder = users.length === 1 && boundaries.some(b => b.id === users[0]);
+      const ys = far => [top - DATA_GAP - far - h, bottom + DATA_GAP + far];
+      const sides = onBorder ? [1, 0] : users.length > 1 ? [0, 1] : [0];
       let place = null;
-      for (const side of users.length > 1 ? [0, 1] : [0]){
+      for (const side of sides){
         rounds: for (const far of NOTE_ROUNDS) for (const crossing of [false, true]) for (const k of ks){
           const p = [R(mid - w / 2 + k * (w + ASIDE_STEP)), R(ys(far)[side]), w, h];
           if (clear(p, crossing)){ place = p; break rounds; }
@@ -3534,7 +3537,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       if (!place){
         const d0 = h + DATA_GAP;
         let best = null;
-        for (const down of users.length > 1 ? [false, true] : [false]){
+        for (const down of onBorder ? [true, false] : users.length > 1 ? [false, true] : [false]){
           const cut = down ? lane[1] + lane[3] : lane[1], y = down ? cut + DATA_GAP / 2 : cut + ASIDE_GAP;
           const move = b => b[1] + b[3] / 2 >= cut ? [b[0], b[1] + d0, b[2], b[3]] : b;
           const nodesNow = new Map([...nodeOf.keys()].map(id => [id, move(di.nodes[id])]));
