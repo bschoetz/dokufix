@@ -299,14 +299,15 @@ export function breaksOf(xml, model, sizes = {}){
     labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
   }
   for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });
-  // A reference's name, as an event's (story 2.32); its pool, the one whose frame holds the reference.
+  // A reference's name, as an event's (story 2.32); its pool, the one of its process in the model, none beside the
+  // pools.
   const refs = (model.data || []).map(d => ({ ...d, box: di.shapes[d.id] })).filter(d => d.box);
-  const poolAt = b => { const k = pools.findIndex((p, i) => poolBox(i) && within(b, poolBox(i))); return k < 0 ? undefined : k; };
+  const poolAt = d => d.pool ?? undefined;
   for (const d of refs){
     const box = di.labels[d.id];
     if (!box) continue;
     const [x, y, w, h] = box, s = sizes[d.label ?? d.name] || measureLabel(d.label ?? d.name);
-    labels.push({ id: d.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: d.id, pool: poolAt(d.box), data: true });
+    labels.push({ id: d.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: d.id, pool: poolAt(d), data: true });
   }
   for (const f of messages) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], message: true });
   for (const l of labels){
@@ -388,7 +389,7 @@ export function breaksOf(xml, model, sizes = {}){
     for (const l of labels) if (l.id !== d.id && overlaps(d.box, l.box)) add('data-on-label', d.id, l.id);
     for (const n of notes) if (overlaps(d.box, n.box)) add('data-on-note', d.id, n.id);
     for (const e of refs) if (e !== d && overlaps(d.box, e.box)) add('data-on-data', ...[d.id, e.id].sort());
-    const k = poolAt(d.box), own = k === undefined ? [] : lanesOfPool(k);
+    const k = poolAt(d), own = k === undefined ? [] : lanesOfPool(k);
     if (own.length && !own.some(ln => within(d.box, ln))) add('data-outside-lane', d.id);
   }
   // A text annotation's association through a reference not its partner.
