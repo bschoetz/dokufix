@@ -154,7 +154,9 @@ function printWarnings(warnings, file){
   }
 }
 
-async function minifyCss(css, name, dev){
+// Exported for the pages of the BPMN tools (tools/seiten.mjs), which take the
+// same path through esbuild.
+export async function minifyCss(css, name, dev){
   const result = await esbuild.transform(css,
     { loader: 'css', minify: !dev, charset: 'utf8', sourcefile: name, logLevel: 'silent' });
   printWarnings(result.warnings, name);
@@ -200,7 +202,9 @@ export function readAssets(dir, demo, demoName = 'demo.md'){
 // data: URL, so the one file is still all there is. outFile is where the page
 // will be written; the map names the sources relative to it. define: names the
 // script uses that the build replaces with a value, as esbuild's define.
-async function bundleScript(file, dev, outFile, define = {}){
+// plugins: esbuild's, for the pages of the BPMN tools (tools/seiten.mjs); the
+// build of dokufix passes none. Exported for those pages.
+export async function bundleScript(file, dev, outFile, define = {}, plugins = []){
   const result = await esbuild.build({
     entryPoints: [file],
     bundle: true,
@@ -211,6 +215,7 @@ async function bundleScript(file, dev, outFile, define = {}){
     write: false,
     logLevel: 'silent',
     define,
+    plugins,
     ...(dev ? { sourcemap: 'inline', outfile: outFile.replace(/\.html$/, '') + '.js' } : {}),
   });
   printWarnings(result.warnings, path.basename(file));

@@ -90,6 +90,15 @@ export const referenceOf = name => { const i = INPUTS.get(name); return i && i.r
 // nicht.
 const MODULE_FILES = ['bpmn-layout.js', 'lmm.js', 'label-size.js'];
 const PARSER_FILE = 'xml-parser.js';
+// Die Logik eines Stands: die ersten 8 Stellen von SHA-1 über die Module des Layouts in dir, in dieser Reihenfolge
+// (files, ohne Angabe die drei und der XML-Leser). Ein Lauf trägt sie als logik (loadStand()), die Werkbank zeigt sie
+// als ihren Layout-Stand (tools/werkbank/bauen.mjs, Story 2.38): dieselbe Zahl heißt dieselbe Anordnung.
+export const LOGIK_FILES = [...MODULE_FILES, PARSER_FILE];
+export function logikOf(dir, files = LOGIK_FILES){
+  const hash = crypto.createHash('sha1');
+  for (const f of files) hash.update(fs.readFileSync(path.join(dir, f)));
+  return hash.digest('hex').slice(0, 8);
+}
 export async function loadStand(ref){
   let dir = path.join(REPO, 'src/app'), commit, dirty = false;
   const git = (...a) => execFileSync('git', a, { cwd: REPO, encoding: 'utf8' }).trim();
@@ -118,9 +127,8 @@ export async function loadStand(ref){
   const lmm = await import(pathToFileURL(path.join(dir, 'lmm.js')).href);
   const hasParser = fs.existsSync(path.join(dir, PARSER_FILE));
   const parser = hasParser ? await import(pathToFileURL(path.join(dir, PARSER_FILE)).href) : null;
-  const hash = crypto.createHash('sha1');
-  for (const f of [...MODULE_FILES, ...(hasParser ? [PARSER_FILE] : [])]) hash.update(fs.readFileSync(path.join(dir, f)));
-  return { dir, commit, dirty, logik: hash.digest('hex').slice(0, 8), layout, lmm, parser, DEFAULT_RULES: layout.DEFAULT_RULES };
+  const logik = logikOf(dir, [...MODULE_FILES, ...(hasParser ? [PARSER_FILE] : [])]);
+  return { dir, commit, dirty, logik, layout, lmm, parser, DEFAULT_RULES: layout.DEFAULT_RULES };
 }
 
 // Das Modell, wie die Fixtures es lesen (tests/bpmn-fixtures.mjs, readModel()): mit dem eigenen XML-Leser des Stands

@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BPMN-Layouter Audi</title>
+<link rel="icon" type="image/svg+xml" href="{{slot:favicon}}">
+<style>{{slot:bpmn-viewer.css}}</style>
+<script>{{slot:bpmn-viewer.js}}</script>
+<style>{{slot:doc.css}}</style>
+<style>{{slot:theme.css}}</style>
+<style>{{slot:page.css}}</style>
+</head>
+<body>
+<header>
+<h1>BPMN-Layouter Audi</h1>
+<p class="intro">Laden Sie eine oder mehrere BPMN-Dateien hoch, oder ziehen Sie sie auf die Seite. Jedes Diagramm erscheint so angeordnet, wie es gezeichnet wurde, in den Farben des Audi-Stils. Auf Wunsch fallen die X an zusammenführenden Gateways weg, und wo sich Linien kreuzen, springt die waagrechte mit einem Bogen. Ein Klick auf ein Diagramm öffnet die Großansicht; jedes Bild lässt sich als SVG oder PNG herunterladen.</p>
+<div class="bar">
+<button id="up" class="primary">{{icon:upload}} BPMN-Dateien hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" multiple hidden>
+<label title="Ohne Häkchen werden exklusive Gateways, die zusammenführen, als leere Raute gezeichnet, wenn die Datei das X an jedem exklusiven Gateway setzt, wie es Modellierer tun"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
+<label title="Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte"><input type="checkbox" id="jumps" checked> Sprungbögen</label>
+</div>
+</header>
+<main id="out"></main>
+<script>{{slot:page.js}}</script>
+</body>
+</html>

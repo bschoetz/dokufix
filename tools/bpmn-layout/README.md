@@ -27,7 +27,7 @@ node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 
 | Datei | Was |
 |---|---|
-| `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), anordnen wie die Seite (`layoutJob()` in `src/app/bpmn-layout-job.js`, mit dem XML-Leser des Stands), Brüche, Größe, Blöcke, Kreuzungen und Knicke (`quality()`), Nähe zu einer Referenz, die Fingerabdrücke aller Eingaben (`fingerprints()`, einmal je Lauf) |
+| `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), seine Logik (`logikOf()`: SHA-1 über `bpmn-layout.js`, `lmm.js`, `label-size.js`, `xml-parser.js`, 8 Stellen, die Zahl, die ein Lauf als `logik` trägt), anordnen wie die Seite (`layoutJob()` in `src/app/bpmn-layout-job.js`, mit dem XML-Leser des Stands), Brüche, Größe, Blöcke, Kreuzungen und Knicke (`quality()`), Nähe zu einer Referenz, die Fingerabdrücke aller Eingaben (`fingerprints()`, einmal je Lauf) |
 | `lauf.mjs` | ordnet an und misst, auch Kreuzungen, Knicke und wie oft `finishGrid()` je Regel lief (die Proben); `--lauf`, `--stand`, `--satz`, `--aus <regel,…>` (DEFAULT_RULES abschalten), Namen |
 | `vergleich.mjs` | zwei Läufe Eingabe für Eingabe, Byte für Byte |
 | `feedback-bauen.mjs`, `feedback-seite.js` | die Seite des Layout-Feedbacks: Bild, Modellierer, Kommentar, früheres Feedback, Export als Paket; `--art`, `--satz`, `--gegen`, `--varianten`, `--alle`, Namen |
@@ -36,6 +36,8 @@ node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 | `pruefen.mjs` | bpmnlint und die Prüfung paralleler Gateways (ein paralleler Split schließt mit einem parallelen Join, oder seine Zweige laufen in Endereignissen aus, Ben, 2026-10-09); eine neue Eingabe kommt nur ohne Fehler in einen Satz, außer sie ist so falsch gezeichnet, wie Leute zeichnen: dann steht ihr Fehler unter `BEKANNT` und zählt nicht (x-wv6: Nachrichten-Start in einen parallelen Join, Ben, 2026-10-09). Danach die Eingaben mit gleichem Fall und gleicher Form (unten) |
 | `kreuz.mjs` | gekreuzte Nachrichtenflüsse zwischen denselben zwei Symbolen (Story 2.12) |
 | `browser-zeit.mjs` | die Laufzeit in Chromium und Firefox |
+
+Die Layout-Werkbank (`dist/bpmn-layout-werkbank.html`, `npm run werkbank`, Story 2.38, bisher nur der Rahmen) zeigt im Kopf ihren Layout-Stand: `logikOf()` über `src/app` beim Bauen, also dieselbe Zahl, die `lauf.mjs` für den Arbeitsbaum als Logik nennt. Steht dort eine andere als im letzten Lauf, ist die Werkbank mit anderen Modulen gebaut; neu bauen.
 
 Nicht mitgekommen sind, was nur mit Mermaids Rohpositionen ging: die eingefrorenen Varianten main, A und B von Spike 2.26 mit ihrer Sichtung (`sichtung.mjs`, `bilder.mjs`), die Wege G und M der Pools (Story 2.12) und das alte Bauskript des Assistant (jetzt `tools/bpmn-assistant/`).
 

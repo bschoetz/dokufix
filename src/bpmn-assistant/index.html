@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Dokufix BPMN Assistant</title>
+<link rel="icon" type="image/svg+xml" href="{{slot:favicon}}">
+<style>{{slot:bpmn-viewer.css}}</style>
+<script>{{slot:bpmn-viewer.js}}</script>
+<style>{{slot:doc.css}}</style>
+<style>{{slot:page.css}}</style>
+</head>
+<body>
+<header>
+<h1>Dokufix BPMN Assistant</h1>
+<p class="tag">Prozessdiagramme mit einem Sprachmodell schreiben und von dokufix anordnen lassen.</p>
+<div class="head">
+<div class="intro">
+<p>Sie beschreiben den Ablauf, das LLM schreibt daraus BPMN-XML, und dokufix ordnet das Diagramm selbst an, ohne dass Sie ein Element von Hand platzieren.</p>
+<ol>
+<li><strong>LLM vorbereiten.</strong> Kopieren Sie die Handreichung für LLMs und geben Sie sie Ihrem Sprachmodell zusammen mit einer Beschreibung Ihres Prozesses: Wer ist beteiligt, wer tauscht mit wem Nachrichten, welche Schritte gibt es, wo wird entschieden, was läuft parallel?</li>
+<li><strong>Rendern.</strong> Fügen Sie das gelieferte XML unten ein oder laden Sie es als Datei hoch. Sie sehen die Anordnung von dokufix (<em>A2</em>), auch mit mehreren Pools, Pools ohne eigenen Prozess (Black Box) und Nachrichtenflüssen. Hat die Datei eigene Koordinaten, steht ihr Bild darüber als „Original BPMN“.</li>
+<li><strong>Feinschleifen.</strong> Die Bilder sind Vorschläge. Laden Sie die beste Variante als <code>.bpmn</code> herunter und bearbeiten Sie sie in einem BPMN-Modellierer wie dem <a href="https://camunda.com/download/modeler/" target="_blank" rel="noopener">Camunda Modeler</a> oder <a href="https://demo.bpmn.io/" target="_blank" rel="noopener">demo.bpmn.io</a> nach.</li>
+<li><strong>Weiterverwenden.</strong> Laden Sie die fertige Datei wieder hoch, um sie zu prüfen, und nehmen Sie das Bild als <code>.svg</code> oder <code>.png</code> in Ihre Dokumente, in den gewählten Diagrammfarben.</li>
+</ol>
+</div>
+<div class="aside">
+<div>
+<span class="label">Handreichung für LLMs</span>
+<p>Sagt einem Sprachmodell, welches BPMN-XML ohne Koordinaten dokufix zeichnen kann.</p>
+<div class="row"><button id="llm-copy">{{icon:copy}} Text für LLM in Zwischenablage kopieren</button><a id="llm-dl" class="btn" download="bpmn-ohne-koordinaten-fuer-llms.md">{{icon:download}} als .md herunterladen</a><span id="llm-ok" class="hint"></span></div>
+</div>
+<div>
+<span class="label">Beispieldiagramme</span>
+<p>Klicken, um Beispiel zu laden.</p>
+<div class="row"><span id="ex"></span></div>
+</div>
+</div>
+</div>
+<label class="sub" for="xml">BPMN einfügen oder hochladen</label>
+<textarea id="xml" spellcheck="false" placeholder="BPMN-XML hier einfügen"></textarea>
+<div class="bar">
+<button id="go" class="primary">{{icon:play}} Rendern</button>
+<button id="up" title="Eine .bpmn-Datei laden und rendern">{{icon:upload}} Datei hochladen …</button><input type="file" id="file" accept=".bpmn,.xml,application/xml,text/xml" hidden>
+<label id="name-l" title="Der Name des Modells (definitions name): Enter schreibt ihn ins XML und rendert neu; er gibt auch den Downloads ihren Namen">Name <input type="text" id="name" spellcheck="false" autocomplete="off"></label>
+<button id="theme-btn" title="Farben der Diagramme">{{icon:palette}} Diagrammfarben ändern</button><span id="theme-now"><span class="hint" id="theme-name"></span><span id="theme-sw" aria-hidden="true"></span></span>
+<label id="merge-x-l" title="Ohne Häkchen zeichnet A2 exklusive Gateways, die zusammenführen, als leere Raute"><input type="checkbox" id="merge-x" checked> X an zusammenführenden Gateways</label>
+<label id="jumps-l" title="Wo sich zwei Linien kreuzen, springt die waagrechte mit einem kleinen Bogen über die senkrechte"><input type="checkbox" id="jumps" checked> Sprungbögen</label>
+<span class="hint">Strg+Enter rendert. Ein Klick auf ein Diagramm öffnet die Großansicht (Strg+Mausrad zoomt, Escape schließt).</span>
+</div>
+</header>
+<dialog id="theme" aria-labelledby="theme-h">
+<form method="dialog">
+<h2 id="theme-h">Farben der Diagramme</h2>
+<fieldset class="presets"><legend>Vorlage</legend></fieldset>
+<fieldset><legend>Eigene Farben</legend>
+<p class="hint">Ein Feld anklicken, dann rechts die Farbe wählen, den Hexcode eintippen oder eine Farbe aus der Palette nehmen.</p>
+<div class="editor">
+<div id="roles"></div>
+<div class="side">
+<div id="pick"><span id="pick-name"></span><input type="text" id="pick-hex" maxlength="11" spellcheck="false" aria-label="Hexcode"></div>
+<div id="field-mode" role="group" aria-label="Farbfeld"><button type="button" data-m="hsv" title="Sättigung nach rechts, Helligkeit (Value) nach oben">HSV</button><button type="button" data-m="hsl" title="Sättigung nach rechts, Helligkeit (Lightness) nach oben, die reine Farbe in halber Höhe">HSL</button></div>
+<div id="sv" aria-label="Sättigung und Helligkeit"><i id="sv-dot"></i></div>
+<input type="range" id="hue" min="0" max="360" step="1" aria-label="Farbton">
+<div id="nums"><label><span>H</span><input type="number" data-i="0" min="0" max="360" step="1" aria-label="Farbton in Grad"></label><label><span>S</span><input type="number" data-i="1" min="0" max="100" step="1" aria-label="Sättigung in Prozent"></label><label><span id="num3">V</span><input type="number" data-i="2" min="0" max="100" step="1" aria-label="Helligkeit in Prozent"></label></div>
+<div id="palette" aria-label="Palette"></div>
+<span class="sub-l">Im Thema verwendet</span>
+<div id="used" aria-label="Im Thema verwendete Farben"></div>
+</div>
+</div>
+</fieldset>
+<div class="dbar"><button type="button" id="theme-export" title="Die Farben als .json herunterladen">{{icon:download}} Exportieren</button><button type="button" id="theme-import" title="Farben aus einer .json-Datei laden">{{icon:upload}} Importieren</button><input type="file" id="theme-file" accept=".json,application/json" hidden><span class="hint" id="theme-msg" role="status"></span><button type="button" id="theme-reset">Zurücksetzen</button><button value="close" id="theme-close">Schließen</button></div>
+</form>
+</dialog>
+<main id="out"></main>
+<script type="text/plain" id="dokufix-layout-js">{{slot:layout.js}}</script>
+<script type="text/plain" id="bpmn-modeler-js">{{slot:bpmn-modeler.js}}</script>
+<script type="text/plain" id="bpmn-modeler-css">{{slot:bpmn-modeler.css}}</script>
+<script type="application/json" id="assistant-data">{{slot:data}}</script>
+<script id="bpmn-io-js">{{slot:bpmn-io.js}}</script>
+<script>{{slot:page.js}}</script>
+</body>
+</html>

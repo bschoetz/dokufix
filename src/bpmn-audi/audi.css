@@ -1,0 +1,33 @@
+:root{--bg:#fff;--fg:#1a1a1a;--mute:#666;--line:#e5e5e5;--acc:#000;--err:#a50e0e;--errbg:#fce8e6}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+header{padding:32px 40px 24px;border-bottom:1px solid var(--line)}
+main{padding:8px 40px 48px}
+@media (max-width:700px){header{padding:20px 16px}main{padding:8px 16px 32px}}
+h1{font-size:24px;font-weight:650;letter-spacing:-.01em;margin:0}
+.intro{max-width:680px;margin:12px 0 20px}
+.bar{display:flex;gap:8px 16px;align-items:center;flex-wrap:wrap}
+.bar label{display:inline-flex;gap:6px;align-items:center;font-size:14px;cursor:pointer}
+.hint{color:var(--mute);font-size:13px}
+button,a.btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 14px;font:inherit;font-size:14px;color:var(--fg);background:#fff;border:1px solid #ccc;border-radius:7px;cursor:pointer;text-decoration:none;white-space:nowrap}
+button:hover,a.btn:hover{background:#f2f2f2}
+button:focus-visible,a.btn:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:600}
+button.primary:hover{background:#333}
+button.small,a.btn.small{height:28px;padding:0 10px;font-size:13px}
+.ic{flex:none}
+body.drag main{outline:2px dashed var(--mute);outline-offset:-8px}
+section{border-top:1px solid var(--line);padding:20px 0 8px}
+section:first-of-type{border-top:0}
+h2{font-size:17px;font-weight:650;margin:0 0 8px;display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+h2 small{font-weight:400;color:var(--mute);font-size:13px}
+.pic{cursor:zoom-in;border:1px solid var(--line);border-radius:8px;padding:8px;background:#fff}
+.pic svg{display:block;max-width:100%;height:auto}
+.err{background:var(--errbg);color:var(--err);padding:10px 12px;border-radius:8px;white-space:pre-wrap;font:13px/1.4 ui-monospace,monospace}
+#large{position:fixed;inset:0;z-index:10;background:#fff;display:flex;flex-direction:column}
+#large .lbar{display:flex;gap:12px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+#large .lbar strong{font-size:17px}#large .lbar .hint{flex:1}
+#large .steps{display:flex}#large .steps button{border-radius:0;margin-left:-1px}#large .steps button:first-child{border-radius:7px 0 0 7px;margin-left:0}#large .steps button:last-child{border-radius:0 7px 7px 0}
+#large .steps button[aria-pressed=true]{background:var(--acc);color:#fff;border-color:var(--acc)}
+#large .lwrap{flex:1;max-width:none;margin:0;padding:0;min-height:0;display:flex}
+#large .lcanvas{flex:1;min-height:0;background:#fff}

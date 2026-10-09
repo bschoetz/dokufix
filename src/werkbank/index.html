@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BPMN-Layout-Werkbank</title>
+<link rel="icon" type="image/svg+xml" href="{{slot:favicon}}">
+<style>{{slot:bpmn-viewer.css}}</style>
+<script>{{slot:bpmn-viewer.js}}</script>
+<style>{{slot:doc.css}}</style>
+<style>{{slot:page.css}}</style>
+</head>
+<body>
+<header>
+<h1>BPMN-Layout-Werkbank</h1>
+<span id="stand" title="Die Prüfsumme der Module des Layouts, mit denen diese Seite anordnet; tools/bpmn-layout/lauf.mjs nennt sie Logik">Layout-Stand {{slot:stand}}</span>
+</header>
+<div id="frame">
+<nav id="liste" aria-label="Fälle"><ul id="faelle"></ul></nav>
+<main id="leinwand" aria-label="Diagramm"><div class="dokufix-doc"><div id="canvas" class="dokufix-diagram dokufix-diagram-bpmn"></div></div></main>
+</div>
+<script type="text/plain" id="dokufix-layout-js">{{slot:layout.js}}</script>
+<script>{{slot:page.js}}</script>
+</body>
+</html>
