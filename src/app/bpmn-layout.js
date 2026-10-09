@@ -104,6 +104,14 @@ const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
 const labelOf = text => String(text || '').includes('\n') ? { label: String(text) } : {};
 // The text a label of x is measured in.
 const textOf = x => x.label ?? x.name;
+// The label of a data object or data store reference with a state (story 2.32, Ben, 2026-10-09): its name, as the
+// labels are measured (its line breaks kept), and the state as a line of its own, "[state]", as BPMN 2.0 shows it;
+// null without a name or without a state, both cleaned. The layout measures it, and src/app/bpmn.js draws it
+// (dataStateText()), so the two read it alike.
+export function dataStateLabel(name, state){
+  const n = clean(name), s = clean(state);
+  return n && s ? (String(name).includes('\n') ? String(name) : n) + '\n[' + s + ']' : null;
+}
 
 // The flow nodes the layout places, by their tag, and the kind it gives each.
 function nodeType(tag){
@@ -382,7 +390,8 @@ function readData(data, { byId, boundaries }, where){
     const name = clean(attr(el, 'name')), stateName = state ? clean(attr(state, 'name')) : '';
     // Its state a line of its own under the name, "[state]", as BPMN 2.0 shows it (Ben, 2026-10-09); bpmn-js 18.31
     // draws the name alone, src/app/bpmn.js adds the line (dataStateLabels). Without a name bpmn-js draws no label.
-    const label = name && stateName ? { label: textOf({ name, ...labelOf(attr(el, 'name')) }) + '\n[' + stateName + ']' } : labelOf(attr(el, 'name'));
+    const withState = dataStateLabel(attr(el, 'name'), stateName);
+    const label = withState ? { label: withState } : labelOf(attr(el, 'name'));
     refs.push({ id, kind: DATA_REF[local(el)], name, ...label, state: stateName, ...aside(id, proc, where) });
     ids.add(id);
   }

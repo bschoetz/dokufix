@@ -1,5 +1,5 @@
 import { TRANSIENT_ATTR } from './transient.js';
-import { maskNotMarkup } from './bpmn-layout.js';
+import { maskNotMarkup, dataStateLabel } from './bpmn-layout.js';
 import { makeLayoutClient } from './layout-client.js';
 import { addLineJumps } from './line-jumps.js';
 import { showLayoutNotice } from './layout-notice.js';
@@ -88,13 +88,11 @@ export const BPMN_FONT = LABEL_FONT;
 // bpmn-js's own renderer would, as bpmn-js draws an external label otherwise
 // (renderExternalLabel()): its box, its style, its colour. The XML stays as
 // written; the layout measures the label with the line (src/app/bpmn-layout.js,
-// readData()). A reference without a name has no label in bpmn-js, and so no
-// line either. Every viewer of dokufix is made with BPMN_VIEWER_CONFIG: the
+// readData()), both with dataStateLabel(): the line is drawn only where the
+// layout measured it. A reference without a name has no label in bpmn-js, and
+// so no line either. Every viewer of dokufix is made with BPMN_VIEWER_CONFIG: the
 // page, the live viewer, the BPMN Assistant and the layout tools.
-export const dataStateText = bo => {
-  const state = bo && bo.dataState && String(bo.dataState.name || '').trim();
-  return bo && bo.name && state ? bo.name + '\n[' + state + ']' : null;
-};
+export const dataStateText = bo => bo ? dataStateLabel(bo.name, bo.dataState && bo.dataState.name) : null;
 // Built when the viewer's configuration is, so that a bundle without a viewer
 // (the reader's of schlank and kompakt) leaves it out.
 function dataStateModule(){
