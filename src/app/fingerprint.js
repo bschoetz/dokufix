@@ -69,7 +69,8 @@
 // over the sum of the larger. Deeper rounds would make every input unlike
 // every other.
 //
-// It does nothing when it loads. Nothing in the page imports it yet.
+// It does nothing when it loads. The layout workbench imports it
+// (src/werkbank/faelle.js, story 2.39); the page of dokufix does not.
 
 import { parseXml } from './xml-parser.js';
 import { readProcess } from './bpmn-layout.js';

@@ -447,7 +447,7 @@ test('the module imports nothing but the parser and the layout\'s reader, and do
   const code = src.replace(/\/\/.*$/gm, '');
   assert.deepEqual([...src.matchAll(/^import .* from '(.*)';$/gm)].map(m => m[1]), ['./xml-parser.js', './bpmn-layout.js']);
   assert.doesNotMatch(code, /crypto\.subtle|\bawait\b|\bdocument\b|\bwindow\b/);
-  // Nothing in the page imports it yet.
+  // Only the layout workbench imports it (src/werkbank/faelle.js, story 2.39), not the page of dokufix.
   const dir = new URL('../src/', import.meta.url);
-  for (const f of fs.readdirSync(dir, { recursive: true })) if (/\.js$/.test(f) && !f.endsWith('fingerprint.js')) assert.doesNotMatch(fs.readFileSync(new URL(f, dir), 'utf8'), /fingerprint\.js/, f);
+  for (const f of fs.readdirSync(dir, { recursive: true })) if (/\.js$/.test(f) && !f.endsWith('fingerprint.js') && !f.startsWith('werkbank/')) assert.doesNotMatch(fs.readFileSync(new URL(f, dir), 'utf8'), /fingerprint\.js/, f);
 });
