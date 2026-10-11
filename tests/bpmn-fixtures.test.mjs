@@ -19,8 +19,8 @@ const names = fixtureNames();
 const here = path.dirname(fileURLToPath(import.meta.url));
 const FIXTURES_COMMAND = path.join(here, 'bpmn-fixtures.mjs');
 
-test('the fixtures: 68 inputs, each with its two files, the index and the known breaks, nothing else in the folder; no Mermaid version, no raw positions', () => {
-  assert.equal(names.length, 68);
+test('the fixtures: 71 inputs, each with its two files, the index and the known breaks, nothing else in the folder; no Mermaid version, no raw positions', () => {
+  assert.equal(names.length, 71);
   const files = fs.readdirSync(FIXTURE_DIR).sort();
   const wanted = ['index.json', 'known-breaks.json', ...names.flatMap(n => FIXTURE_FILES.map(e => n + e))].sort();
   assert.deepEqual(files, wanted);

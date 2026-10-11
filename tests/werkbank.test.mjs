@@ -1050,3 +1050,11 @@ test('Ben\'s hund2 edit of 2026-10-09: the accidental lane change of the discard
   assert.deepEqual(w.gefragt.map(x => [x.id, x.nach]).sort(), [['End_Verworfen', 'Qualitätssicherung'], ['Task_Verwerfen', 'Qualitätssicherung']]);
   assert.match(bahnwechselText(w.gefragt), /‚Charge verwerfen & entsorgen‘ liegt jetzt in Qualitätssicherung statt Verarbeitung\./);
 });
+
+test('a loop and an association between two elements count as changed where their waypoints differ (story 2.33)', () => {
+  const xml = fs.readFileSync(path.join(REPO, 'tests/fixtures/bpmn-layout/assoziationen.laid-out.bpmn'), 'utf8');
+  const model = readProcess(parseXml(xml)).model;
+  const anders = xml.replace(/(bpmnElement="AS_F_Abschmecken"><di:waypoint x=")(\d+)/, (m, a, x) => a + (+x + 10))
+    .replace(/(bpmnElement="AS_Kasse_Linie"><di:waypoint x=")(\d+)/, (m, a, x) => a + (+x + 10));
+  assert.deepEqual(aenderungen(xml, anders, model).flows.map(f => f.id).sort(), ['AS_F_Abschmecken', 'AS_Kasse_Linie']);
+});

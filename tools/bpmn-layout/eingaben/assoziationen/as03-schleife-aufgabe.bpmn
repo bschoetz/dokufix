@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:process id="P_as03" isExecutable="false">
+    <bpmn:startEvent id="S" name="Zutaten bereit" />
+    <bpmn:task id="T_Kneten" name="Teig kneten" default="f_weiter" />
+    <bpmn:task id="T_Backen" name="Brot backen" />
+    <bpmn:endEvent id="End" name="Brot fertig" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="T_Kneten" />
+    <bpmn:sequenceFlow id="f_schleife" name="noch zu fest" sourceRef="T_Kneten" targetRef="T_Kneten"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">zu fest</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_weiter" sourceRef="T_Kneten" targetRef="T_Backen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Backen" targetRef="End" />
+  </bpmn:process>
+</bpmn:definitions>

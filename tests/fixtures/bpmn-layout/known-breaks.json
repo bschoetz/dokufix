@@ -132,5 +132,17 @@
  "daten-namen": [],
  "daten-weggelassen": [],
  "demo-daten": [],
- "demo-daten-sonder": []
+ "demo-daten-sonder": [],
+ "assoziationen": [
+  "link-through AS_Komp_Linie AS_Platz",
+  "link-through AS_Komp_Linie AS_Reservieren",
+  "link-through AS_Signal_Linie AS_F_Abschmecken",
+  "link-through AS_Signal_Linie AS_Kochen",
+  "link-through AS_Signal_Linie AS_Komp",
+  "link-through AS_Signal_Linie AS_Reservieren"
+ ],
+ "as-signal": [],
+ "as-schleife-bahnen": [
+  "node-outside-lane End L_Annahme"
+ ]
 }

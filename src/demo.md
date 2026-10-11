@@ -982,6 +982,57 @@ Ein Datenobjekt, das der Unterprozess „Auftrag ausführen“ schreibt, steht �
 </bpmn:definitions>
 ```
 
+### BPMN ohne Koordinaten: Assoziationen zwischen Knoten und Flüsse auf sich selbst
+
+Zwei Arten Linie, die BPMN ohne Koordinaten bis Story 2.33 wegließ. Eine **Assoziation zwischen zwei Elementen** läuft gepunktet und gerade von Umriss zu Umriss: Das Signal „Gast angemeldet“ in der Bahn Empfang führt zu „Anmeldung gehört“ in der Bahn Küche, über die Bahngrenze. Das Kompensationsereignis an „Tisch reservieren“ führt zu „Reservierung lösen“, der Datenspeicher „Kassensystem“ zu „Rechnung schreiben“. Ein **Fluss auf sich selbst** läuft als Schleife rechts aus seinem Knoten heraus und oben wieder hinein: an der Aufgabe „Essen kochen“ mit dem Namen „abschmecken“ darüber, am Gateway „Platz frei?“ ohne Namen. Weggelassen, mit einer Zeile auf der Konsole: eine Assoziation von einer Aufgabe zu einem Sequenzfluss ohne Notiz an einem Ende.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Assoziationen" targetNamespace="http://example.org/dokufix">
+  <bpmn:signal id="AS_Signal" name="Gast"/>
+  <bpmn:collaboration id="AS_Zusammenarbeit">
+    <bpmn:participant id="AS_Pool" name="Gasthaus" processRef="AS_Prozess"/>
+  </bpmn:collaboration>
+  <bpmn:process id="AS_Prozess" isExecutable="false">
+    <bpmn:laneSet id="AS_Bahnen">
+      <bpmn:lane id="AS_Empfang" name="Empfang">
+        <bpmn:flowNodeRef>AS_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Platz</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Reservieren</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Loesen</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Melden</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Rechnung</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Ende</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="AS_Kueche" name="Küche">
+        <bpmn:flowNodeRef>AS_Koch_Start</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Hoeren</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Kochen</bpmn:flowNodeRef><bpmn:flowNodeRef>AS_Koch_Ende</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="AS_Start" name="Gast kommt"/>
+    <bpmn:exclusiveGateway id="AS_Platz" name="Platz frei?" default="AS_F_Frei"/>
+    <bpmn:task id="AS_Reservieren" name="Tisch reservieren"/>
+    <bpmn:boundaryEvent id="AS_Komp" attachedToRef="AS_Reservieren"><bpmn:compensateEventDefinition id="AS_Komp_Def"/></bpmn:boundaryEvent>
+    <bpmn:task id="AS_Loesen" name="Reservierung lösen" isForCompensation="true"/>
+    <bpmn:intermediateThrowEvent id="AS_Melden" name="Gast angemeldet"><bpmn:signalEventDefinition id="AS_Melden_Def" signalRef="AS_Signal"/></bpmn:intermediateThrowEvent>
+    <bpmn:task id="AS_Rechnung" name="Rechnung schreiben"/>
+    <bpmn:endEvent id="AS_Ende" name="Gast geht"/>
+    <bpmn:startEvent id="AS_Koch_Start" name="Schicht beginnt"><bpmn:timerEventDefinition id="AS_Koch_Zeit"/></bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="AS_Hoeren" name="Anmeldung gehört"><bpmn:signalEventDefinition id="AS_Hoeren_Def" signalRef="AS_Signal"/></bpmn:intermediateCatchEvent>
+    <bpmn:task id="AS_Kochen" name="Essen kochen" default="AS_F_Fertig"/>
+    <bpmn:endEvent id="AS_Koch_Ende" name="Essen serviert"/>
+    <bpmn:dataStoreReference id="AS_Kasse" name="Kassensystem"/>
+    <bpmn:sequenceFlow id="AS_F1" sourceRef="AS_Start" targetRef="AS_Platz"/>
+    <bpmn:sequenceFlow id="AS_F_Warten" sourceRef="AS_Platz" targetRef="AS_Platz"/>
+    <bpmn:sequenceFlow id="AS_F_Frei" sourceRef="AS_Platz" targetRef="AS_Reservieren"/>
+    <bpmn:sequenceFlow id="AS_F2" sourceRef="AS_Reservieren" targetRef="AS_Melden"/>
+    <bpmn:sequenceFlow id="AS_F3" sourceRef="AS_Melden" targetRef="AS_Rechnung"/>
+    <bpmn:sequenceFlow id="AS_F4" sourceRef="AS_Rechnung" targetRef="AS_Ende"/>
+    <bpmn:sequenceFlow id="AS_K1" sourceRef="AS_Koch_Start" targetRef="AS_Hoeren"/>
+    <bpmn:sequenceFlow id="AS_K2" sourceRef="AS_Hoeren" targetRef="AS_Kochen"/>
+    <bpmn:sequenceFlow id="AS_F_Abschmecken" name="abschmecken" sourceRef="AS_Kochen" targetRef="AS_Kochen"/>
+    <bpmn:sequenceFlow id="AS_F_Fertig" sourceRef="AS_Kochen" targetRef="AS_Koch_Ende"/>
+    <bpmn:association id="AS_Signal_Linie" sourceRef="AS_Melden" targetRef="AS_Hoeren"/>
+    <bpmn:association id="AS_Komp_Linie" associationDirection="One" sourceRef="AS_Komp" targetRef="AS_Loesen"/>
+    <bpmn:association id="AS_Kasse_Linie" sourceRef="AS_Kasse" targetRef="AS_Rechnung"/>
+    <bpmn:association id="AS_Zum_Fluss" sourceRef="AS_Rechnung" targetRef="AS_F3"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
 ### BPMN ohne Koordinaten: zwei Schleifen in einer Reihe
 
 Zwei Rückflüsse in einer Bahn, einer um den anderen herum: Sie sollten beide oberhalb der Reihe laufen sehen, jeden auf einer eigenen Höhe, den kürzeren innen, und keinen Pfeil auf den Kanten der Aufgaben oder durch eine Raute.

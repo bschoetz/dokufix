@@ -574,6 +574,9 @@ function judgeDiagrams(exp, wellFormed){
       // Story 2.32: the data object and data store references, and their data associations.
       ...(m.data || []).map(d => ({ id: d.id, tag: d.kind === 'store' ? 'dataStoreReference' : 'dataObjectReference' })),
       ...(m.dataAssociations || []).map(a => ({ id: a.id, tag: a.dir === 'in' ? 'dataInputAssociation' : 'dataOutputAssociation' })),
+      // Story 2.33: the flows from a node to itself, and the associations between two elements.
+      ...(m.loops || []).map(f => ({ id: f.id, tag: 'sequenceFlow' })),
+      ...(m.links || []).map(a => ({ id: a.id, tag: 'association' })),
     ] });
   });
   return exp;
@@ -3570,7 +3573,8 @@ const BPMN_AC2 = [
 function bpmnLayoutProblems(model, g){
   const out = [];
   // Message flows (story 2.12) as the sequence flows: on the outlines, through no symbol, their labels apart.
-  const flows = model.flows.concat(model.messages || []);
+  // A flow from a node to itself (story 2.33) as well.
+  const flows = model.flows.concat(model.messages || [], model.loops || []);
   const type = new Map([...model.nodes.map(n => [n.id, n.type]), ...model.pools.filter(p => p.id).map(p => [p.id, 'pool'])]);
   const eps = 1.5;
   const onOutline = (p, box, kind) => {
@@ -3614,6 +3618,16 @@ function bpmnLayoutProblems(model, g){
       for (let j = 0; j <= k; j++) if (inside([x1 + (x2 - x1) * j / k, y1 + (y2 - y1) * j / k], g.shapes[s.id])){ out.push('note: ' + a.id + ' runs through ' + s.id); break; }
     }
   }
+  // An association between two elements (story 2.33): each end on its element. That it runs through a symbol is a
+  // break of the rule check (link-through), listed for the fixtures, not a fault of the drawing.
+  for (const l of model.links || []){
+    const pts = g.flows[l.id];
+    if (!pts || pts.length < 2){ out.push('outline: ' + l.id + ' is not drawn'); continue; }
+    for (const [p, id] of [[pts[0], l.from], [pts[pts.length - 1], l.to]]){
+      const box = g.shapes[id], isRef = (model.data || []).some(d => d.id === id), isBoundary = (model.boundaries || []).some(b => b.id === id);
+      if (box && !onOutline(p, box, isRef ? 'task' : isBoundary ? 'event' : type.get(id))) out.push('outline: ' + l.id + ' ends at ' + fmt(p) + ', off ' + id);
+    }
+  }
   // A boundary event (story 2.30): its middle on its host's outline; a flow from it starts on its circle.
   for (const b of model.boundaries || []){
     const e = g.shapes[b.id], h = g.shapes[b.host];
@@ -3631,9 +3645,14 @@ function bpmnLayoutProblems(model, g){
     for (const n of model.nodes.concat(model.boundaries || [])){
       if (!g.shapes[n.id]) continue;
       const [x, y, w, h] = g.shapes[n.id];
+      // A loop leaves an event's or a gateway's outline between the corners of its box (story 2.33): through its own
+      // symbol only where it enters the circle or the diamond, 1 px in.
+      const round = fl.from === fl.to && fl.from === n.id && type.get(n.id) !== 'task';
+      const inRound = ([px, py]) => { const cx = x + w / 2, cy = y + h / 2; return type.get(n.id) === 'gateway' ? Math.abs(px - cx) / (w / 2 - 1) + Math.abs(py - cy) / (h / 2 - 1) < 1 : Math.hypot(px - cx, py - cy) < w / 2 - 1; };
       for (let i = 1; i < pts.length; i++){
         const [p, q] = [pts[i - 1], pts[i]];
-        if (Math.max(p[0], q[0]) > x + 1 && Math.min(p[0], q[0]) < x + w - 1 && Math.max(p[1], q[1]) > y + 1 && Math.min(p[1], q[1]) < y + h - 1){
+        if (round ? Array.from({ length: 21 }, (_, k) => [p[0] + (q[0] - p[0]) * k / 20, p[1] + (q[1] - p[1]) * k / 20]).some(inRound)
+          : Math.max(p[0], q[0]) > x + 1 && Math.min(p[0], q[0]) < x + w - 1 && Math.max(p[1], q[1]) > y + 1 && Math.min(p[1], q[1]) < y + h - 1){
           out.push('through: ' + fl.id + ' runs through ' + n.id + ' from ' + fmt(p) + ' to ' + fmt(q));
           break;
         }

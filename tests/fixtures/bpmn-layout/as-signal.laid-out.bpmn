@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:signal id="Sig_Aufstehen" name="Aufstehen" />
+  <bpmn:process id="P_as01" isExecutable="false">
+    <bpmn:laneSet id="LS_as01">
+      <bpmn:lane id="L_Eltern" name="Eltern"><bpmn:flowNodeRef>S_Eltern</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Wecken</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Signal</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Kaffee</bpmn:flowNodeRef><bpmn:flowNodeRef>End_Eltern</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Kind" name="Kind"><bpmn:flowNodeRef>S_Kind</bpmn:flowNodeRef><bpmn:flowNodeRef>C_Signal</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Aufstehen</bpmn:flowNodeRef><bpmn:flowNodeRef>End_Kind</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Eltern" name="Wecker klingelt" />
+    <bpmn:task id="T_Wecken" name="Kind wecken" />
+    <bpmn:intermediateThrowEvent id="E_Signal" name="Aufstehen gerufen"><bpmn:signalEventDefinition id="SED_1" signalRef="Sig_Aufstehen" /></bpmn:intermediateThrowEvent>
+    <bpmn:task id="T_Kaffee" name="Kaffee kochen" />
+    <bpmn:endEvent id="End_Eltern" name="Eltern bereit" />
+    <bpmn:startEvent id="S_Kind" name="Kind schläft"><bpmn:timerEventDefinition id="TED_1" /></bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="C_Signal" name="Ruf gehört"><bpmn:signalEventDefinition id="SED_2" signalRef="Sig_Aufstehen" /></bpmn:intermediateCatchEvent>
+    <bpmn:task id="T_Aufstehen" name="Aufstehen" />
+    <bpmn:endEvent id="End_Kind" name="Kind wach" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Eltern" targetRef="T_Wecken" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Wecken" targetRef="E_Signal" />
+    <bpmn:sequenceFlow id="f3" sourceRef="E_Signal" targetRef="T_Kaffee" />
+    <bpmn:sequenceFlow id="f4" sourceRef="T_Kaffee" targetRef="End_Eltern" />
+    <bpmn:sequenceFlow id="f5" sourceRef="S_Kind" targetRef="C_Signal" />
+    <bpmn:sequenceFlow id="f6" sourceRef="C_Signal" targetRef="T_Aufstehen" />
+    <bpmn:sequenceFlow id="f7" sourceRef="T_Aufstehen" targetRef="End_Kind" />
+    <bpmn:association id="A_Signal" sourceRef="E_Signal" targetRef="C_Signal" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="P_as01">
+      <bpmndi:BPMNShape id="L_Eltern_di" bpmnElement="L_Eltern" isHorizontal="true"><dc:Bounds x="30" y="0" width="816" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Kind_di" bpmnElement="L_Kind" isHorizontal="true"><dc:Bounds x="30" y="144" width="816" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Eltern_di" bpmnElement="S_Eltern"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Wecken_di" bpmnElement="T_Wecken"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Signal_di" bpmnElement="E_Signal"><dc:Bounds x="420" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Kaffee_di" bpmnElement="T_Kaffee"><dc:Bounds x="546" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Eltern_di" bpmnElement="End_Eltern"><dc:Bounds x="738" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Kind_di" bpmnElement="S_Kind"><dc:Bounds x="102" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="238" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="C_Signal_di" bpmnElement="C_Signal"><dc:Bounds x="252" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="225" y="238" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Aufstehen_di" bpmnElement="T_Aufstehen"><dc:Bounds x="378" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_Kind_di" bpmnElement="End_Kind"><dc:Bounds x="738" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="711" y="238" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="72"/><di:waypoint x="420" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="456" y="72"/><di:waypoint x="546" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4"><di:waypoint x="666" y="72"/><di:waypoint x="738" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5"><di:waypoint x="138" y="216"/><di:waypoint x="252" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f6_di" bpmnElement="f6"><di:waypoint x="288" y="216"/><di:waypoint x="378" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f7_di" bpmnElement="f7"><di:waypoint x="498" y="216"/><di:waypoint x="738" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="A_Signal_di" bpmnElement="A_Signal"><di:waypoint x="424" y="84"/><di:waypoint x="284" y="204"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

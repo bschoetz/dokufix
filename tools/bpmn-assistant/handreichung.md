@@ -51,10 +51,11 @@ Das XML steht in einem eingezäunten Block mit der Sprache `bpmn`:
 | Teilprozess | `bpmn:subProcess`, `adHocSubProcess`, `transaction` | als **ein** Symbol, zugeklappt; sein Inhalt wird nicht angeordnet |
 | angeheftetes Ereignis | `bpmn:boundaryEvent attachedToRef="…"` mit Definition (Zeit, Fehler, Eskalation, Nachricht …) | auf der Unterkante seiner Aufgabe oder seines Teilprozesses; unterbrechend, mit `cancelActivity="false"` nicht (gestrichelt); mehrere an einer Aufgabe nebeneinander; der Ausnahmepfad steht eine Zeile darunter; Sequenzflüsse gehen von ihm aus, nie hinein |
 | Gateway | `exclusiveGateway`, `parallelGateway`, `inclusiveGateway`, `eventBasedGateway`, `complexGateway` | jede Art; ein Gateway darf in jeder Bahn liegen |
-| Sequenzfluss | `bpmn:sequenceFlow sourceRef="…" targetRef="…"` | `name` wird als Beschriftung gezeichnet; Rückflüsse (Schleifen) sind erlaubt |
+| Sequenzfluss | `bpmn:sequenceFlow sourceRef="…" targetRef="…"` | `name` wird als Beschriftung gezeichnet; Rückflüsse (Schleifen) sind erlaubt; ein Fluss von einem Knoten zu sich selbst läuft als kleine Schleife rechts heraus und oben wieder hinein, sein Name darüber |
 | Notiz | `bpmn:textAnnotation` mit `<bpmn:text>…</bpmn:text>` und eine `bpmn:association` von oder zu ihr, im `process` oder im `collaboration` | Ziel: ein Flussknoten, ein angeheftetes Ereignis, ein Sequenz- oder Nachrichtenfluss, ein `participant`, ein Datenobjekt oder Datenspeicher; ohne `association` oben links in ihrem Pool, im `collaboration` über den Pools; die Notiz steht neben ihrem Ziel, möglichst rechts davon, die Assoziation gepunktet; eine Notiz an einem Pool rechts neben dem Pool; Zeilenumbrüche im Text bleiben; kurze Notizen lesen sich am besten |
 | Datenobjekt | `bpmn:dataObjectReference` mit `name` und `dataObjectRef` auf ein `bpmn:dataObject`, im `process`; ein Zustand als `<bpmn:dataState name="…"/>` darin | 36 × 50, der Name darunter, der Zustand als zweite Zeile `[Zustand]`; über dem Schritt, der es benutzt, bei mehreren Schritten in der Mitte ihrer Spalten, in der Bahn mit den meisten, stets im Pool seines Prozesses; ein Symbol für alle Schritte. Benutzt es kein Schritt, steht es oben links in der Bahn, deren `flowNodeRef` es nennt, sonst in seinem Pool |
 | Datenspeicher | `bpmn:dataStoreReference` mit `name` (und `dataStoreRef` auf einen `bpmn:dataStore`), im `process` | 50 × 50, sonst wie ein Datenobjekt |
+| Assoziation zwischen zwei Elementen | `bpmn:association` zwischen zwei Flussknoten, einem angehefteten Ereignis und einer Aktivität oder einer Daten-Referenz und einem Schritt, ohne Notiz an einem Ende (Signal-Wurf → Signal-Fang, Kompensationsereignis → Kompensationsaktivität) | gepunktet und gerade von Umriss zu Umriss; liegen beide übereinander oder nebeneinander, senkrecht oder waagerecht. Für Daten, die ein Schritt liest oder schreibt, ist die Datenassoziation da |
 | Datenassoziation | lesen: `bpmn:dataInputAssociation` im Schritt (oder Ereignis) mit `<bpmn:sourceRef>` auf die Referenz und `<bpmn:targetRef>` auf eine `bpmn:property` des Schritts; schreiben: `bpmn:dataOutputAssociation` mit `<bpmn:targetRef>` auf die Referenz | gepunktet mit Pfeil, von der Referenz zum lesenden Schritt, vom schreibenden Schritt zur Referenz; liest und schreibt ein Schritt dieselbe Referenz, zwei Linien nebeneinander |
 | Namen | Attribut `name` | Leerraum wird zusammengezogen; ein Label ist bis 90 px breit, kurze Namen lesen sich am besten |
 
@@ -69,13 +70,12 @@ Nicht nötig, aber unschädlich: `bpmn:incoming` und `bpmn:outgoing` in den Knot
 | `dataInputAssociation`, `dataOutputAssociation`, deren anderes Ende keine Referenz ist (eine `property`, ein Ein- oder Ausgang der `ioSpecification`, nichts) | fehlt |
 | `bpmn:dataObject` ohne `dataObjectReference` | fehlt; auch bpmn-js zeichnet nur Referenzen |
 | `bpmn:textAnnotation` ohne Text | fehlt |
-| `bpmn:association` ohne Notiz an einem Ende | fehlt, etwa zwischen zwei Flussknoten (Signal-Wurf → Signal-Fang), zu einer Kompensationsaktivität oder zwischen einem Schritt und einem Datenspeicher (dafür ist die Datenassoziation da) |
+| `bpmn:association` ohne Notiz an einem Ende, die nicht zwei Elemente verbindet (etwa zu einem Sequenzfluss) | fehlt |
 | `bpmn:group` | fehlt |
 | `participant` ohne `id` | fehlt samt den Nachrichtenflüssen zu ihm; mit Prozess wird der Prozess ohne Pool-Rahmen gezeichnet |
 | `bpmn:messageFlow` innerhalb eines Pools | fehlt |
 | Inhalt eines Teilprozesses, seine Datenobjekte eingeschlossen | fehlt; der Teilprozess steht als ein Symbol |
 | äußere Bahn verschachtelter Bahnen | fehlt; ihre inneren Bahnen stehen |
-| Sequenzfluss von einem Knoten zu sich selbst | fehlt |
 | Element oder Fluss ohne `id` | fehlt |
 | Fluss, der an einem weggelassenen Element hängt | fehlt |
 

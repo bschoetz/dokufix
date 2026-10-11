@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:collaboration id="C_as05"><bpmn:participant id="Pool_as05" name="Werkstatt" processRef="P_as05" /></bpmn:collaboration>
+  <bpmn:process id="P_as05" isExecutable="false">
+    <bpmn:laneSet id="LS_as05">
+      <bpmn:lane id="L_Annahme" name="Annahme"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Pruefen</bpmn:flowNodeRef><bpmn:flowNodeRef>End</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Technik" name="Technik"><bpmn:flowNodeRef>T_Reparieren</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Testen</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S" name="Rad gebracht" />
+    <bpmn:task id="T_Pruefen" name="Schaden aufnehmen" default="f_weiter" />
+    <bpmn:task id="T_Reparieren" name="Reparieren" />
+    <bpmn:task id="T_Testen" name="Probefahrt" default="f_gut" />
+    <bpmn:endEvent id="End" name="Rad abgeholt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="T_Pruefen" />
+    <bpmn:sequenceFlow id="f_nachfragen" name="unklar" sourceRef="T_Pruefen" targetRef="T_Pruefen"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">unklar</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_weiter" sourceRef="T_Pruefen" targetRef="T_Reparieren" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Reparieren" targetRef="T_Testen" />
+    <bpmn:sequenceFlow id="f_nochmal" sourceRef="T_Testen" targetRef="T_Testen"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">quietscht</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_gut" sourceRef="T_Testen" targetRef="End" />
+  </bpmn:process>
+</bpmn:definitions>

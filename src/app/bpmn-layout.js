@@ -151,7 +151,7 @@ const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { da
 
 // The pools and their processes, read from the parsed XML:
 //   { model, leftOut }
-//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, data, dataAssociations, insert }
+//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, data, dataAssociations, links, loops, insert }
 //     pools: [{ id, name, box }], one per pool laid out, top to bottom in
 //            the order of the participants; id null where nothing is drawn as
 //            a pool: a process without a participant, a participant without
@@ -201,6 +201,14 @@ const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { da
 //            a boundary event and a reference: dir in, read by the node (a
 //            dataInputAssociation, its first sourceRef the reference), or out,
 //            written (a dataOutputAssociation, its targetRef the reference)
+//     links: [{ id, from, to }], the associations between two elements laid
+//            out, neither a text annotation (story 2.33): a flow node, a
+//            boundary event or a data reference at each end (a signal thrown
+//            and caught, a compensation event and its activity, a data store
+//            linked to a task by a plain association)
+//     loops: [{ id, from, to, name }], the sequence flows from a flow node to
+//            itself (story 2.33), from and to that node; neither LMM nor the
+//            grid sees them
 //     insert: null, or where processes have no collaboration (Ben,
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
@@ -259,7 +267,7 @@ export function readProcess(doc){
   const referred = new Set(candidates.map(c => c.proc));
   if (participants.length) for (const p of processes) if (!referred.has(p)) leave(p, 'no participant refers to it');
 
-  const nodes = [], lanes = [], flows = [], pools = [], boundaries = [];
+  const nodes = [], lanes = [], flows = [], pools = [], boundaries = [], loops = [];
   const byId = new Map(), poolOfNode = new Map();
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
@@ -272,6 +280,7 @@ export function readProcess(doc){
     for (const n of own.nodes){ byId.set(n.id, n); poolOfNode.set(n.id, index); }
     for (const [id, lane] of own.artifactLane) if (!artifactLane.has(id)) artifactLane.set(id, lane);
     flows.push(...own.flows);
+    loops.push(...own.loops);
     boundaries.push(...own.boundaries);
     pools.push({ id: participant && attr(participant, 'id') ? attr(participant, 'id') : null, name: participant ? clean(attr(participant, 'name')) : '', el: participant, proc, standIn: own.standIn });
   }
@@ -318,11 +327,11 @@ export function readProcess(doc){
   const procPool = new Map(pools.map((p, i) => [p.proc, i]).filter(([proc], i) => proc && !pools[i].box));
   const where = { procPool, artifactLane };
   const { refs, dataAssociations } = readData(data, { byId, boundaries }, where);
-  const { notes, associations } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages, refPool: new Map(refs.map(r => [r.id, r.pool])) }, where);
+  const { notes, associations, links } = readNotes(noted, { pools, byId, poolOfNode, boundaries, flows: flows.concat(loops), messages, refPool: new Map(refs.map(r => [r.id, r.pool])) }, where);
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
   // A participant without an id gets no pool shape.
   for (const p of pools) if (p.el && !attr(p.el, 'id')) leave(p.el, 'has no id; it is not drawn as a pool');
-  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, insert }, leftOut };
+  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, links, loops, insert }, leftOut };
 }
 
 // The text annotations and their associations (story 2.31): noted, [{ el, slot }] in the order of the XML, slot its
@@ -352,13 +361,18 @@ function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages
     : messageOf.has(id) ? { kind: 'message', pool: null }
     : poolIndex.has(id) ? { kind: 'pool', pool: poolIndex.get(id) }
     : refPool.has(id) ? { kind: 'data', pool: refPool.get(id) } : null;
-  const linked = new Map();
+  const linked = new Map(), links = [];
+  // An end of an association between two elements (story 2.33): a flow node, a boundary event or a reference.
+  const linkable = id => { const p = !texts.has(id) && !empty.has(id) && partnerOf(id); return !!p && ['node', 'boundary', 'data'].includes(p.kind); };
   for (const { el, slot } of noted){
     if (local(el) !== 'association') continue;
     const id = attr(el, 'id'), from = attr(el, 'sourceRef'), to = attr(el, 'targetRef');
     const note = texts.has(from) && !texts.has(to) ? from : texts.has(to) && !texts.has(from) ? to : null;
     const other = note === from ? to : from, partner = note && partnerOf(other);
     if (!id) slot.reason = 'has no id';
+    else if (!note && from !== to && linkable(from) && linkable(to)) links.push({ id, from, to });
+    // Neither end a text annotation: an end that is nothing laid out is the reason (story 2.33).
+    else if (!note && !texts.has(from) && !texts.has(to) && !empty.has(from) && !empty.has(to) && [from, to].some(x => !partnerOf(x))) slot.reason = 'touches ' + [...new Set([from, to].filter(x => !partnerOf(x)).map(x => x || 'nothing'))].join(' and ') + ', which is not laid out';
     else if (!note && (empty.has(from) || empty.has(to))) slot.reason = 'its text annotation ' + (empty.has(from) ? from : to) + ' has no text';
     else if (!note) slot.reason = texts.has(from) ? 'between two text annotations' : 'has no text annotation at either end';
     else if (!partner) slot.reason = 'touches ' + (other || 'nothing') + ', which is not laid out';
@@ -371,7 +385,7 @@ function readNotes(noted, { pools, byId, poolOfNode, boundaries, flows, messages
     if (!linked.has(id)) notes.push({ id, text: noteText(el), ...aside(id, proc, { procPool, artifactLane }), lone: true });
     else notes.push({ id, text: noteText(el), pool: linked.get(id) });
   }
-  return { notes, associations };
+  return { notes, associations, links };
 }
 
 // Where a text annotation or a reference without a partner stands (story 2.32): { pool, lane }, the pool its process is
@@ -505,17 +519,17 @@ function readPool(proc, participant, before, beforeLanes, leave, note, data){
     for (const k of kids(el)) if (local(k) === 'flowNodeRef' && !byId.has(k.textContent.trim()) && !artifactLane.has(k.textContent.trim())) artifactLane.set(k.textContent.trim(), lane);
   }
 
-  const flows = [];
+  const flows = [], loops = [];
   for (const el of kids(proc)){
     if (local(el) !== 'sequenceFlow') continue;
     const from = attr(el, 'sourceRef'), to = attr(el, 'targetRef');
-    // A flow from a node to itself is left out: the router has no way for it yet.
-    if (from === to && byId.has(from) && attr(el, 'id')) leave(el, 'a flow from a node to itself');
+    // A flow from a node to itself is a loop beside it (story 2.33), drawn after the grid.
+    if (from === to && byId.has(from) && attr(el, 'id')) loops.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')) });
     // A flow leaves a boundary event and never enters one.
     else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')) });
     else leave(el, !attr(el, 'id') ? 'has no id' : boundaryIds.has(to) ? 'enters the boundary event ' + to : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id) && !boundaryIds.has(id)))].join(' and ') + ', which is not laid out');
   }
-  return { nodes, lanes, flows, boundaries, standIn, artifactLane };
+  return { nodes, lanes, flows, boundaries, standIn, artifactLane, loops };
 }
 
 // One line per left-out element for the console.
@@ -912,6 +926,40 @@ export function dataWay(r, s, offset = 0){
   const nx = -dy / len * offset, ny = dx / len * offset;
   const a = { x: ref.cx + nx, y: ref.cy + ny }, b = { x: s.cx + nx, y: s.cy + ny };
   const p = leaveShape(ref, a, b), q = leaveShape(s, b, a);
+  return [[R(p.x), R(p.y)], [R(q.x), R(q.y)]];
+}
+// How far a loop runs beside its node (story 2.33).
+export const LOOP_OUT = 20;
+// The waypoints of a flow from a node to itself (story 2.33), its shape s ({ kind, cx, cy, w, h }): out of its right
+// side a quarter of its height above the middle (the middle is where its other flows leave), LOOP_OUT to the right, up
+// to LOOP_OUT above it, back left, and down into its top: on a task a quarter of its width right of the middle, on an
+// event or a gateway in the middle. [[x, y], …], orthogonal.
+export function loopWay(s){
+  // At least 13 px above the middle, so that it does not run beside a flow out of the middle (closer than 12 px is
+  // a break): on an event a quarter of its height is 9 px.
+  const yOut = s.cy - Math.max(s.h / 4, 13), xIn = s.kind === 'rect' ? s.cx + s.w / 4 : s.cx;
+  // Rounded away from the shape, so that the loop never starts or ends inside it.
+  const xOut = Math.ceil(edgeAt(s, R(yOut), 1, true)), yIn = Math.floor(edgeAt(s, R(xIn), -1, false));
+  const right = R(s.cx + s.w / 2 + LOOP_OUT), top = R(s.cy - s.h / 2 - LOOP_OUT);
+  return [[xOut, R(yOut)], [right, R(yOut)], [right, top], [R(xIn), top], [R(xIn), yIn]];
+}
+// The waypoints of an association between two elements (story 2.33), from the shape a to the shape b (each { kind, cx,
+// cy, w, h }): one above the other, a vertical line in the middle of where they overlap across; beside each other, a
+// horizontal one; otherwise straight between their middles, as bpmn-js draws an association, cut at both outlines.
+// [[x, y], [x, y]].
+export function linkWay(a, b){
+  const box = s => [s.cx - s.w / 2, s.cy - s.h / 2, s.cx + s.w / 2, s.cy + s.h / 2];
+  const [ax1, ay1, ax2, ay2] = box(a), [bx1, by1, bx2, by2] = box(b);
+  const ox1 = Math.max(ax1, bx1), ox2 = Math.min(ax2, bx2), oy1 = Math.max(ay1, by1), oy2 = Math.min(ay2, by2);
+  if (ox2 - ox1 >= 8 && (ay2 <= by1 || ay1 >= by2)){
+    const v = R((ox1 + ox2) / 2), down = ay2 <= by1;
+    return [[v, R(edgeAt(a, v, down ? 1 : -1, false))], [v, R(edgeAt(b, v, down ? -1 : 1, false))]];
+  }
+  if (oy2 - oy1 >= 8 && (ax2 <= bx1 || ax1 >= bx2)){
+    const v = R((oy1 + oy2) / 2), right = ax2 <= bx1;
+    return [[R(edgeAt(a, v, right ? 1 : -1, true)), v], [R(edgeAt(b, v, right ? -1 : 1, true)), v]];
+  }
+  const p = leaveShape(a, { x: a.cx, y: a.cy }, { x: b.cx, y: b.cy }), q = leaveShape(b, { x: b.cx, y: b.cy }, { x: a.cx, y: a.cy });
   return [[R(p.x), R(p.y)], [R(q.x), R(q.y)]];
 }
 // The boxes a way [[x, y], …] covers, for covered(): a straight piece its box, a slanted one a small box every 4 px.
@@ -3168,6 +3216,14 @@ function finishGrid(g, model, measure, rules, reroute = true){
     di.pools[p.id] = [0, R(bandY[first]), R(totalW), R(bandY[last] + rowH[last] - bandY[first])];
   });
   for (const n of [...model.nodes, ...(model.boundaries || [])]){ const { cx, cy, w, h } = box[n.id]; di.nodes[n.id] = [R(cx - w / 2), R(cy - h / 2), w, h]; }
+  // A flow from a node to itself (story 2.33): a loop beside it, a route like the others from here on, so that its label
+  // is placed, lanes grow for it and it moves with its node.
+  const loopType = new Map(model.nodes.map(n => [n.id, n.type]));
+  for (const f of model.loops || []){
+    const t = loopType.get(f.from), c = box[f.from];
+    const pts = loopWay({ kind: t === 'task' ? 'rect' : t === 'gateway' ? 'diamond' : 'circle', cx: c.cx, cy: c.cy, w: c.w, h: c.h }).map(([x, y]) => ({ x, y }));
+    routes.push({ f, pts, obstacles: [], self: true });
+  }
   for (const { pts } of routes) orthogonal(pts);
   for (const { f, pts } of routes) di.flows[f.id] = pts.map(p => [R(p.x), R(p.y)]);
   const gateways = new Set(model.nodes.filter(n => n.type === 'gateway').map(n => n.id));
@@ -3454,6 +3510,17 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   const dataPool = new Map();
   const usersOf = new Map(data.map(d => [d.id, []]));
   for (const a of dataAssocs) if (!usersOf.get(a.ref).includes(a.node)) usersOf.get(a.ref).push(a.node);
+  // A flow node or boundary event an association links to a reference (story 2.33; p-rc1 links a data store to tasks so)
+  // uses it as well: the reference stands near it, the association drawn straight (linkWay()).
+  const linkedTo = new Map();
+  for (const l of model.links || []){
+    const ref = usersOf.has(l.from) ? l.from : usersOf.has(l.to) ? l.to : null, node = ref === l.from ? l.to : l.from;
+    if (!ref || usersOf.has(node) || !box[node]) continue;
+    if (!usersOf.get(ref).includes(node)) usersOf.get(ref).push(node);
+    (linkedTo.get(ref) || linkedTo.set(ref, []).get(ref)).push(node);
+  }
+  const rectOf = ([x, y, w, h]) => ({ kind: 'rect', cx: x + w / 2, cy: y + h / 2, w, h });
+  const linkWaysOf = (d, place, at) => (linkedTo.get(d.id) || []).map(u => ({ node: u, way: linkWay(rectOf(place), at(u)) }));
   // Two data associations between one reference and one node lie side by side, the one in first.
   const pairOffset = new Map();
   for (const d of data) for (const u of usersOf.get(d.id)){
@@ -3469,7 +3536,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     di.data = byId(); di.dataLabels = byId(); di.dataAssociations = byId();
     const shapeOf = id => { const c = box[id]; return { kind: kindOf(id), cx: c.cx, cy: c.cy, w: c.w, h: c.h }; };
     // A reference's lines at place, each with its node: [{ node, way }].
-    const waysOf = (d, place) => usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(place, shapeOf(u), pairOffset.get(a.id)) })));
+    const waysOf = (d, place) => [...usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(place, shapeOf(u), pairOffset.get(a.id)) }))), ...linkWaysOf(d, place, shapeOf)];
     refreshDataSegs = () => {
       dataSegs.length = 0;
       for (const d of data) if (di.data[d.id]) dataSegs.push(...waysOf(d, di.data[d.id]).flatMap(x => wayBoxes(x.way)));
@@ -3572,7 +3639,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
             const p = [x, R(y), w, h];
             const across = segments.filter(sg => sg[3] > 0 && sg[1] < cut && sg[1] + sg[3] > cut && sg[0] >= x - 3 && sg[0] <= x + w + 3).length +
               taken.filter(b => b[1] < cut && b[1] + b[3] > cut && b[0] < x + w && b[0] + b[2] > x).length;
-            const ways = usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(p, at(u), pairOffset.get(a.id)) })));
+            const ways = [...usersOf.get(d.id).flatMap(u => dataAssocs.filter(a => a.ref === d.id && a.node === u).map(a => ({ node: u, way: dataWay(p, at(u), pairOffset.get(a.id)) }))), ...linkWaysOf(d, p, at)];
             const faults = across + wayFaults(ways, u => nodesNow.get(u), symbolsNow, takenNow, true);
             if (!best || faults < best.faults) best = { faults, cut, p };
             if (!faults) break;
@@ -3685,7 +3752,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   const framed = i => model.pools[i].id || model.lanes.some(l => (l.pool ?? 0) === i && !l.synthetic);
   const pointsOf = i => {
     const xs = [], ys = [];
-    for (const f of model.flows) if (poolOf.get(f.from) === i) for (const [x, y] of di.flows[f.id]){ xs.push(x); ys.push(y); }
+    for (const f of model.flows.concat(model.loops || [])) if (poolOf.get(f.from) === i) for (const [x, y] of di.flows[f.id]){ xs.push(x); ys.push(y); }
     taken.forEach(([x, y, w, h], k) => { if (takenPool[k] === i){ xs.push(x, x + w); ys.push(y, y + h); } });
     return { xs, ys };
   };
@@ -3700,7 +3767,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
   // Moves down by dy what belongs to a pool own() names, and what belongs to no pool (the message flows) at or
   // below y0: symbols, labels, lanes, the points of every flow.
-  const flowPool = new Map(model.flows.map(f => [f.id, poolOf.get(f.from)]));
+  const flowPool = new Map(model.flows.concat(model.loops || []).map(f => [f.id, poolOf.get(f.from)]));
   // The places of the labels of events and gateways kept in taken, which pointsOf() reads, are arrays of their own
   // beside di.labels and move with them; a flow's label and a text annotation share their array with taken and move
   // once (review of 2.31: a pool further down grew for where its labels had been).
@@ -3803,6 +3870,16 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
       const way = dataWay(di.data[a.ref], shapeAt(a.node), pairOffset.get(a.id));
       di.dataAssociations[a.id] = a.dir === 'in' ? way : way.reverse();
     }
+  }
+
+  // Every association between two elements (story 2.33), from its source to its target where they now stand.
+  if ((model.links || []).length){
+    di.links = byId();
+    const shapeOf = id => {
+      const isData = di.data && di.data[id], [x, y, w, h] = isData ? di.data[id] : di.nodes[id];
+      return { kind: isData ? 'rect' : kindOf(id), cx: x + w / 2, cy: y + h / 2, w, h };
+    };
+    for (const a of model.links) di.links[a.id] = linkWay(shapeOf(a.from), shapeOf(a.to));
   }
 }
 
@@ -3960,6 +4037,10 @@ export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
     out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + '_di')) + '" bpmnElement="' + esc(f.id) + '">' +
       di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + label(di.flowLabels[f.id]) + '</bpmndi:BPMNEdge>\n';
   }
+  for (const f of model.loops || []){
+    out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + '_di')) + '" bpmnElement="' + esc(f.id) + '">' +
+      di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + label(di.flowLabels[f.id]) + '</bpmndi:BPMNEdge>\n';
+  }
   for (const f of model.messages || []){
     out += '      <bpmndi:BPMNEdge id="' + esc(fresh(f.id + '_di')) + '" bpmnElement="' + esc(f.id) + '">' +
       di.flows[f.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + label(di.flowLabels[f.id]) + '</bpmndi:BPMNEdge>\n';
@@ -3971,6 +4052,10 @@ export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
   for (const a of model.dataAssociations || []){
     out += '      <bpmndi:BPMNEdge id="' + esc(fresh(a.id + '_di')) + '" bpmnElement="' + esc(a.id) + '">' +
       di.dataAssociations[a.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + '</bpmndi:BPMNEdge>\n';
+  }
+  for (const a of model.links || []){
+    out += '      <bpmndi:BPMNEdge id="' + esc(fresh(a.id + '_di')) + '" bpmnElement="' + esc(a.id) + '">' +
+      di.links[a.id].map(p => '<di:waypoint x="' + p[0] + '" y="' + p[1] + '"/>').join('') + '</bpmndi:BPMNEdge>\n';
   }
   out += '    </bpmndi:BPMNPlane>\n  </bpmndi:BPMNDiagram>\n';
   return { xml: text.slice(0, at) + out + text.slice(at), diagram };

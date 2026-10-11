@@ -5,7 +5,8 @@
 // in a lane's bounds), a node with another order left–right against any
 // other node or another row against a node of its lane (each pair counted
 // for the node that moved more along that axis; tolerances 30 and 20 px),
-// a flow with other waypoints. Pure, for Node and the browser; the model is
+// a flow with other waypoints (a loop and an association between two
+// elements too, story 2.33). Pure, for Node and the browser; the model is
 // readProcess()'s (src/app/bpmn-layout.js) of the input.
 //
 // Nothing done on loading.
@@ -55,7 +56,8 @@ export function aenderungen(erzeugt, bearbeitet, model){
   const listOf = axis => [...moved[axis]].sort((u, v) => v[1].length - u[1].length)
     .map(([id, mit]) => ({ id, d: Math.round(e.shapes[id]['c' + axis] - g.shapes[id]['c' + axis]), mit }));
   const bends = pts => Math.max(0, (pts || []).length - 2);
-  const flows = model.flows.filter(f => g.flows[f.id] && e.flows[f.id] && JSON.stringify(g.flows[f.id]) !== JSON.stringify(e.flows[f.id]))
+  // The loops and the associations between two elements (story 2.33) as well: both drawn edges with two ends.
+  const flows = model.flows.concat(model.loops || [], model.links || []).filter(f => g.flows[f.id] && e.flows[f.id] && JSON.stringify(g.flows[f.id]) !== JSON.stringify(e.flows[f.id]))
     .map(f => ({ id: f.id, from: f.from, to: f.to, vor: bends(g.flows[f.id]), nach: bends(e.flows[f.id]) }));
   return { lanes: laneMoves, x: listOf('x'), y: listOf('y'), flows };
 }

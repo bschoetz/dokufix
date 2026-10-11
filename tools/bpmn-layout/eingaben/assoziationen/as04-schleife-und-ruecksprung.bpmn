@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:process id="P_as04" isExecutable="false">
+    <bpmn:startEvent id="S" name="Anruf kommt" />
+    <bpmn:exclusiveGateway id="G_Merge" />
+    <bpmn:task id="T_Gespraech" name="Gespräch führen" default="f_weiter" />
+    <bpmn:task id="T_Notieren" name="Anliegen notieren" />
+    <bpmn:exclusiveGateway id="G" name="Gelöst?" default="f_nein" />
+    <bpmn:endEvent id="End" name="Aufgelegt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="G_Merge" />
+    <bpmn:sequenceFlow id="f2" sourceRef="G_Merge" targetRef="T_Gespraech" />
+    <bpmn:sequenceFlow id="f_nachfragen" name="nachfragen" sourceRef="T_Gespraech" targetRef="T_Gespraech"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">unklar</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_weiter" sourceRef="T_Gespraech" targetRef="T_Notieren" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Notieren" targetRef="G" />
+    <bpmn:sequenceFlow id="f_ja" name="ja" sourceRef="G" targetRef="End"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">gelöst</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_nein" name="nein" sourceRef="G" targetRef="G_Merge" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:collaboration id="C_as05"><bpmn:participant id="Pool_as05" name="Werkstatt" processRef="P_as05" /></bpmn:collaboration>
+  <bpmn:process id="P_as05" isExecutable="false">
+    <bpmn:laneSet id="LS_as05">
+      <bpmn:lane id="L_Annahme" name="Annahme"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Pruefen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Technik" name="Technik"><bpmn:flowNodeRef>T_Reparieren</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Testen</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>End</bpmn:flowNodeRef>
+</bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S" name="Rad gebracht" />
+    <bpmn:task id="T_Pruefen" name="Schaden aufnehmen" default="f_weiter" />
+    <bpmn:task id="T_Reparieren" name="Reparieren" />
+    <bpmn:task id="T_Testen" name="Probefahrt" default="f_gut" />
+    <bpmn:endEvent id="End" name="Rad abgeholt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="T_Pruefen" />
+    <bpmn:sequenceFlow id="f_nachfragen" name="unklar" sourceRef="T_Pruefen" targetRef="T_Pruefen"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">unklar</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_weiter" sourceRef="T_Pruefen" targetRef="T_Reparieren" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Reparieren" targetRef="T_Testen" />
+    <bpmn:sequenceFlow id="f_nochmal" sourceRef="T_Testen" targetRef="T_Testen"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">quietscht</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_gut" sourceRef="T_Testen" targetRef="End" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C_as05">
+      <bpmndi:BPMNShape id="Pool_as05_di" bpmnElement="Pool_as05" isHorizontal="true"><dc:Bounds x="0" y="-18" width="678" height="306"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Annahme_di" bpmnElement="L_Annahme" isHorizontal="true"><dc:Bounds x="30" y="-18" width="648" height="162"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Technik_di" bpmnElement="L_Technik" isHorizontal="true"><dc:Bounds x="30" y="144" width="648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_di" bpmnElement="S"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Pruefen_di" bpmnElement="T_Pruefen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Reparieren_di" bpmnElement="T_Reparieren"><dc:Bounds x="210" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Testen_di" bpmnElement="T_Testen"><dc:Bounds x="378" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="End_di" bpmnElement="End"><dc:Bounds x="570" y="198" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="543" y="238" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="138" y="72"/><di:waypoint x="210" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f_weiter_di" bpmnElement="f_weiter"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="176"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="216"/><di:waypoint x="378" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f_gut_di" bpmnElement="f_gut"><di:waypoint x="498" y="216"/><di:waypoint x="570" y="216"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f_nachfragen_di" bpmnElement="f_nachfragen"><di:waypoint x="330" y="52"/><di:waypoint x="350" y="52"/><di:waypoint x="350" y="12"/><di:waypoint x="300" y="12"/><di:waypoint x="300" y="32"/><bpmndi:BPMNLabel><dc:Bounds x="310" y="-6" width="30" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f_nochmal_di" bpmnElement="f_nochmal"><di:waypoint x="498" y="196"/><di:waypoint x="518" y="196"/><di:waypoint x="518" y="156"/><di:waypoint x="468" y="156"/><di:waypoint x="468" y="176"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

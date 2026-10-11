@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:process id="P_as06" isExecutable="false">
+    <bpmn:startEvent id="S" name="Kunde an der Kasse" />
+    <bpmn:task id="T_Scannen" name="Waren scannen" />
+    <bpmn:task id="T_Bon" name="Bon drucken" />
+    <bpmn:endEvent id="End" name="Bezahlt" />
+    <bpmn:dataStoreReference id="DS_Kasse" name="Kassensystem" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="T_Scannen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Scannen" targetRef="T_Bon" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Bon" targetRef="End" />
+    <bpmn:association id="A_Scannen" sourceRef="T_Scannen" targetRef="DS_Kasse" />
+    <bpmn:association id="A_Bon" sourceRef="DS_Kasse" targetRef="T_Bon" />
+  </bpmn:process>
+</bpmn:definitions>

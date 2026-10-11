@@ -236,7 +236,9 @@ export function kanonisch(model){
 
   // The places in the sorted lists, which the keys of the rest are made of.
   const bPos = new Map(boundaries.map((b, i) => [b.id, i]));
-  const flowPos = new Map(flows.map((f, i) => [f.id, i])), flowOf = new Map(flows.map(f => [f.id, f]));
+  // A loop (story 2.33) may carry a text annotation as a flow does; it comes after the flows.
+  const withLoops = flows.concat(model.loops || []);
+  const flowPos = new Map(withLoops.map((f, i) => [f.id, i])), flowOf = new Map(withLoops.map(f => [f.id, f]));
   const poolIdx = new Map(model.pools.map((p, i) => [p.id, i]).filter(([id]) => id));
   const laneOf = new Map();
   lanes.forEach((l, i) => l.nodes.forEach(id => { if (!laneOf.has(id)) laneOf.set(id, i); }));

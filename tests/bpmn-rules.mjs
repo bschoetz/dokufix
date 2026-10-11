@@ -80,6 +80,15 @@
 //                             <association> <the end's element>
 //   data-association-along    two data associations, or one and a flow, on
 //                             one line: <association> <the other>
+// and with associations between two elements and flows to themselves (story
+// 2.33):
+//   link-off                  an association between two elements whose end
+//                             is not on its element (a symbol's outline, a
+//                             reference's box): <association> <element>
+//   link-through              such an association through a symbol, a label,
+//                             a text annotation or a reference not one of its
+//                             ends: <association> <what it passes>
+// A flow from a node to itself is a flow for every rule.
 // An association is no flow for any other rule; a text annotation no symbol;
 // a data association no flow and a reference no symbol either, its name a
 // label as an event's.
@@ -161,16 +170,21 @@ export function breaksOf(xml, model, sizes = {}){
   // Nor are the data associations' (story 2.32).
   const dataAssocs = model.dataAssociations || [], dataWays = {};
   for (const a of dataAssocs) if (di.flows[a.id]){ dataWays[a.id] = di.flows[a.id]; delete di.flows[a.id]; }
+  // Nor are those of the associations between two elements (story 2.33).
+  const links = model.links || [], linkWays = {};
+  for (const a of links) if (di.flows[a.id]){ linkWays[a.id] = di.flows[a.id]; delete di.flows[a.id]; }
+  // A flow from a node to itself (story 2.33) is a flow like the others.
+  const loops = model.loops || [];
   // An edge of no flow the model knows (another layout's association to what dokufix leaves out, as bpmn.io draws it in
   // the BPMN Assistant) is not checked.
-  const known = new Set(model.flows.concat(model.messages || []).map(f => f.id));
+  const known = new Set(model.flows.concat(model.messages || [], loops).map(f => f.id));
   for (const id of Object.keys(di.flows)) if (!known.has(id)) delete di.flows[id];
   const boundaries = model.boundaries || [];
   const nodes = Object.fromEntries(model.nodes.concat(boundaries).map(n => [n.id, di.shapes[n.id]]));
   const type = Object.fromEntries(model.nodes.map(n => [n.id, n.type]).concat(boundaries.map(b => [b.id, 'inter'])));
   const hostOf = Object.fromEntries(boundaries.map(b => [b.id, b.host]));
   const messages = model.messages || [];
-  const flowOf = Object.fromEntries(model.flows.concat(messages).map(f => [f.id, f]));
+  const flowOf = Object.fromEntries(model.flows.concat(messages, loops).map(f => [f.id, f]));
   const isMessage = new Set(messages.map(m => m.id));
   const drawnLanes = model.lanes.filter(l => !l.synthetic);
   const lanes = drawnLanes.map(l => di.shapes[l.id]);
@@ -214,7 +228,14 @@ export function breaksOf(xml, model, sizes = {}){
       // A flow from a boundary event starts below its host's outline: into the host counts as through its own, along
       // its outline as on-outline.
       const host = hostOf[f.from] === nid;
-      if (x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1) add(own || host ? 'through-own' : 'through', s.id, nid);
+      // A loop (story 2.33) leaves an event's or a gateway's outline between its corners of the box: through its own
+      // symbol only where it enters the circle or the diamond itself, 1 px in.
+      const roundOwn = own && f.from === f.to && typeOf(nid) !== 'task';
+      const inShape = (px, py) => { const cx = nx + nw / 2, cy = ny + nh / 2; return typeOf(nid) === 'gateway' ? Math.abs(px - cx) / (nw / 2 - 1) + Math.abs(py - cy) / (nh / 2 - 1) < 1 : Math.hypot(px - cx, py - cy) < nw / 2 - 1; };
+      const crosses = roundOwn
+        ? Array.from({ length: 21 }, (_, k) => [s.a[0] + (s.b[0] - s.a[0]) * k / 20, s.a[1] + (s.b[1] - s.a[1]) * k / 20]).some(([px, py]) => inShape(px, py))
+        : x2 > nx + 1 && x1 < nx + nw - 1 && y2 > ny + 1 && y1 < ny + nh - 1;
+      if (crosses) add(own || host ? 'through-own' : 'through', s.id, nid);
       const onH = y1 === y2 && (Math.abs(y1 - ny) <= 1 || Math.abs(y1 - ny - nh) <= 1) && Math.min(x2, nx + nw) - Math.max(x1, nx) > 2;
       const onV = x1 === x2 && (Math.abs(x1 - nx) <= 1 || Math.abs(x1 - nx - nw) <= 1) && Math.min(y2, ny + nh) - Math.max(y1, ny) > 2;
       if ((onH || onV) && !own) add('on-outline', s.id, nid);
@@ -298,7 +319,7 @@ export function breaksOf(xml, model, sizes = {}){
     const [x, y, w, h] = box, s = sizes[n.label ?? n.name] || measureLabel(n.label ?? n.name);
     labels.push({ id: n.id, box: [x + w / 2 - s.w / 2, y, s.w, h], node: n.id, pool: poolOf[n.id] });
   }
-  for (const f of model.flows) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });
+  for (const f of model.flows.concat(loops)) if (di.flowLabels[f.id]) labels.push({ id: f.id, box: di.flowLabels[f.id], pool: poolOf[f.from] });
   // A reference's name, as an event's (story 2.32); its pool, the one of its process in the model, none beside the
   // pools.
   const refs = (model.data || []).map(d => ({ ...d, box: di.shapes[d.id] })).filter(d => d.box);
@@ -405,6 +426,22 @@ export function breaksOf(xml, model, sizes = {}){
     for (const l of labels) if (l.id !== a.ref && passes(w, l.box)) add('data-association-through', a.id, l.id);
     for (const n of notes) if (passes(w, n.box)) add('data-association-through', a.id, n.id);
     for (const e of refs) if (e.id !== a.ref && passes(w, e.box)) add('data-association-through', a.id, e.id);
+  }
+  // Associations between two elements (story 2.33): each end on its element (a symbol's outline, a reference's box),
+  // and through nothing that is not one of its ends.
+  for (const a of links){
+    const w = linkWays[a.id];
+    if (!w) continue;
+    const ends = [[w[0], a.from], [w.at(-1), a.to]];
+    for (const [p, id] of ends){
+      const ok = refBox[id] ? onBox(p, refBox[id]) : !!nodes[id] && onOutline(p, nodes[id], typeOf(id));
+      if (!ok) add('link-off', a.id, id);
+    }
+    const own = id => id === a.from || id === a.to;
+    for (const [nid, b] of Object.entries(nodes)) if (!own(nid) && passes(w, b)) add('link-through', a.id, nid);
+    for (const l of labels) if (!own(l.id) && passes(w, l.box)) add('link-through', a.id, l.id);
+    for (const n of notes) if (passes(w, n.box)) add('link-through', a.id, n.id);
+    for (const e of refs) if (!own(e.id) && passes(w, e.box)) add('link-through', a.id, e.id);
   }
   // Two pieces on one line: both horizontal or both vertical, within 3 px, side by side for more than 4 px.
   const along = (p, q) => {

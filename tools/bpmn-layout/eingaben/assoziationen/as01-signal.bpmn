@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:signal id="Sig_Aufstehen" name="Aufstehen" />
+  <bpmn:process id="P_as01" isExecutable="false">
+    <bpmn:laneSet id="LS_as01">
+      <bpmn:lane id="L_Eltern" name="Eltern"><bpmn:flowNodeRef>S_Eltern</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Wecken</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Signal</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Kaffee</bpmn:flowNodeRef><bpmn:flowNodeRef>End_Eltern</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Kind" name="Kind"><bpmn:flowNodeRef>S_Kind</bpmn:flowNodeRef><bpmn:flowNodeRef>C_Signal</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Aufstehen</bpmn:flowNodeRef><bpmn:flowNodeRef>End_Kind</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Eltern" name="Wecker klingelt" />
+    <bpmn:task id="T_Wecken" name="Kind wecken" />
+    <bpmn:intermediateThrowEvent id="E_Signal" name="Aufstehen gerufen"><bpmn:signalEventDefinition id="SED_1" signalRef="Sig_Aufstehen" /></bpmn:intermediateThrowEvent>
+    <bpmn:task id="T_Kaffee" name="Kaffee kochen" />
+    <bpmn:endEvent id="End_Eltern" name="Eltern bereit" />
+    <bpmn:startEvent id="S_Kind" name="Kind schläft"><bpmn:timerEventDefinition id="TED_1" /></bpmn:startEvent>
+    <bpmn:intermediateCatchEvent id="C_Signal" name="Ruf gehört"><bpmn:signalEventDefinition id="SED_2" signalRef="Sig_Aufstehen" /></bpmn:intermediateCatchEvent>
+    <bpmn:task id="T_Aufstehen" name="Aufstehen" />
+    <bpmn:endEvent id="End_Kind" name="Kind wach" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Eltern" targetRef="T_Wecken" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Wecken" targetRef="E_Signal" />
+    <bpmn:sequenceFlow id="f3" sourceRef="E_Signal" targetRef="T_Kaffee" />
+    <bpmn:sequenceFlow id="f4" sourceRef="T_Kaffee" targetRef="End_Eltern" />
+    <bpmn:sequenceFlow id="f5" sourceRef="S_Kind" targetRef="C_Signal" />
+    <bpmn:sequenceFlow id="f6" sourceRef="C_Signal" targetRef="T_Aufstehen" />
+    <bpmn:sequenceFlow id="f7" sourceRef="T_Aufstehen" targetRef="End_Kind" />
+    <bpmn:association id="A_Signal" sourceRef="E_Signal" targetRef="C_Signal" />
+  </bpmn:process>
+</bpmn:definitions>

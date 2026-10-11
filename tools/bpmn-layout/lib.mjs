@@ -25,7 +25,8 @@ export const EXTERN_ROOT = process.env.DOKUFIX_EXTERN || path.join(REPO, '_bmad-
 export const WERKBANK_EINGABEN = process.env.DOKUFIX_WERKBANK_EINGABEN || path.join(EINGABEN, 'werkbank');
 
 // Die Sätze. Der Satz von 70 (Spike 2.26): sauber (48, 19 davon die Fixtures), ben (2), extern (20). Die Sätze mit
-// Pools, Black Boxes, angehefteten Ereignissen, Notizen und Daten (Stories 2.12, 2.29 bis 2.32), je eigen und extern.
+// Pools, Black Boxes, angehefteten Ereignissen, Notizen und Daten (Stories 2.12, 2.29 bis 2.32), je eigen und extern;
+// assoziationen (Story 2.33, eigen): Assoziationen zwischen Flussknoten und Flüsse auf sich selbst.
 // werkbank: Bens eigene Fälle aus der Werkbank, wb01 …, seit Story 2.42 bei jedem Lauf dabei.
 // laufzeit (Bens hund3, A2 braucht dafür 10 s) und einzeln (Diagramme, über die Ben einzeln sprechen will) nur auf
 // Nennung.
@@ -44,13 +45,14 @@ const SATZ_ORDNER = [
   ['notizen', path.join(EXTERN_ROOT, 'extern/notizen'), true],
   ['daten', path.join(EINGABEN, 'daten'), false],
   ['daten', path.join(EXTERN_ROOT, 'extern/daten'), true],
+  ['assoziationen', path.join(EINGABEN, 'assoziationen'), false],
   ['werkbank', WERKBANK_EINGABEN, false],
   ['laufzeit', path.join(EINGABEN, 'laufzeit'), false],
   ['einzeln', path.join(EINGABEN, 'einzeln'), false],
 ];
 // Eigene Eingaben, die auf einer externen beruhen, bleiben bei den externen.
 const EXTERN_EINZELN = [['notizen', path.join(EXTERN_ROOT, 'eingaben/notizen/nz23-x-tm1.bpmn')]];
-export const POOL_SAETZE = ['pools', 'blackbox', 'angeheftet', 'notizen', 'daten'];
+export const POOL_SAETZE = ['pools', 'blackbox', 'angeheftet', 'notizen', 'daten', 'assoziationen'];
 export const STANDARD_SAETZE = ['sauber', 'ben', 'extern', ...POOL_SAETZE, 'werkbank'];
 
 // name → { name, set, extern, file, ref }: ref die Referenz von Hand, wo es eine gibt (<name>.ref.bpmn daneben;

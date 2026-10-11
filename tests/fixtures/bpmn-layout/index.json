@@ -16,7 +16,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:989"
+    "src/demo.md:1040"
    ],
    "shows": [
     "25.2"
@@ -25,7 +25,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:1029"
+    "src/demo.md:1080"
    ]
   },
   "ereignis": {
@@ -413,6 +413,25 @@
    "note": "the demo text's special cases of data: a data object a sub-process writes, a data store no node uses in a process without lanes; left out a data association from a property, one without a target, everything inside the sub-process; a data object without a reference",
    "shows": [
     "32"
+   ]
+  },
+  "assoziationen": {
+   "source": "src/demo.md:989",
+   "note": "two lanes in a pool; a signal thrown and caught across the lanes, a compensation boundary event and its activity, a data store linked to a task by plain associations, a loop on a task with a name and one on a gateway; an association from a task to a flow left out",
+   "shows": [
+    "33"
+   ]
+  },
+  "as-signal": {
+   "source": "tools/bpmn-layout/eingaben/assoziationen/as01-signal.bpmn",
+   "shows": [
+    "33"
+   ]
+  },
+  "as-schleife-bahnen": {
+   "source": "tools/bpmn-layout/eingaben/assoziationen/as05-schleife-bahnen.bpmn",
+   "shows": [
+    "33"
    ]
   }
  }

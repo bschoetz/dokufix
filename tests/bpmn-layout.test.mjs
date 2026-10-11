@@ -25,6 +25,7 @@ import {
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, dedupe, orthogonal,
   growLane, labelRoom, nearestOnFlow, LAYOUT_NOTHING, layoutStrayText,
   noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS, dataWay, dataStateLabel, DATA_SIZE,
+  loopWay, linkWay, LOOP_OUT,
 } from '../src/app/bpmn-layout.js';
 import { layoutJob, answerLayout } from '../src/app/bpmn-layout-job.js';
 import { breaksOf, readDiagram } from './bpmn-rules.mjs';
@@ -504,10 +505,11 @@ test('the reference input end to end, with positions made up in the shape Mermai
 });
 
 // ---------- the findings of the review (pass 1) ----------
-test('a flow from a node to itself is left out: the router has no way for it yet', () => {
+test('a flow from a node to itself is a loop of its own, not a flow of the grid (story 2.33)', () => {
   const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:sequenceFlow id="Nochmal" sourceRef="T" targetRef="T" name="nochmal"/></bpmn:process>'));
   assert.deepEqual(model.flows.map(f => f.id), ['F1', 'F2']);
-  assert.deepEqual(leftOut.map(leftOutLine), ['sequenceFlow Nochmal: a flow from a node to itself']);
+  assert.deepEqual(model.loops, [{ id: 'Nochmal', from: 'T', to: 'T', name: 'nochmal' }]);
+  assert.deepEqual(leftOut, []);
 });
 
 test('a lane without an id keeps its row and is not written; a participant without an id gets no pool', () => {
@@ -1379,10 +1381,12 @@ test('what is no comment is left out, saying why: no text, an association betwee
     '<bpmn:subProcess id="SP"><bpmn:task id="I"/>' + note('IN', 'innen') + assoc('IA', 'I', 'IN') + '</bpmn:subProcess></bpmn:process>'));
   // Ben, 2026-10-08: "Notizen ohne Verbindungen weglassen — das geht mal gar nicht!"
   assert.deepEqual(model.notes, [['Allein', 'ohne Linie'], ['X', 'x'], ['Y', 'y'], ['Z', 'zu nichts']].map(([id, text]) => ({ id, text, pool: 0, lane: null, lone: true })));
+  // The compensation event and its activity: an association between two elements (story 2.33).
+  assert.deepEqual(model.links, [{ id: 'AK', from: 'B', to: 'K' }]);
   assert.deepEqual(leftOut.map(leftOutLine), [
     'textAnnotation Leer: has no text', 'association AL: its text annotation Leer has no text',
     'association AXY: between two text annotations',
-    'association AK: has no text annotation at either end', 'association AZ: touches Nichts, which is not laid out',
+    'association AZ: touches Nichts, which is not laid out',
     'task I: inside the sub-process SP', 'textAnnotation IN: inside the sub-process SP', 'association IA: inside the sub-process SP']);
 });
 
@@ -1718,4 +1722,77 @@ test('data: a reference stands in its own process\'s pool, its lines crossing to
   assert.ok(d[1] >= pa[1] && d[1] + d[3] <= pa[1] + pa[3], 'inside its own pool');
   assert.ok(d[1] + d[3] < pb[1] || d[1] > pb[1] + pb[3], 'not in the other');
   assert.deepEqual(breaks.filter(x => /^data-(outside|on)/.test(x)), []);
+});
+
+// ---------- associations between two elements and flows to themselves (story 2.33) ----------
+
+test('a loop leaves the right side of a task above the middle and comes back into its top, its label above it, written with the flows', () => {
+  const { di, xml, model } = notesLaid(LINE.replace('<bpmn:sequenceFlow id="F2"', '<bpmn:sequenceFlow id="Nochmal" sourceRef="T" targetRef="T" name="nochmal"/><bpmn:sequenceFlow id="F2"'), LINE_COLS);
+  const t = bx(di.nodes.T), w = di.flows.Nochmal;
+  assert.deepEqual(w, [[t.right, t.cy - t.h / 4], [t.right + LOOP_OUT, t.cy - t.h / 4], [t.right + LOOP_OUT, t.y - LOOP_OUT], [t.cx + t.w / 4, t.y - LOOP_OUT], [t.cx + t.w / 4, t.y]]);
+  const l = bx(di.flowLabels.Nochmal);
+  assert.ok(l.bottom <= t.y, 'the label above the task');
+  assert.match(xml, /<bpmndi:BPMNEdge id="Nochmal_di" bpmnElement="Nochmal">(<di:waypoint x="[\d.-]+" y="[\d.-]+"\/>){5}<bpmndi:BPMNLabel>/);
+  assert.deepEqual(breaksOf(xml, model), []);
+});
+
+test('a loop on an event and on a gateway: out of the outline right, into the top in the middle', () => {
+  // 13 px above the middle at least: a flow out of the middle is not beside it (closer than 12 px is a break).
+  assert.deepEqual(loopWay({ kind: 'circle', cx: 100, cy: 100, w: 36, h: 36 }), [[113, 87], [138, 87], [138, 62], [100, 62], [100, 82]]);
+  assert.deepEqual(loopWay({ kind: 'diamond', cx: 100, cy: 100, w: 50, h: 50 }), [[112, 87], [145, 87], [145, 55], [100, 55], [100, 75]]);
+});
+
+test('the lane grows for a loop at its top', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="Pool" processRef="P"/></bpmn:collaboration><bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    LINE + '<bpmn:sequenceFlow id="Nochmal" sourceRef="T" targetRef="T"/></bpmn:process>');
+  const { model } = read(xml);
+  const raw = { nodes: Object.fromEntries(model.nodes.map(n => [n.key, { cx: LINE_COLS[n.id] * 100, cy: 0, w: 10, h: 10 }])) };
+  const di = layoutGeometry(model, raw);
+  const lane = bx(di.lanes.L1);
+  for (const [, y] of di.flows.Nochmal) assert.ok(y > lane.y && y < lane.bottom, 'every point inside the lane');
+});
+
+test('an association between two elements: read with both ends, drawn straight from outline to outline, no arrow of its own', () => {
+  const body = '<bpmn:startEvent id="S"/><bpmn:intermediateThrowEvent id="W" name="Rufen"/><bpmn:intermediateCatchEvent id="H" name="Hören"/><bpmn:endEvent id="E"/>' +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="W"/><bpmn:sequenceFlow id="F2" sourceRef="W" targetRef="H"/><bpmn:sequenceFlow id="F3" sourceRef="H" targetRef="E"/>' + assoc('Sig', 'W', 'H');
+  const { di, xml, model, leftOut } = notesLaid(body, { S: 0, W: 1, H: 2, E: 3 });
+  assert.deepEqual(model.links, [{ id: 'Sig', from: 'W', to: 'H' }]);
+  assert.deepEqual(leftOut, []);
+  const w = bx(di.nodes.W), h = bx(di.nodes.H);
+  // Side by side on one row: a level line between their facing outlines.
+  assert.deepEqual(di.links.Sig, [[w.right, w.cy], [h.x, h.cy]]);
+  assert.match(xml, /<bpmndi:BPMNEdge id="Sig_di" bpmnElement="Sig"><di:waypoint x="\d+" y="\d+"\/><di:waypoint x="\d+" y="\d+"\/><\/bpmndi:BPMNEdge>/);
+  assert.deepEqual(breaksOf(xml, model).filter(b => /^link-/.test(b)), []);
+});
+
+test('linkWay(): one above the other a vertical line, otherwise straight between the middles cut at both outlines', () => {
+  const task = (cx, cy) => ({ kind: 'rect', cx, cy, w: 100, h: 80 });
+  assert.deepEqual(linkWay(task(100, 100), task(120, 300)), [[110, 140], [110, 260]]);
+  const [p, q] = linkWay({ kind: 'circle', cx: 0, cy: 0, w: 36, h: 36 }, task(300, 200));
+  assert.ok(Math.abs(Math.hypot(p[0], p[1]) - 18) <= 1, 'on the circle');
+  assert.ok(q[0] === 250 || q[1] === 160, 'on the task');
+});
+
+test('an association between a reference and a task, or a boundary event and an activity, is a link; one to a flow or to nothing is not', () => {
+  const { model, leftOut } = read(xmlOf('<bpmn:process id="P">' + LINE + '<bpmn:dataStoreReference id="DS" name="Kasse"/><bpmn:task id="K" isForCompensation="true"/>' +
+    '<bpmn:boundaryEvent id="B" attachedToRef="T"><bpmn:compensateEventDefinition id="CD"/></bpmn:boundaryEvent>' +
+    assoc('A1', 'T', 'DS') + assoc('A2', 'B', 'K') + assoc('A3', 'T', 'F1') + assoc('A4', 'T', 'Nichts') + assoc('A5', 'T', 'T') + '</bpmn:process>'));
+  assert.deepEqual(model.links, [{ id: 'A1', from: 'T', to: 'DS' }, { id: 'A2', from: 'B', to: 'K' }]);
+  assert.deepEqual(leftOut.map(leftOutLine), ['association A3: has no text annotation at either end', 'association A4: touches Nichts, which is not laid out', 'association A5: has no text annotation at either end']);
+});
+
+test('a text annotation at a loop is laid out with its association to the loop', () => {
+  const body = LINE.replace('<bpmn:sequenceFlow id="F2"', '<bpmn:sequenceFlow id="L" sourceRef="T" targetRef="T"/><bpmn:sequenceFlow id="F2"') + note('N', 'so oft wie nötig') + assoc('A', 'N', 'L');
+  const { model, leftOut, di, xml } = notesLaid(body, LINE_COLS);
+  assert.deepEqual(leftOut, []);
+  assert.deepEqual(model.associations, [{ id: 'A', note: 'N', partner: 'L', kind: 'flow' }]);
+  assert.ok(di.notes.N && di.associations.A, 'the note and its association drawn');
+  assert.deepEqual(breaksOf(xml, model).filter(b => /^association-/.test(b)), []);
+});
+
+test('a loop on an event with a flow out of its middle: not beside that flow', () => {
+  const body = '<bpmn:startEvent id="S"/><bpmn:intermediateCatchEvent id="W" name="Warten"/><bpmn:endEvent id="E"/>' +
+    '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="W"/><bpmn:sequenceFlow id="WL" sourceRef="W" targetRef="W"/><bpmn:sequenceFlow id="F2" sourceRef="W" targetRef="E"/>';
+  const { xml, model } = notesLaid(body, { S: 0, W: 1, E: 2 });
+  assert.deepEqual(breaksOf(xml, model), []);
 });

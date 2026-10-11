@@ -50,8 +50,9 @@
 // round and the pools (black box or not, drawn with a frame or, a process
 // without a participant, without, their lanes and which of them are
 // synthetic). Kept: classes, the kind of an event (start, intermediate, end,
-// on a border) and of a gateway, flows with their direction, message flows,
-// associations, data associations, the lane of each node, the order of lanes
+// on a border) and of a gateway, flows with their direction (a loop, a flow
+// to itself, too; story 2.33), message flows, associations (those between
+// two elements as well), data associations, the lane of each node, the order of lanes
 // and pools, a pool's frame, boundary events at their host, black box or not, data object or
 // data store (decision 2). Dropped: ids, every text, task subtypes, event
 // definitions, cancelActivity (decision 2), metadata, colours. The same shape
@@ -247,7 +248,8 @@ function graphOf(model){
     edge(boundaryV.get(b.id), nodeV.get(b.host), 'host');
   }
   const at = id => nodeV.get(id) ?? boundaryV.get(id);
-  for (const f of model.flows){
+  // A loop (story 2.33) is a flow from its node to itself.
+  for (const f of model.flows.concat(model.loops || [])){
     flowV.set(f.id, vertex('flow'));
     edge(at(f.from), flowV.get(f.id), 'flow');
     edge(flowV.get(f.id), at(f.to), 'flow');
@@ -269,6 +271,11 @@ function graphOf(model){
   for (const d of model.dataAssociations){
     if (d.dir === 'in') edge(dataV.get(d.ref), at(d.node), 'data');
     else edge(at(d.node), dataV.get(d.ref), 'data');
+  }
+  // An association between two elements (story 2.33): flow nodes, boundary events, references.
+  for (const l of model.links || []){
+    const a = at(l.from) ?? dataV.get(l.from), b = at(l.to) ?? dataV.get(l.to);
+    if (a !== undefined && b !== undefined) edge(a, b, 'link');
   }
   return { labels, adjacent, pools };
 }

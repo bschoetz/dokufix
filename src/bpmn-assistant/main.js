@@ -20,7 +20,7 @@ import { showLayoutNotice } from '../app/layout-notice.js';
 import { breaksOf } from '../../tests/bpmn-rules.mjs';
 import { ICON } from '../bpmn-tools/icons.js';
 import { TYPES, PROPS, KEYS, NAMES, HEX, valid, PRESETS, presetOf, migrate, applyTheme as applyThemeCss } from '../bpmn-tools/theme.js';
-import { decorate, mergeMarkerOff, modelGraph, signalLines } from '../bpmn-tools/decorate.js';
+import { decorate, mergeMarkerOff, modelGraph } from '../bpmn-tools/decorate.js';
 import { draw as drawPicture, fileBase as baseOf, namesOf, withBackground, bpmnLink, svgLink, pngButton } from '../bpmn-tools/downloads.js';
 import { openLarge, closeLarge, registerLargeView } from '../bpmn-tools/large-view.js';
 import { openModeler, modelerOpen } from '../bpmn-tools/modeler.js';
@@ -441,9 +441,9 @@ async function render(){
     if (my !== run) return;
     // Abgelehnt (der Grund steht im Abschnitt): weiter mit bpmn.io.
     if (laid) try {
-      // Das Modell des Autors, auf der Seite gelesen (read oben), für die Behelfslinien und die Regelprüfung.
-      const sig = signalLines(laid.xml, read.model);
-      let info = Math.round(ms) + ' ms' + (LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker') + (sig.count ? ' · ' + sig.count + ' Assoziationen zwischen Flussknoten als Gerade (Behelf)' : '');
+      // Das Modell des Autors, auf der Seite gelesen (read oben), für die Regelprüfung. Assoziationen zwischen Flussknoten
+      // zeichnet A2 seit Story 2.33 selbst; der Behelf der Seite (signalLines()) ist weg.
+      let info = Math.round(ms) + ' ms' + (LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker');
       try {
         // Gateways und End-Ereignisse dürfen in jeder Bahn liegen (wie splitBreaks() im Lauf; A2 setzt auch Enden um).
         const breaks = breaksOf(laid.xml, read.model, {}).filter(b => !(b.startsWith('node-outside-lane ') && read.model.nodes.some(n => (n.type === 'gateway' || n.tag === 'endEvent') && n.id === b.split(' ')[1])));
@@ -451,7 +451,7 @@ async function render(){
         if (breaks.length){ const d = document.createElement('details'); d.innerHTML = '<summary>Brüche</summary>' + breaks.map(esc).join('<br>'); s.appendChild(d); }
       } catch (e){ info += ' · Regelprüfung: ' + e.message; }
       s.querySelector('small').textContent = info;
-      await draw(s, sig.xml, name);
+      await draw(s, laid.xml, name);
     } catch (e){ error(s, (e && e.stack) || String(e)); }
     if (my !== run) return;
   }

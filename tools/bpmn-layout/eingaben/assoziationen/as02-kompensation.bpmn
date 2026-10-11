@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Defs" targetNamespace="http://dokufix.example/as">
+  <bpmn:process id="P_as02" isExecutable="false">
+    <bpmn:startEvent id="S" name="Reise gewünscht" />
+    <bpmn:task id="T_Buchen" name="Hotel buchen" />
+    <bpmn:boundaryEvent id="B_Komp" attachedToRef="T_Buchen"><bpmn:compensateEventDefinition id="CED_1" /></bpmn:boundaryEvent>
+    <bpmn:task id="T_Storno" name="Buchung stornieren" isForCompensation="true" />
+    <bpmn:task id="T_Zahlen" name="Anzahlung leisten" />
+    <bpmn:exclusiveGateway id="G" name="Bezahlt?" default="f_nein" />
+    <bpmn:endEvent id="End_Ok" name="Reise gebucht" />
+    <bpmn:intermediateThrowEvent id="E_Komp" name="Buchung zurücknehmen"><bpmn:compensateEventDefinition id="CED_2" /></bpmn:intermediateThrowEvent>
+    <bpmn:endEvent id="End_Storno" name="Reise abgesagt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="T_Buchen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Buchen" targetRef="T_Zahlen" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Zahlen" targetRef="G" />
+    <bpmn:sequenceFlow id="f_ja" name="ja" sourceRef="G" targetRef="End_Ok"><bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">bezahlt</bpmn:conditionExpression></bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="f_nein" name="nein" sourceRef="G" targetRef="E_Komp" />
+    <bpmn:sequenceFlow id="f4" sourceRef="E_Komp" targetRef="End_Storno" />
+    <bpmn:association id="A_Komp" associationDirection="One" sourceRef="B_Komp" targetRef="T_Storno" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -3,13 +3,14 @@ import { addLineJumps } from '../app/line-jumps.js';
 
 // --- What the BPMN tools do to a drawn diagram -----------------------------
 // decorate() after the import, in a viewer and so in its saveSVG() too; the
-// pool's head (poolHeads()); the X of merging gateways (mergeMarkerOff()); the
-// stopgap lines of the assistant (signalLines()). Shared by the BPMN
+// pool's head (poolHeads()); the X of merging gateways (mergeMarkerOff()).
+// Until story 2.33 also the assistant's stopgap lines between two flow nodes
+// (signalLines()); A2 draws them itself since. Shared by the BPMN
 // Assistant and the Layouter Audi; until story 2.38 the Audi carried a copy.
 //
 // decorate() and poolHeads() work on a viewer of the page's bpmn-js and use
-// what it hands them; mergeMarkerOff() is pure text; sequenceGraph() and
-// signalLines() use the page's DOMParser. Nothing done on loading.
+// what it hands them; mergeMarkerOff() is pure text; sequenceGraph() uses the
+// page's DOMParser. Nothing done on loading.
 
 // After the import: the type classes of the app, the same classes on the
 // labels outside the shape (events, gateways, flows) so that the label's
@@ -110,37 +111,3 @@ export function sequenceGraph(xml){
 }
 // The graph of the model readProcess() reads (src/app/bpmn-layout.js).
 export const modelGraph = model => ({ gateways: new Set(model.nodes.filter(n => n.tag === 'exclusiveGateway').map(n => n.id)), flows: model.flows });
-
-// A stopgap of the assistant only (Ben, 2026-10-05): an association between
-// two flow nodes (a signal throw → a signal catch, say), which no layout
-// places, as a straight line across from edge to edge, written into the XML
-// after the layout. Events as circles, gateways as diamonds, else rectangles.
-// model: the author's, as readProcess() reads it. Gives { xml, count }.
-export function signalLines(xml, model){
-  const doc = new DOMParser().parseFromString(xml, 'application/xml');
-  const nodes = new Map(model.nodes.map(n => [n.id, n]));
-  const shapes = {};
-  for (const m of xml.matchAll(/<bpmndi:BPMNShape\b[^>]*bpmnElement="([^"]*)"[^>]*>\s*<dc:Bounds x="([-\d.]+)" y="([-\d.]+)" width="([-\d.]+)" height="([-\d.]+)"/g))
-    shapes[m[1]] = { x: +m[2], y: +m[3], w: +m[4], h: +m[5] };
-  const edge = (from, to) => {
-    const c = s => ({ x: s.x + s.w / 2, y: s.y + s.h / 2 });
-    const a = c(shapes[from]), b = c(shapes[to]);
-    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1, ux = (b.x - a.x) / len, uy = (b.y - a.y) / len;
-    // The distance from the centre to the edge in the direction (dx, dy).
-    const reach = (id, dx, dy) => {
-      const s = shapes[id], t = nodes.get(id).type, rw = s.w / 2, rh = s.h / 2;
-      if (t === 'event') return rw;
-      if (t === 'gateway') return 1 / (Math.abs(dx) / rw + Math.abs(dy) / rh);
-      return Math.min(dx ? rw / Math.abs(dx) : Infinity, dy ? rh / Math.abs(dy) : Infinity);
-    };
-    const ra = reach(from, ux, uy), rb = reach(to, -ux, -uy);
-    return [[a.x + ux * ra, a.y + uy * ra], [b.x - ux * rb, b.y - uy * rb]].map(([x, y]) => [Math.round(x), Math.round(y)]);
-  };
-  const add = [];
-  for (const el of doc.getElementsByTagNameNS('*', 'association')){
-    const id = el.getAttribute('id'), from = el.getAttribute('sourceRef'), to = el.getAttribute('targetRef');
-    if (!id || !nodes.has(from) || !nodes.has(to) || !shapes[from] || !shapes[to]) continue;
-    add.push('<bpmndi:BPMNEdge id="' + id + '_di" bpmnElement="' + id + '">' + edge(from, to).map(([x, y]) => '<di:waypoint x="' + x + '" y="' + y + '"/>').join('') + '</bpmndi:BPMNEdge>');
-  }
-  return { xml: add.length ? xml.replace('</bpmndi:BPMNPlane>', add.join('') + '</bpmndi:BPMNPlane>') : xml, count: add.length };
-}
