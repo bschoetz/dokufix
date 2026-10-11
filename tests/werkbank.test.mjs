@@ -795,3 +795,211 @@ test('matrix: the similar cases by shape; a case without a shape has none', () =
   assert.ok(nah.every(n => n.name !== 'r02' && n.name !== 'kaputt' && n.similarity > 0));
   assert.deepEqual(nearest('kaputt', formen, 3), []);
 });
+
+// ---------- the set werkbank (story 2.42) ----------
+// Own cases submitted from a working state or a package (tools/werkbank/einreichen.mjs): checked by pruefen.mjs's
+// check(), written without coordinates as wbNN-<name>.bpmn into the set's folder (a temporary one here, by
+// DOKUFIX_WERKBANK_EINGABEN), then an input of lib.mjs's standard sets, of lauf.mjs, vergleich.mjs and the built
+// page; the page turns the stored own case into that input.
+import { eigeneFaelle, einreichen, kurzname, dateiName, naechsteNummer, vergebeneNamen, eingabenNachFall, externeNamen } from '../tools/werkbank/einreichen.mjs';
+
+const EINREICHEN = path.join(REPO, 'tools/werkbank/einreichen.mjs');
+const bpmnVon = (id, inner) => `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs_${id}" targetNamespace="http://bpmn.io/schema/bpmn">
+  <bpmn:process id="P_${id}" isExecutable="false">
+${inner}
+  </bpmn:process>
+</bpmn:definitions>
+`;
+const GUELTIG = bpmnVon('mein', `    <bpmn:startEvent id="S" name="Los" />
+    <bpmn:task id="A" name="Antrag prüfen" />
+    <bpmn:task id="B" name="Bescheid schreiben" />
+    <bpmn:endEvent id="E" name="Fertig" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="A" />
+    <bpmn:sequenceFlow id="f2" sourceRef="A" targetRef="B" />
+    <bpmn:sequenceFlow id="f3" sourceRef="B" targetRef="E" />`);
+// A parallel join after an exclusive split: it waits for ever (pruefen.mjs's parallel check).
+const UNGUELTIG = bpmnVon('falsch', `    <bpmn:startEvent id="S" name="Los" />
+    <bpmn:exclusiveGateway id="X" name="Welcher?" />
+    <bpmn:task id="A" name="Eins" />
+    <bpmn:task id="B" name="Zwei" />
+    <bpmn:parallelGateway id="J" />
+    <bpmn:endEvent id="E" name="Ende" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S" targetRef="X" />
+    <bpmn:sequenceFlow id="f2" sourceRef="X" targetRef="A" />
+    <bpmn:sequenceFlow id="f3" sourceRef="X" targetRef="B" />
+    <bpmn:sequenceFlow id="f4" sourceRef="A" targetRef="J" />
+    <bpmn:sequenceFlow id="f5" sourceRef="B" targetRef="J" />
+    <bpmn:sequenceFlow id="f6" sourceRef="J" targetRef="E" />`);
+// GUELTIG with positions, as the page holds Ben's drawing.
+const mitDi = xml => xml.replace('</bpmn:definitions>', `  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" id="D"><bpmndi:BPMNPlane id="PL" bpmnElement="P_mein"><bpmndi:BPMNShape id="S_di" bpmnElement="S"><dc:Bounds x="10" y="10" width="36" height="36" /></bpmndi:BPMNShape></bpmndi:BPMNPlane></bpmndi:BPMNDiagram>
+</bpmn:definitions>`);
+
+// A store with an own valid case "Mein Fall" (commented), an own invalid one, hund as an embedded input and hund
+// pasted once more as own (the same case: stays hund).
+async function eigenerSpeicher(){
+  const sp = speicherImArbeitsspeicher();
+  const r = await sp.aufnehmen(mitDi(GUELTIG), { name: 'Mein Fall', herkunft: 'eigen', stand: STAND, jetzt: T1 });
+  await sp.legeFeedback({ fall: r.fall.fall, stand: STAND, kommentar: 'Bitte so', geaendert: T1 });
+  await sp.aufnehmen(UNGUELTIG, { name: 'Falsch gemalt', herkunft: 'eigen', jetzt: T1 });
+  await sp.aufnehmen(eingabe('hund'), { name: 'hund', herkunft: 'sauber', jetzt: T1 });
+  return { sp, fall: r.fall.fall };
+}
+const tmpOrdner = prefix => fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+// An external root with an empty extern/: the tool can tell there is no external input, and the runs stay small.
+const ohneExterne = () => { const d = tmpOrdner('werkbank-extern-'); fs.mkdirSync(path.join(d, 'extern')); return d; };
+const lauf = (script, argv, env, opts = {}) => execFileSync(process.execPath, [script, ...argv], { env: { ...process.env, ...env }, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'], ...opts });
+
+test('the file name: wb, two digits, the name lower case and ASCII, at most 40 characters', () => {
+  assert.equal(dateiName(1, 'Mein Fall'), 'wb01-mein-fall.bpmn');
+  assert.equal(dateiName(12, 'Größe prüfen (2)'), 'wb12-groesse-pruefen-2.bpmn');
+  assert.equal(kurzname('Café / Übergabe'), 'cafe-uebergabe');
+  assert.equal(kurzname('???'), 'fall');
+  assert.ok(kurzname('x'.repeat(30) + ' ' + 'y'.repeat(30)).length <= 40);
+  assert.ok(!kurzname('a'.repeat(39) + ' b').endsWith('-'));
+});
+
+test('matrix: the next number follows the highest the folder ever had; a deleted one is not reused', () => {
+  assert.equal(naechsteNummer([]), 1);
+  assert.equal(naechsteNummer(['wb01-a.bpmn', 'wb02-b.bpmn']), 3);
+  // wb02 deleted, but git once added it: still 3.
+  assert.equal(naechsteNummer(['wb01-a.bpmn', 'tools/bpmn-layout/eingaben/werkbank/wb02-b.bpmn']), 3);
+  assert.equal(naechsteNummer(['wb01-a.bpmn', 'liesmich.md']), 2);
+  // Outside git only the folder counts.
+  const dir = tmpOrdner('werkbank-satz-');
+  fs.writeFileSync(path.join(dir, 'wb04-x.bpmn'), GUELTIG);
+  assert.deepEqual(vergebeneNamen(dir), ['wb04-x.bpmn']);
+  assert.deepEqual(vergebeneNamen(path.join(dir, 'fehlt')), []);
+});
+
+test('the own cases of a working state and of a package; anything else is refused', async () => {
+  const { sp } = await eigenerSpeicher();
+  const z = await sp.zustand(T2);
+  assert.deepEqual(eigeneFaelle(z).map(f => f.name).sort(), ['Falsch gemalt', 'Mein Fall']);
+  const mein = eigeneFaelle(z).find(f => f.name === 'Mein Fall');
+  assert.ok(!hatDi(mein.eingabe));
+  const layouts = (await sp.faelle()).map(f => ({ fall: f.fall, stand: STAND, xml: f.eingabe, angeordnet: T1, brueche: 0 }));
+  const { paket } = paketBauen({ stand: STAND, faelle: await sp.faelle(), layouts, feedback: await sp.feedbacks(), jetzt: T2 });
+  // The package holds only the commented case.
+  assert.deepEqual(eigeneFaelle(paket).map(f => f.name), ['Mein Fall']);
+  assert.equal(eigeneFaelle(paket)[0].fall, mein.fall);
+  for (const x of [null, {}, { format: 'anders' }, { format: ZUSTAND_FORMAT }, [1, 2]]) assert.throws(() => eigeneFaelle(x), /Weder ein Arbeitsstand noch ein Paket/);
+});
+
+test('matrix: listing writes nothing; submitting writes the valid one without positions, skips a set input, refuses an invalid one', async () => {
+  const { sp } = await eigenerSpeicher();
+  const faelle = eigeneFaelle(await sp.zustand(T2));
+  const hund = caseFingerprint(eingabe('hund')).hash;
+  const dir = tmpOrdner('werkbank-satz-');
+  const mitHund = [...faelle, { name: 'hund', eingabe: ohneDi(eingabe('hund')), fall: hund }];
+  const vorhanden = eingabenNachFall();
+  assert.deepEqual(vorhanden.get(hund), { name: 'hund', satz: 'sauber' });
+  const liste = await einreichen(mitHund, { ordner: dir, vorhanden });
+  assert.deepEqual(fs.readdirSync(dir), []);
+  const r = name => liste.find(x => x.name === name);
+  assert.equal(r('Mein Fall').datei, 'wb01-mein-fall.bpmn');
+  assert.deepEqual(r('hund').als, { name: 'hund', satz: 'sauber' });
+  assert.match(r('Falsch gemalt').errors.join('\n'), /parallel-join/);
+  const geschrieben = await einreichen(mitHund, { ordner: dir, vorhanden, schreiben: true });
+  assert.deepEqual(geschrieben, liste);
+  assert.deepEqual(fs.readdirSync(dir), ['wb01-mein-fall.bpmn']);
+  const xml = fs.readFileSync(path.join(dir, 'wb01-mein-fall.bpmn'), 'utf8');
+  assert.ok(!hatDi(xml));
+  assert.equal(caseFingerprint(xml).hash, caseFingerprint(GUELTIG).hash);
+  // The next one gets wb02.
+  const noch = { name: 'Noch einer', eingabe: umbenannt(GUELTIG), fall: caseFingerprint(umbenannt(GUELTIG)).hash };
+  assert.equal((await einreichen([noch], { ordner: dir, vorhanden, schreiben: true }))[0].datei, 'wb02-noch-einer.bpmn');
+});
+
+test('matrix: on the command line an unknown name and a file that is no export fail with a message, exit 1', async () => {
+  const { sp } = await eigenerSpeicher();
+  const dir = tmpOrdner('werkbank-satz-'), ziel = path.join(dir, 'satz');
+  let extern = ohneExterne();
+  fs.writeFileSync(path.join(dir, 'stand.json'), JSON.stringify(await sp.zustand(T2)));
+  fs.writeFileSync(path.join(dir, 'anders.json'), JSON.stringify({ format: 'anders' }));
+  const fehler = argv => {
+    try { lauf(EINREICHEN, argv, { DOKUFIX_WERKBANK_EINGABEN: ziel, DOKUFIX_EXTERN: extern }); }
+    catch (e){ return { status: e.status, out: e.stdout + e.stderr }; }
+    assert.fail('no exit 1: ' + argv.join(' '));
+  };
+  let f = fehler([path.join(dir, 'stand.json'), 'Gibt es nicht']);
+  assert.equal(f.status, 1);
+  assert.match(f.out, /Gibt es nicht\s+kein eigener Fall/);
+  f = fehler([path.join(dir, 'anders.json'), 'Mein Fall']);
+  assert.equal(f.status, 1);
+  assert.match(f.out, /Weder ein Arbeitsstand noch ein Paket/);
+  // Invalid among valid: the valid one is written, exit 1.
+  f = fehler([path.join(dir, 'stand.json'), '--alle']);
+  assert.match(f.out, /Falsch gemalt\s+abgelehnt/);
+  assert.deepEqual(fs.readdirSync(ziel), ['wb01-mein-fall.bpmn']);
+  // Listing: exit 0, nothing more written.
+  assert.match(lauf(EINREICHEN, [path.join(dir, 'stand.json')], { DOKUFIX_WERKBANK_EINGABEN: ziel, DOKUFIX_EXTERN: extern }), /Mein Fall\s+schon im Satz werkbank als wb01-mein-fall/);
+  assert.deepEqual(fs.readdirSync(ziel), ['wb01-mein-fall.bpmn']);
+  // Without the external inputs nothing is written: whether a case is external cannot be told.
+  extern = tmpOrdner('werkbank-extern-');
+  fs.rmSync(ziel, { recursive: true });
+  f = fehler([path.join(dir, 'stand.json'), 'Mein Fall']);
+  assert.match(f.out, /externen Eingaben fehlen[\s\S]*Nichts geschrieben/);
+  assert.ok(!fs.existsSync(ziel));
+});
+
+test('a submitted wb01 is an input of the standard sets: pruefen.mjs, lauf.mjs, vergleich.mjs and the built page take it', async () => {
+  const { sp } = await eigenerSpeicher();
+  const dir = tmpOrdner('werkbank-satz-'), ziel = path.join(dir, 'satz'), arbeit = path.join(dir, 'arbeit');
+  fs.writeFileSync(path.join(dir, 'stand.json'), JSON.stringify(await sp.zustand(T2)));
+  const env = { DOKUFIX_WERKBANK_EINGABEN: ziel, DOKUFIX_LAYOUT_ARBEIT: arbeit, DOKUFIX_EXTERN: ohneExterne() };
+  lauf(EINREICHEN, [path.join(dir, 'stand.json'), 'Mein Fall'], env);
+  const sicht = JSON.parse(lauf('--input-type=module', ['-e', `
+    const lib = await import(${JSON.stringify(path.join(REPO, 'tools/bpmn-layout/lib.mjs'))});
+    const seite = await import(${JSON.stringify(path.join(REPO, 'tools/werkbank/bauen.mjs'))});
+    const i = lib.INPUTS.get('wb01-mein-fall');
+    console.log(JSON.stringify({ satz: i && i.set, standard: lib.namesOf(lib.STANDARD_SAETZE).includes('wb01-mein-fall'), seite: seite.eingaben().filter(e => e.satz === 'werkbank').map(e => e.name) }));
+  `], env, { cwd: REPO }));
+  assert.deepEqual(sicht, { satz: 'werkbank', standard: true, seite: ['wb01-mein-fall'] });
+  // pruefen.mjs without files checks every input of the sets, wb01 among them, and passes.
+  assert.match(lauf(path.join(REPO, 'tools/bpmn-layout/pruefen.mjs'), [], env), /wb01-mein-fall/);
+  // lauf.mjs without --satz lays out namesOf(STANDARD_SAETZE) (checked above); here only wb01, to keep the test short.
+  for (const l of ['eins', 'zwei']) lauf(path.join(REPO, 'tools/bpmn-layout/lauf.mjs'), ['--lauf', l, '--quiet', 'wb01-mein-fall'], env);
+  assert.ok(fs.existsSync(path.join(arbeit, 'eins', 'wb01-mein-fall.bpmn')));
+  assert.match(lauf(path.join(REPO, 'tools/bpmn-layout/vergleich.mjs'), ['eins', 'zwei'], env), /1 Eingaben, 1 gleich/);
+});
+
+test('an external input never comes into the set: a revision of an external case, or a case of its name, is refused', async () => {
+  const sp = speicherImArbeitsspeicher();
+  const x = await sp.aufnehmen(GUELTIG, { name: 'x-test', herkunft: 'extern', jetzt: T1 });
+  // Ben assigns a changed version to the external case: a revision, own, named after it.
+  const rev = await sp.zuordnen(umbenannt(GUELTIG), x.fall.fall, { herkunft: 'eigen', jetzt: T1 });
+  assert.equal(rev.art, 'revision');
+  assert.equal(rev.fall.herkunft, 'eigen');
+  const z = await sp.zustand(T2);
+  const faelle = eigeneFaelle(z);
+  assert.deepEqual(faelle.map(f => [f.name, f.bezug]), [['x-test (2)', ['x-test']]]);
+  const dir = tmpOrdner('werkbank-satz-');
+  const r = await einreichen(faelle, { ordner: dir, vorhanden: new Map(), extern: new Set(['x-test']), schreiben: true });
+  assert.deepEqual(r, [{ name: 'x-test (2)', extern: 'x-test' }]);
+  assert.deepEqual(fs.readdirSync(dir), []);
+  // A package names the revision only: its name without the number is the reference.
+  assert.deepEqual(eigeneFaelle({ format: 'dokufix-layout-feedback', beispiele: [{ name: 'x-test (2)', herkunft: 'eigen', eingabe: umbenannt(GUELTIG) }] })[0].bezug, ['x-test']);
+  // The real external inputs, where they are here, are named.
+  if (!externFehlt()) assert.ok([...externeNamen()].every(n => INPUTS.get(n).extern) && externeNamen().size > 0);
+});
+
+test('matrix: the next build: the stored own case becomes the embedded input, its comment kept, no second case', async () => {
+  const { sp, fall } = await eigenerSpeicher();
+  const vorher = (await sp.faelle()).length;
+  const xml = ohneDi(GUELTIG);
+  // A paste of the same case and the import's archive cases do not rename it.
+  await sp.aufnehmenViele([{ xml, name: 'Anders', herkunft: 'eigen' }, { xml, name: 'alt', herkunft: 'archiv' }], T2);
+  assert.equal((await sp.fall(fall)).name, 'Mein Fall');
+  const [r] = await sp.aufnehmenViele([{ xml, name: 'wb01-mein-fall', herkunft: 'werkbank' }], T2);
+  assert.equal(r.art, 'bekannt');
+  const f = await sp.fall(fall);
+  assert.equal(f.name, 'wb01-mein-fall');
+  assert.equal(f.herkunft, 'werkbank');
+  assert.equal(anzeigeName(f), 'wb01-mein-fall');
+  assert.equal((await sp.faelle()).length, vorher);
+  assert.equal((await sp.feedback(fall, STAND)).kommentar, 'Bitte so');
+  // An input of a set stays as it is when a set embeds the same case under another name.
+  await sp.aufnehmenViele([{ xml: eingabe('hund'), name: 'wb09-hund', herkunft: 'werkbank' }], T2);
+  assert.equal((await sp.faelle()).find(x => x.fall === caseFingerprint(eingabe('hund')).hash).name, 'hund');
+});

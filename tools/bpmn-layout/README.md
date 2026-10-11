@@ -1,14 +1,15 @@
 # Layout-Werkzeuge
 
-Werkzeuge zum Messen und Sichten des BPMN-Layouts ohne Koordinaten (`src/app/bpmn-layout.js`, `src/app/lmm.js`, `src/app/label-size.js`): die Eingaben anordnen, wie die Seite es tut, Brüche zählen, zwei Stände vergleichen und Ben die Bilder auf der Seite des Layout-Feedbacks vorlegen. Keines ist Teil des Builds.
+Werkzeuge zum Messen und Sichten des BPMN-Layouts ohne Koordinaten (`src/app/bpmn-layout.js`, `src/app/lmm.js`, `src/app/label-size.js`): die Eingaben anordnen, wie die Seite es tut, Brüche zählen, zwei Stände vergleichen und Ben die Bilder vorlegen, seit Story 2.42 in der Layout-Werkbank (unten), davor auf der Seite des Layout-Feedbacks. Keines ist Teil des Builds.
 
 Bis 2026-10-07 lagen sie im Store unter `spike-2-26/` (`werkzeug/`, `testtool/`, `pools/`, `pruefen/`) und brauchten je Eingabe Mermaids Rohpositionen (`.raw.json`) und gemessene Labelgrößen (`.sizes.json`). Seit LMM die Spalten gibt und das Layout die Beschriftungen selbst misst, braucht eine Eingabe nur ihr XML.
 
 ```sh
 node tools/bpmn-layout/lauf.mjs                           # alle Sätze anordnen → arbeit/produkt/, arbeit/produkt.json
-node tools/bpmn-layout/feedback-bauen.mjs                 # arbeit/bpmn-feedback.html (die Sammlung)
-node tools/bpmn-layout/feedback-bauen.mjs --art Pools     # arbeit/bpmn-feedback-pools.html
+npm run werkbank                                          # die Werkbank, die Seite der Bilder seit Story 2.42 → dist/bpmn-layout-werkbank.html
 node tools/bpmn-layout/feedback-auswerten.mjs <paket.json> # Bens Paket → arbeit/feedback/<satz>-<datum>/uebersicht.md
+node tools/bpmn-layout/feedback-bauen.mjs                 # früher: arbeit/bpmn-feedback.html (die Sammlung)
+node tools/bpmn-layout/feedback-bauen.mjs --art Pools     # früher: arbeit/bpmn-feedback-pools.html
 ```
 
 ## Das Netz einer Layout-Story
@@ -21,7 +22,21 @@ node tools/bpmn-layout/lauf.mjs                            # → arbeit/produkt/
 node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 ```
 
-`vergleich.mjs` nennt jede Eingabe, deren angeordnetes XML anders ist, und ob das Bild oder nur das Prozess-XML anders ist; Exit 1, wenn sich ein Bild ändert. `--stand` geht ab `f0ff93e` (LMM); davor ordnete Mermaid an.
+`vergleich.mjs` nennt jede Eingabe, deren angeordnetes XML anders ist, und ob das Bild oder nur das Prozess-XML anders ist; Exit 1, wenn sich ein Bild ändert. `--stand` geht ab `f0ff93e` (LMM); davor ordnete Mermaid an. Der Satz `werkbank`, Bens eingereichte Fälle, ist ohne `--satz` dabei.
+
+Die Bilder zeigt eine Layout-Story seit Story 2.42 in der Werkbank: nach dem Bau `npm run werkbank` (und `npm run werkbank -- --mit-extern` für alle Eingaben), Ben öffnet sie, sie ordnet mit dem neuen Stand an und markiert, was sich gegen den letzten Stand geändert hat (Filter „geändert“, Taste M); sein Feedback kommt als Paket zurück und geht durch `feedback-auswerten.mjs`. Die Seite des Layout-Feedbacks (`feedback-bauen.mjs`) und ihre Werkzeuge bleiben, bis Ben anders entscheidet; ihr Archiv und ihre Auswertungen bleiben in jedem Fall.
+
+## Fälle aus der Werkbank einreichen
+
+Was Ben in der Werkbank einfügt oder zeichnet (Herkunft `eigen`), lebt nur in seinem Browser. Damit ein Layout-Bau es nicht unbemerkt bricht, kommt es in den Satz `werkbank`:
+
+```sh
+node tools/werkbank/einreichen.mjs <datei>             # die eigenen Fälle, ihre Prüfung und der Dateiname, den sie bekämen
+node tools/werkbank/einreichen.mjs <datei> <name>…     # diese einreichen (der Name wie in der Liste der Werkbank)
+node tools/werkbank/einreichen.mjs <datei> --alle      # alle eigenen, die noch keine Eingabe sind
+```
+
+`<datei>` ist ein Arbeitsstand („Arbeitsstand speichern“, jeder eigene Fall) oder ein Paket („Paket herunterladen“, die Fälle mit Feedback am Stand). Jeder Fall geht durch `check()` von `pruefen.mjs`; wer durchgeht, wird `eingaben/werkbank/wbNN-<name>.bpmn` ohne Koordinaten, die Nummer die nächste nach der höchsten, die der Ordner je hatte (auch in git), der Name klein und in ASCII. Ein Fall, dessen Fingerabdruck schon eine Eingabe ist, wird übersprungen und mit Satz und Namen genannt; einen, den die Prüfung ablehnt, schreibt das Werkzeug nicht und nennt seine Fehler (Exit 1). Eine externe Eingabe kommt nie in den Satz: ein eigener Fall, der eine Revision einer externen Eingabe ist oder ihren Namen trägt, wird abgelehnt, und fehlen die externen Eingaben, schreibt das Werkzeug nichts, weil es das dann nicht prüfen kann. Danach die Dateien committen und die Werkbank neu bauen: die Seite gibt dem gespeicherten Fall Namen und Satz der Eingabe, sein Feedback bleibt. `DOKUFIX_WERKBANK_EINGABEN` setzt einen anderen Ordner.
 
 ## Die Werkzeuge
 
@@ -30,14 +45,14 @@ node tools/bpmn-layout/vergleich.mjs stand-<commit> produkt
 | `lib.mjs` | die Sätze, einen Stand laden (Arbeitsbaum oder `--stand <commit>`), seine Logik (`logikOf()`: SHA-1 über `bpmn-layout.js`, `lmm.js`, `label-size.js`, `xml-parser.js`, 8 Stellen, die Zahl, die ein Lauf als `logik` trägt), anordnen wie die Seite (`layoutJob()` in `src/app/bpmn-layout-job.js`, mit dem XML-Leser des Stands), Brüche, Größe, Blöcke, Kreuzungen und Knicke (`quality()`), Nähe zu einer Referenz, die Fingerabdrücke aller Eingaben (`fingerprints()`, einmal je Lauf) |
 | `lauf.mjs` | ordnet an und misst, auch Kreuzungen, Knicke und wie oft `finishGrid()` je Regel lief (die Proben); `--lauf`, `--stand`, `--satz`, `--aus <regel,…>` (DEFAULT_RULES abschalten), Namen |
 | `vergleich.mjs` | zwei Läufe Eingabe für Eingabe, Byte für Byte |
-| `feedback-bauen.mjs`, `feedback-seite.js` | die Seite des Layout-Feedbacks: Bild, Modellierer, Kommentar, früheres Feedback, Export als Paket; `--art`, `--satz`, `--gegen`, `--varianten`, `--alle`, Namen |
+| `feedback-bauen.mjs`, `feedback-seite.js` | bis Story 2.42 die Seite der Bilder, bleibt, bis Ben anders entscheidet: die Seite des Layout-Feedbacks: Bild, Modellierer, Kommentar, früheres Feedback, Export als Paket; `--art`, `--satz`, `--gegen`, `--varianten`, `--alle`, Namen |
 | `feedback-auswerten.mjs` | ein Paket von der Seite oder der Werkbank: was Ben geändert hat, gemessen an der erzeugten Fassung (die Messung von Bahn, Reihenfolge, Zeile und Flussverlauf liegt seit Story 2.40 in `src/bpmn-tools/aenderungen.js`, das die Werkbank auf ihrer Leinwand markiert); je Beispiel die Herkunft, wo das Paket sie trägt, der Fingerabdruck des Falls und die Eingabe, die es ist, sonst die drei nach der Form nächsten |
 | `vor-lmm.mjs`, `review-lmm.mjs` | die Stände vor LMM (8266ec4, und d296705 mit dem Messer, aber Mermaids Spalten) aus den aufbewahrten Rohpositionen, und die Review-Seite aller Bilder, die der Umbau vom 2026-10-07 geändert hat (`arbeit/bpmn-feedback-lmm.html`), mit dem Stand vor den Regeln aus Bens Feedback (Lauf `basis`, `--stand dd1dd25`) und den Handfassungen (Bens hund2, die Handlayouts der Quellen) |
 | `pruefen.mjs` | bpmnlint und die Prüfung paralleler Gateways (ein paralleler Split schließt mit einem parallelen Join, oder seine Zweige laufen in Endereignissen aus, Ben, 2026-10-09); eine neue Eingabe kommt nur ohne Fehler in einen Satz, außer sie ist so falsch gezeichnet, wie Leute zeichnen: dann steht ihr Fehler unter `BEKANNT` und zählt nicht (x-wv6: Nachrichten-Start in einen parallelen Join, Ben, 2026-10-09). Danach die Eingaben mit gleichem Fall und gleicher Form (unten) |
 | `kreuz.mjs` | gekreuzte Nachrichtenflüsse zwischen denselben zwei Symbolen (Story 2.12) |
 | `browser-zeit.mjs` | die Laufzeit in Chromium und Firefox |
 
-Die Layout-Werkbank (`dist/bpmn-layout-werkbank.html`, `npm run werkbank`, Stories 2.38 bis 2.40) trägt die eigenen Eingaben ohne Koordinaten, ordnet sie im Browser mit ihrem Stand an und nimmt Bens Feedback auf; ihr Paket hat das Format der Seite des Layout-Feedbacks, mit der Herkunft je Beispiel (`eigen` oder der Satz), und `feedback-auswerten.mjs` wertet es aus wie ein anderes. `npm run werkbank -- --mit-extern` baut sie mit allen Eingaben nach `arbeit/bpmn-layout-werkbank-alles.html`. Was außerhalb von git lebt (die externen Eingaben, Bens Fassungen aus den Paketen in `arbeit/feedback/`, das Archiv, die Variantenvergleiche), schreibt `node tools/werkbank/import.mjs` nach `arbeit/werkbank-import.json`; die Werkbank nimmt die Datei mit „Import laden“ in ihren Speicher. Bens letzte Bearbeitung je Fall ist dort seine Fassung mit `soll: false`, eine Reparatur, kein Ziel (Ben, 2026-10-09). Sie zeigt im Kopf ihren Layout-Stand: `logikOf()` über `src/app` beim Bauen, also dieselbe Zahl, die `lauf.mjs` für den Arbeitsbaum als Logik nennt. Steht dort eine andere als im letzten Lauf, ist die Werkbank mit anderen Modulen gebaut; neu bauen. Seit Story 2.40 liegen die Fassungen eines Falls als Ebenen auf einer Leinwand (Tasten 1 bis 9, Zoom und Ausschnitt bleiben stehen), „Änderungen“ (Taste M) markiert, was `feedback-auswerten.mjs` als geändert listen würde, und „Neuer Fall“ → „Zeichnen“ legt einen gezeichneten Fall an. Seit Story 2.41: Suche (Taste /) und Filter über der Liste, offenes Feedback, bis Ben es markiert, eine Bewertung 1 bis 10 je Stand, die im Paket als `bewertung` steht und die `feedback-auswerten.mjs` beim Beispiel nennt, und die drei ähnlichsten Fälle.
+Die Layout-Werkbank (`dist/bpmn-layout-werkbank.html`, `npm run werkbank`, Stories 2.38 bis 2.42), die Seite, auf der Layout-Stories ihre Bilder zeigen, trägt die eigenen Eingaben ohne Koordinaten, ordnet sie im Browser mit ihrem Stand an und nimmt Bens Feedback auf; ihr Paket hat das Format der Seite des Layout-Feedbacks, mit der Herkunft je Beispiel (`eigen` oder der Satz), und `feedback-auswerten.mjs` wertet es aus wie ein anderes. `npm run werkbank -- --mit-extern` baut sie mit allen Eingaben nach `arbeit/bpmn-layout-werkbank-alles.html`. Was außerhalb von git lebt (die externen Eingaben, Bens Fassungen aus den Paketen in `arbeit/feedback/`, das Archiv, die Variantenvergleiche), schreibt `node tools/werkbank/import.mjs` nach `arbeit/werkbank-import.json`; die Werkbank nimmt die Datei mit „Import laden“ in ihren Speicher. Bens letzte Bearbeitung je Fall ist dort seine Fassung mit `soll: false`, eine Reparatur, kein Ziel (Ben, 2026-10-09). Sie zeigt im Kopf ihren Layout-Stand: `logikOf()` über `src/app` beim Bauen, also dieselbe Zahl, die `lauf.mjs` für den Arbeitsbaum als Logik nennt. Steht dort eine andere als im letzten Lauf, ist die Werkbank mit anderen Modulen gebaut; neu bauen. Seit Story 2.40 liegen die Fassungen eines Falls als Ebenen auf einer Leinwand (Tasten 1 bis 9, Zoom und Ausschnitt bleiben stehen), „Änderungen“ (Taste M) markiert, was `feedback-auswerten.mjs` als geändert listen würde, und „Neuer Fall“ → „Zeichnen“ legt einen gezeichneten Fall an. Seit Story 2.41: Suche (Taste /) und Filter über der Liste, offenes Feedback, bis Ben es markiert, eine Bewertung 1 bis 10 je Stand, die im Paket als `bewertung` steht und die `feedback-auswerten.mjs` beim Beispiel nennt, und die drei ähnlichsten Fälle.
 
 Nicht mitgekommen sind, was nur mit Mermaids Rohpositionen ging: die eingefrorenen Varianten main, A und B von Spike 2.26 mit ihrer Sichtung (`sichtung.mjs`, `bilder.mjs`), die Wege G und M der Pools (Story 2.12) und das alte Bauskript des Assistant (jetzt `tools/bpmn-assistant/`).
 
@@ -63,6 +78,7 @@ Die Sätze, wie Spike 2.26 und die Stories 2.12 und 2.29 bis 2.32 sie gebildet h
 | `ben` | 2 | | Bens morgenroutine und krankheit |
 | `extern` | | 20 (`x-…`) | von Menschen gezeichnete Prozesse, je mit Handlayout als Referenz |
 | `pools`, `blackbox`, `angeheftet`, `notizen`, `daten` | 5, 8, 11, 9, 9 | 10, 7, 3, 12, 14 | die Sätze der Stories 2.12, 2.29 bis 2.32 |
+| `werkbank` | in `eingaben/werkbank/` (`wb01` …) | | Bens Fälle aus der Werkbank, eingereicht mit `tools/werkbank/einreichen.mjs` (Story 2.42), gültig nach `pruefen.mjs`, bei jedem Lauf dabei |
 | `laufzeit` | 1 | | Bens hund3 (77 Knoten), nur auf Nennung |
 | `einzeln` | 1 | | Diagramme, über die Ben einzeln sprechen will, nur auf Nennung: `lauf.mjs --lauf <name> <name>`, `feedback-bauen.mjs --lauf <name> --art <name> <name>` |
 

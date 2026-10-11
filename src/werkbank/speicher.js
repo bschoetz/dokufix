@@ -150,7 +150,7 @@ export function speicher(s, { art = 'arbeitsspeicher', warnung = null } = {}){
       for (const { xml, stand, referenz, soll, ...opts } of items){
         const r = einordnen(xml, faelle, { ...opts, jetzt });
         out.push(r);
-        await ablegen(r, faelle, { stand, referenz, soll, jetzt });
+        await ablegen(r, faelle, { stand, referenz, soll, jetzt, name: opts.name, herkunft: opts.herkunft });
       }
       return out;
     },
@@ -217,8 +217,16 @@ export function pruefeZustand(z){
 }
 
 // Legt ab, was einordnen() oder zuordnen() ergab: einen neuen Fall in faelle und im Speicher, Bens Fassung am stand.
-async function ablegenIn(sp, r, faelle, { stand, referenz, soll, jetzt }){
+async function ablegenIn(sp, r, faelle, { stand, referenz, soll, jetzt, name, herkunft }){
   if (r.fehler || r.art === 'offen') return;
+  // Ein eigener Fall, den Ben in einen Satz eingereicht hat (tools/werkbank/einreichen.mjs, Story 2.42), wird die
+  // eingebaute Eingabe: ihr Name, ihr Satz, Revision 1 (vorher bleibt). Feedback, Anordnungen und Marken hängen am
+  // Fingerabdruck und bleiben.
+  if (r.art === 'bekannt' && r.fall.herkunft === 'eigen' && herkunft && herkunft !== 'eigen' && herkunft !== 'archiv' && name){
+    Object.assign(r.fall, { name, herkunft, revision: 1 });
+    if (referenz && !r.fall.referenz) r.fall.referenz = referenz;
+    await sp.legeFall(r.fall);
+  }
   if (r.art !== 'bekannt'){
     if (referenz) r.fall.referenz = referenz;
     faelle.push(r.fall);
