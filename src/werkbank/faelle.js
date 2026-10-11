@@ -227,6 +227,35 @@ export function zeichnungPruefen(xml){
   if (model.nodes.length < 2) return 'In der Zeichnung ist nichts gezeichnet; nichts angelegt.';
   return null;
 }
+// Knoten in einer anderen Bahn als in der Fassung, die der Modellierer geöffnet hat (aus Bens hund2, 2026-10-09: ein
+// Ziehen im Modellierer schreibt den Knoten in die flowNodeRef einer anderen Bahn). { gefragt, vermerkt }, je
+// [{ id, name, von, nach }] mit den Namen der Bahnen: gefragt Aufgaben, Ereignisse und die übrigen Knoten, vermerkt
+// die Gateways (sie dürfen in jeder Bahn liegen, Ben 2026-10-04). Leer, wo eine Fassung nicht lesbar ist.
+export function bahnwechsel(vorher, nachher){
+  const lesen = xml => { try { return readProcess(parseXml(String(xml))).model; } catch { return null; } };
+  const a = lesen(vorher), b = lesen(nachher), out = { gefragt: [], vermerkt: [] };
+  if (!a || !b) return out;
+  // Je Knoten seine Bahn: verglichen nach der ID der Bahn (eine umbenannte Bahn ist dieselbe, zwei gleichnamige sind
+  // zwei), gezeigt mit ihrem Namen; ein Pool ohne Bahnen ist eine Bahn für sich.
+  const bahnen = m => {
+    const map = new Map();
+    for (const l of m.lanes){
+      const pool = m.pools[l.pool ?? 0] || {};
+      const bahn = l.synthetic && !l.id ? { key: 'pool:' + (pool.id || l.pool), name: pool.name ? 'Pool ' + pool.name : 'keiner Bahn' } : { key: 'bahn:' + l.id, name: l.name || l.id };
+      for (const id of l.nodes) map.set(id, bahn);
+    }
+    return map;
+  };
+  const von = bahnen(a), nach = bahnen(b), typ = new Map(b.nodes.map(n => [n.id, n]));
+  for (const [id, l] of von){
+    if (!nach.has(id) || nach.get(id).key === l.key || !typ.has(id)) continue;
+    const n = typ.get(id);
+    (n.type === 'gateway' ? out.vermerkt : out.gefragt).push({ id, name: n.name || id, von: l.name, nach: nach.get(id).name });
+  }
+  return out;
+}
+export const bahnwechselText = (w, art = '') => w.map(x => (art ? art + ' ' : '') + '‚' + x.name + '‘ liegt jetzt in ' + x.nach + ' statt ' + x.von + '.').join('\n');
+
 export const anzeigeName = f => f.revision > 1 ? f.name + ' (' + f.revision + ')' : f.name;
 
 // Das Paket des Layout-Feedbacks (das Format von tools/bpmn-layout/feedback-seite.js, feedback-auswerten.mjs liest

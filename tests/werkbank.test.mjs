@@ -1003,3 +1003,50 @@ test('matrix: the next build: the stored own case becomes the embedded input, it
   await sp.aufnehmenViele([{ xml: eingabe('hund'), name: 'wb09-hund', herkunft: 'werkbank' }], T2);
   assert.equal((await sp.faelle()).find(x => x.fall === caseFingerprint(eingabe('hund')).hash).name, 'hund');
 });
+
+// ---------- a node moved to another lane in the modeler (deferred from story 2.39) ----------
+import { bahnwechsel, bahnwechselText } from '../src/werkbank/faelle.js';
+
+test('a node moved to another lane is asked, a gateway only noted; nothing where nothing moved or a version is unreadable', () => {
+  const vorher = eingabe('hund2');
+  // Task_Kommen from Hündin to Melker, GW_Merge_Huendin from Melker to Hündin.
+  const nachher = vorher
+    .replace('<bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>', '<bpmn:flowNodeRef>GW_Merge_Huendin</bpmn:flowNodeRef>')
+    .replace(/(<bpmn:lane id="Lane_Melker"[^>]*>\s*(?:<bpmn:flowNodeRef>[^<]*<\/bpmn:flowNodeRef>\s*)*?)<bpmn:flowNodeRef>GW_Merge_Huendin<\/bpmn:flowNodeRef>/, '$1<bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>');
+  const w = bahnwechsel(vorher, nachher);
+  assert.deepEqual(w.gefragt.map(x => [x.id, x.von, x.nach]), [['Task_Kommen', 'Hündin', 'Melker']]);
+  assert.deepEqual(w.vermerkt.map(x => [x.id, x.von, x.nach]), [['GW_Merge_Huendin', 'Melker', 'Hündin']]);
+  assert.match(bahnwechselText(w.gefragt), /^‚[^‘]+‘ liegt jetzt in Melker statt Hündin\.$/);
+  assert.match(bahnwechselText(w.vermerkt, 'Gateway'), /^Gateway ‚GW_Merge_Huendin‘ liegt jetzt in Hündin statt Melker\.$/);
+  assert.deepEqual(bahnwechsel(vorher, vorher), { gefragt: [], vermerkt: [] });
+  assert.deepEqual(bahnwechsel(vorher, '<kaputt'), { gefragt: [], vermerkt: [] });
+  // Without lanes nothing can move.
+  assert.deepEqual(bahnwechsel(eingabe('r01'), eingabe('r01')), { gefragt: [], vermerkt: [] });
+  // A lane renamed is the same lane: nothing asked.
+  assert.deepEqual(bahnwechsel(vorher, vorher.replace('id="Lane_Melker" name="Melker"', 'id="Lane_Melker" name="Melkpersonal"')), { gefragt: [], vermerkt: [] });
+  // Two lanes of one name are two lanes: the move is asked.
+  const gleichnamig = vorher.replace('id="Lane_Huendin" name="Hündin"', 'id="Lane_Huendin" name="Melker"');
+  const zwei = gleichnamig.replace('<bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>', '').replace(/(<bpmn:lane id="Lane_Melker"[^>]*>)/, '$1<bpmn:flowNodeRef>Task_Kommen</bpmn:flowNodeRef>');
+  assert.deepEqual(bahnwechsel(gleichnamig, zwei).gefragt.map(x => [x.id, x.von, x.nach]), [['Task_Kommen', 'Melker', 'Melker']]);
+});
+
+test('a node moved from a lane into a pool without lanes is asked', () => {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D">
+  <bpmn:collaboration id="C"><bpmn:participant id="PA" name="Amt" processRef="P1" /><bpmn:participant id="PB" name="Kunde" processRef="P2" /></bpmn:collaboration>
+  <bpmn:process id="P1"><bpmn:laneSet id="LS"><bpmn:lane id="L1" name="Eingang"><bpmn:flowNodeRef>S1</bpmn:flowNodeRef><bpmn:flowNodeRef>T1</bpmn:flowNodeRef>X</bpmn:lane></bpmn:laneSet>
+    <bpmn:startEvent id="S1" /><bpmn:task id="T1" name="Prüfen" />Y<bpmn:sequenceFlow id="f1" sourceRef="S1" targetRef="T1" /></bpmn:process>
+  <bpmn:process id="P2"><bpmn:startEvent id="S2" />Z</bpmn:process>
+</bpmn:definitions>`;
+  const vorher = xml.replace(/[XYZ]/g, '');
+  const nachher = xml.replace('X', '').replace('<bpmn:flowNodeRef>T1</bpmn:flowNodeRef>', '').replace('<bpmn:task id="T1" name="Prüfen" />Y<bpmn:sequenceFlow id="f1" sourceRef="S1" targetRef="T1" />', '').replace('Z', '<bpmn:task id="T1" name="Prüfen" />');
+  assert.deepEqual(bahnwechsel(vorher, nachher).gefragt.map(x => [x.id, x.von, x.nach]), [['T1', 'Eingang', 'Pool Kunde']]);
+});
+
+test('Ben\'s hund2 edit of 2026-10-09: the accidental lane change of the discard branch is asked', { skip: !fs.existsSync(path.join(ARBEIT, 'feedback/werkbank-76b71e92-2026-10-09/paket.json')) && 'no package here' }, () => {
+  const p = JSON.parse(fs.readFileSync(path.join(ARBEIT, 'feedback/werkbank-76b71e92-2026-10-09/paket.json'), 'utf8'));
+  const b = p.beispiele.find(x => x.name === 'hund2');
+  const w = bahnwechsel(b.erzeugt, b.bearbeitet);
+  assert.deepEqual(w.gefragt.map(x => [x.id, x.nach]).sort(), [['End_Verworfen', 'Qualitätssicherung'], ['Task_Verwerfen', 'Qualitätssicherung']]);
+  assert.match(bahnwechselText(w.gefragt), /‚Charge verwerfen & entsorgen‘ liegt jetzt in Qualitätssicherung statt Verarbeitung\./);
+});

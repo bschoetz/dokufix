@@ -32,8 +32,10 @@ export function loadModeler(){
 // where they are others (the workbench: "Als meine Fassung übernehmen");
 // fileBase: the name of the .bpmn download, from the XML; container: where
 // the modeler goes, else over the whole window; xml null: an empty diagram
-// (bpmn-js's createDiagram(), a start event).
-export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als Original übernehmen', container = null }){
+// (bpmn-js's createDiagram(), a start event); vorTake: asked with the XML
+// before the modeler closes, false keeps it open with the edit (the
+// workbench: a node moved to another lane).
+export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als Original übernehmen', container = null, vorTake = null }){
   closeModeler(true);
   const box = document.createElement('div');
   box.id = 'modeler';
@@ -64,6 +66,7 @@ export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als
   const current = async () => (await modeler.m.saveXML({ format: true })).xml;
   box.querySelector('.take').onclick = async () => {
     const x = await current();
+    if (vorTake && !vorTake(x)) return;
     closeModeler(true);
     take(x);
   };

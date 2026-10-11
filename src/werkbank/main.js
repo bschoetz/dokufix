@@ -53,7 +53,7 @@ import { fileBase } from '../bpmn-tools/downloads.js';
 import { makeA2Client } from '../bpmn-tools/layout.js';
 import { themeCss, PRESETS } from '../bpmn-tools/theme.js';
 import { speicherOeffnen } from './speicher.js';
-import { geaendert, anzeigeName, paketBauen, nameAus, zeichnungPruefen, postenVon, letzteBewertung, merkmale, MERKMALE, warum, filtern } from './faelle.js';
+import { geaendert, anzeigeName, paketBauen, nameAus, zeichnungPruefen, postenVon, letzteBewertung, merkmale, MERKMALE, warum, filtern, bahnwechsel, bahnwechselText } from './faelle.js';
 import { shapeOf, nearest } from '../app/fingerprint.js';
 import { leinwand, markenFuer, ebeneFuerTaste } from './ebenen.js';
 
@@ -546,8 +546,17 @@ function modelliererFrei(){
 $('bearbeiten').onclick = () => {
   const f = faelle.find(x => x.fall === gewaehlt);
   if (!f || !gezeigt || !modelliererFrei()) return;
+  const offen = gezeigt;
+  let vermerkt = [];
   openModeler(anzeigeName(f), gezeigt, {
     container: $('leinwand'), fileBase: () => fileBase(f.name), takeLabel: 'Als meine Fassung übernehmen',
+    // Ein Knoten in einer anderen Bahn fragt; Abbrechen lässt den Modellierer mit der Bearbeitung offen. Ein Gateway
+    // in einer anderen Bahn steht nur in der Meldung danach.
+    vorTake: x => {
+      const w = bahnwechsel(offen, x);
+      vermerkt = w.vermerkt;
+      return !w.gefragt.length || window.confirm(bahnwechselText(w.gefragt) + '\n\nGewollt? OK speichert, Abbrechen lässt den Modellierer offen.');
+    },
     take: async x => {
       let e;
       try { e = await sp.legeFeedback({ fall: f.fall, stand: STAND, bearbeitet: x, geaendert: new Date().toISOString(), soll: null }); }
@@ -558,7 +567,7 @@ $('bearbeiten').onclick = () => {
       nachMarke(f);
       // Ben kann während des Bearbeitens in der Liste einen anderen Fall gewählt haben: zurück zum bearbeiteten.
       if (gewaehlt !== f.fall) waehlen(f.fall); else zeigen();
-      meldung('Deine Fassung von ' + anzeigeName(f) + ' am Stand ' + STAND + ' gespeichert.');
+      meldung('Deine Fassung von ' + anzeigeName(f) + ' am Stand ' + STAND + ' gespeichert.' + (vermerkt.length ? ' ' + bahnwechselText(vermerkt, 'Gateway').replace(/\n/g, ' ') : ''));
     },
   });
 };
