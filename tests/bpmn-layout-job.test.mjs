@@ -19,19 +19,19 @@ const WITHOUT_DI = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/2
 const EMPTY = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P1"/></bpmn:definitions>';
 const STRAY = WITHOUT_DI.replace('<bpmn:process id="P">', '<bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>');
 
-test('the job lays out XML without coordinates: the author\'s XML with the diagram part, the diagram bpmn-js opens, nothing left out', () => {
+test('the job lays out XML without coordinates: the author\'s XML with the diagram part, the diagram bpmn-js opens, nothing left out, no id given', () => {
   const r = layoutJob(WITHOUT_DI);
-  assert.deepEqual(Object.keys(r), ['xml', 'open', 'leftOut']);
+  assert.deepEqual(Object.keys(r), ['xml', 'open', 'leftOut', 'named']);
   const close = WITHOUT_DI.lastIndexOf('</bpmn:definitions>');
   assert.equal(r.xml.slice(0, close), WITHOUT_DI.slice(0, close));
   assert.deepEqual((r.xml.match(/bpmnElement="[^"]+"/g) || []).map(m => m.slice(13, -1)), ['P', 'S', 'A', 'F']);
   assert.equal(r.open, 'dokufix_diagram');
-  assert.deepEqual(r.leftOut, []);
+  assert.deepEqual([r.leftOut, r.named], [[], []]);
 });
 
 test('every fixture: the job gives its laid-out XML byte for byte, as the page laid it out before the worker', () => {
   const names = fixtureNames();
-  assert.equal(names.length, 74);
+  assert.equal(names.length, 75);
   for (const name of names){
     const r = layoutJob(readFixture(name).xml);
     assert.equal(r.xml, fs.readFileSync(expectedFile(name), 'utf8'), name);

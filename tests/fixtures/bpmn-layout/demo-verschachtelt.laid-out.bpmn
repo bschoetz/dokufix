@@ -35,7 +35,7 @@
           <bpmn:lane id="VB_Reklamation" name="Reklamation"/>
         </bpmn:childLaneSet>
       </bpmn:lane>
-      <bpmn:lane name="Auslieferung">
+      <bpmn:lane id="Lane_Auslieferung" name="Auslieferung">
         <bpmn:childLaneSet id="VB_Auslieferung_Bahnen">
           <bpmn:lane id="VB_Lager" name="Lager">
             <bpmn:flowNodeRef>VB_Verpacken</bpmn:flowNodeRef>
@@ -74,14 +74,15 @@
       <bpmndi:BPMNShape id="VB_Fertigung_di" bpmnElement="VB_Fertigung" isHorizontal="true"><dc:Bounds x="30" y="144" width="708" height="432"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Montage_di" bpmnElement="VB_Montage" isHorizontal="true"><dc:Bounds x="60" y="288" width="678" height="288"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Qualitaet_di" bpmnElement="VB_Qualitaet" isHorizontal="true"><dc:Bounds x="30" y="576" width="708" height="248"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Auslieferung_di" bpmnElement="Lane_Auslieferung" isHorizontal="true"><dc:Bounds x="30" y="824" width="708" height="288"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Leitung_di" bpmnElement="VB_Leitung" isHorizontal="true"><dc:Bounds x="30" y="0" width="708" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Zuschnitt_di" bpmnElement="VB_Zuschnitt" isHorizontal="true"><dc:Bounds x="60" y="144" width="678" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Vormontage_di" bpmnElement="VB_Vormontage" isHorizontal="true"><dc:Bounds x="90" y="288" width="648" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Endmontage_di" bpmnElement="VB_Endmontage" isHorizontal="true"><dc:Bounds x="90" y="432" width="648" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Pruefung_di" bpmnElement="VB_Pruefung" isHorizontal="true"><dc:Bounds x="60" y="576" width="678" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Reklamation_di" bpmnElement="VB_Reklamation" isHorizontal="true"><dc:Bounds x="60" y="720" width="678" height="104"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="VB_Lager_di" bpmnElement="VB_Lager" isHorizontal="true"><dc:Bounds x="30" y="824" width="708" height="144"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="VB_Versand_di" bpmnElement="VB_Versand" isHorizontal="true"><dc:Bounds x="30" y="968" width="708" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Lager_di" bpmnElement="VB_Lager" isHorizontal="true"><dc:Bounds x="60" y="824" width="678" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Versand_di" bpmnElement="VB_Versand" isHorizontal="true"><dc:Bounds x="60" y="968" width="678" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Start_di" bpmnElement="VB_Start"><dc:Bounds x="162" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="135" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Planen_di" bpmnElement="VB_Planen"><dc:Bounds x="270" y="32" width="120" height="80"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="VB_Zuschneiden_di" bpmnElement="VB_Zuschneiden"><dc:Bounds x="270" y="176" width="120" height="80"/></bpmndi:BPMNShape>

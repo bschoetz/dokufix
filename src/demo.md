@@ -1035,7 +1035,7 @@ Zwei Arten Linie, die BPMN ohne Koordinaten bis Story 2.33 wegließ. Eine **Asso
 
 ### BPMN ohne Koordinaten: Bahnen in Bahnen
 
-Bis Story 2.34 zeichnete BPMN ohne Koordinaten von **verschachtelten Bahnen** nur die inneren. Jetzt steht jede **äußere Bahn** um ihre inneren, mit eigenem Kopf links von deren Köpfen, je Ebene 30 px weiter rechts. Die Fertigung hält den Zuschnitt und die Montage, die Montage wiederum Vor- und Endmontage: drei Köpfe nebeneinander. Die Leitung ist eine flache Bahn daneben, ihr Inhalt beginnt wie der aller Bahnen hinter den tiefsten Köpfen. „Prüfen“ nennt nur die äußere Bahn Qualität; es steht in deren erster innerer Bahn, Prüfung. Die innere Bahn Reklamation bleibt leer. Lager und Versand liegen in einer äußeren Bahn ohne ID: Sie wird nicht gezeichnet, ihre inneren Bahnen stehen wie flache, mit einer Zeile auf der Konsole.
+Bis Story 2.34 zeichnete BPMN ohne Koordinaten von **verschachtelten Bahnen** nur die inneren. Jetzt steht jede **äußere Bahn** um ihre inneren, mit eigenem Kopf links von deren Köpfen, je Ebene 30 px weiter rechts. Die Fertigung hält den Zuschnitt und die Montage, die Montage wiederum Vor- und Endmontage: drei Köpfe nebeneinander. Die Leitung ist eine flache Bahn daneben, ihr Inhalt beginnt wie der aller Bahnen hinter den tiefsten Köpfen. „Prüfen“ nennt nur die äußere Bahn Qualität; es steht in deren erster innerer Bahn, Prüfung. Die innere Bahn Reklamation bleibt leer. Lager und Versand liegen in einer äußeren Bahn ohne ID: Seit Story 2.45 bekommt sie eine aus ihrem Namen, `Lane_Auslieferung`, und steht wie die anderen um ihre inneren Bahnen; die Konsole nennt die vergebene ID.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>
@@ -1107,6 +1107,82 @@ Bis Story 2.34 zeichnete BPMN ohne Koordinaten von **verschachtelten Bahnen** nu
     <bpmn:sequenceFlow id="VB_F8" name="ja" sourceRef="VB_InOrdnung" targetRef="VB_Verpacken"/>
     <bpmn:sequenceFlow id="VB_F9" sourceRef="VB_Verpacken" targetRef="VB_Versenden"/>
     <bpmn:sequenceFlow id="VB_F10" sourceRef="VB_Versenden" targetRef="VB_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+### BPMN ohne Koordinaten: Elemente ohne ID
+
+Bis Story 2.45 zeichnete BPMN ohne Koordinaten eine **Bahn ohne ID** nur als Zeile ohne Rahmen und ließ eine **Verbindung ohne ID** weg. Jetzt gibt dokufix ihnen eine ID aus ihrem Namen und schreibt sie in die Datei: ein Präfix nach Art, dann der Name mit ausgeschriebenen Umlauten, jedes andere Zeichen ein Unterstrich. Die Konsole nennt jede vergebene ID. Die Bahn „Büro (Nord)“ wird `Lane_Buero_Nord`. „Prüfung“ und „Pruefung“ ergäben dieselbe ID: Die erste behält `Lane_Pruefung`; die zweite bekäme `_2`, doch `Lane_Pruefung_2` hat die Leitung schon, also `Lane_Pruefung_3`. Die Bahn ohne Namen wird `Lane_1`. Die beiden Flüsse „ja“ werden `Flow_ja` und `Flow_ja_2`, die ohne Namen `Flow_1` und so weiter; die Nachrichtenflüsse `MessageFlow_Bestellung` und `MessageFlow_1`, die Assoziation zur Notiz `Association_1`, die Datenassoziation vom Lieferschein `DataInputAssociation_1`. Eine leere Datenassoziation an „Versenden“ nennt kein Ende: Sie bekommt keine ID und bleibt weggelassen, mit einer Zeile auf der Konsole.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_OhneId" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="OI_Zusammenarbeit">
+    <bpmn:participant id="OI_Kunde" name="Kunde"/>
+    <bpmn:participant id="OI_Pool" name="Versandhandel" processRef="OI_Prozess"/>
+    <bpmn:messageFlow name="Bestellung" sourceRef="OI_Kunde" targetRef="OI_Start"/>
+    <bpmn:messageFlow sourceRef="OI_Versenden" targetRef="OI_Kunde"/>
+  </bpmn:collaboration>
+  <bpmn:process id="OI_Prozess" isExecutable="false">
+    <bpmn:laneSet id="OI_Bahnen">
+      <bpmn:lane name="Büro (Nord)">
+        <bpmn:flowNodeRef>OI_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Vorraetig</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane name="Prüfung">
+        <bpmn:flowNodeRef>OI_Nachbestellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Zusammen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Bezahlt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane name="Pruefung">
+        <bpmn:flowNodeRef>OI_Mahnen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Pruefung_2" name="Leitung">
+        <bpmn:flowNodeRef>OI_Freigeben</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane>
+        <bpmn:flowNodeRef>OI_Versenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Ende</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Lieferschein</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Notiz</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="OI_Start" name="Bestellung da">
+      <bpmn:messageEventDefinition id="OI_Nachricht"/>
+    </bpmn:startEvent>
+    <bpmn:task id="OI_Erfassen" name="Bestellung erfassen"/>
+    <bpmn:exclusiveGateway id="OI_Vorraetig" name="vorrätig?"/>
+    <bpmn:task id="OI_Nachbestellen" name="Nachbestellen"/>
+    <bpmn:exclusiveGateway id="OI_Zusammen"/>
+    <bpmn:exclusiveGateway id="OI_Bezahlt" name="bezahlt?"/>
+    <bpmn:task id="OI_Mahnen" name="Mahnen"/>
+    <bpmn:task id="OI_Freigeben" name="Versand freigeben"/>
+    <bpmn:task id="OI_Versenden" name="Versenden">
+      <bpmn:dataInputAssociation>
+        <bpmn:sourceRef>OI_Lieferschein</bpmn:sourceRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation/>
+    </bpmn:task>
+    <bpmn:endEvent id="OI_Ende" name="Versandt"/>
+    <bpmn:dataObjectReference id="OI_Lieferschein" name="Lieferschein" dataObjectRef="OI_Lieferschein_Daten"/>
+    <bpmn:dataObject id="OI_Lieferschein_Daten"/>
+    <bpmn:textAnnotation id="OI_Notiz">
+      <bpmn:text>Versand mit DHL</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association sourceRef="OI_Versenden" targetRef="OI_Notiz"/>
+    <bpmn:sequenceFlow sourceRef="OI_Start" targetRef="OI_Erfassen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Erfassen" targetRef="OI_Vorraetig"/>
+    <bpmn:sequenceFlow name="ja" sourceRef="OI_Vorraetig" targetRef="OI_Zusammen"/>
+    <bpmn:sequenceFlow name="nein" sourceRef="OI_Vorraetig" targetRef="OI_Nachbestellen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Nachbestellen" targetRef="OI_Zusammen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Zusammen" targetRef="OI_Bezahlt"/>
+    <bpmn:sequenceFlow name="ja" sourceRef="OI_Bezahlt" targetRef="OI_Freigeben"/>
+    <bpmn:sequenceFlow name="nein" sourceRef="OI_Bezahlt" targetRef="OI_Mahnen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Mahnen" targetRef="OI_Bezahlt"/>
+    <bpmn:sequenceFlow sourceRef="OI_Freigeben" targetRef="OI_Versenden"/>
+    <bpmn:sequenceFlow sourceRef="OI_Versenden" targetRef="OI_Ende"/>
   </bpmn:process>
 </bpmn:definitions>
 ```

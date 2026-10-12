@@ -259,12 +259,13 @@ async function drawBpmn(diagram, { client, timers, frame, now } = {}){
     let xml = diagram.source, open;
     if (!hasCoordinates(xml)){
       const notice = showLayoutNotice(diagram.holder, { timers, frame, now });
-      let leftOut;
+      let leftOut, named;
       try {
-        ({ xml, open, leftOut } = await (client || pageLayoutClient()).layout(diagram.source, { signal: diagram.signal }));
+        ({ xml, open, leftOut, named } = await (client || pageLayoutClient()).layout(diagram.source, { signal: diagram.signal }));
       } finally { notice.stop(); }
-      // What the layout leaves out is a line on the console each.
+      // What the layout leaves out is a line on the console each, and so is every id it gave (story 2.45).
       for (const line of leftOut || []) console.warn('BPMN layout, left out:', line);
+      for (const line of named || []) console.info('BPMN layout, id given:', line);
     }
     diagram.xml = xml;
     host = offscreenHost(doc);

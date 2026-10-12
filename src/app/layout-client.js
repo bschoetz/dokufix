@@ -7,7 +7,7 @@ import { layoutJob } from './bpmn-layout-job.js';
 // docs/konzept-worker.md).
 //
 //   const client = makeLayoutClient();
-//   const { xml, open, leftOut } = await client.layout(source, { signal, options });
+//   const { xml, open, leftOut, named } = await client.layout(source, { signal, options });
 //
 // layout() gives what layoutJob() of src/app/bpmn-layout-job.js gives, and
 // throws what it throws, as an Error with the same message; so renderBpmn()

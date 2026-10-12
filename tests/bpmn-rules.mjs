@@ -318,7 +318,8 @@ export function breaksOf(xml, model, sizes = {}){
     }
   }
   // Each outer lane around the lanes directly in it, drawn ones only; its top and bottom checked where every lane in it
-  // is drawn (a lane without an id keeps its row, but has no shape).
+  // is drawn (a lane with an empty id keeps its row, but has no shape; one without an id attribute has one since
+  // story 2.45).
   for (const o of model.outerLanes || []){
     const box = di.shapes[o.id];
     if (!box) continue;

@@ -338,6 +338,16 @@ test('what the layout leaves out is a line on the console each, and the rest is 
   assert.deepEqual(warned.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, left out: group B: not laid out', 'BPMN layout, left out: sequenceFlow G: touches B, which is not laid out']);
 });
 
+test('an id the layout gives a lane or a connection without one is a line on the console each (story 2.45)', async t => {
+  const told = t.mock.method(console, 'info', () => {});
+  const { Viewer } = standIn();
+  const document = page();
+  const xml = WITHOUT_DI.replace(/<bpmn:sequenceFlow id="[^"]*"/, '<bpmn:sequenceFlow name="los"');
+  const d = diagramIn(document, xml);
+  await withLibrary(Viewer, () => renderBpmn(d));
+  assert.deepEqual(told.mock.calls.map(c => c.arguments.join(' ')), ['BPMN layout, id given: sequenceFlow: had no id, dokufix gave it Flow_los']);
+});
+
 // ---------- XML without coordinates, through a worker ----------
 // A worker of the test's: it answers as src/layout-worker.js when told.
 function fakeWorker(){

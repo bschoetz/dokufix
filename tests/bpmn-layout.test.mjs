@@ -21,7 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser } from 'linkedom';
 import {
-  readProcess, leftOutLine, layoutGeometry, appendDiagram, DEFAULT_RULES,
+  readProcess, leftOutLine, namedLine, layoutGeometry, appendDiagram, DEFAULT_RULES,
   flowLabel, flowLabelPlaces, labelPlaces, bestPlace, dedupe, orthogonal,
   growLane, labelRoom, nearestOnFlow, LAYOUT_NOTHING, layoutStrayText,
   noteSize, notePlaces, associationWay, wayAlong, NOTE_WIDTHS, dataWay, dataStateLabel, DATA_SIZE,
@@ -198,9 +198,10 @@ test('nested lanes: a node only an outer lane names stands in its first inner la
   assert.deepEqual(laid.breaks, []);
 });
 
-test('nested lanes: an outer lane without an id is not drawn and adds no level; an inner one without an id keeps its row inside the outer frame', () => {
+test('nested lanes: an outer lane with an empty id is not drawn and adds no level; an inner one with an empty id keeps its row inside the outer frame', () => {
+  // An empty id attribute: such a lane gets no id of dokufix's (story 2.45) and stays as before.
   const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Haus" processRef="P"/></bpmn:collaboration>' +
-    pooled('P', lane('', 'Ohne', [], lane('I1', 'Eins', ['T1']) + lane('A', 'Aussen', [], lane('', 'Namenlos', ['T2']) + lane('A2', 'Zwei', ['T3']))), chain(['T1', 'T2', 'T3'])));
+    pooled('P', lane('', 'Ohne', [], lane('I1', 'Eins', ['T1']) + lane('A', 'Aussen', [], lane('', 'Namenlos', ['T2']) + lane('A2', 'Zwei', ['T3']))), chain(['T1', 'T2', 'T3'])).replace(/<bpmn:lane name=/g, '<bpmn:lane id="" name='));
   const { model, leftOut } = read(xml);
   assert.deepEqual(model.outerLanes.map(o => [o.id, o.parent, o.level, o.lanes]), [['A', null, 1, ['l2', 'l3']]]);
   assert.deepEqual(model.lanes.map(l => [l.id, l.level ?? 1, l.synthetic]), [['I1', 1, false], ['', 2, true], ['A2', 2, false]]);
@@ -602,9 +603,9 @@ test('a flow from a node to itself is a loop of its own, not a flow of the grid 
   assert.deepEqual(leftOut, []);
 });
 
-test('a lane without an id keeps its row and is not written; a participant without an id gets no pool', () => {
+test('a lane with an empty id keeps its row and is not written; a participant without an id gets no pool', () => {
   const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant name="Ohne" processRef="P"/></bpmn:collaboration><bpmn:process id="P"><bpmn:laneSet id="LS">' +
-    '<bpmn:lane name="X"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="L2" name="Y"><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' + LINE + '</bpmn:process>');
+    '<bpmn:lane id="" name="X"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="L2" name="Y"><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' + LINE + '</bpmn:process>');
   const { model, leftOut } = read(xml);
   assert.deepEqual(model.pools, [{ id: null, name: 'Ohne' }]);
   assert.deepEqual(model.lanes.map(l => [l.id, l.nodes, l.synthetic]), [['', ['S', 'T'], true], ['L2', ['E'], false]]);
@@ -916,7 +917,7 @@ test('several pools: one per participant in its order, the lanes of each next to
 
 test('several pools: what is left out, each a line, in the order of the XML', () => {
   const xml = POOLS.replace('<bpmn:messageFlow id="M1"', '<bpmn:messageFlow id="MI" sourceRef="S2" targetRef="C"/><bpmn:messageFlow id="MY" sourceRef="B" targetRef="NIX"/>' +
-    '<bpmn:messageFlow sourceRef="B" targetRef="PK"/><bpmn:messageFlow id="MP" sourceRef="C" targetRef="PF"/><bpmn:messageFlow id="M1"');
+    '<bpmn:messageFlow id="" sourceRef="B" targetRef="PK"/><bpmn:messageFlow id="MP" sourceRef="C" targetRef="PF"/><bpmn:messageFlow id="M1"');
   const { model, leftOut } = read(xml);
   assert.deepEqual(model.pools.map(p => p.id), ['PK', 'PF']);
   assert.deepEqual(model.messages.map(m => m.id), ['M1', 'M2']);
@@ -1087,13 +1088,14 @@ test('processes without a collaboration: drawn as pools, the collaboration inser
   assert.ok(out.includes('\n  <bpmn:collaboration id="dokufix_zusammenarbeit">\n    <bpmn:participant id="dokufix_pool_1_2" name="Kunde" processRef="P1"/>\n    <bpmn:participant id="dokufix_pool_2" processRef="P2"/>\n  </bpmn:collaboration>\n  <bpmn:process id="P1"'), out);
   assert.equal(out.replace(/\n  <bpmn:collaboration[\s\S]*?<\/bpmn:collaboration>/, '').replace(/  <bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>\n/, ''), xml);
   assert.ok(out.includes('bpmnElement="dokufix_zusammenarbeit"') && out.includes('bpmnElement="dokufix_pool_1_2" isHorizontal="true"'));
-  // A process without an id is left out, it could have no participant; a lane without an id keeps its name.
+  // A process without an id is left out, it could have no participant; a lane without an id gets one from its name
+  // (story 2.45).
   const odd = xmlOf('<bpmn:process name="Ohne"><bpmn:task id="Q"/></bpmn:process><bpmn:process id="P3" name="Drei"><bpmn:laneSet id="LS3"><bpmn:lane name="Theke"><bpmn:flowNodeRef>R</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet><bpmn:task id="R"/></bpmn:process>' +
     '<bpmn:process id="P4" name="Vier"><bpmn:task id="U"/></bpmn:process><bpmn:process id="P5"/>');
   const r = read(odd);
   assert.deepEqual(r.model.insert.participants.map(p => [p.name, p.process]), [['Drei', 'P3'], ['Vier', 'P4']]);
-  assert.deepEqual(r.model.lanes.map(l => [l.name, l.synthetic]), [['Theke', true], ['Vier', true]]);
-  assert.deepEqual(r.leftOut.map(leftOutLine), ['process (no id): has no id', 'lane (no id): has no id; its row is laid out, the lane is not drawn', 'process P5: a process with nothing to lay out']);
+  assert.deepEqual(r.model.lanes.map(l => [l.id, l.name, l.synthetic]), [['Lane_Theke', 'Theke', false], ['', 'Vier', true]]);
+  assert.deepEqual(r.leftOut.map(leftOutLine), ['process (no id): has no id', 'process P5: a process with nothing to lay out']);
   // The same with read again: the inserted collaboration is read as the author's would be.
   assert.deepEqual(read(out.replace(/<bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>/, '')).model.pools, model.pools);
 });
@@ -1885,4 +1887,84 @@ test('a loop on an event with a flow out of its middle: not beside that flow', (
     '<bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="W"/><bpmn:sequenceFlow id="WL" sourceRef="W" targetRef="W"/><bpmn:sequenceFlow id="F2" sourceRef="W" targetRef="E"/>';
   const { xml, model } = notesLaid(body, { S: 0, W: 1, E: 2 });
   assert.deepEqual(breaksOf(xml, model), []);
+});
+
+// ---------- ids from names (story 2.45) ----------
+// A lane or a connection without an id gets one from its name, unique in the document, written into its start tag.
+const idsOf = xml => (read(xml).model.named || []).map(n => n.id);
+const noDiagram = xml => xml.replace(/\s*<bpmndi:BPMNDiagram[\s\S]*<\/bpmndi:BPMNDiagram>\s*/, '');
+
+test('ids from names: umlauts written out, accents dropped, other characters one "_", none at the ends, at most 40; without a name a number', () => {
+  const names = ['Büro (Nord)', 'Café – Théke!', 'Straße', 'A'.repeat(39) + ' B', '???'];
+  const xml = xmlOf(pooled('P', names.map((n, i) => lane('', n.replace('&', '&amp;'), ['T' + i])).join('') + '<bpmn:lane><bpmn:flowNodeRef>T5</bpmn:flowNodeRef></bpmn:lane>', chain(['T0', 'T1', 'T2', 'T3', 'T4', 'T5'])));
+  assert.deepEqual(idsOf(xml), ['Lane_Buero_Nord', 'Lane_Cafe_Theke', 'Lane_Strasse', 'Lane_' + 'A'.repeat(39), 'Lane_1', 'Lane_2']);
+  // An umlaut written as a letter and its dots is one too, and the capital sharp s is written out.
+  const odd = xmlOf(pooled('P', lane('', 'Pru\u0308fung', ['T1']) + lane('', 'GROẞ', ['T2']), chain(['T1', 'T2'])));
+  assert.deepEqual(idsOf(odd), ['Lane_Pruefung', 'Lane_GROSS']);
+  // Each is drawn as a lane, with its head.
+  const out = layoutJob(xml).xml;
+  for (const id of idsOf(xml)) assert.ok(out.includes('bpmnElement="' + id + '" isHorizontal="true"'), id);
+});
+
+test('ids from names: two names that give the same id, and an id the document holds, get _2, _3; a number skips one in use', () => {
+  const xml = xmlOf(pooled('P', lane('', 'Prüfung', ['T1']) + lane('Lane_Pruefung_2', 'Leitung', ['T2']) + lane('', 'Pruefung', ['T3']) + lane('', 'Prüfung', ['T4']),
+    chain(['T1', 'T2', 'T3', 'T4']) + '<bpmn:textAnnotation id="Association_1"><bpmn:text>Notiz</bpmn:text></bpmn:textAnnotation>' +
+    '<bpmn:association sourceRef="T1" targetRef="Association_1"/><bpmn:association sourceRef="T2" targetRef="Association_1"/>'));
+  assert.deepEqual(idsOf(xml), ['Lane_Pruefung', 'Lane_Pruefung_3', 'Lane_Pruefung_4', 'Association_2', 'Association_3']);
+  // The demo text's section: two flows "ja" and two "nein", the flows without a name numbered in the order of the XML.
+  const demo = idsOf(readFixture('demo-ohne-id').xml);
+  assert.deepEqual(demo.filter(id => id.startsWith('Flow_')), ['Flow_1', 'Flow_2', 'Flow_ja', 'Flow_nein', 'Flow_3', 'Flow_4', 'Flow_ja_2', 'Flow_nein_2', 'Flow_5', 'Flow_6', 'Flow_7']);
+  assert.deepEqual(demo.filter(id => !id.startsWith('Flow_')), ['MessageFlow_Bestellung', 'MessageFlow_1', 'Lane_Buero_Nord', 'Lane_Pruefung', 'Lane_Pruefung_3', 'Lane_1', 'DataInputAssociation_1', 'Association_1']);
+});
+
+test('ids from names: every kind of connection gets one and is drawn; an empty data association gets none and is left out as before', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PK" name="Kunde"/><bpmn:participant id="PS" name="Shop" processRef="P"/>' +
+    '<bpmn:messageFlow name="Bestellung" sourceRef="PK" targetRef="T1"/></bpmn:collaboration>' +
+    pooled('P', lane('L', 'Verkauf', ['T1', 'T2', 'D', 'N']), '<bpmn:task id="T1" name="Annehmen"/><bpmn:task id="T2" name="Versenden">' +
+      '<bpmn:dataInputAssociation><bpmn:sourceRef>D</bpmn:sourceRef></bpmn:dataInputAssociation><bpmn:dataInputAssociation/>' +
+      '<bpmn:dataOutputAssociation><bpmn:targetRef>D</bpmn:targetRef></bpmn:dataOutputAssociation></bpmn:task>' +
+      dataObject('D', 'Lieferschein') + '<bpmn:textAnnotation id="N"><bpmn:text>DHL</bpmn:text></bpmn:textAnnotation>' +
+      '<bpmn:sequenceFlow name="weiter" sourceRef="T1" targetRef="T2"/><bpmn:association sourceRef="T2" targetRef="N"/>'));
+  const ids = ['MessageFlow_Bestellung', 'DataInputAssociation_1', 'DataOutputAssociation_1', 'Flow_weiter', 'Association_1'];
+  assert.deepEqual(idsOf(xml), ids);
+  const laid = dataLaid(xml);
+  for (const id of ids) assert.ok(laid.di.flows[id], id + " drawn");
+  assert.deepEqual(laid.leftOut.map(leftOutLine), ['dataInputAssociation (no id): has no id']);
+  assert.deepEqual(laid.breaks, []);
+  assert.deepEqual(layoutJob(xml).named, ids.map((id, i) => ['messageFlow', 'dataInputAssociation', 'dataOutputAssociation', 'sequenceFlow', 'association'][i] + ': had no id, dokufix gave it ' + id));
+  assert.equal(namedLine({ tag: 'lane', nth: 0, id: 'Lane_X' }), 'lane: had no id, dokufix gave it Lane_X');
+});
+
+test('ids from names: nested lanes without ids are all drawn, the outer one around its inner ones, and lane-nest checks them', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Werk" processRef="P"/></bpmn:collaboration>' +
+    pooled('P', lane('L', 'Auftrag', ['T1']) + lane('', 'Fertigung', [], lane('', 'Zuschnitt', ['T2']) + lane('', 'Montage', ['T3'])), chain(['T1', 'T2', 'T3'])));
+  const laid = dataLaid(xml), sh = shapesOf(laid, ['PA', 'L', 'Lane_Fertigung', 'Lane_Zuschnitt', 'Lane_Montage']);
+  assert.deepEqual(['L', 'Lane_Fertigung', 'Lane_Zuschnitt', 'Lane_Montage'].map(id => sh[id][0] - sh.PA[0]), [30, 30, 60, 60]);
+  assert.deepEqual([sh.Lane_Fertigung[1], sh.Lane_Fertigung[1] + sh.Lane_Fertigung[3]], [sh.Lane_Zuschnitt[1], sh.Lane_Montage[1] + sh.Lane_Montage[3]]);
+  assert.deepEqual([laid.leftOut, laid.breaks], [[], []]);
+  // lane-nest sees the outer lane: moved by a pixel, it breaks.
+  const moved = laid.xml.replace(/(bpmnElement="Lane_Fertigung"[^>]*>\s*<dc:Bounds x=")(\d+)/, (m, a, x) => a + (Number(x) + 1));
+  assert.ok(breaksOf(moved, laid.model).some(b => b.startsWith('lane-nest Lane_Fertigung')), 'lane-nest breaks');
+});
+
+test('ids from names: only the ids are added to the text, past a comment that looks like a start tag; a second run gives none', () => {
+  const xml = xmlOf('<!-- <bpmn:lane name="Kommentar"> --><bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane name="Eins"><bpmn:flowNodeRef>T1</bpmn:flowNodeRef></bpmn:lane>' +
+    '<![CDATA[<bpmn:lane>]]><bpmn:lane\n  name="Zwei"/><bpmn:lane name="Drei"><bpmn:flowNodeRef>T2</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
+    chain(['T1', 'T2']).replace('<bpmn:sequenceFlow id="F1"', '<bpmn:sequenceFlow') + '</bpmn:process>');
+  const out = layoutJob(xml);
+  const want = xml.replace('<bpmn:lane name="Eins"', '<bpmn:lane id="Lane_Eins" name="Eins"').replace('<bpmn:lane\n', '<bpmn:lane id="Lane_Zwei"\n')
+    .replace('<bpmn:lane name="Drei"', '<bpmn:lane id="Lane_Drei" name="Drei"').replace('<bpmn:sequenceFlow sourceRef', '<bpmn:sequenceFlow id="Flow_1" sourceRef');
+  assert.equal(noDiagram(out.xml), want);
+  assert.deepEqual(read(want).model.named, undefined);
+  assert.deepEqual(layoutJob(noDiagram(out.xml)).named, []);
+  // A document read twice keeps its list, so that the second reading writes the ids too.
+  const doc = parseXml(xml);
+  assert.deepEqual(readProcess(doc).model.named, readProcess(doc).model.named);
+});
+
+test('ids from names: an input where every lane and connection has an id gives no list and the same text as before', () => {
+  const xml = xmlOf(pooled('P', lane('L', 'Eins', ['T1', 'T2']), chain(['T1', 'T2'])));
+  assert.equal('named' in read(xml).model, false);
+  assert.deepEqual(layoutJob(xml).named, []);
+  assert.ok(layoutJob(xml).xml.startsWith(xml.slice(0, xml.indexOf('</bpmn:definitions>'))));
 });

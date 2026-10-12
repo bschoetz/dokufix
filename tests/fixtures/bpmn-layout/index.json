@@ -16,7 +16,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:1118"
+    "src/demo.md:1194"
    ],
    "shows": [
     "25.2"
@@ -25,7 +25,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:1158"
+    "src/demo.md:1234"
    ]
   },
   "ereignis": {
@@ -436,9 +436,16 @@
   },
   "demo-verschachtelt": {
    "source": "src/demo.md:1040",
-   "note": "the demo text's section on nested lanes: two and three levels, a flat lane beside them, a node only an outer lane names, an empty inner lane, an outer lane without an id",
+   "note": "the demo text's section on nested lanes: two and three levels, a flat lane beside them, a node only an outer lane names, an empty inner lane, an outer lane without an id, which gets one from its name (story 2.45)",
    "shows": [
     "34"
+   ]
+  },
+  "demo-ohne-id": {
+   "source": "src/demo.md:1118",
+   "note": "the demo text's section on lanes and connections without an id: ids from names, umlauts written out, two names giving the same id, an id the document already holds, a lane without a name, every kind of connection, an empty data association left out",
+   "shows": [
+    "45"
    ]
   },
   "vs-drei-ebenen": {

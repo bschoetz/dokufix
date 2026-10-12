@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/id">
+  <bpmn:collaboration id="C_id02">
+    <bpmn:participant id="Pa_Kunde" name="Kunde" />
+    <bpmn:participant id="Pa_Shop" name="Shop" processRef="P_id02" />
+    <bpmn:messageFlow name="Bestellung" sourceRef="Pa_Kunde" targetRef="S_Bestellung" />
+    <bpmn:messageFlow sourceRef="T_Versenden" targetRef="Pa_Kunde" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_id02" isExecutable="false">
+    <bpmn:laneSet id="LS_id02">
+      <bpmn:lane id="L_Verkauf" name="Verkauf"><bpmn:flowNodeRef>S_Bestellung</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Lager</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Nachbestellen</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Bezahlt</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Mahnen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Lager" name="Lager"><bpmn:flowNodeRef>G_Zusammen</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Versenden</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Fertig</bpmn:flowNodeRef><bpmn:flowNodeRef>D_Lieferschein</bpmn:flowNodeRef><bpmn:flowNodeRef>N_Versand</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Bestellung" name="Bestellung da"><bpmn:messageEventDefinition id="MED_1" /></bpmn:startEvent>
+    <bpmn:exclusiveGateway id="G_Lager" name="Vorrätig?" />
+    <bpmn:task id="T_Nachbestellen" name="Nachbestellen" />
+    <bpmn:exclusiveGateway id="G_Zusammen" />
+    <bpmn:exclusiveGateway id="G_Bezahlt" name="Bezahlt?" />
+    <bpmn:task id="T_Mahnen" name="Mahnen" />
+    <bpmn:task id="T_Versenden" name="Versenden">
+      <bpmn:dataInputAssociation><bpmn:sourceRef>D_Lieferschein</bpmn:sourceRef><bpmn:targetRef>T_Versenden</bpmn:targetRef></bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation />
+    </bpmn:task>
+    <bpmn:endEvent id="E_Fertig" name="Versandt" />
+    <bpmn:dataObjectReference id="D_Lieferschein" name="Lieferschein" dataObjectRef="DO_Lieferschein" />
+    <bpmn:dataObject id="DO_Lieferschein" />
+    <bpmn:textAnnotation id="N_Versand"><bpmn:text>Versand mit DHL</bpmn:text></bpmn:textAnnotation>
+    <bpmn:association sourceRef="T_Versenden" targetRef="N_Versand" />
+    <bpmn:sequenceFlow sourceRef="S_Bestellung" targetRef="G_Lager" />
+    <bpmn:sequenceFlow name="ja" sourceRef="G_Lager" targetRef="G_Zusammen" />
+    <bpmn:sequenceFlow name="nein" sourceRef="G_Lager" targetRef="T_Nachbestellen" />
+    <bpmn:sequenceFlow sourceRef="T_Nachbestellen" targetRef="G_Zusammen" />
+    <bpmn:sequenceFlow sourceRef="G_Zusammen" targetRef="G_Bezahlt" />
+    <bpmn:sequenceFlow name="ja" sourceRef="G_Bezahlt" targetRef="T_Versenden" />
+    <bpmn:sequenceFlow name="nein" sourceRef="G_Bezahlt" targetRef="T_Mahnen" />
+    <bpmn:sequenceFlow sourceRef="T_Mahnen" targetRef="G_Bezahlt" />
+    <bpmn:sequenceFlow sourceRef="T_Versenden" targetRef="E_Fertig" />
+  </bpmn:process>
+</bpmn:definitions>

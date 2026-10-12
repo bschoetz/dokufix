@@ -118,7 +118,7 @@ import { markFilter, filterMatches, filterCountText, FILTER_LABEL } from '../src
 // cannot be drawn says, is asked where the product decides it; for a block
 // without coordinates, whether it can be laid out and what it holds, too.
 import { hasCoordinates, bpmnWarningText, BPMN_CREDIT } from '../src/app/bpmn.js';
-import { readProcess } from '../src/app/bpmn-layout.js';
+import { readProcess, nameIds } from '../src/app/bpmn-layout.js';
 import { parseXml, XmlError } from '../src/app/xml-parser.js';
 // The names of the downloads below the diagrams and how a source stands in
 // its link are asked where the product decides them (story 2.10).
@@ -1197,6 +1197,11 @@ async function chipMarkPictures(page, colours, keep){
   const tag = await page.addStyleTag({ content: CHIPS_ONE_COLOUR });
   await page.evaluate(list => {
     const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
+    // The row is fixed, but in the editor it stands in the preview pane, which scrolls: at a scroll position of a
+    // fraction of a pixel Firefox drew two copies of one chip 25 px apart (the demo text of story 2.45). The pictures
+    // are taken with every scroll container around it at 0, and the positions put back afterwards.
+    window.vergleichScroll = [];
+    for (let el = root; el; el = el.parentElement) if (el.scrollTop){ window.vergleichScroll.push([el, el.scrollTop]); el.scrollTop = 0; }
     const row = document.createElement('div');
     row.id = 'vergleich-chips';
     [...list, list[0]].forEach((colour, i) => {
@@ -1213,7 +1218,12 @@ async function chipMarkPictures(page, colours, keep){
     // Kept beside the exports when the run is asked to: what the check looked at.
     if (keep) pictures.forEach((png, i) => fs.writeFileSync(keep + '-' + (i < colours.length ? colours[i] : 'kontrolle') + '.png', png));
   } finally {
-    await page.evaluate(() => { const row = document.getElementById('vergleich-chips'); if (row) row.remove(); window.scrollTo(0, 0); });
+    await page.evaluate(() => {
+      const row = document.getElementById('vergleich-chips'); if (row) row.remove();
+      for (const [el, top] of window.vergleichScroll || []) el.scrollTop = top;
+      delete window.vergleichScroll;
+      window.scrollTo(0, 0);
+    });
     await tag.evaluate(el => el.remove());
   }
   return pictures;
@@ -4029,7 +4039,10 @@ function sourceProblem(d, got){
     if (ins.participants.some(p => !m[0].includes('id="' + p.id + '"') || !m[0].includes('processRef="' + p.process + '"'))) return 'the inserted collaboration lacks a participant';
     got = got.replace(part, '');
   }
-  if (got.replace(LAID_OUT_PART, '').replace(NODE_REFS, '') !== want.replace(NODE_REFS, '')) return 'without its diagram part and the lanes\' node references not the author\'s XML';
+  // The ids dokufix gave the lanes and connections without one (story 2.45) are the other addition, each in its
+  // element's start tag.
+  const named = d.model ? nameIds(want, d.model) : want;
+  if (got.replace(LAID_OUT_PART, '').replace(NODE_REFS, '') !== named.replace(NODE_REFS, '')) return 'without its diagram part, the ids given and the lanes\' node references not the author\'s XML';
   const had = refCounts(want), has = refCounts(got);
   const wrong = [...new Set([...had.keys(), ...has.keys()])].filter(id => !had.has(id) || !has.has(id) || has.get(id) > had.get(id) || (had.get(id) === 1 && has.get(id) !== 1));
   return wrong.length ? 'lane references not one per node: ' + wrong.map(id => id + ' ' + (had.get(id) || 0) + ' → ' + (has.get(id) || 0)).join(', ') : '';

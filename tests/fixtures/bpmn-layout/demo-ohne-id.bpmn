@@ -1,0 +1,69 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_OhneId" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="OI_Zusammenarbeit">
+    <bpmn:participant id="OI_Kunde" name="Kunde"/>
+    <bpmn:participant id="OI_Pool" name="Versandhandel" processRef="OI_Prozess"/>
+    <bpmn:messageFlow name="Bestellung" sourceRef="OI_Kunde" targetRef="OI_Start"/>
+    <bpmn:messageFlow sourceRef="OI_Versenden" targetRef="OI_Kunde"/>
+  </bpmn:collaboration>
+  <bpmn:process id="OI_Prozess" isExecutable="false">
+    <bpmn:laneSet id="OI_Bahnen">
+      <bpmn:lane name="Büro (Nord)">
+        <bpmn:flowNodeRef>OI_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Vorraetig</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane name="Prüfung">
+        <bpmn:flowNodeRef>OI_Nachbestellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Zusammen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Bezahlt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane name="Pruefung">
+        <bpmn:flowNodeRef>OI_Mahnen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Pruefung_2" name="Leitung">
+        <bpmn:flowNodeRef>OI_Freigeben</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane>
+        <bpmn:flowNodeRef>OI_Versenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Ende</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Lieferschein</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Notiz</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="OI_Start" name="Bestellung da">
+      <bpmn:messageEventDefinition id="OI_Nachricht"/>
+    </bpmn:startEvent>
+    <bpmn:task id="OI_Erfassen" name="Bestellung erfassen"/>
+    <bpmn:exclusiveGateway id="OI_Vorraetig" name="vorrätig?"/>
+    <bpmn:task id="OI_Nachbestellen" name="Nachbestellen"/>
+    <bpmn:exclusiveGateway id="OI_Zusammen"/>
+    <bpmn:exclusiveGateway id="OI_Bezahlt" name="bezahlt?"/>
+    <bpmn:task id="OI_Mahnen" name="Mahnen"/>
+    <bpmn:task id="OI_Freigeben" name="Versand freigeben"/>
+    <bpmn:task id="OI_Versenden" name="Versenden">
+      <bpmn:dataInputAssociation>
+        <bpmn:sourceRef>OI_Lieferschein</bpmn:sourceRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation/>
+    </bpmn:task>
+    <bpmn:endEvent id="OI_Ende" name="Versandt"/>
+    <bpmn:dataObjectReference id="OI_Lieferschein" name="Lieferschein" dataObjectRef="OI_Lieferschein_Daten"/>
+    <bpmn:dataObject id="OI_Lieferschein_Daten"/>
+    <bpmn:textAnnotation id="OI_Notiz">
+      <bpmn:text>Versand mit DHL</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association sourceRef="OI_Versenden" targetRef="OI_Notiz"/>
+    <bpmn:sequenceFlow sourceRef="OI_Start" targetRef="OI_Erfassen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Erfassen" targetRef="OI_Vorraetig"/>
+    <bpmn:sequenceFlow name="ja" sourceRef="OI_Vorraetig" targetRef="OI_Zusammen"/>
+    <bpmn:sequenceFlow name="nein" sourceRef="OI_Vorraetig" targetRef="OI_Nachbestellen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Nachbestellen" targetRef="OI_Zusammen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Zusammen" targetRef="OI_Bezahlt"/>
+    <bpmn:sequenceFlow name="ja" sourceRef="OI_Bezahlt" targetRef="OI_Freigeben"/>
+    <bpmn:sequenceFlow name="nein" sourceRef="OI_Bezahlt" targetRef="OI_Mahnen"/>
+    <bpmn:sequenceFlow sourceRef="OI_Mahnen" targetRef="OI_Bezahlt"/>
+    <bpmn:sequenceFlow sourceRef="OI_Freigeben" targetRef="OI_Versenden"/>
+    <bpmn:sequenceFlow sourceRef="OI_Versenden" targetRef="OI_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>

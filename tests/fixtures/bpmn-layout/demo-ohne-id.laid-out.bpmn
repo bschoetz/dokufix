@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_OhneId" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="OI_Zusammenarbeit">
+    <bpmn:participant id="OI_Kunde" name="Kunde"/>
+    <bpmn:participant id="OI_Pool" name="Versandhandel" processRef="OI_Prozess"/>
+    <bpmn:messageFlow id="MessageFlow_Bestellung" name="Bestellung" sourceRef="OI_Kunde" targetRef="OI_Start"/>
+    <bpmn:messageFlow id="MessageFlow_1" sourceRef="OI_Versenden" targetRef="OI_Kunde"/>
+  </bpmn:collaboration>
+  <bpmn:process id="OI_Prozess" isExecutable="false">
+    <bpmn:laneSet id="OI_Bahnen">
+      <bpmn:lane id="Lane_Buero_Nord" name="Büro (Nord)">
+        <bpmn:flowNodeRef>OI_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Erfassen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Vorraetig</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Pruefung" name="Prüfung">
+        <bpmn:flowNodeRef>OI_Nachbestellen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Zusammen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Bezahlt</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Pruefung_3" name="Pruefung">
+        <bpmn:flowNodeRef>OI_Mahnen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Pruefung_2" name="Leitung">
+        <bpmn:flowNodeRef>OI_Freigeben</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_1">
+        <bpmn:flowNodeRef>OI_Versenden</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Ende</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Lieferschein</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>OI_Notiz</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="OI_Start" name="Bestellung da">
+      <bpmn:messageEventDefinition id="OI_Nachricht"/>
+    </bpmn:startEvent>
+    <bpmn:task id="OI_Erfassen" name="Bestellung erfassen"/>
+    <bpmn:exclusiveGateway id="OI_Vorraetig" name="vorrätig?"/>
+    <bpmn:task id="OI_Nachbestellen" name="Nachbestellen"/>
+    <bpmn:exclusiveGateway id="OI_Zusammen"/>
+    <bpmn:exclusiveGateway id="OI_Bezahlt" name="bezahlt?"/>
+    <bpmn:task id="OI_Mahnen" name="Mahnen"/>
+    <bpmn:task id="OI_Freigeben" name="Versand freigeben"/>
+    <bpmn:task id="OI_Versenden" name="Versenden">
+      <bpmn:dataInputAssociation id="DataInputAssociation_1">
+        <bpmn:sourceRef>OI_Lieferschein</bpmn:sourceRef>
+      </bpmn:dataInputAssociation>
+      <bpmn:dataInputAssociation/>
+    </bpmn:task>
+    <bpmn:endEvent id="OI_Ende" name="Versandt"/>
+    <bpmn:dataObjectReference id="OI_Lieferschein" name="Lieferschein" dataObjectRef="OI_Lieferschein_Daten"/>
+    <bpmn:dataObject id="OI_Lieferschein_Daten"/>
+    <bpmn:textAnnotation id="OI_Notiz">
+      <bpmn:text>Versand mit DHL</bpmn:text>
+    </bpmn:textAnnotation>
+    <bpmn:association id="Association_1" sourceRef="OI_Versenden" targetRef="OI_Notiz"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="OI_Start" targetRef="OI_Erfassen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="OI_Erfassen" targetRef="OI_Vorraetig"/>
+    <bpmn:sequenceFlow id="Flow_ja" name="ja" sourceRef="OI_Vorraetig" targetRef="OI_Zusammen"/>
+    <bpmn:sequenceFlow id="Flow_nein" name="nein" sourceRef="OI_Vorraetig" targetRef="OI_Nachbestellen"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="OI_Nachbestellen" targetRef="OI_Zusammen"/>
+    <bpmn:sequenceFlow id="Flow_4" sourceRef="OI_Zusammen" targetRef="OI_Bezahlt"/>
+    <bpmn:sequenceFlow id="Flow_ja_2" name="ja" sourceRef="OI_Bezahlt" targetRef="OI_Freigeben"/>
+    <bpmn:sequenceFlow id="Flow_nein_2" name="nein" sourceRef="OI_Bezahlt" targetRef="OI_Mahnen"/>
+    <bpmn:sequenceFlow id="Flow_5" sourceRef="OI_Mahnen" targetRef="OI_Bezahlt"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="OI_Freigeben" targetRef="OI_Versenden"/>
+    <bpmn:sequenceFlow id="Flow_7" sourceRef="OI_Versenden" targetRef="OI_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="OI_Zusammenarbeit">
+      <bpmndi:BPMNShape id="OI_Kunde_di" bpmnElement="OI_Kunde" isHorizontal="true"><dc:Bounds x="0" y="-10" width="1119" height="60"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Pool_di" bpmnElement="OI_Pool" isHorizontal="true"><dc:Bounds x="0" y="90" width="1119" height="865"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Buero_Nord_di" bpmnElement="Lane_Buero_Nord" isHorizontal="true"><dc:Bounds x="30" y="90" width="1089" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Pruefung_di" bpmnElement="Lane_Pruefung" isHorizontal="true"><dc:Bounds x="30" y="234" width="1089" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Pruefung_3_di" bpmnElement="Lane_Pruefung_3" isHorizontal="true"><dc:Bounds x="30" y="378" width="1089" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_Pruefung_2_di" bpmnElement="Lane_Pruefung_2" isHorizontal="true"><dc:Bounds x="30" y="522" width="1089" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Lane_1_di" bpmnElement="Lane_1" isHorizontal="true"><dc:Bounds x="30" y="666" width="1089" height="289"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Start_di" bpmnElement="OI_Start"><dc:Bounds x="102" y="144" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="184" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Erfassen_di" bpmnElement="OI_Erfassen"><dc:Bounds x="210" y="122" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Vorraetig_di" bpmnElement="OI_Vorraetig" isMarkerVisible="true"><dc:Bounds x="413" y="137" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="393" y="119" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Nachbestellen_di" bpmnElement="OI_Nachbestellen"><dc:Bounds x="378" y="266" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Zusammen_di" bpmnElement="OI_Zusammen" isMarkerVisible="true"><dc:Bounds x="546" y="281" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Bezahlt_di" bpmnElement="OI_Bezahlt" isMarkerVisible="true"><dc:Bounds x="679" y="281" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="659" y="263" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Mahnen_di" bpmnElement="OI_Mahnen"><dc:Bounds x="644" y="410" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Freigeben_di" bpmnElement="OI_Freigeben"><dc:Bounds x="812" y="554" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Versenden_di" bpmnElement="OI_Versenden"><dc:Bounds x="812" y="798" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Ende_di" bpmnElement="OI_Ende"><dc:Bounds x="1004" y="820" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="977" y="860" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Notiz_di" bpmnElement="OI_Notiz"><dc:Bounds x="957" y="903" width="150" height="40"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="OI_Lieferschein_di" bpmnElement="OI_Lieferschein"><dc:Bounds x="794" y="688" width="36" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="767" y="670" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="Flow_1_di" bpmnElement="Flow_1"><di:waypoint x="138" y="162"/><di:waypoint x="210" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_2_di" bpmnElement="Flow_2"><di:waypoint x="330" y="162"/><di:waypoint x="413" y="162"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ja_di" bpmnElement="Flow_ja"><di:waypoint x="463" y="162"/><di:waypoint x="571" y="162"/><di:waypoint x="571" y="281"/><bpmndi:BPMNLabel><dc:Bounds x="473" y="144" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_nein_di" bpmnElement="Flow_nein"><di:waypoint x="438" y="187"/><di:waypoint x="438" y="266"/><bpmndi:BPMNLabel><dc:Bounds x="444" y="195" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_3_di" bpmnElement="Flow_3"><di:waypoint x="498" y="306"/><di:waypoint x="546" y="306"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_4_di" bpmnElement="Flow_4"><di:waypoint x="596" y="306"/><di:waypoint x="679" y="306"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_ja_2_di" bpmnElement="Flow_ja_2"><di:waypoint x="729" y="306"/><di:waypoint x="872" y="306"/><di:waypoint x="872" y="554"/><bpmndi:BPMNLabel><dc:Bounds x="739" y="288" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_nein_2_di" bpmnElement="Flow_nein_2"><di:waypoint x="704" y="331"/><di:waypoint x="704" y="410"/><bpmndi:BPMNLabel><dc:Bounds x="710" y="339" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_5_di" bpmnElement="Flow_5"><di:waypoint x="644" y="450"/><di:waypoint x="632" y="450"/><di:waypoint x="632" y="306"/><di:waypoint x="679" y="306"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_6_di" bpmnElement="Flow_6"><di:waypoint x="872" y="634"/><di:waypoint x="872" y="798"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_7_di" bpmnElement="Flow_7"><di:waypoint x="932" y="838"/><di:waypoint x="1004" y="838"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_Bestellung_di" bpmnElement="MessageFlow_Bestellung"><di:waypoint x="120" y="50"/><di:waypoint x="120" y="144"/><bpmndi:BPMNLabel><dc:Bounds x="126" y="63" width="52" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="MessageFlow_1_di" bpmnElement="MessageFlow_1"><di:waypoint x="902" y="798"/><di:waypoint x="902" y="786"/><di:waypoint x="944" y="786"/><di:waypoint x="944" y="50"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Association_1_di" bpmnElement="Association_1"><di:waypoint x="912" y="878"/><di:waypoint x="957" y="923"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="DataInputAssociation_1_di" bpmnElement="DataInputAssociation_1"><di:waypoint x="821" y="738"/><di:waypoint x="821" y="798"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/id">
+  <bpmn:collaboration id="C_id01">
+    <bpmn:participant id="Pa_Amt" name="Amt" processRef="P_id01" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_id01" isExecutable="false">
+    <bpmn:laneSet id="LS_id01">
+      <bpmn:lane name="Büro (Nord)"><bpmn:flowNodeRef>S_Antrag</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Erfassen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane name="Prüfung"><bpmn:flowNodeRef>T_Pruefen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane name="Pruefung"><bpmn:flowNodeRef>T_Nachpruefen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="Lane_Pruefung_2" name="Leitung"><bpmn:flowNodeRef>T_Zeichnen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane><bpmn:flowNodeRef>T_Versenden</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Bescheid</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Antrag" name="Antrag da" />
+    <bpmn:task id="T_Erfassen" name="Antrag erfassen" />
+    <bpmn:task id="T_Pruefen" name="Antrag prüfen" />
+    <bpmn:task id="T_Nachpruefen" name="Zweitprüfung" />
+    <bpmn:task id="T_Zeichnen" name="Bescheid zeichnen" />
+    <bpmn:task id="T_Versenden" name="Bescheid versenden" />
+    <bpmn:endEvent id="E_Bescheid" name="Bescheid raus" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Antrag" targetRef="T_Erfassen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Erfassen" targetRef="T_Pruefen" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Pruefen" targetRef="T_Nachpruefen" />
+    <bpmn:sequenceFlow id="f4" sourceRef="T_Nachpruefen" targetRef="T_Zeichnen" />
+    <bpmn:sequenceFlow id="f5" sourceRef="T_Zeichnen" targetRef="T_Versenden" />
+    <bpmn:sequenceFlow id="f6" sourceRef="T_Versenden" targetRef="E_Bescheid" />
+  </bpmn:process>
+</bpmn:definitions>

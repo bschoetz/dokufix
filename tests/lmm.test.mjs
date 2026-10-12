@@ -28,7 +28,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { spawnSync } from 'node:child_process';
 import { DOMParser } from 'linkedom';
-import { readProcess, layoutGeometry, appendDiagram } from '../src/app/bpmn-layout.js';
+import { readProcess, layoutGeometry, appendDiagram, nameIds } from '../src/app/bpmn-layout.js';
 import { parseXml } from '../src/app/xml-parser.js';
 import { lmm, kanonisch, lmmPositions, LMM_MERMAID_VERSION } from '../src/app/lmm.js';
 import { fixtureNames, readFixture, readModel, expectedFile } from './bpmn-fixtures.mjs';
@@ -277,7 +277,9 @@ for (const [i, name] of fixtureNames().entries()){
   test(name + ': the diagram part is the same when the XML is reordered and when its ids are renamed', () => {
     // The fixture's expected XML is its layout (tests/bpmn-fixtures.test.mjs checks that).
     const want = diagramOf(fs.readFileSync(expectedFile(name), 'utf8'));
-    const xml = readFixture(name).xml, rnd = random(1000 + i);
+    // An element without an id gets its id in the order of the XML (story 2.45): reordered and renamed is the XML
+    // with those ids written in.
+    const author = readFixture(name).xml, xml = nameIds(author, readModel(author).model), rnd = random(1000 + i);
     for (let round = 0; round < ROUNDS; round++){
       const shuffled = permuted(xml, rnd);
       assert.deepEqual(diagramOf(laidOut(shuffled)), want, name + ', reordered (round ' + (round + 1) + ')');

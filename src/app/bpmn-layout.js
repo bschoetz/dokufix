@@ -2,13 +2,14 @@
 // A fenced `bpmn` block whose XML holds only the process (lanes, steps, flows)
 // and no diagram part is laid out before bpmn-js draws it, in pure logic:
 //
-//   1. readProcess() reads the XML into its pools, each with its lanes, flow
-//      nodes and sequence flows, a black box without lanes (story 2.29), the
-//      events on an activity's border with their host (story 2.30), the
-//      message flows between pools, the text annotations with their
-//      associations (story 2.31), and the data object and data store
-//      references with their data associations (story 2.32), or refuses
-//      with the reason
+//   1. readProcess() gives every lane and connection without an id one from
+//      its name (story 2.45), then reads the XML into its pools, each with
+//      its lanes, flow nodes and sequence flows, a black box without lanes
+//      (story 2.29), the events on an activity's border with their host
+//      (story 2.30), the message flows between pools, the text annotations
+//      with their associations (story 2.31), and the data object and data
+//      store references with their data associations (story 2.32), or
+//      refuses with the reason
 //   2. LMM (src/app/lmm.js) gives every flow node its column, from the
 //      structure of the process, and kanonisch() there the model in LMM's
 //      order, so that no tie of the grid follows the order of the XML
@@ -26,7 +27,8 @@
 //      on its own, top left in its lane, its pool or beside the pools
 //   5. appendDiagram() writes the result as a diagram part (BPMN-DI) into the
 //      author's XML, before its closing definitions tag; a node a rule put in
-//      another lane moves there in the lane set too, nothing else changes
+//      another lane moves there in the lane set too, an id given in step 1
+//      stands in its element's start tag, nothing else changes
 //
 // bpmn-js draws the XML from step 5 exactly as it draws XML that came with
 // coordinates. Until 2026-10-07 the columns were read from the SVG of
@@ -34,7 +36,7 @@
 // (docs/analyse-mermaid-im-bpmn-code.md).
 //
 // What the layout cannot place is left out, and the rest is laid out and
-// drawn (Ben, 2026-10-03): groups, a parent lane of nested lanes without an
+// drawn (Ben, 2026-10-03): groups, a parent lane of nested lanes with an empty
 // id (since story 2.34 the others are drawn around their inner lanes), the
 // content of a sub-process, a boundary event on what is no activity laid out, a
 // message flow at a boundary event, a text annotation without text, an
@@ -150,9 +152,53 @@ const noteText = el => {
 // and out, from the node to a reference.
 const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { dataInputAssociation: 'in', dataOutputAssociation: 'out' });
 
+// The elements that get an id where they have none (story 2.45), each with the prefix of its id: the diagram part
+// names an element by its id, so without one a lane is a row without its frame and a connection is left out.
+const ID_PREFIX = /* @__PURE__ */ Object.assign(Object.create(null), { lane: 'Lane', sequenceFlow: 'Flow', messageFlow: 'MessageFlow',
+  association: 'Association', dataInputAssociation: 'DataInputAssociation', dataOutputAssociation: 'DataOutputAssociation' });
+const UMLAUT = { ä: 'ae', ö: 'oe', ü: 'ue', Ä: 'Ae', Ö: 'Oe', Ü: 'Ue', ß: 'ss', ẞ: 'SS' };
+// A name made fit for an id: composed first, so that an umlaut written as a letter and its dots is one too; umlauts
+// written out, other accents dropped, every run of other characters one "_", none at the ends, at most 40 characters;
+// '' where nothing is left.
+const idPart = name => clean(name).normalize('NFC').replace(/[äöüÄÖÜßẞ]/g, c => UMLAUT[c]).normalize('NFD').replace(/[̀-ͯ]/g, '')
+  .replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 40).replace(/_+$/, '');
+// Whether a connection names an end: one that names none cannot be drawn and gets no id (signavio's empty
+// <dataInputAssociation/>). A lane always gets one.
+const namesEnd = el => DATA_ASSOCIATION[local(el)]
+  ? kids(el).some(k => (local(k) === 'sourceRef' || local(k) === 'targetRef') && k.textContent.trim())
+  : local(el) === 'lane' || !!(attr(el, 'sourceRef') || attr(el, 'targetRef'));
+
+// Gives every element of ID_PREFIX without an id attribute one (story 2.45, Ben, 2026-10-12), set on the parsed
+// element, so that the reader sees an ordinary element; root and all as in readProcess(). The id: the prefix, "_" and
+// the name (idPart()), or without a name the prefix and the next free number per prefix (Association_1). Never one
+// the document holds or one given before: in document order the first keeps it, the next named one gets _2, _3 and so
+// on. Returns [{ tag, nth, id }], nth the element's place among all elements of its local name in document order, any
+// namespace, as appendDiagram() finds its start tag in the text (nameIds()). An id given by an earlier call on the same
+// document is in the list again, so that a second reading writes it too.
+function giveIds(root, all){
+  const used = new Set([root, ...all].map(el => attr(el, 'id')).filter(Boolean));
+  const named = [], seen = Object.create(null), number = Object.create(null);
+  for (const el of all){
+    const nth = seen[el.localName] = (seen[el.localName] ?? -1) + 1;
+    const prefix = ID_PREFIX[local(el)];
+    if (!prefix) continue;
+    const own = el.attributes.find(a => a.name === 'id');
+    if (own && own.given){ named.push({ tag: el.localName, nth, id: own.value }); continue; }
+    if (own || !namesEnd(el)) continue;
+    const part = idPart(attr(el, 'name'));
+    let id = prefix + '_' + part;
+    if (!part){ let n = number[prefix] || 1; while (used.has(prefix + '_' + n)) n++; number[prefix] = n + 1; id = prefix + '_' + n; }
+    else for (let k = 2; used.has(id); k++) id = prefix + '_' + part + '_' + k;
+    used.add(id);
+    el.attributes.push({ name: 'id', prefix: null, localName: 'id', namespaceURI: null, value: id, given: true });
+    named.push({ tag: el.localName, nth, id });
+  }
+  return named;
+}
+
 // The pools and their processes, read from the parsed XML:
 //   { model, leftOut }
-//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, data, dataAssociations, links, loops, insert }
+//   model: { pools, plane, lanes, nodes, flows, boundaries, messages, notes, associations, data, dataAssociations, links, loops, insert, named }
 //     pools: [{ id, name, box }], one per pool laid out, top to bottom in
 //            the order of the participants; id null where nothing is drawn as
 //            a pool: a process without a participant, a participant without
@@ -163,7 +209,7 @@ const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { da
 //            the lanes of all pools, those of one pool next to each other; a
 //            synthetic lane has its row on the grid and is left out of the
 //            diagram part: the one lane holding every node where the process
-//            has no lanes, and a lane without an id; pool, the index of its
+//            has no lanes, and a lane with an empty id; pool, the index of its
 //            pool in pools; a lane inside an outer lane (story 2.34) has
 //            parent, the outer lane's key, and level, 2 or more; a lane in
 //            its pool has neither (level 1)
@@ -222,6 +268,9 @@ const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { da
 //     insert: null, or where processes have no collaboration (Ben,
 //            2026-10-06: drawn as pools) the collaboration appendDiagram()
 //            inserts: { id, participants: [{ id, name, process }] }
+//     named: [{ tag, nth, id }], only where there are any: the lanes and
+//            connections that had no id and got one (giveIds(), story 2.45),
+//            which appendDiagram() writes into their start tags
 //     key:   an id of the layout's own for it (n1…, l1…), by which the
 //            columns are given (raw, src/app/lmm.js) and the grid keeps its
 //            lanes
@@ -245,6 +294,7 @@ export function readProcess(doc){
   const root = doc && doc.documentElement;
   if (!root || local(root) !== 'definitions') return null;
   const all = descendants(root);
+  const named = giveIds(root, all);
   const participants = all.filter(el => local(el) === 'participant');
   const processes = kids(root).filter(el => local(el) === 'process');
   const leftOut = [];
@@ -344,7 +394,7 @@ export function readProcess(doc){
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
   // A participant without an id gets no pool shape.
   for (const p of pools) if (p.el && !attr(p.el, 'id')) leave(p.el, 'has no id; it is not drawn as a pool');
-  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, links, loops, insert, ...(outerLanes.length ? { outerLanes } : {}) }, leftOut };
+  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, links, loops, insert, ...(outerLanes.length ? { outerLanes } : {}), ...(named.length ? { named } : {}) }, leftOut };
 }
 
 // The text annotations and their associations (story 2.31): noted, [{ el, slot }] in the order of the XML, slot its
@@ -494,10 +544,11 @@ function readPool(proc, participant, before, beforeLanes, leave, note, data){
 
   // The lanes, nested ones included; those without lanes inside get the rows,
   // each node in the first that names it. A node only an outer lane names
-  // stands in that lane's first inner one. A lane without an id keeps its row
-  // and is not drawn. A lane with lanes inside (story 2.34) is drawn around
+  // stands in that lane's first inner one. A lane with an empty id keeps its
+  // row and is not drawn (one without an id attribute has one since story
+  // 2.45, giveIds()). A lane with lanes inside (story 2.34) is drawn around
   // them, its head left of theirs: one level deeper per outer lane with an id
-  // around a lane; an outer lane without an id is not drawn and adds no level.
+  // around a lane; an outer lane with an empty id is not drawn and adds no level.
   const allLanes = kids(proc).filter(el => local(el) === 'laneSet').flatMap(set => descendants(set).filter(el => local(el) === 'lane'));
   const placed = new Set();
   const lanes = [], laneOf = new Map(), outerLanes = [], outerOf = new Map();
@@ -560,6 +611,11 @@ function readPool(proc, participant, before, beforeLanes, leave, note, data){
 // One line per left-out element for the console.
 export function leftOutLine(item){
   return item.tag + ' ' + (item.id || '(no id)') + ': ' + item.reason;
+}
+
+// One line per id given (model.named, story 2.45) for the console.
+export function namedLine(item){
+  return item.tag + ': had no id, dokufix gave it ' + item.id;
 }
 
 // ---------- the geometry ----------
@@ -3776,8 +3832,8 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // (the top lane up, the bottom lane down, every lane left and right, as far
   // as the pool that needs most). The top pool grows upwards; a pool below
   // moves down, and with it everything below its top. The frame of a pool is
-  // every lane of it, the synthetic ones included: a lane without an id keeps
-  // its row.
+  // every lane of it, the synthetic ones included: a lane with an empty id
+  // keeps its row.
   const M = FRAME_MARGIN;
   const lanesOf = i => model.lanes.filter(l => (l.pool ?? 0) === i).map(l => laneBox[l.key]);
   const framed = i => model.pools[i].id || model.lanes.some(l => (l.pool ?? 0) === i && !l.synthetic) || (model.outerLanes || []).some(o => o.pool === i);
@@ -3955,6 +4011,25 @@ export function maskNotMarkup(text){
   }
 }
 
+// The ids readProcess() gave (model.named, story 2.45) written into the author's text, each right after the name of
+// its start tag: the nth start tag of its local name, any prefix, as the parser counts the elements; comments, CDATA
+// sections and PIs blanked out first (maskNotMarkup()). Nothing else of the text changes. Exported for the tests: the
+// author's XML with the ids in it is what a reordering of the XML must keep (tests/lmm.test.mjs).
+export function nameIds(text, model){
+  if (!model.named) return text;
+  const want = new Map(model.named.map(n => [n.tag + ' ' + n.nth, n.id]));
+  const tags = [...new Set(model.named.map(n => n.tag))];
+  const start = new RegExp('<(?:[^\\s<>/:=!?"\']+:)?(' + tags.join('|') + ')(?=[\\s/>])', 'g');
+  const seen = Object.create(null), at = [];
+  for (const m of maskNotMarkup(text).matchAll(start)){
+    const nth = seen[m[1]] = (seen[m[1]] ?? -1) + 1, id = want.get(m[1] + ' ' + nth);
+    if (id) at.push([m.index + m[0].length, ' id="' + id + '"']);
+  }
+  let out = '', last = 0;
+  for (const [i, s] of at){ out += text.slice(last, i) + s; last = i; }
+  return out + text.slice(last);
+}
+
 // The lane set as the layout placed the nodes (spike 2.26, Ben, 2026-10-05): a
 // node a rule put in another lane (R1, R12) would otherwise stay in the
 // author's. Per node the lane di.laneOf names, the one it stands in on the
@@ -4051,7 +4126,8 @@ function insertCollaboration(text, model){
 // BPMN 2.0 and mean the same; the Camunda Modeler turns the X back on by hand.
 // Not a rule of DEFAULT_RULES: the geometry stays the same.
 export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
-  const text = insertCollaboration(relane(String(xml), model, di), model);
+  // The given ids first: relane() finds the lanes by their ids.
+  const text = insertCollaboration(relane(nameIds(String(xml), model), model, di), model);
   // Comments, CDATA sections and PIs are blanked out first: a closing tag or an
   // id written in one is not the XML's.
   const masked = maskNotMarkup(text);

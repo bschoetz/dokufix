@@ -1,4 +1,4 @@
-import { readProcess, layoutGeometry, appendDiagram, leftOutLine } from './bpmn-layout.js';
+import { readProcess, layoutGeometry, appendDiagram, leftOutLine, namedLine } from './bpmn-layout.js';
 import { kanonisch, lmmPositions } from './lmm.js';
 import { parseXml, XmlError } from './xml-parser.js';
 
@@ -21,11 +21,13 @@ import { parseXml, XmlError } from './xml-parser.js';
 //                              The parser is the layout's own, not the page's
 //                              DOMParser, so the same XML gives the same
 //                              layout in every browser and in the tests
-//   { xml, open, leftOut }     laid out: the author's XML with a diagram part
+//   { xml, open, leftOut, named }
+//                              laid out: the author's XML with a diagram part
 //                              added, the id of that diagram, which bpmn-js
-//                              opens, and one line for each element the layout
-//                              left out (leftOutLine()), for the console; a
-//                              worker has no console the reader's tools show
+//                              opens, one line for each element the layout
+//                              left out (leftOutLine()) and one for each id it
+//                              gave (namedLine(), story 2.45), for the console;
+//                              a worker has no console the reader's tools show
 // Throws the layout's refusal (LAYOUT_NOTHING, layoutStrayText()). LMM gives
 // the columns and the layout measures the labels as bpmn-js will draw them
 // (src/app/label-size.js); no library is asked. kanonisch() hands the grid the
@@ -40,7 +42,7 @@ export function layoutJob(xml, options = {}){
   if (!read) return { xml };
   const sorted = kanonisch(read.model);
   const laidOut = appendDiagram(xml, read.model, layoutGeometry(sorted.model, lmmPositions(sorted.model, sorted.rank)), options);
-  return { xml: laidOut.xml, open: laidOut.diagram, leftOut: read.leftOut.map(leftOutLine) };
+  return { xml: laidOut.xml, open: laidOut.diagram, leftOut: read.leftOut.map(leftOutLine), named: (read.model.named || []).map(namedLine) };
 }
 
 // The answer to one message of the worker's protocol, { id, xml, options }

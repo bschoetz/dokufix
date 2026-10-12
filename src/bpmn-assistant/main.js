@@ -13,7 +13,7 @@
 //
 // Die Beispiele, die Handreichung und die Version von bpmn.io stehen im Datenblock #assistant-data.
 import { parseXml } from '../app/xml-parser.js';
-import { readProcess } from '../app/bpmn-layout.js';
+import { readProcess, namedLine, nameIds } from '../app/bpmn-layout.js';
 import { hasCoordinates } from '../app/bpmn.js';
 import { pictureOf } from '../app/diagram-downloads.js';
 import { showLayoutNotice } from '../app/layout-notice.js';
@@ -418,6 +418,12 @@ async function render(){
     d.innerHTML = '<summary>' + read.leftOut.length + ' Elemente nicht angeordnet (wie in der App)</summary>' + read.leftOut.map(l => esc(l.tag + ' ' + (l.id || '') + ': ' + l.reason)).join('<br>');
     $('out').appendChild(d);
   }
+  // Die IDs, die das Layout Bahnen und Verbindungen ohne eine gab (Story 2.45), wie die App sie auf die Konsole schreibt.
+  if (read.model.named){
+    const d = document.createElement('details');
+    d.innerHTML = '<summary>' + read.model.named.length + (read.model.named.length === 1 ? ' ID' : ' IDs') + ' vergeben (wie in der App)</summary>' + read.model.named.map(n => esc(namedLine(n))).join('<br>');
+    $('out').appendChild(d);
+  }
   // A2, ein Abschnitt und keine Schleife über Varianten: der Worker der App ordnet nur A2 an, eine zweite Variante
   // bekäme dort still A2s Bild.
   {
@@ -464,7 +470,9 @@ async function render(){
   try {
     const t0 = performance.now();
     // layoutProcess() gibt { xml, warnings } zurück; die Warnungen der Bibliothek stehen unter dem Bild.
-    res = await BAL_LAYOUT.layout(xml, { signal });
+    // Mit den IDs, die dokufix Bahnen und Verbindungen ohne eine gibt (Story 2.45): Die Regelprüfung misst gegen das
+    // Modell des Autors, in dem sie stehen.
+    res = await BAL_LAYOUT.layout(nameIds(xml, read.model), { signal });
     ms = performance.now() - t0;
   } catch (e){
     if (my === run) error(s, (e && e.message) || String(e));
