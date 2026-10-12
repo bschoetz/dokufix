@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs06">
+    <bpmn:participant id="Pa_Verein" name="Verein" processRef="P_vs06" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_vs06" isExecutable="false">
+    <bpmn:laneSet id="LS_vs06">
+      <bpmn:lane id="L_Vorstand" name="Vorstand">
+        <bpmn:childLaneSet id="LS_Vorstand">
+          <bpmn:lane id="L_Vorsitz" name="Vorsitz"><bpmn:flowNodeRef>S_Termin</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Einladen</bpmn:flowNodeRef></bpmn:lane>
+          <bpmn:lane id="L_Kasse" name="Kasse" />
+          <bpmn:lane id="L_Schrift" name="Schriftführung"><bpmn:flowNodeRef>T_Protokoll</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Protokoll</bpmn:flowNodeRef></bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Termin" name="Termin steht" />
+    <bpmn:task id="T_Einladen" name="Mitglieder einladen" />
+    <bpmn:task id="T_Protokoll" name="Protokoll schreiben" />
+    <bpmn:endEvent id="E_Protokoll" name="Protokoll versandt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Termin" targetRef="T_Einladen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Einladen" targetRef="T_Protokoll" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Protokoll" targetRef="E_Protokoll" />
+  </bpmn:process>
+</bpmn:definitions>

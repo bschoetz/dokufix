@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs01">
+    <bpmn:participant id="Pa_Firma" name="Firma" processRef="P_vs01" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_vs01" isExecutable="false">
+    <bpmn:laneSet id="LS_vs01">
+      <bpmn:lane id="L_Vertrieb" name="Vertrieb">
+        <bpmn:childLaneSet id="LS_Vertrieb">
+          <bpmn:lane id="L_Innen" name="Innendienst"><bpmn:flowNodeRef>S_Anfrage</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Angebot</bpmn:flowNodeRef></bpmn:lane>
+          <bpmn:lane id="L_Aussen" name="Außendienst"><bpmn:flowNodeRef>T_Besuch</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Auftrag</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Abgelehnt</bpmn:flowNodeRef></bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+      <bpmn:lane id="L_Buchhaltung" name="Buchhaltung"><bpmn:flowNodeRef>T_Rechnung</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Bezahlt</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Anfrage" name="Anfrage erhalten" />
+    <bpmn:task id="T_Angebot" name="Angebot erstellen" />
+    <bpmn:task id="T_Besuch" name="Kunden besuchen" />
+    <bpmn:exclusiveGateway id="G_Auftrag" name="Auftrag?" />
+    <bpmn:endEvent id="E_Abgelehnt" name="Abgelehnt" />
+    <bpmn:task id="T_Rechnung" name="Rechnung stellen" />
+    <bpmn:endEvent id="E_Bezahlt" name="Rechnung gestellt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Anfrage" targetRef="T_Angebot" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Angebot" targetRef="T_Besuch" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Besuch" targetRef="G_Auftrag" />
+    <bpmn:sequenceFlow id="f4" name="nein" sourceRef="G_Auftrag" targetRef="E_Abgelehnt" />
+    <bpmn:sequenceFlow id="f5" name="ja" sourceRef="G_Auftrag" targetRef="T_Rechnung" />
+    <bpmn:sequenceFlow id="f6" sourceRef="T_Rechnung" targetRef="E_Bezahlt" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs02">
+    <bpmn:participant id="Pa_Amt" name="Amt" processRef="P_vs02" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_vs02" isExecutable="false">
+    <bpmn:laneSet id="LS_vs02">
+      <bpmn:lane id="L_Abteilung" name="Abteilung Bau">
+        <bpmn:childLaneSet id="LS_Abteilung">
+          <bpmn:lane id="L_Referat1" name="Referat Hochbau">
+            <bpmn:childLaneSet id="LS_Referat1">
+              <bpmn:lane id="L_Antraege" name="Anträge"><bpmn:flowNodeRef>S_Antrag</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Erfassen</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Split</bpmn:flowNodeRef></bpmn:lane>
+              <bpmn:lane id="L_Statik" name="Statik"><bpmn:flowNodeRef>T_Statik</bpmn:flowNodeRef></bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+          <bpmn:lane id="L_Referat2" name="Referat Umwelt">
+            <bpmn:childLaneSet id="LS_Referat2">
+              <bpmn:lane id="L_Natur" name="Naturschutz"><bpmn:flowNodeRef>T_Natur</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Join</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Bescheid</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Bescheid</bpmn:flowNodeRef></bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Antrag" name="Bauantrag eingegangen" />
+    <bpmn:task id="T_Erfassen" name="Antrag erfassen" />
+    <bpmn:parallelGateway id="G_Split" />
+    <bpmn:task id="T_Statik" name="Statik prüfen" />
+    <bpmn:task id="T_Natur" name="Naturschutz prüfen" />
+    <bpmn:parallelGateway id="G_Join" />
+    <bpmn:task id="T_Bescheid" name="Bescheid schreiben" />
+    <bpmn:endEvent id="E_Bescheid" name="Bescheid versandt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Antrag" targetRef="T_Erfassen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Erfassen" targetRef="G_Split" />
+    <bpmn:sequenceFlow id="f3" sourceRef="G_Split" targetRef="T_Statik" />
+    <bpmn:sequenceFlow id="f4" sourceRef="G_Split" targetRef="T_Natur" />
+    <bpmn:sequenceFlow id="f5" sourceRef="T_Statik" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="f6" sourceRef="T_Natur" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="f7" sourceRef="G_Join" targetRef="T_Bescheid" />
+    <bpmn:sequenceFlow id="f8" sourceRef="T_Bescheid" targetRef="E_Bescheid" />
+  </bpmn:process>
+</bpmn:definitions>

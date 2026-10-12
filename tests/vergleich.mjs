@@ -564,6 +564,8 @@ function judgeDiagrams(exp, wellFormed){
     const m = read.model;
     Object.assign(d, { drawn: true, reason: '', laidOut: true, model: m, expected: [
       ...m.pools.filter(p => p.id).map(p => ({ id: p.id, tag: 'participant' })),
+      // Story 2.34: an outer lane is drawn around its inner lanes.
+      ...(m.outerLanes || []).map(l => ({ id: l.id, tag: 'lane' })),
       ...m.lanes.filter(l => !l.synthetic).map(l => ({ id: l.id, tag: 'lane' })),
       ...m.nodes.map(n => ({ id: n.id, tag: n.tag })),
       ...(m.boundaries || []).map(b => ({ id: b.id, tag: 'boundaryEvent' })),
@@ -3832,8 +3834,10 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
     const symbols = m.nodes.concat(m.boundaries || []);
     // Text annotations and their associations (story 2.31) are counted as well.
     const notes = m.notes || [], assocs = m.associations || [];
-    const counts = [m.pools.filter(p => p.id).length, m.lanes.filter(l => !l.synthetic).length, symbols.length, m.flows.length, m.messages.length, notes.length, assocs.length];
-    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, m.lanes.filter(l => !l.synthetic && drawn(l.id)).length, symbols.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length,
+    // The outer lanes (story 2.34) count as lanes.
+    const lanes = [...(m.outerLanes || []), ...m.lanes.filter(l => !l.synthetic)];
+    const counts = [m.pools.filter(p => p.id).length, lanes.length, symbols.length, m.flows.length, m.messages.length, notes.length, assocs.length];
+    const got = [m.pools.filter(p => p.id && drawn(p.id)).length, lanes.filter(l => drawn(l.id)).length, symbols.filter(n => drawn(n.id)).length, m.flows.filter(fl => drawn(fl.id)).length, m.messages.filter(fl => drawn(fl.id)).length,
       notes.filter(n => drawn(n.id)).length, assocs.filter(a => drawn(a.id)).length];
     check('BPMN laid out, "' + d.title + '": pools, lanes, symbols, flows, message flows, text annotations and associations drawn: ' + counts.join(', '), json(got) === json(counts), json(got));
     const problems = g ? bpmnLayoutProblems(m, g) : ['no SVG'];

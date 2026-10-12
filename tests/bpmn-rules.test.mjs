@@ -96,6 +96,18 @@ test('each rule on a diagram made up for it', () => {
   for (const [what, input, expected] of cases) assert.deepEqual(made(input), expected, what);
 });
 
+// Story 2.34: an outer lane O around L1 and L2, their heads 30 px right of its.
+test('lane-nest: an outer lane exactly around its inner lanes breaks nothing; an inner lane out of place, or the outer lane too high, breaks it', () => {
+  const model = { ...M, flows: [], outerLanes: [{ id: 'O', key: 'o1', level: 1, lanes: ['l1', 'l2'] }],
+    lanes: M.lanes.map((l, i) => ({ ...l, key: 'l' + (i + 1), parent: 'o1', level: 2 })) };
+  const nested = { O: [30, 0, 970, 400], L1: [60, 0, 940, 200], L2: [60, 200, 940, 200] };
+  const check = (over = {}) => breaksOf('<x>\n' + Object.entries({ ...SHAPES, ...nested, ...over }).map(([id, b]) => '      <bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">' + bounds(b) + '</bpmndi:BPMNShape>\n').join('') + '</x>', model, SIZES);
+  assert.deepEqual(check(), []);
+  assert.deepEqual(check({ L2: [30, 200, 970, 200] }), ['lane-nest O L2']);
+  assert.deepEqual(check({ L1: [60, 0, 900, 200] }), ['lane-nest O L1']);
+  assert.deepEqual(check({ O: [30, 0, 970, 380] }), ['lane-nest O']);
+});
+
 // Story 2.12: a second pool Q below P, with lane L3 holding the task D, and message flows between the pools.
 test('several pools: a message flow docks vertically and is in no lane; pools neither overlap nor touch; a sequence flow stays in its pool', () => {
   const shapes = { ...SHAPES, Q: [0, 440, 1000, 200], L3: [30, 440, 970, 200], D: [300, 500, 120, 80] };

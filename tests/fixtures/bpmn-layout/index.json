@@ -16,7 +16,7 @@
   "zwei": {
    "source": "tests/referenz.md:895",
    "also": [
-    "src/demo.md:1040"
+    "src/demo.md:1118"
    ],
    "shows": [
     "25.2"
@@ -25,7 +25,7 @@
   "mitte": {
    "source": "tests/referenz.md:935",
    "also": [
-    "src/demo.md:1080"
+    "src/demo.md:1158"
    ]
   },
   "ereignis": {
@@ -432,6 +432,25 @@
    "source": "tools/bpmn-layout/eingaben/assoziationen/as05-schleife-bahnen.bpmn",
    "shows": [
     "33"
+   ]
+  },
+  "demo-verschachtelt": {
+   "source": "src/demo.md:1040",
+   "note": "the demo text's section on nested lanes: two and three levels, a flat lane beside them, a node only an outer lane names, an empty inner lane, an outer lane without an id",
+   "shows": [
+    "34"
+   ]
+  },
+  "vs-drei-ebenen": {
+   "source": "tools/bpmn-layout/eingaben/verschachtelt/vs02-drei-ebenen.bpmn",
+   "shows": [
+    "34"
+   ]
+  },
+  "vs-pools": {
+   "source": "tools/bpmn-layout/eingaben/verschachtelt/vs04-pools.bpmn",
+   "shows": [
+    "34"
    ]
   }
  }

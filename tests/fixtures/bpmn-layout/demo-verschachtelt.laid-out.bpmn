@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Verschachtelt" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="VB_Zusammenarbeit">
+    <bpmn:participant id="VB_Pool" name="Werk" processRef="VB_Prozess"/>
+  </bpmn:collaboration>
+  <bpmn:process id="VB_Prozess" isExecutable="false">
+    <bpmn:laneSet id="VB_Bahnen">
+      <bpmn:lane id="VB_Leitung" name="Leitung">
+        <bpmn:flowNodeRef>VB_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>VB_Planen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="VB_Fertigung" name="Fertigung">
+        <bpmn:childLaneSet id="VB_Fertigung_Bahnen">
+          <bpmn:lane id="VB_Zuschnitt" name="Zuschnitt">
+            <bpmn:flowNodeRef>VB_Zuschneiden</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="VB_Montage" name="Montage">
+            <bpmn:childLaneSet id="VB_Montage_Bahnen">
+              <bpmn:lane id="VB_Vormontage" name="Vormontage">
+                <bpmn:flowNodeRef>VB_Vormontieren</bpmn:flowNodeRef>
+              </bpmn:lane>
+              <bpmn:lane id="VB_Endmontage" name="Endmontage">
+                <bpmn:flowNodeRef>VB_Montieren</bpmn:flowNodeRef>
+              </bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+      <bpmn:lane id="VB_Qualitaet" name="Qualität">
+        <bpmn:flowNodeRef>VB_Pruefen</bpmn:flowNodeRef>
+        <bpmn:childLaneSet id="VB_Qualitaet_Bahnen">
+          <bpmn:lane id="VB_Pruefung" name="Prüfung">
+            <bpmn:flowNodeRef>VB_InOrdnung</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="VB_Reklamation" name="Reklamation"/>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+      <bpmn:lane name="Auslieferung">
+        <bpmn:childLaneSet id="VB_Auslieferung_Bahnen">
+          <bpmn:lane id="VB_Lager" name="Lager">
+            <bpmn:flowNodeRef>VB_Verpacken</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="VB_Versand" name="Versand">
+            <bpmn:flowNodeRef>VB_Versenden</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>VB_Ende</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="VB_Start" name="Auftrag da"/>
+    <bpmn:task id="VB_Planen" name="Fertigung planen"/>
+    <bpmn:task id="VB_Zuschneiden" name="Teile zuschneiden"/>
+    <bpmn:task id="VB_Vormontieren" name="Baugruppen vormontieren"/>
+    <bpmn:task id="VB_Montieren" name="Endmontage"/>
+    <bpmn:task id="VB_Pruefen" name="Prüfen"/>
+    <bpmn:exclusiveGateway id="VB_InOrdnung" name="in Ordnung?"/>
+    <bpmn:task id="VB_Verpacken" name="Verpacken"/>
+    <bpmn:task id="VB_Versenden" name="Versenden"/>
+    <bpmn:endEvent id="VB_Ende" name="Auftrag erledigt"/>
+    <bpmn:sequenceFlow id="VB_F1" sourceRef="VB_Start" targetRef="VB_Planen"/>
+    <bpmn:sequenceFlow id="VB_F2" sourceRef="VB_Planen" targetRef="VB_Zuschneiden"/>
+    <bpmn:sequenceFlow id="VB_F3" sourceRef="VB_Zuschneiden" targetRef="VB_Vormontieren"/>
+    <bpmn:sequenceFlow id="VB_F4" sourceRef="VB_Vormontieren" targetRef="VB_Montieren"/>
+    <bpmn:sequenceFlow id="VB_F5" sourceRef="VB_Montieren" targetRef="VB_Pruefen"/>
+    <bpmn:sequenceFlow id="VB_F6" sourceRef="VB_Pruefen" targetRef="VB_InOrdnung"/>
+    <bpmn:sequenceFlow id="VB_F7" name="nein" sourceRef="VB_InOrdnung" targetRef="VB_Vormontieren"/>
+    <bpmn:sequenceFlow id="VB_F8" name="ja" sourceRef="VB_InOrdnung" targetRef="VB_Verpacken"/>
+    <bpmn:sequenceFlow id="VB_F9" sourceRef="VB_Verpacken" targetRef="VB_Versenden"/>
+    <bpmn:sequenceFlow id="VB_F10" sourceRef="VB_Versenden" targetRef="VB_Ende"/>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="VB_Zusammenarbeit">
+      <bpmndi:BPMNShape id="VB_Pool_di" bpmnElement="VB_Pool" isHorizontal="true"><dc:Bounds x="0" y="0" width="738" height="1112"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Fertigung_di" bpmnElement="VB_Fertigung" isHorizontal="true"><dc:Bounds x="30" y="144" width="708" height="432"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Montage_di" bpmnElement="VB_Montage" isHorizontal="true"><dc:Bounds x="60" y="288" width="678" height="288"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Qualitaet_di" bpmnElement="VB_Qualitaet" isHorizontal="true"><dc:Bounds x="30" y="576" width="708" height="248"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Leitung_di" bpmnElement="VB_Leitung" isHorizontal="true"><dc:Bounds x="30" y="0" width="708" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Zuschnitt_di" bpmnElement="VB_Zuschnitt" isHorizontal="true"><dc:Bounds x="60" y="144" width="678" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Vormontage_di" bpmnElement="VB_Vormontage" isHorizontal="true"><dc:Bounds x="90" y="288" width="648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Endmontage_di" bpmnElement="VB_Endmontage" isHorizontal="true"><dc:Bounds x="90" y="432" width="648" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Pruefung_di" bpmnElement="VB_Pruefung" isHorizontal="true"><dc:Bounds x="60" y="576" width="678" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Reklamation_di" bpmnElement="VB_Reklamation" isHorizontal="true"><dc:Bounds x="60" y="720" width="678" height="104"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Lager_di" bpmnElement="VB_Lager" isHorizontal="true"><dc:Bounds x="30" y="824" width="708" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Versand_di" bpmnElement="VB_Versand" isHorizontal="true"><dc:Bounds x="30" y="968" width="708" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Start_di" bpmnElement="VB_Start"><dc:Bounds x="162" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="135" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Planen_di" bpmnElement="VB_Planen"><dc:Bounds x="270" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Zuschneiden_di" bpmnElement="VB_Zuschneiden"><dc:Bounds x="270" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Vormontieren_di" bpmnElement="VB_Vormontieren"><dc:Bounds x="270" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Montieren_di" bpmnElement="VB_Montieren"><dc:Bounds x="270" y="464" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Pruefen_di" bpmnElement="VB_Pruefen"><dc:Bounds x="270" y="608" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_InOrdnung_di" bpmnElement="VB_InOrdnung" isMarkerVisible="true"><dc:Bounds x="473" y="623" width="50" height="50"/><bpmndi:BPMNLabel><dc:Bounds x="515" y="641" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Verpacken_di" bpmnElement="VB_Verpacken"><dc:Bounds x="438" y="856" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Versenden_di" bpmnElement="VB_Versenden"><dc:Bounds x="438" y="1000" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="VB_Ende_di" bpmnElement="VB_Ende"><dc:Bounds x="630" y="1022" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="603" y="1062" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="VB_F1_di" bpmnElement="VB_F1"><di:waypoint x="198" y="72"/><di:waypoint x="270" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F2_di" bpmnElement="VB_F2"><di:waypoint x="330" y="112"/><di:waypoint x="330" y="176"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F3_di" bpmnElement="VB_F3"><di:waypoint x="330" y="256"/><di:waypoint x="330" y="320"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F4_di" bpmnElement="VB_F4"><di:waypoint x="330" y="400"/><di:waypoint x="330" y="464"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F5_di" bpmnElement="VB_F5"><di:waypoint x="330" y="544"/><di:waypoint x="330" y="608"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F6_di" bpmnElement="VB_F6"><di:waypoint x="390" y="648"/><di:waypoint x="473" y="648"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F7_di" bpmnElement="VB_F7"><di:waypoint x="498" y="623"/><di:waypoint x="498" y="360"/><di:waypoint x="390" y="360"/><bpmndi:BPMNLabel><dc:Bounds x="467" y="364" width="21" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F8_di" bpmnElement="VB_F8"><di:waypoint x="498" y="673"/><di:waypoint x="498" y="856"/><bpmndi:BPMNLabel><dc:Bounds x="504" y="681" width="9" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F9_di" bpmnElement="VB_F9"><di:waypoint x="498" y="936"/><di:waypoint x="498" y="1000"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="VB_F10_di" bpmnElement="VB_F10"><di:waypoint x="558" y="1040"/><di:waypoint x="630" y="1040"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

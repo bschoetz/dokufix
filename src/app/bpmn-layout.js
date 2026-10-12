@@ -34,8 +34,9 @@
 // (docs/analyse-mermaid-im-bpmn-code.md).
 //
 // What the layout cannot place is left out, and the rest is laid out and
-// drawn (Ben, 2026-10-03): groups, parent lanes of nested lanes, the content
-// of a sub-process, a boundary event on what is no activity laid out, a
+// drawn (Ben, 2026-10-03): groups, a parent lane of nested lanes without an
+// id (since story 2.34 the others are drawn around their inner lanes), the
+// content of a sub-process, a boundary event on what is no activity laid out, a
 // message flow at a boundary event, a text annotation without text, an
 // association without a text annotation at one end, a data association whose
 // other end is no reference laid out, and every flow that touches one of
@@ -64,7 +65,7 @@ import { measureLabel } from './label-size.js';
 // RING_CLEARANCE    a lane that grows for a label (growLane()) grows until
 //                   the label keeps this far less LABEL_GAP from the border
 // FRAME_MARGIN      every waypoint and label keeps this far from the edge of
-//                   the outer lanes and the pool (finishLabelsAndFrame())
+//                   the lanes at a pool's edge and the pool (finishLabelsAndFrame())
 // LABEL_GAP         4 px: a label across the border of its owner's lane with
 //                   another lane lies this far inside once that lane has
 //                   grown (labelRoom()), as far as a flow's label keeps from
@@ -163,7 +164,16 @@ const DATA_ASSOCIATION = /* @__PURE__ */ Object.assign(Object.create(null), { da
 //            synthetic lane has its row on the grid and is left out of the
 //            diagram part: the one lane holding every node where the process
 //            has no lanes, and a lane without an id; pool, the index of its
-//            pool in pools
+//            pool in pools; a lane inside an outer lane (story 2.34) has
+//            parent, the outer lane's key, and level, 2 or more; a lane in
+//            its pool has neither (level 1)
+//     outerLanes: [{ id, name, key, pool, parent, level, lanes }], only where
+//            there are any: the lanes with lanes inside that have an id
+//            (story 2.34), in the order of the XML, an outer one before those
+//            in it; key o1…; parent, the key of the outer lane around it, or
+//            null; level, 1 in its pool, one more per outer lane around it;
+//            lanes, the keys of every lane without lanes inside in it, at
+//            any depth
 //     nodes: [{ id, name, type, tag, key, markers }], type one of start, end,
 //            inter, gateway, task; markers, only where there are any, how many
 //            markers bpmn-js draws in the middle of an activity's lower edge
@@ -267,7 +277,7 @@ export function readProcess(doc){
   const referred = new Set(candidates.map(c => c.proc));
   if (participants.length) for (const p of processes) if (!referred.has(p)) leave(p, 'no participant refers to it');
 
-  const nodes = [], lanes = [], flows = [], pools = [], boundaries = [], loops = [];
+  const nodes = [], lanes = [], flows = [], pools = [], boundaries = [], loops = [], outerLanes = [];
   const byId = new Map(), poolOfNode = new Map();
   const blackBoxes = [];
   for (const { participant, proc } of candidates){
@@ -276,6 +286,9 @@ export function readProcess(doc){
     if (!own && participant && attr(participant, 'id')){ pools.push({ id: attr(participant, 'id'), name: clean(attr(participant, 'name')), el: participant, proc, box: true }); continue; }
     if (!own){ blackBoxes.push({ participant, proc }); continue; }
     const index = pools.length;
+    // An outer lane's key (o1…) apart from the inner lanes' (l1…), so that theirs stay as without nesting.
+    for (const o of own.outerLanes){ o.key = 'o' + (outerLanes.length + 1); o.pool = index; outerLanes.push(o); }
+    for (const x of [...own.outerLanes, ...own.lanes]) if (x.parent) x.parent = x.parent.key;
     for (const l of own.lanes){ l.pool = index; lanes.push(l); }
     for (const n of own.nodes){ byId.set(n.id, n); poolOfNode.set(n.id, index); }
     for (const [id, lane] of own.artifactLane) if (!artifactLane.has(id)) artifactLane.set(id, lane);
@@ -331,7 +344,7 @@ export function readProcess(doc){
   for (let i = leftOut.length - 1; i >= 0; i--) if (leftOut[i].reason === null) leftOut.splice(i, 1);
   // A participant without an id gets no pool shape.
   for (const p of pools) if (p.el && !attr(p.el, 'id')) leave(p.el, 'has no id; it is not drawn as a pool');
-  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, links, loops, insert }, leftOut };
+  return { model: { pools: pools.map(p => p.box ? { id: p.id, name: p.name, box: true } : { id: p.id, name: p.name }), plane, lanes, nodes, flows, boundaries, messages, notes, associations, data: refs, dataAssociations, links, loops, insert, ...(outerLanes.length ? { outerLanes } : {}) }, leftOut };
 }
 
 // The text annotations and their associations (story 2.31): noted, [{ el, slot }] in the order of the XML, slot its
@@ -479,22 +492,34 @@ function readPool(proc, participant, before, beforeLanes, leave, note, data){
   }
   const boundaryIds = new Set(boundaries.map(b => b.id));
 
-  // The lanes, nested ones included; only those without lanes inside are laid
-  // out, each node in the first that names it. A node only an outer lane
-  // names stands in that lane's first inner one. A lane without an id keeps
-  // its row and is not drawn.
+  // The lanes, nested ones included; those without lanes inside get the rows,
+  // each node in the first that names it. A node only an outer lane names
+  // stands in that lane's first inner one. A lane without an id keeps its row
+  // and is not drawn. A lane with lanes inside (story 2.34) is drawn around
+  // them, its head left of theirs: one level deeper per outer lane with an id
+  // around a lane; an outer lane without an id is not drawn and adds no level.
   const allLanes = kids(proc).filter(el => local(el) === 'laneSet').flatMap(set => descendants(set).filter(el => local(el) === 'lane'));
   const placed = new Set();
-  const lanes = [], laneOf = new Map();
+  const lanes = [], laneOf = new Map(), outerLanes = [], outerOf = new Map();
   const key = () => 'l' + (beforeLanes.length + lanes.length + 1);
   const refsOf = el => kids(el).filter(k => local(k) === 'flowNodeRef').map(k => k.textContent.trim()).filter(id => byId.has(id) && !placed.has(id));
   const outer = el => descendants(el).some(inner => local(inner) === 'lane');
+  // The nearest outer lane with an id around el, as read: allLanes is in document order, so it comes first.
+  const around = el => { for (let p = el.parentElement; p && p !== proc; p = p.parentElement) if (outerOf.has(p)) return outerOf.get(p); return null; };
   for (const el of allLanes){
-    if (outer(el)){ leave(el, 'a lane with lanes inside'); continue; }
+    const parent = around(el), level = parent ? parent.level + 1 : 1;
+    if (outer(el)){
+      if (!attr(el, 'id')){ leave(el, 'a lane with lanes inside has no id; it is not drawn, its inner lanes are'); continue; }
+      const o = { id: attr(el, 'id'), name: clean(attr(el, 'name')), parent, level, lanes: [] };
+      outerLanes.push(o);
+      outerOf.set(el, o);
+      continue;
+    }
     const refs = refsOf(el);
     refs.forEach(id => placed.add(id));
     if (!attr(el, 'id')) leave(el, 'has no id; its row is laid out, the lane is not drawn');
-    const lane = { id: attr(el, 'id'), name: clean(attr(el, 'name')), nodes: refs, key: key(), synthetic: !attr(el, 'id') };
+    const lane = { id: attr(el, 'id'), name: clean(attr(el, 'name')), nodes: refs, key: key(), synthetic: !attr(el, 'id'), ...(parent ? { parent, level } : {}) };
+    for (let o = parent; o; o = o.parent) o.lanes.push(lane.key);
     lanes.push(lane);
     laneOf.set(el, lane);
   }
@@ -529,7 +554,7 @@ function readPool(proc, participant, before, beforeLanes, leave, note, data){
     else if ((byId.has(from) || boundaryIds.has(from)) && byId.has(to) && attr(el, 'id')) flows.push({ id: attr(el, 'id'), from, to, name: clean(attr(el, 'name')), ...labelOf(attr(el, 'name')) });
     else leave(el, !attr(el, 'id') ? 'has no id' : boundaryIds.has(to) ? 'enters the boundary event ' + to : 'touches ' + [...new Set([from, to].filter(id => !byId.has(id) && !boundaryIds.has(id)))].join(' and ') + ', which is not laid out');
   }
-  return { nodes, lanes, flows, boundaries, standIn, artifactLane, loops };
+  return { nodes, lanes, flows, boundaries, standIn, artifactLane, loops, outerLanes };
 }
 
 // One line per left-out element for the console.
@@ -545,6 +570,11 @@ const EVENT_LABEL = 84;
 // The width of a pool's head in bpmn-js.
 const HEAD = 30;
 const R = n => Math.round(n);
+// A lane's level (story 2.34): 1 in its pool, one more per outer lane drawn around it; its box starts HEAD·level right
+// of its pool's left edge. The depth: the deepest level of all pools, 1 without nesting. The content of every pool
+// starts behind the heads of that depth (one grid for all pools).
+const levelOf = l => l.level ?? 1;
+const depthOf = model => Math.max(1, ...model.lanes.map(levelOf));
 
 // Consecutive points closer than a pixel on both axes become one: a corner
 // the router puts where two pieces meet at an end. A flow keeps at least its
@@ -584,7 +614,7 @@ export const exitSide = pts => Math.abs(pts[0].y - pts[1].y) < 0.5 ? (pts[1].x >
 // stays): ring: { r, dir, y, cy }, r with the points that stay ({ pts: [] }),
 // the side (1 the bottom border, -1 the top), the level y and the middle cy
 // of the lane it lies in; placed, the levels that move with it ([]). In no
-// lane, or by an outer lane's outer border, nothing grows. Returns by how
+// lane, or by the border of a lane at a pool's edge, nothing grows. Returns by how
 // much the lane grew: 0 where it did not.
 export function growLane(ring, lanes, box, routes, placed){
   const { r, dir, y, cy } = ring;
@@ -622,7 +652,7 @@ export function growLane(ring, lanes, box, routes, placed){
 // the label lies on, and every label is checked again until none crosses a
 // border (a growth can bring a label that lay wholly in the next lane across
 // the border that moved), so that the order of the labels does not change
-// the result. A label beyond an outer lane's outer border grows nothing
+// the result. A label beyond the border of a lane at a pool's edge grows nothing
 // here: the frame grows afterwards (finishLabelsAndFrame()). labels: [{ boxes,
 // anchor }], boxes the arrays [x, y, w, h] that move together, the first
 // the label's text, which is checked; lanes: the boxes of every lane.
@@ -3044,7 +3074,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
     gapW[c.col + 1] += Math.ceil(right);
   }
   const colX = [], gapX = [];
-  let x = HEAD;
+  let x = HEAD * depthOf(model);
   for (let c = 0; c <= cols; c++){
     gapX[c] = x; x += gapW[c];
     if (c < cols){ colX[c] = x; x += colW[c]; }
@@ -3207,7 +3237,7 @@ function finishGrid(g, model, measure, rules, reroute = true){
   const laneBox = byId();
   model.lanes.forEach((l, i) => {
     const first = bands.findIndex(b => b.lane === i), last = bands.length - 1 - [...bands].reverse().findIndex(b => b.lane === i);
-    laneBox[l.key] = [R(HEAD), R(bandY[first]), R(totalW - HEAD), R(bandY[last] + rowH[last] - bandY[first])];
+    laneBox[l.key] = [R(HEAD * levelOf(l)), R(bandY[first]), R(totalW - HEAD * levelOf(l)), R(bandY[last] + rowH[last] - bandY[first])];
     if (!l.synthetic) di.lanes[l.id] = laneBox[l.key];
   });
   model.pools.forEach((p, i) => {
@@ -3741,7 +3771,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   }
 
   // Flows routed in the outer channels, and labels, can lie beyond the lanes:
-  // the outer lanes of each pool grow until every waypoint of its sequence
+  // the lanes at the edge of each pool grow until every waypoint of its sequence
   // flows and every label of its own lies inside, FRAME_MARGIN from the edge
   // (the top lane up, the bottom lane down, every lane left and right, as far
   // as the pool that needs most). The top pool grows upwards; a pool below
@@ -3750,7 +3780,7 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   // its row.
   const M = FRAME_MARGIN;
   const lanesOf = i => model.lanes.filter(l => (l.pool ?? 0) === i).map(l => laneBox[l.key]);
-  const framed = i => model.pools[i].id || model.lanes.some(l => (l.pool ?? 0) === i && !l.synthetic);
+  const framed = i => model.pools[i].id || model.lanes.some(l => (l.pool ?? 0) === i && !l.synthetic) || (model.outerLanes || []).some(o => o.pool === i);
   const pointsOf = i => {
     const xs = [], ys = [];
     for (const f of model.flows.concat(model.loops || [])) if (poolOf.get(f.from) === i) for (const [x, y] of di.flows[f.id]){ xs.push(x); ys.push(y); }
@@ -3760,10 +3790,12 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
   const pools = model.pools.map((p, i) => i).filter(i => framed(i) && !model.pools[i].box);
   // The top pool may be a black box, which does not grow; a pool below it moves down as any other (story 2.29).
   const topmost = model.pools.findIndex((p, i) => framed(i));
+  // West is measured from the edge behind the deepest heads (story 2.34), so that it is what it is without nesting.
+  const D = depthOf(model);
   let west = 0, east = 0;
   for (const i of pools){
     const { xs } = pointsOf(i), frame = lanesOf(i);
-    const left = Math.min(...frame.map(b => b[0])), right = Math.max(...frame.map(b => b[0] + b[2]));
+    const left = Math.min(...model.lanes.filter(l => (l.pool ?? 0) === i).map(l => laneBox[l.key][0] + HEAD * (D - levelOf(l)))), right = Math.max(...frame.map(b => b[0] + b[2]));
     west = Math.max(west, R(left - (Math.min(...xs) - M))); east = Math.max(east, R(Math.max(...xs) + M - right));
   }
   // Moves down by dy what belongs to a pool own() names, and what belongs to no pool (the message flows) at or
@@ -3798,21 +3830,29 @@ function finishLabelsAndFrame(model, di, box, routes, laneBox, measure, gateways
     if (down){ shift(down, k => k > i, bottom + (i !== topmost ? up : 0)); for (const b of frame) if (b[1] + b[3] === bottom + (i !== topmost ? up : 0)) b[3] += down; }
   }
   if (pools.length) for (const b of Object.values(laneBox)){ b[0] -= west; b[2] += west + east; }
-  // Each pool around its lanes, its head left of them.
-  // A black box as wide as the lanes, with a head as theirs; it keeps its band's height (story 2.29).
+  // Each pool around its lanes, its head left of them; left of an outer lane's head where its lanes are nested (story
+  // 2.34). A black box as wide as the lanes, with a head as theirs; it keeps its band's height (story 2.29).
   const lanesAll = Object.values(laneBox);
+  const poolLeft = ls => Math.min(...ls.map(l => laneBox[l.key][0] - HEAD * levelOf(l)));
   model.pools.forEach((p, i) => {
     if (!p.id) return;
     if (p.box){
-      const left = Math.min(...lanesAll.map(b => b[0])) - HEAD, right = Math.max(...lanesAll.map(b => b[0] + b[2]));
+      const left = poolLeft(model.lanes), right = Math.max(...lanesAll.map(b => b[0] + b[2]));
       di.pools[p.id] = [left, di.pools[p.id][1], right - left, di.pools[p.id][3]];
       return;
     }
     const frame = lanesOf(i);
     const top = Math.min(...frame.map(b => b[1])), bottom = Math.max(...frame.map(b => b[1] + b[3]));
-    const left = Math.min(...frame.map(b => b[0])) - HEAD, right = Math.max(...frame.map(b => b[0] + b[2]));
+    const left = poolLeft(model.lanes.filter(l => (l.pool ?? 0) === i)), right = Math.max(...frame.map(b => b[0] + b[2]));
     di.pools[p.id] = [left, top, right - left, bottom - top];
   });
+  // Each outer lane around its inner lanes, as they now stand, its head left of theirs at its level (story 2.34).
+  for (const o of model.outerLanes || []){
+    const inner = model.lanes.filter(l => o.lanes.includes(l.key)), boxes = inner.map(l => laneBox[l.key]);
+    const left = poolLeft(inner) + HEAD * o.level, top = Math.min(...boxes.map(b => b[1]));
+    const right = Math.max(...boxes.map(b => b[0] + b[2])), bottom = Math.max(...boxes.map(b => b[1] + b[3]));
+    di.lanes[o.id] = [left, top, right - left, bottom - top];
+  }
   // A message flow's end at a pool lies on the edge of its frame facing the way (story 2.29), however the pools grew
   // and moved.
   for (const m of model.messages || []) for (const [k, at] of [['fromPool', 0], ['toPool', -1]]){
@@ -3924,7 +3964,7 @@ export function maskNotMarkup(text){
 // text stays as written. Comments, CDATA and PIs do not count.
 function relane(text, model, di){
   const masked = maskNotMarkup(text);
-  // The lanes in the text: id, prefix, range [open, close] and outer lane.
+  // The lanes in the text: id, prefix, range [open, close] and the lane around it (parent).
   const lanes = [], stack = [];
   // A tag's attributes: a quoted value may hold ">".
   for (const m of masked.matchAll(/<(\/?)((?:[\w.-]+:)?)lane\b((?:"[^"]*"|'[^']*'|[^'">])*?)(\/?)>/g)){
@@ -4027,6 +4067,9 @@ export function appendDiagram(xml, model, di, { mergeMarker = true } = {}){
   let out = '  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="' + esc(diagram) + '">\n' +
     '    <bpmndi:BPMNPlane id="' + esc(fresh('dokufix_plane')) + '" bpmnElement="' + esc(model.plane) + '">\n';
   for (const p of model.pools) if (p.id && di.pools[p.id]) out += shape(p.id, di.pools[p.id], ' isHorizontal="true"');
+  // An outer lane before its inner ones (story 2.34), as a modeler writes them; bpmn-js draws each inner lane inside
+  // its outer one from the lane set, whatever the order here.
+  for (const o of model.outerLanes || []) out += shape(o.id, di.lanes[o.id], ' isHorizontal="true"');
   for (const l of model.lanes) if (!l.synthetic) out += shape(l.id, di.lanes[l.id], ' isHorizontal="true"');
   const count = (end, id) => model.flows.filter(f => f[end] === id).length;
   const marker = n => n.tag === 'exclusiveGateway' && (mergeMarker || count('to', n.id) < 2 || count('from', n.id) > 1);

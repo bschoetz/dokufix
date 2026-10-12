@@ -399,13 +399,14 @@ const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, 
 
 // ---------- the copy of src/ with two passes more ----------
 // The diagrams of the demo text: five of Mermaid (two of them the special
-// cases of the large view, one that of the downloads), eighteen of BPMN (two
-// with coordinates, sixteen without, three of them the loop process and the
+// cases of the large view, one that of the downloads), nineteen of BPMN (two
+// with coordinates, seventeen without, three of them the loop process and the
 // two loop special cases of story 2.20, three those of several pools of story
 // 2.12, two the boundary events of story 2.30, one the text annotations of
 // story 2.31, two the data of story 2.32, one the associations between two
-// elements and the flows to themselves of story 2.33).
-const DEMO_DIAGRAMS = 23;
+// elements and the flows to themselves of story 2.33, one the nested lanes of
+// story 2.34).
+const DEMO_DIAGRAMS = 24;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';

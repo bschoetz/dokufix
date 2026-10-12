@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs04">
+    <bpmn:participant id="Pa_Lieferant" name="Lieferant" processRef="P_Lieferant" />
+    <bpmn:participant id="Pa_Kunde" name="Kunde" processRef="P_Kunde" />
+    <bpmn:messageFlow id="m1" name="Bestellung" sourceRef="T_Bestellen" targetRef="S_Bestellung" />
+    <bpmn:messageFlow id="m2" name="Ware" sourceRef="T_Versenden" targetRef="T_Empfangen" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_Lieferant" isExecutable="false">
+    <bpmn:laneSet id="LS_Lieferant">
+      <bpmn:lane id="L_Logistik" name="Logistik">
+        <bpmn:childLaneSet id="LS_Logistik">
+          <bpmn:lane id="L_Lager" name="Lager"><bpmn:flowNodeRef>S_Bestellung</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Kommissionieren</bpmn:flowNodeRef></bpmn:lane>
+          <bpmn:lane id="L_Versand" name="Versand"><bpmn:flowNodeRef>T_Versenden</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Versandt</bpmn:flowNodeRef></bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Bestellung" name="Bestellung erhalten"><bpmn:messageEventDefinition id="MED_1" /></bpmn:startEvent>
+    <bpmn:task id="T_Kommissionieren" name="Ware kommissionieren" />
+    <bpmn:task id="T_Versenden" name="Ware versenden" />
+    <bpmn:endEvent id="E_Versandt" name="Ware versandt" />
+    <bpmn:sequenceFlow id="lf1" sourceRef="S_Bestellung" targetRef="T_Kommissionieren" />
+    <bpmn:sequenceFlow id="lf2" sourceRef="T_Kommissionieren" targetRef="T_Versenden" />
+    <bpmn:sequenceFlow id="lf3" sourceRef="T_Versenden" targetRef="E_Versandt" />
+  </bpmn:process>
+  <bpmn:process id="P_Kunde" isExecutable="false">
+    <bpmn:laneSet id="LS_Kunde">
+      <bpmn:lane id="L_Einkauf" name="Einkauf"><bpmn:flowNodeRef>S_Bedarf</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Bestellen</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Wareneingang" name="Wareneingang"><bpmn:flowNodeRef>T_Empfangen</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Erhalten</bpmn:flowNodeRef></bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Bedarf" name="Bedarf erkannt" />
+    <bpmn:task id="T_Bestellen" name="Ware bestellen" />
+    <bpmn:task id="T_Empfangen" name="Ware empfangen" />
+    <bpmn:endEvent id="E_Erhalten" name="Ware erhalten" />
+    <bpmn:sequenceFlow id="kf1" sourceRef="S_Bedarf" targetRef="T_Bestellen" />
+    <bpmn:sequenceFlow id="kf2" sourceRef="T_Bestellen" targetRef="T_Empfangen" />
+    <bpmn:sequenceFlow id="kf3" sourceRef="T_Empfangen" targetRef="E_Erhalten" />
+  </bpmn:process>
+</bpmn:definitions>

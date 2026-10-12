@@ -41,7 +41,7 @@ Das XML steht in einem eingezäunten Block mit der Sprache `bpmn`:
 | Pool ohne eigenen Prozess (Black Box) | `bpmn:participant` ohne `processRef` | ein schmaler Rahmen ohne Bahnen, so breit wie die anderen Pools, an seinem Platz in der Reihenfolge der `participant`; mindestens ein Pool braucht einen Prozess |
 | Nachrichtenfluss | `bpmn:messageFlow sourceRef="…" targetRef="…"` im `collaboration` | zwischen zwei Pools; jedes Ende ein Flussknoten oder die `id` eines `participant`; gestrichelt, senkrecht, an einem Pool bis an seinen Rand; `name` als Beschriftung |
 | Bahnen | `bpmn:laneSet` mit `bpmn:lane` und `bpmn:flowNodeRef` | Reihenfolge im `laneSet` = von oben nach unten; eine leere Bahn ist erlaubt und wird gezeichnet |
-| verschachtelte Bahnen | `bpmn:lane` mit `bpmn:childLaneSet` | nur die inneren Bahnen werden gezeichnet, die äußere nicht; besser vermeiden |
+| verschachtelte Bahnen | `bpmn:lane` mit `bpmn:childLaneSet` | die äußere Bahn steht um ihre inneren, mit eigenem Kopf links von deren Köpfen, in jeder Tiefe; ein Knoten, den nur die äußere Bahn nennt, steht in ihrer ersten inneren; die äußere Bahn braucht eine `id` |
 | ohne Bahnen | Prozess ohne `laneSet` | erlaubt; alle Knoten stehen in einer Bahn ohne Rahmen, mit Teilnehmer im Pool |
 | Startereignis | `bpmn:startEvent` | mit oder ohne Definition (Zeit, Nachricht, Signal …) |
 | Endereignis | `bpmn:endEvent` | auch `terminateEventDefinition`, `errorEventDefinition` usw. |
@@ -75,7 +75,7 @@ Nicht nötig, aber unschädlich: `bpmn:incoming` und `bpmn:outgoing` in den Knot
 | `participant` ohne `id` | fehlt samt den Nachrichtenflüssen zu ihm; mit Prozess wird der Prozess ohne Pool-Rahmen gezeichnet |
 | `bpmn:messageFlow` innerhalb eines Pools | fehlt |
 | Inhalt eines Teilprozesses, seine Datenobjekte eingeschlossen | fehlt; der Teilprozess steht als ein Symbol |
-| äußere Bahn verschachtelter Bahnen | fehlt; ihre inneren Bahnen stehen |
+| äußere Bahn verschachtelter Bahnen ohne `id` | fehlt; ihre inneren Bahnen stehen |
 | Element oder Fluss ohne `id` | fehlt |
 | Fluss, der an einem weggelassenen Element hängt | fehlt |
 

@@ -31,7 +31,7 @@ test('the job lays out XML without coordinates: the author\'s XML with the diagr
 
 test('every fixture: the job gives its laid-out XML byte for byte, as the page laid it out before the worker', () => {
   const names = fixtureNames();
-  assert.equal(names.length, 71);
+  assert.equal(names.length, 74);
   for (const name of names){
     const r = layoutJob(readFixture(name).xml);
     assert.equal(r.xml, fs.readFileSync(expectedFile(name), 'utf8'), name);

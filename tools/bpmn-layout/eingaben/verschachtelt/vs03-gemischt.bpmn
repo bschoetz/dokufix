@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs03">
+    <bpmn:participant id="Pa_Werk" name="Werk" processRef="P_vs03" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_vs03" isExecutable="false">
+    <bpmn:laneSet id="LS_vs03">
+      <bpmn:lane id="L_Leitung" name="Leitung"><bpmn:flowNodeRef>S_Auftrag</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Planen</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Abnehmen</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Fertig</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Fertigung" name="Fertigung">
+        <bpmn:childLaneSet id="LS_Fertigung">
+          <bpmn:lane id="L_Zuschnitt" name="Zuschnitt"><bpmn:flowNodeRef>T_Zuschneiden</bpmn:flowNodeRef></bpmn:lane>
+          <bpmn:lane id="L_Montage" name="Montage">
+            <bpmn:childLaneSet id="LS_Montage">
+              <bpmn:lane id="L_Vormontage" name="Vormontage"><bpmn:flowNodeRef>T_Vormontieren</bpmn:flowNodeRef></bpmn:lane>
+              <bpmn:lane id="L_Endmontage" name="Endmontage"><bpmn:flowNodeRef>T_Montieren</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Ok</bpmn:flowNodeRef></bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Auftrag" name="Auftrag da" />
+    <bpmn:task id="T_Planen" name="Fertigung planen" />
+    <bpmn:task id="T_Zuschneiden" name="Teile zuschneiden" />
+    <bpmn:task id="T_Vormontieren" name="Baugruppen vormontieren" />
+    <bpmn:task id="T_Montieren" name="Endmontage" />
+    <bpmn:exclusiveGateway id="G_Ok" name="in Ordnung?" />
+    <bpmn:task id="T_Abnehmen" name="Abnahme" />
+    <bpmn:endEvent id="E_Fertig" name="Auftrag fertig" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Auftrag" targetRef="T_Planen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Planen" targetRef="T_Zuschneiden" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Zuschneiden" targetRef="T_Vormontieren" />
+    <bpmn:sequenceFlow id="f4" sourceRef="T_Vormontieren" targetRef="T_Montieren" />
+    <bpmn:sequenceFlow id="f5" sourceRef="T_Montieren" targetRef="G_Ok" />
+    <bpmn:sequenceFlow id="f6" name="nein" sourceRef="G_Ok" targetRef="T_Vormontieren" />
+    <bpmn:sequenceFlow id="f7" name="ja" sourceRef="G_Ok" targetRef="T_Abnehmen" />
+    <bpmn:sequenceFlow id="f8" sourceRef="T_Abnehmen" targetRef="E_Fertig" />
+  </bpmn:process>
+</bpmn:definitions>

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs05">
+    <bpmn:participant id="Pa_Praxis" name="Praxis" processRef="P_vs05" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_vs05" isExecutable="false">
+    <bpmn:laneSet id="LS_vs05">
+      <bpmn:lane id="L_Empfang" name="Empfang"><bpmn:flowNodeRef>S_Patient</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Anmelden</bpmn:flowNodeRef></bpmn:lane>
+      <bpmn:lane id="L_Behandlung" name="Behandlung">
+        <bpmn:flowNodeRef>T_Untersuchen</bpmn:flowNodeRef>
+        <bpmn:childLaneSet id="LS_Behandlung">
+          <bpmn:lane id="L_Arzt" name="Ärztin"><bpmn:flowNodeRef>T_Diagnose</bpmn:flowNodeRef></bpmn:lane>
+          <bpmn:lane id="L_Labor" name="Labor"><bpmn:flowNodeRef>T_Blut</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Fertig</bpmn:flowNodeRef></bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Patient" name="Patientin kommt" />
+    <bpmn:task id="T_Anmelden" name="Anmelden" />
+    <bpmn:task id="T_Untersuchen" name="Untersuchen" />
+    <bpmn:task id="T_Diagnose" name="Diagnose stellen" />
+    <bpmn:task id="T_Blut" name="Blut abnehmen" />
+    <bpmn:endEvent id="E_Fertig" name="Behandlung fertig" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Patient" targetRef="T_Anmelden" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Anmelden" targetRef="T_Untersuchen" />
+    <bpmn:sequenceFlow id="f3" sourceRef="T_Untersuchen" targetRef="T_Diagnose" />
+    <bpmn:sequenceFlow id="f4" sourceRef="T_Diagnose" targetRef="T_Blut" />
+    <bpmn:sequenceFlow id="f5" sourceRef="T_Blut" targetRef="E_Fertig" />
+  </bpmn:process>
+</bpmn:definitions>

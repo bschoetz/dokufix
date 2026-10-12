@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs" targetNamespace="http://dokufix.example/vs">
+  <bpmn:collaboration id="C_vs02">
+    <bpmn:participant id="Pa_Amt" name="Amt" processRef="P_vs02" />
+  </bpmn:collaboration>
+  <bpmn:process id="P_vs02" isExecutable="false">
+    <bpmn:laneSet id="LS_vs02">
+      <bpmn:lane id="L_Abteilung" name="Abteilung Bau">
+        <bpmn:childLaneSet id="LS_Abteilung">
+          <bpmn:lane id="L_Referat1" name="Referat Hochbau">
+            <bpmn:childLaneSet id="LS_Referat1">
+              <bpmn:lane id="L_Antraege" name="Anträge"><bpmn:flowNodeRef>S_Antrag</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Erfassen</bpmn:flowNodeRef><bpmn:flowNodeRef>G_Split</bpmn:flowNodeRef>
+<bpmn:flowNodeRef>G_Join</bpmn:flowNodeRef>
+</bpmn:lane>
+              <bpmn:lane id="L_Statik" name="Statik"><bpmn:flowNodeRef>T_Statik</bpmn:flowNodeRef></bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+          <bpmn:lane id="L_Referat2" name="Referat Umwelt">
+            <bpmn:childLaneSet id="LS_Referat2">
+              <bpmn:lane id="L_Natur" name="Naturschutz"><bpmn:flowNodeRef>T_Natur</bpmn:flowNodeRef><bpmn:flowNodeRef>T_Bescheid</bpmn:flowNodeRef><bpmn:flowNodeRef>E_Bescheid</bpmn:flowNodeRef></bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="S_Antrag" name="Bauantrag eingegangen" />
+    <bpmn:task id="T_Erfassen" name="Antrag erfassen" />
+    <bpmn:parallelGateway id="G_Split" />
+    <bpmn:task id="T_Statik" name="Statik prüfen" />
+    <bpmn:task id="T_Natur" name="Naturschutz prüfen" />
+    <bpmn:parallelGateway id="G_Join" />
+    <bpmn:task id="T_Bescheid" name="Bescheid schreiben" />
+    <bpmn:endEvent id="E_Bescheid" name="Bescheid versandt" />
+    <bpmn:sequenceFlow id="f1" sourceRef="S_Antrag" targetRef="T_Erfassen" />
+    <bpmn:sequenceFlow id="f2" sourceRef="T_Erfassen" targetRef="G_Split" />
+    <bpmn:sequenceFlow id="f3" sourceRef="G_Split" targetRef="T_Statik" />
+    <bpmn:sequenceFlow id="f4" sourceRef="G_Split" targetRef="T_Natur" />
+    <bpmn:sequenceFlow id="f5" sourceRef="T_Statik" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="f6" sourceRef="T_Natur" targetRef="G_Join" />
+    <bpmn:sequenceFlow id="f7" sourceRef="G_Join" targetRef="T_Bescheid" />
+    <bpmn:sequenceFlow id="f8" sourceRef="T_Bescheid" targetRef="E_Bescheid" />
+  </bpmn:process>
+  <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
+    <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C_vs02">
+      <bpmndi:BPMNShape id="Pa_Amt_di" bpmnElement="Pa_Amt" isHorizontal="true"><dc:Bounds x="0" y="0" width="1102" height="432"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Abteilung_di" bpmnElement="L_Abteilung" isHorizontal="true"><dc:Bounds x="30" y="0" width="1072" height="432"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Referat1_di" bpmnElement="L_Referat1" isHorizontal="true"><dc:Bounds x="60" y="0" width="1042" height="288"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Referat2_di" bpmnElement="L_Referat2" isHorizontal="true"><dc:Bounds x="60" y="288" width="1042" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Antraege_di" bpmnElement="L_Antraege" isHorizontal="true"><dc:Bounds x="90" y="0" width="1012" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Statik_di" bpmnElement="L_Statik" isHorizontal="true"><dc:Bounds x="90" y="144" width="1012" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Natur_di" bpmnElement="L_Natur" isHorizontal="true"><dc:Bounds x="90" y="288" width="1012" height="144"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="S_Antrag_di" bpmnElement="S_Antrag"><dc:Bounds x="162" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="135" y="94" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Erfassen_di" bpmnElement="T_Erfassen"><dc:Bounds x="270" y="32" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Split_di" bpmnElement="G_Split"><dc:Bounds x="438" y="47" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Statik_di" bpmnElement="T_Statik"><dc:Bounds x="536" y="176" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Natur_di" bpmnElement="T_Natur"><dc:Bounds x="536" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="G_Join_di" bpmnElement="G_Join"><dc:Bounds x="704" y="47" width="50" height="50"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="T_Bescheid_di" bpmnElement="T_Bescheid"><dc:Bounds x="802" y="320" width="120" height="80"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="E_Bescheid_di" bpmnElement="E_Bescheid"><dc:Bounds x="994" y="342" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="967" y="382" width="90" height="27"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="f1_di" bpmnElement="f1"><di:waypoint x="198" y="72"/><di:waypoint x="270" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="390" y="72"/><di:waypoint x="438" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f3_di" bpmnElement="f3"><di:waypoint x="488" y="72"/><di:waypoint x="596" y="72"/><di:waypoint x="596" y="176"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f4_di" bpmnElement="f4"><di:waypoint x="463" y="97"/><di:waypoint x="463" y="360"/><di:waypoint x="536" y="360"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f5_di" bpmnElement="f5"><di:waypoint x="656" y="216"/><di:waypoint x="668" y="216"/><di:waypoint x="668" y="72"/><di:waypoint x="704" y="72"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f6_di" bpmnElement="f6"><di:waypoint x="656" y="360"/><di:waypoint x="729" y="360"/><di:waypoint x="729" y="97"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f7_di" bpmnElement="f7"><di:waypoint x="754" y="72"/><di:waypoint x="862" y="72"/><di:waypoint x="862" y="320"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f8_di" bpmnElement="f8"><di:waypoint x="922" y="360"/><di:waypoint x="994" y="360"/></bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>

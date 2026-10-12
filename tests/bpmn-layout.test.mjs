@@ -129,13 +129,103 @@ test('what the layout cannot place is left out, with every flow that touches it;
   assert.equal(leftOutLine(leftOut.find(x => x.id === 'SP_T')), 'task SP_T: inside the sub-process SP');
 });
 
-test('nested lanes: the inner lanes are laid out, the outer one is left out; an empty lane is kept, empty', () => {
-  const xml = xmlOf('<bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="Aussen" name="Haus"><bpmn:flowNodeRef>A</bpmn:flowNodeRef><bpmn:flowNodeRef>B</bpmn:flowNodeRef>' +
-    '<bpmn:childLaneSet id="CS"><bpmn:lane id="I1" name="Oben"><bpmn:flowNodeRef>A</bpmn:flowNodeRef></bpmn:lane><bpmn:lane id="I2" name="Unten"><bpmn:flowNodeRef>B</bpmn:flowNodeRef></bpmn:lane></bpmn:childLaneSet></bpmn:lane>' +
-    '<bpmn:lane id="Leer" name="Leer"/></bpmn:laneSet><bpmn:task id="A"/><bpmn:task id="B"/></bpmn:process>');
+// ---------- nested lanes (story 2.34) ----------
+const lane = (id, name, refs = [], inner = '') => '<bpmn:lane' + (id ? ' id="' + id + '"' : '') + ' name="' + name + '">' + refs.map(r => '<bpmn:flowNodeRef>' + r + '</bpmn:flowNodeRef>').join('') +
+  (inner ? '<bpmn:childLaneSet id="CS_' + (id || name) + '">' + inner + '</bpmn:childLaneSet>' : '') + '</bpmn:lane>';
+const chain = ids => ids.map((id, i) => '<bpmn:task id="' + id + '" name="Schritt ' + id + '"/>' + (i ? '<bpmn:sequenceFlow id="F' + i + '" sourceRef="' + ids[i - 1] + '" targetRef="' + id + '"/>' : '')).join('');
+const pooled = (pid, lanes, nodes) => '<bpmn:process id="' + pid + '"><bpmn:laneSet id="LS_' + pid + '">' + lanes + '</bpmn:laneSet>' + nodes + '</bpmn:process>';
+const NESTED = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Haus" processRef="P"/></bpmn:collaboration>' +
+  pooled('P', lane('A', 'Aussen', [], lane('A1', 'Oben', ['T1']) + lane('A2', 'Unten', ['T2'])) + lane('B', 'Flach', ['T3']), chain(['T1', 'T2', 'T3'])));
+// The shapes of the lanes and pools of a laid-out input: id → [x, y, w, h].
+const shapesOf = (laid, ids) => Object.fromEntries(ids.map(id => [id, laid.di.shapes[id]]));
+
+test('nested lanes: the outer lane is read with its pool, level and inner lanes; the inner ones get their parent and level, a flat one neither; an empty lane is kept, empty', () => {
+  const { model, leftOut } = read(NESTED);
+  assert.deepEqual(model.outerLanes, [{ id: 'A', name: 'Aussen', parent: null, level: 1, lanes: ['l1', 'l2'], key: 'o1', pool: 0 }]);
+  assert.deepEqual(model.lanes.map(l => [l.id, l.key, l.parent, l.level]), [['A1', 'l1', 'o1', 2], ['A2', 'l2', 'o1', 2], ['B', 'l3', undefined, undefined]]);
+  assert.deepEqual(leftOut, []);
+  const empty = read(xmlOf(pooled('P', lane('A', 'Aussen', [], lane('A1', 'Oben', ['T1'])) + lane('Leer', 'Leer'), chain(['T1'])))).model;
+  assert.deepEqual(empty.lanes.map(l => [l.id, l.nodes, l.key]), [['A1', ['T1'], 'l1'], ['Leer', [], 'l2']]);
+  // Without nesting the model has no outerLanes.
+  assert.equal('outerLanes' in read(xmlOf(pooled('P', lane('L', 'L', ['T1']), chain(['T1'])))).model, false);
+});
+
+test('nested lanes, two levels: the outer lane around its inner ones, their heads 30 px right of its; a flat lane at its level, as wide', () => {
+  const laid = dataLaid(NESTED);
+  const { PA, A, A1, A2, B } = shapesOf(laid, ['PA', 'A', 'A1', 'A2', 'B']);
+  assert.equal(A[0], PA[0] + 30);
+  assert.deepEqual([A1[0], A2[0]], [A[0] + 30, A[0] + 30]);
+  assert.deepEqual([A[1], A[1] + A[3]], [A1[1], A2[1] + A2[3]]);
+  assert.equal(B[0], A[0]);
+  for (const b of [A, A1, A2, B]) assert.equal(b[0] + b[2], PA[0] + PA[2]);
+  // The content starts behind the deepest heads, in the flat lane too.
+  for (const id of ['T1', 'T2', 'T3']) assert.ok(laid.di.shapes[id][0] >= A1[0] + 30, id);
+  assert.deepEqual(laid.breaks, []);
+  // The outer lane's shape comes before its inner lanes'.
+  assert.deepEqual((laid.xml.match(/bpmnElement="(A|A1|A2|B)"/g) || []).map(m => m.slice(13, -1)), ['A', 'A1', 'A2', 'B']);
+});
+
+test('nested lanes, three levels and levels mixed in one pool: each lane starts at its level, the content of all behind the deepest heads', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Werk" processRef="P"/></bpmn:collaboration>' +
+    pooled('P', lane('L', 'Leitung', ['T1']) + lane('F', 'Fertigung', [], lane('Z', 'Zuschnitt', ['T2']) + lane('M', 'Montage', [], lane('M1', 'Vor', ['T3']) + lane('M2', 'End', ['T4']))), chain(['T1', 'T2', 'T3', 'T4'])));
+  const { model } = read(xml);
+  assert.deepEqual(model.outerLanes.map(o => [o.id, o.parent, o.level, o.lanes]), [['F', null, 1, ['l2', 'l3', 'l4']], ['M', 'o1', 2, ['l3', 'l4']]]);
+  assert.deepEqual(model.lanes.map(l => [l.id, l.level ?? 1]), [['L', 1], ['Z', 2], ['M1', 3], ['M2', 3]]);
+  const laid = dataLaid(xml), sh = shapesOf(laid, ['PA', 'L', 'F', 'Z', 'M', 'M1', 'M2']), x0 = sh.PA[0];
+  assert.deepEqual(['L', 'F', 'Z', 'M', 'M1', 'M2'].map(id => sh[id][0] - x0), [30, 30, 60, 60, 90, 90]);
+  assert.deepEqual([sh.F[1], sh.F[1] + sh.F[3]], [sh.Z[1], sh.M2[1] + sh.M2[3]]);
+  assert.deepEqual([sh.M[1], sh.M[1] + sh.M[3]], [sh.M1[1], sh.M2[1] + sh.M2[3]]);
+  for (const id of ['T1', 'T2', 'T3', 'T4']) assert.ok(laid.di.shapes[id][0] >= x0 + 120, id);
+  assert.deepEqual(laid.breaks, []);
+});
+
+test('nested lanes, several pools: a nested pool above a flat one, both as wide; the flat one\'s lanes at level 1', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Lieferant" processRef="P"/><bpmn:participant id="PB" name="Kunde" processRef="Q"/>' +
+    '<bpmn:messageFlow id="M1" sourceRef="T2" targetRef="U1"/></bpmn:collaboration>' +
+    pooled('P', lane('A', 'Logistik', [], lane('A1', 'Lager', ['T1']) + lane('A2', 'Versand', ['T2'])), chain(['T1', 'T2'])) +
+    pooled('Q', lane('B1', 'Einkauf', ['U1']) + lane('B2', 'Eingang', ['U2']), '<bpmn:task id="U1" name="Empfangen"/><bpmn:task id="U2" name="Prüfen"/><bpmn:sequenceFlow id="G1" sourceRef="U1" targetRef="U2"/>'));
+  const laid = dataLaid(xml), sh = shapesOf(laid, ['PA', 'PB', 'A', 'A1', 'B1', 'B2']);
+  assert.deepEqual([sh.PB[0], sh.PB[2]], [sh.PA[0], sh.PA[2]]);
+  assert.deepEqual([sh.B1[0], sh.B2[0], sh.A[0], sh.A1[0]], [sh.PA[0] + 30, sh.PA[0] + 30, sh.PA[0] + 30, sh.PA[0] + 60]);
+  assert.deepEqual(laid.breaks, []);
+});
+
+test('nested lanes: a node only an outer lane names stands in its first inner lane, and the outer lane keeps its flowNodeRef', () => {
+  const xml = xmlOf(pooled('P', lane('A', 'Aussen', ['T2'], lane('A1', 'Oben', ['T1']) + lane('A2', 'Unten', ['T3'])), chain(['T1', 'T2', 'T3'])));
+  const laid = dataLaid(xml);
+  assert.deepEqual(laid.model.lanes.map(l => [l.id, l.nodes]), [['A1', ['T1', 'T2']], ['A2', ['T3']]]);
+  assert.match(laid.xml, /<bpmn:lane id="A" name="Aussen"><bpmn:flowNodeRef>T2<\/bpmn:flowNodeRef>/);
+  assert.deepEqual(laid.breaks, []);
+});
+
+test('nested lanes: an outer lane without an id is not drawn and adds no level; an inner one without an id keeps its row inside the outer frame', () => {
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Haus" processRef="P"/></bpmn:collaboration>' +
+    pooled('P', lane('', 'Ohne', [], lane('I1', 'Eins', ['T1']) + lane('A', 'Aussen', [], lane('', 'Namenlos', ['T2']) + lane('A2', 'Zwei', ['T3']))), chain(['T1', 'T2', 'T3'])));
   const { model, leftOut } = read(xml);
-  assert.deepEqual(model.lanes.map(l => [l.id, l.nodes, l.key]), [['I1', ['A'], 'l1'], ['I2', ['B'], 'l2'], ['Leer', [], 'l3']]);
-  assert.deepEqual(leftOut.map(leftOutLine), ['lane Aussen: a lane with lanes inside']);
+  assert.deepEqual(model.outerLanes.map(o => [o.id, o.parent, o.level, o.lanes]), [['A', null, 1, ['l2', 'l3']]]);
+  assert.deepEqual(model.lanes.map(l => [l.id, l.level ?? 1, l.synthetic]), [['I1', 1, false], ['', 2, true], ['A2', 2, false]]);
+  assert.deepEqual(leftOut.map(leftOutLine), ['lane (no id): a lane with lanes inside has no id; it is not drawn, its inner lanes are', 'lane (no id): has no id; its row is laid out, the lane is not drawn']);
+  const laid = dataLaid(xml), sh = shapesOf(laid, ['PA', 'I1', 'A', 'A2']);
+  assert.deepEqual([sh.I1[0], sh.A[0], sh.A2[0]].map(x => x - sh.PA[0]), [30, 30, 60]);
+  // The outer frame holds the row of its inner lane without an id: from the bottom of I1 to the bottom of A2.
+  assert.deepEqual([sh.A[1], sh.A[1] + sh.A[3]], [sh.I1[1] + sh.I1[3], sh.A2[1] + sh.A2[3]]);
+  const t2 = laid.di.shapes.T2;
+  assert.ok(t2[1] >= sh.A[1] && t2[1] + t2[3] <= sh.A2[1], 'T2 in the row above A2, inside A');
+  assert.equal((laid.xml.match(/BPMNShape[^>]*bpmnElement="[^"]*"/g) || []).filter(m => /_di_?\d*" bpmnElement="(I1|A|A2)"/.test(m)).length, 3);
+  // The row without a lane shape breaks lane-gap and point-outside-lanes, as without nesting; the outer lane is no break.
+  assert.deepEqual(laid.breaks.filter(b => b.startsWith('lane-nest')), []);
+});
+
+test('nested lanes: the outer lane follows its inner lanes when they grow for a label and a flow in the outer channel', () => {
+  // A loop from the last task back to the first runs in the channel below the bottom lane; the long gateway label grows the lanes.
+  const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="PA" name="Haus" processRef="P"/></bpmn:collaboration>' +
+    pooled('P', lane('A', 'Aussen', [], lane('A1', 'Oben', ['T1', 'G']) + lane('A2', 'Unten', ['T2'])),
+      '<bpmn:task id="T1" name="Eins"/><bpmn:exclusiveGateway id="G" name="Ist das wirklich alles in Ordnung so?"/><bpmn:task id="T2" name="Zwei"/>' +
+      '<bpmn:sequenceFlow id="F1" sourceRef="T1" targetRef="G"/><bpmn:sequenceFlow id="F2" name="nein" sourceRef="G" targetRef="T2"/><bpmn:sequenceFlow id="F3" name="ja" sourceRef="G" targetRef="T1"/>'));
+  const laid = dataLaid(xml), sh = shapesOf(laid, ['PA', 'A', 'A1', 'A2']);
+  assert.deepEqual([sh.A[1], sh.A[1] + sh.A[3], sh.A[0] + sh.A[2]], [sh.A1[1], sh.A2[1] + sh.A2[3], sh.PA[0] + sh.PA[2]]);
+  assert.deepEqual([sh.A[1], sh.A[3]], [sh.PA[1], sh.PA[3]]);
+  assert.deepEqual(laid.breaks.filter(b => b.startsWith('lane-')), []);
 });
 
 test('a node two lanes name stands in the first; a reference to nothing is ignored', () => {

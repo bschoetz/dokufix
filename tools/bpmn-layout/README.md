@@ -79,6 +79,7 @@ Die Sätze, wie Spike 2.26 und die Stories 2.12 und 2.29 bis 2.32 sie gebildet h
 | `extern` | | 20 (`x-…`) | von Menschen gezeichnete Prozesse, je mit Handlayout als Referenz |
 | `pools`, `blackbox`, `angeheftet`, `notizen`, `daten` | 5, 8, 11, 9, 9 | 10, 7, 3, 12, 14 | die Sätze der Stories 2.12, 2.29 bis 2.32 |
 | `assoziationen` | 6 (`as01` …) | | Assoziationen zwischen Flussknoten (Signal, Kompensation, Datenspeicher ohne Datenassoziation) und Flüsse auf sich selbst, Story 2.33 |
+| `verschachtelt` | 6 (`vs01` …) | 3 (`v-wv1` …, bfr) | Bahnen in Bahnen, Story 2.34: zwei und drei Ebenen, Ebenen gemischt, ein verschachtelter Pool über einem flachen, ein Knoten nur in der äußeren Bahn, eine leere innere Bahn |
 | `werkbank` | in `eingaben/werkbank/` (`wb01` …) | | Bens Fälle aus der Werkbank, eingereicht mit `tools/werkbank/einreichen.mjs` (Story 2.42), gültig nach `pruefen.mjs`, bei jedem Lauf dabei |
 | `laufzeit` | 1 | | Bens hund3 (77 Knoten), nur auf Nennung |
 | `einzeln` | 1 | | Diagramme, über die Ben einzeln sprechen will, nur auf Nennung: `lauf.mjs --lauf <name> <name>`, `feedback-bauen.mjs --lauf <name> --art <name> <name>` |

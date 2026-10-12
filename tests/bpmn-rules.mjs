@@ -34,6 +34,12 @@
 //                             host's outline: <event> <host> (story 2.30)
 //   boundary-overlap          two boundary events of one host that overlap
 //   lane-gap                  two lanes one below the other that do not meet
+//   lane-nest                 an outer lane not exactly around the lanes in it
+//                             (story 2.34): not from the top of the highest to
+//                             the bottom of the lowest, an inner lane's x not
+//                             30 px right of its x, or a right edge not its:
+//                             <outer lane> <inner lane>, or the outer lane
+//                             alone where its top or bottom is wrong
 //   label-on-flow,            a label on a piece of a flow, on a foreign
 //   label-on-node,            symbol, on another label: <label's element>
 //   label-on-label            <what it lies on>
@@ -310,6 +316,20 @@ export function breaksOf(xml, model, sizes = {}){
       const [aid, a] = stacked[i - 1], [bid, b] = stacked[i];
       if (b[1] !== a[1] + a[3]) add('lane-gap', aid, bid);
     }
+  }
+  // Each outer lane around the lanes directly in it, drawn ones only; its top and bottom checked where every lane in it
+  // is drawn (a lane without an id keeps its row, but has no shape).
+  for (const o of model.outerLanes || []){
+    const box = di.shapes[o.id];
+    if (!box) continue;
+    const inner = [...(model.outerLanes || []), ...drawnLanes].filter(l => l.parent === o.key && di.shapes[l.id]);
+    for (const l of inner){
+      const [x, , w] = di.shapes[l.id];
+      if (x !== box[0] + 30 || x + w !== box[0] + box[2]) add('lane-nest', o.id, l.id);
+    }
+    if (!inner.length || model.lanes.some(l => o.lanes.includes(l.key) && l.synthetic)) continue;
+    const top = Math.min(...inner.map(l => di.shapes[l.id][1])), bottom = Math.max(...inner.map(l => di.shapes[l.id][1] + di.shapes[l.id][3]));
+    if (top !== box[1] || bottom !== box[1] + box[3]) add('lane-nest', o.id);
   }
 
   const labels = [];

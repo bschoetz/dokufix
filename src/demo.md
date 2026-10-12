@@ -1033,6 +1033,84 @@ Zwei Arten Linie, die BPMN ohne Koordinaten bis Story 2.33 wegließ. Eine **Asso
 </bpmn:definitions>
 ```
 
+### BPMN ohne Koordinaten: Bahnen in Bahnen
+
+Bis Story 2.34 zeichnete BPMN ohne Koordinaten von **verschachtelten Bahnen** nur die inneren. Jetzt steht jede **äußere Bahn** um ihre inneren, mit eigenem Kopf links von deren Köpfen, je Ebene 30 px weiter rechts. Die Fertigung hält den Zuschnitt und die Montage, die Montage wiederum Vor- und Endmontage: drei Köpfe nebeneinander. Die Leitung ist eine flache Bahn daneben, ihr Inhalt beginnt wie der aller Bahnen hinter den tiefsten Köpfen. „Prüfen“ nennt nur die äußere Bahn Qualität; es steht in deren erster innerer Bahn, Prüfung. Die innere Bahn Reklamation bleibt leer. Lager und Versand liegen in einer äußeren Bahn ohne ID: Sie wird nicht gezeichnet, ihre inneren Bahnen stehen wie flache, mit einer Zeile auf der Konsole.
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Definitionen_Verschachtelt" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="VB_Zusammenarbeit">
+    <bpmn:participant id="VB_Pool" name="Werk" processRef="VB_Prozess"/>
+  </bpmn:collaboration>
+  <bpmn:process id="VB_Prozess" isExecutable="false">
+    <bpmn:laneSet id="VB_Bahnen">
+      <bpmn:lane id="VB_Leitung" name="Leitung">
+        <bpmn:flowNodeRef>VB_Start</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>VB_Planen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="VB_Fertigung" name="Fertigung">
+        <bpmn:childLaneSet id="VB_Fertigung_Bahnen">
+          <bpmn:lane id="VB_Zuschnitt" name="Zuschnitt">
+            <bpmn:flowNodeRef>VB_Zuschneiden</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="VB_Montage" name="Montage">
+            <bpmn:childLaneSet id="VB_Montage_Bahnen">
+              <bpmn:lane id="VB_Vormontage" name="Vormontage">
+                <bpmn:flowNodeRef>VB_Vormontieren</bpmn:flowNodeRef>
+              </bpmn:lane>
+              <bpmn:lane id="VB_Endmontage" name="Endmontage">
+                <bpmn:flowNodeRef>VB_Montieren</bpmn:flowNodeRef>
+              </bpmn:lane>
+            </bpmn:childLaneSet>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+      <bpmn:lane id="VB_Qualitaet" name="Qualität">
+        <bpmn:flowNodeRef>VB_Pruefen</bpmn:flowNodeRef>
+        <bpmn:childLaneSet id="VB_Qualitaet_Bahnen">
+          <bpmn:lane id="VB_Pruefung" name="Prüfung">
+            <bpmn:flowNodeRef>VB_InOrdnung</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="VB_Reklamation" name="Reklamation"/>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+      <bpmn:lane name="Auslieferung">
+        <bpmn:childLaneSet id="VB_Auslieferung_Bahnen">
+          <bpmn:lane id="VB_Lager" name="Lager">
+            <bpmn:flowNodeRef>VB_Verpacken</bpmn:flowNodeRef>
+          </bpmn:lane>
+          <bpmn:lane id="VB_Versand" name="Versand">
+            <bpmn:flowNodeRef>VB_Versenden</bpmn:flowNodeRef>
+            <bpmn:flowNodeRef>VB_Ende</bpmn:flowNodeRef>
+          </bpmn:lane>
+        </bpmn:childLaneSet>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="VB_Start" name="Auftrag da"/>
+    <bpmn:task id="VB_Planen" name="Fertigung planen"/>
+    <bpmn:task id="VB_Zuschneiden" name="Teile zuschneiden"/>
+    <bpmn:task id="VB_Vormontieren" name="Baugruppen vormontieren"/>
+    <bpmn:task id="VB_Montieren" name="Endmontage"/>
+    <bpmn:task id="VB_Pruefen" name="Prüfen"/>
+    <bpmn:exclusiveGateway id="VB_InOrdnung" name="in Ordnung?"/>
+    <bpmn:task id="VB_Verpacken" name="Verpacken"/>
+    <bpmn:task id="VB_Versenden" name="Versenden"/>
+    <bpmn:endEvent id="VB_Ende" name="Auftrag erledigt"/>
+    <bpmn:sequenceFlow id="VB_F1" sourceRef="VB_Start" targetRef="VB_Planen"/>
+    <bpmn:sequenceFlow id="VB_F2" sourceRef="VB_Planen" targetRef="VB_Zuschneiden"/>
+    <bpmn:sequenceFlow id="VB_F3" sourceRef="VB_Zuschneiden" targetRef="VB_Vormontieren"/>
+    <bpmn:sequenceFlow id="VB_F4" sourceRef="VB_Vormontieren" targetRef="VB_Montieren"/>
+    <bpmn:sequenceFlow id="VB_F5" sourceRef="VB_Montieren" targetRef="VB_Pruefen"/>
+    <bpmn:sequenceFlow id="VB_F6" sourceRef="VB_Pruefen" targetRef="VB_InOrdnung"/>
+    <bpmn:sequenceFlow id="VB_F7" name="nein" sourceRef="VB_InOrdnung" targetRef="VB_Vormontieren"/>
+    <bpmn:sequenceFlow id="VB_F8" name="ja" sourceRef="VB_InOrdnung" targetRef="VB_Verpacken"/>
+    <bpmn:sequenceFlow id="VB_F9" sourceRef="VB_Verpacken" targetRef="VB_Versenden"/>
+    <bpmn:sequenceFlow id="VB_F10" sourceRef="VB_Versenden" targetRef="VB_Ende"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
 ### BPMN ohne Koordinaten: zwei Schleifen in einer Reihe
 
 Zwei Rückflüsse in einer Bahn, einer um den anderen herum: Sie sollten beide oberhalb der Reihe laufen sehen, jeden auf einer eigenen Höhe, den kürzeren innen, und keinen Pfeil auf den Kanten der Aufgaben oder durch eine Raute.
