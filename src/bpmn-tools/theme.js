@@ -131,6 +131,27 @@ export const PRESETS = {
   // dark blue #1D2C49 of the dark sections (here the pool's head as well), text #333, headings #1a1a1a, background #FAFAFA.
   sti: { name: 'STI Consulting', ...fromRoles({ sym: '#7e904c', end: '#1d2c49', line: '#333333', poolLine: '#1d2c49', poolFill: '#fafafa', head: '#1d2c49', fill: '#ffffff', label: '#1a1a1a', bg: '#ffffff' },
     { 'flow-label': '#333333', 'lane-label': '#1d2c49', 'msg-stroke': '#1d2c49', 'task-icon': '#1d2c49', 'gwp-stroke': '#1d2c49' }) },
+  // STI 2026: from the draft tokens sti-tokens.draft.json (CI long version v13, 2026-10-09), every value explicit.
+  // Text and lines navy 900 (never black), Navy 600 on tasks and data, cyan as the signal (start, exclusive
+  // gateway, message flow; 700 where it is a line on white), gold only on intermediate events (accent, small
+  // area), no red and no green (end events navy). Pool and lanes warm light grey, the pool's head navy with white.
+  sti2026: { name: 'STI 2026',
+    'task-fill': '#ffffff', 'task-stroke': '#2d5086', 'task-label': '#172c49', 'task-icon': '#00798a',
+    'sub-fill': '#ffffff', 'sub-stroke': '#172c49', 'sub-label': '#172c49',
+    'start-fill': '#ffffff', 'start-stroke': '#0099b0', 'start-label': '#172c49', 'start-icon': '#00798a',
+    'inter-fill': '#ffffff', 'inter-stroke': '#d4a032', 'inter-label': '#172c49', 'inter-icon': '#7a5818',
+    'end-fill': '#ffffff', 'end-stroke': '#172c49', 'end-label': '#172c49', 'end-icon': '#172c49',
+    'gwx-fill': '#d4f1f6', 'gwx-stroke': '#00798a', 'gwx-label': '#172c49', 'gwx-icon': '#005c6b',
+    'gwp-fill': '#e8edf5', 'gwp-stroke': '#2d5086', 'gwp-label': '#172c49', 'gwp-icon': '#172c49',
+    'gwo-fill': '#ffffff', 'gwo-stroke': '#2d5086', 'gwo-label': '#172c49', 'gwo-icon': '#172c49',
+    'gwe-fill': '#ffffff', 'gwe-stroke': '#2d5086', 'gwe-label': '#172c49', 'gwe-icon': '#172c49',
+    'flow-fill': '#ffffff', 'flow-stroke': '#172c49', 'flow-label': '#5c5c5c',
+    'msg-fill': '#ffffff', 'msg-stroke': '#00798a', 'msg-label': '#172c49',
+    'assoc-stroke': '#8c8c8c', 'note-stroke': '#5c5c5c', 'note-label': '#172c49',
+    'data-fill': '#ffffff', 'data-stroke': '#2d5086', 'data-label': '#172c49',
+    'group-stroke': '#8c8c8c', 'group-label': '#172c49',
+    'pool-fill': '#f0ede8', 'pool-stroke': '#172c49', 'head-fill': '#172c49', 'head-label': '#ffffff',
+    'lane-fill': '#f0ede8', 'lane-stroke': '#b5c2d9', 'lane-label': '#172c49', 'bg-fill': '#ffffff' },
 };
 // The background "transparent" in the tool: a checkerboard; the SVG has none.
 export const CHECKER = 'repeating-conic-gradient(#e5e5ea 0 25%,#fff 0 50%) 0 0/16px 16px';
