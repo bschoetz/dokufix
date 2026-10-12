@@ -984,7 +984,7 @@ Ein Datenobjekt, das der Unterprozess „Auftrag ausführen“ schreibt, steht �
 
 ### BPMN ohne Koordinaten: Assoziationen zwischen Knoten und Flüsse auf sich selbst
 
-Zwei Arten Linie, die BPMN ohne Koordinaten bis Story 2.33 wegließ. Eine **Assoziation zwischen zwei Elementen** läuft gepunktet und gerade von Umriss zu Umriss: Das Signal „Gast angemeldet“ in der Bahn Empfang führt zu „Anmeldung gehört“ in der Bahn Küche, über die Bahngrenze. Das Kompensationsereignis an „Tisch reservieren“ führt zu „Reservierung lösen“, der Datenspeicher „Kassensystem“ zu „Rechnung schreiben“. Ein **Fluss auf sich selbst** läuft als Schleife rechts aus seinem Knoten heraus und oben wieder hinein: an der Aufgabe „Essen kochen“ mit dem Namen „abschmecken“ darüber, am Gateway „Platz frei?“ ohne Namen. Weggelassen, mit einer Zeile auf der Konsole: eine Assoziation von einer Aufgabe zu einem Sequenzfluss ohne Notiz an einem Ende.
+Zwei Arten Linie, die BPMN ohne Koordinaten bis Story 2.33 wegließ. Eine **Assoziation zwischen zwei Elementen** läuft gepunktet und gerade von Umriss zu Umriss: Das Signal „Gast angemeldet“ in der Bahn Empfang führt zu „Anmeldung gehört“ in der Bahn Küche, über die Bahngrenze. Das Kompensationsereignis an „Tisch reservieren“ führt zu „Reservierung lösen“, der Datenspeicher „Kassensystem“ zu „Rechnung schreiben“. Ein **Fluss auf sich selbst** läuft als Schleife rechts aus seinem Knoten heraus und unten wieder hinein: an der Aufgabe „Essen kochen“ mit dem Namen „abschmecken“ darunter, am Gateway „Platz frei?“ ohne Namen. Weggelassen, mit einer Zeile auf der Konsole: eine Assoziation von einer Aufgabe zu einem Sequenzfluss ohne Notiz an einem Ende.
 
 ```bpmn
 <?xml version="1.0" encoding="UTF-8"?>

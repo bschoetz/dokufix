@@ -931,17 +931,18 @@ export function dataWay(r, s, offset = 0){
 // How far a loop runs beside its node (story 2.33).
 export const LOOP_OUT = 20;
 // The waypoints of a flow from a node to itself (story 2.33), its shape s ({ kind, cx, cy, w, h }): out of its right
-// side a quarter of its height above the middle (the middle is where its other flows leave), LOOP_OUT to the right, up
-// to LOOP_OUT above it, back left, and down into its top: on a task a quarter of its width right of the middle, on an
-// event or a gateway in the middle. [[x, y], …], orthogonal.
+// side a quarter of its height below the middle (the middle is where its other flows leave), LOOP_OUT to the right,
+// down to LOOP_OUT below it, back left, and up into its bottom: on a task a quarter of its width right of the middle,
+// on an event or a gateway in the middle. Below, not above (Ben, 2026-10-12, from the pictures): above, it lay beside
+// the channels of the flows back. [[x, y], …], orthogonal.
 export function loopWay(s){
-  // At least 13 px above the middle, so that it does not run beside a flow out of the middle (closer than 12 px is
+  // At least 13 px below the middle, so that it does not run beside a flow out of the middle (closer than 12 px is
   // a break): on an event a quarter of its height is 9 px.
-  const yOut = s.cy - Math.max(s.h / 4, 13), xIn = s.kind === 'rect' ? s.cx + s.w / 4 : s.cx;
+  const yOut = s.cy + Math.max(s.h / 4, 13), xIn = s.kind === 'rect' ? s.cx + s.w / 4 : s.cx;
   // Rounded away from the shape, so that the loop never starts or ends inside it.
-  const xOut = Math.ceil(edgeAt(s, R(yOut), 1, true)), yIn = Math.floor(edgeAt(s, R(xIn), -1, false));
-  const right = R(s.cx + s.w / 2 + LOOP_OUT), top = R(s.cy - s.h / 2 - LOOP_OUT);
-  return [[xOut, R(yOut)], [right, R(yOut)], [right, top], [R(xIn), top], [R(xIn), yIn]];
+  const xOut = Math.ceil(edgeAt(s, R(yOut), 1, true)), yIn = Math.ceil(edgeAt(s, R(xIn), 1, false));
+  const right = R(s.cx + s.w / 2 + LOOP_OUT), bottom = R(s.cy + s.h / 2 + LOOP_OUT);
+  return [[xOut, R(yOut)], [right, R(yOut)], [right, bottom], [R(xIn), bottom], [R(xIn), yIn]];
 }
 // The waypoints of an association between two elements (story 2.33), from the shape a to the shape b (each { kind, cx,
 // cy, w, h }): one above the other, a vertical line in the middle of where they overlap across; beside each other, a

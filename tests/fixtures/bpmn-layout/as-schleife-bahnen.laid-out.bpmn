@@ -22,8 +22,8 @@
   </bpmn:process>
   <bpmndi:BPMNDiagram xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="dokufix_diagram">
     <bpmndi:BPMNPlane id="dokufix_plane" bpmnElement="C_as05">
-      <bpmndi:BPMNShape id="Pool_as05_di" bpmnElement="Pool_as05" isHorizontal="true"><dc:Bounds x="0" y="-18" width="678" height="306"/></bpmndi:BPMNShape>
-      <bpmndi:BPMNShape id="L_Annahme_di" bpmnElement="L_Annahme" isHorizontal="true"><dc:Bounds x="30" y="-18" width="648" height="162"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Pool_as05_di" bpmnElement="Pool_as05" isHorizontal="true"><dc:Bounds x="0" y="0" width="678" height="288"/></bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="L_Annahme_di" bpmnElement="L_Annahme" isHorizontal="true"><dc:Bounds x="30" y="0" width="648" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="L_Technik_di" bpmnElement="L_Technik" isHorizontal="true"><dc:Bounds x="30" y="144" width="648" height="144"/></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="S_di" bpmnElement="S"><dc:Bounds x="102" y="54" width="36" height="36"/><bpmndi:BPMNLabel><dc:Bounds x="75" y="94" width="90" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="T_Pruefen_di" bpmnElement="T_Pruefen"><dc:Bounds x="210" y="32" width="120" height="80"/></bpmndi:BPMNShape>
@@ -34,8 +34,8 @@
       <bpmndi:BPMNEdge id="f_weiter_di" bpmnElement="f_weiter"><di:waypoint x="270" y="112"/><di:waypoint x="270" y="176"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="f2_di" bpmnElement="f2"><di:waypoint x="330" y="216"/><di:waypoint x="378" y="216"/></bpmndi:BPMNEdge>
       <bpmndi:BPMNEdge id="f_gut_di" bpmnElement="f_gut"><di:waypoint x="498" y="216"/><di:waypoint x="570" y="216"/></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="f_nachfragen_di" bpmnElement="f_nachfragen"><di:waypoint x="330" y="52"/><di:waypoint x="350" y="52"/><di:waypoint x="350" y="12"/><di:waypoint x="300" y="12"/><di:waypoint x="300" y="32"/><bpmndi:BPMNLabel><dc:Bounds x="310" y="-6" width="30" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
-      <bpmndi:BPMNEdge id="f_nochmal_di" bpmnElement="f_nochmal"><di:waypoint x="498" y="196"/><di:waypoint x="518" y="196"/><di:waypoint x="518" y="156"/><di:waypoint x="468" y="156"/><di:waypoint x="468" y="176"/></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f_nachfragen_di" bpmnElement="f_nachfragen"><di:waypoint x="330" y="92"/><di:waypoint x="350" y="92"/><di:waypoint x="350" y="132"/><di:waypoint x="300" y="132"/><di:waypoint x="300" y="112"/><bpmndi:BPMNLabel><dc:Bounds x="310" y="114" width="30" height="14"/></bpmndi:BPMNLabel></bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="f_nochmal_di" bpmnElement="f_nochmal"><di:waypoint x="498" y="236"/><di:waypoint x="518" y="236"/><di:waypoint x="518" y="276"/><di:waypoint x="468" y="276"/><di:waypoint x="468" y="256"/></bpmndi:BPMNEdge>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>
 </bpmn:definitions>

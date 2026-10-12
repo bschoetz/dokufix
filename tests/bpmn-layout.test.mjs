@@ -1726,23 +1726,23 @@ test('data: a reference stands in its own process\'s pool, its lines crossing to
 
 // ---------- associations between two elements and flows to themselves (story 2.33) ----------
 
-test('a loop leaves the right side of a task above the middle and comes back into its top, its label above it, written with the flows', () => {
+test('a loop leaves the right side of a task below the middle and comes back into its bottom, its label below it, written with the flows', () => {
   const { di, xml, model } = notesLaid(LINE.replace('<bpmn:sequenceFlow id="F2"', '<bpmn:sequenceFlow id="Nochmal" sourceRef="T" targetRef="T" name="nochmal"/><bpmn:sequenceFlow id="F2"'), LINE_COLS);
   const t = bx(di.nodes.T), w = di.flows.Nochmal;
-  assert.deepEqual(w, [[t.right, t.cy - t.h / 4], [t.right + LOOP_OUT, t.cy - t.h / 4], [t.right + LOOP_OUT, t.y - LOOP_OUT], [t.cx + t.w / 4, t.y - LOOP_OUT], [t.cx + t.w / 4, t.y]]);
+  assert.deepEqual(w, [[t.right, t.cy + t.h / 4], [t.right + LOOP_OUT, t.cy + t.h / 4], [t.right + LOOP_OUT, t.bottom + LOOP_OUT], [t.cx + t.w / 4, t.bottom + LOOP_OUT], [t.cx + t.w / 4, t.bottom]]);
   const l = bx(di.flowLabels.Nochmal);
-  assert.ok(l.bottom <= t.y, 'the label above the task');
+  assert.ok(l.y >= t.bottom, 'the label below the task');
   assert.match(xml, /<bpmndi:BPMNEdge id="Nochmal_di" bpmnElement="Nochmal">(<di:waypoint x="[\d.-]+" y="[\d.-]+"\/>){5}<bpmndi:BPMNLabel>/);
   assert.deepEqual(breaksOf(xml, model), []);
 });
 
-test('a loop on an event and on a gateway: out of the outline right, into the top in the middle', () => {
-  // 13 px above the middle at least: a flow out of the middle is not beside it (closer than 12 px is a break).
-  assert.deepEqual(loopWay({ kind: 'circle', cx: 100, cy: 100, w: 36, h: 36 }), [[113, 87], [138, 87], [138, 62], [100, 62], [100, 82]]);
-  assert.deepEqual(loopWay({ kind: 'diamond', cx: 100, cy: 100, w: 50, h: 50 }), [[112, 87], [145, 87], [145, 55], [100, 55], [100, 75]]);
+test('a loop on an event and on a gateway: out of the outline right, into the bottom in the middle', () => {
+  // 13 px below the middle at least: a flow out of the middle is not beside it (closer than 12 px is a break).
+  assert.deepEqual(loopWay({ kind: 'circle', cx: 100, cy: 100, w: 36, h: 36 }), [[113, 113], [138, 113], [138, 138], [100, 138], [100, 118]]);
+  assert.deepEqual(loopWay({ kind: 'diamond', cx: 100, cy: 100, w: 50, h: 50 }), [[112, 113], [145, 113], [145, 145], [100, 145], [100, 125]]);
 });
 
-test('the lane grows for a loop at its top', () => {
+test('the lane grows for a loop at its bottom', () => {
   const xml = xmlOf('<bpmn:collaboration id="K"><bpmn:participant id="Pool" processRef="P"/></bpmn:collaboration><bpmn:process id="P"><bpmn:laneSet id="LS"><bpmn:lane id="L1"><bpmn:flowNodeRef>S</bpmn:flowNodeRef><bpmn:flowNodeRef>T</bpmn:flowNodeRef><bpmn:flowNodeRef>E</bpmn:flowNodeRef></bpmn:lane></bpmn:laneSet>' +
     LINE + '<bpmn:sequenceFlow id="Nochmal" sourceRef="T" targetRef="T"/></bpmn:process>');
   const { model } = read(xml);
