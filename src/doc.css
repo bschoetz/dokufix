@@ -55,6 +55,11 @@
     display:block;position:relative;min-height:1.5em;
     padding-left:calc(var(--dokufix-code-digits,1) * 1ch + 2ch);
   }
+  /* A diff block (```diff): an added line pale green, a removed one pale red,
+     across the whole width of the box; the shadows reach into its padding
+     and the box clips them. Text 13.6:1 and 13.2:1, numbers 4.9:1 and 4.7:1. */
+  .dokufix-doc .dokufix-code-add{background:#dafbe1;box-shadow:-16px 0 0 #dafbe1,44px 0 0 #dafbe1;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .dokufix-doc .dokufix-code-del{background:#ffebe9;box-shadow:-16px 0 0 #ffebe9,44px 0 0 #ffebe9;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .dokufix-doc .dokufix-code-line::before{
     counter-increment:dokufix-code-line;content:counter(dokufix-code-line);
     position:absolute;left:0;top:0;width:calc(var(--dokufix-code-digits,1) * 1ch);

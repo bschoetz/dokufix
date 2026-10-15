@@ -18,6 +18,11 @@ import { DIAGRAM_LANGUAGES } from './diagram-kinds.js';
 // The number of digits of the last line's number goes onto the pre as a
 // custom property, the width of the gutter (src/doc.css).
 //
+// In a block of the language diff a line that starts with "+" is an added
+// line, one that starts with "-" a removed one, each with a class of its own
+// that src/doc.css tints (Ben, 2026-10-15). The headers "+++" and "---", the
+// hunk lines "@@" and the context lines keep the look of every line.
+//
 // A code block is a `pre` whose one element child is a `code` with text
 // only, as marked writes a fenced or an indented block. Not one: a `pre`
 // without a `code` (raw HTML), a `code` with markup in it (raw HTML, whose
@@ -41,6 +46,8 @@ import { DIAGRAM_LANGUAGES } from './diagram-kinds.js';
 export const CODE_CLASS = 'dokufix-code';
 export const LINE_CLASS = 'dokufix-code-line';
 export const DIGITS_PROPERTY = '--dokufix-code-digits';
+export const ADDED_CLASS = 'dokufix-code-add';
+export const REMOVED_CLASS = 'dokufix-code-del';
 export const COPY_CLASS = 'dokufix-code-copy';
 export const COPY_LABEL = 'Code kopieren';
 export const COPIED_LABEL = 'Kopiert';
@@ -74,6 +81,14 @@ export function codeLines(text){
   return lines;
 }
 
+// The class of a line of a diff block: added, removed, or none.
+export function diffLineClass(text){
+  if (text.startsWith('+++') || text.startsWith('---')) return '';
+  if (text.startsWith('+')) return ADDED_CLASS;
+  if (text.startsWith('-')) return REMOVED_CLASS;
+  return '';
+}
+
 // Document pass "Code-Blöcke": every code block under root that has no lines
 // yet gets them, its pre the class and the width of its gutter.
 export function buildCodeLines(root){
@@ -83,9 +98,11 @@ export function buildCodeLines(root){
     if (!code || code.children.length) continue;
     const doc = pre.ownerDocument;
     const lines = codeLines(code.textContent);
+    const diff = code.classList.contains('language-diff');
     code.replaceChildren(...lines.map(text => {
       const line = doc.createElement('span');
-      line.className = LINE_CLASS;
+      const mark = diff ? diffLineClass(text) : '';
+      line.className = mark ? LINE_CLASS + ' ' + mark : LINE_CLASS;
       line.textContent = text;
       return line;
     }));

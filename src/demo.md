@@ -466,6 +466,17 @@ function dokufix(md) {
 
 Jede Zeile trägt ihre Nummer, auch die leere Zeile 5; die Nummern werden weder markiert noch kopiert noch gefunden. Die Schaltfläche oben rechts kopiert den Code, wie er geschrieben ist, und zeigt zwei Sekunden lang ein Häkchen; in der offenen Fassung ohne Skript (`-nur-lesen.html`) fehlt sie, Nummern und Umbruch bleiben.
 
+Ein Block `diff`: `+` blassgrün, `-` blassrot; Kopfzeilen `---`, `+++` und `@@` sowie unveränderte Zeilen bleiben ungefärbt.
+
+```diff
+--- a/ausleihe.md
++++ b/ausleihe.md
+@@ -3,2 +3,2 @@
+ ## Leihfrist
+-- Bücher: zwei Wochen
++- Bücher: vier Wochen
+```
+
 > **Träger für Inhalte.** Die HTML ist nur die aktuelle Hülle.
 
 ## Sonderfälle

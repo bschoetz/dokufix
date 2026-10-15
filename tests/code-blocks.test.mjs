@@ -13,7 +13,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { buildCodeLines, attachCodeCopy, codeLines, copiedText, copyText,
-  CODE_CLASS, LINE_CLASS, DIGITS_PROPERTY, COPY_CLASS, COPY_LABEL, COPIED_LABEL, FAILED_LABEL, COPIED_CLASS, FAILED_CLASS, FEEDBACK_MS } from '../src/app/code-blocks.js';
+  CODE_CLASS, LINE_CLASS, DIGITS_PROPERTY, COPY_CLASS, COPY_LABEL, COPIED_LABEL, FAILED_LABEL, COPIED_CLASS, FAILED_CLASS, FEEDBACK_MS, ADDED_CLASS, REMOVED_CLASS } from '../src/app/code-blocks.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
 import { buildWarning } from '../src/app/warning.js';
 import { injectFrontmatterPanel, splitFrontmatter } from '../src/app/frontmatter.js';
@@ -65,6 +65,16 @@ test('buildCodeLines: an indented block, a block in a list item and a block with
   const { root } = rootWith('<pre><code>eingerückt\n</code></pre>\n<ul>\n<li>Punkt<pre><code class="language-text">Rückbuchungsbeleg ausdrucken\n</code></pre>\n</li>\n</ul>\n<pre><code>ohne Ende</code></pre>');
   buildCodeLines(root);
   assert.deepEqual(Array.from(root.querySelectorAll('pre')).map(lineTexts), [['eingerückt\n'], ['Rückbuchungsbeleg ausdrucken\n'], ['ohne Ende']]);
+});
+
+test('buildCodeLines: in a diff block "+" lines are added and "-" lines removed; headers, hunks and context are neither, nor "+" and "-" outside a diff block', () => {
+  const { root } = rootWith('<pre><code class="language-diff">--- a/regel.md\n+++ b/regel.md\n@@ -1,3 +1,3 @@\n Frist\n-zwei Wochen\n+vier Wochen\n</code></pre>\n<pre><code class="language-markdown">- Punkt\n+ Punkt\n</code></pre>');
+  buildCodeLines(root);
+  const [diff, md] = Array.from(root.querySelectorAll('pre'));
+  const marks = pre => Array.from(pre.querySelectorAll('.' + LINE_CLASS)).map(l => l.classList.contains(ADDED_CLASS) ? '+' : l.classList.contains(REMOVED_CLASS) ? '-' : '');
+  assert.deepEqual(marks(diff), ['', '', '', '', '-', '+']);
+  assert.deepEqual(marks(md), ['', '']);
+  assert.equal(diff.querySelector('code').textContent, '--- a/regel.md\n+++ b/regel.md\n@@ -1,3 +1,3 @@\n Frist\n-zwei Wochen\n+vier Wochen\n');
 });
 
 test('buildCodeLines: run again on a rendered root it changes nothing, no line inside a line', () => {
