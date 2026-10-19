@@ -82,7 +82,7 @@ Mehr Marken gibt es nicht: `cards`, `steps`, `facets <Spalte>` und `filter`. Ein
 ## Fußnoten, Code, Bilder
 
 - **Fußnoten:** `Text[^1]` und irgendwo `[^1]: Erklärung.` Der Leser sieht die Erklärung beim Darüberfahren. Halte sie kurz; Links in der Vorschau werden zu Text.
-- **Code-Blöcke** mit Sprachangabe, etwa ` ```json `. Sie bekommen Zeilennummern, Umbruch und einen Kopier-Knopf. Färbung nach Sprache gibt es nicht. `mermaid` und `bpmn` sind für Diagramme reserviert.
+- **Code-Blöcke** mit Sprachangabe, etwa ` ```json `. Sie bekommen Zeilennummern, Umbruch und einen Kopier-Knopf. Färbung nach Sprache gibt es nicht, mit einer Ausnahme: In ` ```diff ` sind Zeilen mit `+` grün und Zeilen mit `-` rot hinterlegt; so zeigst du eine Änderung. `mermaid` und `bpmn` sind für Diagramme reserviert.
 - **Bilder:** Ein LLM kann keine eingebetteten Bilder erzeugen, denn `#asset-…` ist eine Prüfsumme, die der Editor beim Einfügen vergibt. Lass Bilder weg, oder markiere die Stelle als Text, damit ein Mensch das Bild im Editor einfügt. Eine `https://`-Adresse funktioniert nur mit Netz.
 
 ## Mermaid
@@ -104,8 +104,9 @@ Mehr Marken gibt es nicht: `cards`, `steps`, `facets <Spalte>` und `filter`. Ein
 - **Datenobjekte und Datenspeicher:** eine `dataObjectReference` (mit `dataObjectRef` auf ein `dataObject`) oder eine `dataStoreReference` im `process`, mit `name`, ein Zustand als `<dataState name="…"/>` darin. Ein Schritt (oder ein Ereignis), der sie liest, enthält eine `dataInputAssociation` mit `<sourceRef>` auf die Referenz (und `<targetRef>` auf eine `property` des Schritts); einer, der sie schreibt, eine `dataOutputAssociation` mit `<targetRef>` auf die Referenz. dokufix setzt die Referenz über ihren Schritt, bei mehreren Schritten in die Mitte ihrer Spalten, und zeichnet jede Datenassoziation gepunktet mit Pfeil; den Zustand als zweite Zeile `[Zustand]` unter dem Namen. Eine Referenz, die kein Schritt benutzt, steht oben links in ihrer Bahn (wenn ein `flowNodeRef` sie nennt) oder in ihrem Pool. Weggelassen wird eine Datenassoziation, deren anderes Ende keine Referenz ist (etwa eine `property` oder ein Ein- oder Ausgang der `ioSpecification`).
 - **Assoziationen zwischen zwei Elementen** (ohne Notiz an einem Ende: zwischen zwei Signal-Ereignissen, von einem Kompensationsereignis zu seiner Kompensationsaktivität, zwischen einem Datenspeicher und einem Schritt) zeichnet dokufix gepunktet und gerade von Umriss zu Umriss. Einen **Fluss von einem Knoten zu sich selbst** zeichnet es als kleine Schleife rechts aus dem Knoten heraus und unten wieder hinein.
 - **Ohne Hinweis weggelassen:** Assoziationen ohne Notiz an einem Ende, die nicht zwei Elemente verbinden (etwa zu einem Sequenzfluss), Gruppen, der Inhalt von Teilprozessen sowie jeder Fluss, der eines dieser Elemente berührt. Bau den Ablauf ohne diese Elemente.
-- **Bahnen:** Jeder Knoten muss in genau einer Bahn stehen (`flowNodeRef`), sonst gibt es die Warnung „Diese Elemente liegen in keiner Bahn“. Zweige einer Verzweigung bekommen innerhalb einer Bahn eigene Zeilen; parallele Zweige dürfen also in derselben Bahn stehen. Gateways und Endereignisse darf dokufix in eine andere Bahn stellen als die, der du sie zuordnest, meist in die ihres Vorgängers; im heruntergeladenen XML stehen sie dann dort.
-- **Ids** sind gültige XML-Namen: mit einem Buchstaben anfangen, keine Leerzeichen. Jeder Knoten und Fluss braucht eine `id`. Gib Knoten und Flüssen einen `name`, das ist ihre Beschriftung.
+- **Bahnen:** Jeder Knoten muss in genau einer Bahn stehen (`flowNodeRef`), sonst gibt es die Warnung „Diese Elemente liegen in keiner Bahn“. Die Reihenfolge im `laneSet` ist die von oben nach unten; eine leere Bahn wird gezeichnet. Zweige einer Verzweigung bekommen innerhalb einer Bahn eigene Zeilen; parallele Zweige dürfen also in derselben Bahn stehen. Gateways und Endereignisse darf dokufix in eine andere Bahn stellen als die, der du sie zuordnest, meist in die ihres Vorgängers; im heruntergeladenen XML stehen sie dann dort.
+- **Verschachtelte Bahnen** (eine `lane` mit `childLaneSet`, etwa eine Abteilung mit ihren Teams): dokufix zeichnet die äußere Bahn um ihre inneren, mit eigenem Kopf links von deren Köpfen, in jeder Tiefe. Ordne jeden Knoten einer innersten Bahn zu; einen Knoten, den nur die äußere Bahn nennt, stellt dokufix in deren erste innere. Eine Ebene reicht meist.
+- **Ids** sind gültige XML-Namen: mit einem Buchstaben anfangen, keine Leerzeichen, jede nur einmal. Vergib jedem Element eine `id`. Ein Flussknoten, Pool, Datenobjekt oder eine Notiz ohne `id` fehlt im Bild. Bahnen und Verbindungen (`sequenceFlow`, `messageFlow`, `association`, Datenassoziationen) ohne `id` bekommen eine aus Art und Namen (`Lane_Fertigung`, `Flow_ja`), aber verlass dich nicht darauf. Gib Knoten und Flüssen einen `name`, das ist ihre Beschriftung.
 - **Gut lesbar bleibt es**, wenn ein Gateway wenige Ausgänge hat (2 bis 3), Schleifen zurück sparsam sind und Flüsse von einem Knoten zu sich selbst selten (ein Wiederholungsmarker an der Aufgabe sagt dasselbe).
 
 ```bpmn
@@ -172,6 +173,12 @@ Zwei Beteiligte als Pools, mit Nachrichtenflüssen zwischen ihnen:
 ```
 
 **2. Mit Koordinaten:** Enthält das XML einen vollständigen `bpmndi:BPMNDiagram` mit Lagen für jedes Element, etwa aus dem Camunda Modeler, wird es genau so gezeichnet. Erfinde Koordinaten nicht selbst. Schon ein einziges `BPMNShape` schaltet die automatische Anordnung ab; was dann ohne Lage ist, fehlt im Bild.
+
+## Ausgabe
+
+- Gib das ganze Dokument als einen Markdown-Text aus, vom Metadaten-Kopf bis zum Ende, ohne Vorrede und ohne Nachwort. Der Mensch kopiert ihn unverändert in den Editor von dokufix.
+- Musst du das Dokument in einen Code-Block setzen, nimm einen Zaun aus **vier** Backticks (` ````markdown `), denn die Diagramme darin stehen in Blöcken mit drei. Mit drei Backticks bricht der äußere Block beim ersten Diagramm ab.
+- Erfinde keine Fakten, um ein Element zu füllen. Fehlt etwas, schreib die Lücke als Text hinein, etwa „*(Frist noch klären)*“.
 
 ## Stil
 
