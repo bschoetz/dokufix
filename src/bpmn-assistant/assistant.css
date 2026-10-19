@@ -22,6 +22,7 @@ h1{font-size:24px;font-weight:650;letter-spacing:-.01em;margin:0}
 .sub{display:block;font-size:15px;font-weight:600;margin:0 0 8px}
 textarea{width:100%;height:220px;font:12px/1.45 ui-monospace,monospace;padding:10px 12px;border:1px solid var(--line);border-radius:8px;resize:vertical;background:#fbfbfd}
 textarea:focus{outline:2px solid var(--acc);outline-offset:-1px;background:#fff}
+#xml-cut{margin:6px 0 0}
 .bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}
 .bar .hint{flex-basis:100%;margin-top:4px}
 #name-l{display:inline-flex;gap:6px;align-items:center;font-size:14px;margin-left:8px}

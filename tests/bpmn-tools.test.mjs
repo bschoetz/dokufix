@@ -4,8 +4,9 @@
 //
 // src/bpmn-tools/ holds what the BPMN Assistant, the Layouter Audi and the layout workbench share; tools/seiten.mjs
 // builds their pages. Here: the pure helpers (the name of a download, the background of the SVG, the pool's head,
-// the X of merges, the colours' CSS, the worker's text of bpmn.io), the stand of the layout (logikOf()), the page
-// builder's rules, and the three pages as built: their blocks, nothing from the network, the workbench's stand. What
+// the X of merges, the colours' CSS, the worker's text of bpmn.io, the XML out of a pasted answer), the stand of the
+// layout (logikOf()), the page builder's rules, and the three pages as built: their blocks, nothing from the network,
+// the workbench's stand. What
 // needs a browser (the pictures, the large view, the modeler, the downloads) is compared by hand and by a scratch
 // Playwright run against the pages built before the story.
 
@@ -23,6 +24,7 @@ import { themeCss, applyTheme, PRESETS, KEYS, SEL, CHECKER, presetOf, migrate } 
 import { balAnswer, balWorkerSource } from '../src/bpmn-tools/layout.js';
 import { nextStep, STEPS } from '../src/bpmn-tools/large-view.js';
 import { ICON } from '../src/bpmn-tools/icons.js';
+import { extractXml } from '../src/bpmn-tools/paste.js';
 import { logikOf, LOGIK_FILES, loadStand } from '../tools/bpmn-layout/lib.mjs';
 import { buildPage } from '../tools/seiten.mjs';
 import { BuildError } from '../build.mjs';
@@ -188,6 +190,87 @@ test('logikOf(): a change in a module of the layout is another stand', () => {
   } finally { fs.rmSync(dir, { recursive: true, force: true }); }
 });
 
+// ---------- the XML out of a pasted answer ----------
+const XML = '<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d" name="Urlaub">\n  <bpmn:process id="p">\n    <bpmn:startEvent id="s"/>\n  </bpmn:process>\n</bpmn:definitions>';
+const ROOT = XML.slice(XML.indexOf('<bpmn:definitions'));
+const plain = { before: 0, after: 0, more: false, cutOff: null };
+test('extractXml(): a fenced answer gives the block\'s XML and counts the lines with text before and after', () => {
+  const text = '## BPMN\n\nHier ist das Diagramm:\n\n```xml\n' + XML + '\n```\n\nDer Prozess beginnt mit dem Antrag.\nViel Erfolg!';
+  assert.deepEqual(extractXml(text), { ...plain, xml: XML, before: 3, after: 3 });
+  // ~~~, four backticks, indent of up to three spaces.
+  assert.equal(extractXml('Text\n~~~\n' + XML + '\n~~~').xml, XML);
+  assert.equal(extractXml('Text\n   ````xml\n' + XML + '\n   ````\nmehr').xml, XML);
+  // A block without its closing fence runs to the end.
+  assert.deepEqual(extractXml('Hier:\n```xml\n' + XML + '\n'), { ...plain, xml: XML, before: 2 });
+  // The first block that holds a root; a block before without one does not count.
+  assert.equal(extractXml('```sh\nnpm run assistant\n```\n```xml\n' + XML + '\n```').xml, XML);
+});
+test('extractXml(): prose around XML without a fence gives the XML from <?xml or the root to the closing tag', () => {
+  assert.deepEqual(extractXml('Hier ist das XML:\n' + XML + '\nViel Erfolg'), { ...plain, xml: XML, before: 1, after: 1 });
+  assert.deepEqual(extractXml('Hier ist das XML: ' + ROOT + ' Viel Erfolg'), { ...plain, xml: ROOT, before: 1, after: 1 });
+});
+test('extractXml(): a tag named in prose before the XML is not the root', () => {
+  const r = extractXml('Das `<bpmn:definitions>`-Element umfasst alles.\n\n' + XML + '\n');
+  assert.deepEqual(r, { ...plain, xml: XML, before: 1 });
+  assert.deepEqual(extractXml('Es endet mit `</bpmn:definitions>`.\n' + XML), { ...plain, xml: XML, before: 1 });
+  // In a comment or a CDATA section, a tag does not count.
+  for (const c of ['<!-- </bpmn:definitions> -->', '<bpmn:documentation><![CDATA[endet mit </bpmn:definitions>]]></bpmn:documentation>']){
+    const xml = ROOT.replace('<bpmn:process', c + '<bpmn:process');
+    assert.deepEqual(extractXml('So:\n' + xml + '\nEnde'), { ...plain, xml, before: 1, after: 1 }, c);
+  }
+});
+test('extractXml(): the declaration, with white space or comments before the root, belongs to the cut', () => {
+  const xml = '<?xml version="1.0"?>\n<!-- von einem LLM -->\n' + ROOT;
+  assert.deepEqual(extractXml('Bitte sehr:\n' + xml + '\nFertig.'), { ...plain, xml, before: 1, after: 1 });
+  // A DOCTYPE and processing instructions between them too; <?xml-stylesheet is no declaration.
+  const more = '<?xml version="1.0"?>\n<?xml-stylesheet href="bpmn.css" type="text/css"?>\n<!DOCTYPE definitions [ <!ENTITY a "b"> ]>\n' + ROOT;
+  assert.deepEqual(extractXml(more), { ...plain, xml: more });
+  assert.deepEqual(extractXml('Hier:\n' + more), { ...plain, xml: more, before: 1 });
+  assert.equal(extractXml('<?xml-stylesheet href="bpmn.css"?> und\n' + ROOT).xml, ROOT);
+  // Prose between declaration and root: the cut starts at the root.
+  assert.equal(extractXml('<?xml version="1.0"?>\nund dann\n' + ROOT).xml, ROOT);
+});
+test('extractXml(): the prefix bpmn2: and none', () => {
+  const b2 = ROOT.replace(/bpmn:/g, 'bpmn2:').replace('xmlns:bpmn=', 'xmlns:bpmn2=');
+  assert.deepEqual(extractXml('Antwort:\n' + b2 + '\n</bpmn:definitions> war gemeint'), { ...plain, xml: b2, before: 1, after: 1 });
+  const none = '<definitions xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL"><process id="p"/></definitions>';
+  assert.equal(extractXml('So:\n' + none).xml, none);
+  // A self-closing root is whole.
+  assert.equal(extractXml('So: <definitions id="d"/> und fertig').xml, '<definitions id="d"/>');
+});
+test('extractXml(): of two diagrams the first, and more says the input held another', () => {
+  const two = ROOT.replace('name="Urlaub"', 'name="Zwei"');
+  assert.deepEqual(extractXml('Erstes:\n```xml\n' + ROOT + '\n```\nZweites:\n```xml\n' + two + '\n```'), { ...plain, xml: ROOT, before: 2, after: 9, more: true });
+  assert.deepEqual(extractXml(ROOT + '\n\n' + two), { ...plain, xml: ROOT, after: 5, more: true });
+});
+test('extractXml(): cut off, an opening root with no closing tag after it: nothing guessed, cutOff the closing tag it lacks', () => {
+  const text = 'Hier:\n```xml\n' + XML.slice(0, XML.indexOf('</bpmn:process>'));
+  assert.deepEqual(extractXml(text), { ...plain, xml: text, cutOff: '</bpmn:definitions>' });
+  const b2 = '<bpmn2:definitions id="d"><bpmn2:process id="p">';
+  assert.equal(extractXml(b2).cutOff, '</bpmn2:definitions>');
+  // A closing tag of another prefix is no cut-off: the text goes on unchanged, for the parser to report.
+  const other = 'So:\n' + ROOT.replace('</bpmn:definitions>', '</definitions>');
+  assert.deepEqual(extractXml(other), { ...plain, xml: other });
+});
+test('extractXml(): of fenced blocks the first with a whole root, before one that only shows the opening tag', () => {
+  const text = 'Die Wurzel:\n```xml\n<bpmn:definitions …>\n```\nDas ganze XML:\n```xml\n' + XML + '\n```';
+  assert.deepEqual(extractXml(text), { ...plain, xml: XML, before: 6, after: 1 });
+});
+test('extractXml(): only XML comes back byte-identical, with no line removed', () => {
+  for (const xml of [XML, ROOT, '<!-- Kopf -->\n' + XML + '\n<!-- Ende -->', XML.replace(/\n/g, '\r\n')]){
+    assert.deepEqual(extractXml(xml), { ...plain, xml });
+  }
+  for (const name of fs.readdirSync(path.join(REPO, 'tools/bpmn-assistant/beispiele')).filter(n => n.endsWith('.bpmn'))){
+    const xml = fs.readFileSync(path.join(REPO, 'tools/bpmn-assistant/beispiele', name), 'utf8').trim();
+    assert.deepEqual(extractXml(xml), { ...plain, xml }, name);
+  }
+});
+test('extractXml(): without a definitions root the input goes on unchanged', () => {
+  for (const text of ['Nur Text, kein XML.', '<bpmn:process id="p"><bpmn:startEvent id="s"/></bpmn:process>', '```xml\n<process id="p"/>\n```', '&lt;bpmn:definitions&gt;', '<!-- <bpmn:definitions> -->']){
+    assert.deepEqual(extractXml(text), { ...plain, xml: text }, text);
+  }
+});
+
 // ---------- the page builder ----------
 async function pageOf(html, parts = {}){
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'seite-'));
@@ -244,7 +327,7 @@ test('assistant: the blocks it needs, the six examples and the guide in its data
   assert.match(data.handreichung, /^# BPMN für dokufix/);
   assert.equal(data.balVersion, '2.0.0-alpha.2');
   // The element ids the page script and Ben's habits rely on.
-  for (const id of ['xml', 'go', 'up', 'file', 'name', 'theme-btn', 'merge-x', 'jumps', 'theme', 'out', 'llm-copy', 'llm-dl', 'ex']) assert.ok(document.getElementById(id), id);
+  for (const id of ['xml', 'go', 'up', 'file', 'name', 'theme-btn', 'merge-x', 'jumps', 'theme', 'out', 'llm-copy', 'llm-dl', 'ex', 'xml-cut']) assert.ok(document.getElementById(id), id);
   // Every id of the page once.
   const ids = [...document.querySelectorAll('[id]')].map(e => e.id);
   assert.deepEqual(ids.filter((id, i) => ids.indexOf(id) !== i), []);

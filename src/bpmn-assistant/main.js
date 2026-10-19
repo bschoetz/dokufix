@@ -11,6 +11,11 @@
 // Downloads, Anordnungen, Dekoration, Farben). Hier bleibt, was nur der Assistent hat: der Farbwähler, die Beispiele,
 // das Feld „Name“, die Häkchen, die Abschnitte und render().
 //
+// render() nimmt eine Antwort eines Sprachmodells so, wie sie eingefügt ist (Story 2.46): extractXml()
+// (src/bpmn-tools/paste.js) schneidet das XML aus Überschrift, Text und Codeblock, render() schreibt es ins Feld, und
+// die Zeile unter dem Feld sagt, was entfernt wurde. Das gilt fürs Einfügen, den Upload, Strg+Enter, die Beispiele und
+// „Als Original übernehmen“.
+//
 // Die Beispiele, die Handreichung und die Version von bpmn.io stehen im Datenblock #assistant-data.
 import { parseXml } from '../app/xml-parser.js';
 import { readProcess, namedLine, nameIds } from '../app/bpmn-layout.js';
@@ -25,6 +30,7 @@ import { draw as drawPicture, fileBase as baseOf, namesOf, withBackground, bpmnL
 import { openLarge, closeLarge, registerLargeView } from '../bpmn-tools/large-view.js';
 import { openModeler, modelerOpen } from '../bpmn-tools/modeler.js';
 import { makeA2Client, makeBalClient } from '../bpmn-tools/layout.js';
+import { extractXml } from '../bpmn-tools/paste.js';
 
 const $ = id => document.getElementById(id);
 const { beispiele: BEISPIELE, handreichung: HANDREICHUNG, balVersion: BAL_VERSION } = JSON.parse($('assistant-data').textContent);
@@ -277,7 +283,7 @@ try { const s = localStorage.getItem('bpmn-testtool-xml'); if (s) $('xml').value
 for (const b of [...BEISPIELE].reverse()){
   const k = document.createElement('button');
   k.innerHTML = ICON.doc + ' '; k.append(b.label); k.title = 'Beispiel laden und rendern: ' + b.label;
-  k.onclick = () => { $('xml').value = b.xml; render(); };
+  k.onclick = () => { $('xml').value = b.xml; cleaned = null; render(); };
   $('ex').after(k);
 }
 $('go').onclick = () => render();
@@ -310,6 +316,7 @@ $('file').onchange = async () => {
   const f = $('file').files[0];
   if (!f) return;
   $('xml').value = await f.text();
+  cleaned = null;
   $('file').value = '';
   render();
 };
@@ -359,7 +366,7 @@ const decorateHere = viewer => decorate(viewer, { jumps: $('jumps').checked });
 const titleOf = s => s.querySelector('h2').firstChild.textContent.trim();
 // Der Modellierer: „Als Original übernehmen“ setzt das XML ein, rendert und springt nach oben.
 function edit(title, xml){
-  openModeler(title, xml, { fileBase, take: x => { $('xml').value = x; render(); window.scrollTo({ top: 0 }); } });
+  openModeler(title, xml, { fileBase, take: x => { $('xml').value = x; cleaned = null; render(); window.scrollTo({ top: 0 }); } });
 }
 // Die Großansicht, mit „Bearbeiten“, das den Modellierer öffnet; ihre Tasten nicht, solange der Farbdialog oder der
 // Modellierer über ihr liegt.
@@ -378,6 +385,16 @@ async function draw(s, xml, name){
   s.querySelector('h2').append(dl, ed);
 }
 
+// Die Zeile unter dem Feld (Story 2.46): was render() aus der Eingabe entfernt hat. Sie bleibt, solange das Feld dieses
+// XML hält (ein Häkchen rendert neu und behält sie), und geht, sobald es etwas anderes hält.
+let cleaned = null;
+function showCut(){
+  if (cleaned && $('xml').value !== cleaned.xml) cleaned = null;
+  $('xml-cut').textContent = cleaned ? cleaned.text : '';
+  $('xml-cut').hidden = !cleaned;
+}
+$('xml').addEventListener('input', showCut);
+
 async function render(){
   const my = ++run;
   if (aborter) aborter.abort();
@@ -386,10 +403,19 @@ async function render(){
   for (const v of viewers) try { v.destroy(); } catch {}
   viewers = [];
   $('out').replaceChildren();
-  const input = $('xml').value.trim();
+  // Das XML aus der eingefügten Antwort; abgeschnitten bleibt das Feld, wie es ist.
+  const pasted = $('xml').value.trim(), cut = extractXml(pasted);
+  const input = cut.cutOff ? pasted : cut.xml;
+  if (input !== pasted){
+    $('xml').value = input;
+    const lines = n => n + (n === 1 ? ' Zeile' : ' Zeilen');
+    cleaned = { xml: input, text: 'Nur das XML übernommen; entfernt: ' + [cut.before && lines(cut.before) + ' davor', cut.after && lines(cut.after) + ' danach'].filter(Boolean).join(' und ') + '.' + (cut.more ? ' Die Eingabe enthielt mehr als ein Diagramm; übernommen ist das erste.' : '') };
+  }
+  showCut();
   syncName();
   try { localStorage.setItem('bpmn-testtool-xml', input); } catch {}
   if (!input){ error(section('Eingabe'), 'Kein XML.'); return; }
+  if (cut.cutOff){ error(section('Eingabe'), 'Das XML endet vor ' + cut.cutOff + ': Die Antwort wurde wahrscheinlich abgeschnitten.'); return; }
   const xml = hasDi(input) ? stripDi(input) : input;
   // Mit dem Leser des Layouts (src/app/xml-parser.js), wie layoutJob() in der App (src/app/bpmn-layout-job.js), nicht mit
   // dem DOMParser der Seite.
