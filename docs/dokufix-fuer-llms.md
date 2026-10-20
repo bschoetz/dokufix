@@ -87,7 +87,7 @@ Mehr Marken gibt es nicht: `cards`, `steps`, `facets <Spalte>` und `filter`. Ein
 
 ## Mermaid
 
-` ```mermaid ` mit `flowchart LR`, `flowchart TD` oder `sequenceDiagram`. Andere Diagrammarten sind nicht geprüft. Klick-Aktionen mit Skript werden nicht ausgeführt. Zeilenumbrüche in Beschriftungen schreibst du als `<br>`. Der Titel eines Diagramms ist die letzte Überschrift davor, also gehört über jedes Diagramm eine eigene, sprechende Überschrift.
+` ```mermaid ` mit `flowchart LR`, `flowchart TD` oder `sequenceDiagram`. Andere Diagrammarten sind nicht geprüft. Klick-Aktionen mit Skript werden nicht ausgeführt. Zeilenumbrüche in Beschriftungen schreibst du als `<br>`. Der Titel eines Diagramms ist die letzte Überschrift davor: Jedes Diagramm steht in einem eigenen Abschnitt, dessen Überschrift sein Titel ist, ohne eine zusätzliche Überschrift nur für das Diagramm.
 
 ## BPMN
 
@@ -428,4 +428,4 @@ Der Onlineshop mit zwei Bahnen; Kunde und Paketdienst als Black Boxes, weil ihr 
 
 - Lieber Tabellen, Karten und Schrittlisten als lange Absätze. Jedes Element nur dort, wo es dem Leser hilft.
 - Chips für Zustände, die sich ändern, Hinweise für das, was der Leser nicht übersehen darf. Ein Hinweis pro Abschnitt reicht.
-- Über jedes Diagramm eine Überschrift, sie wird zu seinem Titel.
+- Jedes Diagramm steht in einem eigenen Abschnitt, dessen Überschrift sein Titel ist; eine zusätzliche Überschrift nur für das Diagramm gibt es nicht.

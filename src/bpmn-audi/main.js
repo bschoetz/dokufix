@@ -3,7 +3,7 @@
 // „Audi-Stil“ (PRESETS.audi in src/bpmn-tools/theme.js; tools/bpmn-assistant/audi.mjs schreibt ihren Stilblock beim
 // Bauen); wählbar nur das X an zusammenführenden Gateways (dieselbe Regel wie fürs Original im Assistenten) und die
 // Sprungbögen. Je Datei das Bild, die Großansicht und der Download als .svg und .png. Kein Anordnen, kein Modellierer,
-// kein .bpmn-Download, keine Beispiele, keine Handreichung, keine Farbwahl.
+// kein .bpmn-Download, keine Beispiele, keine Prompts für LLMs, keine Farbwahl.
 //
 // Der Einstieg des Skripts der Seite, gebündelt über tools/seiten.mjs. Bis Story 2.38 trug das Bauskript Kopien aus
 // dem des Assistenten; seither zeichnet die Seite mit denselben Modulen (src/bpmn-tools/).

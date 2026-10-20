@@ -2,8 +2,8 @@
 // Original mit seinen eigenen Koordinaten (nur wenn es welche hat), darunter A2 angeordnet, das Modul des Produkts,
 // src/app/bpmn-layout.js, mit allen Regeln, mit einem Satz, was die Ansicht ausmacht, Brüchen, Zeit, Großansicht wie
 // in dokufix und Download als .bpmn, .svg und .png; ein Fehler steht an Stelle des Diagramms. Dazu die beiden Prompts
-// für LLMs (nur das XML eines Diagramms, ein dokufix-Dokument) zum Kopieren und Herunterladen, sechs Beispiele und die Diagrammfarben (Vorlagen oder eigene), und die Anordnung
-// von bpmn.io zum Vergleich.
+// für LLMs (nur das XML eines Diagramms, ein dokufix-Dokument) zum Kopieren und Herunterladen, sechs Beispiele und
+// die Diagrammfarben (Vorlagen oder eigene), und die Anordnung von bpmn.io zum Vergleich.
 //
 // Der Einstieg des Skripts der Seite: tools/bpmn-assistant/bauen.mjs bündelt ihn über tools/seiten.mjs mit dem, was er
 // importiert, zu einem IIFE in src/bpmn-assistant/index.html. Bis Story 2.38 stand er als Text im Bauskript; was der

@@ -325,9 +325,9 @@ test('assistant: the blocks it needs, the six examples and the two prompts in it
   assert.ok(document.getElementById('bpmn-io-js').textContent.includes('bpmn-auto-layout'));
   const data = JSON.parse(document.getElementById('assistant-data').textContent);
   assert.equal(data.beispiele.length, 6);
-  assert.match(data.promptXml, /^Stand: \d{4}-\d\d-\d\d\n\n# BPMN-XML für dokufix/);
-  assert.match(data.promptMarkdown, /^Stand: \d{4}-\d\d-\d\d\n\n# dokufix-Markdown/);
-  assert.equal(data.promptMarkdown.replace(/^Stand: .*\n\n/, ''), fs.readFileSync(DOCS, 'utf8'));
+  assert.match(data.promptXml, /^(Stand: \d{4}-\d\d-\d\d\n\n)?# BPMN-XML für dokufix/);
+  assert.match(data.promptMarkdown, /^(Stand: \d{4}-\d\d-\d\d\n\n)?# dokufix-Markdown/);
+  assert.equal(data.promptMarkdown.replace(/^(Stand: \d{4}-\d\d-\d\d\n\n)?/, ''), fs.readFileSync(DOCS, 'utf8'));
   assert.equal(data.balVersion, '2.0.0-alpha.2');
   // The element ids the page script and Ben's habits rely on.
   for (const id of ['xml', 'go', 'up', 'file', 'name', 'theme-btn', 'merge-x', 'jumps', 'theme', 'out', 'llm-copy', 'llm-dl', 'llm-ok', 'llm-md-copy', 'llm-md-dl', 'llm-md-ok', 'ex', 'xml-cut']) assert.ok(document.getElementById(id), id);

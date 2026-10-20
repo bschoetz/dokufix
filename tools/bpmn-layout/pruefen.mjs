@@ -95,7 +95,7 @@ export async function check(xml){
   // dann die rootElements, gibt es nichts weiter zu prüfen, und jede Warnung ist ein Fehler. Eine Referenz ins Leere
   // („unresolved reference“) bleibt, wie zuvor, ohne Meldung: Eingaben der Sätze tragen sie mit Absicht (dt09).
   const said = (read || []).map(w => `read: ${w.message.split('\n')[0]}`);
-  if (!rootElement || !rootElement.rootElements) return { errors: said.length ? said : ['read: no definitions'], warnings: [] };
+  if (!rootElement || !rootElement.rootElements) return { errors: said.length ? said : ['read: no root elements'], warnings: [] };
   const unread = said.filter(w => w.startsWith('read: unparsable content'));
   const procs = rootElement.rootElements.filter(r => r.$type === 'bpmn:Process');
   for (const p of procs) link(p);
