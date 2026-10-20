@@ -1,8 +1,8 @@
 // Der Dokufix BPMN Assistant (dist/bpmn-assistant.html): BPMN-XML einfügen oder als Datei hochladen; oben das
 // Original mit seinen eigenen Koordinaten (nur wenn es welche hat), darunter A2 angeordnet, das Modul des Produkts,
 // src/app/bpmn-layout.js, mit allen Regeln, mit einem Satz, was die Ansicht ausmacht, Brüchen, Zeit, Großansicht wie
-// in dokufix und Download als .bpmn, .svg und .png; ein Fehler steht an Stelle des Diagramms. Dazu die Handreichung für
-// LLMs zum Kopieren und Herunterladen, sechs Beispiele und die Diagrammfarben (Vorlagen oder eigene), und die Anordnung
+// in dokufix und Download als .bpmn, .svg und .png; ein Fehler steht an Stelle des Diagramms. Dazu die beiden Prompts
+// für LLMs (nur das XML eines Diagramms, ein dokufix-Dokument) zum Kopieren und Herunterladen, sechs Beispiele und die Diagrammfarben (Vorlagen oder eigene), und die Anordnung
 // von bpmn.io zum Vergleich.
 //
 // Der Einstieg des Skripts der Seite: tools/bpmn-assistant/bauen.mjs bündelt ihn über tools/seiten.mjs mit dem, was er
@@ -16,7 +16,7 @@
 // die Zeile unter dem Feld sagt, was entfernt wurde. Das gilt fürs Einfügen, den Upload, Strg+Enter, die Beispiele und
 // „Als Original übernehmen“.
 //
-// Die Beispiele, die Handreichung und die Version von bpmn.io stehen im Datenblock #assistant-data.
+// Die Beispiele, die beiden Prompts und die Version von bpmn.io stehen im Datenblock #assistant-data.
 import { parseXml } from '../app/xml-parser.js';
 import { readProcess, namedLine, nameIds } from '../app/bpmn-layout.js';
 import { hasCoordinates } from '../app/bpmn.js';
@@ -33,7 +33,7 @@ import { makeA2Client, makeBalClient } from '../bpmn-tools/layout.js';
 import { extractXml } from '../bpmn-tools/paste.js';
 
 const $ = id => document.getElementById(id);
-const { beispiele: BEISPIELE, handreichung: HANDREICHUNG, balVersion: BAL_VERSION } = JSON.parse($('assistant-data').textContent);
+const { beispiele: BEISPIELE, promptXml: PROMPT_XML, promptMarkdown: PROMPT_MD, balVersion: BAL_VERSION } = JSON.parse($('assistant-data').textContent);
 // Farben der Diagramme: die Vorlagen, die Schlüssel und der Stilblock in src/bpmn-tools/theme.js; hier die Wahl, ihr
 // Speicher und der Farbwähler.
 const PALETTE = [
@@ -256,18 +256,21 @@ function syncThemeForm(){
 theme = { ...theme }; delete theme.name;
 applyTheme();
 
-// Die Handreichung für LLMs: als .md herunterladen oder in die Zwischenablage kopieren.
-$('llm-dl').href = URL.createObjectURL(new Blob([HANDREICHUNG], { type: 'text/markdown;charset=utf-8' }));
-$('llm-copy').onclick = async () => {
-  try { await navigator.clipboard.writeText(HANDREICHUNG); }
-  catch {
-    // Ohne Zugriff auf die Zwischenablage (etwa file:// in manchen Browsern): über ein unsichtbares Feld.
-    const t = document.createElement('textarea'); t.value = HANDREICHUNG; t.style.cssText = 'position:fixed;left:-9999px';
-    document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
-  }
-  $('llm-ok').textContent = 'kopiert';
-  setTimeout(() => { $('llm-ok').textContent = ''; }, 2000);
-};
+// Die beiden Prompts für LLMs (Story 2.47), je eine Zeile: als .md herunterladen oder in die Zwischenablage kopieren.
+// llm-* ist Prompt A, nur das XML; llm-md-* Prompt B, ein dokufix-Dokument.
+for (const [key, text] of [['llm', PROMPT_XML], ['llm-md', PROMPT_MD]]){
+  $(key + '-dl').href = URL.createObjectURL(new Blob([text], { type: 'text/markdown;charset=utf-8' }));
+  $(key + '-copy').onclick = async () => {
+    try { await navigator.clipboard.writeText(text); }
+    catch {
+      // Ohne Zugriff auf die Zwischenablage (etwa file:// in manchen Browsern): über ein unsichtbares Feld.
+      const t = document.createElement('textarea'); t.value = text; t.style.cssText = 'position:fixed;left:-9999px';
+      document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove();
+    }
+    $(key + '-ok').textContent = 'kopiert';
+    setTimeout(() => { $(key + '-ok').textContent = ''; }, 2000);
+  };
+}
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 const stripDi = xml => xml.replace(/<([\w.-]+:)?BPMNDiagram\b[\s\S]*?<\/([\w.-]+:)?BPMNDiagram>\s*/g, '');
 const hasDi = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(xml.replace(/<!--[\s\S]*?-->/g, ''));

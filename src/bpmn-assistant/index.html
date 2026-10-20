@@ -18,7 +18,7 @@
 <div class="intro">
 <p>Sie beschreiben den Ablauf, das LLM schreibt daraus BPMN-XML, und dokufix ordnet das Diagramm selbst an, ohne dass Sie ein Element von Hand platzieren.</p>
 <ol>
-<li><strong>LLM vorbereiten.</strong> Kopieren Sie die Handreichung für LLMs und geben Sie sie Ihrem Sprachmodell zusammen mit einer Beschreibung Ihres Prozesses: Wer ist beteiligt, wer tauscht mit wem Nachrichten, welche Schritte gibt es, wo wird entschieden, was läuft parallel?</li>
+<li><strong>LLM vorbereiten.</strong> Kopieren Sie einen der beiden Prompts für LLMs und geben Sie ihn Ihrem Sprachmodell zusammen mit einer Beschreibung Ihres Prozesses: Wer ist beteiligt, wer tauscht mit wem Nachrichten, welche Schritte gibt es, wo wird entschieden, was läuft parallel? Mit „Nur Diagramm“ antwortet es mit dem XML eines Diagramms für das Feld unten, mit „dokufix-Dokument“ mit einem ganzen Dokument für den Editor von dokufix, auch mit mehreren Diagrammen.</li>
 <li><strong>Rendern.</strong> Fügen Sie das gelieferte XML unten ein oder laden Sie es als Datei hoch. Sie sehen die Anordnung von dokufix (<em>A2</em>), auch mit mehreren Pools, Pools ohne eigenen Prozess (Black Box) und Nachrichtenflüssen. Hat die Datei eigene Koordinaten, steht ihr Bild darüber als „Original BPMN“.</li>
 <li><strong>Feinschleifen.</strong> Die Bilder sind Vorschläge. Laden Sie die beste Variante als <code>.bpmn</code> herunter und bearbeiten Sie sie in einem BPMN-Modellierer wie dem <a href="https://camunda.com/download/modeler/" target="_blank" rel="noopener">Camunda Modeler</a> oder <a href="https://demo.bpmn.io/" target="_blank" rel="noopener">demo.bpmn.io</a> nach.</li>
 <li><strong>Weiterverwenden.</strong> Laden Sie die fertige Datei wieder hoch, um sie zu prüfen, und nehmen Sie das Bild als <code>.svg</code> oder <code>.png</code> in Ihre Dokumente, in den gewählten Diagrammfarben.</li>
@@ -26,9 +26,12 @@
 </div>
 <div class="aside">
 <div>
-<span class="label">Handreichung für LLMs</span>
-<p>Sagt einem Sprachmodell, welches BPMN-XML ohne Koordinaten dokufix zeichnen kann.</p>
-<div class="row"><button id="llm-copy">{{icon:copy}} Text für LLM in Zwischenablage kopieren</button><a id="llm-dl" class="btn" download="bpmn-ohne-koordinaten-fuer-llms.md">{{icon:download}} als .md herunterladen</a><span id="llm-ok" class="hint"></span></div>
+<span class="label">Prompts für LLMs</span>
+<p>Sagen einem Sprachmodell, welches BPMN-XML ohne Koordinaten dokufix zeichnen kann.</p>
+<p><strong>Nur Diagramm:</strong> das BPMN-XML eines Diagramms für das Feld unten.</p>
+<div class="row"><button id="llm-copy">{{icon:copy}} Text für LLM in Zwischenablage kopieren</button><a id="llm-dl" class="btn" download="bpmn-xml-fuer-llms.md">{{icon:download}} als .md herunterladen</a><span id="llm-ok" class="hint"></span></div>
+<p><strong>dokufix-Dokument:</strong> ein ganzes Dokument in dokufix-Markdown, die Diagramme darin.</p>
+<div class="row"><button id="llm-md-copy">{{icon:copy}} Text für LLM in Zwischenablage kopieren</button><a id="llm-md-dl" class="btn" download="dokufix-dokument-fuer-llms.md">{{icon:download}} als .md herunterladen</a><span id="llm-md-ok" class="hint"></span></div>
 </div>
 <div>
 <span class="label">Beispieldiagramme</span>

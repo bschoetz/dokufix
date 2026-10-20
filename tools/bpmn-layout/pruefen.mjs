@@ -84,16 +84,23 @@ function parallelCheck(proc){
 
 // { errors: ["rule id: message"], warnings: [...] }, or { errors: ["read: …"] }.
 export async function check(xml){
-  let rootElement;
+  let rootElement, read;
   try {
-    ({ rootElement } = await moddle.fromXML(xml));
+    ({ rootElement, warnings: read } = await moddle.fromXML(xml));
   } catch (e){
     return { errors: [`read: ${e.message.split('\n')[0]}`], warnings: [] };
   }
+  // Ein Element, das moddle nicht lesen kann, etwa eines mit einer ungültigen id (00_x, Task_Prüfen; Story 2.47),
+  // meldet es als Warnung „unparsable content“, nicht als Ausnahme, und lässt es weg; hier ist das ein Fehler. Fehlen
+  // dann die rootElements, gibt es nichts weiter zu prüfen, und jede Warnung ist ein Fehler. Eine Referenz ins Leere
+  // („unresolved reference“) bleibt, wie zuvor, ohne Meldung: Eingaben der Sätze tragen sie mit Absicht (dt09).
+  const said = (read || []).map(w => `read: ${w.message.split('\n')[0]}`);
+  if (!rootElement || !rootElement.rootElements) return { errors: said.length ? said : ['read: no definitions'], warnings: [] };
+  const unread = said.filter(w => w.startsWith('read: unparsable content'));
   const procs = rootElement.rootElements.filter(r => r.$type === 'bpmn:Process');
   for (const p of procs) link(p);
   const res = await new Linter({ config: CONFIG, resolver: new NodeResolver() }).lint(rootElement);
-  const errors = [], warnings = [];
+  const errors = [...unread], warnings = [];
   for (const [rule, reps] of Object.entries(res)) for (const r of reps)
     (r.category === 'error' ? errors : warnings).push(`${rule} ${r.id}: ${r.message}`);
   errors.push(...procs.flatMap(parallelCheck));

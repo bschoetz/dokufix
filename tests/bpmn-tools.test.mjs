@@ -28,7 +28,8 @@ import { extractXml } from '../src/bpmn-tools/paste.js';
 import { logikOf, LOGIK_FILES, loadStand } from '../tools/bpmn-layout/lib.mjs';
 import { buildPage } from '../tools/seiten.mjs';
 import { BuildError } from '../build.mjs';
-import { bauen as bauenAssistant } from '../tools/bpmn-assistant/bauen.mjs';
+import { bauen as bauenAssistant, kernOf, promptXmlOf, DOCS, FRAME } from '../tools/bpmn-assistant/bauen.mjs';
+import { check } from '../tools/bpmn-layout/pruefen.mjs';
 import { bauen as bauenAudi } from '../tools/bpmn-assistant/audi.mjs';
 import { bauen as bauenWerkbank } from '../tools/werkbank/bauen.mjs';
 
@@ -314,7 +315,7 @@ for (const [name, html] of Object.entries(pages)){
     assert.ok(html.includes('.dokufix-doc'), 'doc.css');
   });
 }
-test('assistant: the blocks it needs, the six examples and the guide in its data block', () => {
+test('assistant: the blocks it needs, the six examples and the two prompts in its data block', () => {
   const { document } = parseHTML(pages.assistant);
   for (const id of ['dokufix-layout-js', 'bpmn-modeler-js', 'bpmn-modeler-css']){
     const b = document.getElementById(id);
@@ -324,14 +325,64 @@ test('assistant: the blocks it needs, the six examples and the guide in its data
   assert.ok(document.getElementById('bpmn-io-js').textContent.includes('bpmn-auto-layout'));
   const data = JSON.parse(document.getElementById('assistant-data').textContent);
   assert.equal(data.beispiele.length, 6);
-  assert.match(data.handreichung, /^# BPMN für dokufix/);
+  assert.match(data.promptXml, /^Stand: \d{4}-\d\d-\d\d\n\n# BPMN-XML für dokufix/);
+  assert.match(data.promptMarkdown, /^Stand: \d{4}-\d\d-\d\d\n\n# dokufix-Markdown/);
+  assert.equal(data.promptMarkdown.replace(/^Stand: .*\n\n/, ''), fs.readFileSync(DOCS, 'utf8'));
   assert.equal(data.balVersion, '2.0.0-alpha.2');
   // The element ids the page script and Ben's habits rely on.
-  for (const id of ['xml', 'go', 'up', 'file', 'name', 'theme-btn', 'merge-x', 'jumps', 'theme', 'out', 'llm-copy', 'llm-dl', 'ex', 'xml-cut']) assert.ok(document.getElementById(id), id);
+  for (const id of ['xml', 'go', 'up', 'file', 'name', 'theme-btn', 'merge-x', 'jumps', 'theme', 'out', 'llm-copy', 'llm-dl', 'llm-ok', 'llm-md-copy', 'llm-md-dl', 'llm-md-ok', 'ex', 'xml-cut']) assert.ok(document.getElementById(id), id);
   // Every id of the page once.
   const ids = [...document.querySelectorAll('[id]')].map(e => e.id);
   assert.deepEqual(ids.filter((id, i) => ids.indexOf(id) !== i), []);
   assert.equal(document.querySelectorAll('main').length, 1);
+});
+// ---------- the two prompts for LLMs (story 2.47) ----------
+// One BPMN core, in docs/dokufix-fuer-llms.md between the markers: prompt A is tools/bpmn-assistant/prompt-xml.md with
+// the core at its place, prompt B the docs file itself.
+const DOCS_TEXT = fs.readFileSync(DOCS, 'utf8');
+const KERN = kernOf(DOCS_TEXT, DOCS);
+const withoutFences = text => text.replace(/^(`{3,})[^\n]*\n[\s\S]*?^\1\s*$/gm, '');
+test('prompts: A holds the core verbatim, B is the docs file, both with the id rule', () => {
+  const data = JSON.parse(parseHTML(pages.assistant).document.getElementById('assistant-data').textContent);
+  assert.ok(KERN.startsWith('### Das Wichtigste'), KERN.slice(0, 40));
+  assert.ok(KERN.trimEnd().endsWith('kein Nachrichtenfluss an ihm.'), KERN.slice(-60));
+  assert.ok(data.promptXml.includes(KERN));
+  assert.doesNotMatch(data.promptXml, /\{\{kern:bpmn\}\}|<!-- \/?kern:bpmn -->/);
+  for (const p of [data.promptXml, data.promptMarkdown]) assert.match(p, /ASCII/);
+});
+test('prompts: outside the markers no row of the element table, so no second copy of the core in the docs file', () => {
+  const outside = DOCS_TEXT.slice(0, DOCS_TEXT.indexOf('<!-- kern:bpmn -->')) + DOCS_TEXT.slice(DOCS_TEXT.indexOf('<!-- /kern:bpmn -->'));
+  const table = KERN.split('### Was dokufix anordnet und zeichnet')[1].split('\n###')[0];
+  const rows = table.split('\n').filter(l => /^\| [^-]/.test(l) && !l.startsWith('| Struktur'));
+  assert.ok(rows.length > 20, rows.length);
+  for (const r of rows) assert.ok(!outside.includes(r), r);
+  // The old guide is gone.
+  assert.ok(!fs.existsSync(path.join(REPO, 'tools/bpmn-assistant/handreichung.md')));
+});
+test('prompts: A says nothing of a document, a heading or a block outside its XML', () => {
+  const a = withoutFences(promptXmlOf(fs.readFileSync(FRAME, 'utf8'), KERN));
+  for (const word of [/Dokument/, /Überschrift/, /\bBlock\b/]) assert.doesNotMatch(a, word);
+});
+test('prompts: every template of the core passes check()', async () => {
+  const blocks = [...KERN.matchAll(/^```bpmn\n([\s\S]*?)^```$/gm)].map(m => m[1]).filter(x => x.includes('xmlns:bpmn'));
+  assert.equal(blocks.length, 3);
+  for (const xml of blocks) assert.deepEqual((await check(xml)).errors, [], xml.slice(0, 200));
+});
+test('check(): ids starting with a digit or holding an umlaut are errors, not a crash', async () => {
+  const model = id => `<?xml version="1.0" encoding="UTF-8"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" name="T" targetNamespace="http://example.org/dokufix"><bpmn:process id="P" isExecutable="false"><bpmn:startEvent id="S" name="Los"/><bpmn:task id="${id}" name="Prüfen"/><bpmn:endEvent id="E" name="Fertig"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="${id}"/><bpmn:sequenceFlow id="F2" sourceRef="${id}" targetRef="E"/></bpmn:process></bpmn:definitions>`;
+  assert.deepEqual((await check(model('Task_Pruefen'))).errors, []);
+  for (const id of ['00_x', 'Task_Prüfen']) assert.ok((await check(model(id))).errors.length, id);
+  // The root itself unreadable: before, check() crashed on the missing rootElements.
+  assert.ok((await check(model('Task_Pruefen').replace('id="D"', 'id="00_D"'))).errors.length);
+});
+test('kernOf(), promptXmlOf(): a marker missing, doubled or out of order, or the place in the frame, fails the build with the file', () => {
+  const ok = 'a\n<!-- kern:bpmn -->\n\nKern\n\n<!-- /kern:bpmn -->\nz';
+  assert.equal(kernOf(ok, DOCS), 'Kern');
+  for (const bad of ['ohne Marken', ok.replace('<!-- /kern:bpmn -->', ''), ok + '\n<!-- kern:bpmn -->', '<!-- /kern:bpmn -->\n<!-- kern:bpmn -->'])
+    assert.throws(() => kernOf(bad, DOCS), e => e instanceof BuildError && e.message.includes('docs/dokufix-fuer-llms.md'), bad);
+  assert.equal(promptXmlOf('A\n{{kern:bpmn}}\nB', 'K'), 'A\nK\nB');
+  for (const bad of ['A', 'A {{kern:bpmn}} {{kern:bpmn}}'])
+    assert.throws(() => promptXmlOf(bad, 'K'), e => e instanceof BuildError && e.message.includes('tools/bpmn-assistant/prompt-xml.md'), bad);
 });
 test('audi: the viewer and the colours of the Audi-Stil, no modeler, no layout', () => {
   assert.ok(pages.audi.includes('<style>' + themeCss(PRESETS.audi, { background: false }) + '</style>'));
