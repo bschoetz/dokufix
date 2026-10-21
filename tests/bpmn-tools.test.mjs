@@ -368,6 +368,25 @@ test('prompts: every template of the core passes check()', async () => {
   assert.equal(blocks.length, 3);
   for (const xml of blocks) assert.deepEqual((await check(xml)).errors, [], xml.slice(0, 200));
 });
+// Story 2.48: the outline for a process documentation, outside the core, so only in prompt B.
+test('prompts: the section on process documentation stands after the core, only in B, its example in the syntax of the docs', async () => {
+  const data = JSON.parse(parseHTML(pages.assistant).document.getElementById('assistant-data').textContent);
+  const at = DOCS_TEXT.indexOf('\n## Prozessdokumentation\n');
+  assert.ok(at > DOCS_TEXT.indexOf('<!-- /kern:bpmn -->') && at < DOCS_TEXT.indexOf('\n## Ausgabe\n'), String(at));
+  const section = DOCS_TEXT.slice(at, DOCS_TEXT.indexOf('\n## Ausgabe\n'));
+  assert.doesNotMatch(data.promptXml, /Prozessdokumentation/);
+  const example = section.match(/^````markdown\n([\s\S]*?)^````$/m)[1];
+  // Chips with one of the five dots and a label; the notice alone on its line; steps with the actor in italics, colon inside.
+  const chipsOf = text => [...text.matchAll(/`([^\x00-\x7F`\s]+) [^`]+`/g)].map(m => m[1]);
+  assert.ok(chipsOf(example).length >= 1);
+  for (const dot of chipsOf(section)) assert.ok(['🟢', '🟡', '🔴', '⚪', '🔵'].includes(dot), dot);
+  assert.match(example, /^> \[!IMPORTANT\]\n> \S/m);
+  const steps = example.split('<!-- dokufix: steps -->\n')[1].split('\n\n')[0].split('\n');
+  assert.ok(steps.length >= 2);
+  for (const s of steps) assert.match(s, /^\d+\. \*[^*]+:\* \S/);
+  const xml = example.match(/^```bpmn\n([\s\S]*?)^```$/m)[1];
+  assert.deepEqual((await check(xml)).errors, []);
+});
 test('check(): ids starting with a digit or holding an umlaut are errors, not a crash', async () => {
   const model = id => `<?xml version="1.0" encoding="UTF-8"?><bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="D" name="T" targetNamespace="http://example.org/dokufix"><bpmn:process id="P" isExecutable="false"><bpmn:startEvent id="S" name="Los"/><bpmn:task id="${id}" name="Prüfen"/><bpmn:endEvent id="E" name="Fertig"/><bpmn:sequenceFlow id="F1" sourceRef="S" targetRef="${id}"/><bpmn:sequenceFlow id="F2" sourceRef="${id}" targetRef="E"/></bpmn:process></bpmn:definitions>`;
   assert.deepEqual((await check(model('Task_Pruefen'))).errors, []);

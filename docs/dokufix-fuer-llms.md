@@ -415,6 +415,84 @@ Der Onlineshop mit zwei Bahnen; Kunde und Paketdienst als Black Boxes, weil ihr 
 
 <!-- /kern:bpmn -->
 
+## Prozessdokumentation
+
+Beschreibt das Dokument mehrere Abläufe, etwa die Prozesse einer Abteilung, gliedere es so:
+
+- **Anfang:** `[[toc]]` unter der H1. Danach eine Übersicht der Abläufe als Tabelle mit den Spalten Nr., Ablauf, Bereich und Ergebnis oder nächster Ablauf. Kommen mehrere Bereiche vor, steht `<!-- dokufix: facets Bereich -->` über der Tabelle.
+- **Je Ablauf eine H2** mit seinem Namen. Darin, in dieser Reihenfolge:
+  1. eine Zeile mit dem Stand des Modells als Chip und einem Satz zum Zweck, etwa `` `🟢 dokumentiert` ``, `` `🟡 Zielprozess` `` oder `` `⚪ Annahme` ``;
+  2. Auslöser und Ergebnis;
+  3. die Beteiligten als Tabelle mit Rolle, Aufgabe und System;
+  4. offene Punkte als ein Hinweis `[!IMPORTANT]`;
+  5. der Block ` ```bpmn `, mit der H2 als Titel;
+  6. Ausnahmen als Schrittliste, nur wo das Diagramm sie nicht zeigt; eine Schrittliste, die das Diagramm wiederholt, gibt es nicht;
+  7. die Quellen des Ablaufs.
+- **Ende:** ein Abschnitt „Offene Entscheidungen“ als Tabelle mit Frage, Möglichkeiten und wer entscheidet.
+
+Ein Ablauf nach dieser Gliederung:
+
+````markdown
+## Fernleihe
+
+`🟡 Zielprozess` Die Bibliothek beschafft Medien, die sie nicht hat, aus einer anderen Bibliothek.
+
+**Auslöser:** Eine Leserin bestellt ein Medium. **Ergebnis:** Das Medium liegt zur Abholung bereit, oder die Bestellung ist abgelehnt.
+
+| Rolle | Aufgabe | System |
+|---|---|---|
+| Leserin | bestellt, holt ab | Online-Katalog |
+| Theke | prüft und bestellt | Bibliothekssystem |
+
+> [!IMPORTANT]
+> Offen: Wer trägt die Gebühr der gebenden Bibliothek?
+
+```bpmn
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="Defs_Fernleihe" name="Fernleihe" targetNamespace="http://example.org/dokufix">
+  <bpmn:collaboration id="Collab_Fernleihe">
+    <bpmn:participant id="Part_Bibliothek" name="Stadtbibliothek" processRef="Process_Fernleihe"/>
+  </bpmn:collaboration>
+  <bpmn:process id="Process_Fernleihe" isExecutable="false">
+    <bpmn:laneSet id="LaneSet_1">
+      <bpmn:lane id="Lane_Leserin" name="Leserin">
+        <bpmn:flowNodeRef>Start_Gewuenscht</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Bestellen</bpmn:flowNodeRef>
+      </bpmn:lane>
+      <bpmn:lane id="Lane_Theke" name="Theke">
+        <bpmn:flowNodeRef>Task_Pruefen</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Gw_Bestellbar</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>Task_Anfordern</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Bereit</bpmn:flowNodeRef>
+        <bpmn:flowNodeRef>End_Abgelehnt</bpmn:flowNodeRef>
+      </bpmn:lane>
+    </bpmn:laneSet>
+    <bpmn:startEvent id="Start_Gewuenscht" name="Medium gewünscht"/>
+    <bpmn:task id="Task_Bestellen" name="Medium bestellen"/>
+    <bpmn:task id="Task_Pruefen" name="Bestellung prüfen"/>
+    <bpmn:exclusiveGateway id="Gw_Bestellbar" name="Bestellbar?"/>
+    <bpmn:task id="Task_Anfordern" name="Bei anderer Bibliothek anfordern"/>
+    <bpmn:endEvent id="End_Bereit" name="Zur Abholung bereit"/>
+    <bpmn:endEvent id="End_Abgelehnt" name="Abgelehnt"/>
+    <bpmn:sequenceFlow id="Flow_1" sourceRef="Start_Gewuenscht" targetRef="Task_Bestellen"/>
+    <bpmn:sequenceFlow id="Flow_2" sourceRef="Task_Bestellen" targetRef="Task_Pruefen"/>
+    <bpmn:sequenceFlow id="Flow_3" sourceRef="Task_Pruefen" targetRef="Gw_Bestellbar"/>
+    <bpmn:sequenceFlow id="Flow_4" name="ja" sourceRef="Gw_Bestellbar" targetRef="Task_Anfordern"/>
+    <bpmn:sequenceFlow id="Flow_5" name="nein" sourceRef="Gw_Bestellbar" targetRef="End_Abgelehnt"/>
+    <bpmn:sequenceFlow id="Flow_6" sourceRef="Task_Anfordern" targetRef="End_Bereit"/>
+  </bpmn:process>
+</bpmn:definitions>
+```
+
+**Ausnahmen:**
+
+<!-- dokufix: steps -->
+1. *Theke:* Kommt das Medium beschädigt an, den Schaden im Bibliothekssystem vermerken.
+2. *Theke:* Die gebende Bibliothek benachrichtigen.
+
+**Quellen:** Dienstanweisung Fernleihe, Gebührenordnung § 4.
+````
+
 ## Ausgabe
 
 - Gib das ganze Dokument als einen Markdown-Text aus, vom Metadaten-Kopf bis zum Ende, ohne Vorrede und ohne Nachwort. Der Mensch kopiert ihn unverändert in den Editor von dokufix.
