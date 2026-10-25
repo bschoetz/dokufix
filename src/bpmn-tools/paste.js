@@ -89,9 +89,11 @@ export function extractXml(text){
   const none = { xml: text, before: 0, after: 0, more: false, cutOff: null };
   let from = 0, to = text.length, more = false;
   const blocks = fences(text);
-  // The first block with a whole root, else the first with an opening tag.
+  // The first block with a whole root, else the first with an opening tag, unless the text outside the blocks holds a
+  // whole root: then that one, not a block that only shows the tag (audit 2026-10-25, finding 19).
   let i = blocks.findIndex(k => root(text.slice(k.start, k.end))?.end !== undefined);
-  if (i < 0) i = blocks.findIndex(k => hasRoot(text.slice(k.start, k.end)));
+  const outside = blocks.reduce((t, k) => t.slice(0, k.start) + ' '.repeat(k.end - k.start) + t.slice(k.end), text);
+  if (i < 0 && root(outside)?.end === undefined) i = blocks.findIndex(k => hasRoot(text.slice(k.start, k.end)));
   if (i >= 0){
     ({ start: from, end: to } = blocks[i]);
     more = blocks.slice(i + 1).some(k => hasRoot(text.slice(k.start, k.end)));
