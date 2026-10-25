@@ -549,7 +549,7 @@ The second way body text used to disappear was an **unterminated** block: the cl
 
 `---\nSome intro.\n---` and an empty `---\n---` are left completely untouched. An explicit but empty header (`---json\n---`) is consumed and renders nothing — announcing "nicht lesbar" over an empty `<pre>` would be a lie. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
 
-**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It is handed the source and reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that.
+**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It is handed the source and reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that. Lines inside fenced code (``` or ~~~, closed by the same character at least as long) are skipped as well, so a shell comment `# install dependencies` in a block before the first heading names nothing (audit 2026-10-25, finding 14).
 
 ### Callouts
 

@@ -267,10 +267,21 @@ export function splitFrontmatter(src){
 
 // Single source of truth for "what is this document called?" — used by the
 // download filename and by all three read-only export <title>s. Reads the
-// BODY, so a "#"-prefixed YAML comment can't masquerade as the heading.
+// BODY, so a "#"-prefixed YAML comment can't masquerade as the heading, and
+// skips fenced code, so a shell comment can't either (audit 2026-10-25, 14).
 export function deriveDocTitle(source, fallback){
-  const m = splitFrontmatter(source).body.match(/^#\s+(.+?)\s*$/m);
-  return (m ? m[1] : fallback).trim();
+  let fence = null;
+  for (const line of splitFrontmatter(source).body.split('\n')){
+    const f = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    if (fence){
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !line.slice(f[0].length).trim()) fence = null;
+    } else if (f) fence = f[1];
+    else {
+      const m = /^#\s+(.+?)\s*$/.exec(line);
+      if (m) return m[1].trim();
+    }
+  }
+  return fallback.trim();
 }
 
 function fmLookup(data, name){

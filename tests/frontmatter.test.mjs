@@ -157,3 +157,12 @@ test('deriveDocTitle reads the first heading of the body, not a comment of the h
   assert.equal(deriveDocTitle('Text ohne Überschrift\n## Nur zweite Ebene', 'ohne'), 'ohne');
   assert.equal(deriveDocTitle(doc('title: Aus dem Kopf', 'Text'), ' ohne '), 'ohne');
 });
+
+test('deriveDocTitle skips fenced code: a shell comment is no title, a heading after the fence is (audit 2026-10-25, finding 14)', () => {
+  assert.equal(deriveDocTitle('Text\n\n```sh\n# Abhängigkeiten installieren\nnpm ci\n```\n', 'ohne'), 'ohne');
+  assert.equal(deriveDocTitle('```sh\n# Kommentar\n```\n\n# Handbuch\n', 'ohne'), 'Handbuch');
+  // A closing fence: the same character, at least as long, nothing after it.
+  assert.equal(deriveDocTitle('````md\n```\n# Im Beispiel\n````\n# Danach\n', 'ohne'), 'Danach');
+  assert.equal(deriveDocTitle('~~~\n```\n# Drin\n~~~\n# Draußen\r\n', 'ohne'), 'Draußen');
+  assert.equal(deriveDocTitle('```\n# Nie geschlossen\n', 'ohne'), 'ohne');
+});
