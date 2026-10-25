@@ -157,7 +157,7 @@ Ein erster Schritt soll schon Ergebnisse liefern, ohne alle Bilder zu ändern un
   - ob Bens Befund b-wv2 ohne Probe so ausfällt wie heute.
 
 **Ergebnis von c):**
-- `ruleRowOrder()` und `gridCrossings()` in `src/app/bpmn-layout.js`, eingeschaltet mit `options.rowOrder: true` (in `lauf.mjs` mit `--an rowOrder`). Es ist keine Regel von `DEFAULT_RULES`; ohne den Schalter bleibt jedes Bild, wie es ist.
+- (Herausgenommen am 2026-10-25, Audit Fund 20, Bens Entscheidung; im Verlauf bis c04ad9e.) `ruleRowOrder()` und `gridCrossings()` in `src/app/bpmn-layout.js`, eingeschaltet mit `options.rowOrder: true` (in `lauf.mjs` mit `--an rowOrder`). Es ist keine Regel von `DEFAULT_RULES`; ohne den Schalter bleibt jedes Bild, wie es ist.
 - Erster Versuch, gezählt auf dem Raster vor `finishGrid()`: schlechter als heute (Kreuzungen 41 → 48, Knicke 495 → 517, Brüche 13 → 14, 5 Bilder anders). Vor `finishGrid()` stehen die Knoten noch in LMMs Spalten; erst R7 und R9 setzen sie in die Spalte ihres Gateways, und an diesen Flüssen innerhalb einer Spalte hängen die meisten Kreuzungen.
 - Zweiter Versuch, gezählt auf den Lagen nach einem Probelauf: 82 von 84 Bildern gleich, Kreuzungen 42, Brüche 14. Der Rest kam aus Gleichständen, bei denen die Zählung eine Kreuzung nicht sieht (u4: Spuren und Ports an der Seite), und aus einem Gleichstandskriterium für Nachrichtenflüsse, das ein Bild ohne Gewinn drehte.
 - **Fassung jetzt:** Die Zählung entscheidet, wo sie einen Unterschied sieht; bei Gleichstand probiert R10 wie bisher, mit allen seinen Maßen. Ergebnis über die 84 eigenen Eingaben: **jedes Bild byte-gleich mit heute**, und R10 braucht 40 statt 54 Läufe von `finishGrid()`. Insgesamt sind das 1654 statt 1668 Läufe, weil R10 der kleinste Posten ist.
