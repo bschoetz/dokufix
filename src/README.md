@@ -85,7 +85,7 @@ A block holds `{"text": "…"}` or `{"gz": "…"}` (gzip, then base64), and the 
 
 The showcase, `dist/dokufix-showcase.html`, carries its own demo text: `src/showcase.md`, short, each core feature once, without special cases, for a newcomer. It is the same page with that text in `#dokufix-demo`, so "Demo zurücksetzen" in it restores the showcase text. `src/demo.md` stays the text of the regression checks, with every variant and special case. The two files do not share a draft: without a UUID baked into the file each keys its storage by its own location (see *Per-document identity* above).
 
-Loading order on open: IndexedDB doc record (live draft) > `#dokufix-source` (file's baked content) > `#dokufix-demo`.
+Loading order on open: IndexedDB doc record (live draft) > `#dokufix-source` (file's baked content) > `#dokufix-demo`. The draft is passed over when the file carries a later version than the record, or the same version but the record did not start from this file's document (its `commitBaseline`): a file saved elsewhere and sent back, or saved from another tab, opens with its own document, not with the draft of this browser.
 
 In the PoC both were variables of the script, `DEMO` and `SAMPLE`. Why they moved is under *Self-replication mechanism*.
 
@@ -1137,7 +1137,7 @@ The dirty indicator compares the live editor against `cleanBaseline`, which is s
 
 One database per origin, named `dokufix-v1`, with two object stores:
 
-- **`docs`** (keyPath: `uuid`) — one record per dokufix file: `{ uuid, source, version, history, commitBaseline, updatedAt }`. The whole record is rewritten on every persist; markdown + history JSON is small enough that this is cheap.
+- **`docs`** (keyPath: `uuid`) — one record per dokufix file: `{ uuid, source, version, history, commitBaseline, updatedAt, page }`. The whole record is rewritten on every persist; markdown + history JSON is small enough that this is cheap. `page` names the open page that wrote it last. A page writes only while the record is the one it read or one it wrote itself; when another tab of the same document wrote in between, the write is dropped, an alert says so once, and the version mark carries the persist warning. So the first tab to write wins, and a tab with an older state no longer overwrites a version the other one made.
 - **`assets`** (keyPath: `hash`) — image Blobs, keyed by SHA-256 hex. Content-addressed → uploading the same image twice deduplicates automatically; no GC needed in the PoC.
 
 On first load of a doc whose UUID has a pre-existing `dokufix-doc-<uuid>-source` / `…-versions` pair in the old localStorage layout, the data is migrated into the IDB doc record and the legacy keys are deleted. Idempotent — the migration only fires when no IDB record exists yet for the UUID.
@@ -1518,6 +1518,8 @@ Five things the run does on purpose, each because the obvious way gave wrong res
 2. open that file: the editor holds A, version `v1`, not marked as changed; type document B, save;
 3. open that file: the editor holds B, version `v2`; "Demo zurücksetzen" gives the original demo text, and every image it names is shown, though neither A nor B names one: both saved files carry the images of the demo text in their `#dokufix-assets` block, each under the hash of its bytes;
 4. build a copy of `src/` whose demo text contains `</script>`, `<!--` and `<script>`, open it: the editor holds that text unchanged.
+
+One step shares its storage between openings, in one browser context: a draft typed into the first generation, then the second generation opened, which must show its own document B, not the older draft; then two tabs of the second generation, the first writing `v3` with "+ Neue Version festschreiben", the second typing after it, which must get the alert and the persist warning; a third tab then opens with `v3` and the first tab's text. Control: with `src/app/idb.js` and `src/app/persistence.js` as they were before the audit of 2026-10-25, all three checks fail (Chromium).
 
 Every save types a version description that contains `<!-- <script>` and `</script>`; the second save is made with heading numbering switched on, and the second generation has to open numbered. The run also reads both saved files as text: `#dokufix-history` parses and holds that description as typed, `#dokufix-source` and `#dokufix-demo` hold `{"gz": …}` that unpack to the document and to the demo text, and the script is the script of the file under test, byte for byte. A and B contain what could break a block or a replacement: `</script>`, `<!--`, backticks, `${…}`, `$&`, backslashes, quotes, non-ASCII. The saved files stay in `tests/out/speichern/`. Exit 1 when anything fails. Controls: with the line that writes `#dokufix-source` taken out of the save, the run fails in both generations; with `encodeJsonForScript()` escaping only `</script>`, as it did in the PoC, the run ends with a timeout while opening the second generation (Chromium).
 

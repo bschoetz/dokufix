@@ -26,8 +26,13 @@ const options = { ...stand.DEFAULT_RULES, ...Object.fromEntries((a.aus || '').sp
   ...Object.fromEntries((a.an || '').split(',').filter(Boolean).map(k => { if (!VERSUCHE.includes(k)) throw new Error('kein Versuch ' + k + ' (' + VERSUCHE.join(', ') + ')'); return [k, true]; })) };
 const breaksOf = await rules();
 const out = laufDir(lauf);
+// Gelöscht wird nur, was ein Lauf angelegt hat (<lauf>.json daneben, oder .lauf darin, falls er abbrach):
+// arbeit/ hält auch archiv, feedback, Handlayouts, nicht in git.
+if (!/^[\w-]+$/.test(lauf)) throw new Error('--lauf ' + lauf + ': nur Buchstaben, Ziffern, _ und -');
+if (fs.existsSync(out) && !fs.existsSync(laufFile(lauf)) && !fs.existsSync(path.join(out, '.lauf'))) throw new Error('arbeit/' + lauf + ' ist kein Lauf (kein ' + lauf + '.json daneben); anderen Namen wählen oder den Ordner von Hand löschen');
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out, { recursive: true });
+fs.writeFileSync(path.join(out, '.lauf'), '');
 const sets = a.satz ? a.satz.split(',') : STANDARD_SAETZE;
 const names = a._.length ? a._ : namesOf(sets);
 if (externFehlt()) console.log('Hinweis: keine externen Eingaben unter ' + EXTERN_ROOT + ' (DOKUFIX_EXTERN); nur die eigenen.');

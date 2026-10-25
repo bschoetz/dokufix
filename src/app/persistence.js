@@ -1,5 +1,5 @@
 import { gzipB64 } from './gzip.js';
-import { idbGetDoc, idbPutDoc } from './idb.js';
+import { idbGetDoc, idbPutDoc, DocConflict } from './idb.js';
 import { fallbackUuidFromLocation } from './document.js';
 import { sourceEl } from './dom.js';
 import { state } from './state.js';
@@ -7,7 +7,7 @@ import { escapeHtml } from './html.js';
 
 // --- Browser-side persistence (IndexedDB) ---------------------
 // One record per dokufix file lives in IDB under its UUID, in store 'docs':
-//   { uuid, source, version, history, commitBaseline, updatedAt }
+//   { uuid, source, version, history, commitBaseline, updatedAt, page }
 // Migration from the PoC's earlier localStorage layout happens transparently
 // on first load (see migrateLegacyLocalStorage). Storage of the heading-
 // numbering preference stays in localStorage — it's doc-independent UX state,
@@ -95,12 +95,21 @@ export async function loadDocState(initialSource){
   state.commitBaseline = useDb && typeof data.commitBaseline === 'string' && data.commitBaseline !== ''
     ? data.commitBaseline
     : initialSource;
-  // Source: whatever IDB has wins — drafts survive reloads. The presence
-  // of the record itself, not the truthiness of source, distinguishes
-  // "no draft" from "deliberately empty draft" — clearing the textarea on
-  // purpose must not be silently undone by substituting the file's document on reload.
-  state.storedSource = (dbRec && typeof dbRec.source === 'string') ? dbRec.source : null;
+  // Source: the IDB draft wins when it is a draft of this file — drafts
+  // survive reloads. It is when its version is ahead, or equal and it started
+  // from this file's document (its commitBaseline; a record without one is
+  // taken as before). A file saved elsewhere, later or from another tab at
+  // the same version, shows its own document. The presence of the record
+  // itself, not the truthiness of source, distinguishes "no draft" from
+  // "deliberately empty draft" — clearing the textarea on purpose must not be
+  // silently undone by substituting the file's document on reload.
+  const ownDraft = dbVer > fileVer
+    || (dbVer === fileVer && (!dbRec.commitBaseline || dbRec.commitBaseline === initialSource));
+  state.storedSource = (dbRec && ownDraft && typeof dbRec.source === 'string') ? dbRec.source : null;
+  readAt = dbRec ? dbRec.updatedAt : undefined;
 }
+// updatedAt of the record as this page read it; see idbPutDoc.
+let readAt;
 
 export function sanitizeVersion(n){
   const v = Math.floor(Number(n));
@@ -121,11 +130,15 @@ export async function persistDoc(){
       version: state.currentVersion,
       history: state.versionHistory,
       commitBaseline: state.commitBaseline,
-    });
+    }, readAt);
     setPersistFailed(false);
   } catch (e) {
     console.warn('IDB persist failed:', e);
-    setPersistFailed(true);
+    if (e instanceof DocConflict && !conflictTold){
+      conflictTold = true;
+      alert('Dieses Dokument wurde in einem anderen Tab geändert. Was hier geschrieben wird, speichert der Browser nicht mehr: zum Behalten „Mit Editor“ herunterladen, sonst neu laden.');
+    }
+    setPersistFailed(true, conflictTold ? 'Achtung: In einem anderen Tab geändert, dieser Tab speichert nicht mehr im Browser. Neu laden.' : undefined);
   }
 }
 
@@ -135,18 +148,15 @@ export function scheduleSave(){
   saveTimer = setTimeout(persistDoc, 250);
 }
 
-let persistFailedFlag = false;
+let persistFailedFlag = false, conflictTold = false;
 // The badge's title while storage works: the one it has in src/index.html.
 // "Mit Editor" writes it into the saved file.
 export const VERSION_BADGE_TITLE = 'Versionsverlauf anzeigen';
-export function setPersistFailed(failed){
-  if (persistFailedFlag === failed) return;
+export function setPersistFailed(failed, title = 'Achtung: Versionsdaten konnten nicht im Browser gespeichert werden (Quota?). Klick für Details.'){
   persistFailedFlag = failed;
   if (versionBtn){
     versionBtn.classList.toggle('persist-failed', failed);
-    versionBtn.title = failed
-      ? 'Achtung: Versionsdaten konnten nicht im Browser gespeichert werden (Quota?). Klick für Details.'
-      : VERSION_BADGE_TITLE;
+    versionBtn.title = failed ? title : VERSION_BADGE_TITLE;
   }
 }
 

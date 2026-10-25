@@ -1,6 +1,6 @@
 // --- IndexedDB layer ------------------------------------------
 // One DB per origin, two stores:
-//   docs   (keyPath: uuid)  — one record per dokufix file: source, version, history, commitBaseline
+//   docs   (keyPath: uuid)  — one record per dokufix file: source, version, history, commitBaseline, updatedAt, page
 //   assets (keyPath: hash)  — image Blobs, content-addressed by SHA-256 hex (auto-dedup, no GC needed)
 const IDB_NAME = 'dokufix-v1';
 const IDB_VERSION = 1;
@@ -34,10 +34,19 @@ export async function idbGetDoc(uuid){
   const db = await openDB();
   return _idbReq(db.transaction('docs', 'readonly').objectStore('docs').get(uuid));
 }
-export async function idbPutDoc(rec){
+// One id per open page. A record that another page wrote after this one read
+// it (readAt: its updatedAt then) is not overwritten: two tabs of one document
+// would otherwise write their state over each other's, version entries included.
+const PAGE = Math.random().toString(36).slice(2);
+export class DocConflict extends Error {}
+export async function idbPutDoc(rec, readAt){
   const db = await openDB();
+  const store = db.transaction('docs', 'readwrite').objectStore('docs');
+  const cur = await _idbReq(store.get(rec.uuid));
+  if (cur && cur.page !== PAGE && cur.updatedAt !== readAt) throw new DocConflict('changed in another tab: ' + rec.uuid);
   rec.updatedAt = new Date().toISOString();
-  return _idbReq(db.transaction('docs', 'readwrite').objectStore('docs').put(rec));
+  rec.page = PAGE;
+  return _idbReq(store.put(rec));
 }
 export async function idbDeleteDoc(uuid){
   const db = await openDB();

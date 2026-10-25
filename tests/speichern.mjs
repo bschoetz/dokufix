@@ -35,6 +35,10 @@
 //                                        #dokufix-assets block, by their hash)
 //   4. build a copy of src/ whose demo text contains </script>, <!-- and the
 //      like, open it                     the editor holds that text unchanged
+//  4b. one storage, one browser context: a draft of generation 1, then
+//      generation 2 opened (its own document, not the older draft); two tabs
+//      of generation 2, the first writes v3, the second types after it and
+//      is told; a third tab opens with v3
 //
 // It also reads the saved files as text: #dokufix-history parses and holds the
 // version description as typed, both text blocks hold {"gz": …} that unpack to
@@ -233,19 +237,23 @@ function differenceInContext(got, want){
 // Opens a file in a context of its own and waits until init and the first
 // render are done: the rail is the last thing a render builds.
 // options: { viewport, initScript }, for the states of steps 5 and 6.
+// With options.context, a further page in that context, so with its storage.
 async function open(browser, file, options = {}){
-  const context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: options.viewport || { width: 1400, height: 1000 }, acceptDownloads: true });
-  await libraries.serve(context);
-  if (options.initScript) await context.addInitScript(options.initScript);
+  let context = options.context;
+  if (!context){
+    context = await browser.newContext({ locale: 'de-DE', timezoneId: 'Europe/Berlin', viewport: options.viewport || { width: 1400, height: 1000 }, acceptDownloads: true });
+    await libraries.serve(context);
+    if (options.initScript) await context.addInitScript(options.initScript);
+  }
   const page = await context.newPage();
-  const errors = [];
+  const errors = [], dialogs = [];
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   // "Mit Editor" asks for a version description, "Demo zurücksetzen" for a confirmation.
-  page.on('dialog', d => d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.accept());
+  page.on('dialog', d => { dialogs.push(d.message()); return d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.accept(); });
   await page.goto(pathToFileURL(file).href);
   await page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
-  return { context, page, errors };
+  return { context, page, errors, dialogs };
 }
 const state = page => page.evaluate(() => ({
   source: document.getElementById('source').value,
@@ -454,6 +462,43 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       images.length === demoImages.length && images.every(i => !i.missing && i.width > 1 && i.src === 'blob:'), JSON.stringify(images));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
+
+    // 4b. one storage for several openings. A draft of generation 1 must not
+    // hide generation 2, a later version of the same document. Then two tabs
+    // of generation 2: the first writes v3, the second types after it and
+    // must neither overwrite v3 nor stay silent about it.
+    scope = name + ' shared storage';
+    o = await open(browser, gen1);
+    await o.page.click('#edit-btn');
+    await o.page.fill('#source', DOC_A + '\n\nEntwurf zu v1');
+    await o.page.waitForTimeout(1000);  // the save after typing waits 250 ms
+    const shared = o.context;
+    await o.page.close();
+    const tab1 = await open(browser, gen2, { context: shared });
+    const tab2 = await open(browser, gen2, { context: shared });
+    s = await state(tab1.page);
+    same(scope, 'a draft of v1 in storage, generation 2 opens with its own document', s.source, DOC_B);
+    await tab1.page.click('#edit-btn');
+    await tab1.page.fill('#source', DOC_A);
+    await tab1.page.click('#version-btn');
+    await tab1.page.click('#commit-btn');
+    await tab1.page.waitForFunction(() => document.getElementById('version-btn').textContent === 'v3');
+    await tab2.page.click('#edit-btn');
+    await tab2.page.fill('#source', DOC_B + '\n\nTippen im zweiten Tab');
+    const told = await tab2.page.waitForFunction(() => document.getElementById('version-btn').classList.contains('persist-failed'), null, { timeout: 5000 }).then(() => true, () => false);
+    check(scope, 'the second tab, typing after the first wrote v3, is told it no longer saves', told && tab2.dialogs.filter(m => m.includes('anderen Tab')).length === 1, JSON.stringify(tab2.dialogs));
+    // The second tab does what the alert says and saves its text, at v3 as the
+    // first tab's record: opened in this browser, the file shows its own text.
+    const lost = path.join(dir, 'zweiter-tab.html'), lostText = DOC_B + '\n\nZweiter Tab gespeichert';
+    await editAndSave(tab2.page, lostText, lost);
+    check(scope, 'the second tab still alerted only once', tab2.dialogs.filter(m => m.includes('anderen Tab')).length === 1, JSON.stringify(tab2.dialogs));
+    const tab4 = await open(browser, lost, { context: shared });
+    same(scope, 'its file, v3 as the record of the first tab, opens with its own text', (await state(tab4.page)).source, lostText);
+    const tab3 = await open(browser, gen2, { context: shared });
+    s = await state(tab3.page);
+    check(scope, 'opened again, v3 of the first tab is kept', s.version === 'v3' && s.source === DOC_A, JSON.stringify({ version: s.version, source: s.source.slice(0, 40) }));
+    check(scope, 'no page error', [tab1, tab2, tab3, tab4].every(t => t.errors.length === 0), [tab1, tab2, tab3, tab4].flatMap(t => t.errors).join(' | '));
+    await shared.close();
 
     // 5. a narrow window, saved with the hamburger panel open
     scope = name + ' narrow window';
