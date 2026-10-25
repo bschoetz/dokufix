@@ -77,6 +77,13 @@ test('buildCodeLines: in a diff block "+" lines are added and "-" lines removed;
   assert.equal(diff.querySelector('code').textContent, '--- a/regel.md\n+++ b/regel.md\n@@ -1,3 +1,3 @@\n Frist\n-zwei Wochen\n+vier Wochen\n');
 });
 
+test('buildCodeLines: in a diff block "----" and "+++i" without their pair are a removed and an added line (audit 2026-10-25, finding 16)', () => {
+  const { root } = rootWith('<pre><code class="language-diff">--- a/regel.md\n+++ b/regel.md\n@@ -1,4 +1,4 @@\n Titel\n----\n+***\n-i++\n+++i\n---\n</code></pre>');
+  buildCodeLines(root);
+  const marks = Array.from(root.querySelectorAll('.' + LINE_CLASS)).map(l => l.classList.contains(ADDED_CLASS) ? '+' : l.classList.contains(REMOVED_CLASS) ? '-' : '');
+  assert.deepEqual(marks, ['', '', '', '', '-', '+', '-', '+', '-']);
+});
+
 test('buildCodeLines: run again on a rendered root it changes nothing, no line inside a line', () => {
   const { root } = rootWith('<pre><code>a\n\nb\n</code></pre>');
   buildCodeLines(root);

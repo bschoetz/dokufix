@@ -81,9 +81,11 @@ export function codeLines(text){
   return lines;
 }
 
-// The class of a line of a diff block: added, removed, or none.
-export function diffLineClass(text){
-  if (text.startsWith('+++') || text.startsWith('---')) return '';
+// The class of a line of a diff block: added, removed, or none. A header is
+// the pair "---" before "+++"; alone, "----" is a removed "---" and "+++i" an
+// added "++i" (audit 2026-10-25, finding 16).
+export function diffLineClass(text, prev = '', next = ''){
+  if ((text.startsWith('---') && next.startsWith('+++')) || (text.startsWith('+++') && prev.startsWith('---'))) return '';
   if (text.startsWith('+')) return ADDED_CLASS;
   if (text.startsWith('-')) return REMOVED_CLASS;
   return '';
@@ -99,9 +101,9 @@ export function buildCodeLines(root){
     const doc = pre.ownerDocument;
     const lines = codeLines(code.textContent);
     const diff = code.classList.contains('language-diff');
-    code.replaceChildren(...lines.map(text => {
+    code.replaceChildren(...lines.map((text, i) => {
       const line = doc.createElement('span');
-      const mark = diff ? diffLineClass(text) : '';
+      const mark = diff ? diffLineClass(text, lines[i - 1], lines[i + 1]) : '';
       line.className = mark ? LINE_CLASS + ' ' + mark : LINE_CLASS;
       line.textContent = text;
       return line;
