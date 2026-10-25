@@ -1,6 +1,6 @@
 // Die Fälle der Layout-Werkbank (Story 2.39): reine Logik, in Node wie im Browser, ohne Speicher und ohne Seite.
 //
-//   ohneDi(xml)                       das XML ohne Diagrammteil (jedes BPMNDiagram)
+//   ohneDi(xml)                       das XML ohne Diagrammteil (jedes BPMNDiagram), aus src/bpmn-tools/paste.js
 //   hatDi(xml)                        ob das XML Positionen trägt (ein BPMNShape)
 //   nameAus(xml)                      der Name, den die Eingabe sich gibt: Teilnehmer, Prozess, Definitionen
 //   ohneBahnen(xml)                   der Fall ohne Bahnzugehörigkeit (jedes flowNodeRef weg): { hash, short } oder null
@@ -40,14 +40,12 @@ import { caseFingerprint, shapeOf, similarity } from '../app/fingerprint.js';
 import { readProcess } from '../app/bpmn-layout.js';
 import { parseXml } from '../app/xml-parser.js';
 import { aenderungen } from '../bpmn-tools/aenderungen.js';
+import { ATTRS, ohneDi } from '../bpmn-tools/paste.js';
 
-// Ein Element mit Namensraum-Präfix oder ohne, mit seinen Attributen (auch mit ">" in Anführungszeichen).
-const ATTRS = '(?:[^>"\'/]|"[^"]*"|\'[^\']*\'|\\/(?!>))*';
-const DIAGRAM = new RegExp('<((?:[\\w.-]+:)?BPMNDiagram)\\b' + ATTRS + '(?:\\/>|>[\\s\\S]*?<\\/\\1\\s*>)\\s*', 'g');
 const SHAPE = /<(?:[\w.-]+:)?BPMNShape\b/;
 const LANE_REF = new RegExp('<((?:[\\w.-]+:)?flowNodeRef)\\b' + ATTRS + '(?:\\/>|>[\\s\\S]*?<\\/\\1\\s*>)\\s*', 'g');
 
-export const ohneDi = xml => String(xml).replace(DIAGRAM, '');
+export { ohneDi };
 export const hatDi = xml => SHAPE.test(String(xml));
 export const ohneBahnen = xml => caseFingerprint(ohneDi(xml).replace(LANE_REF, ''));
 // Der Abdruck ohne Bahnen eines Falls; ein Fall aus einem älteren Arbeitsstand hat ihn nicht gespeichert.

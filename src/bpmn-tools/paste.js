@@ -23,6 +23,10 @@
 // it), else null, and then xml is the text unchanged. Without any opening
 // root, or with a closing tag of another prefix, the text comes back
 // unchanged, for the parser to report.
+//
+// ohneDi(xml) gives the XML without its diagram part, every BPMNDiagram, the
+// self-closing empty one too (audit 2026-10-25, finding 10): the assistant
+// lays out without it, the workbench stores a case without it.
 // Pure, for Node and the browser.
 //
 // Nothing done on loading.
@@ -117,3 +121,8 @@ export function extractXml(text){
     cutOff: null,
   };
 }
+
+// An element with a namespace prefix or without, with its attributes (also with ">" in quotes).
+export const ATTRS = '(?:[^>"\'/]|"[^"]*"|\'[^\']*\'|\\/(?!>))*';
+const DIAGRAM = new RegExp('<((?:[\\w.-]+:)?BPMNDiagram)\\b' + ATTRS + '(?:\\/>|>[\\s\\S]*?<\\/\\1\\s*>)\\s*', 'g');
+export const ohneDi = xml => String(xml).replace(DIAGRAM, '');

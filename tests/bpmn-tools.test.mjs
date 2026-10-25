@@ -24,7 +24,7 @@ import { themeCss, applyTheme, PRESETS, KEYS, SEL, CHECKER, presetOf, migrate } 
 import { balAnswer, balWorkerSource } from '../src/bpmn-tools/layout.js';
 import { nextStep, STEPS } from '../src/bpmn-tools/large-view.js';
 import { ICON } from '../src/bpmn-tools/icons.js';
-import { extractXml } from '../src/bpmn-tools/paste.js';
+import { extractXml, ohneDi } from '../src/bpmn-tools/paste.js';
 import { logikOf, LOGIK_FILES, loadStand } from '../tools/bpmn-layout/lib.mjs';
 import { buildPage } from '../tools/seiten.mjs';
 import { BuildError } from '../build.mjs';
@@ -195,6 +195,13 @@ test('logikOf(): a change in a module of the layout is another stand', () => {
 const XML = '<?xml version="1.0" encoding="UTF-8"?>\n<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" id="d" name="Urlaub">\n  <bpmn:process id="p">\n    <bpmn:startEvent id="s"/>\n  </bpmn:process>\n</bpmn:definitions>';
 const ROOT = XML.slice(XML.indexOf('<bpmn:definitions'));
 const plain = { before: 0, after: 0, more: false, cutOff: null };
+test('ohneDi(): a self-closing empty BPMNDiagram goes too, so the assistant\'s A2 XML holds exactly one diagram (audit 2026-10-25, finding 10)', () => {
+  const di = '<bpmndi:BPMNDiagram id="D" name="a>b"/>\n  <bpmndi:BPMNDiagram id="E"><bpmndi:BPMNPlane id="P" bpmnElement="p"/></bpmndi:BPMNDiagram>\n';
+  const input = ROOT.replace('</bpmn:definitions>', di + '</bpmn:definitions>');
+  assert.equal(ohneDi(input), ROOT);
+  const laidOut = ohneDi(input).replace('</bpmn:definitions>', '<bpmndi:BPMNDiagram id="A2"><bpmndi:BPMNPlane id="P2" bpmnElement="p"/></bpmndi:BPMNDiagram></bpmn:definitions>');
+  assert.equal((laidOut.match(/<(?:[\w.-]+:)?BPMNDiagram\b/g) || []).length, 1);
+});
 test('extractXml(): a fenced answer gives the block\'s XML and counts the lines with text before and after', () => {
   const text = '## BPMN\n\nHier ist das Diagramm:\n\n```xml\n' + XML + '\n```\n\nDer Prozess beginnt mit dem Antrag.\nViel Erfolg!';
   assert.deepEqual(extractXml(text), { ...plain, xml: XML, before: 3, after: 3 });

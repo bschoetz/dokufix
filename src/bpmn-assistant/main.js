@@ -30,7 +30,7 @@ import { draw as drawPicture, fileBase as baseOf, namesOf, withBackground, bpmnL
 import { openLarge, closeLarge, registerLargeView } from '../bpmn-tools/large-view.js';
 import { openModeler, modelerOpen } from '../bpmn-tools/modeler.js';
 import { makeA2Client, makeBalClient } from '../bpmn-tools/layout.js';
-import { extractXml } from '../bpmn-tools/paste.js';
+import { extractXml, ohneDi } from '../bpmn-tools/paste.js';
 
 const $ = id => document.getElementById(id);
 const { beispiele: BEISPIELE, promptXml: PROMPT_XML, promptMarkdown: PROMPT_MD, balVersion: BAL_VERSION } = JSON.parse($('assistant-data').textContent);
@@ -272,8 +272,6 @@ for (const [key, text] of [['llm', PROMPT_XML], ['llm-md', PROMPT_MD]]){
   };
 }
 const esc = s => String(s).replace(/[&<>]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
-const stripDi = xml => xml.replace(/<([\w.-]+:)?BPMNDiagram\b[\s\S]*?<\/([\w.-]+:)?BPMNDiagram>\s*/g, '');
-const hasDi = xml => /<(?:[\w.-]+:)?BPMNDiagram\b/.test(xml.replace(/<!--[\s\S]*?-->/g, ''));
 // Koordinaten hat ein XML, sobald es eine Form trägt: hasCoordinates() der App (src/app/bpmn.js).
 let viewers = [], run = 0;
 // Der Client des Layouts: ein Worker für die Seite, beim ersten Rendern gemacht. Jedes Rendern bricht das vorige ab,
@@ -419,7 +417,7 @@ async function render(){
   try { localStorage.setItem('bpmn-testtool-xml', input); } catch {}
   if (!input){ error(section('Eingabe'), 'Kein XML.'); return; }
   if (cut.cutOff){ error(section('Eingabe'), 'Das XML endet vor ' + cut.cutOff + ': Die Antwort wurde wahrscheinlich abgeschnitten.'); return; }
-  const xml = hasDi(input) ? stripDi(input) : input;
+  const xml = ohneDi(input);
   // Mit dem Leser des Layouts (src/app/xml-parser.js), wie layoutJob() in der App (src/app/bpmn-layout-job.js), nicht mit
   // dem DOMParser der Seite.
   let doc;
