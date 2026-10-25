@@ -39,7 +39,7 @@ const NODE = /^(startEvent|endEvent|intermediateCatchEvent|intermediateThrowEven
 const RENAMED = /^(startEvent|endEvent|intermediateCatchEvent|intermediateThrowEvent|\w*Gateway|task|\w+Task|callActivity|subProcess|adHocSubProcess|transaction|boundaryEvent|sequenceFlow|messageFlow|textAnnotation|association|dataObjectReference|dataStoreReference|dataInputAssociation|dataOutputAssociation)$/;
 const random = seed => () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
 const parse = xml => new DOMParser().parseFromString(xml, 'text/xml');
-// A document written back. linkedom writes a line break in an attribute as it is, which an XML parser reads as a
+// A document written back. linkedom writes a line break in an attribute as it is, which a browser reads as a
 // blank (attribute value normalisation); written as "&#10;" it stays the name's line break (daten-namen).
 const NL = '\uE000NL\uE000';
 function write(doc){

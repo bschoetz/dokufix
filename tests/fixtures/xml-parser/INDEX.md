@@ -11,8 +11,8 @@ Die heiklen Fälle aus Spike lmm/parsing (`spikes/lmm/parsing/korpus/`, erzeugt 
 | `entitaeten-ungueltige-zeichen.bpmn` | Zeichenreferenzen auf Zeichen, die XML 1.0 verbietet (U+0000, ein einzelnes Surrogat, jenseits von U+10FFFF). Erwartung: Fehler. |
 | `entitaet-kaputt.bpmn` | Ein nacktes & in einem Attribut und eine Referenz ohne Semikolon. Erwartung: Fehler. |
 | `entitaet-in-flowNodeRef.bpmn` | Eine ID mit & in Attribut und als Inhalt eines flowNodeRef, beide als &amp; geschrieben: sie müssen gleich gelesen werden, sonst steht die Aufgabe in keiner Bahn. |
-| `attribut-zeilenumbruch.bpmn` | Wörtlicher Zeilenumbruch und Tabulator in Attributwerten: XML 1.0 §3.3.3 ersetzt sie durch ein Leerzeichen (&#10; dagegen bleibt). clean() verwischt das für Namen, die Rohlesung unterscheidet sich. |
-| `attribut-crlf.bpmn` | Zeilenenden \r\n in der Datei, im Attribut und im Text der Anmerkung: XML 1.0 §2.11 macht daraus \n (im Attribut dann ein Leerzeichen). Der Text der Anmerkung geht wörtlich in die Größe der Notiz. |
+| `attribut-zeilenumbruch.bpmn` | Wörtlicher Zeilenumbruch und Tabulator in Attributwerten: XML 1.0 §3.3.3 ersetzt sie durch ein Leerzeichen (&#10; dagegen bleibt), der Parser behält sie wie bpmn-moddle (Audit 2026-10-25, Befund 9). clean() verwischt das für Namen; das Label misst den Umbruch wie bpmn-js. |
+| `attribut-crlf.bpmn` | Zeilenenden \r\n in der Datei, im Attribut und im Text der Anmerkung: XML 1.0 §2.11 macht daraus \n (im Attribut bleibt es ein Zeilenumbruch, wie in bpmn-moddle). Der Text der Anmerkung geht wörtlich in die Größe der Notiz. |
 | `zeilenenden-cr.bpmn` | Nur \r als Zeilenende (alter Mac): ebenfalls zu \n zu normalisieren. |
 | `attribut-anfuehrungszeichen.bpmn` | Einfache Anführungszeichen, > in Attributwerten: für den Parser harmlos, für die Textregeln in appendDiagram() und relane() eine Falle. |
 | `attribut-mehrzeilig.bpmn` | Attribute über mehrere Zeilen verteilt, Tag mit Leerraum vor />. |

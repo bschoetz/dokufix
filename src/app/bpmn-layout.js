@@ -104,8 +104,8 @@ function descendants(el){
   return out;
 }
 const clean = text => String(text || '').replace(/\s+/g, ' ').trim();
-// The text bpmn-js draws for a name with line breaks ("&#10;"; a literal line break in an attribute is a blank by
-// then, xml-parser.js): the name as the author wrote it, which the labels are measured in (Ben, 2026-10-07,
+// The text bpmn-js draws for a name with line breaks ("&#10;", or a literal one, which xml-parser.js keeps as
+// bpmn-moddle does): the name as the author wrote it, which the labels are measured in (Ben, 2026-10-07,
 // nz19-pool1: "verzögertes &#10;Ergebnis&#10;erhalten", three lines drawn, measured as two, lay on its event); the
 // name itself stays clean for the order (LMM) and the rest. { label } where it differs, else nothing.
 const labelOf = text => String(text || '').includes('\n') ? { label: String(text) } : {};

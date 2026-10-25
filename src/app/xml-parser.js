@@ -27,8 +27,9 @@
 //   - a byte order mark is passed over; "\r\n" and "\r" become "\n" (§2.11)
 //   - a character XML forbids (control characters, a lone surrogate, U+FFFE,
 //     U+FFFF) is an error (§2.2), as a character reference too (§4.1)
-//   - attribute values are normalised (§3.3.3): a tab or line break becomes a
-//     blank, "&#10;" stays a line break; no "<" in a value, no attribute twice
+//   - attribute values keep a literal tab or line break, as bpmn-moddle does
+//     and bpmn-js draws it, not the blank of §3.3.3 (audit 2026-10-25, 9);
+//     no "<" in a value, no attribute twice
 //   - text: no bare "<" or "&", no "]]>"; CDATA as it stands
 //   - references: the five predefined entities and character references,
 //     decimal and hexadecimal, beyond the BMP too (Ben, 2026-10-07)
@@ -169,7 +170,7 @@ export function parseXml(input){
     return [String.fromCodePoint(cp), REFERENCE_RE.lastIndex];
   };
 
-  // --- Attribute value (§3.3.3) ----------------------------------------------
+  // --- Attribute value (§3.3.3, without its normalisation) --------------------
   const attValue = () => {
     const q = text[i];
     if (q !== '"' && q !== "'") fail('attribute', 'AttValue: " or \' expected', i);
@@ -179,12 +180,11 @@ export function parseXml(input){
     const raw = text.slice(start, end);
     i = end + 1;
     if (raw.indexOf('<') !== -1) fail('attribute', "Unescaped '<' not allowed in attributes values", start + raw.indexOf('<'));
-    if (raw.indexOf('&') === -1 && raw.indexOf('\n') === -1 && raw.indexOf('\t') === -1) return raw;
+    if (raw.indexOf('&') === -1) return raw;
     let out = '';
     for (let k = 0; k < raw.length;){
-      const c = raw[k];
-      if (c === '&'){ const [value, next] = reference(raw, k, start + k); out += value; k = next; }
-      else { out += c === '\t' || c === '\n' ? ' ' : c; k++; }
+      if (raw[k] === '&'){ const [value, next] = reference(raw, k, start + k); out += value; k = next; }
+      else out += raw[k++];
     }
     return out;
   };

@@ -1620,6 +1620,13 @@ test('the size of a text annotation: the narrowest width a third as high as wide
   assert.deepEqual(noteSize('x', (t, w) => ({ w, h: w === 200 ? 57 : 72 })), { w: 200, h: 57 }, 'Ben\'s Behandeln: 200 × 57, not 150 × 72');
 });
 
+test('a name with a literal line break is measured in two lines, as bpmn-js draws it, the same as with "&#10;" (audit 2026-10-25, 9)', () => {
+  const label = nl => readDiagram(layoutJob(xmlOf('<bpmn:process id="P"><bpmn:startEvent id="S" name="Antrag' + nl + 'neu"/></bpmn:process>')).xml).labels.S;
+  const literal = label('\n'), escaped = label('&#10;');
+  assert.deepEqual(literal, escaped);
+  assert.deepEqual([literal[3], measureLabel('Antrag neu').h], [measureLabel('Antrag\nneu').h, 14], 'two lines, not one');
+});
+
 test('the places of a text annotation: right first, then up and down right, above, below, up and down left, left; further out by round', () => {
   const c = { cx: 100, cy: 100, w: 120, h: 80 }, size = { w: 100, h: 40 };
   const near = notePlaces(c, size), far = notePlaces(c, size, 25);

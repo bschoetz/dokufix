@@ -44,6 +44,9 @@ const DIFFERS = {
   'text-mit-kindelement': 'the text of a note joins the text nodes of <text>, not the text of an element in it ("Vorn  hinten"); bpmn-js cannot open the file at all',
   'fremde-elemente': 'elements are read by their namespace, as bpmn-js reads them: a signavio:task is no task, so no task stands outside a lane; read by its local name, it made readProcess() throw',
   'praefix-falscher-namensraum': 'elements are read by their namespace, as bpmn-js reads them: definitions of another namespace are no BPMN (null)',
+  'attribut-zeilenumbruch': 'a literal line break or tab in an attribute stays, as bpmn-moddle keeps it and bpmn-js draws it (audit 2026-10-25, 9); Chromium makes it a blank',
+  'attribut-crlf': 'a literal line break in an attribute stays, as bpmn-moddle keeps it and bpmn-js draws it (audit 2026-10-25, 9); Chromium makes it a blank',
+  'attribut-mehrzeilig': 'a literal line break in an attribute stays, as bpmn-moddle keeps it and bpmn-js draws it (audit 2026-10-25, 9); Chromium makes it a blank',
 };
 
 // What the parser and readProcess() make of one file: rejected (with the
@@ -96,9 +99,9 @@ if (process.argv.includes('--write')){
     assert.deepEqual(t.childNodes.map(k => k.data), ['\n  ', '\n  x', 'y']);
   });
 
-  test('attribute values: references resolved, line breaks and tabs normalised, \\r\\n read as \\n', () => {
-    const a = parseXml('<a n="A &amp; B&#10;C\td\r\ne" m=\'&quot;&#x1F600;\'/>').documentElement;
-    assert.equal(a.getAttribute('n'), 'A & B\nC d e');
+  test('attribute values: references resolved, line breaks and tabs kept as bpmn-moddle keeps them, \\r\\n read as \\n', () => {
+    const a = parseXml('<a n="A &amp; B&#10;C\td\r\ne\nf" m=\'&quot;&#x1F600;\'/>').documentElement;
+    assert.equal(a.getAttribute('n'), 'A & B\nC\td\ne\nf');
     assert.equal(a.getAttribute('m'), '"😀');
     assert.equal(a.getAttribute('x'), null);
   });
