@@ -32,13 +32,17 @@
 //   "statuschip", "Status Chip" and "status.chip" find "Status-Chip". Nothing
 //   else: no umlaut folded, "oe" is no "ö", no letters swapped. Since it
 //   ignores blanks, a blank at an edge of the term marks no boundary either.
-// Lowering can change the length of a text, "İ" becomes "i̇", two UTF-16
+// Always: a letter and the marks after it are compared composed (NFC), so
+// "Pru" + U+0308 + "fung" is "Prüfung", and the soft hyphen, the zero width
+// space, the word joiner and the byte order mark are ignored (audit of
+// 2026-10-25). Lowering can change the length of a text, "İ" becomes "i̇", two UTF-16
 // units, and fuzzy leaves characters out; so the text is compared one
-// character at a time, and each unit compared remembers the character it came
+// character with its marks at a time, and each unit compared remembers the character it came
 // from. A range is always one of the original text and covers whole
 // characters of it; a fuzzy hit spans from its first to its last matched
 // character, the ignored ones between them included, none before or after.
-// Where nothing of that can happen, without fuzzy, the text is lowered whole,
+// Where nothing of that can happen, without fuzzy, marks and invisible
+// characters, the text is lowered whole,
 // which is one call in place of one per character: where that leaves its
 // length as it is and the text holds no capital sigma "Σ". Lowered whole, a
 // "Σ" at the end of a word becomes "ς", one at a time always "σ"; the term
@@ -63,13 +67,25 @@ const tidy = text => String(text).replace(/\s+/g, ' ').trim();
 
 // The characters light fuzzy ignores, in the term and in the text.
 const IGNORED = /^[\s\-\u2010\u2011\u00AD.]$/u;
+// The characters nobody sees, ignored always, in the term and in the text: the
+// soft hyphen, the zero width space, the word joiner, the byte order mark.
+// "Telefon&shy;nummer" is found by "Telefonnummer".
+const INVISIBLE = /^[\u00AD\u200B\u2060\uFEFF]$/u;
+// A character with the marks after it: compared composed (NFC), so a "ü"
+// written as "u" and U+0308, as PDFs and macOS often give it, is a "ü".
+const CLUSTER = /\P{M}\p{M}*|\p{M}+/gsu;
+// What the comparison one unit at a time is needed for besides case: marks,
+// invisible characters, and a character NFC replaces on its own (the Ohm sign).
+const NOT_PLAIN = /[\p{M}\u00AD\u200B\u2060\uFEFF]/u;
+const plain = text => !NOT_PLAIN.test(text) && text.normalize('NFC') === text;
 
 // The text as it is compared, and for each unit of it where the character it
 // came from starts and ends in the original text: lowered unless case counts,
-// without the characters fuzzy ignores.
+// composed with its marks, without the invisible characters and those fuzzy
+// ignores.
 function compared(text, { caseSensitive = false, fuzzy = false } = {}){
   const from = [], to = [];
-  if (!fuzzy){
+  if (!fuzzy && plain(text)){
     const whole = caseSensitive ? text : text.toLocaleLowerCase('de');
     if (whole.length === text.length && !text.includes('Σ')){
       for (let i = 0; i < text.length; i++){
@@ -81,14 +97,13 @@ function compared(text, { caseSensitive = false, fuzzy = false } = {}){
     }
   }
   let out = '';
-  let at = 0;
-  for (const ch of text){
-    if (!(fuzzy && IGNORED.test(ch))){
-      const part = caseSensitive ? ch : ch.toLocaleLowerCase('de');
-      for (let k = 0; k < part.length; k++){ from.push(at); to.push(at + ch.length); }
-      out += part;
-    }
-    at += ch.length;
+  for (const m of text.matchAll(CLUSTER)){
+    const ch = m[0], at = m.index;
+    if (INVISIBLE.test(ch) || (fuzzy && IGNORED.test(ch))) continue;
+    const composed = ch.normalize('NFC');
+    const part = caseSensitive ? composed : composed.toLocaleLowerCase('de');
+    for (let k = 0; k < part.length; k++){ from.push(at); to.push(at + ch.length); }
+    out += part;
   }
   return { out, from, to };
 }
@@ -122,9 +137,10 @@ function wordAt(text, at){
   return WORD.test(ch) || MARK.test(ch);
 }
 
-// The term as it is compared: tidied, without what fuzzy ignores.
+// The term as it is compared: tidied, without the invisible characters and
+// what fuzzy ignores, so that tooShort() counts what is compared.
 const termOf = (term, fuzzy) => {
-  const t = tidy(term);
+  const t = tidy(Array.from(String(term)).filter(ch => !INVISIBLE.test(ch)).join(''));
   return fuzzy ? Array.from(t).filter(ch => !IGNORED.test(ch)).join('') : t;
 };
 

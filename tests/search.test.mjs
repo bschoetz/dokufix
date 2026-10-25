@@ -77,6 +77,27 @@ test('findHits: case is ignored, in the term and in the text', () => {
   }
 });
 
+test('findHits: a letter and its marks compare composed, and the characters nobody sees are ignored (audit of 2026-10-25)', () => {
+  const covered = (text, hits) => hits.map(h => text.slice(h.start, h.end));
+  // "ü" written as "u" and U+0308, as PDFs and macOS give it, in the text or in the term.
+  const decomposed = 'Die Pru\u0308fung.';
+  assert.deepEqual(covered(decomposed, findHits('Prüfung', decomposed)), ['Pru\u0308fung']);
+  assert.deepEqual(findHits('Pru\u0308fung', 'Die Prüfung.'), [{ start: 4, end: 11 }]);
+  assert.deepEqual(findHits('prüf', decomposed, { fuzzy: true }), [{ start: 4, end: 9 }], 'under fuzzy as well');
+  assert.deepEqual(findHits('PRÜFUNG', decomposed, { caseSensitive: true }), [], 'case still counts when asked');
+  // A hit does not end inside a letter's marks: "pru" is no part of "prü".
+  assert.deepEqual(findHits('pru', decomposed), []);
+  // The soft hyphen, the zero width space, the word joiner and the byte order mark.
+  for (const invisible of ['\u00AD', '\u200B', '\u2060', '\uFEFF']){
+    const text = 'Die Telefon' + invisible + 'nummer.';
+    assert.deepEqual(covered(text, findHits('Telefonnummer', text)), ['Telefon' + invisible + 'nummer'], 'U+' + invisible.codePointAt(0).toString(16));
+    assert.equal(tooShort('ab' + invisible), true, 'an invisible character makes no term long enough');
+  }
+  // A character NFC replaces on its own compares the same whatever else the text holds.
+  assert.equal(findHits('10 k\u2126', 'R 10 k\u2126 Prüfung.', { caseSensitive: true }).length, 1);
+  assert.equal(findHits('ab\uF900', 'x ab\uF900 Te\u00ADl').length, 1);
+});
+
 test('findHits: hits do not overlap', () => {
   assert.deepEqual(findHits('aa', 'aaaaa'), [{ start: 0, end: 2 }, { start: 2, end: 4 }]);
 });

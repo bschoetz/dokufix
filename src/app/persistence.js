@@ -1,5 +1,5 @@
 import { gzipB64 } from './gzip.js';
-import { idbGetDoc, idbPutDoc, DocConflict } from './idb.js';
+import { idbGetDoc, idbPutDoc, idbDeleteDoc, DocConflict } from './idb.js';
 import { fallbackUuidFromLocation } from './document.js';
 import { sourceEl } from './dom.js';
 import { state } from './state.js';
@@ -146,6 +146,7 @@ export async function persistDoc(){
       commitBaseline: state.commitBaseline,
     }, readAt);
     setPersistFailed(false);
+    return true;
   } catch (e) {
     console.warn('IDB persist failed:', e);
     if (e instanceof DocConflict && !conflictTold){
@@ -153,10 +154,23 @@ export async function persistDoc(){
       alert('Dieses Dokument wurde in einem anderen Tab geändert. Was hier geschrieben wird, speichert der Browser nicht mehr: zum Behalten „Mit Editor“ herunterladen, sonst neu laden.');
     }
     setPersistFailed(true, conflictTold ? 'Achtung: In einem anderen Tab geändert, dieser Tab speichert nicht mehr im Browser. Neu laden.' : undefined);
+    return false;
   }
 }
 
-export let saveTimer;
+// The record moves to uuid: written there, then the old one deleted, unless
+// the write failed or another tab wrote the old one since. "Mit Editor" calls
+// it after the download of a file's first save, which gives the file a UUID
+// in place of the one from its location.
+export async function persistDocAs(uuid){
+  const old = state.docUuid;
+  state.docUuid = uuid;
+  if (!await persistDoc() || old === uuid) return;
+  try { await idbDeleteDoc(old, readAt); }
+  catch (e) { console.warn('IDB delete of the record under ' + old + ' failed:', e); }
+}
+
+let saveTimer;
 export function scheduleSave(){
   clearTimeout(saveTimer);
   saveTimer = setTimeout(persistDoc, 250);

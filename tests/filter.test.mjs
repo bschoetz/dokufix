@@ -506,3 +506,8 @@ test('the built file carries the rules and the entry of the marker', () => {
   assert.ok(built.includes('name:"filter"'), 'the entry of the marker');
   assert.ok(built.includes('"Tabellenfilter"'), 'the run-time pass');
 });
+
+test('filterMatches: a decomposed umlaut and a soft hyphen in a row match as the reader sees them (audit of 2026-10-25)', () => {
+  assert.equal(filterMatches('prüf', 'Pru\u0308fung bestanden'), true);
+  assert.equal(filterMatches('Telefonnummer', 'Telefon\u00ADnummer 0711'), true);
+});

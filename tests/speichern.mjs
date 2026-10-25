@@ -40,6 +40,10 @@
 //      keeps it, confirmed it shows its own document; two tabs
 //      of generation 2, the first writes v3, the second types after it and
 //      is told; a third tab opens with v3
+//  4c. the first save of the file under test cancelled at the version
+//      description; reloaded, the editor holds the draft
+//  4d. every write into "docs" aborted after its request succeeded, as a full
+//      quota does at commit; the version mark warns
 //
 // It also reads the saved files as text: #dokufix-history parses and holds the
 // version description as typed, both text blocks hold {"gz": …} that unpack to
@@ -239,7 +243,7 @@ function differenceInContext(got, want){
 // render are done: the rail is the last thing a render builds.
 // options: { viewport, initScript }, for the states of steps 5 and 6.
 // With options.context, a further page in that context, so with its storage;
-// with options.cancel, a confirmation is cancelled instead of accepted.
+// with options.cancel, a confirmation or a prompt is cancelled instead of accepted.
 async function open(browser, file, options = {}){
   let context = options.context;
   if (!context){
@@ -252,7 +256,7 @@ async function open(browser, file, options = {}){
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   // "Mit Editor" asks for a version description, "Demo zurücksetzen" for a confirmation.
-  page.on('dialog', d => { dialogs.push(d.message()); return d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.type() === 'confirm' && options.cancel ? d.dismiss() : d.accept(); });
+  page.on('dialog', d => { dialogs.push(d.message()); return options.cancel && d.type() !== 'alert' ? d.dismiss() : d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.accept(); });
   await page.goto(pathToFileURL(file).href);
   await page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
   return { context, page, errors, dialogs };
@@ -509,6 +513,42 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'opened again, v3 of the first tab is kept', s.version === 'v3' && s.source === DOC_A, JSON.stringify({ version: s.version, source: s.source.slice(0, 40) }));
     check(scope, 'no page error', [tab0, tab1, tab2, tab3, tab4].every(t => t.errors.length === 0), [tab0, tab1, tab2, tab3, tab4].flatMap(t => t.errors).join(' | '));
     await shared.close();
+
+    // 4c. the first save of a file without a UUID, cancelled at the version
+    // description: the draft stays where the next opening looks for it.
+    scope = name + ' first save cancelled';
+    o = await open(browser, opts.file, { cancel: true });
+    await o.page.click('#edit-btn');
+    await o.page.fill('#source', DOC_A);
+    await o.page.waitForTimeout(1000);  // the save after typing waits 250 ms
+    await o.page.click('#download-btn');
+    await Promise.all([o.page.waitForEvent('dialog'), o.page.click('button[data-download="full"]')]);
+    await o.page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+    check(scope, 'it asked for the description', o.dialogs.length === 1, JSON.stringify(o.dialogs));
+    await o.page.reload();
+    await o.page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
+    same(scope, 'reloaded, the editor holds the draft', (await state(o.page)).source, DOC_A);
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+
+    // 4d. a write the browser takes and then drops when its transaction
+    // commits, as a full quota does: the version mark warns. The run aborts
+    // the transaction of every put into "docs" once the request succeeded.
+    scope = name + ' write dropped at commit';
+    o = await open(browser, opts.file, { initScript: () => {
+      const put = IDBObjectStore.prototype.put;
+      IDBObjectStore.prototype.put = function(...a){
+        const req = put.apply(this, a);
+        if (this.name === 'docs' && window.dropWrites) req.addEventListener('success', () => this.transaction.abort());
+        return req;
+      };
+    } });
+    await o.page.click('#edit-btn');
+    await o.page.evaluate(() => { window.dropWrites = true; });
+    await o.page.fill('#source', DOC_A);
+    const warned = await o.page.waitForFunction(() => document.getElementById('version-btn').classList.contains('persist-failed'), null, { timeout: 5000 }).then(() => true, () => false);
+    check(scope, 'the version mark carries the persist warning', warned);
+    await o.context.close();
 
     // 5. a narrow window, saved with the hamburger panel open
     scope = name + ' narrow window';

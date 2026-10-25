@@ -1,10 +1,9 @@
 import { gzipB64 } from '../gzip.js';
-import { idbGetDoc, idbPutDoc, idbDeleteDoc } from '../idb.js';
 import { bakeAssetsForDocument } from '../assets.js';
 import { generateDocUuid } from '../document.js';
 import { sourceEl } from '../dom.js';
 import { state } from '../state.js';
-import { persistDoc, saveTimer, updateVersionBadge, baseTitle, updateDirtyState, CLEAN_BADGE_TEXT, VERSION_BADGE_TITLE } from '../persistence.js';
+import { persistDocAs, updateVersionBadge, baseTitle, updateDirtyState, CLEAN_BADGE_TEXT, VERSION_BADGE_TITLE } from '../persistence.js';
 import { removeTransient } from '../transient.js';
 import { removeRendererLeftovers } from '../diagrams.js';
 import { safeFilenameBase, triggerDownload, setDownloadInFlight } from './download.js';
@@ -23,31 +22,14 @@ function encodeJsonForScript(obj){
 
 export async function downloadWithEditor(){
   if (!state.initDone) return;
-  // First save with a location-based fallback UUID — upgrade to a real UUID
-  // and rekey the IDB record. Subsequent saves keep the same real UUID.
+  // First save with a location-based fallback UUID: the file gets a real
+  // UUID, and the IDB record moves to it after the download (persistDocAs()),
+  // so that a save cancelled or failed leaves the draft where the next
+  // opening looks. Subsequent saves keep the same real UUID.
   // Copies of this file (via OS-level file copy) will share the UUID —
   // that's the intentional behaviour: each "lineage" of saves shares a
   // single identifier until the user breaks it manually.
-  //
-  // Order matters: we cancel the debounced save and read the existing
-  // record BEFORE flipping docUuid. Otherwise a 250 ms keystroke debounce
-  // firing during the await window could write the current source under
-  // the new UUID, only for the rekey to overwrite it with stale data.
-  if (state.docUuid.startsWith('loc-')){
-    clearTimeout(saveTimer);
-    const oldUuid = state.docUuid;
-    let oldRec = null;
-    try { oldRec = await idbGetDoc(oldUuid); }
-    catch (e) { console.warn('IDB rekey read failed:', e); }
-    const newUuid = generateDocUuid();
-    try {
-      if (oldRec){
-        await idbPutDoc({ ...oldRec, uuid: newUuid, source: sourceEl.value });
-        await idbDeleteDoc(oldUuid);
-      }
-    } catch (e) { console.warn('IDB rekey write failed:', e); }
-    state.docUuid = newUuid;
-  }
+  const uuid = state.docUuid.startsWith('loc-') ? generateDocUuid() : state.docUuid;
   // Only ask for a commit message if there are actual changes since the last
   // version event. If the source already matches the last commit/save, we
   // silently re-emit the current version — no prompt, no bump.
@@ -81,7 +63,7 @@ export async function downloadWithEditor(){
   setDownloadInFlight(true);
   try {
     const historyJson = encodeJsonForScript({
-      uuid: state.docUuid,
+      uuid,
       version: pendingVersion,
       history: pendingHistory,
     });
@@ -180,7 +162,7 @@ export async function downloadWithEditor(){
     state.cleanBaseline = sourceEl.value;
     updateDirtyState();
     updateVersionBadge();
-    await persistDoc();
+    await persistDocAs(uuid);
   } finally {
     setDownloadInFlight(false);
   }

@@ -30,6 +30,15 @@ function _idbReq(req){
     req.onerror   = () => reject(req.error);
   });
 }
+// A write is done when its transaction is: a full quota aborts the
+// transaction when it commits, after the request itself succeeded.
+function _idbWrite(req){
+  return new Promise((resolve, reject) => {
+    req.onerror = () => reject(req.error);
+    req.transaction.oncomplete = () => resolve(req.result);
+    req.transaction.onabort = () => reject(req.transaction.error || new Error('IndexedDB transaction aborted'));
+  });
+}
 export async function idbGetDoc(uuid){
   const db = await openDB();
   return _idbReq(db.transaction('docs', 'readonly').objectStore('docs').get(uuid));
@@ -46,11 +55,15 @@ export async function idbPutDoc(rec, readAt){
   if (cur && cur.page !== PAGE && cur.updatedAt !== readAt) throw new DocConflict('changed in another tab: ' + rec.uuid);
   rec.updatedAt = new Date().toISOString();
   rec.page = PAGE;
-  return _idbReq(store.put(rec));
+  return _idbWrite(store.put(rec));
 }
-export async function idbDeleteDoc(uuid){
+// Deletes as idbPutDoc writes: not a record another page wrote after this one read it.
+export async function idbDeleteDoc(uuid, readAt){
   const db = await openDB();
-  return _idbReq(db.transaction('docs', 'readwrite').objectStore('docs').delete(uuid));
+  const store = db.transaction('docs', 'readwrite').objectStore('docs');
+  const cur = await _idbReq(store.get(uuid));
+  if (cur && cur.page !== PAGE && cur.updatedAt !== readAt) throw new DocConflict('changed in another tab: ' + uuid);
+  return _idbWrite(store.delete(uuid));
 }
 export async function idbGetAsset(hash){
   const db = await openDB();
@@ -58,7 +71,7 @@ export async function idbGetAsset(hash){
 }
 export async function idbPutAsset(rec){
   const db = await openDB();
-  return _idbReq(db.transaction('assets', 'readwrite').objectStore('assets').put(rec));
+  return _idbWrite(db.transaction('assets', 'readwrite').objectStore('assets').put(rec));
 }
 export async function idbBatchGetAssets(hashes){
   const out = new Map();
