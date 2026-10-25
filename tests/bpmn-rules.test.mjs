@@ -39,7 +39,8 @@ test('the diagram part is read back: boxes, label boxes, waypoints', () => {
 });
 
 test('the diagram part is read back with any prefix and a label with attributes, as bpmn.io writes a Signavio export (audit 2026-10-25, finding 13)', () => {
-  const signavio = laid.replace(/dc:Bounds/g, 'omgdc:Bounds').replace(/di:waypoint/g, 'omgdi:waypoint').replace(/<bpmndi:BPMNLabel>/g, '<bpmndi:BPMNLabel labelStyle="L1">');
+  const signavio = laid.replace(/dc:Bounds/g, 'omgdc:Bounds').replace(/di:waypoint/g, 'omgdi:waypoint').replace(/<bpmndi:BPMNLabel>/g, '<bpmndi:BPMNLabel labelStyle="L1">')
+    .replace(/bpmndi:BPMN(Shape|Edge)\b/g, 'di2:BPMN$1').replace(/(<di2:BPMNEdge [^>]*bpmnElement="[^"]*")/g, '$1 sourceElement="s"');
   assert.notEqual(signavio, laid);
   assert.deepEqual(readDiagram(signavio), readDiagram(laid));
   assert.deepEqual(breaksOf(signavio, model), breaksOf(laid, model));
