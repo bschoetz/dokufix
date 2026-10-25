@@ -40,15 +40,15 @@ function mutate(text, find, replacement){
   assert.ok(text.includes(find), 'mutation target not found');
   return text.replace(find, replacement);
 }
-// One problem, reported as ESLint prints it: the file on a line of its own, then
-// "line:column  error  message  rule".
-function fails(name, changed, file, line, message, rule){
+// One problem, or as many as given, reported as ESLint prints it: the file on a
+// line of its own, then "line:column  error  message  rule" of the first.
+function fails(name, changed, file, line, message, rule, problems = 1){
   test(name, () => {
     const r = lint(changed);
     assert.equal(r.status, 1, r.stdout + r.stderr);
     const esc = s => s.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
     assert.match(r.stdout, new RegExp(esc('src/' + file) + '\\n +' + line + ':\\d+ +error +' + esc(message) + ' +' + esc(rule) + '\\n'));
-    assert.match(r.stdout, /\b1 problem\b/);
+    assert.match(r.stdout, new RegExp('\\b' + problems + ' problems?\\b'));
   });
 }
 
@@ -68,7 +68,7 @@ test('"npm run check" runs the lint over src/', () => {
   const text = original('app/toc.js');
   const used = lineCount(text.slice(0, text.indexOf('escapeHtml(', text.indexOf(importLine) + importLine.length))) + 1;
   fails('a module uses a name it no longer imports', { 'app/toc.js': mutate(text, importLine, '\n') },
-    'app/toc.js', used, "'escapeHtml' is not defined", 'no-undef');
+    'app/toc.js', used, "'escapeHtml' is not defined", 'no-undef', 2);  // the link's id and its text, one line
 }
 // What was a variable of the one script is a property of state now.
 fails('a module uses a name of the shared state without "state."',
