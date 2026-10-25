@@ -54,9 +54,9 @@
 //     effect: the input is a string already
 // An error names its line and column in the message, in English as the
 // browsers' do, and its kind in code, one of XML_ERROR_CODES, for a page
-// that wants to say it in its own words (Ben, 2026-10-07). dokufix does not
-// show it: XML this parser rejects goes to bpmn-js unchanged, which says
-// what is wrong with it.
+// that wants to say it in its own words (Ben, 2026-10-07). dokufix shows the
+// message in the warning of a diagram without coordinates
+// (xmlUnreadableText() in src/app/bpmn-layout-job.js, Ben, 2026-10-25).
 //
 // It walks the document with a stack, not by recursion, so a deep document
 // cannot overflow the call stack. Like src/app/lmm.js it does nothing when it

@@ -1082,7 +1082,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       const bodyBefore = await o.page.evaluate(() => Array.from(document.body.children).map(el => el.tagName + '.' + el.className).join(' '));
       await typeAndRender(o.page, DOC_BPMN);
       const drawnPage = (s, x, text) => {
-        checkWarning(s, x, [bpmnWarningText('Kaputt'), 'unparsable content'], 'naming the diagram and the reason');
+        checkWarning(s, x, [bpmnWarningText('Kaputt'), 'Das XML ist nicht lesbar: error on line 1 at column 1'], 'naming the diagram and the reason');
         check(s, 'the warning stands where the diagram would be', x.warnings.length === 1 && x.warnings[0].before === 'H2#kaputt', x.warnings.map(w => w.before));
         const credit = BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a>';
         check(s, 'the other two are drawn, each with "' + BPMN_CREDIT.before + BPMN_CREDIT.text + '" below it, the name a link', x.bpmn.join('|') === 'Gut true ' + credit + '|Noch eins true ' + credit, x.bpmn);

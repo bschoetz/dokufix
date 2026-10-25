@@ -455,7 +455,7 @@ test('the built file carries the layout\'s worker in a block that does not run; 
   // Nothing of the page's, nothing of the editor's: neither a renderer nor the client of the worker.
   assert.ok(!code.includes('--dokufix-bpmn-fill') && !code.includes('konnte nicht gezeichnet werden') && !code.includes('dokufix-layout-js'), 'the worker carries no renderer and no client');
   // Run as a worker is: a global self and nothing else of a page, no document, no window, no DOMParser.
-  const { layoutJob } = await import('../src/app/bpmn-layout-job.js');
+  const { layoutJob, answerLayout } = await import('../src/app/bpmn-layout-job.js');
   const { LAYOUT_NOTHING } = await import('../src/app/bpmn-layout.js');
   const posted = [];
   const self = { postMessage: m => posted.push(structuredClone(m)) };
@@ -472,7 +472,7 @@ test('the built file carries the layout\'s worker in a block that does not run; 
   assert.deepEqual(posted, [
     { id: 3, ok: true, result: layoutJob(xml) },
     { id: 4, ok: false, error: LAYOUT_NOTHING },
-    { id: 5, ok: true, result: { xml: '<kein' } },
+    { id: 5, ok: false, error: answerLayout({ id: 5, xml: '<kein' }).error },
   ]);
   assert.deepEqual(posted[0].result.leftOut, ['group B: not laid out']);
 });

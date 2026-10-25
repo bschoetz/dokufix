@@ -20,9 +20,9 @@ import { LABEL_FONT, TEXT_FONT_SIZE, LABEL_FONT_SIZE } from './label-size.js';
 //      src/app/bpmn-layout-job.js), in the layout's worker where the page can
 //      make one (src/app/layout-client.js), with a notice in the diagram's
 //      container that counts the seconds (src/app/layout-notice.js); or it is
-//      refused with the reason the layout gives, the time limit's included;
-//      XML the browser cannot read goes to bpmn-js as it is, which words the
-//      reason
+//      refused with the reason the layout gives, the time limit's included,
+//      or the parser's for XML it cannot read (xmlUnreadableText()); XML with
+//      coordinates goes to bpmn-js as it is, which words the reason
 //   2. bpmn-js draws into a host of its own: transient, fixed off-screen,
 //      outside the document, in <body>; it is destroyed and the host removed
 //      after each diagram, whether it was drawn or not

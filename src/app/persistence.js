@@ -105,11 +105,25 @@ export async function loadDocState(initialSource){
   // silently undone by substituting the file's document on reload.
   const ownDraft = dbVer > fileVer
     || (dbVer === fileVer && (!dbRec.commitBaseline || dbRec.commitBaseline === initialSource));
-  state.storedSource = (dbRec && ownDraft && typeof dbRec.source === 'string') ? dbRec.source : null;
+  // A draft of another state that holds text saved nowhere is not dropped
+  // without asking (Ben, 2026-10-25); cancel keeps it in the editor, against
+  // this file's version and history.
+  const unsaved = dbRec && !ownDraft && typeof dbRec.source === 'string' && dbRec.source !== ''
+    && dbRec.source !== dbRec.commitBaseline && dbRec.source !== initialSource;
+  const keep = ownDraft || (unsaved && !confirm(DRAFT_QUESTION));
+  state.storedSource = (dbRec && keep && typeof dbRec.source === 'string') ? dbRec.source : null;
   readAt = dbRec ? dbRec.updatedAt : undefined;
+  // Dropped as asked: the file's state goes over it, or every opening would ask again.
+  if (unsaved && !keep){
+    try {
+      await idbPutDoc({ uuid: state.docUuid, source: initialSource, version: state.currentVersion,
+        history: state.versionHistory, commitBaseline: state.commitBaseline }, readAt);
+    } catch (e) { console.warn('IDB write of the dropped draft failed:', e); }
+  }
 }
 // updatedAt of the record as this page read it; see idbPutDoc.
 let readAt;
+export const DRAFT_QUESTION = 'Im Browser liegt ein ungespeicherter Entwurf zu einer anderen Fassung dieses Dokuments. Verwerfen und die Datei zeigen?\n\nAbbrechen behält den Entwurf im Editor.';
 
 export function sanitizeVersion(n){
   const v = Math.floor(Number(n));

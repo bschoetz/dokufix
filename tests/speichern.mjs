@@ -36,7 +36,8 @@
 //   4. build a copy of src/ whose demo text contains </script>, <!-- and the
 //      like, open it                     the editor holds that text unchanged
 //  4b. one storage, one browser context: a draft of generation 1, then
-//      generation 2 opened (its own document, not the older draft); two tabs
+//      generation 2 opened: it asks before it drops the draft, cancelled it
+//      keeps it, confirmed it shows its own document; two tabs
 //      of generation 2, the first writes v3, the second types after it and
 //      is told; a third tab opens with v3
 //
@@ -237,7 +238,8 @@ function differenceInContext(got, want){
 // Opens a file in a context of its own and waits until init and the first
 // render are done: the rail is the last thing a render builds.
 // options: { viewport, initScript }, for the states of steps 5 and 6.
-// With options.context, a further page in that context, so with its storage.
+// With options.context, a further page in that context, so with its storage;
+// with options.cancel, a confirmation is cancelled instead of accepted.
 async function open(browser, file, options = {}){
   let context = options.context;
   if (!context){
@@ -250,7 +252,7 @@ async function open(browser, file, options = {}){
   page.on('pageerror', e => errors.push(String(e)));
   page.on('console', m => { if (m.type() === 'error') errors.push('console: ' + m.text()); });
   // "Mit Editor" asks for a version description, "Demo zurücksetzen" for a confirmation.
-  page.on('dialog', d => { dialogs.push(d.message()); return d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.accept(); });
+  page.on('dialog', d => { dialogs.push(d.message()); return d.type() === 'prompt' ? d.accept(DESCRIPTION) : d.type() === 'confirm' && options.cancel ? d.dismiss() : d.accept(); });
   await page.goto(pathToFileURL(file).href);
   await page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
   return { context, page, errors, dialogs };
@@ -470,14 +472,21 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     scope = name + ' shared storage';
     o = await open(browser, gen1);
     await o.page.click('#edit-btn');
-    await o.page.fill('#source', DOC_A + '\n\nEntwurf zu v1');
+    const draft = DOC_A + '\n\nEntwurf zu v1';
+    await o.page.fill('#source', draft);
     await o.page.waitForTimeout(1000);  // the save after typing waits 250 ms
     const shared = o.context;
     await o.page.close();
+    const asked = t => t.dialogs.filter(m => m.includes('ungespeicherter Entwurf')).length;
+    const tab0 = await open(browser, gen2, { context: shared, cancel: true });
+    s = await state(tab0.page);
+    check(scope, 'a draft of v1 in storage, generation 2 asks before it drops it; cancelled, the editor keeps the draft against v2', asked(tab0) === 1 && s.source === draft && s.version === 'v2' && s.dirty, JSON.stringify({ dialogs: tab0.dialogs, version: s.version, dirty: s.dirty, source: s.source.slice(-20) }));
+    await tab0.page.close();
     const tab1 = await open(browser, gen2, { context: shared });
     const tab2 = await open(browser, gen2, { context: shared });
     s = await state(tab1.page);
-    same(scope, 'a draft of v1 in storage, generation 2 opens with its own document', s.source, DOC_B);
+    same(scope, 'the draft dropped, generation 2 opens with its own document', s.source, DOC_B);
+    check(scope, 'it asked once before; the draft dropped, the next opening does not ask again', asked(tab1) === 1 && asked(tab2) === 0, JSON.stringify([tab1.dialogs, tab2.dialogs]));
     await tab1.page.click('#edit-btn');
     await tab1.page.fill('#source', DOC_A);
     await tab1.page.click('#version-btn');
@@ -494,10 +503,11 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'the second tab still alerted only once', tab2.dialogs.filter(m => m.includes('anderen Tab')).length === 1, JSON.stringify(tab2.dialogs));
     const tab4 = await open(browser, lost, { context: shared });
     same(scope, 'its file, v3 as the record of the first tab, opens with its own text', (await state(tab4.page)).source, lostText);
+    check(scope, 'without asking: the first tab\'s record holds nothing unsaved', asked(tab4) === 0, JSON.stringify(tab4.dialogs));
     const tab3 = await open(browser, gen2, { context: shared });
     s = await state(tab3.page);
     check(scope, 'opened again, v3 of the first tab is kept', s.version === 'v3' && s.source === DOC_A, JSON.stringify({ version: s.version, source: s.source.slice(0, 40) }));
-    check(scope, 'no page error', [tab1, tab2, tab3, tab4].every(t => t.errors.length === 0), [tab1, tab2, tab3, tab4].flatMap(t => t.errors).join(' | '));
+    check(scope, 'no page error', [tab0, tab1, tab2, tab3, tab4].every(t => t.errors.length === 0), [tab0, tab1, tab2, tab3, tab4].flatMap(t => t.errors).join(' | '));
     await shared.close();
 
     // 5. a narrow window, saved with the hamburger panel open

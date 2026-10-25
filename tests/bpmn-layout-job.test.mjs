@@ -10,7 +10,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { layoutJob, answerLayout } from '../src/app/bpmn-layout-job.js';
+import { layoutJob, answerLayout, xmlUnreadableText } from '../src/app/bpmn-layout-job.js';
 import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { fixtureNames, readFixture, expectedFile } from './bpmn-fixtures.mjs';
 
@@ -43,9 +43,14 @@ test('what the layout leaves out comes back as a line each, for the console of t
   assert.deepEqual(layoutJob(xml).leftOut, ['group B: not laid out', 'sequenceFlow G: touches B, which is not laid out']);
 });
 
-test('XML the layout\'s parser rejects, and XML that is no BPMN definitions, come back as they are, without a diagram to open', () => {
-  for (const xml of ['<bpmn:definitions>kein BPMN', '<process id="P"><task id="A"/></process>', '']){
-    assert.deepEqual(layoutJob(xml), { xml });
+test('XML that is no BPMN definitions comes back as it is, without a diagram to open', () => {
+  assert.deepEqual(layoutJob('<process id="P"><task id="A"/></process>'), { xml: '<process id="P"><task id="A"/></process>' });
+});
+
+test('XML the layout\'s parser rejects is thrown as the parser\'s error, with its line and column, for the reader to hand back to the LLM', () => {
+  const amp = WITHOUT_DI.replace('<bpmn:process', '\n<bpmn:process').replace(/name="[^"]*"/, 'name="Prüfen & Freigeben"');
+  for (const [xml, line] of [[amp, 2], ['<bpmn:definitions>kein BPMN', 1], ['', 1]]){
+    assert.throws(() => layoutJob(xml), e => e.message.startsWith(xmlUnreadableText('error on line ' + line + ' at column ')), xml.slice(0, 40));
   }
 });
 
@@ -56,7 +61,8 @@ test('the layout\'s refusals are thrown with their reason', () => {
 
 test('the answer to a message: the result with its id, or the reason with its id; it never throws', () => {
   assert.deepEqual(answerLayout({ id: 7, xml: WITHOUT_DI }), { id: 7, ok: true, result: layoutJob(WITHOUT_DI) });
-  assert.deepEqual(answerLayout({ id: 8, xml: '<x' }), { id: 8, ok: true, result: { xml: '<x' } });
+  assert.equal(answerLayout({ id: 8, xml: '<x' }).ok, false);
+  assert.match(answerLayout({ id: 8, xml: '<x' }).error, /^Das XML ist nicht lesbar: error on line 1 at column \d+: /);
   assert.deepEqual(answerLayout({ id: 9, xml: EMPTY }), { id: 9, ok: false, error: LAYOUT_NOTHING });
   assert.deepEqual(answerLayout({ id: 10, xml: STRAY }), { id: 10, ok: false, error: layoutStrayText(['A']) });
   // A message that is no job is answered as well, with what went wrong.

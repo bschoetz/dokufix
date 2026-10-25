@@ -25,7 +25,7 @@ import { LAYOUT_NOTHING, layoutStrayText } from '../src/app/bpmn-layout.js';
 import { measureLabel, LABEL_FONT } from '../src/app/label-size.js';
 import { drawDiagrams, DIAGRAM_KINDS } from '../src/app/diagrams.js';
 import { makeLayoutClient, layoutTimeLimitText, LAYOUT_ABORTED } from '../src/app/layout-client.js';
-import { answerLayout } from '../src/app/bpmn-layout-job.js';
+import { answerLayout, xmlUnreadableText } from '../src/app/bpmn-layout-job.js';
 import { LAYOUT_NOTICE_CLASS } from '../src/app/layout-notice.js';
 
 const WITH_DI = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="d"><bpmn:process id="P"><bpmn:task id="A"/></bpmn:process>' +
@@ -502,12 +502,18 @@ test('a BPMN block\'s container holds no source while the diagrams before it are
   assert.equal(root.querySelectorAll('figure .dokufix-diagram-svg > svg').length, 2);
 });
 
-// The order of the reasons: XML the layout's parser rejects, and XML that is no
-// BPMN definitions, go to bpmn-js, which words the reason; then the layout's
-// own refusals (nothing to place, a node in no lane), before any host.
+// The order of the reasons: XML the layout's parser rejects is the parser's
+// error; XML that is no BPMN definitions goes to bpmn-js, which words the
+// reason; then the layout's own refusals (nothing to place, a node in no
+// lane), before any host.
 test('a refusal of the layout is the reason, and no host is made', async t => {
   const logged = t.mock.method(console, 'error', () => {});
   const { Viewer, log } = standIn();
+  const amp = WITHOUT_DI.replace('name="', 'name="Prüfen & ');
+  const unread = page();
+  await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(unread, amp)), e => e.message.startsWith(xmlUnreadableText('error on line 1 at column '))));
+  assert.equal(log.length, 0, 'bpmn-js is not asked');
+  assert.deepEqual(Array.from(unread.body.children).map(el => el.id), ['preview']);
   const empty = '<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL"><bpmn:process id="P1"/></bpmn:definitions>';
   let document = page();
   await withLibrary(Viewer, () => assert.rejects(renderBpmn(diagramIn(document, empty)), { message: LAYOUT_NOTHING }));
