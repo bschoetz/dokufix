@@ -51,6 +51,11 @@ test('the source as a data: URL: only what has to be is percent-encoded, and dec
   assert.doesNotMatch(body(url), /[^\x20-\x7e]/);
 });
 
+test('the source as a data: URL: half an emoji is U+FFFD, no throw (audit 2026-10-25, finding 17)', () => {
+  const url = sourceDataUrl('A[Start \uD83D] --> B[\uDE00]', 'text/plain;charset=utf-8');
+  assert.equal(decodeURIComponent(body(url)), 'A[Start \uFFFD] --> B[\uFFFD]');
+});
+
 test('the source as a data: URL: control characters are encoded, and blanks at the very end, which a URL parser strips', () => {
   const text = 'a\x00b\x1fc\x7f  d  ';
   const url = sourceDataUrl(text, 'application/xml;charset=utf-8');

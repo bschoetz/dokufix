@@ -69,7 +69,8 @@ export function diagramFileNames(titles){
 // escapes nothing, and the body is about a quarter larger than the text
 // (base64: a third; encodeURIComponent(): more than half).
 export function sourceDataUrl(text, mime){
-  const body = String(text).replace(/[\x00-\x1f\x7f%#<>"&']|[^\x00-\x7f]+| +$/g, m => m === "'" ? '%27' : encodeURIComponent(m));
+  // A lone surrogate (half an emoji) makes encodeURIComponent() throw; it becomes U+FFFD (audit 2026-10-25, finding 17).
+  const body = String(text).toWellFormed().replace(/[\x00-\x1f\x7f%#<>"&']|[^\x00-\x7f]+| +$/g, m => m === "'" ? '%27' : encodeURIComponent(m));
   return 'data:' + mime + ',' + body;
 }
 
