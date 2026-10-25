@@ -18,7 +18,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DOMParser, parseHTML } from 'linkedom';
-import { fileBase, withBackground } from '../src/bpmn-tools/downloads.js';
+import { fileBase, withBackground, svgLink, bpmnLink } from '../src/bpmn-tools/downloads.js';
 import { poolHeads, mergeMarkerOff } from '../src/bpmn-tools/decorate.js';
 import { themeCss, applyTheme, PRESETS, KEYS, SEL, CHECKER, presetOf, migrate } from '../src/bpmn-tools/theme.js';
 import { balAnswer, balWorkerSource } from '../src/bpmn-tools/layout.js';
@@ -80,6 +80,23 @@ function fakeViewer(pools){
   const registry = { filter: f => els.map(e => e.el).filter(f), getGraphics: el => els.find(e => e.el === el).g };
   return { viewer: { get: () => registry }, gfx: id => els.find(e => e.el.id === id).g };
 }
+test('svgLink(), bpmnLink(): the blob: URL is made at the click and freed 1.5 s later, none before (audit 2026-10-25, finding 18)', t => {
+  const made = [], freed = [];
+  t.mock.method(URL, 'createObjectURL', () => { made.push('blob:' + made.length); return made.at(-1); });
+  t.mock.method(URL, 'revokeObjectURL', url => freed.push(url));
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const had = globalThis.document;
+  globalThis.document = parseHTML('<html><body></body></html>').document;
+  t.after(() => { globalThis.document = had; });
+  const links = [svgLink(() => 'bild', () => '<svg/>', 'A2'), bpmnLink(() => 'prozess', '<definitions/>', 'A2')];
+  assert.deepEqual(made, []);
+  for (const a of links) a.onclick();
+  assert.deepEqual(links.map(a => [a.download, a.href]), [['bild.svg', 'blob:0'], ['prozess.bpmn', 'blob:1']]);
+  assert.deepEqual(freed, []);
+  t.mock.timers.tick(1500);
+  assert.deepEqual(freed, ['blob:0', 'blob:1']);
+});
+
 test('poolHeads(): a head behind the frame of a pool, inset by half the stroke; a collapsed pool has none and is a box', () => {
   const { viewer, gfx } = fakeViewer([
     { id: 'p1', width: 600, height: 250, horizontal: true },

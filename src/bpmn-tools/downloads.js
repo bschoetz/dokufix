@@ -86,6 +86,13 @@ export function pngButton(name, svgText){
   };
   return p;
 }
+// At the click: the link gets its name and a blob: URL of the file, freed
+// again 1.5 s later, as pngButton() does (audit 2026-10-25, finding 18).
+const blobAtClick = (link, name, blob) => () => {
+  link.download = name();
+  const url = link.href = URL.createObjectURL(blob());
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
+};
 // The link of the .svg: named and made at the click. initial: the name it
 // carries before (the assistant's "A2.svg"), or none.
 export function svgLink(name, svgText, initial){
@@ -93,15 +100,14 @@ export function svgLink(name, svgText, initial){
   v.className = 'btn small';
   if (initial) v.download = initial + '.svg';
   v.innerHTML = ICON.download + ' .svg'; v.title = 'Diagramm als .svg herunterladen'; v.href = '#';
-  v.onclick = () => { v.download = name() + '.svg'; v.href = URL.createObjectURL(new Blob([svgText()], { type: 'image/svg+xml' })); };
+  v.onclick = blobAtClick(v, () => name() + '.svg', () => new Blob([svgText()], { type: 'image/svg+xml' }));
   return v;
 }
-// The link of the .bpmn: the XML as it is, named at the click.
+// The link of the .bpmn: the XML as it is, named and made at the click.
 export function bpmnLink(name, xml, initial){
   const a = document.createElement('a');
-  a.className = 'btn small'; a.download = initial + '.bpmn'; a.innerHTML = ICON.download + ' .bpmn'; a.title = 'Diagramm als .bpmn herunterladen';
-  a.href = URL.createObjectURL(new Blob([xml], { type: 'application/xml' }));
-  a.onclick = () => { a.download = name() + '.bpmn'; };
+  a.className = 'btn small'; a.download = initial + '.bpmn'; a.innerHTML = ICON.download + ' .bpmn'; a.title = 'Diagramm als .bpmn herunterladen'; a.href = '#';
+  a.onclick = blobAtClick(a, () => name() + '.bpmn', () => new Blob([xml], { type: 'application/xml' }));
   return a;
 }
 

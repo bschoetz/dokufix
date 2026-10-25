@@ -77,6 +77,7 @@ export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als
     a.download = fileBase(x) + '.bpmn';
     a.href = URL.createObjectURL(new Blob([x], { type: 'application/xml' }));
     a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1500);
   };
 }
 // force: without asking (taken over or opened anew).
