@@ -549,7 +549,7 @@ The second way body text used to disappear was an **unterminated** block: the cl
 
 `---\nSome intro.\n---` and an empty `---\n---` are left completely untouched. An explicit but empty header (`---json\n---`) is consumed and renders nothing — announcing "nicht lesbar" over an empty `<pre>` would be a lie. A block that looks like frontmatter but fails to parse gets the raw panel; a block that doesn't look like frontmatter at all is not frontmatter.
 
-**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It is handed the source and reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that. Lines inside fenced code (``` or ~~~, closed by the same character at least as long) are skipped as well, so a shell comment `# install dependencies` in a block before the first heading names nothing (audit 2026-10-25, finding 14).
+**Title derivation.** `deriveDocTitle()` is the single source of truth for "what is this document called?", used by the download filename and all three read-only export `<title>`s. It is handed the source and reads the **body**, i.e. the source with frontmatter split off. Previously each of those four sites ran `/^#\s+(.+?)\s*$/m` against the raw source, so a YAML comment like `# internal draft` won against the document's real `# Heading` — files downloaded as `internal-draft.html`. Splitting the frontmatter off fixes that. Lines inside fenced code are skipped as well, the blocks as `fences()` finds them, which `extractXml()` of the BPMN tools uses too (``` or ~~~, closed by the same character at least as long with only blanks after it, as marked reads them), so a shell comment `# install dependencies` in a block before the first heading names nothing (audit 2026-10-25, finding 14).
 
 ### Callouts
 
@@ -1259,7 +1259,7 @@ Until story 2.14 the script was one file of 2111 lines in which every function a
 | `app/warning.js` | `buildWarning()`, the warning a reader sees where something could not be rendered |
 | `app/passes.js` | `runPasses()`, the runner of a list of passes, each in its own containment |
 | `app/transient.js` | the attribute `data-dokufix-transient` and `removeTransient()` |
-| `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel as a pass, `deriveDocTitle()` |
+| `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel as a pass, `deriveDocTitle()`, `fences()` (the fenced code blocks of a text, shared with `bpmn-tools/paste.js`) |
 | `app/callouts.js` | callouts as a pass: recognising the alert marker of a blockquote, the callout element with its label; the class by which `toc.js` leaves out headings inside one |
 | `app/chips.js` | status chips as a pass: what counts as a status (`readChip()`), the chip element with its word for assistive technology; the class by which `toc.js` leaves that word out of a heading's label |
 | `app/nodes.js` | what the marker components ask of a node: the `nodeType` values, `isBlank()`, `firstReal()`, and `itemHost()`, where the content of a list item starts |

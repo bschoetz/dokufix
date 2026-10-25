@@ -32,6 +32,7 @@
 //
 // Nothing done on loading.
 import { maskNotMarkup } from '../app/bpmn-layout.js';
+import { fences } from '../app/frontmatter.js';
 
 const DEF = /<(\/?)((?:[\w.-]+:)?)definitions\b[^>]*?(\/?)>/g;
 // Comments and CDATA sections blanked with spaces of the same length: tags inside them do not count.
@@ -45,27 +46,6 @@ const DOCTYPE = '<!DOCTYPE(?:[^\\[>]|\\[[^\\]]*\\])*>';
 const GAP = new RegExp('^(?:\\s|' + COMMENT + '|' + PI + '|' + DOCTYPE + ')*$');
 const LEAD = new RegExp('(?:' + COMMENT + '\\s*)+$');
 const TRAIL = new RegExp('^(?:\\s*' + COMMENT + ')+');
-
-// The fenced blocks of a text: { start, end } of each one's content.
-function fences(text){
-  const blocks = [];
-  const lines = text.split('\n');
-  let pos = 0, open = null;
-  for (const line of lines){
-    const next = pos + line.length + 1;
-    const l = line.replace(/\r$/, '');
-    if (!open){
-      const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(l);
-      if (m && !(m[1][0] === '`' && m[2].includes('`'))) open = { ch: m[1][0], len: m[1].length, start: Math.min(next, text.length) };
-    } else {
-      const m = /^ {0,3}(`{3,}|~{3,})\s*$/.exec(l);
-      if (m && m[1][0] === open.ch && m[1].length >= open.len){ blocks.push({ start: open.start, end: pos }); open = null; }
-    }
-    pos = next;
-  }
-  if (open) blocks.push({ start: open.start, end: text.length });
-  return blocks;
-}
 
 // The root in a text: { start, end, more } or { cutOff } or null. Cut off only where no closing definitions tag, of any
 // prefix, follows the last opening one; one with another prefix leaves the text to the parser.
@@ -95,8 +75,12 @@ export function extractXml(text){
   // since prose may name both tags before it (audit 2026-10-25, finding 19, and its review).
   let i = blocks.findIndex(k => root(text.slice(k.start, k.end))?.end !== undefined);
   if (i < 0){
-    const outside = blocks.reduce((t, k) => t.slice(0, k.start) + ' '.repeat(k.end - k.start) + t.slice(k.end), text);
-    const whole = root(outside)?.end !== undefined;
+    let outside = '', at = 0;
+    for (const k of blocks){ outside += text.slice(at, k.start) + ' '.repeat(k.end - k.start); at = k.end; }
+    outside += text.slice(at);
+    // A real root declares its namespace; tags named in prose (`<bpmn:definitions>`) do not (ponytail review).
+    const o = root(outside);
+    const whole = o?.end !== undefined && /\sxmlns[:=]/.test(outside.slice(o.start, outside.indexOf('>', o.start) + 1));
     i = blocks.findIndex(k => hasRoot(text.slice(k.start, k.end)) && (!whole || k.end === text.length));
   }
   if (i >= 0){

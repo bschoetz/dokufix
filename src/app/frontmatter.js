@@ -270,18 +270,40 @@ export function splitFrontmatter(src){
 // BODY, so a "#"-prefixed YAML comment can't masquerade as the heading, and
 // skips fenced code, so a shell comment can't either (audit 2026-10-25, 14).
 export function deriveDocTitle(source, fallback){
-  let fence = null;
-  for (const line of splitFrontmatter(source).body.split('\n')){
-    const f = /^ {0,3}(`{3,}|~{3,})(.*)/.exec(line);
-    if (fence){
-      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !f[2].trim()) fence = null;
-    } else if (f && !(f[1][0] === '`' && f[2].includes('`'))) fence = f[1];  // ```a``` is inline code, no fence
-    else {
-      const m = /^#\s+(.+?)\s*$/.exec(line);
-      if (m) return m[1].trim();
-    }
+  const body = splitFrontmatter(source).body, code = fences(body);
+  let at = 0;
+  for (const line of body.split('\n')){
+    const m = !code.some(k => at >= k.start && at < k.end) && /^#\s+(.+?)\s*$/.exec(line);
+    if (m) return m[1].trim();
+    at += line.length + 1;
   }
   return fallback.trim();
+}
+
+// The fenced blocks of a text: { start, end } of each one's content, as
+// marked reads them: ``` or ~~~, three or more, up to three spaces of indent;
+// a backtick fence's info string holds no backtick (```a``` is inline code);
+// closed by the same character at least as long, only blanks after it; a
+// block without its closing fence runs to the end. Title derivation and the
+// BPMN tools' extractXml() (src/bpmn-tools/paste.js) read code with it.
+export function fences(text){
+  const blocks = [];
+  const lines = text.split('\n');
+  let pos = 0, open = null;
+  for (const line of lines){
+    const next = pos + line.length + 1;
+    const l = line.replace(/\r$/, '');
+    if (!open){
+      const m = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(l);
+      if (m && !(m[1][0] === '`' && m[2].includes('`'))) open = { ch: m[1][0], len: m[1].length, start: Math.min(next, text.length) };
+    } else {
+      const m = /^ {0,3}(`{3,}|~{3,}) *$/.exec(l);
+      if (m && m[1][0] === open.ch && m[1].length >= open.len){ blocks.push({ start: open.start, end: pos }); open = null; }
+    }
+    pos = next;
+  }
+  if (open) blocks.push({ start: open.start, end: text.length });
+  return blocks;
 }
 
 function fmLookup(data, name){
