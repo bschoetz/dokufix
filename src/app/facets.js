@@ -1,5 +1,6 @@
 import { ELEMENT, TEXT } from './nodes.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
+import { tidy } from './search-match.js';
 
 // --- Facet filter ----------------------------------------------------------
 // A table with the marker "facets" before it gets one control per distinct
@@ -77,9 +78,6 @@ export const FACET_REFUSALS = {
   tooMany: count => 'trifft auf ' + count + ' verschiedene Werte in ihrer Spalte; mehr als ' + FACET_MAX + ' kann sie nicht filtern.',
   nested: 'steht in einer Tabelle, die schon gefiltert wird.',
 };
-
-// White space collapsed, none at the ends.
-const tidy = text => String(text).replace(/\s+/g, ' ').trim();
 
 // Which column the marker names: its place among the headings, -1 when none
 // has that name. headings are the first lines of the header cells. The name is

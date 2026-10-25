@@ -1,3 +1,5 @@
+import { ELEMENT, TEXT, isBlank } from './nodes.js';
+
 // --- Callouts ------------------------------------------------------------
 // A blockquote whose first line is only an alert marker becomes a callout:
 //
@@ -55,10 +57,6 @@ export const CALLOUT_LABELS = {
 // The marker at the start of the first text of the first paragraph, alone on
 // its line: after it only blanks, then the end of the line or of the text.
 const MARKER = /^\[!(note|tip|important|warning|caution)\][ \t]*(\n|$)/i;
-
-// nodeType values; the global Node exists only in a page.
-const ELEMENT = 1, TEXT = 3;
-const isBlank = node => node.nodeType === TEXT && !node.data.trim();
 
 // { type, paragraph, text, length } when the blockquote opens with a marker
 // line, null when it is an ordinary quotation.

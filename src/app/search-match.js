@@ -63,7 +63,7 @@ const isHigh = code => code >= 0xD800 && code <= 0xDBFF;
 const isLow = code => code >= 0xDC00 && code <= 0xDFFF;
 
 // White space collapsed, none at the ends.
-const tidy = text => String(text).replace(/\s+/g, ' ').trim();
+export const tidy = text => String(text).replace(/\s+/g, ' ').trim();
 
 // The characters light fuzzy ignores, in the term and in the text.
 const IGNORED = /^[\s\-\u2010\u2011\u00AD.]$/u;

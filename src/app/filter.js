@@ -3,7 +3,7 @@ import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACETS_CLASS, FACET_BAR_CLASS, facetKeyClass, isFootnoteMarker, rowsOf } from './facets.js';
 import { TABLE_CLASS } from './tables.js';
 import { TRANSIENT_ATTR } from './transient.js';
-import { findHits } from './search-match.js';
+import { findHits, tidy } from './search-match.js';
 
 // --- Free-text filter ------------------------------------------------------
 // A table with the marker "filter" before it gets a search field above it
@@ -63,9 +63,6 @@ export const FILTER_OUT_CLASS = 'dokufix-filter-out';
 // name of the field for assistive technology.
 export const FILTER_PLACEHOLDER = 'Suchen …';
 export const FILTER_LABEL = 'Tabelle filtern';
-
-// White space collapsed, none at the ends.
-const tidy = text => String(text).replace(/\s+/g, ' ').trim();
 
 const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
