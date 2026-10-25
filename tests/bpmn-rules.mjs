@@ -124,17 +124,19 @@ export const KNOWN_FILE = path.join(FIXTURE_DIR, 'known-breaks.json');
 export function readDiagram(xml){
   const di = { shapes: {}, labels: {}, flows: {}, flowLabels: {} };
   const num = m => m.slice(1, 5).map(Number);
-  const bounds = /<dc:Bounds x="([-\d.]+)" y="([-\d.]+)" width="([-\d.]+)" height="([-\d.]+)"\/>/;
+  // Any prefix: bpmn.io keeps the input's, and a Signavio export writes omgdc: and omgdi: (audit 2026-10-25, finding 13).
+  const bounds = /<(?:[\w-]+:)?Bounds x="([-\d.]+)" y="([-\d.]+)" width="([-\d.]+)" height="([-\d.]+)"\/>/;
+  const label = /<(?:[\w-]+:)?BPMNLabel\b[^>]*>/;
   const unesc = s => s.replace(/&(amp|lt|gt|quot);/g, (all, e) => ({ amp: '&', lt: '<', gt: '>', quot: '"' }[e]));
-  for (const m of xml.matchAll(/<bpmndi:BPMNShape [^>]*bpmnElement="([^"]*)"[^>]*>(.*?)<\/bpmndi:BPMNShape>/g)){
-    const id = unesc(m[1]), [own, label] = m[2].split('<bpmndi:BPMNLabel>');
+  for (const m of xml.matchAll(/<(?:[\w-]+:)?BPMNShape [^>]*bpmnElement="([^"]*)"[^>]*>(.*?)<\/(?:[\w-]+:)?BPMNShape>/g)){
+    const id = unesc(m[1]), [own, lab] = m[2].split(label);
     di.shapes[id] = num(bounds.exec(own));
-    if (label) di.labels[id] = num(bounds.exec(label));
+    if (lab) di.labels[id] = num(bounds.exec(lab));
   }
-  for (const m of xml.matchAll(/<bpmndi:BPMNEdge [^>]*bpmnElement="([^"]*)">(.*?)<\/bpmndi:BPMNEdge>/g)){
-    const id = unesc(m[1]), [way, label] = m[2].split('<bpmndi:BPMNLabel>');
-    di.flows[id] = [...way.matchAll(/<di:waypoint x="([-\d.]+)" y="([-\d.]+)"\/>/g)].map(w => [Number(w[1]), Number(w[2])]);
-    if (label) di.flowLabels[id] = num(bounds.exec(label));
+  for (const m of xml.matchAll(/<(?:[\w-]+:)?BPMNEdge [^>]*bpmnElement="([^"]*)"[^>]*>(.*?)<\/(?:[\w-]+:)?BPMNEdge>/g)){
+    const id = unesc(m[1]), [way, lab] = m[2].split(label);
+    di.flows[id] = [...way.matchAll(/<(?:[\w-]+:)?waypoint x="([-\d.]+)" y="([-\d.]+)"\/>/g)].map(w => [Number(w[1]), Number(w[2])]);
+    if (lab) di.flowLabels[id] = num(bounds.exec(lab));
   }
   return di;
 }

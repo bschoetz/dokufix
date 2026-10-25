@@ -38,6 +38,13 @@ test('the diagram part is read back: boxes, label boxes, waypoints', () => {
   assert.ok(di.labels.c && di.flowLabels.F4_c_d);
 });
 
+test('the diagram part is read back with any prefix and a label with attributes, as bpmn.io writes a Signavio export (audit 2026-10-25, finding 13)', () => {
+  const signavio = laid.replace(/dc:Bounds/g, 'omgdc:Bounds').replace(/di:waypoint/g, 'omgdi:waypoint').replace(/<bpmndi:BPMNLabel>/g, '<bpmndi:BPMNLabel labelStyle="L1">');
+  assert.notEqual(signavio, laid);
+  assert.deepEqual(readDiagram(signavio), readDiagram(laid));
+  assert.deepEqual(breaksOf(signavio, model), breaksOf(laid, model));
+});
+
 test('a new break fails, naming the input, the rule and the elements', () => {
   // The second waypoint of F1_s_a 5 px lower: its first piece is slanted.
   const changed = laid.replace(firstWay, firstWay.replace(/(<di:waypoint x="-?\d+" y="-?\d+"\/><di:waypoint x="-?\d+" y=")(-?\d+)/, (all, head, y) => head + (Number(y) + 5)));
