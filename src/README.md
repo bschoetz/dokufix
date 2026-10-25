@@ -1262,7 +1262,7 @@ Until story 2.14 the script was one file of 2111 lines in which every function a
 | `app/frontmatter.js` | the YAML subset, `splitFrontmatter()`, the metadata panel as a pass, `deriveDocTitle()`, `fences()` (the fenced code blocks of a text, shared with `bpmn-tools/paste.js`) |
 | `app/callouts.js` | callouts as a pass: recognising the alert marker of a blockquote, the callout element with its label; the class by which `toc.js` leaves out headings inside one |
 | `app/chips.js` | status chips as a pass: what counts as a status (`readChip()`), the chip element with its word for assistive technology; the class by which `toc.js` leaves that word out of a heading's label |
-| `app/nodes.js` | what the marker components, the callouts and the facets ask of a node: the `nodeType` values, `isBlank()`, `firstReal()`, and `itemHost()`, where the content of a list item starts |
+| `app/nodes.js` | what the passes and their components ask of a node: the `nodeType` values, `tagOf()`, `isBlank()`, `firstReal()`, and `itemHost()`, where the content of a list item starts |
 | `app/markers.js` | block markers as a pass: reading a comment as a marker (`readMarker()`), the list of known markers (`MARKERS`) with the block each expects, what a marker comes to (`judgeMarker()`), applying them and the warnings |
 | `app/cards.js` | cards: the entry for the list of markers, and `buildCards()`, which marks the list and the title of each card |
 | `app/steps.js` | step lists: the entry for the list of markers, and `buildSteps()`, which writes the number of each item and marks its actor |

@@ -1,4 +1,4 @@
-import { ELEMENT, TEXT } from './nodes.js';
+import { ELEMENT, TEXT, tagOf } from './nodes.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACETS_CLASS, FACET_BAR_CLASS, facetKeyClass, isFootnoteMarker, rowsOf } from './facets.js';
 import { TABLE_CLASS } from './tables.js';
@@ -63,8 +63,6 @@ export const FILTER_OUT_CLASS = 'dokufix-filter-out';
 // name of the field for assistive technology.
 export const FILTER_PLACEHOLDER = 'Suchen …';
 export const FILTER_LABEL = 'Tabelle filtern';
-
-const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
 // What holds no text a reader reads: a picture, a stylesheet, a script, a
 // template. The search of the reading view leaves the same out, and its

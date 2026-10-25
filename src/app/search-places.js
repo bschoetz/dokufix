@@ -1,4 +1,4 @@
-import { ELEMENT, TEXT } from './nodes.js';
+import { ELEMENT, TEXT, tagOf } from './nodes.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
 import { FACET_BAR_CLASS, isFootnoteMarker } from './facets.js';
 import { STEP_NUMBER_CLASS } from './steps.js';
@@ -148,8 +148,6 @@ const EXCLUDED_CLASSES = [
   'dokufix-toc',            // the inline table of contents, toc.js
   DIAGRAM_CLASS,            // a diagram's figure: a place of its own, read by diagramReading()
 ];
-
-const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
 function excluded(el){
   return el.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(el) || UNREAD_TAGS.has(tagOf(el)) ||

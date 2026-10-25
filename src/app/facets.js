@@ -1,4 +1,4 @@
-import { ELEMENT, TEXT } from './nodes.js';
+import { ELEMENT, TEXT, tagOf } from './nodes.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
 import { tidy } from './search-match.js';
 
@@ -126,7 +126,6 @@ export function planFacets(argument, headings, valuesOf){
 }
 
 // ---------- the table as elements ----------
-const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 const childrenOf = (el, ...tags) => Array.from(el.children).filter(child => tags.includes(tagOf(child)));
 const cellsOf = row => childrenOf(row, 'TD', 'TH');
 

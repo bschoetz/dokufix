@@ -1,9 +1,12 @@
 // --- Nodes -----------------------------------------------------------------
-// What the marker pass and its components ask of a node (markers.js, cards.js,
-// steps.js), and the callouts and facets. Pure logic: nothing here touches a page.
+// What the passes and their components ask of a node. Pure logic: nothing
+// here touches a page.
 
 // nodeType values; the global Node exists only in a page.
 export const ELEMENT = 1, TEXT = 3, COMMENT = 8;
+
+// An element's tag in capitals, '' for any other node.
+export const tagOf = node => node.nodeType === ELEMENT ? node.tagName.toUpperCase() : '';
 
 // A text node that holds white space only, such as the line break marked
 // writes between two blocks.
