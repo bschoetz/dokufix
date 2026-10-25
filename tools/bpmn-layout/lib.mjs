@@ -201,15 +201,6 @@ export function readLauf(lauf){
   return JSON.parse(fs.readFileSync(laufFile(lauf), 'utf8'));
 }
 
-// Brüche ohne node-outside-lane für Gateways: ein Gateway darf in jeder Bahn
-// liegen (Ben, 2026-10-04); die Zahl der so gezeichneten Gateways wird eigens gezählt.
-export function splitBreaks(breaks, model){
-  // Gateways und, seit R1 sie auch versetzt (Ben, 2026-10-05), End-Ereignisse: in einer anderen Bahn als in der Eingabe gewollt, kein Bruch.
-  const gw = new Set(model.nodes.filter(n => n.type === 'gateway' || n.tag === 'endEvent').map(n => n.id));
-  const moved = breaks.filter(b => { const [rule, id] = b.split(' '); return rule === 'node-outside-lane' && gw.has(id); });
-  return { breaks: breaks.filter(b => !moved.includes(b)), movedGateways: moved.length };
-}
-
 export function poolSize(di){
   const ps = Object.values(di.pools || {});
   if (ps.length) return [Math.max(...ps.map(p => p[0] + p[2])) - Math.min(...ps.map(p => p[0])), Math.max(...ps.map(p => p[1] + p[3])) - Math.min(...ps.map(p => p[1]))];
@@ -347,20 +338,6 @@ export function blockStats(xml, model){
   return { blocks, foreignNodes, foreignFlows, inColumns };
 }
 
-// Prüfungen, die die Regelprüfung von Eintrag 24 nicht kennt (Spike 2.26, nach
-// Bens Sichtung): node-overlap <a> <b>, zwei Knoten, deren Kästen sich mehr als
-// 2 px überdecken. node-outside-pool prüft seit Story 2.12 die Regelprüfung selbst.
-export function shapeBreaks(xml, model){
-  const di = readDi(xml), ids = model.nodes.map(n => n.id).filter(id => di.shapes[id]), out = [];
-  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++){
-    const p = di.shapes[ids[i]], q = di.shapes[ids[j]];
-    if (Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x) > 2 && Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y) > 2) out.push(`node-overlap ${ids[i]} ${ids[j]}`);
-  }
-  return out;
-}
-
-// Alle Brüche einer angeordneten Fassung: die Regelprüfung (tests/bpmn-rules.mjs) und shapeBreaks(), ohne Gateways
-// und End-Ereignisse in einer anderen Bahn. Der Modellierer schreibt eingerückt; die Regelprüfung liest das DI so,
-// wie die Anordnung es schreibt, ohne Leerraum zwischen den Tags und "/>" ohne Leerzeichen.
-export const compact = xml => xml.replace(/>\s+</g, '><').replace(/\s+\/>/g, '/>');
-export function allBreaks(breaksOf, xml, model){ return splitBreaks([...breaksOf(xml, model), ...shapeBreaks(xml, model)], model); }
+// Alle Brüche einer angeordneten Fassung: seit dem Audit vom 2026-10-25 (Fund 13) im gemeinsamen Modul der Messung,
+// damit der Assistant sie ebenso zählt.
+export { compact, allBreaks } from '../../src/bpmn-tools/aenderungen.js';

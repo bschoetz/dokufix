@@ -7,7 +7,8 @@
 // for the node that moved more along that axis; tolerances 30 and 20 px),
 // a flow with other waypoints (a loop and an association between two
 // elements too, story 2.33). Pure, for Node and the browser; the model is
-// readProcess()'s (src/app/bpmn-layout.js) of the input.
+// readProcess()'s (src/app/bpmn-layout.js) of the input. At the end the
+// breaks of a laid-out version, as the runs and the BPMN Assistant count them.
 //
 // Nothing done on loading.
 
@@ -64,3 +65,35 @@ export function aenderungen(erzeugt, bearbeitet, model){
 
 // The ids aenderungen() names as changed: the nodes in another lane, order or row, the flows with another route.
 export const geaenderteIds = a => new Set([...a.lanes, ...a.x, ...a.y, ...a.flows].map(c => c.id));
+
+// --- The breaks of a laid-out version -------------------------------------
+// Moved here from tools/bpmn-layout/lib.mjs (audit 2026-10-25, finding 13) so
+// that the BPMN Assistant counts what a run counts. breaksOf is the rule check
+// of tests/bpmn-rules.mjs, passed in: the runs load it only when they need it.
+
+// The breaks without node-outside-lane of a gateway or an end event: both may
+// lie in any lane (Ben, 2026-10-04; end events since R1 moves them,
+// 2026-10-05); how many lie elsewhere is counted on its own.
+export function splitBreaks(breaks, model){
+  const gw = new Set(model.nodes.filter(n => n.type === 'gateway' || n.tag === 'endEvent').map(n => n.id));
+  const moved = breaks.filter(b => { const [rule, id] = b.split(' '); return rule === 'node-outside-lane' && gw.has(id); });
+  return { breaks: breaks.filter(b => !moved.includes(b)), movedGateways: moved.length };
+}
+
+// What the rule check of entry 24 does not know (spike 2.26, after Ben's
+// review): node-overlap <a> <b>, two nodes whose boxes overlap by more than
+// 2 px. The rule check has known node-outside-pool itself since story 2.12.
+export function shapeBreaks(xml, model){
+  const di = readDi(xml), ids = model.nodes.map(n => n.id).filter(id => di.shapes[id]), out = [];
+  for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++){
+    const p = di.shapes[ids[i]], q = di.shapes[ids[j]];
+    if (Math.min(p.x + p.w, q.x + q.w) - Math.max(p.x, q.x) > 2 && Math.min(p.y + p.h, q.y + q.h) - Math.max(p.y, q.y) > 2) out.push(`node-overlap ${ids[i]} ${ids[j]}`);
+  }
+  return out;
+}
+
+// The rule check reads the diagram part as the layout writes it: no white
+// space between tags, "/>" without a blank. The modeler and bpmn.io indent.
+export const compact = xml => xml.replace(/>\s+</g, '><').replace(/\s+\/>/g, '/>');
+// Every break of a laid-out version: the rule check and shapeBreaks(), through splitBreaks().
+export function allBreaks(breaksOf, xml, model){ return splitBreaks([...breaksOf(xml, model), ...shapeBreaks(xml, model)], model); }

@@ -23,6 +23,7 @@ import { hasCoordinates } from '../app/bpmn.js';
 import { pictureOf } from '../app/diagram-downloads.js';
 import { showLayoutNotice } from '../app/layout-notice.js';
 import { breaksOf } from '../../tests/bpmn-rules.mjs';
+import { allBreaks, compact } from '../bpmn-tools/aenderungen.js';
 import { ICON } from '../bpmn-tools/icons.js';
 import { TYPES, PROPS, KEYS, NAMES, HEX, valid, PRESETS, presetOf, migrate, applyTheme as applyThemeCss } from '../bpmn-tools/theme.js';
 import { decorate, mergeMarkerOff, modelGraph } from '../bpmn-tools/decorate.js';
@@ -478,8 +479,8 @@ async function render(){
       // zeichnet A2 seit Story 2.33 selbst; der Behelf der Seite (signalLines()) ist weg.
       let info = Math.round(ms) + ' ms' + (LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker');
       try {
-        // Gateways und End-Ereignisse dürfen in jeder Bahn liegen (wie splitBreaks() im Lauf; A2 setzt auch Enden um).
-        const breaks = breaksOf(laid.xml, read.model, {}).filter(b => !(b.startsWith('node-outside-lane ') && read.model.nodes.some(n => (n.type === 'gateway' || n.tag === 'endEvent') && n.id === b.split(' ')[1])));
+        // Gezählt wie im Lauf (allBreaks()): mit überlappenden Knoten, ohne Gateways und End-Ereignisse in anderer Bahn.
+        const { breaks } = allBreaks(breaksOf, laid.xml, read.model);
         info = breaks.length + ' Brüche · ' + info;
         if (breaks.length){ const d = document.createElement('details'); d.innerHTML = '<summary>Brüche</summary>' + breaks.map(esc).join('<br>'); s.appendChild(d); }
       } catch (e){ info += ' · Regelprüfung: ' + e.message; }
@@ -511,9 +512,7 @@ async function render(){
     let info = Math.round(ms) + ' ms' + (BAL_LAYOUT.withoutWorker() ? ' (ohne Worker)' : ' im Worker') + (warn.length ? ' · ' + warn.length + ' Warnungen' : '');
     if (warn.length){ const d = document.createElement('details'); d.innerHTML = '<summary>Warnungen von bpmn.io</summary>' + warn.map(esc).join('<br>'); s.appendChild(d); }
     try {
-      // Die Regelprüfung liest das DI in der Form, die dokufix schreibt: ein Element je Zeile, ohne Leerraum vor />.
-      const flat = out.replace(/>\s+</g, '><').replace(/\s+\/>/g, '/>');
-      const breaks = breaksOf(flat, read.model, {}).filter(b => !(b.startsWith('node-outside-lane ') && read.model.nodes.some(n => (n.type === 'gateway' || n.tag === 'endEvent') && n.id === b.split(' ')[1])));
+      const { breaks } = allBreaks(breaksOf, compact(out), read.model);
       info = breaks.length + ' Brüche · ' + info;
       if (breaks.length){ const d = document.createElement('details'); d.innerHTML = '<summary>Brüche</summary>' + breaks.map(esc).join('<br>'); s.appendChild(d); }
     } catch (e){ info += ' · Regelprüfung: ' + e.message; }

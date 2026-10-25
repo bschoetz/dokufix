@@ -151,7 +151,8 @@ export function escTitle(s){ return String(s).replace(/[<>&]/g, c => ({'<':'&lt;
 
 // Small metadata block appended to read-only exports. Always emits at least
 // an export timestamp — even on files that have never been saved (v0) — so
-// every read-only artifact carries a "when was this generated" anchor.
+// every read-only artifact carries a "when was this generated" anchor. From
+// v1 on, a text edited since the last version says so after the timestamp.
 export function buildMetaFooterHtml(){
   const nowStr = escapeHtml(formatVersionDate(new Date().toISOString()));
   if (state.currentVersion === 0 || !state.versionHistory.length){
@@ -160,6 +161,8 @@ export function buildMetaFooterHtml(){
   const last = state.versionHistory[state.versionHistory.length - 1];
   const dateStr = escapeHtml(formatVersionDate(last.t));
   const msgStr = last.m ? ' · ' + escapeHtml(last.m) : '';
+  // The version names the last saved text; an edited text is not that version.
+  const dirtyStr = sourceEl.value !== state.commitBaseline ? ' · mit ungespeicherten Änderungen' : '';
   return '<footer class="dokufix-meta"><p>Version ' + last.v + ' · ' + dateStr + msgStr +
-         ' · exportiert ' + nowStr + '</p></footer>';
+         ' · exportiert ' + nowStr + dirtyStr + '</p></footer>';
 }

@@ -25,6 +25,7 @@ import { balAnswer, balWorkerSource } from '../src/bpmn-tools/layout.js';
 import { nextStep, STEPS } from '../src/bpmn-tools/large-view.js';
 import { ICON } from '../src/bpmn-tools/icons.js';
 import { extractXml, ohneDi } from '../src/bpmn-tools/paste.js';
+import { allBreaks, compact } from '../src/bpmn-tools/aenderungen.js';
 import { logikOf, LOGIK_FILES, loadStand } from '../tools/bpmn-layout/lib.mjs';
 import { buildPage } from '../tools/seiten.mjs';
 import { BuildError } from '../build.mjs';
@@ -211,6 +212,18 @@ test('ohneDi(): a diagram tag in a comment is no diagram, and broken openings co
   ohneDi(broken);
   assert.ok(performance.now() - t0 < 1000, Math.round(performance.now() - t0) + ' ms');
 });
+test('allBreaks(): the rule check and overlapping nodes, without a gateway or an end event in another lane; the assistant counts with it (audit 2026-10-25, finding 13)', () => {
+  const box = (id, x) => '<bpmndi:BPMNShape id="' + id + '_di" bpmnElement="' + id + '">\n  <dc:Bounds x="' + x + '" y="0" width="100" height="80" />\n</bpmndi:BPMNShape>';
+  const xml = compact([box('t1', 0), box('t2', 90), box('g1', 300), box('e1', 500)].join('\n'));
+  const model = { nodes: [{ id: 't1', type: 'task' }, { id: 't2', type: 'task' }, { id: 'g1', type: 'gateway' }, { id: 'e1', type: 'event', tag: 'endEvent' }] };
+  const rules = () => ['node-outside-lane g1', 'node-outside-lane e1', 'node-outside-lane t1'];
+  assert.deepEqual(allBreaks(rules, xml, model), { breaks: ['node-outside-lane t1', 'node-overlap t1 t2'], movedGateways: 2 });
+  // The assistant has no count of its own: A2 and bpmn.io both through allBreaks().
+  const main = fs.readFileSync(path.join(REPO, 'src/bpmn-assistant/main.js'), 'utf8');
+  assert.equal(main.match(/allBreaks\(breaksOf, /g)?.length, 2);
+  assert.doesNotMatch(main, /node-outside-lane/);
+});
+
 test('extractXml(): a fenced answer gives the block\'s XML and counts the lines with text before and after', () => {
   const text = '## BPMN\n\nHier ist das Diagramm:\n\n```xml\n' + XML + '\n```\n\nDer Prozess beginnt mit dem Antrag.\nViel Erfolg!';
   assert.deepEqual(extractXml(text), { ...plain, xml: XML, before: 3, after: 3 });

@@ -27,7 +27,9 @@
 //      type document A, save             → generation 1
 //   2. open generation 1                 the editor holds A, version v1, clean
 //      type document B, save             → generation 2
-//   3. open generation 2                 the editor holds B, version v2
+//   3. open generation 2                 the editor holds B, version v2; the
+//                                        footer of nur-lesen names v2, after
+//                                        the reset with unsaved changes
 //      "Demo zurücksetzen"               the editor holds the original demo text,
 //                                        and every image it names is shown: a
 //                                        save carries the images of the demo text
@@ -294,6 +296,17 @@ async function editAndSave(page, text, file, numbering = false){
   await download.saveAs(file);
   await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
 }
+// Downloads nur-lesen into file and gives the text of its footer.
+async function exportFooter(page, file){
+  const [download] = await Promise.all([
+    page.waitForEvent('download', { timeout: 60000 }),
+    page.evaluate(() => document.querySelector('button[data-download="readonly-open"]').click()),
+  ]);
+  await download.saveAs(file);
+  await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+  const m = fs.readFileSync(file, 'utf8').match(/<footer class="dokufix-meta"><p>([\s\S]*?)<\/p><\/footer>/);
+  return m ? m[1] : '';
+}
 
 // ---------- a saved file, as text ----------
 function dataBlock(html, id){
@@ -446,10 +459,17 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'the preview shows document B', s.h1 === 'Dokument B', JSON.stringify(s.h1));
     check(scope, 'version v2, not marked as changed', s.version === 'v2' && !s.dirty, JSON.stringify({ version: s.version, dirty: s.dirty }));
     check(scope, 'heading numbering, switched on before the save, came along', s.numbered);
+    // The footer of nur-lesen names v2, and says so when the text was changed since (audit 2026-10-25, finding 12).
+    const clean = await exportFooter(o.page, path.join(dir, 'generation-2-nur-lesen.html'));
+    check(scope, 'nur-lesen of the unchanged text: its footer names version 2 and no unsaved changes',
+      clean.startsWith('Version 2 · ') && !clean.includes('ungespeichert'), JSON.stringify(clean));
     await o.page.click('#edit-btn');
     await pressAndWaitForRender(o.page, '#reset-btn');
     s = await state(o.page);
     same(scope, '"Demo zurücksetzen" gives the original demo text', s.source, demo);
+    const edited = await exportFooter(o.page, path.join(dir, 'generation-2-nur-lesen-geaendert.html'));
+    check(scope, 'nur-lesen after "Demo zurücksetzen": its footer names version 2 with unsaved changes',
+      s.dirty && edited.startsWith('Version 2 · ') && edited.endsWith(' · mit ungespeicherten Änderungen'), JSON.stringify({ dirty: s.dirty, footer: edited }));
     // The images the demo text names: in the file's block, and shown, although
     // neither document A nor B names one and the storage is fresh.
     const demoImages = [...new Set(Array.from(demo.matchAll(/#asset-([0-9a-f]{64})/g), m => m[1]))];
