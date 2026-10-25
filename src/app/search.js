@@ -435,10 +435,17 @@ function drawHighlight(found){
 // and the records it holds and has not delivered yet count as such a change.
 // A change of an attribute does not: a filter hides a row by a class or by
 // CSS, and whether a row is hidden is read when the search runs. The search
-// thus knows nothing of the render. Without MutationObserver every search
-// reads the root. Records of attributes are passed over, should an
-// implementation deliver them unasked (linkedom does).
-const changed = records => records.some(r => r.type !== 'attributes');
+// thus knows nothing of the render. Nor does a change inside a transient
+// element, which collectPlaces() does not read: a table filter's counter,
+// rewritten on every key typed in its field, a live viewer drawing. Without
+// MutationObserver every search reads the root. Records of attributes are
+// passed over, should an implementation deliver them unasked (linkedom does).
+const TRANSIENT_SEL = '[' + TRANSIENT_ATTR + ']';
+const inTransient = node => {
+  const el = node.nodeType === 1 ? node : node.parentElement;
+  return !!el && !!el.closest(TRANSIENT_SEL);
+};
+const changed = records => records.some(r => r.type !== 'attributes' && !inTransient(r.target));
 function placesOf(root){
   if (root !== observed){
     if (observer) observer.disconnect();

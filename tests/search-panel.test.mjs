@@ -518,6 +518,42 @@ test('a change of the root\'s nodes or text drops the kept places: a diagram dra
   assert.deepEqual(p.texts(), ['Mermaid-Diagramm: Abholbereit']);
 });
 
+// linkedom gives every record of a subtree the observed root as its target,
+// so this case gives the search an observer whose records it writes itself,
+// as a browser delivers them.
+test('typing in a table filter keeps the places: its counter, transient, changes no place; a change of the document still drops them (audit 2026-10-25, finding 11)', async () => {
+  const counter = '<span class="dokufix-filter-count">2 von 2</span>';
+  const p = await open(filterField.replace('</div>', counter + '</div>') + table([{ text: 'Zitronenfalter Ost' }, { text: 'Zitronenfalter West' }]) + '<p>Ohne den Begriff.</p>');
+  let pending = [];
+  globalThis.MutationObserver = class { observe(){} disconnect(){} takeRecords(){ const r = pending; pending = []; return r; } };
+  const reads = counted(p.root.querySelector('p').firstChild);
+  const field = p.root.querySelector('.' + FILTER_INPUT_CLASS);
+  const count = p.root.querySelector('.dokufix-filter-count');
+  p.search.openSearch();
+  await p.type('Zitronenfalter');
+  reads.n = 0;
+  // What the filter does on a key: hides a row, rewrites its counter; the search runs again.
+  field.value = 'West';
+  p.root.querySelectorAll('tr')[0].classList.add(FILTER_OUT_CLASS);
+  count.textContent = '1 von 2';
+  pending.push({ type: 'childList', target: count });
+  field.dispatchEvent(new p.window.Event('input', { bubbles: true }));
+  await sleep(AFTER);
+  assert.deepEqual(p.texts(), ['Tabelle: Zitronenfalter Ost (ausgeblendet)', 'Tabelle: Zitronenfalter West']);
+  assert.equal(reads.n, 0, 'the search again reads the places kept');
+  count.firstChild.data = '0 von 2';
+  pending.push({ type: 'characterData', target: count.firstChild });
+  await p.type('Zitronenfalter ');
+  assert.equal(reads.n, 0, 'nor does a change of the counter\'s text node drop them');
+  // A change of the document does.
+  const cell = p.root.querySelectorAll('td')[1].firstChild;
+  cell.data = 'Zitronenfalter Süd';
+  pending.push({ type: 'characterData', target: cell });
+  await p.type('Zitronenfalter');
+  assert.ok(reads.n > 0, 'a changed cell drops the places');
+  assert.deepEqual(p.texts(), ['Tabelle: Zitronenfalter Ost (ausgeblendet)', 'Tabelle: Zitronenfalter Süd']);
+});
+
 // ---------- a facet table in a closed <details> (story 5.16, N8) ----------
 test('a facet table in a closed <details>: no row says " (ausgeblendet)", and a click opens the <details> and scrolls to the row', async () => {
   const hiddenByFacet = new Set();
