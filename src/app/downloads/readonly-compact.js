@@ -1,7 +1,8 @@
+import { escapeHtml } from '../html.js';
 import { gzipB64 } from '../gzip.js';
 import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
-import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml, readerScript } from './export-body.js';
+import { buildExportBody, readonlyCss, bodyClassForExport, buildMetaFooterHtml, readerScript } from './export-body.js';
 
 // --- Download #2c — read-only, fully gzip-compressed, tiny JS decoder ---
 export async function downloadReadonlyCompact(){
@@ -29,7 +30,7 @@ export async function downloadReadonlyCompact(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escTitle(title)}</title>
+<title>${escapeHtml(title)}</title>
 <style>${readonlyCss()}</style>
 </head>
 <body${bodyClassForExport()}>

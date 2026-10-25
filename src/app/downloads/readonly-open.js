@@ -1,6 +1,7 @@
+import { escapeHtml } from '../html.js';
 import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
-import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml } from './export-body.js';
+import { buildExportBody, readonlyCss, bodyClassForExport, buildMetaFooterHtml } from './export-body.js';
 import { removeFilterMarks } from '../filter.js';
 
 // --- Download #2a — pure read-only, no JS, fully open HTML ---
@@ -13,7 +14,7 @@ export async function downloadReadonlyOpen(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escTitle(title)}</title>
+<title>${escapeHtml(title)}</title>
 <style>${readonlyCss()}</style>
 </head>
 <body${bodyClassForExport()}>

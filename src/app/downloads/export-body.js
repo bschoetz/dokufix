@@ -25,11 +25,6 @@ import { showFilteredRows } from '../filter.js';
 // wrong file that looks right. The menu catches what a download throws and
 // tells the user that no file was written, and why.
 
-// Elements that exist only while the page runs; see transient.js.
-function removeTransientElements(copy){
-  removeTransient(copy);
-}
-
 // Every image asset becomes a data: URL — the receiver of a read-only export
 // has no IDB and may not even have JS, so blob URLs (live preview) and
 // "#asset-…" refs (unresolved) both need to become self-contained.
@@ -43,7 +38,7 @@ async function inlineImages(copy){
 // takes a hidden row along. The field itself has gone with the transient
 // elements; the mark of a filter table stays for `schlank` and `kompakt`, which
 // build their field from it, and `nur-lesen` hands in removeFilterMarks itself.
-const EXPORT_STEPS = [removeTransientElements, showFilteredRows, inlineImages];
+const EXPORT_STEPS = [removeTransient, showFilteredRows, inlineImages];
 
 // The reader bundle (src/reader.js), the table filter and the search, read
 // from the page's data block #dokufix-reader-js: the script `schlank` and
@@ -147,7 +142,6 @@ export function bodyClassForExport(){
   return document.body.classList.contains('numbered') ? ' class="numbered"' : '';
 }
 
-export function escTitle(s){ return String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c])); }
 
 // Small metadata block appended to read-only exports. Always emits at least
 // an export timestamp — even on files that have never been saved (v0) — so

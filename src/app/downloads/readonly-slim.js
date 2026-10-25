@@ -1,10 +1,11 @@
+import { escapeHtml } from '../html.js';
 import { gzipB64 } from '../gzip.js';
 import { DIAGRAM_CLASS, DIAGRAM_SVG_CLASS } from '../diagrams.js';
 import { DOWNLOADS_CLASS } from '../diagram-downloads.js';
 import { licencesHtml } from '../licences.js';
 import { UNPACKED_EVENT, UNPACKING_ATTR } from '../search.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
-import { buildExportBody, readonlyCss, bodyClassForExport, escTitle, buildMetaFooterHtml, readerScript } from './export-body.js';
+import { buildExportBody, readonlyCss, bodyClassForExport, buildMetaFooterHtml, readerScript } from './export-body.js';
 
 // --- Download #2b — schlank: text plain, only the diagrams' SVGs gzipped per-element ---
 export async function downloadReadonlySlim(){
@@ -66,7 +67,7 @@ export async function downloadReadonlySlim(){
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${escTitle(title)}</title>
+<title>${escapeHtml(title)}</title>
 <style>${readonlyCss()}</style>
 ${noscript}
 </head>

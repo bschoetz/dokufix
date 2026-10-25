@@ -418,7 +418,7 @@ test('the export steps: the class of a hidden row goes from every read-only expo
 });
 test('the steps sit in the export path: the shared one after the transient elements are gone and before the images, the mark\'s in nur-lesen alone', () => {
   const src = fs.readFileSync(path.join(here, '../src/app/downloads/export-body.js'), 'utf8');
-  assert.match(src, /const EXPORT_STEPS = \[removeTransientElements, showFilteredRows, inlineImages\];/);
+  assert.match(src, /const EXPORT_STEPS = \[removeTransient, showFilteredRows, inlineImages\];/);
   const read = name => fs.readFileSync(path.join(here, '../src/app/downloads/' + name), 'utf8');
   assert.match(read('readonly-open.js'), /buildExportBody\(\[removeFilterMarks\]\)/);
   for (const name of ['readonly-slim.js', 'readonly-compact.js', 'with-editor.js']) assert.ok(!read(name).includes('removeFilterMarks'), name);

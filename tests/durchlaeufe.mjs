@@ -422,7 +422,7 @@ const PASS_EDITS = [
 ];
 const EXPORT_STEP_MESSAGE = 'Absicht: der Exportschritt wirft (durchlaeufe)';
 const EXPORT_EDITS = [
-  { after: "const EXPORT_STEPS = [removeTransientElements, showFilteredRows, inlineImages];\n",
+  { after: "const EXPORT_STEPS = [removeTransient, showFilteredRows, inlineImages];\n",
     add: "EXPORT_STEPS.push(() => { throw new Error('" + EXPORT_STEP_MESSAGE + "'); });\n" },
 ];
 // Builds a copy of src/ in which one module got the given lines, or, where an
