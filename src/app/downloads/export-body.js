@@ -142,7 +142,6 @@ export function bodyClassForExport(){
   return document.body.classList.contains('numbered') ? ' class="numbered"' : '';
 }
 
-
 // Small metadata block appended to read-only exports. Always emits at least
 // an export timestamp — even on files that have never been saved (v0) — so
 // every read-only artifact carries a "when was this generated" anchor. From

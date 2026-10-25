@@ -167,6 +167,6 @@ Ein Z, das in einer Lücke die Zeile wechselt, wählt der Router fast nie (9 von
 
 **Was daraus folgt:**
 1. **Ein Zählmodell, das R12 trägt, müsste den Router nachbauen.** Der Router wägt viele Kosten gegeneinander ab: Spuren, Ports an der Seite einer Aufgabe, die Reihenfolge der Flüsse, einen zweiten Durchgang und zwei Varianten des ganzen Bilds. Ein gieriger Router auf Spaltenebene weicht davon ab, und zwar gerade bei den Fällen, um die es R12 geht: zwei Wege in einer Zeile, lange Flüsse um das Bild herum.
-2. **Wo das Zählen trägt, ist es eingesetzt:** R10 entscheidet nach `mini` und probiert nur bei Gleichstand (`options.rowOrder`).
+2. **Wo das Zählen trägt, ist es eingesetzt:** R10 entscheidet nach `mini` und probiert nur bei Gleichstand (`options.rowOrder`; am 2026-10-25 aus dem Produkt herausgenommen, Audit Fund 20).
 3. **Für die Laufzeit ist das Zählen der falsche Hebel.** Ein direkterer: Jeder Probelauf (`runGrid()`) ruft `finishGrid()` zweimal auf, mit und ohne den zweiten Durchgang des Routers, und nimmt das bessere Bild. Würden die Proben nur einen Durchgang rechnen und erst das Ergebnis beide, halbierten sich die Läufe der Proben; die Bilder könnten sich dabei ändern. Das ist nicht gemessen.
 

@@ -1,6 +1,6 @@
 // --- Nodes -----------------------------------------------------------------
 // What the marker pass and its components ask of a node (markers.js, cards.js,
-// steps.js). Pure logic: nothing here touches a page.
+// steps.js), and the callouts and facets. Pure logic: nothing here touches a page.
 
 // nodeType values; the global Node exists only in a page.
 export const ELEMENT = 1, TEXT = 3, COMMENT = 8;
