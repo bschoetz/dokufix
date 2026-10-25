@@ -30,6 +30,7 @@
 // Pure, for Node and the browser.
 //
 // Nothing done on loading.
+import { maskNotMarkup } from '../app/bpmn-layout.js';
 
 const DEF = /<(\/?)((?:[\w.-]+:)?)definitions\b[^>]*?(\/?)>/g;
 // Comments and CDATA sections blanked with spaces of the same length: tags inside them do not count.
@@ -122,7 +123,15 @@ export function extractXml(text){
   };
 }
 
-// An element with a namespace prefix or without, with its attributes (also with ">" in quotes).
-export const ATTRS = '(?:[^>"\'/]|"[^"]*"|\'[^\']*\'|\\/(?!>))*';
-const DIAGRAM = new RegExp('<((?:[\\w.-]+:)?BPMNDiagram)\\b' + ATTRS + '(?:\\/>|>[\\s\\S]*?<\\/\\1\\s*>)\\s*', 'g');
-export const ohneDi = xml => String(xml).replace(DIAGRAM, '');
+// An element with a namespace prefix or without, with its attributes (also with ">" in quotes). A quoted value ends
+// at "<", which no attribute value holds, and a diagram's body at the next diagram: an opening without its end then
+// costs its own stretch of text, not all of it (audit of 2026-10-25: quadratic on 400 KB of broken openings).
+export const ATTRS = '(?:[^>"\'/]|"[^"<]*"|\'[^\'<]*\'|\\/(?!>))*';
+const DIAGRAM = new RegExp('<((?:[\\w.-]+:)?BPMNDiagram)\\b' + ATTRS + '(?:\\/>|>(?:(?!<(?:[\\w.-]+:)?BPMNDiagram\\b)[\\s\\S])*?<\\/\\1\\s*>)\\s*', 'g');
+// Found outside comments, CDATA and PIs (maskNotMarkup(), which keeps every place), cut from the text as it is.
+export const ohneDi = xml => {
+  const text = String(xml);
+  let out = '', at = 0;
+  for (const m of maskNotMarkup(text).matchAll(DIAGRAM)){ out += text.slice(at, m.index); at = m.index + m[0].length; }
+  return out + text.slice(at);
+};

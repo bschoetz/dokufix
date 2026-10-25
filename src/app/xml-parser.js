@@ -140,7 +140,9 @@ export function parseXml(input){
   const { name: NAME_RE, ncStart: NC_START_RE } = getPatterns();
   let text = String(input);
   if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
-  if (text.indexOf('\r') !== -1) text = text.replace(/\r\n?/g, '\n');
+  // bpmn-moddle writes a CRLF in an attribute as "\r&#10;" and reads it as one
+  // line break, as bpmn-js draws it; the CR before the reference goes first.
+  if (text.indexOf('\r') !== -1) text = text.replace(/\r(?=&#(?:10|x[aA]);)/g, '').replace(/\r\n?/g, '\n');
   const n = text.length;
   const fail = (code, reason, at) => { throw new XmlError(code, reason, text, at); };
   // Forbidden characters first (§2.2), at the place of the first.

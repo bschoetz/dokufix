@@ -1,5 +1,6 @@
 import { BPMN_VIEWER_CONFIG } from '../app/bpmn.js';
 import { diagramFileName } from '../app/diagram-downloads.js';
+import { diagramToOpen } from '../app/live-viewer.js';
 import { ICON } from './icons.js';
 
 // --- The picture of a diagram and its downloads in the BPMN tools ----------
@@ -118,7 +119,8 @@ export async function draw(s, xml, { decorate, open }){
   document.body.appendChild(host);
   const off = new BpmnJS({ container: host, ...BPMN_VIEWER_CONFIG });
   try {
-    await off.importXML(xml);
+    // The first diagram with shapes, as the app opens it: an empty one before it is no picture.
+    await off.importXML(xml, diagramToOpen(xml) || undefined);
     decorate(off);
     pic.innerHTML = (await off.saveSVG()).svg;
   } finally { off.destroy(); host.remove(); }

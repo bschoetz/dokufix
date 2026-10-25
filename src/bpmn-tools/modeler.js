@@ -1,4 +1,5 @@
 import { ICON } from './icons.js';
+import { diagramToOpen } from '../app/live-viewer.js';
 
 // --- The modeler of the BPMN tools -----------------------------------------
 // bpmn-js Modeler 18.31.0, the same version as the viewer, in the page in the
@@ -56,7 +57,7 @@ export async function openModeler(title, xml, { take, fileBase, takeLabel = 'Als
     const m = new M({ container: box.querySelector('.mcanvas'), keyboard: { bindTo: document } });
     modeler.m = m;
     if (xml == null) await m.createDiagram();
-    else { await m.importXML(xml); m.get('canvas').zoom('fit-viewport', 'auto'); }
+    else { await m.importXML(xml, diagramToOpen(xml) || undefined); m.get('canvas').zoom('fit-viewport', 'auto'); }
     m.on('commandStack.changed', () => { if (modeler) modeler.dirty = true; });
   } catch (e){
     const d = document.createElement('div'); d.className = 'err'; d.style.margin = '16px'; d.textContent = (e && e.message) || String(e);

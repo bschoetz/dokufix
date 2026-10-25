@@ -1624,6 +1624,9 @@ test('a name with a literal line break is measured in two lines, as bpmn-js draw
   const label = nl => readDiagram(layoutJob(xmlOf('<bpmn:process id="P"><bpmn:startEvent id="S" name="Antrag' + nl + 'neu"/></bpmn:process>')).xml).labels.S;
   const literal = label('\n'), escaped = label('&#10;');
   assert.deepEqual(literal, escaped);
+  // bpmn-moddle writes a CRLF in a name as "\r&#10;": one line break, as bpmn-js draws it (ponytail review of 2026-10-25).
+  assert.deepEqual(label('\r&#10;'), escaped, 'CR before the escaped LF');
+  assert.deepEqual(label('\r\n'), escaped, 'a literal CRLF');
   assert.deepEqual([literal[3], measureLabel('Antrag neu').h], [measureLabel('Antrag\nneu').h, 14], 'two lines, not one');
 });
 

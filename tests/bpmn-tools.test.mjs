@@ -199,8 +199,17 @@ test('ohneDi(): a self-closing empty BPMNDiagram goes too, so the assistant\'s A
   const di = '<bpmndi:BPMNDiagram id="D" name="a>b"/>\n  <bpmndi:BPMNDiagram id="E"><bpmndi:BPMNPlane id="P" bpmnElement="p"/></bpmndi:BPMNDiagram>\n';
   const input = ROOT.replace('</bpmn:definitions>', di + '</bpmn:definitions>');
   assert.equal(ohneDi(input), ROOT);
-  const laidOut = ohneDi(input).replace('</bpmn:definitions>', '<bpmndi:BPMNDiagram id="A2"><bpmndi:BPMNPlane id="P2" bpmnElement="p"/></bpmndi:BPMNDiagram></bpmn:definitions>');
-  assert.equal((laidOut.match(/<(?:[\w.-]+:)?BPMNDiagram\b/g) || []).length, 1);
+});
+
+test('ohneDi(): a diagram tag in a comment is no diagram, and broken openings cost linear time (ponytail review of 2026-10-25)', () => {
+  const di = '<bpmndi:BPMNDiagram id="E"><bpmndi:BPMNPlane id="P" bpmnElement="p"/></bpmndi:BPMNDiagram>\n';
+  const commented = ROOT.replace('<bpmn:process', '<!-- <bpmndi:BPMNDiagram> folgt unten -->\n  <bpmn:process').replace('</bpmn:definitions>', di + '</bpmn:definitions>');
+  assert.equal(ohneDi(commented), commented.replace(di, ''));
+  // 400 KB of openings without their ends: quadratic before, 16 s.
+  const broken = '<bpmn:definitions>' + '<bpmndi:BPMNDiagram a="'.repeat(17000) + '</bpmn:definitions>';
+  const t0 = performance.now();
+  ohneDi(broken);
+  assert.ok(performance.now() - t0 < 1000, Math.round(performance.now() - t0) + ' ms');
 });
 test('extractXml(): a fenced answer gives the block\'s XML and counts the lines with text before and after', () => {
   const text = '## BPMN\n\nHier ist das Diagramm:\n\n```xml\n' + XML + '\n```\n\nDer Prozess beginnt mit dem Antrag.\nViel Erfolg!';

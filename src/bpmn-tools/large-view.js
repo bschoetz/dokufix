@@ -1,4 +1,5 @@
 import { BPMN_VIEWER_CONFIG } from '../app/bpmn.js';
+import { diagramToOpen } from '../app/live-viewer.js';
 import { registerEscape } from '../app/escape.js';
 import { ICON } from './icons.js';
 
@@ -36,7 +37,7 @@ export async function openLarge(title, xml, { decorate, edit } = {}){
   if (edit) box.querySelector('.edit').onclick = () => { closeLarge(); edit(); };
   for (const b of box.querySelectorAll('.steps button')) b.onclick = () => step(b.dataset.z);
   try {
-    await viewer.importXML(xml);
+    await viewer.importXML(xml, diagramToOpen(xml) || undefined);
     if (decorate) decorate(viewer);
     step('fit');
     // The step the view stands on is pressed; after the mouse wheel none.
