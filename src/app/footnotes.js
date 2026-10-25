@@ -158,7 +158,7 @@ export function buildStaticRailHtml(root){
   let html = '<aside class="dokufix-rail has-items" aria-label="Navigation"><ol>';
   for (const h of items){
     html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
-            '<a href="#' + h.id + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
+            '<a href="#' + escapeHtml(h.id) + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
   }
   html += '</ol></aside>';
   return html;

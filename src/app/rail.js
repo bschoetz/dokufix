@@ -43,7 +43,7 @@ export function buildRail(root){
   let html = '<ol>';
   for (const h of items){
     html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
-            '<a href="#' + h.id + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
+            '<a href="#' + escapeHtml(h.id) + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
   }
   html += '</ol>';
   railEl.innerHTML = html;

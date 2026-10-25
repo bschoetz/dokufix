@@ -74,7 +74,7 @@ function buildTocHtml(headings, maxLevel){
     while (open.length && open[open.length-1] > lv){ html += '</li></ol>'; open.pop(); }
     if (!open.length || open[open.length-1] < lv){ html += '<ol>'; open.push(lv); }
     else { html += '</li>'; }
-    html += '<li><a href="#' + h.id + '">' + escapeHtml(headingLabelText(h)) + '</a>';
+    html += '<li><a href="#' + escapeHtml(h.id) + '">' + escapeHtml(headingLabelText(h)) + '</a>';
   }
   while (open.length){ html += '</li></ol>'; open.pop(); }
   return html;

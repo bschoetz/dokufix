@@ -11,6 +11,7 @@
 // chips.js, markers.js, tables.js, filter.js.
 
 import test from 'node:test';
+import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { runPasses } from '../src/app/passes.js';
@@ -171,6 +172,14 @@ test('heading ids, the inline table of contents and the metadata panel, driven b
     ['#uebersicht Übersicht', '#groesse-und-mass Größe und Maß', '#uebersicht-2 Übersicht']);
   // The marker written as code is talked about, not used.
   assert.equal(root.querySelector('p > code').textContent, '[[toc]]');
+});
+test('an id the author wrote on a heading stays one attribute in the table of contents (audit 2026-10-25, finding 15)', async () => {
+  const root = rootWith('<p>[[toc]]</p><h2 id=\'a"b&amp;c\'>Eins</h2><h2>Zwei</h2>');
+  assert.deepEqual(await runPasses(root, [{ name: 'Überschriften', run: assignHeadingIds }, { name: 'Inhaltsverzeichnis', run: processInlineToc }]), []);
+  const links = Array.from(root.querySelectorAll('nav.dokufix-toc a'));
+  assert.deepEqual(links.map(a => [a.getAttribute('href'), a.textContent]), [['#a"b&c', 'Eins'], ['#zwei', 'Zwei']]);
+  // The rail and the static rail of the exports write the link the same way; both need a page to load.
+  for (const f of ['rail.js', 'footnotes.js']) assert.match(fs.readFileSync(new URL('../src/app/' + f, import.meta.url), 'utf8'), /'<a href="#' \+ escapeHtml\(h\.id\) \+ '">'/, f);
 });
 test('a real pass that fails on its input is contained like any other', async t => {
   const root = rootWith('<h2>Eins</h2><p>[[toc]]</p>');
