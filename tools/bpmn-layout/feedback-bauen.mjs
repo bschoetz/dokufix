@@ -48,7 +48,7 @@ const lauf = readLauf(laufName);
 const isPool = n => POOL_SAETZE.includes((INPUTS.get(n) || {}).set);
 const explicit = names.length ? names : saetze ? namesOf(saetze) : alle ? Object.keys(lauf.inputs) : null;
 if (!art) art = explicit && explicit.length && explicit.every(isPool) ? 'Pools' : 'A';
-// Eine andere Art (etwa LMM, review-lmm.mjs) hat ihr eigenes Archiv und nimmt nur genannte Eingaben.
+// Eine andere Art hat ihr eigenes Archiv und nimmt nur genannte Eingaben.
 if (!['A', 'Pools'].includes(art) && !explicit) throw new Error('Art ' + art + ': nur mit Namen, --satz oder --alle');
 if (!ziel) ziel = art === 'Pools' ? 'bpmn-feedback-pools.html' : art === 'A' ? 'bpmn-feedback.html' : 'bpmn-feedback-' + art.toLowerCase() + '.html';
 const ofArt = n => art === 'Pools' ? isPool(n) : !isPool(n);
