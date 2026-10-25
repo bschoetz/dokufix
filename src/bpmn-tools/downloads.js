@@ -88,6 +88,8 @@ export function pngButton(name, svgText){
 }
 // At the click: the link gets its name and a blob: URL of the file, freed
 // again 1.5 s later, as pngButton() does (audit 2026-10-25, finding 18).
+// shortcut: "save link as" and a middle click fire no click and get no file; only
+// worth a fix if someone uses them.
 const blobAtClick = (link, name, blob) => () => {
   link.download = name();
   const url = link.href = URL.createObjectURL(blob());

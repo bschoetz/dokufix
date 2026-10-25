@@ -165,4 +165,6 @@ test('deriveDocTitle skips fenced code: a shell comment is no title, a heading a
   assert.equal(deriveDocTitle('````md\n```\n# Im Beispiel\n````\n# Danach\n', 'ohne'), 'Danach');
   assert.equal(deriveDocTitle('~~~\n```\n# Drin\n~~~\n# Draußen\r\n', 'ohne'), 'Draußen');
   assert.equal(deriveDocTitle('```\n# Nie geschlossen\n', 'ohne'), 'ohne');
+  // Backticks with a backtick after them open no fence: inline code (review of finding 14).
+  assert.equal(deriveDocTitle('```npm ci``` startet alles.\n\n# Handbuch\n', 'ohne'), 'Handbuch');
 });

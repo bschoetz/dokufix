@@ -272,10 +272,10 @@ export function splitFrontmatter(src){
 export function deriveDocTitle(source, fallback){
   let fence = null;
   for (const line of splitFrontmatter(source).body.split('\n')){
-    const f = /^ {0,3}(`{3,}|~{3,})/.exec(line);
+    const f = /^ {0,3}(`{3,}|~{3,})(.*)/.exec(line);
     if (fence){
-      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !line.slice(f[0].length).trim()) fence = null;
-    } else if (f) fence = f[1];
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !f[2].trim()) fence = null;
+    } else if (f && !(f[1][0] === '`' && f[2].includes('`'))) fence = f[1];  // ```a``` is inline code, no fence
     else {
       const m = /^#\s+(.+?)\s*$/.exec(line);
       if (m) return m[1].trim();

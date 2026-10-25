@@ -306,6 +306,9 @@ test('extractXml(): of fenced blocks the first with a whole root, before one tha
 test('extractXml(): the whole XML without a fence, then a block that only shows the opening tag: the XML, not cut off (audit 2026-10-25, finding 19)', () => {
   const text = 'Hier das XML:\n' + XML + '\nDie Wurzel noch einmal:\n```xml\n<bpmn:definitions …>\n```';
   assert.deepEqual(extractXml(text), { ...plain, xml: XML, before: 1, after: 4, more: true });
+  // Both tags named in prose, then a block cut off: still cut off (review of finding 19).
+  const cut = 'Das Wurzelelement `<bpmn:definitions>` öffnet, `</bpmn:definitions>` schließt.\n```xml\n<?xml version="1.0"?>\n<bpmn:definitions xmlns:bpmn="x">\n<bpmn:process id="p">\n';
+  assert.deepEqual(extractXml(cut), { ...plain, xml: cut, cutOff: '</bpmn:definitions>' });
 });
 test('extractXml(): only XML comes back byte-identical, with no line removed', () => {
   for (const xml of [XML, ROOT, '<!-- Kopf -->\n' + XML + '\n<!-- Ende -->', XML.replace(/\n/g, '\r\n')]){

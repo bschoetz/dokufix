@@ -6,7 +6,8 @@
 // Code block first: where the text holds fenced blocks (``` or ~~~, three or
 // more, up to three spaces of indent; a block without its closing fence runs
 // to the end), the first block that holds a whole root is the text the cut
-// works on, else the first that holds an opening definitions tag. Then the
+// works on, else the first that holds an opening definitions tag (a closed
+// one only where the text outside the blocks holds no whole root). Then the
 // root: the opening definitions tag with any prefix and the next closing tag
 // with the same prefix after it; of several opening tags before that closing
 // tag the last (definitions never nest, so the earlier ones are prose); a
@@ -89,11 +90,15 @@ export function extractXml(text){
   const none = { xml: text, before: 0, after: 0, more: false, cutOff: null };
   let from = 0, to = text.length, more = false;
   const blocks = fences(text);
-  // The first block with a whole root, else the first with an opening tag, unless the text outside the blocks holds a
-  // whole root: then that one, not a block that only shows the tag (audit 2026-10-25, finding 19).
+  // The first block with a whole root, else the first with an opening tag. A closed block that only shows the tag
+  // loses against a whole root outside the blocks; a block cut off (no closing fence, it runs to the end) never does,
+  // since prose may name both tags before it (audit 2026-10-25, finding 19, and its review).
   let i = blocks.findIndex(k => root(text.slice(k.start, k.end))?.end !== undefined);
-  const outside = blocks.reduce((t, k) => t.slice(0, k.start) + ' '.repeat(k.end - k.start) + t.slice(k.end), text);
-  if (i < 0 && root(outside)?.end === undefined) i = blocks.findIndex(k => hasRoot(text.slice(k.start, k.end)));
+  if (i < 0){
+    const outside = blocks.reduce((t, k) => t.slice(0, k.start) + ' '.repeat(k.end - k.start) + t.slice(k.end), text);
+    const whole = root(outside)?.end !== undefined;
+    i = blocks.findIndex(k => hasRoot(text.slice(k.start, k.end)) && (!whole || k.end === text.length));
+  }
   if (i >= 0){
     ({ start: from, end: to } = blocks[i]);
     more = blocks.slice(i + 1).some(k => hasRoot(text.slice(k.start, k.end)));
