@@ -1190,12 +1190,17 @@ test('findHits lowers a text whose length lowering does not change as a whole, n
   }
 });
 
-test('findHits: what lowering a whole text would change is lowered one character at a time, as before: the capital sigma, a longer lowered form, a character outside the BMP', () => {
-  // Lowered whole, "ΟΔΟΣ" would end in the final sigma "ς"; one at a time it is "σ", and stays so.
+test('findHits: the final sigma is a sigma, in a text lowered whole and one character at a time (search audit of 2026-10-26, finding 2)', () => {
+  // Lowered whole, "ΟΔΟΣ" ends in the final sigma "ς"; one at a time it would be "σ". Case ignored, both are "σ".
   assert.equal('ΟΔΟΣ'.toLocaleLowerCase('de'), 'οδος');
-  assert.deepEqual(findHits('οδοσ', 'Die ΟΔΟΣ hier'), [{ start: 4, end: 8 }]);
-  assert.deepEqual(findHits('οδος', 'Die ΟΔΟΣ hier'), []);
-  assert.deepEqual(findHits('ΟΔΟΣ', 'die οδοσ'), [{ start: 4, end: 8 }]);
+  for (const [term, text] of [['οδοσ', 'Die ΟΔΟΣ hier'], ['οδος', 'Die ΟΔΟΣ hier'], ['ΟΔΟΣ', 'die οδοσ'], ['ΟΔΟΣ', 'die οδος'], ['οδος', 'die οδοσ'], ['οδος', 'Cafe\u0301 ΟΔΟΣ'], ['ΟΔΟΣ', 'Cafe\u0301 οδος']])
+    assert.equal(findHits(term, text).length, 1, JSON.stringify([term, text]));
+  assert.deepEqual(findHits('οδος', 'Die ΟΔΟΣ hier'), [{ start: 4, end: 8 }]);
+  // Case-sensitive, nothing is lowered, and "ς" is not "σ".
+  assert.deepEqual(findHits('οδος', 'die οδοσ', { caseSensitive: true }), []);
+});
+
+test('findHits: what lowering a whole text would change is lowered one character at a time, as before: a longer lowered form, a character outside the BMP', () => {
   // "İ" lowers to two units: the hits behind it keep the ranges of the original text.
   assert.deepEqual(findHits('tabelle', 'İ Tabelle'), [{ start: 2, end: 9 }]);
   // A surrogate pair, lowered whole: a hit behind it and one over it.

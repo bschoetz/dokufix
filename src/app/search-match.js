@@ -45,11 +45,11 @@
 // character, the ignored ones between them included, none before or after.
 // Where nothing of that can happen, without fuzzy, marks and invisible
 // characters, the text is lowered whole,
-// which is one call in place of one per character: where that leaves its
-// length as it is and the text holds no capital sigma "Σ". Lowered whole, a
-// "Σ" at the end of a word becomes "ς", one at a time always "σ"; the term
-// and the text stay compared one at a time there, as they always were. No
-// other character of German case rules lowers by its neighbours, and one
+// which is one call in place of one per character, where that leaves its
+// length as it is. Lowered whole, a "Σ" at the end of a word becomes "ς", one
+// at a time "σ"; case ignored, the final sigma "ς" is compared as "σ", so
+// "ΟΔΟΣ" and "οδος" find each other either way (search audit of 2026-10-26).
+// No other character of German case rules lowers by its neighbours, and one
 // whose lowered form is longer changes the length. A surrogate pair maps both
 // its units to the whole character, as one at a time.
 //
@@ -80,6 +80,8 @@ const CLUSTER = /\P{M}\p{M}*|\p{M}+/gsu;
 // invisible characters, and a character NFC replaces on its own (the Ohm sign).
 const NOT_PLAIN = /[\p{M}\u00AD\u200B\u2060\uFEFF]/u;
 const plain = text => !NOT_PLAIN.test(text) && text.normalize('NFC') === text;
+// Lowered by German rules, the final sigma as a sigma: one length, so the map stays.
+const lower = text => text.toLocaleLowerCase('de').replaceAll('ς', 'σ');
 
 // The text as it is compared, and for each unit of it where the character it
 // came from starts and ends in the original text: lowered unless case counts,
@@ -88,8 +90,8 @@ const plain = text => !NOT_PLAIN.test(text) && text.normalize('NFC') === text;
 function compared(text, { caseSensitive = false, fuzzy = false } = {}){
   const from = [], to = [];
   if (!fuzzy && plain(text)){
-    const whole = caseSensitive ? text : text.toLocaleLowerCase('de');
-    if (whole.length === text.length && !text.includes('Σ')){
+    const whole = caseSensitive ? text : lower(text);
+    if (whole.length === text.length){
       for (let i = 0; i < text.length; i++){
         const pair = isHigh(text.charCodeAt(i)) && isLow(text.charCodeAt(i + 1));
         from.push(i); to.push(i + (pair ? 2 : 1));
@@ -103,7 +105,7 @@ function compared(text, { caseSensitive = false, fuzzy = false } = {}){
     const ch = m[0], at = m.index;
     if (INVISIBLE.test(ch) || (fuzzy && IGNORED.test(ch))) continue;
     const composed = ch.normalize('NFC');
-    const part = caseSensitive ? composed : composed.toLocaleLowerCase('de');
+    const part = caseSensitive ? composed : lower(composed);
     for (let k = 0; k < part.length; k++){ from.push(at); to.push(at + ch.length); }
     out += part;
   }
