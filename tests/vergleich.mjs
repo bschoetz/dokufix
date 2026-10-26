@@ -53,7 +53,9 @@
 // One browser process per browser and run; every opening gets a browser
 // context of its own, with fresh storage and the clock frozen anew, so no page
 // inherits state from the one before it. The libraries the page loads from
-// jsDelivr are served to every context from tests/.cdn/ (tests/cdn.mjs).
+// jsDelivr are served to every context from tests/.cdn/ (tests/cdn.mjs); every
+// other request but file:, data: and blob: fails and is kept on the context,
+// and each file is checked to have asked for none (story 5.21).
 //
 // The run waits on conditions, not on fixed times: after a change of the
 // window's size, a style or a scroll position, two animation frames; after
@@ -770,11 +772,17 @@ async function freeze(context){
 
 // The libraries of the file under test, served from tests/.cdn/; set in main.
 let libraries = null;
+const LOCAL_URL = /^(?:file|data|blob):/, CDN_URL = /^https?:\/\/cdn\.jsdelivr\.net\//;
 // A browser context of its own for one opening: fresh storage, the libraries
 // served locally, and Date and Math.random frozen unless scripts are off.
 async function openContext(browser, options){
   const context = await browser.newContext({ ...CONTEXT, ...options });
   await libraries.serve(context);
+  // Offline (epic 5, "Done when" 5): every request but a local one and the
+  // libraries served above fails; each request beside a local one is kept.
+  context.asked = [];
+  context.on('request', r => { if (!LOCAL_URL.test(r.url())) context.asked.push(r.url()); });
+  await context.route(url => !LOCAL_URL.test(String(url)) && !CDN_URL.test(String(url)), route => route.abort('internetdisconnected'));
   if (options.javaScriptEnabled !== false) await freeze(context);
   return context;
 }
@@ -943,7 +951,7 @@ async function openVariant(browser, file, key, exp, width, scheme){
     await Promise.all(Array.from(document.images).map(img => img.complete ? null : new Promise(r => { img.onload = img.onerror = r; })));
   });
   await frames(page);
-  return { close: () => context.close(), page, errors };
+  return { close: () => context.close(), page, errors, asked: context.asked };
 }
 
 const NO_FALLBACKS = '.dokufix-fn-preview{position-try-fallbacks:none !important}';
@@ -3200,6 +3208,42 @@ async function assertSearch(page, check, key){
         await search('');
         await field.fill('');
       }
+
+      // --- "Done when" 3 in the browser (story 5.21): one term typed into the
+      // field of the first filter table and into the search, both switches
+      // off: the body rows the search highlights in that table are the rows
+      // the field keeps, and no result is marked hidden. Read in the page
+      // alone; " zeile " keeps fewer rows than "zeile", by the word boundary.
+      const m = await page.evaluate(rootSel => Array.from(document.querySelectorAll(rootSel + ' .dokufix-filter-input')).findIndex(f => {
+        const wrap = f.closest('.dokufix-filter').nextElementSibling, th = wrap && wrap.querySelector('th');
+        return !!th && th.textContent.trim() === 'Baustein';
+      }), ROOT_SEL);
+      if (m < 0) check('search: the demo text\'s first filter table, with its own field', false, json({ m }));
+      else {
+        const own = page.locator(ROOT_SEL + ' .dokufix-filter-input').nth(m);
+        const keptBy = [];
+        for (const term of ['zeile', ' zeile ']){
+          await search('');
+          await own.fill(term);
+          const same = await search(term);
+          const rows = await page.evaluate(([rootSel, m, name]) => {
+            const wrap = document.querySelectorAll(rootSel + ' .dokufix-filter-input')[m].closest('.dokufix-filter').nextElementSibling;
+            const body = Array.from(wrap.querySelector('table').tBodies[0].rows);
+            const lit = window.CSS && CSS.highlights && CSS.highlights.get(name) ? Array.from(CSS.highlights.get(name)) : [];
+            return { total: body.length,
+              kept: body.flatMap((tr, i) => getComputedStyle(tr).display !== 'none' ? [i] : []),
+              found: body.flatMap((tr, i) => lit.some(r => tr.contains(r.startContainer)) ? [i] : []) };
+          }, [ROOT_SEL, m, HIGHLIGHT]);
+          check('search: "' + term + '" typed into the field of the first filter table and into the search: the search finds in that table exactly the body rows the field keeps, and marks no result hidden',
+            rows.kept.length > 0 && rows.kept.length < rows.total && sameList(rows.found, rows.kept) && same.results.every(r => !r.hidden),
+            json({ ...rows, hidden: same.results.filter(r => r.hidden).map(r => r.text.slice(0, 40)) }));
+          keptBy.push(rows.kept.length);
+        }
+        // A matcher both share that lost the word boundary would keep as many rows for both.
+        check('search: " zeile " keeps fewer rows of the first filter table than "zeile", by the word boundary', keptBy[1] < keptBy[0], json(keptBy));
+        await search('');
+        await own.fill('');
+      }
     }
 
     // --- a row a facet filter hides: listed, marked "(ausgeblendet)"; a click
@@ -5269,7 +5313,7 @@ async function assertVariant(browser, file, key, exp, results, label){
       JSON.stringify(elements));
   }
 
-  const { close, page, errors } = await openVariant(browser, file, key, exp, 1400, 'light');
+  const { close, page, errors, asked } = await openVariant(browser, file, key, exp, 1400, 'light');
   try {
     const s = await page.evaluate(() => {
       // The content container: the preview in the editor file, <main> in a read-only export.
@@ -5786,6 +5830,13 @@ async function assertVariant(browser, file, key, exp, results, label){
       if (key !== 'kompakt') await assertLargeViewWithoutScripts(browser, file, check, exp, key);
     }
     check('no script errors', errors.length === 0, errors.join(' | '));
+    // Offline ("Done when" 5): with every other request failed, the opening
+    // asked for nothing, Mit Editor for its pinned libraries alone; the search
+    // checks above ran on this opening.
+    // A URL the author wrote into a document of one's own (--doc), such as a remote image, is the author's, not dokufix's.
+    const outside = [...new Set(asked)].filter(url => !(key === 'mit-editor' && libraries.urls.includes(url)) && !(md && md.includes(url)));
+    check('offline: every request but a local one failed, and the file asked for none' + (key === 'mit-editor' ? ' but its pinned libraries' : ''),
+      outside.length === 0, outside.join(' '));
   } finally {
     await close();
   }
