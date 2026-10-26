@@ -217,6 +217,19 @@ test('findHits: a blank at the end of the term asks for a word boundary after th
   assert.deepEqual(findHits('klick ', 'Klick klick.', { caseSensitive: true }), [{ start: 6, end: 11 }]);
   assert.deepEqual(covered('Ein Klick hier', findHits(' Klick h', 'Ein Klick hier')), ['Klick h']);
 });
+test('findHits: a character nobody sees is no word boundary, as the comparison ignores it (search audit of 2026-10-26, finding 1)', () => {
+  for (const invisible of ['­', '​', '⁠', '﻿']){
+    const text = 'Die Telefon' + invisible + 'nummer.';
+    const name = 'U+' + invisible.codePointAt(0).toString(16);
+    assert.deepEqual(findHits(' nummer', text), [], name + ' before the hit');
+    assert.deepEqual(findHits('Telefon ', text), [], name + ' after the hit');
+    assert.equal(findHits(' Telefonnummer ', text).length, 1, name + ' inside the hit');
+    // At a real boundary it stays one.
+    assert.equal(findHits('Telefon ', 'Telefon' + invisible + ' x').length, 1, name + ' before a blank');
+    assert.equal(findHits('Telefon ', 'Telefon' + invisible).length, 1, name + ' at the end');
+    assert.equal(findHits(' nummer', invisible + 'nummer').length, 1, name + ' at the start');
+  }
+});
 test('findHits, light fuzzy: a blank at the edge marks no boundary', () => {
   assert.deepEqual(covered('Klicken', findHits('Klick ', 'Klicken', { fuzzy: true })), ['Klick']);
   assert.deepEqual(covered('Doppelklick', findHits(' Klick', 'Doppelklick', { fuzzy: true })), ['klick']);

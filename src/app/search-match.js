@@ -22,7 +22,9 @@
 // character but a letter or a digit stands at a boundary, a hyphen, "_" and an
 // emoji too; a mark belongs to the character before it: a combining accent to
 // its letter, so "Cafe " does not find "Cafe" + U+0301, a variation selector
-// to its emoji, so " Klick" finds "⚠️Klick". The range is
+// to its emoji, so " Klick" finds "⚠️Klick"; the characters nobody sees
+// (below) are passed over, so " nummer" does not find "Telefon&shy;nummer"
+// (search audit of 2026-10-26). The range is
 // the word's, without the blank. A hit at no boundary is none, and the next
 // one is looked for from its second character.
 // Two options change that:
@@ -119,19 +121,22 @@ function charBefore(text, at){
   return text.slice(at - (pair ? 2 : 1), at);
 }
 // Whether a word goes on before index at of text: the character there, past
-// the marks it carries, is a letter or a digit; at the start there is none.
+// the marks it carries and the characters nobody sees, which the comparison
+// ignores, is a letter or a digit; at the start there is none.
 function wordBefore(text, at){
   while (at > 0){
     const ch = charBefore(text, at);
-    if (!MARK.test(ch)) return WORD.test(ch);
+    if (!MARK.test(ch) && !INVISIBLE.test(ch)) return WORD.test(ch);
     at -= ch.length;
   }
   return false;
 }
-// Whether a word goes on at index at of text: a letter or a digit stands
-// there, or a mark, which belongs to the character the hit ends with, so the
-// hit ends inside it; at the end of the text there is none.
+// Whether a word goes on at index at of text, past the characters nobody
+// sees: a letter or a digit stands there, or a mark, which belongs to the
+// character the hit ends with, so the hit ends inside it; at the end of the
+// text there is none.
 function wordAt(text, at){
+  while (at < text.length && INVISIBLE.test(text[at])) at++;
   if (at >= text.length) return false;
   const ch = String.fromCodePoint(text.codePointAt(at));
   return WORD.test(ch) || MARK.test(ch);
