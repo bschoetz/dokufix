@@ -1226,7 +1226,13 @@ test('collectPlaces: text directly in a block that is no place, a div, a dt and 
 test('collectPlaces: such a block is read without the places, lists and tables in it, which are places of their own; a block in it is text of it; one in a place is text of the place', () => {
   const html = '<div>Davor\n<p>Ein Absatz</p>\ndanach <span>und</span>\n<div>innen</div>\n<ul><li>Punkt</li></ul>\n</div>\n' +
     '<ul><li>Ein Punkt mit <div>Block</div></li></ul>\n<blockquote>\n<p>Ein Zitat</p>\n</blockquote>\n<div><strong>Nur fett</strong></div>\n';
-  assert.deepEqual(places(html), [['div', 'Davor danach und innen'], ['p', 'Ein Absatz'], ['li', 'Punkt'], ['li', 'Ein Punkt mit Block'], ['p', 'Ein Zitat'], ['strong', 'Nur fett']]);
+  assert.deepEqual(places(html), [['div', 'Davor danach und innen'], ['p', 'Ein Absatz'], ['li', 'Punkt'], ['li', 'Ein Punkt mit Block'], ['p', 'Ein Zitat'], ['div', 'Nur fett']]);
+});
+
+test('collectPlaces: a block that holds inline elements and no text node of its own is one place as well, not one per element (search audit of 2026-10-26, finding 3)', () => {
+  const html = '<div><b>Neue</b> <i>Preisliste</i></div>\n<dt><a href="#x">Begriff</a></dt>\n<div><span> </span><div>Innen</div></div>\n<div><img src="x.png" alt="Bild"></div>\n';
+  assert.deepEqual(places(html), [['div', 'Neue Preisliste'], ['dt', 'Begriff'], ['div', 'Innen']]);
+  assert.deepEqual(hitTexts(rootWith(html), 'Neue Preisliste'), [['Neue Preisliste']]);
 });
 
 test('collectPlaces: no block of the page\'s own is a place for its text: the field of a table filter with its counter, a warning, the inline table of contents, a callout, a facet group, a table\'s wrapper, a transient element', () => {

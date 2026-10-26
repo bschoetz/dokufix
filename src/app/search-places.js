@@ -102,12 +102,15 @@ import { TRANSIENT_ATTR } from './transient.js';
 // Raw HTML can put text where Markdown never does: directly in a `div`, a
 // `dt` or `dd`, the `summary` of an author's `details`, a `figcaption`, a
 // bare `blockquote`. Any element outside a place that holds a text node of
-// its own, not only white space, is a place of its own, read as a paragraph
+// its own, not only white space, or an inline element with such text, `b`,
+// `em`, `a`, `span` and their like, is a place of its own, read as a paragraph
 // is: without the places, lists, tables and code blocks in it, which are
 // places of their own, and with every other element in it, a `div` included,
 // as its text. Nothing inside it or inside any other place is such a place.
 // So a `dl` is no place, each of its `dt` and `dd` is one; a `details` with a
-// Markdown paragraph is none, its `summary` and the paragraph are. What is
+// Markdown paragraph is none, its `summary` and the paragraph are; a `div`
+// that holds `<b>Neue</b> <i>Preisliste</i>` is one place, "Neue Preisliste"
+// (search audit of 2026-10-26). What is
 // left out above stays out, a warning, the inline table of contents, the
 // field of a table filter with its counter, whatever is transient. An image's
 // `alt` is no text.
@@ -358,9 +361,16 @@ function ownReading(el, meta){
   return finish(r);
 }
 
-// Whether an element holds a text node of its own that is not white space.
+// The elements of a line of text: text of the block they stand in.
+const INLINE_TAGS = new Set(['A', 'ABBR', 'B', 'BDI', 'BDO', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'I', 'INS',
+  'KBD', 'MARK', 'Q', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR']);
+
+// Whether an element holds text of its own that is not white space: a text
+// node, or an inline element with such text that is not left out.
 function ownText(el){
-  for (let n = el.firstChild; n; n = n.nextSibling) if (n.nodeType === TEXT && /\S/.test(n.data)) return true;
+  for (let n = el.firstChild; n; n = n.nextSibling){
+    if (n.nodeType === TEXT ? /\S/.test(n.data) : n.nodeType === ELEMENT && INLINE_TAGS.has(tagOf(n)) && !excluded(n) && /\S/.test(n.textContent)) return true;
+  }
   return false;
 }
 
