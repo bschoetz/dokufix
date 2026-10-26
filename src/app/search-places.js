@@ -362,19 +362,20 @@ function ownReading(el, meta){
 }
 
 // The elements of a line of text: text of the block they stand in.
-const INLINE_TAGS = new Set(['A', 'ABBR', 'B', 'BDI', 'BDO', 'BIG', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'FONT', 'I', 'INS',
-  'KBD', 'LABEL', 'MARK', 'NOBR', 'OUTPUT', 'Q', 'RUBY', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRIKE', 'STRONG', 'SUB', 'SUP', 'TIME', 'TT', 'U', 'VAR']);
+const INLINE_TAGS = new Set(['A', 'ABBR', 'B', 'BDI', 'BDO', 'BIG', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'FONT', 'I', 'IMG', 'INS',
+  'KBD', 'LABEL', 'MARK', 'NOBR', 'OUTPUT', 'Q', 'RUBY', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRIKE', 'STRONG', 'SUB', 'SUP', 'TIME', 'TT', 'U', 'VAR', 'WBR']);
 
 // Whether an element holds text of its own that is not white space: a text
 // node, or an inline element with such text that is not left out, where no
 // other element stands beside it; a block beside it keeps the inline element
-// and the block places of their own.
+// and the block places of their own, and so does an inline element whose text
+// lies in blocks, a link around a card.
 function ownText(el){
   let inline = false, block = false;
   for (let n = el.firstChild; n; n = n.nextSibling){
     if (n.nodeType === TEXT){ if (/\S/.test(n.data)) return true; continue; }
     if (n.nodeType !== ELEMENT || tagOf(n) === 'BR' || excluded(n)) continue;
-    if (INLINE_TAGS.has(tagOf(n))) inline = inline || /\S/.test(n.textContent);
+    if (INLINE_TAGS.has(tagOf(n))){ const own = ownText(n); inline ||= own; block ||= !own && /\S/.test(n.textContent); }
     else block = true;
   }
   return inline && !block;

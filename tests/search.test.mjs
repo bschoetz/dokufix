@@ -1238,6 +1238,11 @@ test('collectPlaces: a block that holds inline elements and no text node of its 
   // A block beside the inline element: each stays a place of its own, as before.
   assert.deepEqual(places('<div><span>Kopf</span><div>Absatz eins</div><div>Absatz zwei</div></div>\n'), [['span', 'Kopf'], ['div', 'Absatz eins'], ['div', 'Absatz zwei']]);
   assert.deepEqual(places('<section><a href="#x">Nach oben</a><div>Kapitel eins</div></section>\n'), [['a', 'Nach oben'], ['div', 'Kapitel eins']]);
+  // An inline element around blocks counts as a block: a card behind a link keeps its places.
+  assert.deepEqual(places('<div><a href="#k"><div>Karte eins</div><div>Mehr dazu</div></a></div>\n'), [['div', 'Karte eins'], ['div', 'Mehr dazu']]);
+  assert.deepEqual(places('<div><b>Neue</b> <a href="#k"><div>Preisliste</div></a></div>\n'), [['b', 'Neue'], ['div', 'Preisliste']]);
+  // An image or a line break opportunity beside the inline elements is no block.
+  assert.deepEqual(places('<div><img src="x.png" alt=""> <b>Neue</b> <i>Preisliste</i></div>\n<div><b>Tele</b><wbr><b>fon</b></div>\n'), [['div', 'Neue Preisliste'], ['div', 'Telefon']]);
 });
 
 test('collectPlaces: no block of the page\'s own is a place for its text: the field of a table filter with its counter, a warning, the inline table of contents, a callout, a facet group, a table\'s wrapper, a transient element', () => {
