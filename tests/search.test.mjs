@@ -1233,6 +1233,11 @@ test('collectPlaces: a block that holds inline elements and no text node of its 
   const html = '<div><b>Neue</b> <i>Preisliste</i></div>\n<dt><a href="#x">Begriff</a></dt>\n<div><span> </span><div>Innen</div></div>\n<div><img src="x.png" alt="Bild"></div>\n';
   assert.deepEqual(places(html), [['div', 'Neue Preisliste'], ['dt', 'Begriff'], ['div', 'Innen']]);
   assert.deepEqual(hitTexts(rootWith(html), 'Neue Preisliste'), [['Neue Preisliste']]);
+  // Older inline elements, as pasted HTML gives them.
+  assert.deepEqual(places('<div><font>Neue</font> <tt>Preis</tt><big>liste</big></div>\n'), [['div', 'Neue Preisliste']]);
+  // A block beside the inline element: each stays a place of its own, as before.
+  assert.deepEqual(places('<div><span>Kopf</span><div>Absatz eins</div><div>Absatz zwei</div></div>\n'), [['span', 'Kopf'], ['div', 'Absatz eins'], ['div', 'Absatz zwei']]);
+  assert.deepEqual(places('<section><a href="#x">Nach oben</a><div>Kapitel eins</div></section>\n'), [['a', 'Nach oben'], ['div', 'Kapitel eins']]);
 });
 
 test('collectPlaces: no block of the page\'s own is a place for its text: the field of a table filter with its counter, a warning, the inline table of contents, a callout, a facet group, a table\'s wrapper, a transient element', () => {

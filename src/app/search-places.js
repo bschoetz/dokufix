@@ -103,8 +103,8 @@ import { TRANSIENT_ATTR } from './transient.js';
 // `dt` or `dd`, the `summary` of an author's `details`, a `figcaption`, a
 // bare `blockquote`. Any element outside a place that holds a text node of
 // its own, not only white space, or an inline element with such text, `b`,
-// `em`, `a`, `span` and their like, is a place of its own, read as a paragraph
-// is: without the places, lists, tables and code blocks in it, which are
+// `em`, `a`, `span`, `font` and their like, where no block stands beside it,
+// is a place of its own, read as a paragraph is: without the places, lists, tables and code blocks in it, which are
 // places of their own, and with every other element in it, a `div` included,
 // as its text. Nothing inside it or inside any other place is such a place.
 // So a `dl` is no place, each of its `dt` and `dd` is one; a `details` with a
@@ -362,16 +362,22 @@ function ownReading(el, meta){
 }
 
 // The elements of a line of text: text of the block they stand in.
-const INLINE_TAGS = new Set(['A', 'ABBR', 'B', 'BDI', 'BDO', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'I', 'INS',
-  'KBD', 'MARK', 'Q', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRONG', 'SUB', 'SUP', 'TIME', 'U', 'VAR']);
+const INLINE_TAGS = new Set(['A', 'ABBR', 'B', 'BDI', 'BDO', 'BIG', 'CITE', 'CODE', 'DATA', 'DEL', 'DFN', 'EM', 'FONT', 'I', 'INS',
+  'KBD', 'LABEL', 'MARK', 'NOBR', 'OUTPUT', 'Q', 'RUBY', 'S', 'SAMP', 'SMALL', 'SPAN', 'STRIKE', 'STRONG', 'SUB', 'SUP', 'TIME', 'TT', 'U', 'VAR']);
 
 // Whether an element holds text of its own that is not white space: a text
-// node, or an inline element with such text that is not left out.
+// node, or an inline element with such text that is not left out, where no
+// other element stands beside it; a block beside it keeps the inline element
+// and the block places of their own.
 function ownText(el){
+  let inline = false, block = false;
   for (let n = el.firstChild; n; n = n.nextSibling){
-    if (n.nodeType === TEXT ? /\S/.test(n.data) : n.nodeType === ELEMENT && INLINE_TAGS.has(tagOf(n)) && !excluded(n) && /\S/.test(n.textContent)) return true;
+    if (n.nodeType === TEXT){ if (/\S/.test(n.data)) return true; continue; }
+    if (n.nodeType !== ELEMENT || tagOf(n) === 'BR' || excluded(n)) continue;
+    if (INLINE_TAGS.has(tagOf(n))) inline = inline || /\S/.test(n.textContent);
+    else block = true;
   }
-  return false;
+  return inline && !block;
 }
 
 // The places under root, in the order of the document. Beside its text each
