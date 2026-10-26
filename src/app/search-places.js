@@ -25,12 +25,13 @@ import { TRANSIENT_ATTR } from './transient.js';
 // (headingLabelText() in toc.js), with the same things left out.
 //
 // A table row is a place, the header row included, and its text is the one
-// filterRowText() in filter.js reads: its cells joined by a blank, with what
-// that leaves out left out, and nothing more; a table nested in a cell is text
-// of its row, and its own rows are no places. A row carries the kind KIND_ROW,
-// "Tabelle", which the panel puts before its result; the kind is no text of
-// the place, so the hits, their count and the part a result shows see the
-// row's text alone. A paragraph, list item or heading has no kind.
+// the free-text filter searches (filterRowText() in filter.js takes this
+// reading): its cells joined by a blank, with what rowReading() leaves out
+// left out, and nothing more; a table nested in a cell is text of its row,
+// and its own rows are no places. A row carries the kind KIND_ROW, "Tabelle",
+// which the panel puts before its result; the kind is no text of the place,
+// so the hits, their count and the part a result shows see the row's text
+// alone. A paragraph, list item or heading has no kind.
 //
 // A diagram is one place: its figure (diagrams.js), whatever it shows. Its
 // text is the labels the reader sees in its SVG, never its source: of the
@@ -100,13 +101,14 @@ import { TRANSIENT_ATTR } from './transient.js';
 // the row. A place without text is none.
 //
 // Raw HTML can put text where Markdown never does: directly in a `div`, a
-// `dt` or `dd`, the `summary` of an author's `details`, a `figcaption`, a
-// bare `blockquote`. Any element outside a place that holds a text node of
-// its own, not only white space, or an inline element with such text, `b`,
-// `em`, `a`, `span`, `font` and their like, where no block stands beside it,
-// is a place of its own, read as a paragraph is: without the places, lists, tables and code blocks in it, which are
-// places of their own, and with every other element in it, a `div` included,
-// as its text. Nothing inside it or inside any other place is such a place.
+// `dt` or `dd`, the `summary` of an author's `details`, a `figcaption`, a bare
+// `blockquote`. Any element outside a place that holds a text node of its own,
+// not only white space, or an inline element with such text, `b`, `em`, `a`,
+// `span`, `font` and their like, where no block stands beside it, is a place
+// of its own, read as a paragraph is: without the places, lists, tables and
+// code blocks in it, which are places of their own, and with every other
+// element in it, a `div` included, as its text. Nothing inside it or inside
+// any other place is such a place.
 // So a `dl` is no place, each of its `dt` and `dd` is one; a `details` with a
 // Markdown paragraph is none, its `summary` and the paragraph are; a `div`
 // that holds `<b>Neue</b> <i>Preisliste</i>` is one place, "Neue Preisliste"
@@ -125,8 +127,7 @@ const OWN_TAGS = new Set([...PLACE_TAGS, 'UL', 'OL', 'TABLE', 'PRE']);
 // No place, nor anything inside it.
 const EXCLUDED_TAGS = new Set(['SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
 // Nor a noscript or an iframe, whose content the page keeps as one raw text
-// node it never shows, raw tags and all. A row reads EXCLUDED_TAGS alone, as
-// filterRowText() does.
+// node it never shows, raw tags and all. A row leaves out EXCLUDED_TAGS alone.
 const UNREAD_TAGS = new Set([...EXCLUDED_TAGS, 'NOSCRIPT', 'IFRAME']);
 // What a table row is to the panel: the word before its result.
 export const KIND_ROW = 'Tabelle';
@@ -255,16 +256,16 @@ function headingReading(h){
 
 const headingText = h => headingReading(h).text;
 
-// The text of a table row, as filterRowText() in filter.js reads it, and in
-// the same order of rules: a line break as a blank; left out what is
+// The text of a table row, the search's and the free-text filter's
+// (filterRowText() in filter.js): a line break as a blank; left out what is
 // transient, a footnote marker with its preview, the word of a status chip,
 // the controls of a facet filter, and an SVG, a stylesheet, a script or a
 // template (EXCLUDED_TAGS); a blank before and after every cell, a cell
 // of a table nested in a cell as well. Nothing else is left out: what a row
 // holds is text of the row, as the filter searches it. The part is counted up
 // at every cell's edge, so that no range of a hit (nodeRanges()) runs from one
-// cell into the next. tests/search.test.mjs holds the two readings together.
-function rowReading(row){
+// cell into the next.
+export function rowReading(row){
   const r = reading();
   const read = node => {
     for (let child = node.firstChild; child; child = child.nextSibling){

@@ -1,9 +1,9 @@
-import { ELEMENT, TEXT, tagOf } from './nodes.js';
-import { CHIP_STATUS_CLASS } from './chips.js';
-import { FACETS_CLASS, FACET_BAR_CLASS, facetKeyClass, isFootnoteMarker, rowsOf } from './facets.js';
+import { ELEMENT } from './nodes.js';
+import { FACETS_CLASS, FACET_BAR_CLASS, facetKeyClass, rowsOf } from './facets.js';
 import { TABLE_CLASS } from './tables.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { findHits, tidy } from './search-match.js';
+import { rowReading } from './search-places.js';
 
 // --- Free-text filter ------------------------------------------------------
 // A table with the marker "filter" before it gets a search field above it
@@ -64,43 +64,20 @@ export const FILTER_OUT_CLASS = 'dokufix-filter-out';
 export const FILTER_PLACEHOLDER = 'Suchen …';
 export const FILTER_LABEL = 'Tabelle filtern';
 
-// What holds no text a reader reads: a picture, a stylesheet, a script, a
-// template. The search of the reading view leaves the same out, and its
-// test holds the two readings of a row together.
-const TEXTLESS_TAGS = new Set(['SVG', 'SCRIPT', 'STYLE', 'TEMPLATE']);
+// The text of a row as the filter searches it: the search's reading of a row
+// (rowReading() of search-places.js), its cells joined by a blank, a line
+// break as a blank, without the word a status chip carries for assistive
+// technology, a footnote marker and its preview, the controls of a facet
+// filter, anything transient, an SVG, a stylesheet, a script or a template.
+// A table nested in a cell is text of its cell.
+export const filterRowText = row => rowReading(row).text;
 
-// The text of a row as the filter searches it: its cells joined by a blank, a
-// line break as a blank, without the word a status chip carries for assistive
-// technology, without a footnote marker and its preview, without the controls
-// of a facet filter, without anything transient and without an SVG, a
-// stylesheet, a script or a template. A table nested in a cell is text of its
-// cell, its cells joined by a blank as well.
-export function filterRowText(row){
-  let text = '';
-  const read = node => {
-    for (let child = node.firstChild; child; child = child.nextSibling){
-      if (child.nodeType === TEXT){ text += child.data; continue; }
-      if (child.nodeType !== ELEMENT) continue;
-      const tag = tagOf(child);
-      if (tag === 'BR'){ text += ' '; continue; }
-      if (child.hasAttribute(TRANSIENT_ATTR) || isFootnoteMarker(child) ||
-          child.classList.contains(CHIP_STATUS_CLASS) || child.classList.contains(FACET_BAR_CLASS) || TEXTLESS_TAGS.has(tag)) continue;
-      const cell = tag === 'TD' || tag === 'TH';
-      if (cell) text += ' ';
-      read(child);
-      if (cell) text += ' ';
-    }
-  };
-  read(row);
-  return tidy(text);
-}
-
-// Whether a row's text matches a term, by the rules of the search with both
-// of its switches off (findHits() of search-match.js, story 11 of epic 5): the
+// Whether a row's text matches a term, by the rules of the search with both of
+// its switches off (findHits() of search-match.js, story 11 of epic 5): the
 // term, blanks collapsed, as one phrase anywhere in the text, case ignored; a
-// blank at an edge of the term marks a word boundary (story 14). An empty term matches every row. The filter has no
-// switches and no minimum length: it filters from the first character typed,
-// tooShort() is the search's.
+// blank at an edge of the term marks a word boundary (story 14). An empty term
+// matches every row. The filter has no switches and no minimum length: it
+// filters from the first character typed, tooShort() is the search's.
 export function filterMatches(term, text){
   return !tidy(term) || findHits(term, tidy(text)).length > 0;
 }

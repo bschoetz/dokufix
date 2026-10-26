@@ -24,9 +24,9 @@
 // its letter, so "Cafe " does not find "Cafe" + U+0301, a variation selector
 // to its emoji, so " Klick" finds "⚠️Klick"; the characters nobody sees
 // (below) are passed over, so " nummer" does not find "Telefon&shy;nummer"
-// (search audit of 2026-10-26). The range is
-// the word's, without the blank. A hit at no boundary is none, and the next
-// one is looked for from its second character.
+// (search audit of 2026-10-26). The range is the word's, without the blank. A
+// hit at no boundary is none, and the next one is looked for from its second
+// character.
 // Two options change that:
 // - caseSensitive: case counts; nothing is lowered.
 // - fuzzy, light fuzzy: white space, hyphens (-, U+2010, U+2011, the soft
@@ -37,12 +37,13 @@
 // Always: a letter and the marks after it are compared composed (NFC), so
 // "Pru" + U+0308 + "fung" is "Prüfung", and the soft hyphen, the zero width
 // space, the word joiner and the byte order mark are ignored (audit of
-// 2026-10-25). Lowering can change the length of a text, "İ" becomes "i̇", two UTF-16
-// units, and fuzzy leaves characters out; so the text is compared one
-// character with its marks at a time, and each unit compared remembers the character it came
-// from. A range is always one of the original text and covers whole
-// characters of it; a fuzzy hit spans from its first to its last matched
-// character, the ignored ones between them included, none before or after.
+// 2026-10-25). Lowering can change the length of a text, "İ" becomes "i̇", two
+// UTF-16 units, and fuzzy leaves characters out; so the text is compared one
+// character with its marks at a time, and each unit compared remembers the
+// character it came from. A range is always one of the original text and
+// covers whole characters of it; a fuzzy hit spans from its first to its last
+// matched character, the ignored ones between them included, none before or
+// after.
 // Where nothing of that can happen, without fuzzy, marks and invisible
 // characters, the text is lowered whole,
 // which is one call in place of one per character, where that leaves its

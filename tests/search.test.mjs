@@ -41,7 +41,6 @@ import { buildCodeLines, attachCodeCopy } from '../src/app/code-blocks.js';
 import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
 import { buildWarning } from '../src/app/warning.js';
 import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
-import { filterRowText } from '../src/app/filter.js';
 import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
@@ -637,37 +636,6 @@ test('collectPlaces: a table in a list item is no text of the item; each of its 
   assert.deepEqual(rowHits(root, 'Tabelle und').map(h => h.ranges), [['Tabelle', 'und']]);
 });
 
-test('collectPlaces: the text of every row is filterRowText() of the row, over a varied table', () => {
-  const ref = n => '<sup class="dokufix-fn-host"><a href="#footnote-back-' + n + '" data-footnote-ref="">' + n + '</a><span class="dokufix-fn-preview" aria-hidden="true">Vorschau ' + n + '</span></sup>';
-  const html = '<div class="dokufix-facets"><fieldset class="dokufix-facet-bar"><legend>Art</legend><div class="dokufix-facet-controls"><label><input type="radio" class="dokufix-facet-0" checked>Alle <span class="dokufix-facet-count">5</span></label></div></fieldset>' +
-    '<div class="dokufix-filter" ' + TRANSIENT_ATTR + '><input type="search" class="dokufix-filter-input"><span class="dokufix-filter-count">5 Zeilen</span></div>' +
-    '<div class="dokufix-table"><table>\n<thead>\n<tr>\n<th>Baustein</th>\n<th align="left">Art</th>\n<th>  Geschrieben   als </th>\n</tr>\n</thead>\n<tbody>' +
-    '<tr class="dokufix-facet-row dokufix-facet-1">\n<td>Hinweis<br><em class="dokufix-cell-sub">fünf Marken</em></td>\n<td>Block</td>\n<td>Zitat mit <strong>Marke</strong>' + ref(1) + '</td>\n</tr>\n' +
-    '<tr>\n<td><code>🟢 Live</code> seit<br>gestern</td>\n<td><a href="#x">Text</a></td>\n<td></td>\n</tr>\n' +
-    '<tr>\n<td></td>\n<td></td>\n<td></td>\n</tr>\n' +
-    '<tr>\n<td>flüchtig<span ' + TRANSIENT_ATTR + '>weg</span>da</td>\n<td><p>Absatz</p>\n<ul>\n<li>Punkt</li>\n</ul></td>\n<td><table><tbody><tr><td>in</td><td>nen<code>🔴 Aus</code></td></tr></tbody></table></td>\n</tr>\n' +
-    '<tr>\n<td colspan="2"> 😀 İ <!-- Kommentar --> ẞ </td>\n<td><fieldset class="dokufix-facet-bar"><legend>X</legend>Alle 3</fieldset>Rest' + ref(2) + '.</td>\n</tr>\n' +
-    // Story 5.16, N2: an SVG, a stylesheet, a script and a template in a cell are no text of the row.
-    '<tr>\n<td>Form<svg viewBox="0 0 10 10"><text>Kreis</text></svg></td>\n<td><style>.x{fill:red}</style>Stil</td>\n<td><script>var y = 1;</script><template><b>Vorlage</b></template>Ende</td>\n</tr>\n' +
-    '</tbody><tfoot><tr><td>Summe</td><td>5</td><td></td></tr></tfoot></table></div></div>\n';
-  const root = rootWith(html);
-  buildChips(root);
-  const rows = Array.from(root.querySelectorAll('tr')).filter(tr => !tr.parentNode.closest('td, th'));
-  const places = collectPlaces(root);
-  assert.deepEqual(places.map(p => p.el), rows.filter(tr => filterRowText(tr)), 'every row with text is a place, a nested row none');
-  for (const place of places) assert.equal(place.text, filterRowText(place.el));
-  assert.equal(places.length, 7);
-  assert.equal(places[5].text, 'Form Stil Ende');
-  for (const word of ['Kreis', 'fill', 'var y', 'Vorlage']) assert.deepEqual(places.filter(p => findHits(word, p.text).length), [], word);
-  // The map holds as for every place: each unit from the character of a text node.
-  for (const { text, map } of places){
-    assert.equal(map.nodes.length, text.length);
-    for (let i = 0; i < text.length; i++){
-      if (text[i] !== ' ') assert.equal(map.nodes[i].data[map.offsets[i]], text[i], text + ' at ' + i);
-    }
-  }
-});
-
 test('the kind of a row is no text of it: "Tabelle" finds no row that does not hold it, and the hits count the row text alone', () => {
   const root = rootWith(tableHtml(['Art'], [['Karten'], ['Tabelle und Tabelle']]));
   const found = collectPlaces(root).filter(p => findHits('Tabelle', p.text).length);
@@ -963,11 +931,40 @@ test('collectPlaces: a code block in a list item is no text of the item, and a p
   assert.deepEqual(hitTexts(root, 'Code: und'), [['Code:', 'und']]);
 });
 
-test('collectPlaces: a pre in a table cell is text of its row, as filterRowText() reads it, and no code block', () => {
+test('collectPlaces: every row of a varied table is a place with its text and its map, a row without text and a nested row none', () => {
+  const ref = n => '<sup class="dokufix-fn-host"><a href="#footnote-back-' + n + '" data-footnote-ref="">' + n + '</a><span class="dokufix-fn-preview" aria-hidden="true">Vorschau ' + n + '</span></sup>';
+  const html = '<div class="dokufix-facets"><fieldset class="dokufix-facet-bar"><legend>Art</legend><div class="dokufix-facet-controls"><label><input type="radio" class="dokufix-facet-0" checked>Alle <span class="dokufix-facet-count">5</span></label></div></fieldset>' +
+    '<div class="dokufix-filter" ' + TRANSIENT_ATTR + '><input type="search" class="dokufix-filter-input"><span class="dokufix-filter-count">5 Zeilen</span></div>' +
+    '<div class="dokufix-table"><table>\n<thead>\n<tr>\n<th>Baustein</th>\n<th align="left">Art</th>\n<th>  Geschrieben   als </th>\n</tr>\n</thead>\n<tbody>' +
+    '<tr class="dokufix-facet-row dokufix-facet-1">\n<td>Hinweis<br><em class="dokufix-cell-sub">fünf Marken</em></td>\n<td>Block</td>\n<td>Zitat mit <strong>Marke</strong>' + ref(1) + '</td>\n</tr>\n' +
+    '<tr>\n<td><code>🟢 Live</code> seit<br>gestern</td>\n<td><a href="#x">Text</a></td>\n<td></td>\n</tr>\n' +
+    '<tr>\n<td></td>\n<td></td>\n<td></td>\n</tr>\n' +
+    '<tr>\n<td>flüchtig<span ' + TRANSIENT_ATTR + '>weg</span>da</td>\n<td><p>Absatz</p>\n<ul>\n<li>Punkt</li>\n</ul></td>\n<td><table><tbody><tr><td>in</td><td>nen<code>🔴 Aus</code></td></tr></tbody></table></td>\n</tr>\n' +
+    '<tr>\n<td colspan="2"> 😀 İ <!-- Kommentar --> ẞ </td>\n<td><fieldset class="dokufix-facet-bar"><legend>X</legend>Alle 3</fieldset>Rest' + ref(2) + '.</td>\n</tr>\n' +
+    // Story 5.16, N2: an SVG, a stylesheet, a script and a template in a cell are no text of the row.
+    '<tr>\n<td>Form<svg viewBox="0 0 10 10"><text>Kreis</text></svg></td>\n<td><style>.x{fill:red}</style>Stil</td>\n<td><script>var y = 1;</script><template><b>Vorlage</b></template>Ende</td>\n</tr>\n' +
+    '</tbody><tfoot><tr><td>Summe</td><td>5</td><td></td></tr></tfoot></table></div></div>\n';
+  const root = rootWith(html);
+  buildChips(root);
+  const rows = Array.from(root.querySelectorAll('tr')).filter(tr => !tr.parentNode.closest('td, th'));
+  const places = collectPlaces(root);
+  assert.deepEqual(places.map(p => rows.indexOf(p.el)), [0, 1, 2, 4, 5, 6, 7], 'every row with text is a place, a nested row none');
+  // The texts the free-text filter searches as well (filterRowText() is this reading's, story 5.13).
+  assert.deepEqual(places.map(p => p.text), ['Baustein Art Geschrieben als', 'Hinweis fünf Marken Block Zitat mit Marke', 'Live seit gestern Text',
+    'flüchtigda Absatz Punkt in nenAus', '😀 İ ẞ Rest.', 'Form Stil Ende', 'Summe 5']);
+  for (const word of ['Kreis', 'fill', 'var y', 'Vorlage']) assert.deepEqual(places.filter(p => findHits(word, p.text).length), [], word);
+  // The map holds as for every place: each unit from the character of a text node.
+  for (const { text, map } of places){
+    assert.equal(map.nodes.length, text.length);
+    for (let i = 0; i < text.length; i++){
+      if (text[i] !== ' ') assert.equal(map.nodes[i].data[map.offsets[i]], text[i], text + ' at ' + i);
+    }
+  }
+});
+
+test('collectPlaces: a pre in a table cell is text of its row and no code block', () => {
   const root = rootWith('<table><tbody><tr><td>Befehl</td><td><pre><code>npm   run pruefung\n</code></pre></td></tr></tbody></table>\n');
-  const row = root.querySelector('tr');
   assert.deepEqual(collectPlaces(root).map(p => [p.el.tagName, p.text, p.kind]), [['TR', 'Befehl npm run pruefung', KIND_ROW]]);
-  assert.equal(collectPlaces(root)[0].text, filterRowText(row));
   assert.deepEqual(codePlaces(root), []);
 });
 
@@ -1102,11 +1099,12 @@ test('the match and the places are pure: neither imports the page\'s elements', 
   }
 });
 
-test('the reader bundle registers the search over its content container, always in read mode; render.js and filter.js know nothing of the search', () => {
+test('the reader bundle registers the search over its content container, always in read mode; render.js knows nothing of the search, filter.js only the reading of a row', () => {
   assert.match(read('reader.js'), /registerSearch\(\{ root, inReadMode: \(\) => true \}\)/);
   assert.doesNotMatch(read('app/render.js'), /search(-match|-places)?\.js|collectPlaces|findHits|Search/);
-  // The search reads the filter's classes, the filter knows nothing of the search.
-  assert.doesNotMatch(read('app/filter.js'), /search(-places)?\.js|collectPlaces|registerSearch/);
+  // The search reads the filter's classes; the filter takes the search's reading of a row (story 5.13) and nothing else of it.
+  assert.deepEqual(read('app/filter.js').split('\n').filter(line => /^import .*search-places\.js/.test(line)), ["import { rowReading } from './search-places.js';"]);
+  assert.doesNotMatch(read('app/filter.js'), /search\.js|collectPlaces|registerSearch/);
 });
 
 test('the styles of the search: a hit highlighted in the colour of the marks, not in print, dark on screen; a kind grey, a hidden row red and italic', () => {

@@ -30,15 +30,15 @@ import { TABLE_CLASS } from './tables.js';
 // marked. A diagram's text is its labels. A click on the result of a
 // diagram, of the metadata panel or of a code block brings its first hit to
 // the middle of the window, so a hit deep in a tall diagram or block is in
-// view, a code block scrolled sideways to it as well; the
-// metadata panel, a <details>, is opened first where it is closed, and stays
-// open, as if the reader had opened it. Its `open` is no part of a file: a
-// `Mit Editor` file is saved from the source, an export renders anew. A row a table's filter hides, the free-text filter
-// by its class or a facet filter by CSS alone (a row of a facet table without
-// a box), is
-// listed like any row, marked " (ausgeblendet)" after its text; a click on it
-// scrolls to the table's filter controls, the facet buttons, else the field of
-// the free-text filter, else the table, and the filter stays as it is.
+// view, a code block scrolled sideways to it as well; the metadata panel, a
+// <details>, is opened first where it is closed, and stays open, as if the
+// reader had opened it. Its `open` is no part of a file: a `Mit Editor` file
+// is saved from the source, an export renders anew. A row a table's filter
+// hides, the free-text filter by its class or a facet filter by CSS alone (a
+// row of a facet table without a box), is listed like any row, marked
+// " (ausgeblendet)" after its text; a click on it scrolls to the table's
+// filter controls, the facet buttons, else the field of the free-text filter,
+// else the table, and the filter stays as it is.
 // Whether a row is hidden is read when the search runs and again on the click.
 // A row in a closed <details> of the author, a facet table's included, is
 // not hidden by a filter; a click on the result of any place in a closed
@@ -160,12 +160,13 @@ import { TABLE_CLASS } from './tables.js';
 // nodes the hits came from (nodeRanges() in search-places.js), drawn by
 // ::highlight() in src/search.css, in the labels of a diagram's SVG as in the
 // text; not in the live viewer of a BPMN large view, which draws its own.
-// Nothing is added to the root or changed in it, so a file saved or exported while the panel is open is the file it
-// would be without it. Every search replaces the highlight; a term too short,
-// an empty field and closing the panel take it away. A render that replaces
-// the root's nodes leaves ranges over nodes no longer in the document, which
-// draw nothing; a click on a result then searches again. Where the browser
-// has no CSS.highlights, the results are listed without highlight.
+// Nothing is added to the root or changed in it, so a file saved or exported
+// while the panel is open is the file it would be without it. Every search
+// replaces the highlight; a term too short, an empty field and closing the
+// panel take it away. A render that replaces the root's nodes leaves ranges
+// over nodes no longer in the document, which draw nothing; a click on a
+// result then searches again. Where the browser has no CSS.highlights, the
+// results are listed without highlight.
 
 const PANEL_CLASS = 'search-panel';
 // The class of a panel collapsed to its bar (src/search.css).

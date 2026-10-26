@@ -134,6 +134,13 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { prepareLibraries, librariesLine } from './cdn.mjs';
 
+// The body kompakt packs into its data block #p, gzip in base64, unpacked;
+// null for a file without one.
+const kompaktBody = text => {
+  const m = /<script type="text\/plain" id="p">([^<]*)<\/script>/.exec(text);
+  return m ? zlib.gunzipSync(Buffer.from(m[1].trim(), 'base64')).toString('utf8') : null;
+};
+
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.join(here, '..');
 
@@ -693,8 +700,12 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     check(scope, 'the panel was open with a term, its results and its hits highlighted in the preview, one in the diagram\'s SVG, when the file was saved', !!searchOpen && searchOpen.open && searchOpen.term === 'Abschnitt' && searchOpen.results > 0 && searchOpen.highlighted >= searchOpen.results && searchOpen.inSvg >= 1, JSON.stringify(searchOpen));
     check(scope, 'and is still open in the running page', JSON.stringify(await searchState(o.page)) === JSON.stringify(searchOpen), JSON.stringify(await searchState(o.page)));
     // Without its scripts and styles: the page's script and the reader bundle in
-    // its data block name the panel's classes, and so does the stylesheet.
-    const withoutCode = file => fs.readFileSync(file, 'utf8').replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '');
+    // its data block name the panel's classes, and so does the stylesheet. The
+    // body kompakt packs into its data block is read unpacked.
+    const withoutCode = file => {
+      const text = fs.readFileSync(file, 'utf8');
+      return (text + (kompaktBody(text) || '')).replace(/<script\b[^>]*>[\s\S]*?<\/script>|<style\b[^>]*>[\s\S]*?<\/style>/g, '');
+    };
     // The code block of the document has its copy button in the running page (story 5.19), transient.
     const copyButtons = await o.page.evaluate(() => Array.from(document.querySelectorAll('#preview pre.dokufix-code > button.dokufix-code-copy')).map(b => b.hasAttribute('data-dokufix-transient')));
     check(scope, 'the running page has the copy button in the code block, transient', JSON.stringify(copyButtons) === '[true]', JSON.stringify(copyButtons));
@@ -744,7 +755,8 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     for (const kind of READONLY){
       const a = fs.readFileSync(whileOpen[kind].file), b = fs.readFileSync(afterClose[kind].file);
       check(scope, kind + ' written from the page with the panel open is the file written after it is closed, byte for byte, and holds no panel, no magnifier and no copy button',
-        a.equals(b) && !/search-panel|search-input|search-magnifier|search-hit|dokufix-code-copy/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
+        a.equals(b) && (kind !== 'readonly-compact' || kompaktBody(a.toString('utf8')) !== null) &&
+        !/search-panel|search-input|search-magnifier|search-hit|dokufix-code-copy/.test(withoutCode(whileOpen[kind].file)), a.length + ' B and ' + b.length + ' B');
     }
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();

@@ -2238,6 +2238,15 @@ async function assertSearch(page, check, key){
   const centred = f => !!f.first && f.first.height > 0 && f.first.top >= 0 && f.first.bottom <= f.height &&
     (Math.abs((f.first.top + f.first.bottom) / 2 - f.height / 2) <= 2 || (f.scrolled <= 1 && (f.first.top + f.first.bottom) / 2 < f.height / 2) || (f.scrolled >= f.max - 1 && (f.first.top + f.first.bottom) / 2 > f.height / 2));
   const want = expected(SEARCH_TERM);
+  // A document of one's own (--doc) without the term: the checks below search
+  // for it and the words of the reference document, so the rest of the search
+  // is passed over, as a whole (Ben, 2026-10-26, story 5.13).
+  if (!want.length){
+    check('search: the checks of "' + SEARCH_TERM + '" and after it', true, '',
+      'passed over: the document holds no "' + SEARCH_TERM + '"; with it the rest of the search: the switches, tables, diagrams, metadata and code, Escape, the narrow screen, the magnifier');
+    await page.evaluate(() => { const close = document.querySelector('body > .search-panel:not([hidden]) .search-close'); if (close) close.click(); });
+    return;
+  }
   const wantSummary = summaryOf(want);
   const typed = await search(SEARCH_TERM);
   const lit = await highlightFacts();
@@ -2297,13 +2306,16 @@ async function assertSearch(page, check, key){
   const wantChip = expectedWith('statuschip', { fuzzy: true });
   const wantPlainChip = expectedWith('statuschip', {});
   const fuzzyStrip = t => t.replace(/[\s\-\u2010\u2011\u00AD.]/gu, '').toLowerCase();
-  check('search: "statuschip" finds only itself so written; light fuzzy flipped on lists, without typing again, every place with "Status-Chip" as well, all eleven characters marked',
-    plainChip.summary === summaryOf(wantPlainChip) && wantChip.length > wantPlainChip.length && fuzzyChip.summary === summaryOf(wantChip) && fuzzyChip.results.length === wantChip.length &&
-      fuzzyChip.results.some(r => r.marks.includes('Status-Chip')) && fuzzyChip.results.every(r => r.marks.length >= 1 && r.marks.every(m => fuzzyStrip(m) === 'statuschip')),
-    json({ plain: plainChip.summary, fuzzy: fuzzyChip.summary, expected: summaryOf(wantChip), marks: fuzzyChip.results.map(r => r.marks) }));
-  check('search: light fuzzy flipped on, the highlight follows: every hit of "statuschip" highlighted, "Status-Chip" over its text nodes as one range',
-    litAs(litChip, 'statuschip', { fuzzy: true }, wantChip, t => fuzzyStrip(t) === 'statuschip') && litChip.ranges.some(r => r.text === 'Status-Chip'),
-    litLine(litChip, 'statuschip', { fuzzy: true }, wantChip));
+  // Only where the document holds "Status-Chip", so written, as the reference document does.
+  if (expectedWith('Status-Chip', { caseSensitive: true }).length){
+    check('search: "statuschip" finds only itself so written; light fuzzy flipped on lists, without typing again, every place with "Status-Chip" as well, all eleven characters marked',
+      plainChip.summary === summaryOf(wantPlainChip) && wantChip.length > wantPlainChip.length && fuzzyChip.summary === summaryOf(wantChip) && fuzzyChip.results.length === wantChip.length &&
+        fuzzyChip.results.some(r => r.marks.includes('Status-Chip')) && fuzzyChip.results.every(r => r.marks.length >= 1 && r.marks.every(m => fuzzyStrip(m) === 'statuschip')),
+      json({ plain: plainChip.summary, fuzzy: fuzzyChip.summary, expected: summaryOf(wantChip), marks: fuzzyChip.results.map(r => r.marks) }));
+    check('search: light fuzzy flipped on, the highlight follows: every hit of "statuschip" highlighted, "Status-Chip" over its text nodes as one range',
+      litAs(litChip, 'statuschip', { fuzzy: true }, wantChip, t => fuzzyStrip(t) === 'statuschip') && litChip.ranges.some(r => r.text === 'Status-Chip'),
+      litLine(litChip, 'statuschip', { fuzzy: true }, wantChip));
+  } else check('search: "statuschip" with light fuzzy', true, '', 'passed over: the document holds no "Status-Chip"');
   await flip(1);
   // --- a blank at the edge of the term marks a word boundary (story 14): "Klick " lists the places where
   // "Klick" ends a word, not those where it only begins one, and marks the word alone, without the blank
@@ -5050,6 +5062,12 @@ async function liveViewerTouch(page, check, { FIG, n, step }){
 // line high; the copy button where a script runs, transient, at the top right,
 // not printed; a click copies the code without the numbers and its final
 // "\n", the button then named "Kopiert" with the check, and after 2 s as before.
+// The body kompakt packs into its data block #p, gzip in base64, unpacked;
+// null for a file without one.
+const kompaktBody = text => {
+  const m = /<script type="text\/plain" id="p">([^<]*)<\/script>/.exec(text);
+  return m ? zlib.gunzipSync(Buffer.from(m[1].trim(), 'base64')).toString('utf8') : null;
+};
 const CODE_LOOK = { background: 'rgb(243, 246, 250)', border: '1px solid rgb(221, 228, 238)', color: 'rgb(28, 39, 51)' };
 async function assertCodeBlocks(page, check, exp, key, text){
   const json = JSON.stringify;
@@ -5126,7 +5144,10 @@ async function assertCodeBlocks(page, check, exp, key, text){
   check('code blocks: the button stands at the top right of its block, 28 px square, with the 16 px icon, clear of every line',
     blocks.every(b => b.button && b.button.topRight && b.button.size === '28x28' && b.button.icon === '16px 16px' && b.button.clear), json(blocks.map(b => b.button)));
   if (key === 'schlank' || key === 'kompakt'){
-    check('code blocks: ' + key + ' writes no copy button into its file; its reader bundle adds it', !/<button[^>]*dokufix-code-copy/.test(text), '');
+    // kompakt packs its body: read unpacked, or the check passes on any file.
+    const body = key === 'kompakt' ? kompaktBody(text) : text;
+    check('code blocks: ' + key + ' writes no copy button into its file' + (key === 'kompakt' ? ', its packed body read unpacked' : '') + '; its reader bundle adds it',
+      body !== null && (!blocks.length || body.includes('<pre')) && !/<button[^>]*dokufix-code-copy/.test(body), body === null ? 'no packed body' : '');
   }
   if (!blocks.length) return;
   // Not printed.
