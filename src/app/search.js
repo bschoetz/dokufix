@@ -299,6 +299,14 @@ function controlsOf(row){
   return hasClass(field, FILTER_CLASS) ? field : table;
 }
 
+// The range of the document one part of nodeRanges() covers.
+function rangeFrom(r){
+  const range = document.createRange();
+  range.setStart(r.startNode, r.startOffset);
+  range.setEnd(r.endNode, r.endOffset);
+  return range;
+}
+
 // Brings the first hit of a place to the middle of the window, opening the
 // place first if it is a closed <details>, the metadata panel. Where the hit
 // has no range of the document, or its range no box, the place itself.
@@ -306,17 +314,31 @@ function centreHit(place, hit){
   const el = place.el;
   if (el.tagName.toUpperCase() === 'DETAILS' && !el.open) el.open = true;
   const r = hit && nodeRanges(place.map, hit)[0];
-  if (!r){ el.scrollIntoView({ block: 'center' }); return; }
-  const range = document.createRange();
-  range.setStart(r.startNode, r.startOffset);
-  range.setEnd(r.endNode, r.endOffset);
+  const range = r && rangeFrom(r);
   // A hit with no box, inside an author's closed <details> say: the place.
-  const box = range.getBoundingClientRect(), frame = el.getBoundingClientRect();
-  if (!box.width && !box.height){ el.scrollIntoView({ block: 'center' }); return; }
+  const box = range && range.getBoundingClientRect();
+  if (!box || (!box.width && !box.height)){ el.scrollIntoView({ block: 'center' }); return; }
   // Sideways first: a long line of code scrolls inside its block.
-  if (box.left < frame.left || box.right > frame.right) el.scrollLeft += box.left - frame.left - (frame.width - box.width) / 2;
+  sideways(el, range);
   const at = range.getBoundingClientRect();
   window.scrollBy(0, at.top + at.height / 2 - window.innerHeight / 2);
+}
+
+// Scrolls el sideways so that range stands in its middle, where it lies
+// outside it; as far as el scrolls. A range with no box moves nothing.
+function sideways(el, range){
+  const box = range.getBoundingClientRect(), frame = el.getBoundingClientRect();
+  if (!box.width && !box.height) return;
+  if (box.left < frame.left || box.right > frame.right) el.scrollLeft += box.left - frame.left - (frame.width - box.width) / 2;
+}
+
+// The first hit of a row brought into view sideways (bug 5.20): every table
+// wrapper around it, the innermost first, a nested table's inside its outer.
+function alongTables(place, hit){
+  const r = hit && nodeRanges(place.map, hit)[0];
+  if (!r) return;
+  const range = rangeFrom(r);
+  for (let w = r.startNode.parentElement.closest('.' + TABLE_CLASS); w; w = w.parentElement && w.parentElement.closest('.' + TABLE_CLASS)) sideways(w, range);
 }
 
 // The class of each kind beside search-kind, which gives it its icon and
@@ -332,8 +354,9 @@ const KIND_CLASSES = new Map([
 
 // A result: a button with the kind of its place, if it has one, and the part
 // of its text, which scrolls the document to the place, a diagram, the
-// metadata panel and a code block to their first hit; a hidden
-// row says so and scrolls to its table's filter controls.
+// metadata panel and a code block to their first hit, a row's table
+// sideways to its first hit; a hidden row says so and scrolls to its
+// table's filter controls.
 function resultItem({ place, at }){
   const li = document.createElement('li');
   const button = document.createElement('button');
@@ -363,7 +386,9 @@ function resultItem({ place, at }){
     // the reader would, as centreHit() opens the metadata panel.
     for (const d of closedAround(place.el)) d.setAttribute('open', '');
     if (hasClass(place.el, DIAGRAM_CLASS) || place.kind === KIND_META || place.kind === KIND_CODE){ centreHit(place, at[0]); return; }
-    (row && rowHidden(place.el) ? controlsOf(place.el) : place.el).scrollIntoView({ block: 'center' });
+    if (row && rowHidden(place.el)){ controlsOf(place.el).scrollIntoView({ block: 'center' }); return; }
+    place.el.scrollIntoView({ block: 'center' });
+    if (row) alongTables(place, at[0]);
   });
   placeOf.set(button, place.el);
   li.append(button);

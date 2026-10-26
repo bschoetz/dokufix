@@ -3298,6 +3298,73 @@ async function assertSearch(page, check, key){
     await field.fill('');
     check('search: a "/" typed into the field of a table filter is a slash in the field, and the panel stays closed', slash.value === '/' && !slash.panel, json(slash));
   }
+
+  // --- bug 5.20: a hit in a table wider than its column. A click on its
+  // result scrolls the table sideways, so that the hit stands in the middle
+  // of what the table shows, as far as the table scrolls: a hit in the last
+  // column at its right edge, where at 1400 px the open panel may cover it
+  // (retrospective F2, Ben 2026-10-26); a hit in a middle column in the middle,
+  // left of the panel. A hit already in view, off the middle, leaves the
+  // table where it is.
+  // The table is put in here, so the documents stay as they are.
+  const WIDE_TERM = 'Breitfalter';
+  await page.evaluate(([rootSel, term]) => {
+    const cells = (k, tag) => Array.from({ length: 10 }, (_, i) => '<' + tag + '>' +
+      (k === 30 && i === 9 ? term : k === 32 && i === 6 ? term + 'mitte' : 'Zelleninhaltsnummer' + i) + '</' + tag + '>').join('');
+    const wrap = document.createElement('div');
+    wrap.className = 'dokufix-table vergleich-wide';
+    wrap.innerHTML = '<table><thead><tr>' + cells(-1, 'th') + '</tr></thead><tbody>' +
+      Array.from({ length: 40 }, (_, k) => '<tr>' + cells(k, 'td') + '</tr>').join('') + '</tbody></table>';
+    document.querySelector(rootSel).append(wrap);
+  }, [ROOT_SEL, WIDE_TERM]);
+  // The hit of row k against the table's box and the open panel's left edge.
+  const wideFacts = k => page.evaluate(([rootSel, name, k]) => {
+    const wrap = document.querySelector(rootSel + ' .vergleich-wide');
+    const tr = wrap.querySelectorAll('tbody tr')[k];
+    const s = Array.from((window.CSS && CSS.highlights && CSS.highlights.get(name)) || []).find(x => tr.contains(x.startContainer));
+    if (!s) return { hit: null };
+    const range = document.createRange();
+    range.setStart(s.startContainer, s.startOffset);
+    range.setEnd(s.endContainer, s.endOffset);
+    const b = range.getBoundingClientRect(), w = wrap.getBoundingClientRect(), p = document.querySelector('body > .search-panel');
+    return { hit: { left: b.left, right: b.right, top: b.top, bottom: b.bottom }, wrap: { left: w.left, right: w.right }, scrollLeft: wrap.scrollLeft,
+      max: wrap.scrollWidth - wrap.clientWidth, panel: p.hidden || p.classList.contains('search-collapsed') ? null : p.getBoundingClientRect().left, height: innerHeight };
+  }, [ROOT_SEL, HIGHLIGHT, k]);
+  const midWide = f => !!f.hit && f.hit.left >= f.wrap.left && f.hit.right <= f.wrap.right && f.hit.top >= 0 && f.hit.bottom <= f.height &&
+    (Math.abs((f.hit.left + f.hit.right) / 2 - (f.wrap.left + f.wrap.right) / 2) <= 2 || f.scrollLeft >= f.max - 1);
+  for (const width of [1400, 400]){
+    await page.setViewportSize({ width, height: 1000 });
+    await page.evaluate(rootSel => {
+      document.querySelector(rootSel + ' .vergleich-wide').scrollLeft = 0;
+      window.scrollTo(0, 0);
+      if (document.activeElement) document.activeElement.blur();
+    }, ROOT_SEL);
+    await press('/');
+    await search(WIDE_TERM);
+    await page.locator('body > .search-panel .search-results .search-result').first().click();
+    await frames(page);
+    const right = await wideFacts(30);
+    check('search at ' + width + ' px: a click on a hit in the last column of a wide table scrolls the table sideways to its end, the hit inside what it shows',
+      midWide(right) && right.scrollLeft >= right.max - 1, json(right));
+    if (width === 1400){
+      await page.evaluate(rootSel => { document.querySelector(rootSel + ' .vergleich-wide').scrollLeft = 0; }, ROOT_SEL);
+      await page.locator('body > .search-panel .search-results .search-result').nth(1).click();
+      await frames(page);
+      const middle = await wideFacts(32);
+      check('search at 1400 px: a click on a hit in a middle column of a wide table, out of view, brings it to the middle of what the table shows, left of the open panel',
+        midWide(middle) && Math.abs((middle.hit.left + middle.hit.right) / 2 - (middle.wrap.left + middle.wrap.right) / 2) <= 2 && middle.panel !== null && middle.hit.right <= middle.panel, json(middle));
+      // The table moved 150 px back, the hit still in view but off its middle: a click again moves nothing.
+      const shifted = await page.evaluate(rootSel => { const w = document.querySelector(rootSel + ' .vergleich-wide'); w.scrollLeft -= 150; return w.scrollLeft; }, ROOT_SEL);
+      await page.locator('body > .search-panel .search-results .search-result').nth(1).click();
+      await frames(page);
+      const still = await wideFacts(32);
+      check('search at 1400 px: a click on a hit of a wide table in view, off its middle, leaves the table where it is',
+        !!still.hit && still.hit.left >= still.wrap.left && still.hit.right <= still.wrap.right && Math.abs(still.scrollLeft - shifted) <= 1, json({ ...still, shifted }));
+    }
+    await press('Escape');
+  }
+  await page.setViewportSize({ width: 1400, height: 1000 });
+  await page.evaluate(rootSel => document.querySelector(rootSel + ' .vergleich-wide').remove(), ROOT_SEL);
   await page.evaluate(() => { window.scrollTo(0, 0); if (document.activeElement) document.activeElement.blur(); });
   await frames(page);
 }
