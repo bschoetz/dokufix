@@ -4,3 +4,5 @@ node_modules/
 dist/dokufix.dev.html
 # The working folder of the layout tools: runs and pages hold the laid-out external inputs (tools/bpmn-layout/README.md)
 tools/bpmn-layout/arbeit/
+# What Python writes when it runs the tests of skill/dokufix/dokufix.py
+__pycache__/
