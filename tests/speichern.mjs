@@ -129,7 +129,8 @@
 //      of generation 2 (story 3.8), given an image the blank does not hold, a
 //      document that shows it: it opens with that document, v2, both versions and the image,
 //      its history and assets byte for byte as they were. Then a Markdown
-//      that names a PNG beside it (story 3.9): opened, the image shows, and
+//      that names a PNG beside it three ways, inline, by reference and in an
+//      <img> (story 3.9): opened, the image shows, and
 //      in its nur-lesen export too, its bytes unchanged. Story 3.11 adds its
 //      cases here
 //
@@ -293,12 +294,12 @@ async function open(browser, file, options = {}){
   await page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
   return { context, page, errors, dialogs };
 }
-// The first image of selector once loaded: shown when it has a width and no missing-asset mark.
-const shownImage = (page, selector) => page.evaluate(async sel => {
-  const img = document.querySelector(sel);
-  if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; });
-  return img ? { missing: img.hasAttribute('data-missing-asset'), width: img.naturalWidth, title: img.title } : null;
-}, selector);
+// The images of selector once loaded: shown when they have a width and no missing-asset mark.
+const shownImages = (page, selector) => page.evaluate(sel => Promise.all([...document.querySelectorAll(sel)].map(async img => {
+  if (!img.complete) await new Promise(r => { img.onload = img.onerror = r; });
+  return { missing: img.hasAttribute('data-missing-asset'), width: img.naturalWidth, title: img.title };
+})), selector);
+const allShown = images => images.length > 0 && images.every(i => !i.missing && i.width > 0);
 const state = page => page.evaluate(() => ({
   source: document.getElementById('source').value,
   h1: (document.querySelector('#preview h1') || { textContent: '' }).textContent,
@@ -1086,17 +1087,19 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     s = await state(o.page);
     same(scope, 'opened, the editor holds the new document', s.source, intoDoc);
     check(scope, 'version v2 with both versions, not marked as changed', s.version === 'v2' && !s.dirty && await entries(o) === 2, JSON.stringify({ version: s.version, dirty: s.dirty }));
-    const shown = await shownImage(o.page, '#preview img');
-    check(scope, 'its own image, which the blank does not hold, is shown', shown && !shown.missing && shown.width > 0, JSON.stringify(shown));
+    const shown = await shownImages(o.page, '#preview img');
+    check(scope, 'its own image, which the blank does not hold, is shown', shown.length === 1 && allShown(shown), JSON.stringify(shown));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     const back = spawnSync('python3', [SKRIPT, 'extract', into], { encoding: 'utf8' });
     same(scope, 'extract returns the new document', back.stdout, intoDoc);
-    // Images through inject (story 3.9): a PNG beside the Markdown, its reference with a title.
+    // Images through inject (story 3.9): a PNG beside the Markdown, named three ways: inline with
+    // a title, by a reference-style definition, in an <img> with a width.
     const withImage = path.join(dir, 'skript-mit-bild.html'), imageExport = path.join(dir, 'skript-mit-bild-nur-lesen.html');
     fs.writeFileSync(path.join(dir, 'skript-bild.png'), png);
-    const imageDoc = SKRIPT_DOC_LF.replace('## Zweitens', '## Zweitens\n\n![Ein Bild daneben](skript-bild.png "Mit Titel")');
-    const imageWant = imageDoc.replace('skript-bild.png', '#asset-' + own);
+    const imageDoc = SKRIPT_DOC_LF.replace('## Zweitens', '## Zweitens\n\n![Ein Bild daneben](skript-bild.png "Mit Titel")\n\n' +
+      '![Noch einmal][bild]\n\n<img src="skript-bild.png" width="40" alt="Klein">\n\n[bild]: skript-bild.png');
+    const imageWant = imageDoc.replaceAll('skript-bild.png', '#asset-' + own);
     fs.writeFileSync(markdown, imageDoc);
     const injectingImage = spawnSync('python3', [SKRIPT, 'inject', markdown, withImage], { encoding: 'utf8' });
     check(scope, 'inject of a Markdown that names a PNG beside it exits 0', injectingImage.status === 0, injectingImage.stderr || String(injectingImage.error));
@@ -1104,8 +1107,8 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       o = await open(browser, withImage);
       s = await state(o.page);
       same(scope, 'opened, the editor holds the document with the reference pointed at the asset', s.source, imageWant);
-      const embedded = await shownImage(o.page, '#preview img');
-      check(scope, 'the embedded image is shown, with its title', embedded && !embedded.missing && embedded.width > 0 && embedded.title === 'Mit Titel', JSON.stringify(embedded));
+      const embedded = await shownImages(o.page, '#preview img');
+      check(scope, 'the embedded image is shown three times, inline with its title, by reference and as <img>', embedded.length === 3 && allShown(embedded) && embedded[0].title === 'Mit Titel', JSON.stringify(embedded));
       await exportReadonly(o.page, 'readonly-open', imageExport);
       check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
       await o.context.close();
@@ -1114,8 +1117,8 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       const exportPage = await exportContext.newPage(), exportErrors = [];
       exportPage.on('pageerror', e => exportErrors.push(String(e)));
       await exportPage.goto(pathToFileURL(imageExport).href);
-      const exported = await shownImage(exportPage, 'main img');
-      check(scope, 'opened, nur-lesen shows the image', exported && !exported.missing && exported.width > 0, JSON.stringify(exported));
+      const exported = await shownImages(exportPage, 'main img');
+      check(scope, 'opened, nur-lesen shows the image three times', exported.length === 3 && allShown(exported), JSON.stringify(exported));
       check(scope, 'no page error in nur-lesen', exportErrors.length === 0, exportErrors.join(' | '));
       await exportContext.close();
       same(scope, 'extract returns the reference to the asset', spawnSync('python3', [SKRIPT, 'extract', withImage], { encoding: 'utf8' }).stdout, imageWant);

@@ -211,6 +211,29 @@ class Script(unittest.TestCase):
         self.assertEqual(len(assets), len(blank) + len(IMAGES) + 1)
         self.assertTrue(all(assets[h] == a for h, a in blank.items()))
 
+    def test_reference_style_images_and_img_tags_are_embedded(self):
+        (self.tmp / 'bilder').mkdir()
+        for name, data in IMAGES.items():
+            (self.tmp / 'bilder' / name).write_bytes(data)
+        md = ('# Referenzen\n\n![Logo][logo], ![Foto][] und ![w] und ein Link [Spezifikation][spec]\n\n'
+              '<img src="bilder/alt.gif" width="200" alt="Alt"> <IMG alt=\'n\' SRC = \'bilder/neu.gif\'> <img src="https://x.org/a.png">\n\n'
+              '`<img src="fehlt.png">` und ` ![c][code] `\n\n'
+              '[LOGO]: bilder/logo.png "Titel"\n'
+              '[foto]: <bilder/foto.jpg>\n'
+              '[W]: bilder/w.webp\n'
+              '[spec]: docs/spec.md\n'
+              '[code]: fehlt.png\n')
+        target = self.inject(md)
+        want = (md.replace('bilder/logo.png "Titel"', '#asset-%s "Titel"' % sha(IMAGES['logo.png']))
+                  .replace('<bilder/foto.jpg>', '#asset-' + sha(IMAGES['foto.jpg']))
+                  .replace('[W]: bilder/w.webp', '[W]: #asset-' + sha(IMAGES['w.webp']))
+                  .replace('src="bilder/alt.gif"', 'src="#asset-%s"' % sha(IMAGES['alt.gif']))
+                  .replace("SRC = 'bilder/neu.gif'", 'src="#asset-%s"' % sha(IMAGES['neu.gif'])))
+        self.assertEqual(self.extract(target), want)
+        assets = assets_of(target)
+        for name, data in IMAGES.items():
+            self.assertEqual(assets[sha(data)], {'m': TYPES[name], 'd': base64.b64encode(data).decode('ascii')})
+
     def test_inject_into_an_existing_file_adds_a_new_image_to_its_own(self):
         (self.tmp / 'logo.png').write_bytes(IMAGES['logo.png'])
         target = self.inject(TRICKY)

@@ -57,10 +57,21 @@ IMAGE_MAX_BYTES = 5 * 1024 * 1024
 # shortcut: an indented code block is not told apart from a list's continuation; an image in one is embedded.
 CODE = re.compile(r'^[ \t]*(`{3,}(?=[^`\n]*$)|~{3,}).*?(?:\n[ \t]*\1[`~]*[ \t]*$|\Z)'
                   r'|(?<![`\\])(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\2(?!`)|<!--.*?-->', re.M | re.S)
-# ![alt](path "title"), the alt with one level of brackets, the path with one of parentheses or in <...>;
-# reference-style images and <img> stay as written.
-IMAGE = re.compile(r'(?<!\\)(!\[(?:[^\[\]\\]|\\.|\[[^\[\]]*\])*\]\()[ \t]*(?:<([^<>\n]*)>|((?:[^\s()<>]|\([^\s()<>]*\))+))'
-                   r'''([ \t]+(?:"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|\([^()\n]*\)))?[ \t]*\)''')
+# ![alt](path "title"), the alt with one level of brackets, the path with one of parentheses or in <...>.
+ALT = r'(?:[^\[\]\\]|\\.|\[[^\[\]]*\])*'
+TITLE = r'''([ \t]+(?:"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|\([^()\n]*\)))?'''
+IMAGE = re.compile(r'(?<!\\)(!\[' + ALT + r'\]\()[ \t]*(?:<([^<>\n]*)>|((?:[^\s()<>]|\([^\s()<>]*\))+))' + TITLE + r'[ \t]*\)')
+# ![alt][label], ![label][] and ![label]: their path stands in a definition [label]: path "title".
+IMAGE_REF = re.compile(r'(?<!\\)!\[(' + ALT + r')\](?:\[([^\[\]]*)\])?(?![(\[:])')
+# shortcut: a definition on one line; a link that shares it with an image points at the asset too.
+DEFINITION = re.compile(r'^([ ]{0,3}\[([^\[\]]+)\]:[ \t]*)(?:<([^<>\n]*)>|(\S+))' + TITLE + r'[ \t]*$', re.M)
+# <img src="path">: only src changes, quoted as the page resolves it (src/app/assets.js, ASSET_SRC_ATTR_RE).
+IMG_TAG = re.compile(r'''(<img\b[^>]*?\s)src[ \t]*=[ \t]*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))''', re.I)
+
+
+def label(text):
+    # As the Markdown matches labels: case and runs of whitespace do not count.
+    return ' '.join(text.split()).casefold()
 
 
 def image_type(data):
@@ -77,11 +88,10 @@ def embed_images(text, markdown_path):
     """The text with each image file it names pointed at its asset, and those assets by hash (FR28)."""
     assets = {}
 
-    def image(m):
-        dest = m.group(2) if m.group(2) is not None else m.group(3)
-        # Web addresses, //... and #..., so #asset-..., stay as written (Ben, 2026-10-27).
+    def embed(dest):
+        # Web addresses, //... and #..., so #asset-..., stay as written (Ben, 2026-10-27): None.
         if re.match(r'[A-Za-z][\w+.-]*:|//|#', dest):
-            return m.group(0)
+            return None
         path = Path(markdown_path).parent / urllib.parse.unquote(dest)
         try:
             if path.stat().st_size > IMAGE_MAX_BYTES:
@@ -94,14 +104,28 @@ def embed_images(text, markdown_path):
             raise Refusal('the image %s in %s is no PNG, JPEG, GIF or WebP' % (dest, markdown_path))
         h = hashlib.sha256(data).hexdigest()
         assets[h] = {'m': mime, 'd': base64.b64encode(data).decode('ascii')}
-        return m.group(1) + '#asset-' + h + (m.group(4) or '') + ')'
+        return '#asset-' + h
 
-    out, i = [], 0
+    def image(m):
+        ref = embed(m.group(2) if m.group(2) is not None else m.group(3))
+        return m.group(1) + ref + (m.group(4) or '') + ')' if ref else m.group(0)
+
+    def definition(m):
+        ref = label(m.group(2)) in used and embed(m.group(3) if m.group(3) is not None else m.group(4))
+        return m.group(1) + ref + (m.group(5) or '') if ref else m.group(0)
+
+    def tag(m):
+        ref = embed(next(g for g in m.groups()[1:] if g is not None))
+        return m.group(1) + 'src="' + ref + '"' if ref else m.group(0)
+
+    parts, i = [], 0
     for c in CODE.finditer(text):
-        out += [IMAGE.sub(image, text[i:c.start()]), c.group(0)]
+        parts += [(text[i:c.start()], False), (c.group(0), True)]
         i = c.end()
-    out.append(IMAGE.sub(image, text[i:]))
-    return ''.join(out), assets
+    parts.append((text[i:], False))
+    used = {label(m.group(2) or m.group(1)) for t, code in parts if not code for m in IMAGE_REF.finditer(t)}
+    out = ''.join(t if code else IMG_TAG.sub(tag, DEFINITION.sub(definition, IMAGE.sub(image, t))) for t, code in parts)
+    return out, assets
 
 
 def add_assets(html, assets, where):
