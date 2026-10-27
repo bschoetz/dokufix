@@ -2,12 +2,13 @@
 
     python3 -m unittest discover -s tests -p 'test_*.py'   (npm test runs it too)
 
-The matrices of epic 3, stories 1 and 8, against dist/dokufix.html. A file saved in the
+The matrices of epic 3, stories 1, 8 and 9, against dist/dokufix.html. A file saved in the
 editor, {"gz": ...}, is made here as the page writes it; that the page writes
 it so, tests/speichern.mjs shows in step 11, in a browser.
 """
 import base64
 import gzip
+import hashlib
 import json
 import re
 import subprocess
@@ -22,6 +23,20 @@ BLANK = ROOT / 'dist' / 'dokufix.html'
 
 TRICKY = ('# Überschrift\n\n```html\n<script>alert(1)</script>\n<!-- kein Kommentar -->\n```\n\n'
           'Ein </script> im Text, $& und \\n und "Anführung", ein Backslash \\ am Ende')
+
+
+# The first bytes the script tells the types by; the rest need not be an image.
+IMAGES = {'logo.png': b'\x89PNG\r\n\x1a\n-png', 'foto.jpg': b'\xff\xd8\xff-jpeg', 'alt.gif': b'GIF87a-gif',
+          'neu.gif': b'GIF89a-gif', 'w.webp': b'RIFF\x00\x00\x00\x00WEBP-webp'}
+TYPES = {'logo.png': 'image/png', 'foto.jpg': 'image/jpeg', 'alt.gif': 'image/gif', 'neu.gif': 'image/gif', 'w.webp': 'image/webp'}
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def assets_of(path):
+    return json.loads(block(path.read_text(encoding='utf-8'), 'dokufix-assets'))
 
 
 def run(*args):
@@ -166,6 +181,69 @@ class Script(unittest.TestCase):
         before = BLANK.read_bytes()
         self.refused(run('inject', self.md(TRICKY), BLANK), 'is the blank')
         self.assertEqual(BLANK.read_bytes(), before)
+
+    def test_images_are_embedded_with_their_bytes_and_type(self):
+        (self.tmp / 'bilder').mkdir()
+        for name, data in IMAGES.items():
+            (self.tmp / 'bilder' / name).write_bytes(data)
+        (self.tmp / 'Mein Bild.png').write_bytes(b'\x89PNG\r\n\x1a\n-leerzeichen')
+        (self.tmp / 'bilder' / 'foto(1).png').write_bytes(IMAGES['logo.png'])
+        md = ('# Bilder\n\n![Logo](bilder/logo.png "Titel") und ![Noch einmal]( ./bilder/lo%67o.png )\n\n'
+              '![J](bilder/foto.jpg) ![G](bilder/alt.gif) ![G2](bilder/neu.gif \'t\') ![W](bilder/w.webp)\n\n'
+              '![Bild](<Mein Bild.png>)\n\n'
+              'Im Code: `![a](fehlt.png)` und ``![b](`fehlt.png`)``\n\n'
+              '1. Schritt\n\n    ```md\n    ![c](fehlt.png)\n    ```\n\n'
+              '~~~\n![d](fehlt.png)\n~~~\n\n'
+              '<!-- ![e](fehlt.png) --> Ein \\` und ```x``` im Satz\n\n'
+              '![Web](https://example.org/x.png) ![Da](#asset-' + 'ab' * 32 + ') \\![kein Bild](fehlt.png)\n\n'
+              '![a [b] c](bilder/foto(1).png "x \\"y\\"")\n')
+        target = self.inject(md)
+        want = (md.replace('bilder/logo.png "Titel"', '#asset-%s "Titel"' % sha(IMAGES['logo.png']))
+                  .replace('( ./bilder/lo%67o.png )', '(#asset-%s)' % sha(IMAGES['logo.png']))
+                  .replace('<Mein Bild.png>', '#asset-' + sha(b'\x89PNG\r\n\x1a\n-leerzeichen'))
+                  .replace('bilder/foto(1).png', '#asset-' + sha(IMAGES['logo.png'])))
+        for name in ['foto.jpg', 'alt.gif', 'neu.gif', 'w.webp']:
+            want = want.replace('bilder/' + name, '#asset-' + sha(IMAGES[name]))
+        self.assertEqual(self.extract(target), want)
+        assets, blank = assets_of(target), json.loads(block(BLANK.read_text(encoding='utf-8'), 'dokufix-assets'))
+        for name, data in IMAGES.items():
+            self.assertEqual(assets[sha(data)], {'m': TYPES[name], 'd': base64.b64encode(data).decode('ascii')})
+        self.assertEqual(len(assets), len(blank) + len(IMAGES) + 1)
+        self.assertTrue(all(assets[h] == a for h, a in blank.items()))
+
+    def test_inject_into_an_existing_file_adds_a_new_image_to_its_own(self):
+        (self.tmp / 'logo.png').write_bytes(IMAGES['logo.png'])
+        target = self.inject(TRICKY)
+        before = assets_of(target)
+        r = run('inject', self.md('# Neu\n\n![Logo](logo.png)\n', 'b.md'), target)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        after = assets_of(target)
+        self.assertEqual(after, {**before, sha(IMAGES['logo.png']): {'m': 'image/png', 'd': base64.b64encode(IMAGES['logo.png']).decode('ascii')}})
+        # The image once more: the file holds it, so its block stays byte for byte.
+        held = block(target.read_text(encoding='utf-8'), 'dokufix-assets')
+        r = run('inject', self.md('# Wieder\n\n![Logo](logo.png)\n', 'c.md'), target)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertEqual(block(target.read_text(encoding='utf-8'), 'dokufix-assets'), held)
+
+    def test_an_image_missing_of_another_type_or_too_large_is_refused(self):
+        (self.tmp / 'ok.png').write_bytes(IMAGES['logo.png'])
+        (self.tmp / 'bild.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg"/>', encoding='utf-8')
+        with open(self.tmp / 'gross.png', 'wb') as f:
+            f.write(IMAGES['logo.png'])
+            f.truncate(5 * 1024 * 1024 + 1)
+        (self.tmp / 'notiz.txt').write_text('kein Bild', encoding='utf-8')
+        existing = self.tmp / 'da.html'
+        run('inject', self.md(TRICKY, 'da.md'), existing)
+        before = existing.read_bytes()
+        for ref, word in [('fehlt.png', 'cannot be read'), ('bild.svg', 'no PNG, JPEG, GIF or WebP'),
+                          ('notiz.txt', 'no PNG, JPEG, GIF or WebP'), ('gross.png', 'larger than 5 MB')]:
+            for target in [self.tmp / 'x.html', existing]:
+                with self.subTest(ref=ref, target=target.name):
+                    r = run('inject', self.md('# T\n\n![Ok](ok.png) ![X](%s)\n' % ref), target)
+                    self.refused(r, word)
+                    self.assertIn(ref, r.stderr.decode())
+        self.assertFalse((self.tmp / 'x.html').exists())
+        self.assertEqual(existing.read_bytes(), before)
 
     def test_markdown_not_utf8_is_refused(self):
         self.refused(run('inject', self.md(b'# \xe4rger\n'), self.tmp / 'x.html'), 'UTF-8')

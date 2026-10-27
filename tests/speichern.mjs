@@ -128,8 +128,10 @@
 //      `extract` of both files gives the LF text. Then injected into a copy
 //      of generation 2 (story 3.8), given an image the blank does not hold, a
 //      document that shows it: it opens with that document, v2, both versions and the image,
-//      its history and assets byte for byte as they were. Stories 3.9 and
-//      3.11 add their cases here
+//      its history and assets byte for byte as they were. Then a Markdown
+//      that names a PNG beside it (story 3.9): opened, the image shows, and
+//      in its nur-lesen export too, its bytes unchanged. Story 3.11 adds its
+//      cases here
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -291,6 +293,12 @@ async function open(browser, file, options = {}){
   await page.waitForFunction(() => !!document.querySelector('#dokufix-rail.has-items'), null, { timeout: 90000 });
   return { context, page, errors, dialogs };
 }
+// The first image of selector once loaded: shown when it has a width and no missing-asset mark.
+const shownImage = (page, selector) => page.evaluate(async sel => {
+  const img = document.querySelector(sel);
+  if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; });
+  return img ? { missing: img.hasAttribute('data-missing-asset'), width: img.naturalWidth, title: img.title } : null;
+}, selector);
 const state = page => page.evaluate(() => ({
   source: document.getElementById('source').value,
   h1: (document.querySelector('#preview h1') || { textContent: '' }).textContent,
@@ -328,14 +336,18 @@ async function saveWithEditor(page, file){
   await download.saveAs(file);
   await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
 }
-// Downloads nur-lesen into file and gives the text of its footer.
-async function exportFooter(page, file){
+// Downloads a read-only export, kind readonly-open (nur-lesen), readonly-slim or readonly-compact, into file.
+async function exportReadonly(page, kind, file){
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 60000 }),
-    page.evaluate(() => document.querySelector('button[data-download="readonly-open"]').click()),
+    page.evaluate(k => document.querySelector('button[data-download="' + k + '"]').click(), kind),
   ]);
   await download.saveAs(file);
   await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+}
+// Downloads nur-lesen into file and gives the text of its footer.
+async function exportFooter(page, file){
+  await exportReadonly(page, 'readonly-open', file);
   const m = fs.readFileSync(file, 'utf8').match(/<footer class="dokufix-meta"><p>([\s\S]*?)<\/p><\/footer>/);
   return m ? m[1] : '';
 }
@@ -1074,16 +1086,40 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     s = await state(o.page);
     same(scope, 'opened, the editor holds the new document', s.source, intoDoc);
     check(scope, 'version v2 with both versions, not marked as changed', s.version === 'v2' && !s.dirty && await entries(o) === 2, JSON.stringify({ version: s.version, dirty: s.dirty }));
-    const shown = await o.page.evaluate(async () => {
-      const img = document.querySelector('#preview img');
-      if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; });
-      return img ? { missing: img.hasAttribute('data-missing-asset'), width: img.naturalWidth } : null;
-    });
+    const shown = await shownImage(o.page, '#preview img');
     check(scope, 'its own image, which the blank does not hold, is shown', shown && !shown.missing && shown.width > 0, JSON.stringify(shown));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     const back = spawnSync('python3', [SKRIPT, 'extract', into], { encoding: 'utf8' });
     same(scope, 'extract returns the new document', back.stdout, intoDoc);
+    // Images through inject (story 3.9): a PNG beside the Markdown, its reference with a title.
+    const withImage = path.join(dir, 'skript-mit-bild.html'), imageExport = path.join(dir, 'skript-mit-bild-nur-lesen.html');
+    fs.writeFileSync(path.join(dir, 'skript-bild.png'), png);
+    const imageDoc = SKRIPT_DOC_LF.replace('## Zweitens', '## Zweitens\n\n![Ein Bild daneben](skript-bild.png "Mit Titel")');
+    const imageWant = imageDoc.replace('skript-bild.png', '#asset-' + own);
+    fs.writeFileSync(markdown, imageDoc);
+    const injectingImage = spawnSync('python3', [SKRIPT, 'inject', markdown, withImage], { encoding: 'utf8' });
+    check(scope, 'inject of a Markdown that names a PNG beside it exits 0', injectingImage.status === 0, injectingImage.stderr || String(injectingImage.error));
+    if (injectingImage.status === 0){
+      o = await open(browser, withImage);
+      s = await state(o.page);
+      same(scope, 'opened, the editor holds the document with the reference pointed at the asset', s.source, imageWant);
+      const embedded = await shownImage(o.page, '#preview img');
+      check(scope, 'the embedded image is shown, with its title', embedded && !embedded.missing && embedded.width > 0 && embedded.title === 'Mit Titel', JSON.stringify(embedded));
+      await exportReadonly(o.page, 'readonly-open', imageExport);
+      check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+      await o.context.close();
+      check(scope, 'nur-lesen of it holds the PNG byte for byte', fs.readFileSync(imageExport, 'utf8').includes('data:image/png;base64,' + png.toString('base64')));
+      const exportContext = await browser.newContext();
+      const exportPage = await exportContext.newPage(), exportErrors = [];
+      exportPage.on('pageerror', e => exportErrors.push(String(e)));
+      await exportPage.goto(pathToFileURL(imageExport).href);
+      const exported = await shownImage(exportPage, 'main img');
+      check(scope, 'opened, nur-lesen shows the image', exported && !exported.missing && exported.width > 0, JSON.stringify(exported));
+      check(scope, 'no page error in nur-lesen', exportErrors.length === 0, exportErrors.join(' | '));
+      await exportContext.close();
+      same(scope, 'extract returns the reference to the asset', spawnSync('python3', [SKRIPT, 'extract', withImage], { encoding: 'utf8' }).stdout, imageWant);
+    }
   } finally {
     await browser.close();
   }

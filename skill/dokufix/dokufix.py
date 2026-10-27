@@ -11,12 +11,14 @@ import argparse
 import base64
 import contextlib
 import gzip
+import hashlib
 import json
 import os
 import re
 import shutil
 import sys
 import tempfile
+import urllib.parse
 import uuid
 import zlib
 from pathlib import Path
@@ -47,6 +49,74 @@ def replace_block(html, block_id, obj, where):
     return block_pattern(block_id).sub(lambda m: m.group(1) + encode_block(obj) + m.group(3), html, count=1)
 
 
+# As ASSET_MAX_INPUT_BYTES in src/app/assets.js.
+IMAGE_MAX_BYTES = 5 * 1024 * 1024
+# Code as the editor's Markdown reads it: a fence, at any indent, to its closing fence or the end (a backtick
+# fence holds no backtick after its run), a code span, a run of backticks not escaped to the next run as long,
+# within a paragraph, and an HTML comment.
+# shortcut: an indented code block is not told apart from a list's continuation; an image in one is embedded.
+CODE = re.compile(r'^[ \t]*(`{3,}(?=[^`\n]*$)|~{3,}).*?(?:\n[ \t]*\1[`~]*[ \t]*$|\Z)'
+                  r'|(?<![`\\])(`+)(?!`)(?:[^\n]|\n(?![ \t]*\n))+?(?<!`)\2(?!`)|<!--.*?-->', re.M | re.S)
+# ![alt](path "title"), the alt with one level of brackets, the path with one of parentheses or in <...>;
+# reference-style images and <img> stay as written.
+IMAGE = re.compile(r'(?<!\\)(!\[(?:[^\[\]\\]|\\.|\[[^\[\]]*\])*\]\()[ \t]*(?:<([^<>\n]*)>|((?:[^\s()<>]|\([^\s()<>]*\))+))'
+                   r'''([ \t]+(?:"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|\([^()\n]*\)))?[ \t]*\)''')
+
+
+def image_type(data):
+    # The types the editor shows, by their first bytes; no SVG (Ben, 2026-10-27).
+    for magic, mime in ((b'\x89PNG\r\n\x1a\n', 'image/png'), (b'\xff\xd8\xff', 'image/jpeg'), (b'GIF87a', 'image/gif'), (b'GIF89a', 'image/gif')):
+        if data.startswith(magic):
+            return mime
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return 'image/webp'
+    return None
+
+
+def embed_images(text, markdown_path):
+    """The text with each image file it names pointed at its asset, and those assets by hash (FR28)."""
+    assets = {}
+
+    def image(m):
+        dest = m.group(2) if m.group(2) is not None else m.group(3)
+        # Web addresses, //... and #..., so #asset-..., stay as written (Ben, 2026-10-27).
+        if re.match(r'[A-Za-z][\w+.-]*:|//|#', dest):
+            return m.group(0)
+        path = Path(markdown_path).parent / urllib.parse.unquote(dest)
+        try:
+            if path.stat().st_size > IMAGE_MAX_BYTES:
+                raise Refusal('the image %s in %s is larger than 5 MB' % (dest, markdown_path))
+            data = path.read_bytes()
+        except OSError as e:
+            raise Refusal('the image %s in %s cannot be read: %s' % (dest, markdown_path, e))
+        mime = image_type(data)
+        if not mime:
+            raise Refusal('the image %s in %s is no PNG, JPEG, GIF or WebP' % (dest, markdown_path))
+        h = hashlib.sha256(data).hexdigest()
+        assets[h] = {'m': mime, 'd': base64.b64encode(data).decode('ascii')}
+        return m.group(1) + '#asset-' + h + (m.group(4) or '') + ')'
+
+    out, i = [], 0
+    for c in CODE.finditer(text):
+        out += [IMAGE.sub(image, text[i:c.start()]), c.group(0)]
+        i = c.end()
+    out.append(IMAGE.sub(image, text[i:]))
+    return ''.join(out), assets
+
+
+def add_assets(html, assets, where):
+    # What the file holds stays; the block is written only for a new one, so a file without new images keeps it byte for byte.
+    m = block_pattern('dokufix-assets').search(html)
+    try:
+        held = json.loads(m.group(2).strip() or '{}') if m else {}
+    except ValueError as e:
+        raise Refusal('%s: the block #dokufix-assets cannot be read: %s' % (where, e))
+    if not isinstance(held, dict):
+        raise Refusal('%s: the block #dokufix-assets holds no assets' % where)
+    new = {h: a for h, a in assets.items() if h not in held}
+    return replace_block(html, 'dokufix-assets', {**held, **new}, where) if new else html
+
+
 def read_html(path):
     try:
         # Bytes, not text mode: its line endings stay as they are.
@@ -68,10 +138,12 @@ def inject(markdown_path, target_path):
     text = text.replace('\r\n', '\n').replace('\r', '\n')
     if not text.strip():
         raise Refusal('%s is empty or only whitespace; there is no document to write' % markdown_path)
+    text, assets = embed_images(text, markdown_path)
     if target.exists():
-        return inject_into(target.resolve(), text)
+        return inject_into(target.resolve(), text, assets)
     html = replace_block(read_html(BLANK), 'dokufix-source', {'text': text}, BLANK)
     html = replace_block(html, 'dokufix-history', {'uuid': str(uuid.uuid4()), 'version': 0, 'history': []}, BLANK)
+    html = add_assets(html, assets, BLANK)
     try:
         with open(target, 'x', encoding='utf-8', newline='') as f:
             f.write(html)
@@ -79,13 +151,13 @@ def inject(markdown_path, target_path):
         raise Refusal('%s cannot be written: %s' % (target, e))
 
 
-def inject_into(target, text):
+def inject_into(target, text, assets):
     # The document alone: identifier, version history and images stay, and no version is added (FR27).
     if target == BLANK.resolve():
         raise Refusal('%s is the blank; inject into a new file instead' % target)
     if not os.access(target, os.W_OK):
         raise Refusal('%s cannot be written: it is write-protected' % target)
-    html = replace_block(read_html(target), 'dokufix-source', {'text': text}, target)
+    html = add_assets(replace_block(read_html(target), 'dokufix-source', {'text': text}, target), assets, target)
     # Written beside it with its mode and moved over it, so that a failed write leaves the file as it was.
     # shortcut: a new file replaces it, so hard links, ACLs and the owner are not kept; write in place if one needs them.
     tmp = None
