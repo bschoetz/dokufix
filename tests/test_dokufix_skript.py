@@ -146,6 +146,16 @@ class Script(unittest.TestCase):
         self.refused(run('inject', self.md('# Neu\n', 'b.md'), target), 'write-protected')
         self.assertEqual(self.extract(target), TRICKY)
 
+    def test_inject_into_a_file_in_a_write_protected_folder_leaves_it_alone(self):
+        target, md = self.inject(TRICKY), self.md('# Neu\n', 'b.md')
+        self.tmp.chmod(0o555)
+        try:
+            self.refused(run('inject', md, target), 'cannot be written')
+        finally:
+            self.tmp.chmod(0o755)
+        self.assertEqual(self.extract(target), TRICKY)
+        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ['a.md', 'b.md', 'x.html'])
+
     def test_inject_into_what_is_no_dokufix_file_with_editor_leaves_it_alone(self):
         target = self.tmp / 'x.html'
         target.write_text('<!doctype html><title>x</title><p>vorher</p>', encoding='utf-8')

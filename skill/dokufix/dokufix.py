@@ -87,6 +87,7 @@ def inject_into(target, text):
         raise Refusal('%s cannot be written: it is write-protected' % target)
     html = replace_block(read_html(target), 'dokufix-source', {'text': text}, target)
     # Written beside it with its mode and moved over it, so that a failed write leaves the file as it was.
+    # shortcut: a new file replaces it, so hard links, ACLs and the owner are not kept; write in place if one needs them.
     tmp = None
     try:
         fd, tmp = tempfile.mkstemp(dir=target.parent, prefix='.' + target.name + '.', suffix='.dokufix-inject')
