@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """dokufix for language models: Markdown into a dokufix file and back out.
 
-    python3 dokufix.py inject <markdown> <target>   writes a new dokufix file
+    python3 dokufix.py inject <markdown> <target>   writes a new dokufix file, or the document of one
     python3 dokufix.py extract <file>               prints its Markdown
 
 Python 3 and its standard library alone. No command prints HTML. See
@@ -9,10 +9,14 @@ src/README.md, "The script for language models".
 """
 import argparse
 import base64
+import contextlib
 import gzip
 import json
+import os
 import re
+import shutil
 import sys
+import tempfile
 import uuid
 import zlib
 from pathlib import Path
@@ -35,12 +39,20 @@ def encode_block(obj):
     return json.dumps(obj, ensure_ascii=False, separators=(',', ':')).replace('<', '\\u003c')
 
 
-def replace_block(html, block_id, obj):
+def replace_block(html, block_id, obj, where):
     found = block_pattern(block_id).findall(html)
     if len(found) != 1:
-        raise Refusal('the blank has %d blocks #%s, not one: %s' % (len(found), block_id, BLANK))
+        raise Refusal('%s has %d blocks #%s, not one; it is no dokufix file with editor' % (where, len(found), block_id))
     # A function as replacement, so backslashes in the JSON stay as they are.
     return block_pattern(block_id).sub(lambda m: m.group(1) + encode_block(obj) + m.group(3), html, count=1)
+
+
+def read_html(path):
+    try:
+        # Bytes, not text mode: its line endings stay as they are.
+        return Path(path).read_bytes().decode('utf-8')
+    except (OSError, UnicodeDecodeError) as e:
+        raise Refusal('%s cannot be read: %s' % (path, e))
 
 
 def inject(markdown_path, target_path):
@@ -56,26 +68,42 @@ def inject(markdown_path, target_path):
     text = text.replace('\r\n', '\n').replace('\r', '\n')
     if not text.strip():
         raise Refusal('%s is empty or only whitespace; there is no document to write' % markdown_path)
-    try:
-        html = BLANK.read_text(encoding='utf-8')
-    except OSError as e:
-        raise Refusal('the blank cannot be read: %s' % e)
-    html = replace_block(html, 'dokufix-source', {'text': text})
-    html = replace_block(html, 'dokufix-history', {'uuid': str(uuid.uuid4()), 'version': 0, 'history': []})
+    if target.exists():
+        return inject_into(target.resolve(), text)
+    html = replace_block(read_html(BLANK), 'dokufix-source', {'text': text}, BLANK)
+    html = replace_block(html, 'dokufix-history', {'uuid': str(uuid.uuid4()), 'version': 0, 'history': []}, BLANK)
     try:
         with open(target, 'x', encoding='utf-8', newline='') as f:
             f.write(html)
-    except FileExistsError:
-        raise Refusal('%s exists; inject into an existing file is not built yet (epic 3, story 8)' % target)
     except OSError as e:
         raise Refusal('%s cannot be written: %s' % (target, e))
 
 
-def extract(file_path):
+def inject_into(target, text):
+    # The document alone: identifier, version history and images stay, and no version is added (FR27).
+    if target == BLANK.resolve():
+        raise Refusal('%s is the blank; inject into a new file instead' % target)
+    if not os.access(target, os.W_OK):
+        raise Refusal('%s cannot be written: it is write-protected' % target)
+    html = replace_block(read_html(target), 'dokufix-source', {'text': text}, target)
+    # Written beside it with its mode and moved over it, so that a failed write leaves the file as it was.
+    # shortcut: a new file replaces it, so hard links, ACLs and the owner are not kept; write in place if one needs them.
+    tmp = None
     try:
-        html = Path(file_path).read_text(encoding='utf-8')
-    except (OSError, UnicodeDecodeError) as e:
-        raise Refusal('%s cannot be read: %s' % (file_path, e))
+        fd, tmp = tempfile.mkstemp(dir=target.parent, prefix='.' + target.name + '.', suffix='.dokufix-inject')
+        with os.fdopen(fd, 'w', encoding='utf-8', newline='') as f:
+            f.write(html)
+        shutil.copymode(target, tmp)
+        os.replace(tmp, target)
+    except OSError as e:
+        if tmp:
+            with contextlib.suppress(OSError):
+                os.unlink(tmp)
+        raise Refusal('%s cannot be written: %s' % (target, e))
+
+
+def extract(file_path):
+    html = read_html(file_path)
     m = block_pattern('dokufix-source').search(html)
     if not m:
         raise Refusal('%s is no dokufix file with editor: it has no block #dokufix-source' % file_path)
@@ -94,7 +122,7 @@ def extract(file_path):
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='dokufix.py', description='Markdown into a dokufix file and back out.')
     commands = parser.add_subparsers(dest='command', required=True)
-    p = commands.add_parser('inject', help='write Markdown into a new dokufix file')
+    p = commands.add_parser('inject', help='write Markdown into a new dokufix file, or as the document of an existing one')
     p.add_argument('markdown')
     p.add_argument('target')
     p = commands.add_parser('extract', help='print the Markdown of a dokufix file')
