@@ -160,6 +160,7 @@ export async function downloadWithEditor(){
     state.versionHistory = pendingHistory;
     state.commitBaseline = pendingCommitBaseline;
     state.cleanBaseline = sourceEl.value;
+    state.fileVersion = pendingVersion;
     updateDirtyState();
     updateVersionBadge();
     await persistDocAs(uuid);

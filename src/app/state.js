@@ -17,6 +17,7 @@ export const state = {
   storedSource: null,   // last source loaded from IDB (or null on fresh open)
 
   cleanBaseline: '',
+  fileVersion: 0,       // version of the file opened or saved last, as cleanBaseline its document
 
   // Init gate — set true at end of the async IIFE. Until then, download
   // buttons (and any state-mutating user actions) are disabled so a click

@@ -1,6 +1,6 @@
 // --- IndexedDB layer ------------------------------------------
 // One DB per origin, two stores:
-//   docs   (keyPath: uuid)  — one record per dokufix file: source, version, history, commitBaseline, updatedAt, page
+//   docs   (keyPath: uuid)  — one record per dokufix file: source, version, history, commitBaseline, fileSource, fileVersion, updatedAt, page
 //   assets (keyPath: hash)  — image Blobs, content-addressed by SHA-256 hex (auto-dedup, no GC needed)
 const IDB_NAME = 'dokufix-v1';
 const IDB_VERSION = 1;
