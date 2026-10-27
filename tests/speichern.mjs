@@ -46,6 +46,11 @@
 //      description; reloaded, the editor holds the draft
 //  4d. every write into "docs" aborted after its request succeeded, as a full
 //      quota does at commit; the version mark warns
+//  4e. generation 1 with another document at v1, as a pull brings it, after
+//      v2 was made in the browser: with text typed after v2 the opening asks,
+//      without it shows the file's document; v2 stays either way; the file
+//      not changed opens with the draft, and so does it after a save of v2
+//      elsewhere; a record without fileSource as before
 //
 // It also reads the saved files as text: #dokufix-history parses and holds the
 // version description as typed, both text blocks hold {"gz": …} that unpack to
@@ -593,6 +598,77 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     const warned = await o.page.waitForFunction(() => document.getElementById('version-btn').classList.contains('persist-failed'), null, { timeout: 5000 }).then(() => true, () => false);
     check(scope, 'the version mark carries the persist warning', warned);
     await o.context.close();
+
+    // 4e. generation 1 changed outside at its old version, as a pull or a
+    // colleague's copy brings it: another document at v1 (story 3.15). A
+    // version made in the browser, v2, not saved; with text typed after it the
+    // opening asks, without it does not. Each case in a storage of its own.
+    scope = name + ' file changed outside';
+    const replaced = path.join(dir, 'generation-1-ersetzt.html');
+    const DOC_R = '# Dokument R\n\n' + body('R') + '\n';
+    fs.writeFileSync(replaced, gen1Text.replace(dataBlock(gen1Text, 'dokufix-source'), () => JSON.stringify({ text: DOC_R }).replace(/</g, '\\u003c')));
+    const inBrowser = DOC_A + '\n\nVersion im Browser', typedAfter = inBrowser + '\n\nDanach getippt';
+    // Opens generation 1 in a storage of its own and makes v2 there; with typed, types after it.
+    const versionInBrowser = async typed => {
+      const t = await open(browser, gen1);
+      await t.page.click('#edit-btn');
+      await t.page.fill('#source', inBrowser);
+      await t.page.click('#version-btn');
+      await t.page.click('#commit-btn');
+      await t.page.waitForFunction(() => document.getElementById('version-btn').textContent === 'v2');
+      await t.page.click('#version-modal .version-modal-close');
+      if (typed){
+        await t.page.fill('#source', typedAfter);
+        await t.page.waitForTimeout(1000);  // the save after typing waits 250 ms
+      }
+      return t;
+    };
+    const entries = t => t.page.evaluate(() => { document.getElementById('version-btn').click(); return document.querySelectorAll('#version-modal .version-list li').length; });
+    const changed = await versionInBrowser(true);
+    const tabs = [changed];
+    const same1 = await open(browser, gen1, { context: changed.context });
+    s = await state(same1.page);
+    check(scope, 'not changed outside, generation 1 opens with the draft, v2, without asking', asked(same1) === 0 && s.source === typedAfter && s.version === 'v2', JSON.stringify({ dialogs: same1.dialogs, version: s.version, source: s.source.slice(-20) }));
+    const kept = await open(browser, replaced, { context: changed.context, cancel: true });
+    s = await state(kept.page);
+    check(scope, 'changed outside, it asks; cancelled, the editor keeps the draft with v2 and both versions', asked(kept) === 1 && s.source === typedAfter && s.version === 'v2' && await entries(kept) === 2, JSON.stringify({ dialogs: kept.dialogs, version: s.version, source: s.source.slice(-20) }));
+    const dropped = await open(browser, replaced, { context: changed.context });
+    s = await state(dropped.page);
+    check(scope, 'confirmed, it shows the file\'s document, and v2 made in the browser stays in the history', asked(dropped) === 1 && s.source === DOC_R && s.version === 'v2' && await entries(dropped) === 2, JSON.stringify({ dialogs: dropped.dialogs, version: s.version, source: s.source.slice(0, 20) }));
+    const again = await open(browser, replaced, { context: changed.context });
+    check(scope, 'the next opening does not ask again', asked(again) === 0 && (await state(again.page)).source === DOC_R, JSON.stringify(again.dialogs));
+    tabs.push(same1, kept, dropped, again);
+    // Nothing typed after v2: no question, the file's document, v2 kept.
+    const clean1 = await versionInBrowser(false);
+    const quiet = await open(browser, replaced, { context: clean1.context });
+    s = await state(quiet.page);
+    check(scope, 'no text after the version made in the browser: no question, the file\'s document, v2 in the history', asked(quiet) === 0 && s.source === DOC_R && s.version === 'v2' && await entries(quiet) === 2, JSON.stringify({ dialogs: quiet.dialogs, version: s.version, source: s.source.slice(0, 20) }));
+    tabs.push(clean1, quiet);
+    // Saved "Mit Editor" elsewhere, then generation 1, an older copy, opened again: the saved state, as before.
+    const saver = await open(browser, gen1);
+    await editAndSave(saver.page, inBrowser, path.join(dir, 'generation-1-weiter.html'));
+    const older = await open(browser, gen1, { context: saver.context });
+    s = await state(older.page);
+    check(scope, 'saved as v2 elsewhere, generation 1 opened again shows v2 with its text, without asking', asked(older) === 0 && s.source === inBrowser && s.version === 'v2', JSON.stringify({ dialogs: older.dialogs, version: s.version, source: s.source.slice(-20) }));
+    tabs.push(saver, older);
+    // A record written before this story, without fileSource: the draft wins as before.
+    const legacy = await versionInBrowser(true);
+    await legacy.page.evaluate(() => new Promise((resolve, reject) => {
+      const req = indexedDB.open('dokufix-v1');
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => {
+        const store = req.result.transaction('docs', 'readwrite').objectStore('docs');
+        const all = store.getAll();
+        all.onsuccess = () => { for (const r of all.result){ delete r.fileSource; delete r.fileVersion; store.put(r); } };
+        store.transaction.oncomplete = resolve;
+      };
+    }));
+    const old = await open(browser, replaced, { context: legacy.context });
+    s = await state(old.page);
+    check(scope, 'a record without fileSource: the draft, v2, without asking, as before', asked(old) === 0 && s.source === typedAfter && s.version === 'v2', JSON.stringify({ dialogs: old.dialogs, version: s.version, source: s.source.slice(-20) }));
+    tabs.push(legacy, old);
+    check(scope, 'no page error', tabs.every(t => t.errors.length === 0), tabs.flatMap(t => t.errors).join(' | '));
+    for (const c of [changed, clean1, saver, legacy]) await c.context.close();
 
     // 5. a narrow window, saved with the hamburger panel open
     scope = name + ' narrow window';

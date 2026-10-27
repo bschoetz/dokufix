@@ -7,7 +7,7 @@ import { escapeHtml } from './html.js';
 
 // --- Browser-side persistence (IndexedDB) ---------------------
 // One record per dokufix file lives in IDB under its UUID, in store 'docs':
-//   { uuid, source, version, history, commitBaseline, updatedAt, page }
+//   { uuid, source, version, history, commitBaseline, fileSource, fileVersion, updatedAt, page }
 // Migration from the PoC's earlier localStorage layout happens transparently
 // on first load (see migrateLegacyLocalStorage). Storage of the heading-
 // numbering preference stays in localStorage — it's doc-independent UX state,
@@ -96,18 +96,25 @@ export async function loadDocState(initialSource){
     ? data.commitBaseline
     : initialSource;
   // Source: the IDB draft wins when it is a draft of this file — drafts
-  // survive reloads. It is when its version is ahead, or equal and it started
-  // from this file's document (its commitBaseline; a record without one is
-  // taken as before). A file saved elsewhere, later or from another tab at
-  // the same version, shows its own document. The presence of the record
+  // survive reloads. It is when its version is ahead, unless the file was
+  // changed outside at the version the draft came from (its fileVersion, with
+  // another document than its fileSource: a pull, a colleague's copy; Ben,
+  // 2026-10-27), or equal and it started from this file's document (its
+  // commitBaseline); a record without the fields is taken as before. So a
+  // file saved elsewhere, later or from another tab at the same version, or
+  // changed outside, shows its own document; an older copy of the file shows
+  // the draft. The presence of the record
   // itself, not the truthiness of source, distinguishes "no draft" from
   // "deliberately empty draft" — clearing the textarea on purpose must not be
   // silently undone by substituting the file's document on reload.
-  const ownDraft = dbVer > fileVer
+  const changedOutside = dbRec && dbRec.fileVersion === fileVer && typeof dbRec.fileSource === 'string' && dbRec.fileSource !== initialSource;
+  state.fileVersion = fileVer;
+  const ownDraft = (dbVer > fileVer && !changedOutside)
     || (dbVer === fileVer && (!dbRec.commitBaseline || dbRec.commitBaseline === initialSource));
   // A draft of another state that holds text saved nowhere is not dropped
   // without asking (Ben, 2026-10-25); cancel keeps it in the editor, against
-  // this file's version and history.
+  // this file's version and history, or its own when they are ahead. A
+  // version made in the browser stays in either case.
   const unsaved = dbRec && !ownDraft && typeof dbRec.source === 'string' && dbRec.source !== ''
     && dbRec.source !== dbRec.commitBaseline && dbRec.source !== initialSource;
   const keep = ownDraft || (unsaved && !confirm(DRAFT_QUESTION));
@@ -117,7 +124,7 @@ export async function loadDocState(initialSource){
   if (unsaved && !keep){
     try {
       await idbPutDoc({ uuid: state.docUuid, source: initialSource, version: state.currentVersion,
-        history: state.versionHistory, commitBaseline: state.commitBaseline }, readAt);
+        history: state.versionHistory, commitBaseline: state.commitBaseline, fileSource: initialSource, fileVersion: fileVer }, readAt);
     } catch (e) { console.warn('IDB write of the dropped draft failed:', e); }
   }
 }
@@ -144,6 +151,9 @@ export async function persistDoc(){
       version: state.currentVersion,
       history: state.versionHistory,
       commitBaseline: state.commitBaseline,
+      // The document and version of the file opened or saved last: loadDocState tells by them a file changed outside.
+      fileSource: state.cleanBaseline,
+      fileVersion: state.fileVersion,
     }, readAt);
     setPersistFailed(false);
     return true;
