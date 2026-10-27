@@ -2,7 +2,7 @@
 
     python3 -m unittest discover -s tests -p 'test_*.py'   (npm test runs it too)
 
-The matrix of epic 3, story 1, against dist/dokufix.html. A file saved in the
+The matrices of epic 3, stories 1 and 8, against dist/dokufix.html. A file saved in the
 editor, {"gz": ...}, is made here as the page writes it; that the page writes
 it so, tests/speichern.mjs shows in step 11, in a browser.
 """
@@ -119,11 +119,43 @@ class Script(unittest.TestCase):
             self.refused(r, 'empty')
             self.assertFalse((self.tmp / 'x.html').exists())
 
-    def test_an_existing_target_is_left_alone(self):
+    def test_inject_into_an_existing_file_replaces_its_document_alone(self):
+        # A file with an identifier, two versions and an image, as the editor saves it, with CRLF around its blocks.
+        html = self.inject(TRICKY).read_text(encoding='utf-8')
+        history = {'uuid': 'u-1', 'version': 2, 'history': [{'v': 1, 't': '2026-10-27T10:00:00Z', 'm': 'eins', 's': ''}, {'v': 2, 't': '2026-10-27T11:00:00Z', 'm': 'zwei', 's': ''}]}
+        html = html.replace(block(html, 'dokufix-history'), json.dumps(history))
+        html = html.replace(block(html, 'dokufix-assets'), json.dumps({'ab' * 32: {'m': 'image/png', 'd': 'iVBORw0K'}}))
+        html = html.replace(block(html, 'dokufix-source'), json.dumps({'gz': base64.b64encode(gzip.compress(TRICKY.encode('utf-8'))).decode('ascii')}))
         target = self.tmp / 'x.html'
-        target.write_text('vorher', encoding='utf-8')
-        self.refused(run('inject', self.md(TRICKY), target), 'story 8')
-        self.assertEqual(target.read_text(encoding='utf-8'), 'vorher')
+        target.write_bytes(html.replace('\n', '\r\n').encode('utf-8'))
+        target.chmod(0o600)
+        before = target.read_bytes()
+        new = '# Neu\r\n\n![Bild](#asset-' + 'ab' * 32 + ')\n'
+        r = run('inject', self.md(new, 'b.md'), target)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertEqual(self.extract(target), new.replace('\r\n', '\n'))
+        after = target.read_bytes()
+        strip = lambda b: re.sub(rb'(id="dokufix-source">).*?</script>', rb'\1</script>', b, flags=re.S)
+        self.assertEqual(strip(after), strip(before))
+        self.assertEqual(target.stat().st_mode & 0o777, 0o600)
+        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ['a.md', 'b.md', 'x.html'])
+
+    def test_inject_into_a_write_protected_file_is_refused(self):
+        target = self.inject(TRICKY)
+        target.chmod(0o444)
+        self.refused(run('inject', self.md('# Neu\n', 'b.md'), target), 'write-protected')
+        self.assertEqual(self.extract(target), TRICKY)
+
+    def test_inject_into_what_is_no_dokufix_file_with_editor_leaves_it_alone(self):
+        target = self.tmp / 'x.html'
+        target.write_text('<!doctype html><title>x</title><p>vorher</p>', encoding='utf-8')
+        self.refused(run('inject', self.md(TRICKY), target), 'no dokufix file with editor')
+        self.assertEqual(target.read_text(encoding='utf-8'), '<!doctype html><title>x</title><p>vorher</p>')
+
+    def test_inject_into_the_blank_is_refused(self):
+        before = BLANK.read_bytes()
+        self.refused(run('inject', self.md(TRICKY), BLANK), 'is the blank')
+        self.assertEqual(BLANK.read_bytes(), before)
 
     def test_markdown_not_utf8_is_refused(self):
         self.refused(run('inject', self.md(b'# \xe4rger\n'), self.tmp / 'x.html'), 'UTF-8')

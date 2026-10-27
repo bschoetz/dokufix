@@ -125,8 +125,11 @@
 //      epic 3, story 1): Markdown with CRLF, a lone CR, </script>, <!-- and
 //      umlauts, injected into the built file; opened, the editor holds it with
 //      LF and the preview shows it; saved "Mit Editor" without a change,
-//      `extract` of both files gives the LF text. Stories 3.8, 3.9 and 3.11
-//      add their cases here
+//      `extract` of both files gives the LF text. Then injected into a copy
+//      of generation 2 (story 3.8), given an image the blank does not hold, a
+//      document that shows it: it opens with that document, v2, both versions and the image,
+//      its history and assets byte for byte as they were. Stories 3.9 and
+//      3.11 add their cases here
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -1052,6 +1055,35 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       }
       check(scope, 'the file saved in the editor holds {"gz": …}', blockText(fs.readFileSync(injectedSaved, 'utf8'), 'dokufix-source').gz === true);
     }
+    // Into an existing file (story 3.8): a copy of generation 2, v2, given an
+    // image of its own that the blank does not hold, gets a document that shows it.
+    const into = path.join(dir, 'skript-in-generation-2.html');
+    const gen2Text = fs.readFileSync(gen2, 'utf8'), assets = dataBlock(gen2Text, 'dokufix-assets');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const own = crypto.createHash('sha256').update(png).digest('hex');
+    const withOwn = gen2Text.replace(assets, () => JSON.stringify({ ...JSON.parse(assets), [own]: { m: 'image/png', d: png.toString('base64') } }));
+    fs.writeFileSync(into, withOwn);
+    const intoDoc = SKRIPT_DOC_LF.replace('## Zweitens', '## Zweitens\n\n![Ein Bild der Datei](#asset-' + own + ')');
+    fs.writeFileSync(markdown, intoDoc);
+    const injectingInto = spawnSync('python3', [SKRIPT, 'inject', markdown, into], { encoding: 'utf8' });
+    check(scope, 'inject into generation 2 exits 0', injectingInto.status === 0, injectingInto.stderr || String(injectingInto.error));
+    same(scope, 'its #dokufix-history and #dokufix-assets, its own image among them, are as they were, byte for byte',
+      ['dokufix-history', 'dokufix-assets'].map(id => dataBlock(fs.readFileSync(into, 'utf8'), id)).join('\n'),
+      ['dokufix-history', 'dokufix-assets'].map(id => dataBlock(withOwn, id)).join('\n'));
+    o = await open(browser, into);
+    s = await state(o.page);
+    same(scope, 'opened, the editor holds the new document', s.source, intoDoc);
+    check(scope, 'version v2 with both versions, not marked as changed', s.version === 'v2' && !s.dirty && await entries(o) === 2, JSON.stringify({ version: s.version, dirty: s.dirty }));
+    const shown = await o.page.evaluate(async () => {
+      const img = document.querySelector('#preview img');
+      if (img && !img.complete) await new Promise(r => { img.onload = img.onerror = r; });
+      return img ? { missing: img.hasAttribute('data-missing-asset'), width: img.naturalWidth } : null;
+    });
+    check(scope, 'its own image, which the blank does not hold, is shown', shown && !shown.missing && shown.width > 0, JSON.stringify(shown));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    const back = spawnSync('python3', [SKRIPT, 'extract', into], { encoding: 'utf8' });
+    same(scope, 'extract returns the new document', back.stdout, intoDoc);
   } finally {
     await browser.close();
   }
