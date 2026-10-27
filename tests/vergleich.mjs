@@ -3897,7 +3897,11 @@ const bpmnFacts = page => page.evaluate(() => {
             if (!visual || !visual.firstElementChild) continue;
             const [ox, oy] = offset(g);
             if (g.classList.contains('djs-connection')){
-              const nums = ((visual.querySelector(':scope > path') || { getAttribute: () => '' }).getAttribute('d') || '').match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [];
+              // A line jump is an arc (src/app/line-jumps.js): of its seven numbers only the last two are a point of the flow.
+              // shortcut: the jump is read as its chord, so a label or note on its 5 px bulge alone goes unseen; read the arc if that matters.
+              const d = ((visual.querySelector(':scope > path') || { getAttribute: () => '' }).getAttribute('d') || '')
+                .replace(/A([^A-Za-z]*)/g, (_, args) => 'L' + args.trim().split(/[\s,]+/).slice(5).join(','));
+              const nums = d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [];
               const pts = [];
               for (let i = 0; i + 1 < nums.length; i += 2) pts.push([Number(nums[i]), Number(nums[i + 1])]);
               out.flows[id] = pts;
@@ -4042,7 +4046,9 @@ async function assertBpmnFonts(page, check, dir){
         for (const g of svg.querySelectorAll('g.djs-connection[data-element-id]')){
           const path = g.querySelector(':scope > .djs-visual > path');
           if (!path) continue;
-          const nums = (path.getAttribute('d') || '').match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [];
+          // A line jump is an arc: only its end point is a point of the flow, as in the geometry above.
+          const d = (path.getAttribute('d') || '').replace(/A([^A-Za-z]*)/g, (_, args) => 'L' + args.trim().split(/[\s,]+/).slice(5).join(','));
+          const nums = d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/gi) || [];
           const ctm = path.getScreenCTM();
           const pts = [];
           for (let i = 0; i + 1 < nums.length; i += 2) pts.push(new DOMPoint(Number(nums[i]), Number(nums[i + 1])).matrixTransform(ctm));
