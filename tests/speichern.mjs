@@ -116,6 +116,13 @@
 //      after such a click are byte for byte the files written with the panel
 //      and the search closed, since an export renders the document anew
 //
+//  11. a file the script for language models writes (skill/dokufix/dokufix.py,
+//      epic 3, story 1): Markdown with CRLF, a lone CR, </script>, <!-- and
+//      umlauts, injected into the built file; opened, the editor holds it with
+//      LF and the preview shows it; saved "Mit Editor" without a change,
+//      `extract` of both files gives the LF text. Stories 3.8, 3.9 and 3.11
+//      add their cases here
+//
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
 // The version description contains "<!-- <script>" and "</script>".
@@ -223,6 +230,12 @@ const BPMN_XML = [
   '  </bpmndi:BPMNDiagram>',
   '</bpmn:definitions>',
 ].join('\n');
+// For step 11: Markdown the script injects, with CRLF, a lone CR, markup and
+// umlauts, and no final newline; the editor holds it with LF.
+const SKRIPT = path.join(root, 'skill/dokufix/dokufix.py');
+// Four headings below the title, RAIL_MIN_HEADINGS: open() waits for the rail.
+const SKRIPT_DOC = '# Vom Skript\r\n\r\n## Erstens\r\n\r\nEin `</script>`, ein `<!--` und ein `<script>`.\r\r## Zweitens\r\n\r\n## Drittens\r\n\r\n## Viertens\r\n\r\nÄrger über Umlaute, ohne Zeilenende';
+const SKRIPT_DOC_LF = SKRIPT_DOC.replace(/\r\n?/g, '\n');
 const DEMO_EXTRA ='\n## Demo-Text mit Markup\n\nEin </script> ohne Rückstriche, ein <!-- und ein <script>, dazu $& und {{slot:app.js}}.\n';
 
 // ---------- results ----------
@@ -295,6 +308,10 @@ async function editAndSave(page, text, file, numbering = false){
   await page.fill('#source', text);
   await pressAndWaitForRender(page, '#render-btn');
   if (numbering) await page.click('#numbering-btn');
+  await saveWithEditor(page, file);
+}
+// Saves the page as "Mit Editor" into file.
+async function saveWithEditor(page, file){
   await page.click('#download-btn');
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 60000 }),
@@ -934,6 +951,31 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     same(scope, 'the editor holds the demo text unchanged', s.source, demoWithMarkup);
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
+
+    // 11. a file written by the script for language models (epic 3, story 1)
+    scope = name + ' file of the script';
+    const injected = path.join(dir, 'skript-injiziert.html'), injectedSaved = path.join(dir, 'skript-gespeichert.html');
+    const markdown = path.join(dir, 'skript.md');
+    fs.writeFileSync(markdown, SKRIPT_DOC);
+    const injecting = spawnSync('python3', [SKRIPT, 'inject', markdown, injected], { encoding: 'utf8' });
+    check(scope, 'inject writes the file', injecting.status === 0 && fs.existsSync(injected), injecting.stderr || String(injecting.error));
+    if (fs.existsSync(injected)){
+      o = await open(browser, injected);
+      s = await state(o.page);
+      same(scope, 'opened, the editor holds the Markdown with LF line endings', s.source, SKRIPT_DOC_LF);
+      check(scope, 'the preview shows its heading', s.h1 === 'Vom Skript', JSON.stringify(s.h1));
+      check(scope, 'version v0, not marked as changed', s.version === 'v0' && !s.dirty, JSON.stringify({ version: s.version, dirty: s.dirty }));
+      await o.page.click('#edit-btn');
+      await saveWithEditor(o.page, injectedSaved);
+      check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+      await o.context.close();
+      for (const [label, file] of [['the injected file', injected], ['the file saved in the editor', injectedSaved]]){
+        const r = spawnSync('python3', [SKRIPT, 'extract', file], { encoding: 'utf8' });
+        check(scope, 'extract of ' + label + ' exits 0', r.status === 0, r.stderr);
+        same(scope, 'extract of ' + label + ' returns the Markdown with LF line endings', r.stdout, SKRIPT_DOC_LF);
+      }
+      check(scope, 'the file saved in the editor holds {"gz": …}', blockText(fs.readFileSync(injectedSaved, 'utf8'), 'dokufix-source').gz === true);
+    }
   } finally {
     await browser.close();
   }
