@@ -81,6 +81,7 @@ export async function loadDocState(initialSource){
 
   const dbVer   = dbRec ? sanitizeVersion(dbRec.version) : -1;
   const fileVer = sanitizeVersion(fileData.version);
+  state.fileVersion = fileVer;
   const useDb = dbRec && dbVer > fileVer;
   const data = useDb ? dbRec : fileData;
 
@@ -103,12 +104,11 @@ export async function loadDocState(initialSource){
   // commitBaseline); a record without the fields is taken as before. So a
   // file saved elsewhere, later or from another tab at the same version, or
   // changed outside, shows its own document; an older copy of the file shows
-  // the draft. The presence of the record
-  // itself, not the truthiness of source, distinguishes "no draft" from
-  // "deliberately empty draft" — clearing the textarea on purpose must not be
-  // silently undone by substituting the file's document on reload.
+  // the draft. The presence of the record itself, not the truthiness of
+  // source, distinguishes "no draft" from "deliberately empty draft" —
+  // clearing the textarea on purpose must not be silently undone by
+  // substituting the file's document on reload.
   const changedOutside = dbRec && dbRec.fileVersion === fileVer && typeof dbRec.fileSource === 'string' && dbRec.fileSource !== initialSource;
-  state.fileVersion = fileVer;
   const ownDraft = (dbVer > fileVer && !changedOutside)
     || (dbVer === fileVer && (!dbRec.commitBaseline || dbRec.commitBaseline === initialSource));
   // A draft of another state that holds text saved nowhere is not dropped
