@@ -26,7 +26,7 @@ class Refusal(Exception):
 
 
 def block_pattern(block_id):
-    # A data block holds every < as <, so its first </script> is its end.
+    # A data block holds every < as \u003c, so its first </script> is its end.
     return re.compile(r'(<script type="application/json" id="' + block_id + r'">)(.*?)(</script>)', re.S)
 
 
@@ -45,8 +45,6 @@ def replace_block(html, block_id, obj):
 
 def inject(markdown_path, target_path):
     target = Path(target_path)
-    if target.exists():
-        raise Refusal('%s exists; inject into an existing file is not built yet (epic 3, story 8)' % target)
     try:
         # utf-8-sig: a byte order mark of a Windows editor is no part of the document.
         text = Path(markdown_path).read_bytes().decode('utf-8-sig')
