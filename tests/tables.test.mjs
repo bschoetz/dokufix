@@ -97,7 +97,7 @@ test('a document without a table comes through the pass as it went in', () => {
 });
 test('the pass takes the root alone and makes its elements with the document of that root', () => {
   const root = rootWith(TABLE);
-  buildTables(root, { frontmatter: { kind: null } });
+  buildTables(root, { parts: [] });
   assert.ok(root.firstElementChild.ownerDocument === root.ownerDocument);
   assert.equal(root.querySelectorAll('.' + TABLE_CLASS + ' > table').length, 1);
 });

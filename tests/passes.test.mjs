@@ -18,7 +18,7 @@ import { runPasses } from '../src/app/passes.js';
 import { buildWarning } from '../src/app/warning.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
 import { assignHeadingIds, processInlineToc, documentHeadings, headingLabelText } from '../src/app/toc.js';
-import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
+import { readParts, injectPartHeaders } from '../src/app/frontmatter.js';
 import { buildCallouts } from '../src/app/callouts.js';
 import { buildChips } from '../src/app/chips.js';
 import { applyMarkers } from '../src/app/markers.js';
@@ -43,7 +43,7 @@ const later = () => new Promise(resolve => setTimeout(resolve, 5));
 // ---------- the runner ----------
 test('passes run in the order of the list, each with the root and the context', async () => {
   const root = rootWith('<h1>Titel</h1>');
-  const context = { frontmatter: { kind: null } };
+  const context = { parts: [] };
   const seen = [];
   const pass = name => ({ name, run(r, c){ seen.push([name, r === root, c === context]); } });
   const failed = await runPasses(root, [pass('eins'), pass('zwei'), pass('drei')], context);
@@ -153,11 +153,11 @@ test('removeTransient takes out every marked element, at any depth, and nothing 
 // ---------- real passes over a parsed fragment ----------
 test('heading ids, the inline table of contents and the metadata panel, driven by the runner', async () => {
   const root = rootWith(
-    '<h1>Handbuch</h1><p>[[toc]]</p><h2>Übersicht</h2><h3>Größe und Maß</h3><h2>Übersicht</h2>' +
+    '<div data-dokufix-part="7-0"></div><h1>Handbuch</h1><p>[[toc]]</p><h2>Übersicht</h2><h3>Größe und Maß</h3><h2>Übersicht</h2>' +
     '<h4>zu tief für die Liste</h4><p><code>[[toc]]</code></p>');
-  const context = { frontmatter: splitFrontmatter('---\ntitle: Handbuch\nversion: 3\n---\n') };
+  const context = { parts: readParts('---\ntitle: Handbuch\nversion: 3\n---\n'), partToken: 7 };
   const failed = await runPasses(root, [
-    { name: 'Metadaten', run: (r, c) => injectFrontmatterPanel(r, c.frontmatter) },
+    { name: 'Metadaten', run: injectPartHeaders },
     { name: 'Überschriften', run: assignHeadingIds },
     { name: 'Inhaltsverzeichnis', run: processInlineToc },
   ], context);
@@ -184,7 +184,7 @@ test('an id the author wrote on a heading stays one attribute in the table of co
 test('a real pass that fails on its input is contained like any other', async t => {
   const root = rootWith('<h2>Eins</h2><p>[[toc]]</p>');
   const { result: failed } = await quiet(t, () => runPasses(root, [
-    { name: 'Metadaten', run: (r, c) => injectFrontmatterPanel(r, c.frontmatter) },   // no context: throws
+    { name: 'Metadaten', run: injectPartHeaders },   // no context: throws
     { name: 'Überschriften', run: assignHeadingIds },
     { name: 'Inhaltsverzeichnis', run: processInlineToc },
   ]));
@@ -208,7 +208,7 @@ test('a heading inside a callout is no document heading: no id, no entry in the 
     { name: 'Hinweise', run: buildCallouts },
     { name: 'Überschriften', run: assignHeadingIds },
     { name: 'Inhaltsverzeichnis', run: processInlineToc },
-  ], { frontmatter: { kind: null } });
+  ], { parts: [] });
   assert.deepEqual(failed, []);
   const inside = root.querySelector('.dokufix-callout h3');
   assert.equal(inside.textContent, 'Im Hinweis');
@@ -225,7 +225,7 @@ test('the heading rule sees callouts only when their pass ran first: that is the
   await runPasses(root, [
     { name: 'Überschriften', run: assignHeadingIds },
     { name: 'Hinweise', run: buildCallouts },
-  ], { frontmatter: { kind: null } });
+  ], { parts: [] });
   // Wrong order: the heading was still in a blockquote when ids were given.
   assert.equal(root.querySelector('.dokufix-callout h3').id, 'im-hinweis');
 });
@@ -265,7 +265,7 @@ const CHIP_PASSES = [
 ];
 test('a heading with a chip: its entry reads the label, its anchor is the one of that text', async () => {
   const root = rootWith(WITH_CHIP_HEADINGS);
-  const failed = await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  const failed = await runPasses(root, CHIP_PASSES, { parts: [] });
   assert.deepEqual(failed, []);
   assert.equal(root.querySelectorAll('h2 .dokufix-chip, h4 .dokufix-chip').length, 5);
   assert.deepEqual(documentHeadings(root).map(h => h.id),
@@ -281,7 +281,7 @@ test('a heading with a chip: its entry reads the label, its anchor is the one of
 test('a heading that is only a chip has an entry and an anchor, never empty ones', async () => {
   // ## `🟢 Live`, and "## `🟡 !`", whose label has nothing an anchor can be made of
   const root = rootWith('<p>[[toc]]</p>\n<h2><code>🟢 Live</code></h2>\n<h2><code>🟡 !</code></h2>\n');
-  await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  await runPasses(root, CHIP_PASSES, { parts: [] });
   assert.deepEqual(documentHeadings(root).map(h => h.id), ['live', 'section']);
   const entries = Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.textContent);
   assert.deepEqual(entries, ['Live', '!']);
@@ -290,7 +290,7 @@ test('a heading that is only a chip has an entry and an anchor, never empty ones
 test('the word for assistive technology is in neither entry nor anchor, whatever the colour', async () => {
   const dots = ['🟢', '🟡', '🔴', '⚪', '🔵'];
   const root = rootWith('<p>[[toc]]</p>\n' + dots.map((dot, i) => '<h2>Teil ' + (i + 1) + ' <code>' + dot + ' Stand</code></h2>\n').join(''));
-  await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  await runPasses(root, CHIP_PASSES, { parts: [] });
   assert.deepEqual(documentHeadings(root).map(h => h.id), [1, 2, 3, 4, 5].map(n => 'teil-' + n + '-stand'));
   assert.deepEqual(Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.textContent), [1, 2, 3, 4, 5].map(n => 'Teil ' + n + ' Stand'));
   // Five headings, five words, none of them in a label.
@@ -327,7 +327,7 @@ test('the table of contents sees chips only when their pass ran first: that is t
     { name: 'Überschriften', run: assignHeadingIds },
     { name: 'Inhaltsverzeichnis', run: processInlineToc },
     { name: 'Status-Chips', run: buildChips },
-  ], { frontmatter: { kind: null } });
+  ], { parts: [] });
   // Wrong order: the entry was written while the heading still held the code span with its dot.
   assert.equal(root.querySelector('nav.dokufix-toc a').textContent, 'Bestellung 🟢 Live');
 });
@@ -335,7 +335,7 @@ test('a chip in a heading inside a callout: a chip, and the heading still does n
   // > [!TIP]
   // > ### Automat `🟢 Live`
   const root = rootWith('<h2>Eins</h2>\n<blockquote>\n<p>[!TIP]</p>\n<h3>Automat <code>🟢 Live</code></h3>\n</blockquote>\n');
-  await runPasses(root, CHIP_PASSES, { frontmatter: { kind: null } });
+  await runPasses(root, CHIP_PASSES, { parts: [] });
   const inside = root.querySelector('.dokufix-callout h3');
   assert.equal(inside.querySelectorAll('.dokufix-chip-green').length, 1);
   assert.ok(!inside.hasAttribute('id'));
@@ -389,7 +389,7 @@ const WITH_MARKERS =
   '<blockquote>\n<p>[!TIP]</p>\n<!-- dokufix: steps -->\n<ol>\n<li>im Hinweis</li>\n</ol>\n</blockquote>\n';
 test('broken markers among working ones: no pass fails, each warning stands at its marker\'s place, every other marker takes effect', async t => {
   const root = rootWith(WITH_MARKERS);
-  const { result: failed, logged } = await quiet(t, () => runPasses(root, MARKER_PASSES, { frontmatter: { kind: null } }));
+  const { result: failed, logged } = await quiet(t, () => runPasses(root, MARKER_PASSES, { parts: [] }));
   assert.deepEqual(failed, [], 'no pass failed');
   assert.deepEqual(logged, [], 'nothing on the console');
   // Not at the top, where the runner puts the warning of a pass that failed.
@@ -418,7 +418,7 @@ test('broken markers among working ones: no pass fails, each warning stands at i
 test('a document without a marker comes through the marker pass as it went in', async () => {
   const markup = '<h1>Titel</h1>\n<!-- Notiz -->\n<ul>\n<li><strong>fett</strong> a</li>\n</ul>\n<ol start="3">\n<li><em>Wer:</em> b</li>\n</ol>\n';
   const root = rootWith(markup);
-  const failed = await runPasses(root, [{ name: 'Markierungen', run: applyMarkers }], { frontmatter: { kind: null } });
+  const failed = await runPasses(root, [{ name: 'Markierungen', run: applyMarkers }], { parts: [] });
   assert.deepEqual(failed, []);
   assert.equal(root.innerHTML, markup);
 });
@@ -458,7 +458,7 @@ const WITH_TABLES =
   '<h2>Danach</h2>\n<blockquote>\n<p>[!NOTE]</p>\n' + mdTable(['a', 'b'], [['1', '2']]) + '</blockquote>\n';
 test('tables through the passes of render.js: every table wrapped once, the facet filter built over chips, its warnings at their markers, no pass failed', async t => {
   const root = rootWith(WITH_TABLES);
-  const { result: failed, logged } = await quiet(t, () => runPasses(root, MARKER_PASSES, { frontmatter: { kind: null } }));
+  const { result: failed, logged } = await quiet(t, () => runPasses(root, MARKER_PASSES, { parts: [] }));
   assert.deepEqual(failed, [], 'no pass failed');
   assert.deepEqual(logged, [], 'nothing on the console');
   // Every table has its wrapper, the one in the callout as well; none has two.
@@ -495,7 +495,7 @@ test('with the tables wrapped before the markers are applied, a marker no longer
     { name: 'Status-Chips', run: buildChips },
     { name: 'Tabellen', run: buildTables },
     { name: 'Markierungen', run: applyMarkers },
-  ], { frontmatter: { kind: null } });
+  ], { parts: [] });
   // Wrong order: the element directly behind the marker is the wrapper, a <div>.
   assert.equal(root.querySelectorAll('.dokufix-facets').length, 0);
   assert.ok(Array.from(root.querySelectorAll('.dokufix-warning')).some(w => w.textContent === 'Warnung: Die Markierung „dokufix: facets Status“ erwartet direkt danach eine Tabelle.'));
@@ -510,8 +510,8 @@ const WITH_FILTER =
 test('the free-text filter through the runner: the document passes mark the table and leave no field, the run-time pass attaches it; no pass failed', async t => {
   const root = rootWith(WITH_FILTER);
   const { result: failed, logged } = await quiet(t, async () => [
-    ...await runPasses(root, MARKER_PASSES, { frontmatter: { kind: null } }),
-    ...await runPasses(root, [{ name: 'Tabellenfilter', run: attachTableFilters }], { frontmatter: { kind: null } }),
+    ...await runPasses(root, MARKER_PASSES, { parts: [] }),
+    ...await runPasses(root, [{ name: 'Tabellenfilter', run: attachTableFilters }], { parts: [] }),
   ]);
   assert.deepEqual(failed, [], 'no pass failed');
   assert.deepEqual(logged, [], 'nothing on the console');

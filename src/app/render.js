@@ -1,6 +1,6 @@
 import { pruneAssetUrlCache, resolveAssetRefsInHtml } from './assets.js';
 import { sourceEl, previewEl } from './dom.js';
-import { splitFrontmatter, injectFrontmatterPanel } from './frontmatter.js';
+import { readParts, partsMarkdown, injectPartHeaders } from './frontmatter.js';
 import { buildCallouts } from './callouts.js';
 import { buildChips } from './chips.js';
 import { applyMarkers } from './markers.js';
@@ -13,6 +13,7 @@ import { runPasses } from './passes.js';
 import { buildWarning, errorMessage } from './warning.js';
 import { TRANSIENT_ATTR } from './transient.js';
 import { renderDiagrams } from './diagrams.js';
+import { noteDuplicateDefinitions } from './definitions.js';
 import { attachSvgDownloads } from './diagram-downloads.js';
 import { buildCodeLines, attachCodeCopy } from './code-blocks.js';
 import { attachLiveViewers, stopLiveViewers } from './live-viewer.js';
@@ -31,8 +32,9 @@ import { makeRenderQueue } from './render-queue.js';
 
 // Document passes produce the document: what a reader sees, and what an export
 // takes along when it copies the preview. A pass gets the root that holds the
-// document and the context of this render, { frontmatter, signal }: what was
-// split off the source before Markdown was parsed, and the AbortSignal of this
+// document and the context of this render, { markdown, parts, partToken,
+// signal }: the Markdown marked parsed, the parts of the source with their headers, read before Markdown was parsed, the
+// token of their placeholders (frontmatter.js), and the AbortSignal of this
 // render, aborted once a newer render is requested (below).
 //
 // The order matters in eight places. Callouts come before the headings: which
@@ -57,7 +59,8 @@ import { makeRenderQueue } from './render-queue.js';
 // taken their fenced sources out by then, and a footnote preview has copied
 // its definition, a code block in it flattened to its text (code-blocks.js).
 export const DOCUMENT_PASSES = [
-  { name: 'Metadaten', run: (root, context) => injectFrontmatterPanel(root, context.frontmatter) },
+  { name: 'Metadaten', run: injectPartHeaders },
+  { name: 'Verweise', run: noteDuplicateDefinitions },
   { name: 'Hinweise', run: buildCallouts },
   { name: 'Status-Chips', run: buildChips },
   { name: 'Markierungen', run: applyMarkers },
@@ -92,15 +95,19 @@ export const RUNTIME_PASSES = [
 // the console. The queue is makeRenderQueue()'s (src/app/render-queue.js).
 export const render = makeRenderQueue(renderOnce);
 
+// Counts the renders, so that the placeholders of the parts are this render's.
+let renders = 0;
+
 async function renderOnce(signal) {
   try {
     // A live viewer still running goes first: whatever this render does, the
     // figure it stands in is replaced (src/app/live-viewer.js).
     stopLiveViewers();
-    const fm = splitFrontmatter(sourceEl.value);
+    const source = sourceEl.value, parts = readParts(source), partToken = ++renders;
+    const markdown = partsMarkdown(source, parts, partToken);
     let html;
     try {
-      html = marked.parse(fm.body, { gfm: true, breaks: false });
+      html = marked.parse(markdown, { gfm: true, breaks: false });
     } catch (err) {
       console.error('Markdown error:', err);
       previewEl.replaceChildren(buildWarning(document, 'Das Markdown konnte nicht verarbeitet werden.', errorMessage(err)));
@@ -116,7 +123,7 @@ async function renderOnce(signal) {
     pruneAssetUrlCache(resolution.resolved);
     previewEl.innerHTML = resolution.html;
 
-    const context = { frontmatter: fm, signal };
+    const context = { markdown, parts, partToken, signal };
     await runPasses(previewEl, DOCUMENT_PASSES, context);
     // Aborted by a newer render, which replaces the preview: nothing to
     // attach to it (src/app/render-queue.js).

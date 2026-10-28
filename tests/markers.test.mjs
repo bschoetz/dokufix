@@ -666,7 +666,7 @@ test('render.js runs the pass "Markierungen" after "Status-Chips" and before "Ta
 });
 test('the pass takes the root alone: the runner\'s context is not mistaken for a list of markers', () => {
   const root = rootWith('<!-- dokufix: cards -->\n' + LIST);
-  applyMarkers(root, { frontmatter: { kind: null } });
+  applyMarkers(root, { parts: [] });
   assert.equal(root.querySelectorAll('ul.dokufix-cards').length, 1);
 });
 

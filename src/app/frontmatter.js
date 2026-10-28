@@ -1,4 +1,5 @@
 import { escapeHtml } from './html.js';
+import { buildWarning } from './warning.js';
 
 // --- Frontmatter -------------------------------------------------------
 // Pure logic: this module loads without a page. The parser works on text, the
@@ -270,7 +271,7 @@ export function splitFrontmatter(src){
 // BODY, so a "#"-prefixed YAML comment can't masquerade as the heading, and
 // skips fenced code, so a shell comment can't either (audit 2026-10-25, 14).
 export function deriveDocTitle(source, fallback){
-  const body = splitFrontmatter(source).body, code = fences(body);
+  const body = partBodies(source), code = fences(body);
   let at = 0;
   for (const line of body.split('\n')){
     const m = !code.some(k => at >= k.start && at < k.end) && /^#\s+(.+?)\s*$/.exec(line);
@@ -342,7 +343,7 @@ function buildFrontmatterRowsHtml(obj){
   return html + '</dl>';
 }
 
-function buildFrontmatterHtml(fm){
+export function buildFrontmatterHtml(fm){
   if (!fm || !fm.kind) return '';
   if (fm.kind === 'raw'){
     return '<details class="dokufix-frontmatter dokufix-fm-unparsed">' +
@@ -359,11 +360,109 @@ function buildFrontmatterHtml(fm){
     '<div class="dokufix-fm-body">' + buildFrontmatterRowsHtml(fm.data) + '</div></details>';
 }
 
-// A document pass, mirroring processInlineToc: every export variant renders
-// and then takes a copy of the preview, so mutating the rendered document
-// here is what makes the panel ship into all four downloads for free.
-// Emits no headings, so assignHeadingIds/buildRail stay unaffected.
-export function injectFrontmatterPanel(root, fm){
-  const html = buildFrontmatterHtml(fm);
-  if (html) root.insertAdjacentHTML('afterbegin', html);
+// --- Parts ---------------------------------------------------------------
+// A document of several parts, each with a header of its own: src/README.md,
+// "Parts and their headers", and the cases in tests/fixtures/parts/. The
+// document is cut at its boundaries first, outside fenced code, and each
+// header is read inside its own part, so a header left open at the top never
+// takes in a boundary below it.
+
+const PART_RE = /^---part[ \t]*$/i;
+const CLOSE_RE = /^---[ \t]*$/;
+const BLANK_RE = /^[ \t]*$/;
+const HEADING_RE = /^#{1,6}\s+(.+?)\s*$/;
+
+// The parts of a source, each { line, fm, problem, name, body, end }: its
+// first line (1-based), its header as splitFrontmatter() gives it or null,
+// 'header-missing' / 'header-unclosed' / 'header-unreadable' or null, its
+// name or null, and its body as line indexes [body, end) of the source.
+export function readParts(source){
+  const raw = source.split('\n'), lines = raw.map(l => l.replace(/\r$/, ''));
+  const code = fences(source);
+  const starts = [];
+  let pos = 0;
+  lines.forEach((l, i) => {
+    if (PART_RE.test(l) && !code.some(k => pos >= k.start && pos < k.end)) starts.push(i);
+    pos += raw[i].length + 1;
+  });
+  if (starts[0] !== 0) starts.unshift(0);
+  return starts.map((s, n) => {
+    const end = n + 1 < starts.length ? starts[n + 1] : lines.length;
+    const part = { line: s + 1, fm: null, problem: null, name: null, body: s, end };
+    if (PART_RE.test(lines[s])){
+      let close = -1;
+      for (let j = s + 1; j < end && !BLANK_RE.test(lines[j]); j++) if (CLOSE_RE.test(lines[j])){ close = j; break; }
+      if (s + 1 === end || BLANK_RE.test(lines[s + 1]) || close === s + 1){
+        part.problem = 'header-missing';
+        part.body = close === s + 1 ? s + 2 : s + 1;
+      } else if (close < 0){
+        part.problem = 'header-unclosed';
+        part.body = s + 1;
+      } else {
+        const raw = lines.slice(s + 1, close).join('\n');
+        part.fm = splitFrontmatter((raw.trim().startsWith('{') ? '---json\n' : '---yaml\n') + raw + '\n---\n');
+        if (part.fm.kind === 'raw') part.problem = 'header-unreadable';
+        part.body = close + 1;
+      }
+    } else {
+      const text = lines.slice(s, end).join('\n');
+      // An explicit empty header ("---json\n---") is consumed and shows nothing.
+      const fm = splitFrontmatter(text);
+      if (fm.kind) part.fm = fm;
+      part.body = s + text.slice(0, text.length - fm.body.length).split('\n').length - 1;
+    }
+    const title = part.fm && part.fm.data && part.fm.data.title;
+    if (typeof title === 'string' && title.trim()) part.name = title;
+    else {
+      const body = lines.slice(part.body, end), inCode = fences(body.join('\n'));
+      let at = 0;
+      for (const l of body){
+        const m = !inCode.some(k => at >= k.start && at < k.end) && HEADING_RE.exec(l);
+        if (m){ part.name = m[1]; break; }
+        at += l.length + 1;
+      }
+    }
+    return part;
+  });
+}
+
+// The source without its headers: what Markdown the parts hold.
+function partBodies(source){
+  const lines = source.split('\n');
+  return readParts(source).map(p => lines.slice(p.body, p.end).join('\n')).join('\n');
+}
+
+// The Markdown that render.js parses: each part's body, and before it, where
+// it has a header or a problem, a placeholder that the pass below fills. A
+// placeholder is an HTML block with a blank line on each side, so a boundary
+// right after a paragraph or a list ends it; `token` is the render's, so a
+// placeholder an author writes is left alone. A part with neither gets none,
+// so a document of one part without a header parses as before.
+export function partsMarkdown(source, parts, token){
+  const lines = source.split('\n');
+  return parts.map((p, n) => {
+    const text = lines.slice(p.body, p.end).join('\n');
+    if (!p.fm && !p.problem) return text;
+    return (n ? '\n\n' : '') + '<div data-dokufix-part="' + token + '-' + n + '"></div>\n\n' + text;
+  }).join('\n');
+}
+
+const PART_NOTICES = {
+  'header-missing': 'Für diesen Teil sind keine Metadaten angegeben.',
+  'header-unclosed': 'Die Metadaten dieses Teils sind nicht abgeschlossen, es fehlt die Zeile „---“. Sie werden darum als Text gezeigt.',
+};
+
+// A document pass: each placeholder becomes the panel of its part's header, the
+// raw panel of one that does not parse, or a notice for one missing or left
+// open. Every export renders and copies the preview, so the panels ship into
+// all four downloads. Emits no headings, so assignHeadingIds/buildRail stay
+// unaffected.
+export function injectPartHeaders(root, context){
+  context.parts.forEach((p, n) => {
+    const el = root.querySelector('div[data-dokufix-part="' + context.partToken + '-' + n + '"]');
+    if (!el) return;
+    const notice = PART_NOTICES[p.problem];
+    if (notice) el.replaceWith(buildWarning(root.ownerDocument, notice));
+    else { el.insertAdjacentHTML('beforebegin', buildFrontmatterHtml(p.fm)); el.remove(); }
+  });
 }

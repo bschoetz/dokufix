@@ -16,7 +16,7 @@ import { buildCodeLines, attachCodeCopy, codeLines, copiedText, copyText,
   CODE_CLASS, LINE_CLASS, DIGITS_PROPERTY, COPY_CLASS, COPY_LABEL, COPIED_LABEL, FAILED_LABEL, COPIED_CLASS, FAILED_CLASS, FEEDBACK_MS, ADDED_CLASS, REMOVED_CLASS } from '../src/app/code-blocks.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
 import { buildWarning } from '../src/app/warning.js';
-import { injectFrontmatterPanel, splitFrontmatter } from '../src/app/frontmatter.js';
+import { buildFrontmatterHtml, splitFrontmatter } from '../src/app/frontmatter.js';
 
 function rootWith(html){
   const { document, window } = parseHTML('<!DOCTYPE html><html><body><main>' + html + '</main></body></html>');
@@ -105,7 +105,7 @@ test('buildCodeLines: no lines for a raw pre without code, a code with markup, a
     '<pre ' + TRANSIENT_ATTR + '><code>flüchtig\n</code></pre>\n' +
     '<div ' + TRANSIENT_ATTR + '><pre><code>flüchtig\n</code></pre></div>\n' +
     '<pre><code>eins\n</code>zwei</pre>\n');
-  injectFrontmatterPanel(root, splitFrontmatter('---\ntitle: Kaputt\nliste: [a, b\n---\n\n# Kaputt\n'));
+  root.insertAdjacentHTML('afterbegin', buildFrontmatterHtml(splitFrontmatter('---\ntitle: Kaputt\nliste: [a, b\n---\n\n# Kaputt\n')));
   root.append(buildWarning(document, 'Ein Diagramm konnte nicht gezeichnet werden.', 'Parse error\nZeile 2'));
   assert.ok(root.querySelector('pre.dokufix-fm-raw') && root.querySelector('pre.dokufix-warning-detail'));
   const before = root.innerHTML;

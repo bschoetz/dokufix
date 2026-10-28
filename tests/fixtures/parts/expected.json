@@ -721,5 +721,15 @@
       }
     ],
     "problems": []
+  },
+  "pt27-empty-explicit-header.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Titel",
+        "header": null
+      }
+    ],
+    "problems": []
   }
 }
