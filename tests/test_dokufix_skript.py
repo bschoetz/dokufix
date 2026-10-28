@@ -2,7 +2,8 @@
 
     python3 -m unittest discover -s tests -p 'test_*.py'   (npm test runs it too)
 
-The matrices of epic 3, stories 1, 8 and 9, against dist/dokufix.html. A file saved in the
+The matrices of epic 3, stories 1, 8, 9 and 4, against dist/dokufix.html; the reader of parts against
+every case of tests/fixtures/parts/, as tests/parts-cases.test.mjs runs the product's. A file saved in the
 editor, {"gz": ...}, is made here as the page writes it; that the page writes
 it so, tests/speichern.mjs shows in step 11, in a browser.
 """
@@ -20,6 +21,12 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'skill' / 'dokufix' / 'dokufix.py'
 BLANK = ROOT / 'dist' / 'dokufix.html'
+CASES = ROOT / 'tests' / 'fixtures' / 'parts'
+
+sys.path.insert(0, str(SCRIPT.parent))
+# No __pycache__ in the folder story 3.12 ships.
+sys.dont_write_bytecode = True
+from dokufix import read_parts  # noqa: E402
 
 TRICKY = ('# Überschrift\n\n```html\n<script>alert(1)</script>\n<!-- kein Kommentar -->\n```\n\n'
           'Ein </script> im Text, $& und \\n und "Anführung", ein Backslash \\ am Ende')
@@ -37,6 +44,11 @@ def sha(data):
 
 def assets_of(path):
     return json.loads(block(path.read_text(encoding='utf-8'), 'dokufix-assets'))
+
+
+def case(name):
+    # Bytes, not text mode: pt19's CRLF stays.
+    return (CASES / name).read_bytes().decode('utf-8')
 
 
 def run(*args):
@@ -272,11 +284,108 @@ class Script(unittest.TestCase):
         self.refused(run('inject', self.md(b'# \xe4rger\n'), self.tmp / 'x.html'), 'UTF-8')
         self.assertFalse((self.tmp / 'x.html').exists())
 
+    def part(self, target, wanted):
+        return self.extract_args(target, '--part', wanted)
+
+    def extract_args(self, target, *args):
+        r = run('extract', target, *args)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        return r.stdout.decode('utf-8')
+
+    def overview(self, target):
+        r = run('overview', target)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertNotIn(b'\\u00', r.stdout)
+        return json.loads(r.stdout.decode('utf-8'))
+
+    def test_a_part_by_number_or_by_name_and_the_parts_give_the_document(self):
+        for name in ('pt03-two-parts.md', 'pt21-same-name.md'):
+            doc = case(name)
+            target = self.inject(doc)
+            self.assertEqual(self.part(target, '1') + self.part(target, '2'), doc)
+        target = self.inject(case('pt03-two-parts.md'))
+        second = case('pt03-two-parts.md').split('\n---part\n')[1]
+        self.assertEqual(self.part(target, '2'), '---part\n' + second)
+        self.assertEqual(self.part(target, 'Rückgabe'), '---part\n' + second)
+        self.assertEqual(self.part(target, '01'), self.part(target, 'Ausleihe'))
+        self.assertEqual(self.extract_args(target), case('pt03-two-parts.md'))
+        one = self.inject(case('pt01-plain.md'))
+        self.assertEqual(self.part(one, '1'), case('pt01-plain.md'))
+
+    def test_a_part_shared_missing_or_out_of_range_is_refused(self):
+        r = run('extract', self.inject(case('pt21-same-name.md')), '--part', 'Ablauf')
+        self.refused(r, 'parts 1 (line 1) and 2 (line 6) are both named Ablauf')
+        target = self.inject(case('pt03-two-parts.md'))
+        for wanted in ('3', '0', 'Fehlt', '-1', '２', 'rückgabe'):
+            with self.subTest(wanted=wanted):
+                self.refused(run('extract', target, '--part', wanted), 'it has 2 parts')
+
+    def test_overview_lists_headers_and_headings_and_no_text(self):
+        got = self.overview(self.inject(case('pt03-two-parts.md')))
+        self.assertEqual(got, {'parts': [
+            {'number': 1, 'line': 1, 'name': 'Ausleihe', 'header': {'title': 'Ausleihe', 'kind': 'reference'}, 'problem': None,
+             'headings': [{'level': 1, 'text': 'Ausleihe', 'line': 5}]},
+            {'number': 2, 'line': 9, 'name': 'Rückgabe', 'header': {'title': 'Rückgabe', 'kind': 'how-to', 'functions': ['Rückgabe am Automaten'],
+             'sources': ['src/rueckgabe.py', 'src/automat/'], 'state': '3464d1c'}, 'problem': None,
+             'headings': [{'level': 2, 'text': 'Rückgabe am Automaten', 'line': 20}]}]})
+
+    def test_overview_of_headers_missing_unclosed_unreadable_and_a_heading_in_code(self):
+        for name, problem in (('pt10-missing.md', 'header-missing'), ('pt11-unclosed.md', 'header-unclosed'),
+                              ('pt12-unreadable.md', 'header-unreadable')):
+            with self.subTest(case=name):
+                parts = self.overview(self.inject(case(name)))['parts']
+                self.assertEqual([(p['header'], p['problem']) for p in parts], [(None, None)] + [(None, problem)] * (len(parts) - 1))
+        parts = self.overview(self.inject(case('pt11-unclosed.md')))['parts']
+        self.assertEqual(parts[1]['headings'], [{'level': 2, 'text': 'Rückgabe', 'line': 8}])
+        parts = self.overview(self.inject(case('pt14-names.md')))['parts']
+        self.assertEqual([p['headings'] for p in parts], [[{'level': 2, 'text': 'Rückgabe', 'line': 4}], [], [], [{'level': 2, 'text': 'Ablauf', 'line': 22}]])
+        self.assertEqual(parts[1]['name'], None)
+
+    def test_overview_of_a_json_header_with_a_huge_number_or_a_lone_surrogate_is_json(self):
+        r = run('overview', self.inject('---json\n{"title": "T", "n": 1e999, "s": "\\ud800x"}\n---\n'))
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertIn(b'"s": "\\ud800x"', r.stdout)
+        header = json.loads(r.stdout.decode('utf-8'))['parts'][0]['header']
+        self.assertEqual((header['n'], header['s']), (None, '\ud800x'))
+
+    def test_overview_and_a_part_of_a_file_saved_in_the_editor(self):
+        doc = case('pt03-two-parts.md')
+        html = self.inject(doc).read_text(encoding='utf-8')
+        saved = self.tmp / 'saved.html'
+        gz = base64.b64encode(gzip.compress(doc.encode('utf-8'))).decode('ascii')
+        saved.write_text(html.replace(block(html, 'dokufix-source'), json.dumps({'gz': gz})), encoding='utf-8')
+        self.assertEqual(self.part(saved, 'Ausleihe'), doc.split('---part\n')[0])
+        self.assertEqual(self.overview(saved), self.overview(self.tmp / 'x.html'))
+
+    def test_a_read_only_export_is_refused_by_both_commands(self):
+        # A nur-lesen export carries the document as HTML alone, no block #dokufix-source.
+        html = self.inject(case('pt03-two-parts.md')).read_text(encoding='utf-8')
+        export = self.tmp / 'nur-lesen.html'
+        export.write_text(re.sub(r'<script type="application/json" id="dokufix-source">.*?</script>', '', html, flags=re.S), encoding='utf-8')
+        for args in (('overview', export), ('extract', export, '--part', '1')):
+            self.refused(run(*args), 'no dokufix file with editor')
+
     def test_extract_refuses_what_is_no_dokufix_file(self):
         other = self.tmp / 'other.html'
         other.write_text('<!doctype html><title>x</title><p>Hallo</p>', encoding='utf-8')
         self.refused(run('extract', other), 'no dokufix file')
         self.refused(run('extract', self.tmp / 'missing.html'), 'cannot be read')
+
+
+class Parts(unittest.TestCase):
+    def test_every_case_against_read_parts(self):
+        expected = json.loads((CASES / 'expected.json').read_text(encoding='utf-8'))
+        files = sorted(p.name for p in CASES.glob('*.md'))
+        self.assertEqual(sorted(expected), files)
+        for name in files:
+            with self.subTest(case=name):
+                doc, want = case(name), expected[name]
+                parts = read_parts(doc)
+                self.assertEqual([{'line': p['line'], 'name': p['name'], 'header': p['header']} for p in parts], want['parts'])
+                # The problems of the fields are check's (story 3.7).
+                self.assertEqual([{'line': p['line'], 'code': p['problem']} for p in parts if p['problem']],
+                                 [p for p in want['problems'] if p['code'].startswith('header-')])
+                self.assertEqual(''.join(p['text'] for p in parts), doc)
 
 
 if __name__ == '__main__':

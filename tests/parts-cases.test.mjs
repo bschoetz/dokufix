@@ -3,7 +3,8 @@
 // file per case and expected.json what a reader of it must find. The product's
 // reader, readParts() in src/app/frontmatter.js (story 3.3), runs every case:
 // its parts, and the problems of the header; the problems of the fields are
-// `check`'s (story 3.7), the script's reader comes with story 3.4.
+// `check`'s (story 3.7). tests/test_dokufix_skript.py runs every case against
+// the script's reader, read_parts() (story 3.4).
 //
 //   npm test          (node --test tests/*.test.mjs)
 

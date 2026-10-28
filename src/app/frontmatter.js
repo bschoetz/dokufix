@@ -409,6 +409,7 @@ export function readParts(source){
       // An explicit empty header ("---json\n---") is consumed and shows nothing.
       const fm = splitFrontmatter(text);
       if (fm.kind) part.fm = fm;
+      if (fm.kind === 'raw') part.problem = 'header-unreadable';
       part.body = s + text.slice(0, text.length - fm.body.length).split('\n').length - 1;
     }
     const title = part.fm && part.fm.data && part.fm.data.title;
