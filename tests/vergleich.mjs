@@ -2812,7 +2812,7 @@ async function assertSearch(page, check, key){
 
   // Story 7, inside assertSearch for its helpers. In the demo text the terms
   // its special cases name: "Abholbereit" in a BPMN diagram, "nachfordern" in
-  // a Mermaid diagram, "Stempeln" only in the source of one. In another
+  // a Mermaid diagram, "Prozess_Vormerkung" only in the source of one. In another
   // document a word of a diagram of each kind, the fewest places first.
   async function assertSearchDiagrams(){
     const placesOf = collectPlaces(root);
@@ -2946,7 +2946,7 @@ async function assertSearch(page, check, key){
     // listed for such a word only where one of its labels, the text and
     // foreignObject elements of its SVG, holds it as well ("Akte schließen").
     const labelsOf = el => Array.from(el.querySelectorAll('*')).filter(e => /^(text|foreignobject)$/i.test(e.tagName)).map(e => e.textContent).join(' ').toLowerCase();
-    const noLabels = [...(opts.demo ? ['Stempeln', 'Prozess_Neu'] : []), 'isExecutable', 'Einpassen', 'Schließen', 'Gezeichnet'];
+    const noLabels = [...(opts.demo ? ['Prozess_Vormerkung'] : []), 'isExecutable', 'Einpassen', 'Schließen', 'Gezeichnet'];
     const strays = [];
     for (const term of noLabels){
       const listed = await search(term);
@@ -2979,8 +2979,8 @@ async function assertSearch(page, check, key){
       !Array.from(pre.children).some(c => /^code$/i.test(c.tagName) && /\blanguage-(mermaid|bpmn)\b/.test(c.className)) && pre.textContent.trim());
     const metas = placesOf.filter(p => p.kind === META), codes = placesOf.filter(p => p.kind === CODE);
     const at = els => els.map(el => index.get(el));
-    check('search: the metadata panel is one place of the kind "' + META + '", every code block outside it, a warning, a table row and the footer of an export one of the kind "' + CODE + '"; a diagram\'s source is none',
-      sameList(at(metas.map(p => p.el)), at(panels)) && sameList(at(codes.map(p => p.el)), at(pres)) && (!opts.demo || (panels.length === 1 && pres.length >= 3)),
+    check('search: each metadata panel is one place of the kind "' + META + '", every code block outside it, a warning, a table row and the footer of an export one of the kind "' + CODE + '"; a diagram\'s source is none',
+      sameList(at(metas.map(p => p.el)), at(panels)) && sameList(at(codes.map(p => p.el)), at(pres)) && (!opts.demo || (panels.length === 2 && pres.length >= 3)),
       json({ panels: panels.length, metas: metas.length, pres: pres.length, codes: codes.length }));
     // A word of the places of the kind, the fewest places first.
     const words = text => text.match(/\p{L}{6,}/gu) || [];
@@ -4293,8 +4293,8 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
     } catch (e){ check('downloads: the ' + kind + ' picture through the browser', false, e.message.split('\n')[0]); }
   }
   // The source of the first diagram whose title has characters a file name
-  // cannot take (the demo text's "Herunterladen: Gebühr 5 %/Tag?", the reference
-  // document's "Frist: 2/3 erreicht?"): saved under the name the product gives
+  // cannot take (the reference document's "Frist: 2/3 erreicht?"; the demo
+  // text has none since story 3.3): saved under the name the product gives
   // it, in both browsers (Firefox saves a "%" as "_").
   const odd = drawn.findIndex(d => /[%/?]/.test(d.title));
   if (odd >= 0){

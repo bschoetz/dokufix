@@ -531,7 +531,33 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     });
     check(scope, 'after "Demo zurücksetzen" every image of the demo text is shown, none is a missing-image placeholder (' + demoImages.length + ')',
       images.length === demoImages.length && images.every(i => !i.missing && i.width > 1 && i.src === 'blob:'), JSON.stringify(images));
+    // A document of two parts (epic 3, story 3.3): the demo text, its second
+    // part "Sonderfälle" with a header of its own, its image in part 1 and the
+    // footnote [^tasten] cited in both parts and defined at the end. Every
+    // variant shows a panel per part, the image and the footnote.
+    const panelsOf = html => (html.match(/<details class="dokufix-frontmatter"/g) || []).length;
+    for (const kind of ['readonly-open', 'readonly-slim', 'readonly-compact']){
+      const file = path.join(dir, 'teile-' + kind + '.html');
+      await exportReadonly(o.page, kind, file);
+      const text = fs.readFileSync(file, 'utf8'), html = kind === 'readonly-compact' ? kompaktBody(text) || '' : text;
+      check(scope, kind + ' of the demo text: a panel for each of its two parts, the image as data, the footnote across parts' + (kind === 'readonly-open' ? ', no <script>' : ''),
+        panelsOf(html) === 2 && /<img[^>]+src="data:image\//.test(html) && html.includes('id="footnote-tasten"') && (kind !== 'readonly-open' || !/<script/i.test(text)),
+        JSON.stringify({ panels: panelsOf(html), script: /<script/i.test(text) }));
+    }
+    const partsFile = path.join(dir, 'teile-mit-editor.html');
+    await saveWithEditor(o.page, partsFile);
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
+    o = await open(browser, partsFile);
+    const partsPreview = await o.page.evaluate(() => ({
+      panels: document.querySelectorAll('#preview details.dokufix-frontmatter').length,
+      second: (document.querySelectorAll('#preview details.dokufix-frontmatter')[1] || { nextElementSibling: null }).nextElementSibling?.textContent || '',
+      footnote: !!document.querySelector('#preview #footnote-tasten'),
+    }));
+    const partsImages = await shownImages(o.page, '#preview img');
+    check(name + ' Mit Editor with two parts', 'opened, the preview shows a panel for each part, the second right before its heading, the image and the footnote across parts',
+      partsPreview.panels === 2 && partsPreview.second.startsWith('Sonderfälle') && partsPreview.footnote && allShown(partsImages), JSON.stringify({ ...partsPreview, images: partsImages }));
+    check(name + ' Mit Editor with two parts', 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
 
     // 4b. one storage for several openings. A draft of generation 1 must not

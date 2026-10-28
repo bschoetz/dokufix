@@ -40,7 +40,7 @@ import { DIAGRAM_LANGUAGES, DIAGRAM_LABEL } from '../src/app/diagram-kinds.js';
 import { buildCodeLines, attachCodeCopy } from '../src/app/code-blocks.js';
 import { diagramFigure, DIAGRAM_CLOSE_TEXT, DIAGRAM_ZOOM_STEPS } from '../src/app/diagrams.js';
 import { buildWarning } from '../src/app/warning.js';
-import { splitFrontmatter, injectFrontmatterPanel } from '../src/app/frontmatter.js';
+import { splitFrontmatter, buildFrontmatterHtml } from '../src/app/frontmatter.js';
 import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
@@ -831,7 +831,7 @@ test('diagrams.js knows nothing of the search', () => {
 // markup given, as the render pass puts it before the first heading.
 function metaRoot(source, html = '<h1>Willkommen</h1>\n<p>Davor.</p>\n<h2>Eins</h2>\n'){
   const root = rootWith(html);
-  injectFrontmatterPanel(root, splitFrontmatter(source));
+  root.insertAdjacentHTML('afterbegin', buildFrontmatterHtml(splitFrontmatter(source)));
   return root;
 }
 const FM = '---\ntitle: Willkommen bei dokufix\nauthor: Beispiel-Autorin\nleer:\ntags:\n  - markdown\n  - eine-datei\nfreigabe:\n  rolle: Informationssicherheit\n  gueltig_bis: 2027-06-30\n---\n\n# Willkommen\n';

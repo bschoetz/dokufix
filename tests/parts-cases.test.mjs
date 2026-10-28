@@ -1,16 +1,17 @@
 // The cases of parts and their headers, run in Node: src/README.md, "Parts and
 // their headers", states the format; tests/fixtures/parts/ holds one Markdown
-// file per case and expected.json what a reader of it must find. The readers
-// come later (the product in story 3.3, the script in story 3.4, `check` in
-// story 3.7); until then this keeps the cases consistent and checks the ones of
-// a single part against today's reader of the top header.
+// file per case and expected.json what a reader of it must find. The product's
+// reader, readParts() in src/app/frontmatter.js (story 3.3), runs every case:
+// its parts, and the problems of the header; the problems of the fields are
+// `check`'s (story 3.7), the script's reader comes with story 3.4.
 //
 //   npm test          (node --test tests/*.test.mjs)
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { splitFrontmatter } from '../src/app/frontmatter.js';
+import { parseHTML } from 'linkedom';
+import { splitFrontmatter, readParts, partsMarkdown, injectPartHeaders, deriveDocTitle } from '../src/app/frontmatter.js';
 
 const DIR = new URL('./fixtures/parts/', import.meta.url);
 const expected = JSON.parse(fs.readFileSync(new URL('expected.json', DIR), 'utf8'));
@@ -46,6 +47,13 @@ for (const file of files){
     }
   });
 
+  test(`${file}: readParts() finds the parts and the problems of their headers`, () => {
+    const read = readParts(doc);
+    assert.deepEqual(read.map(p => ({ line: p.line, name: p.name, header: p.fm && p.fm.data ? plain(p.fm.data) : null })), parts);
+    assert.deepEqual(read.filter(p => p.problem).map(p => ({ line: p.line, code: p.problem })),
+      problems.filter(p => p.code.startsWith('header-')));
+  });
+
   if (parts.length === 1 && !BOUNDARY.test(lines[0])){
     test(`${file}: a document of one part has the header splitFrontmatter reads`, () => {
       const data = splitFrontmatter(doc).data;
@@ -53,3 +61,66 @@ for (const file of files){
     });
   }
 }
+
+// ---------- the parts in the page ----------
+const read = file => fs.readFileSync(new URL(file, DIR), 'utf8');
+// The placeholders as marked keeps an HTML block, the rest left out.
+function rootOf(markdown){
+  const { document } = parseHTML('<!doctype html><html><body><main></main></body></html>');
+  const root = document.querySelector('main');
+  root.innerHTML = markdown.split('\n').filter(l => l.startsWith('<div data-dokufix-part=')).join('');
+  return root;
+}
+
+test('every part with a header or a problem gets a placeholder of this render, the others none', () => {
+  const source = read('pt03-two-parts.md'), parts = readParts(source);
+  const md = partsMarkdown(source, parts, 5);
+  assert.match(md, /^<div data-dokufix-part="5-0"><\/div>\n\n# Ausleihe\n/);
+  assert.match(md, /\n\n<div data-dokufix-part="5-1"><\/div>\n\n\n## Rückgabe am Automaten/);
+  assert.doesNotMatch(md, /title:|---part/);
+  // A document of one part without a header is parsed as it stands.
+  const plainDoc = read('pt01-plain.md');
+  assert.equal(partsMarkdown(plainDoc, readParts(plainDoc), 5), plainDoc);
+  // An explicit empty header is consumed, as splitFrontmatter() does.
+  const empty = read('pt27-empty-explicit-header.md');
+  assert.equal(partsMarkdown(empty, readParts(empty), 5), '# Titel\n\nText.\n');
+  // The lines of a header left open stay text.
+  const open = read('pt11-unclosed.md');
+  assert.match(partsMarkdown(open, readParts(open), 5), /<div data-dokufix-part="5-1"><\/div>\n\ntitle: X\n/);
+});
+
+test('the pass puts a panel, a raw panel or a notice where each placeholder stood', () => {
+  for (const [file, want] of [
+    ['pt03-two-parts.md', ['dokufix-frontmatter', 'dokufix-frontmatter']],
+    ['pt10-missing.md', ['dokufix-warning', 'dokufix-warning', 'dokufix-warning']],
+    ['pt11-unclosed.md', ['dokufix-warning', 'dokufix-warning', 'dokufix-warning']],
+    ['pt12-unreadable.md', ['dokufix-frontmatter dokufix-fm-unparsed', 'dokufix-frontmatter dokufix-fm-unparsed', 'dokufix-frontmatter dokufix-fm-unparsed']],
+  ]){
+    const source = read(file), parts = readParts(source);
+    const root = rootOf(partsMarkdown(source, parts, 3));
+    injectPartHeaders(root, { parts, partToken: 3 });
+    assert.deepEqual(Array.from(root.children).map(el => el.className), want, file);
+  }
+  const notices = (() => {
+    const s = read('pt10-missing.md') + '\n---part\ntitle: offen\n', parts = readParts(s), root = rootOf(partsMarkdown(s, parts, 1));
+    injectPartHeaders(root, { parts, partToken: 1 });
+    return Array.from(root.querySelectorAll('.dokufix-warning-title')).map(p => p.textContent);
+  })();
+  assert.equal(notices[0], 'Warnung: Für diesen Teil sind keine Metadaten angegeben.');
+  assert.equal(notices.at(-1), 'Warnung: Die Metadaten dieses Teils sind nicht abgeschlossen, es fehlt die Zeile „---“. Sie werden darum als Text gezeigt.');
+});
+
+test('a placeholder of another render, or one an author wrote, is left alone', () => {
+  const source = read('pt03-two-parts.md'), parts = readParts(source);
+  const root = rootOf(partsMarkdown(source, parts, 2));
+  root.insertAdjacentHTML('beforeend', '<div data-dokufix-part="9-1"></div>');
+  injectPartHeaders(root, { parts, partToken: 2 });
+  assert.equal(root.querySelectorAll('details.dokufix-frontmatter').length, 2);
+  assert.ok(root.querySelector('div[data-dokufix-part="9-1"]'));
+});
+
+test('the title of the file is read past every header, a YAML comment in one included', () => {
+  assert.equal(deriveDocTitle(read('pt14-names.md'), 'leer'), 'leer');
+  assert.equal(deriveDocTitle('---part\n# intern\nkind: process\n---\n# Ablauf\n', 'leer'), 'Ablauf');
+  assert.equal(deriveDocTitle(read('pt03-two-parts.md'), 'leer'), 'Ausleihe');
+});

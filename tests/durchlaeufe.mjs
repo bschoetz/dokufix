@@ -398,15 +398,11 @@ const FILTER_WARNING = 'Die Markierung „dokufix: filter "Suchen …"“ erwart
 const FILTER_TERM = 'kategorie', FILTER_ROWS_TYPED = [false, true, false, true, false];
 
 // ---------- the copy of src/ with two passes more ----------
-// The diagrams of the demo text: five of Mermaid (two of them the special
-// cases of the large view, one that of the downloads), twenty of BPMN (two
-// with coordinates, eighteen without, three of them the loop process and the
-// two loop special cases of story 2.20, three those of several pools of story
-// 2.12, two the boundary events of story 2.30, one the text annotations of
-// story 2.31, two the data of story 2.32, one the associations between two
-// elements and the flows to themselves of story 2.33, one the nested lanes of
-// story 2.34, one the lanes and connections without an id of story 2.45).
-const DEMO_DIAGRAMS = 25;
+// The diagrams of the demo text: two of Mermaid (one the tall special case of
+// the large view), two of BPMN (one with coordinates, one without). The demo
+// was cut to that in story 3.3 (Ben, 2026-10-28); the layout's cases live in
+// tests/fixtures/bpmn-layout/.
+const DEMO_DIAGRAMS = 4;
 const THROWING_PASS = 'Prüfschritt';
 const THROWING_MESSAGE = 'Absicht: der Prüfschritt wirft (durchlaeufe)';
 const RUNTIME_PASS = 'Laufzeit-Prüfschritt';
@@ -1359,7 +1355,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
     await attempt(name + ' a pass throws', async () => {
       const scope = name + ' a pass throws';
       const o = await open(browser, copyWithPasses, editorReady);
-      const f = await facts(o.page);   // the demo text: metadata, table of contents, footnotes, its ten diagrams
+      const f = await facts(o.page);   // the demo text: metadata, table of contents, footnotes, its four diagrams
       checkWarning(scope, f, ['Der Schritt „' + THROWING_PASS + '“ ist fehlgeschlagen.', THROWING_MESSAGE], 'naming the pass');
       const firstContent = f.children.findIndex(c => c !== 'div.dokufix-warning');
       check(scope, 'the warnings stand at the top of the document', firstContent === f.warnings.length && f.children[firstContent] === 'details.dokufix-frontmatter', f.children.slice(0, 5));
