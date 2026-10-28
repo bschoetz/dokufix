@@ -1,0 +1,725 @@
+{
+  "pt01-plain.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ausleihe",
+        "header": null
+      }
+    ],
+    "problems": []
+  },
+  "pt02-top-header.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ausleihe in der Stadtbibliothek",
+        "header": {
+          "title": "Ausleihe in der Stadtbibliothek",
+          "version": "1.2"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt03-two-parts.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ausleihe",
+        "header": {
+          "title": "Ausleihe",
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 9,
+        "name": "Rückgabe",
+        "header": {
+          "title": "Rückgabe",
+          "kind": "how-to",
+          "functions": [
+            "Rückgabe am Automaten"
+          ],
+          "sources": [
+            "src/rueckgabe.py",
+            "src/automat/"
+          ],
+          "state": "3464d1c"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt04-starts-with-part.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ausleihe",
+        "header": {
+          "title": "Ausleihe",
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 9,
+        "name": "Rückgabe",
+        "header": {
+          "title": "Rückgabe"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt05-in-fence.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Beispiel",
+        "header": null
+      }
+    ],
+    "problems": []
+  },
+  "pt06-not-column-0.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Einrückung",
+        "header": null
+      }
+    ],
+    "problems": []
+  },
+  "pt07-after-paragraph.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Absatz",
+        "header": null
+      },
+      {
+        "line": 4,
+        "name": "Danach",
+        "header": {
+          "title": "Danach"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt08-case-and-blanks.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Groß",
+        "header": null
+      },
+      {
+        "line": 3,
+        "name": "Klein",
+        "header": {
+          "title": "Klein"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt09-json.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "JSON",
+        "header": null
+      },
+      {
+        "line": 3,
+        "name": "X",
+        "header": {
+          "title": "X",
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 8,
+        "name": "Dritter",
+        "header": {
+          "kind": null,
+          "state": 20261028
+        }
+      },
+      {
+        "line": 13,
+        "name": "Vier",
+        "header": {
+          "title": "Vier",
+          "kind": "howto"
+        }
+      }
+    ],
+    "problems": [
+      {
+        "line": 8,
+        "code": "field-type"
+      },
+      {
+        "line": 13,
+        "code": "kind-unknown"
+      }
+    ]
+  },
+  "pt10-missing.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ohne Kopf",
+        "header": null
+      },
+      {
+        "line": 3,
+        "name": "Zweiter",
+        "header": null
+      },
+      {
+        "line": 7,
+        "name": "Dritter",
+        "header": null
+      },
+      {
+        "line": 11,
+        "name": null,
+        "header": null
+      }
+    ],
+    "problems": [
+      {
+        "line": 3,
+        "code": "header-missing"
+      },
+      {
+        "line": 7,
+        "code": "header-missing"
+      },
+      {
+        "line": 11,
+        "code": "header-missing"
+      }
+    ]
+  },
+  "pt11-unclosed.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Offen",
+        "header": null
+      },
+      {
+        "line": 3,
+        "name": "Rückgabe",
+        "header": null
+      },
+      {
+        "line": 10,
+        "name": null,
+        "header": null
+      },
+      {
+        "line": 12,
+        "name": null,
+        "header": null
+      }
+    ],
+    "problems": [
+      {
+        "line": 3,
+        "code": "header-unclosed"
+      },
+      {
+        "line": 10,
+        "code": "header-unclosed"
+      },
+      {
+        "line": 12,
+        "code": "header-unclosed"
+      }
+    ]
+  },
+  "pt12-unreadable.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Unlesbar",
+        "header": null
+      },
+      {
+        "line": 3,
+        "name": "Eins",
+        "header": null
+      },
+      {
+        "line": 8,
+        "name": "Zwei",
+        "header": null
+      },
+      {
+        "line": 14,
+        "name": "Drei",
+        "header": null
+      }
+    ],
+    "problems": [
+      {
+        "line": 3,
+        "code": "header-unreadable"
+      },
+      {
+        "line": 8,
+        "code": "header-unreadable"
+      },
+      {
+        "line": 14,
+        "code": "header-unreadable"
+      }
+    ]
+  },
+  "pt13-thematic-breaks.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Linien",
+        "header": null
+      },
+      {
+        "line": 11,
+        "name": "Zwei",
+        "header": {
+          "title": "Zwei"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt14-names.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Rückgabe",
+        "header": {
+          "kind": "how-to"
+        }
+      },
+      {
+        "line": 6,
+        "name": null,
+        "header": {
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 13,
+        "name": null,
+        "header": {
+          "kind": "explanation"
+        }
+      },
+      {
+        "line": 18,
+        "name": "Ablauf",
+        "header": {
+          "kind": "process"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt15-kinds.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Eins",
+        "header": {
+          "title": "Eins",
+          "kind": "tutorial"
+        }
+      },
+      {
+        "line": 5,
+        "name": "Zwei",
+        "header": {
+          "title": "Zwei",
+          "kind": "how-to"
+        }
+      },
+      {
+        "line": 9,
+        "name": "Drei",
+        "header": {
+          "title": "Drei",
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 13,
+        "name": "Vier",
+        "header": {
+          "title": "Vier",
+          "kind": "explanation"
+        }
+      },
+      {
+        "line": 17,
+        "name": "Fünf",
+        "header": {
+          "title": "Fünf",
+          "kind": "process"
+        }
+      },
+      {
+        "line": 21,
+        "name": "Sechs",
+        "header": {
+          "title": "Sechs",
+          "kind": "decision"
+        }
+      },
+      {
+        "line": 25,
+        "name": "Sieben",
+        "header": {
+          "title": "Sieben",
+          "kind": "howto"
+        }
+      }
+    ],
+    "problems": [
+      {
+        "line": 27,
+        "code": "kind-unknown"
+      }
+    ]
+  },
+  "pt16-state.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Kurz",
+        "header": {
+          "title": "Kurz",
+          "state": "a1b2c3d"
+        }
+      },
+      {
+        "line": 5,
+        "name": "Lang",
+        "header": {
+          "title": "Lang",
+          "state": "3464d1cf1f31ec675ba434a73db7fcab8521d32d"
+        }
+      },
+      {
+        "line": 9,
+        "name": "Datum",
+        "header": {
+          "title": "Datum",
+          "state": "2026-10-28"
+        }
+      },
+      {
+        "line": 13,
+        "name": "Release",
+        "header": {
+          "title": "Release",
+          "state": "v1.2"
+        }
+      },
+      {
+        "line": 17,
+        "name": "Kein Datum",
+        "header": {
+          "title": "Kein Datum",
+          "state": "2026-13-01"
+        }
+      },
+      {
+        "line": 21,
+        "name": "Zwei Worte",
+        "header": {
+          "title": "Zwei Worte",
+          "state": "zwei Worte"
+        }
+      },
+      {
+        "line": 25,
+        "name": "Option",
+        "header": {
+          "title": "Option",
+          "state": "-foo"
+        }
+      }
+    ],
+    "problems": [
+      {
+        "line": 19,
+        "code": "state-form"
+      },
+      {
+        "line": 23,
+        "code": "state-form"
+      },
+      {
+        "line": 27,
+        "code": "state-form"
+      }
+    ]
+  },
+  "pt17-sources.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Einer",
+        "header": {
+          "title": "Einer",
+          "sources": "src/app.js"
+        }
+      },
+      {
+        "line": 5,
+        "name": "Liste",
+        "header": {
+          "title": "Liste",
+          "sources": [
+            "./src/app/",
+            "docs"
+          ]
+        }
+      },
+      {
+        "line": 11,
+        "name": "Falsch",
+        "header": {
+          "title": "Falsch",
+          "sources": [
+            "/etc/x",
+            "../x",
+            "src\\x",
+            "src/*.js",
+            "C:/x",
+            "src/?.js",
+            "src/[ab].js"
+          ]
+        }
+      }
+    ],
+    "problems": [
+      {
+        "line": 14,
+        "code": "source-path"
+      },
+      {
+        "line": 15,
+        "code": "source-path"
+      },
+      {
+        "line": 16,
+        "code": "source-path"
+      },
+      {
+        "line": 17,
+        "code": "source-path"
+      },
+      {
+        "line": 18,
+        "code": "source-path"
+      },
+      {
+        "line": 19,
+        "code": "source-path"
+      },
+      {
+        "line": 20,
+        "code": "source-path"
+      }
+    ]
+  },
+  "pt18-field-type.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Überschrift",
+        "header": {
+          "title": [
+            "Eins",
+            "Zwei"
+          ],
+          "owner": "Ben",
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 10,
+        "name": "Zweiter",
+        "header": {
+          "state": {
+            "commit": "abc1234"
+          }
+        }
+      }
+    ],
+    "problems": [
+      {
+        "line": 2,
+        "code": "field-type"
+      },
+      {
+        "line": 11,
+        "code": "field-type"
+      }
+    ]
+  },
+  "pt19-crlf.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ausleihe",
+        "header": {
+          "title": "Ausleihe",
+          "kind": "reference"
+        }
+      },
+      {
+        "line": 9,
+        "name": "Rückgabe",
+        "header": {
+          "title": "Rückgabe",
+          "kind": "how-to",
+          "functions": [
+            "Rückgabe am Automaten"
+          ],
+          "sources": [
+            "src/rueckgabe.py",
+            "src/automat/"
+          ],
+          "state": "3464d1c"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt20-top-prose.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Entwurf",
+        "header": null
+      }
+    ],
+    "problems": []
+  },
+  "pt21-same-name.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Ablauf",
+        "header": {
+          "title": "Ablauf"
+        }
+      },
+      {
+        "line": 6,
+        "name": "Ablauf",
+        "header": {
+          "title": "Ablauf"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt22-empty-part.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Leer",
+        "header": {
+          "title": "Leer",
+          "version": "1"
+        }
+      },
+      {
+        "line": 5,
+        "name": "Inhalt",
+        "header": {
+          "title": "Inhalt"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt23-top-unclosed-before-part.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": null,
+        "header": null
+      },
+      {
+        "line": 4,
+        "name": "B",
+        "header": {
+          "title": "B"
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt24-yaml-subset.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Subset",
+        "header": null
+      },
+      {
+        "line": 3,
+        "name": "Rückgabe: am Automaten",
+        "header": {
+          "title": "Rückgabe: am Automaten",
+          "kind": "how-to",
+          "owner": {
+            "name": "Ben",
+            "team": "Bibliothek"
+          },
+          "sources": [
+            "src/rueckgabe.py",
+            "src/mit # zeichen.py"
+          ]
+        }
+      }
+    ],
+    "problems": []
+  },
+  "pt25-top-one-field.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Anleitung",
+        "header": null
+      }
+    ],
+    "problems": []
+  },
+  "pt26-empty-value.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Leer",
+        "header": {
+          "title": "Leer",
+          "kind": "",
+          "state": "",
+          "sources": ""
+        }
+      }
+    ],
+    "problems": []
+  }
+}

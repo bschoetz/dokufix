@@ -1,0 +1,4 @@
+---
+kind: how-to
+---
+# Anleitung
