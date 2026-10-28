@@ -20,13 +20,14 @@ const BLANK_RE = /^[ \t]*\r?$/;
 // Each label defined more than once, in the order of its second definition:
 // { kind: 'footnote' | 'link', label } as the author wrote it the first time.
 // A definition opens a block: it stands at the start, after a blank line,
-// another definition, a heading, a thematic break or a fence, never inside a
-// paragraph or fenced code. Footnote labels compare as written, link labels
+// another definition, a heading, a thematic break or a fence, or after the
+// indented lines that continue a footnote, never inside a paragraph or fenced
+// code. Footnote labels compare as written, link labels
 // as marked compares them: runs of blanks collapsed, case folded through
 // upper case, so "Straße" and "STRASSE" are one label.
 export function duplicateDefinitions(source){
   const code = fences(source), seen = new Map(), twice = [];
-  let pos = 0, opens = true;
+  let pos = 0, opens = true, note = false;
   for (const line of source.split('\n')){
     const inCode = code.some(k => pos >= k.start && pos < k.end);
     pos += line.length + 1;
@@ -38,7 +39,9 @@ export function duplicateDefinitions(source){
       if (!seen.has(key)) seen.set(key, def[1]);
       else if (!twice.some(t => t.key === key)) twice.push({ key, kind: def[0], label: seen.get(key) });
     }
-    opens = BLANK_RE.test(line) || !!def || (!inCode && ENDS_BLOCK_RE.test(line));
+    // marked-footnote takes lines indented by four spaces, blank lines between, into the footnote.
+    note = !!fn || (note && /^(?: {4,}|[ \t]*\r?$)/.test(line));
+    opens = BLANK_RE.test(line) || !!def || note || (!inCode && ENDS_BLOCK_RE.test(line));
   }
   return twice.map(({ kind, label }) => ({ kind, label }));
 }

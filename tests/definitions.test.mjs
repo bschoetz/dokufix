@@ -45,4 +45,8 @@ test('as marked reads them: a block starts after a heading, a break or a fence; 
   assert.deepEqual(duplicateDefinitions('[Achtung]: Das ist wichtig.\n\n[Achtung]: Das auch.\n'), []);
   assert.deepEqual(duplicateDefinitions('[a]: <b c> "Titel"\n[A]: /d (Titel)\n'), [{ kind: 'link', label: 'a' }]);
   assert.deepEqual(duplicateDefinitions('[Straße]: /a\n[STRASSE]: /b\n'), [{ kind: 'link', label: 'Straße' }]);
+  // After the indented lines that continue a footnote, a definition starts a block; after a paragraph line not.
+  assert.deepEqual(duplicateDefinitions('[^b]: b\n    weiter\n[^a]: erste\n\n[^a]: zweite\n'), [{ kind: 'footnote', label: 'a' }]);
+  assert.deepEqual(duplicateDefinitions('[^b]: b\n\n    weiter\n[^a]: erste\n\n[^a]: zweite\n'), [{ kind: 'footnote', label: 'a' }]);
+  assert.deepEqual(duplicateDefinitions('[^b]: b\nweiter\n[^a]: erste\n\n[^a]: zweite\n'), []);
 });
