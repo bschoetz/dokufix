@@ -2,7 +2,8 @@
 """dokufix for language models: Markdown into a dokufix file and back out.
 
     python3 dokufix.py inject <markdown> <target>   writes a new dokufix file, or the document of one
-    python3 dokufix.py extract <file>               prints its Markdown
+    python3 dokufix.py extract <file> [--part <n>]  prints its Markdown, or one part of it by number or name
+    python3 dokufix.py overview <file>              prints per part its header and its headings as JSON
 
 Python 3 and its standard library alone. No command prints HTML. See
 src/README.md, "The script for language models".
@@ -13,6 +14,7 @@ import contextlib
 import gzip
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -215,20 +217,381 @@ def extract(file_path):
     raise Refusal('%s: the block #dokufix-source holds no document' % file_path)
 
 
+# --- Parts ----------------------------------------------------------------
+# A port of the reader of parts in src/app/frontmatter.js, by src/README.md, "Parts and their headers"; each
+# function names its original, so a change to one is found from the other. tests/test_dokufix_skript.py runs it
+# against the cases of tests/fixtures/parts/, as tests/parts-cases.test.mjs runs the original.
+# shortcut: Python's strip() and \s are JavaScript's trim() and \s but for \ufeff (JavaScript's only) and \x1c-\x1f,
+# \x85 (Python's only); a lone \r, \u2028 or \u2029 ends a line for JavaScript's . ^ $ alone; JavaScript lists a
+# header's integer-like keys first. No case holds these; port a helper of JavaScript's rules when one must.
+
+def fm_strip_comment(s):  # fmStripComment
+    # A '#' opens a comment only after whitespace or at the start, so "https://x.com#frag" keeps its fragment.
+    m = re.search(r'(?:^|\s)#', s)
+    return s[:m.start()] if m else s
+
+
+def fm_find_quote_end(s, q):  # fmFindQuoteEnd
+    i = 1
+    while i < len(s):
+        if (q == '"' and s[i] == '\\') or (q == "'" and s[i:i + 2] == "''"):
+            i += 2
+            continue
+        if s[i] == q:
+            return i
+        i += 1
+    return -1
+
+
+FM_DQ_ESCAPES = {'"': '"', '\\': '\\', '/': '/', 'n': '\n', 'r': '\r', 't': '\t'}  # FM_DQ_ESCAPES
+
+
+def fm_scalar(raw):  # fmScalar
+    s = raw.strip()
+    if not s:
+        return ''
+    q = s[0]
+    if q in '"\'':
+        end = fm_find_quote_end(s, q)
+        if end < 0:
+            raise ValueError('unterminated quoted scalar')
+        inner = s[1:end]
+        if fm_strip_comment(s[end + 1:]).strip():
+            raise ValueError('trailing content after quoted scalar')
+        if q == "'":
+            return inner.replace("''", "'")
+
+        def unescape(m):
+            if m.group(1) not in FM_DQ_ESCAPES:
+                raise ValueError('unsupported escape sequence: \\' + m.group(1))
+            return FM_DQ_ESCAPES[m.group(1)]
+        return re.sub(r'\\(.)', unescape, inner)
+    v = fm_strip_comment(s).strip()
+    for start, what in (('[|>]', 'block scalars'), ('[&*]', 'anchors and aliases'), ('!', 'tags'), (r'[\[{]', 'flow collections')):
+        if re.match(start, v):
+            raise ValueError(what + ' are not supported')
+    return v
+
+
+def fm_unquote_key(k):  # fmUnquoteKey
+    s = k.strip()
+    if len(s) > 1 and s[0] == s[-1] and s[0] in '"\'':
+        return s[1:-1]
+    return s
+
+
+def fm_is_seq_item(text):  # fmIsSeqItem
+    return text == '-' or text.startswith('- ')
+
+
+FM_KEY_LINE_RE = re.compile(r'[ \t]*[^:#\s][^:#]*?[ \t]*:(?:[ \t]|$)')  # FM_KEY_LINE_RE
+
+
+def fm_parse_node(lines, i, indent):  # fmParseNode; lines of (indent, text, line)
+    return (fm_parse_seq if fm_is_seq_item(lines[i][1]) else fm_parse_map)(lines, i, indent)
+
+
+def fm_define(out, key, value):  # fmDefine
+    if key in out:
+        raise ValueError('duplicate key: ' + key)
+    out[key] = value
+
+
+def fm_parse_map(lines, i, indent):  # fmParseMap
+    out = {}
+    while i < len(lines):
+        ind, text, line = lines[i]
+        if ind < indent:
+            break
+        if ind > indent:
+            raise ValueError('unexpected indentation on line %d' % line)
+        if fm_is_seq_item(text):
+            break
+        m = re.match(r'([^:#]+?)\s*:(?:\s+(.*))?$', text)
+        if not m:
+            raise ValueError('unsupported line: ' + text)
+        key = fm_unquote_key(m.group(1))
+        rest = (m.group(2) or '').strip()
+        if rest.startswith('#'):
+            rest = ''
+        i += 1
+        if rest:
+            fm_define(out, key, fm_scalar(rest))
+            continue
+        nxt = lines[i] if i < len(lines) else None
+        if nxt and nxt[0] > indent:
+            value, i = fm_parse_node(lines, i, nxt[0])
+        elif nxt and nxt[0] == indent and fm_is_seq_item(nxt[1]):
+            # A sequence written flush with its key.
+            value, i = fm_parse_seq(lines, i, indent)
+        else:
+            value = ''
+        fm_define(out, key, value)
+    return out, i
+
+
+def fm_parse_seq(lines, i, indent):  # fmParseSeq
+    out = []
+    while i < len(lines):
+        ind, text, line = lines[i]
+        if ind < indent:
+            break
+        if ind > indent:
+            raise ValueError('unexpected indentation on line %d' % line)
+        if not fm_is_seq_item(text):
+            break
+        rest = ('' if text == '-' else text[2:]).strip()
+        i += 1
+        if FM_KEY_LINE_RE.match(rest):
+            raise ValueError('sequences of maps are not supported')
+        nxt = lines[i] if i < len(lines) else None
+        if rest or not (nxt and nxt[0] > indent):
+            out.append(fm_scalar(rest))
+            continue
+        value, i = fm_parse_node(lines, i, nxt[0])
+        # The same sequence of maps spelled across two lines.
+        if isinstance(value, dict):
+            raise ValueError('sequences of maps are not supported')
+        out.append(value)
+    return out, i
+
+
+def parse_yaml_subset(text):  # parseYamlSubset
+    lines = []
+    for n, raw in enumerate(re.split(r'\r?\n', text)):
+        if re.match(r'[ \t]*(?:#|$)', raw):
+            continue
+        lead = re.match(r'[ \t]*', raw).group(0)
+        if '\t' in lead:
+            raise ValueError('tab indentation is not supported')
+        lines.append((len(lead), raw[len(lead):].rstrip(), n + 1))
+    if not lines:
+        raise ValueError('empty block')
+    value, nxt = fm_parse_node(lines, 0, lines[0][0])
+    if nxt != len(lines):
+        raise ValueError('inconsistent indentation')
+    return value
+
+
+FM_SUMMARY_KEYS = ('title', 'version', 'date', 'author')  # FM_SUMMARY_KEYS
+
+
+def fm_looks_like_frontmatter(raw):  # fmLooksLikeFrontmatter
+    lines = [l for l in re.split(r'\r?\n', raw) if not re.match(r'[ \t]*(?:#|$)', l)]
+    if not lines:
+        return False
+    if re.match(r'[ \t]*\{', lines[0]):
+        return True
+    entries, recognized = 0, False
+    for line in lines:
+        if re.match(r'[ \t]', line) or not FM_KEY_LINE_RE.match(line):
+            continue
+        entries += 1
+        recognized = recognized or fm_unquote_key(line[:line.index(':')]).lower() in FM_SUMMARY_KEYS
+    return recognized or entries >= 2
+
+
+def fm_has_prose_paragraph(raw):  # fmHasProseParagraph
+    blank = False
+    for line in re.split(r'\r?\n', raw):
+        if re.match(r'[ \t]*$', line):
+            blank = True
+            continue
+        if re.match(r'[ \t]*#', line):
+            continue
+        structural = re.match(r'[ \t]', line) or fm_is_seq_item(line.strip()) or FM_KEY_LINE_RE.match(line)
+        if blank and not structural:
+            return True
+        blank = False
+    return False
+
+
+def refuse_constant(name):
+    # JSON.parse knows no NaN, Infinity or -Infinity.
+    raise ValueError(name + ' is no JSON')
+
+
+def split_frontmatter(src):  # splitFrontmatter
+    none = {'raw': '', 'kind': None, 'data': None, 'body': src}
+    m = re.match(r'---([A-Za-z]*)[ \t]*\r?\n', src)
+    if not m:
+        return none
+    fence = m.group(1).lower()
+    if fence not in ('', 'json', 'yaml'):
+        return none
+    rest = src[m.end():]
+    close = re.search(r'^---[ \t]*(?:\r?\n|$)', rest, re.M)
+    if not close:
+        return none
+    raw, body = rest[:close.start()], rest[close.end():]
+    if not raw.strip():
+        # An explicit empty header is consumed; without a fence it is two thematic breaks.
+        return {'raw': raw, 'kind': None, 'data': None, 'body': body} if fence else none
+    if not fence and (not fm_looks_like_frontmatter(raw) or fm_has_prose_paragraph(raw)):
+        return none
+    trimmed = raw.strip()
+    try:
+        if fence == 'json' or (not fence and trimmed.startswith('{')):
+            # A number too large for a float is null, as JSON.stringify writes Infinity; overview prints JSON.
+            kind, data = 'json', json.loads(trimmed, parse_constant=refuse_constant,
+                                            parse_float=lambda f: float(f) if math.isfinite(float(f)) else None)
+        else:
+            if re.match(r'[\[{]', trimmed):
+                raise ValueError('flow collections are not supported')
+            kind, data = 'yaml', parse_yaml_subset(raw)
+        if not isinstance(data, dict):
+            raise ValueError('not a mapping')
+        if not data:
+            raise ValueError('empty mapping')
+        return {'raw': raw, 'kind': kind, 'data': data, 'body': body}
+    except (ValueError, RecursionError) as e:
+        return {'raw': raw, 'kind': 'raw', 'data': None, 'body': body, 'error': str(e)}
+
+
+def fences(text):  # fences
+    """The fenced blocks of a text, (start, end) of each one's content, as marked reads them."""
+    blocks, pos, opened = [], 0, None
+    for line in text.split('\n'):
+        nxt = pos + len(line) + 1
+        l = line[:-1] if line.endswith('\r') else line
+        if not opened:
+            m = re.match(r' {0,3}(`{3,}|~{3,})(.*)$', l)
+            if m and not (m.group(1)[0] == '`' and '`' in m.group(2)):
+                opened = (m.group(1)[0], len(m.group(1)), min(nxt, len(text)))
+        else:
+            m = re.match(r' {0,3}(`{3,}|~{3,}) *$', l)
+            if m and m.group(1)[0] == opened[0] and len(m.group(1)) >= opened[1]:
+                blocks.append((opened[2], pos))
+                opened = None
+        pos = nxt
+    if opened:
+        blocks.append((opened[2], len(text)))
+    return blocks
+
+
+PART_RE = re.compile(r'---part[ \t]*$', re.I)
+CLOSE_RE = re.compile(r'---[ \t]*$')
+BLANK_RE = re.compile(r'[ \t]*$')
+HEADING_RE = re.compile(r'(#{1,6})\s+(.+?)\s*$')
+
+
+def in_code(code, at):
+    return any(start <= at < end for start, end in code)
+
+
+def headings(lines, start, end):
+    """The ATX headings of lines [start, end) outside fenced code, as readParts looks for a name."""
+    # shortcut: no setext headings, none in a block quote or a list; Claude writes ATX headings (docs/dokufix-fuer-llms.md).
+    body, out, at = lines[start:end], [], 0
+    code = fences('\n'.join(body))
+    for n, l in enumerate(body):
+        m = not in_code(code, at) and HEADING_RE.match(l)
+        if m:
+            out.append({'level': len(m.group(1)), 'text': m.group(2), 'line': start + n + 1})
+        at += len(l) + 1
+    return out
+
+
+def read_parts(source):  # readParts
+    """The parts of a document, each with its first line (from 1), its header (the data, or None), its problem
+    ('header-missing', 'header-unclosed', 'header-unreadable' or None), its name, its body as line indexes
+    [body, end), its headings, and its text: its lines with their endings, so the texts give the document."""
+    raw = source.split('\n')
+    lines = [l[:-1] if l.endswith('\r') else l for l in raw]
+    code, starts, offsets = fences(source), [], [0]
+    for i, l in enumerate(lines):
+        if PART_RE.match(l) and not in_code(code, offsets[-1]):
+            starts.append(i)
+        offsets.append(offsets[-1] + len(raw[i]) + 1)
+    if not starts or starts[0] != 0:
+        starts.insert(0, 0)
+    parts = []
+    for n, s in enumerate(starts):
+        end = starts[n + 1] if n + 1 < len(starts) else len(lines)
+        part = {'line': s + 1, 'header': None, 'problem': None, 'name': None, 'body': s, 'end': end,
+                'text': source[offsets[s]:offsets[end]]}
+        if PART_RE.match(lines[s]):
+            close = -1
+            for j in range(s + 1, end):
+                if BLANK_RE.match(lines[j]):
+                    break
+                if CLOSE_RE.match(lines[j]):
+                    close = j
+                    break
+            if s + 1 == end or BLANK_RE.match(lines[s + 1]) or close == s + 1:
+                part['problem'] = 'header-missing'
+                part['body'] = s + 2 if close == s + 1 else s + 1
+            elif close < 0:
+                part['problem'] = 'header-unclosed'
+                part['body'] = s + 1
+            else:
+                head = '\n'.join(lines[s + 1:close])
+                fm = split_frontmatter(('---json\n' if head.strip().startswith('{') else '---yaml\n') + head + '\n---\n')
+                part['header'] = fm['data']
+                part['problem'] = 'header-unreadable' if fm['kind'] == 'raw' else None
+                part['body'] = close + 1
+        else:
+            text = '\n'.join(lines[s:end])
+            fm = split_frontmatter(text)
+            part['header'] = fm['data']
+            part['problem'] = 'header-unreadable' if fm['kind'] == 'raw' else None
+            part['body'] = s + text[:len(text) - len(fm['body'])].count('\n')
+        part['headings'] = headings(lines, part['body'], end)
+        title = (part['header'] or {}).get('title')
+        if isinstance(title, str) and title.strip():
+            part['name'] = title
+        elif part['headings']:
+            part['name'] = part['headings'][0]['text']
+        parts.append(part)
+    return parts
+
+
+def find_part(parts, wanted, where):
+    """The part a number, from 1, or a name asks for."""
+    count = '%d part%s' % (len(parts), '' if len(parts) == 1 else 's')
+    if re.fullmatch(r'[0-9]+', wanted):
+        if 1 <= int(wanted) <= len(parts):
+            return parts[int(wanted) - 1]
+        raise Refusal('%s has no part %s: it has %s' % (where, wanted, count))
+    named = ['%d (line %d)' % (n, p['line']) for n, p in enumerate(parts, 1) if p['name'] == wanted]
+    if not named:
+        raise Refusal('%s has no part named %s: it has %s' % (where, wanted, count))
+    if len(named) > 1:
+        raise Refusal('%s: parts %s and %s are %s named %s; ask for one by its number' % (
+            where, ', '.join(named[:-1]), named[-1], 'both' if len(named) == 2 else 'all', wanted))
+    return next(p for p in parts if p['name'] == wanted)
+
+
+def overview(document):
+    """Per part its header and its headings, none of the text below them (FR32)."""
+    return {'parts': [{'number': n, 'line': p['line'], 'name': p['name'], 'header': p['header'], 'problem': p['problem'],
+                       'headings': p['headings']} for n, p in enumerate(read_parts(document), 1)]}
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='dokufix.py', description='Markdown into a dokufix file and back out.')
     commands = parser.add_subparsers(dest='command', required=True)
     p = commands.add_parser('inject', help='write Markdown into a new dokufix file, or as the document of an existing one')
     p.add_argument('markdown')
     p.add_argument('target')
-    p = commands.add_parser('extract', help='print the Markdown of a dokufix file')
+    p = commands.add_parser('extract', help='print the Markdown of a dokufix file, or of one part of it')
+    p.add_argument('file')
+    p.add_argument('--part', help='the number of the part, from 1, or its name; a name starting with - as --part=<name>')
+    p = commands.add_parser('overview', help='print per part its header and its headings as JSON')
     p.add_argument('file')
     args = parser.parse_args(argv)
     try:
         if args.command == 'inject':
             inject(args.markdown, args.target)
+        elif args.command == 'overview':
+            out = json.dumps(overview(extract(args.file)), ensure_ascii=False) + '\n'
+            # A lone surrogate of a JSON header is written as its escape, as JSON.stringify writes it.
+            sys.stdout.buffer.write(out.encode('utf-8', errors='backslashreplace'))
         else:
-            sys.stdout.buffer.write(extract(args.file).encode('utf-8'))
+            text = extract(args.file)
+            if args.part is not None:
+                text = find_part(read_parts(text), args.part, args.file)['text']
+            sys.stdout.buffer.write(text.encode('utf-8'))
     except Refusal as e:
         print('dokufix.py: ' + str(e), file=sys.stderr)
         return 1

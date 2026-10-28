@@ -154,7 +154,7 @@
 `)+d+`
 ---
 `),l.fm.kind==="raw"&&(l.problem="header-unreadable"),l.body=u+1}}else{let u=n.slice(i,c).join(`
-`),d=Ur(u);d.kind&&(l.fm=d),l.body=i+u.slice(0,u.length-d.body.length).split(`
+`),d=Ur(u);d.kind&&(l.fm=d),d.kind==="raw"&&(l.problem="header-unreadable"),l.body=i+u.slice(0,u.length-d.body.length).split(`
 `).length-1}let p=l.fm&&l.fm.data&&l.fm.data.title;if(typeof p=="string"&&p.trim())l.name=p;else{let u=n.slice(l.body,c),d=Ln(u.join(`
 `)),w=0;for(let A of u){let h=!d.some(M=>w>=M.start&&w<M.end)&&Xl.exec(A);if(h){l.name=h[1];break}w+=A.length+1}}return l})}function Jl(e){let t=e.split(`
 `);return xs(e).map(n=>t.slice(n.body,n.end).join(`

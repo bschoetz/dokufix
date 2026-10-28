@@ -731,5 +731,20 @@
       }
     ],
     "problems": []
+  },
+  "pt28-top-unreadable.md": {
+    "parts": [
+      {
+        "line": 1,
+        "name": "Kopf kaputt",
+        "header": null
+      }
+    ],
+    "problems": [
+      {
+        "line": 1,
+        "code": "header-unreadable"
+      }
+    ]
   }
 }
