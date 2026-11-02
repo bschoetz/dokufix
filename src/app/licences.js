@@ -109,6 +109,11 @@ export const LICENCE_TEXTS = {
   },
 };
 
+// dokufix itself, named first in the view: whoever passes a file on passes
+// dokufix on, and its licence asks for this notice in every copy. The line is
+// the one in the repository's LICENSE (tests/licences.test.mjs compares them).
+export const OWN = { name: 'dokufix', licence: 'MIT', copyright: ['Copyright (c) 2026 Benjamin Schötz'] };
+
 export const LICENCES_CLASS = 'dokufix-licences';
 export const LICENCES_LINK_TEXT = 'license information';
 
@@ -133,7 +138,7 @@ function usageSentence(notices){
 // stands and what it looks like is the frame's business (src/app.css in the
 // editor, READONLY_FRAME_CSS in an export).
 // The parameters are there for the test; the product calls it without any.
-export function licencesHtml(notices = NOTICES, texts = LICENCE_TEXTS){
+export function licencesHtml(notices = NOTICES, texts = LICENCE_TEXTS, own = OWN){
   const entries = notices.map(n => {
     const text = texts[n.licence];
     const pkg = n.package && n.package.toLowerCase() !== n.name.toLowerCase() ? ' (' + escapeHtml(n.package) + ')' : '';
@@ -142,7 +147,7 @@ export function licencesHtml(notices = NOTICES, texts = LICENCE_TEXTS){
       n.copyright.map(line => '<br>' + escapeHtml(line)).join('') + '</li>';
   }).join('');
   // Each licence that an entry names, once, in the order the entries name them.
-  const used = [...new Set(notices.map(n => n.licence))].filter(key => texts[key]);
+  const used = [...new Set([own.licence, ...notices.map(n => n.licence)])].filter(key => texts[key]);
   const licences = used.map(key =>
     '<p><strong>' + escapeHtml(texts[key].title) + '</strong></p>' +
     texts[key].paragraphs.map(p => '<p>' + escapeHtml(p) + '</p>').join('')).join('');
@@ -150,6 +155,8 @@ export function licencesHtml(notices = NOTICES, texts = LICENCE_TEXTS){
   return '<details class="' + LICENCES_CLASS + '"><summary>' + LICENCES_LINK_TEXT + '</summary>' +
     '<div class="' + LICENCES_CLASS + '-view">' +
     '<p><strong>License information</strong></p>' +
+    '<p><strong>' + escapeHtml(own.name) + '</strong>, ' + escapeHtml(texts[own.licence] ? texts[own.licence].title : own.licence) +
+      own.copyright.map(line => '<br>' + escapeHtml(line)).join('') + '</p>' +
     (usage ? '<p>' + escapeHtml(usage) + '</p>' : '') +
     '<ul>' + entries + '</ul>' +
     licences +

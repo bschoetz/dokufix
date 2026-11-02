@@ -66,9 +66,11 @@ const bpmnJs = name => vendorFile(path.join(BPMN_JS, name));
 // Der Text der bpmn.io License aus der Lizenzliste des Produkts (src/app/licences.js); das Logo, das sie verlangt,
 // zeichnen Viewer und Modellierer selbst.
 export function bpmnJsNotice(){
-  const e = NOTICES.find(n => n.package === 'bpmn-js');
-  return [e.name + ' ' + e.version, ...e.copyright, LICENCE_TEXTS[e.licence].title, ...LICENCE_TEXTS[e.licence].paragraphs].join('\n\n');
+  return noticeOf(NOTICES.find(n => n.package === 'bpmn-js'));
 }
+// Die Octicons in den Dokumentstilen: minifiziert fällt ihr Kommentar in src/doc.css weg, deshalb steht er davor.
+const octiconsNotice = () => noticeOf(NOTICES.find(n => n.package === '@primer/octicons'));
+const noticeOf = e => [e.name + ' ' + e.version, ...e.copyright, LICENCE_TEXTS[e.licence].title, ...LICENCE_TEXTS[e.licence].paragraphs].join('\n\n');
 // Was ein Bündel mit dem Layout von anderen trägt: der Nachbau des Textlayouts von diagram-js (src/app/label-size.js)
 // und der Nachbau der Schichtung aus dem Swimlane-Layout von Mermaid (src/app/lmm.js), beide MIT, mit den Hinweisen,
 // wie sie die Lizenzliste des Produkts führt; die wenigen Konstanten und Formeln aus dem Textrenderer von bpmn-js
@@ -114,7 +116,7 @@ export async function buildPage({ template, entry, css, favicon, notice = '', pl
     'bpmn-viewer.js': () => comment(bpmnJsNotice()) + bpmnJs('bpmn-navigated-viewer.production.min.js'),
     'bpmn-modeler.js': () => bpmnJs('bpmn-modeler.production.min.js'),
     'bpmn-modeler.css': () => bpmnJs('bpmn-js.css') + '\n' + bpmnJs('bpmn-embedded.css'),
-    'doc.css': async () => { const t = await minifyCss(fs.readFileSync(path.join(SRC, 'doc.css'), 'utf8'), 'doc.css', false); if (/<\/style/i.test(t)) problems.push('doc.css enthält "</style"'); return t; },
+    'doc.css': async () => { const t = await minifyCss(fs.readFileSync(path.join(SRC, 'doc.css'), 'utf8'), 'doc.css', false); if (/<\/style/i.test(t)) problems.push('doc.css enthält "</style"'); return comment(octiconsNotice()) + t; },
     'layout.js': async () => { const t = await bundleScript(path.join(SRC, 'layout-worker.js'), false, null); problems.push(...scriptProblems('der Worker des Layouts', t)); return comment(layoutNotice()) + t; },
     'page.css': async () => { const t = await minifyCss(fs.readFileSync(css, 'utf8'), path.basename(css), false); if (/<\/style/i.test(t)) problems.push(path.basename(css) + ' enthält "</style"'); return t; },
     'page.js': async () => { const t = await bundleScript(entry, false, null, {}, plugins); problems.push(...scriptProblems('das Skript der Seite', t)); return (notice ? comment(notice) : '') + t; },

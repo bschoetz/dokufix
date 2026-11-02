@@ -31,7 +31,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
-import { NOTICES, LICENCE_TEXTS, LICENCES_CLASS, LICENCES_LINK_TEXT, licencesHtml } from '../src/app/licences.js';
+import { NOTICES, LICENCE_TEXTS, OWN, LICENCES_CLASS, LICENCES_LINK_TEXT, licencesHtml } from '../src/app/licences.js';
 // The Mermaid version whose layering LMM replicates for the columns of BPMN without coordinates.
 import { LMM_MERMAID_VERSION } from '../src/app/lmm.js';
 // The diagram-js whose text layout the label measurer replicates, and the bpmn-js that bundles it.
@@ -319,7 +319,7 @@ test('the view names every entry with version, licence and copyright lines, and 
   assert.ok(whole.includes('The dokufix editor loads marked, marked-footnote, Mermaid and bpmn-js from a CDN; the file itself carries diagram-js, Mermaid\'s swimlane layout and Octicons.'), whole.slice(0, 200));
   for (const key of ['MIT', 'bpmn.io']){
     const title = LICENCE_TEXTS[key].title;
-    assert.equal(whole.split(title).length - 1, NOTICES.filter(n => n.licence === key).length + 1, title + ': once per entry, once above its text');
+    assert.equal(whole.split(title).length - 1, [OWN, ...NOTICES].filter(n => n.licence === key).length + 1, title + ': once per entry and for dokufix, once above its text');
     for (const p of LICENCE_TEXTS[key].paragraphs) assert.ok(whole.includes(p), key + ': ' + p.slice(0, 40));
   }
   assert.equal(whole.split('Permission is hereby granted').length - 1, 2, 'the permission notice once per licence text');
@@ -348,11 +348,21 @@ test('an entry whose licence has no text is still shown, with the licence\'s nam
   assert.ok(text.includes('x 1.0.0, ISC') && text.includes('Copyright (c) 2026 X'), text);
 });
 
+test('the view names dokufix first, with its licence and the copyright line of the repository\'s LICENSE', () => {
+  const view = parsed(licencesHtml()).querySelector('.dokufix-licences-view');
+  const first = view.children[1];
+  assert.equal(first.querySelector('strong').textContent, 'dokufix');
+  assert.ok(first.textContent.includes(LICENCE_TEXTS[OWN.licence].title + 'Copyright (c) 2026 Benjamin Schötz'), first.textContent);
+  for (const line of OWN.copyright) assert.ok(read('LICENSE').split('\n').includes(line), 'LICENSE: ' + line);
+  // Only a licence an entry or dokufix names shows its text: with no entries, the MIT text is there for dokufix.
+  assert.ok(parsed(licencesHtml([])).textContent.includes(LICENCE_TEXTS.MIT.paragraphs[1]));
+});
+
 // ---------- the built file ----------
 test('the built file holds the link\'s text and every copyright line', () => {
   const built = read('dist/dokufix.html');
   assert.ok(built.includes(LICENCES_LINK_TEXT), 'the text of the link');
-  for (const n of NOTICES){
+  for (const n of [OWN, ...NOTICES]){
     for (const line of n.copyright) assert.ok(built.includes(line), 'entry "' + n.name + '": ' + line);
   }
   assert.ok(built.includes('Permission is hereby granted, free of charge, to any person obtaining a copy'), 'the permission notice');

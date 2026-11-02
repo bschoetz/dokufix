@@ -35,11 +35,10 @@ python3 skill/dokufix/dokufix.py overview <file>                  # parts, heade
 
 ## BPMN tools
 
-Three pages beside the product, for working on the automatic layout:
+Two pages beside the product, for working on the automatic layout:
 
 - [`dist/bpmn-assistant.html`](dist/bpmn-assistant.html): lay out BPMN XML and compare it with other layouters.
 - [`dist/bpmn-layout-werkbank.html`](dist/bpmn-layout-werkbank.html): the layout workbench with test cases, status and rating.
-- [`dist/bpmn-layouter-audi.html`](dist/bpmn-layouter-audi.html): a slimmed-down assistant that draws uploaded `.bpmn` files with their own coordinates in a fixed colour template.
 
 ## Build and checks
 
@@ -52,7 +51,7 @@ npm run watch      # readable build on every change
 npm run check      # built file current, style check, lint
 npm test           # unit tests, including the Python script
 npm run pruefung   # browser runs (Chromium and Firefox via Playwright)
-npm run assistant  # build the BPMN tool pages (also: werkbank, layouter-audi)
+npm run assistant  # build the BPMN tool pages (also: werkbank)
 ```
 
 ## Layout
@@ -69,3 +68,7 @@ spikes/        experiments
 ```
 
 Details on every feature, the build and the checks: [`src/README.md`](src/README.md).
+
+## License
+
+dokufix is under the [MIT License](LICENSE). It uses work of others under their own licences, mostly MIT, bpmn-js under the bpmn.io License: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
