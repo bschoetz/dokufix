@@ -1,6 +1,4 @@
-import { escapeHtml } from './html.js';
-import { documentHeadings, headingLabelText } from './toc.js';
-import { RAIL_MIN_HEADINGS } from './rail.js';
+import { slugify } from './toc.js';
 import { FACET_BAR_CLASS } from './facets.js';
 
 // --- Footnote previews -------------------------------------------------
@@ -104,6 +102,16 @@ function buildFootnotePreview(li){
 // its Nth arrow: both are in reference order.
 export function linkFootnoteReturnPaths(root){
   const refs = Array.from(root.querySelectorAll('a[data-footnote-ref]'));
+  // A footnote [^label] gets the id footnote-label, which marked-footnote also
+  // gives the hidden heading above the list, and every marker names that
+  // heading in aria-describedby. The definition keeps its id, so its markers
+  // still jump to it; the heading takes a free one, and the markers follow.
+  const hidden = root.querySelector('.footnotes > h2[id]');
+  if (hidden && root.querySelector('.footnotes li#' + CSS.escape(hidden.id))){
+    const old = hidden.id;
+    hidden.id = slugify(old, new Set(Array.from(root.querySelectorAll('[id]'), el => el.id)));
+    refs.forEach(a => { if (a.getAttribute('aria-describedby') === old) a.setAttribute('aria-describedby', hidden.id); });
+  }
   for (const li of root.querySelectorAll('.footnotes li[id]')){
     const arrows = li.querySelectorAll('a[data-footnote-backref]');
     if (!arrows.length) continue;
@@ -147,19 +155,4 @@ export function attachFootnotePreviews(root){
     sup.classList.add('dokufix-fn-host');
     sup.appendChild(span);
   }
-}
-
-// Build a static rail HTML string (no scrollspy) for read-only exports, from
-// the headings of the root it is handed (an export's copy of the preview).
-// Same structure as the live rail; just anchor links, no JS dependency.
-export function buildStaticRailHtml(root){
-  const items = Array.from(documentHeadings(root)).filter(h => /^H[234]$/.test(h.tagName));
-  if (items.length < RAIL_MIN_HEADINGS) return '';
-  let html = '<aside class="dokufix-rail has-items" aria-label="Navigation"><ol>';
-  for (const h of items){
-    html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
-            '<a href="#' + escapeHtml(h.id) + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
-  }
-  html += '</ol></aside>';
-  return html;
 }

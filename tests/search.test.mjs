@@ -1077,6 +1077,15 @@ test('groupResults: it goes by the order of the document alone, so any element c
   assert.deepEqual(groupResults(root, []), { groups: [], sections: 0 });
 });
 
+test('groupResults: a hit in a footnote\'s text belongs to the last section, not to the hidden heading of the footnotes', () => {
+  const root = rootWith('<h2>Eins</h2>\n<p>Text<sup><a href="#footnote-a" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup>.</p>\n<h2>Zwei</h2>\n<p>Mehr.</p>\n' +
+    '<section class="footnotes" data-footnotes="">\n<h2 id="footnote-label" class="sr-only">Fußnoten</h2>\n<ol>\n' +
+    '<li id="footnote-a">\n<p>Laut Tabelle drei. <a href="#footnote-ref-a" data-footnote-backref="" aria-label="Back to reference 1">↩</a></p>\n</li>\n</ol>\n</section>\n');
+  const found = collectPlaces(root).filter(p => findHits('Tabelle', p.text).length).map(p => ({ el: p.el, hits: 1 }));
+  assert.equal(found.length, 1);
+  assert.deepEqual(groupResults(root, found).groups.map(g => g.label), ['Zwei']);
+});
+
 test('groupResults: the group headings are those of the rail, H2 to H4 of documentHeadings(); the source says so', () => {
   assert.match(read('app/rail.js'), /documentHeadings\(root\)\)\.filter\(h => \/\^H\[234\]\$\/\.test\(h\.tagName\)\)/);
   assert.match(read('app/search-places.js'), /const GROUP_TAG = \/\^H\[234\]\$\/;/);

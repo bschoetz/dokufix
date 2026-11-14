@@ -1173,8 +1173,14 @@ const chipFacts = page => page.evaluate(() => {
   const all = Array.from(root.querySelectorAll('.dokufix-chip'));
   const inPreview = c => !!c.closest('.dokufix-fn-preview'), inFootnotes = c => !!c.closest('.footnotes');
   // The label of a heading as its entries have to read it: its text without
-  // the word of a chip and without a footnote preview.
-  const labelOf = h => { const c = h.cloneNode(true); c.querySelectorAll('.dokufix-chip-status, .dokufix-fn-preview').forEach(n => n.remove()); return c.textContent; };
+  // the word of a chip and without a footnote marker, its number and its
+  // preview: the <sup> that holds a[data-footnote-ref], or a bare one.
+  const labelOf = h => {
+    const c = h.cloneNode(true);
+    c.querySelectorAll('.dokufix-chip-status').forEach(n => n.remove());
+    c.querySelectorAll('a[data-footnote-ref]').forEach(a => (a.parentElement && a.parentElement.tagName === 'SUP' ? a.parentElement : a).remove());
+    return c.textContent;
+  };
   const entry = (sel, id) => { const a = Array.from(document.querySelectorAll(sel)).find(x => x.getAttribute('href') === '#' + id); return a ? a.textContent : null; };
   return {
     body: all.filter(c => !inPreview(c) && !inFootnotes(c)).map(fact),

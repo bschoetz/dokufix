@@ -280,6 +280,8 @@ const DOC_NO_LIBRARY = [
   '## Mermaid', GOOD_FLOW,
   '## BPMN', BPMN_GOOD,
   '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  // The fourth heading the rail needs: the hidden heading of the footnotes is none.
+  '## Anhang', 'Noch ein Abschnitt.',
   '[^a]: Die Fußnote.',
 ].join('\n\n') + '\n';
 // BPMN without coordinates: one block that is laid out, one with two pools,
@@ -375,6 +377,8 @@ const DOC_FACETS = [
   '## Wirkt', '<!-- dokufix: facets Typ -->\n| Merkmal | Typ |\n|---|---|\n| ORT | Text |\n| STATUS | Kategorie |\n| TELEFON | Text |\n| ANREDE | Kategorie |\n| ANLASS | Datum |',
   '## Wirkt nicht', '<!-- dokufix: facets Tpy -->\n| Merkmal | Typ |\n|---|---|\n| ORT | Text |',
   '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  // The fourth heading the rail needs: the hidden heading of the footnotes is none.
+  '## Anhang', 'Noch ein Abschnitt.',
   '[^a]: Die Fußnote mit einer Tabelle.',
   '    <!-- dokufix: facets Art -->\n    | Name | Art |\n    |---|---|\n    | a | eins |\n    | b | zwei |',
 ].join('\n\n') + '\n';
@@ -390,6 +394,8 @@ const DOC_FILTER = [
   '## Wirkt', '<!-- dokufix: filter "Merkmal suchen …" -->\n| Merkmal | Typ |\n|---|---|\n| ORT | Text |\n| STATUS | Kategorie |\n| TELEFON | Text |\n| ANREDE | Kategorie |\n| ANLASS | Datum |',
   '## Wirkt nicht', '<!-- dokufix: filter "Suchen …" -->\nEin Absatz, keine Tabelle.',
   '## Schluss', 'Ein Absatz mit Fußnote.[^a]',
+  // The fourth heading the rail needs: the hidden heading of the footnotes is none.
+  '## Anhang', 'Noch ein Abschnitt.',
   '[^a]: Die Fußnote mit einer Tabelle.',
   '    <!-- dokufix: filter -->\n    | Name | Art |\n    |---|---|\n    | a | eins |\n    | b | zwei |',
 ].join('\n\n') + '\n';
@@ -969,7 +975,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       };
       await facetPage(scope, await facts(o.page), '', o.page);
       const f = await facts(o.page);
-      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 3, { railHasItems: f.railHasItems, railLinks: f.railLinks });
+      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 4, { railHasItems: f.railHasItems, railLinks: f.railLinks });
       // A marker its component refuses is no failure of a pass: nothing is logged.
       check(scope, 'no pass failed: nothing on the console, no page error', o.consoleErrors.length === 0 && o.pageErrors.length === 0, o.consoleErrors.concat(o.pageErrors).join(' | '));
       // What a download serialises is the markup. A copy of the preview, taken
@@ -1125,7 +1131,7 @@ async function runBrowser(name, opts, copyWithPasses, copyWithExportStep, copyWi
       };
       const f = await facts(o.page);
       withoutLibrary(scope, f, '');
-      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 3, { railHasItems: f.railHasItems, railLinks: f.railLinks });
+      check(scope, 'the rail is built', f.railHasItems && f.railLinks >= 4, { railHasItems: f.railHasItems, railLinks: f.railLinks });
       check(scope, 'the library was asked for and not loaded', await o.page.evaluate(() => typeof BpmnJS === 'undefined'));
       checkErrors(scope, o, ['BPMN error']);
       await checkExports(scope, browser, o.page, dir, 'ohne-bpmn-js', READONLY, withoutLibrary);

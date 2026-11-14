@@ -1,9 +1,9 @@
 import { inlineAssetRefsAsDataUrls } from '../assets.js';
 import { sourceEl, previewEl } from '../dom.js';
 import { deriveDocTitle } from '../frontmatter.js';
-import { buildStaticRailHtml } from '../footnotes.js';
 import { escapeHtml } from '../html.js';
 import { formatVersionDate } from '../persistence.js';
+import { buildStaticRailHtml } from '../rail.js';
 import { render } from '../render.js';
 import { state } from '../state.js';
 import { removeTransient } from '../transient.js';
