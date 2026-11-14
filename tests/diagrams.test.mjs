@@ -50,12 +50,12 @@ test('a heading inside a callout does not count: "Diagramm", or the document hea
   assert.equal(diagramTitle(inside.querySelector('pre'), inside), 'Rückgabe');
 });
 
-test('the title is the heading as the table of contents shows it: a status chip by its label, a footnote preview left out', () => {
+test('the title is the heading as the table of contents shows it: a status chip by its label, a footnote marker left out', () => {
   const root = rootWith('<h2>Automat <code>🟢 in Betrieb</code></h2>' + block('mermaid', 'a'));
   buildChips(root);
   assert.equal(diagramTitle(root.querySelector('pre'), root), 'Automat in Betrieb');
   const note = rootWith('<h2>Fristen<sup class="dokufix-fn-host"><a data-footnote-ref href="#fn">1</a><span class="dokufix-fn-preview">Die ganze Fußnote.</span></sup></h2>' + block('mermaid', 'a'));
-  assert.equal(diagramTitle(note.querySelector('pre'), note), 'Fristen1');
+  assert.equal(diagramTitle(note.querySelector('pre'), note), 'Fristen');
 });
 
 test('a heading with no text gives "Diagramm"', () => {

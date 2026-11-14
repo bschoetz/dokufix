@@ -8,10 +8,11 @@
 //
 // The modules imported here are the ones that load without a page:
 // passes.js, warning.js, transient.js, toc.js, frontmatter.js, callouts.js,
-// chips.js, markers.js, tables.js, filter.js.
+// chips.js, markers.js, tables.js, filter.js, footnotes.js, diagrams.js. rail.js
+// loads without a page too; its buildRail() needs one, so the test that drives
+// it imports the module with stand-ins for document and window in place.
 
 import test from 'node:test';
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { runPasses } from '../src/app/passes.js';
@@ -24,6 +25,8 @@ import { buildChips } from '../src/app/chips.js';
 import { applyMarkers } from '../src/app/markers.js';
 import { buildTables } from '../src/app/tables.js';
 import { attachTableFilters } from '../src/app/filter.js';
+import { linkFootnoteReturnPaths } from '../src/app/footnotes.js';
+import { diagramTitle } from '../src/app/diagrams.js';
 
 // A root like the preview, holding the given markup.
 function rootWith(html){
@@ -178,8 +181,6 @@ test('an id the author wrote on a heading stays one attribute in the table of co
   assert.deepEqual(await runPasses(root, [{ name: 'Überschriften', run: assignHeadingIds }, { name: 'Inhaltsverzeichnis', run: processInlineToc }]), []);
   const links = Array.from(root.querySelectorAll('nav.dokufix-toc a'));
   assert.deepEqual(links.map(a => [a.getAttribute('href'), a.textContent]), [['#a"b&c', 'Eins'], ['#zwei', 'Zwei']]);
-  // The rail and the static rail of the exports write the link the same way; both need a page to load.
-  for (const f of ['rail.js', 'footnotes.js']) assert.match(fs.readFileSync(new URL('../src/app/' + f, import.meta.url), 'utf8'), /'<a href="#' \+ escapeHtml\(h\.id\) \+ '">'/, f);
 });
 test('a real pass that fails on its input is contained like any other', async t => {
   const root = rootWith('<h2>Eins</h2><p>[[toc]]</p>');
@@ -301,7 +302,8 @@ test('the anchors of headings with a chip are the ones they had as code spans, a
   // the dot fell out of the anchor. So a document that already wrote a status
   // into a heading keeps its links.
   const markup = WITH_CHIP_HEADINGS +
-    // a heading with a footnote marker, as marked-footnote emits it, and two alike
+    // a heading with a footnote marker, as marked-footnote emits it (its anchor
+    // leaves the marker's number out since the fix of the footnotes' outline), and two alike
     '<h2>Frist<sup><a id="footnote-ref-quelle" href="#footnote-quelle" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup></h2>\n' +
     '<h3>Größe und Maß</h3>\n<h3>Größe und Maß</h3>\n<h2><code>Code</code> im Titel</h2>\n' +
     // A status that touches the text before it: "## Bestellung:`🟢 Live`",
@@ -315,7 +317,7 @@ test('the anchors of headings with a chip are the ones they had as code spans, a
   assignHeadingIds(after);
   assert.deepEqual(documentHeadings(after).map(h => h.id), documentHeadings(before).map(h => h.id));
   assert.deepEqual(documentHeadings(after).map(h => h.id).slice(6),
-    ['frist1', 'groesse-und-mass', 'groesse-und-mass-2', 'code-im-titel', 'bestellung-live-2', 'stand-live', 'live-tot']);
+    ['frist', 'groesse-und-mass', 'groesse-und-mass-2', 'code-im-titel', 'bestellung-live-2', 'stand-live', 'live-tot']);
   // Their entries keep the words apart as well, with one blank; a heading
   // that has a blank before its chip does not get a second one.
   assert.deepEqual(documentHeadings(after).map(headingLabelText).slice(10), ['Bestellung: Live', 'Stand Live', 'Live/ Tot']);
@@ -341,13 +343,105 @@ test('a chip in a heading inside a callout: a chip, and the heading still does n
   assert.ok(!inside.hasAttribute('id'));
   assert.deepEqual(documentHeadings(root).map(h => h.id), ['eins']);
 });
-test('the label of a heading leaves out the footnote preview and the chip\'s word, both', () => {
+test('the label of a heading leaves out the footnote marker with its preview and the chip\'s word, all', () => {
   // As the heading stands after every document pass: a chip and a marker with its preview.
   const root = rootWith('<h2>Frist <span class="dokufix-chip dokufix-chip-green"><span class="dokufix-chip-status">grün: </span>Live</span>' +
     '<sup class="dokufix-fn-host"><a href="#footnote-back-quelle" data-footnote-ref="">1</a><span class="dokufix-fn-preview" aria-hidden="true">Die ganze Fußnote.</span></sup></h2>');
-  assert.equal(headingLabelText(root.querySelector('h2')), 'Frist Live1');
+  assert.equal(headingLabelText(root.querySelector('h2')), 'Frist Live');
   // The heading is not changed by being asked.
   assert.equal(root.querySelectorAll('.dokufix-chip-status, .dokufix-fn-preview').length, 2);
+});
+
+// ---------- footnotes in the outline and among the ids ----------
+// The markup is what marked-footnote emits: a marker in a <sup>, and at the
+// end a section with a hidden heading and one definition per cited footnote.
+const fnRef = (label, n = 1) => '<sup><a id="footnote-ref-' + label + '" href="#footnote-' + label + '" data-footnote-ref="" aria-describedby="footnote-label">' + n + '</a></sup>';
+const fnList = (...labels) => '<section class="footnotes" data-footnotes="">\n<h2 id="footnote-label" class="sr-only">Fußnoten</h2>\n<ol>\n' +
+  labels.map(l => '<li id="footnote-' + l + '">\n<p>Text ' + l + '. <a href="#footnote-ref-' + l + '" data-footnote-backref="" aria-label="Back to reference 1">↩</a></p>\n</li>\n').join('') +
+  '</ol>\n</section>\n';
+const tocEntries = root => Array.from(root.querySelectorAll('nav.dokufix-toc a')).map(a => a.getAttribute('href') + ' ' + a.textContent);
+// globalThis stand-ins for what a page has, removed after the test.
+function standIns(t, globals){
+  const before = Object.keys(globals).map(k => [k, Object.getOwnPropertyDescriptor(globalThis, k)]);
+  Object.assign(globalThis, globals);
+  t.after(() => { for (const [k, d] of before){ if (d) Object.defineProperty(globalThis, k, d); else delete globalThis[k]; } });
+}
+const cssEscape = s => String(s).replace(/[^\w-]/g, c => '\\' + c);
+
+test('the hidden heading of the footnotes is no document heading; a document\'s own heading "Fußnoten" counts once', async () => {
+  const without = rootWith('<p>[[toc]]</p><h2>Eins</h2><h2>Zwei</h2><h2>Drei</h2><h2>Vier' + fnRef('a') + '</h2>' + fnList('a'));
+  await runPasses(without, [{ name: 'Überschriften', run: assignHeadingIds }, { name: 'Inhaltsverzeichnis', run: processInlineToc }]);
+  assert.deepEqual(documentHeadings(without).map(h => h.id), ['eins', 'zwei', 'drei', 'vier']);
+  assert.deepEqual(tocEntries(without), ['#eins Eins', '#zwei Zwei', '#drei Drei', '#vier Vier']);
+  // The hidden heading keeps the id marked-footnote gave it.
+  assert.equal(without.querySelector('.footnotes h2').id, 'footnote-label');
+  const own = rootWith('<p>[[toc]]</p><h2>Eins' + fnRef('a') + '</h2><h2>Fußnoten</h2>' + fnList('a'));
+  await runPasses(own, [{ name: 'Überschriften', run: assignHeadingIds }, { name: 'Inhaltsverzeichnis', run: processInlineToc }]);
+  assert.deepEqual(documentHeadings(own).map(headingLabelText), ['Eins', 'Fußnoten']);
+  assert.deepEqual(tocEntries(own), ['#eins Eins', '#fussnoten Fußnoten']);
+});
+
+test('a heading with a footnote marker: label, anchor and diagram title leave the marker out', async () => {
+  // ## Kündigung[^bgb], a diagram below it, [^bgb]: § 573 BGB.
+  const root = rootWith('<p>[[toc]]</p><h2>Kündigung' + fnRef('bgb') + '</h2><pre><code class="language-mermaid">a</code></pre>' + fnList('bgb'));
+  await runPasses(root, [{ name: 'Überschriften', run: assignHeadingIds }, { name: 'Inhaltsverzeichnis', run: processInlineToc }]);
+  const h = root.querySelector('h2');
+  assert.deepEqual([h.id, headingLabelText(h)], ['kuendigung', 'Kündigung']);
+  assert.deepEqual(tocEntries(root), ['#kuendigung Kündigung']);
+  assert.equal(diagramTitle(root.querySelector('pre'), root), 'Kündigung');
+  // The marker stays in the heading.
+  assert.equal(h.querySelectorAll('a[data-footnote-ref]').length, 1);
+});
+
+test('a heading anchor never takes an id already in the document: a footnote\'s, the hidden heading\'s, one in raw HTML', () => {
+  const root = rootWith('<div id="einleitung">Roh.</div><h2>Einleitung</h2><h2>Footnote Norm' + fnRef('norm') + '</h2><h2>Footnote label</h2>' + fnList('norm'));
+  assignHeadingIds(root);
+  assert.deepEqual(documentHeadings(root).map(h => h.id), ['einleitung-2', 'footnote-norm-2', 'footnote-label-2']);
+  const ids = Array.from(root.querySelectorAll('[id]'), el => el.id);
+  assert.equal(new Set(ids).size, ids.length, 'no id stands twice: ' + ids);
+});
+
+test('a footnote named label keeps its id; the hidden heading takes a free one, and the markers name it', t => {
+  standIns(t, { CSS: { escape: cssEscape } });
+  // Text[^label] and more[^label], [^label]: Die Fußnote.
+  const root = rootWith('<p>Text' + fnRef('label') + ' und mehr' + fnRef('label') + '</p>' +
+    '<section class="footnotes" data-footnotes="">\n<h2 id="footnote-label" class="sr-only">Fußnoten</h2>\n<ol>\n<li id="footnote-label">\n<p>Die Fußnote. ' +
+    '<a href="#footnote-ref-label" data-footnote-backref="" aria-label="Back to reference 1">↩</a> <a href="#footnote-ref-label-2" data-footnote-backref="" aria-label="Back to reference 1-2">↩<sup>2</sup></a></p>\n</li>\n</ol>\n</section>\n');
+  root.querySelectorAll('a[data-footnote-ref]')[1].id = 'footnote-ref-label-2';
+  linkFootnoteReturnPaths(root);
+  const hidden = root.querySelector('.footnotes h2');
+  assert.equal(root.querySelector('.footnotes li').id, 'footnote-label');
+  assert.equal(hidden.id, 'footnote-label-2');
+  const markers = Array.from(root.querySelectorAll('a[data-footnote-ref]'));
+  assert.deepEqual(markers.map(a => a.getAttribute('aria-describedby')), ['footnote-label-2', 'footnote-label-2']);
+  // Each marker jumps to its own return arrow inside the definition.
+  assert.deepEqual(markers.map(a => a.getAttribute('href')), ['#footnote-back-label', '#footnote-back-label-2']);
+  const ids = Array.from(root.querySelectorAll('[id]'), el => el.id);
+  assert.equal(new Set(ids).size, ids.length, 'no id stands twice: ' + ids);
+});
+
+test('both rails list the same entries for one document, and none below the minimum', async t => {
+  const { document } = parseHTML('<!DOCTYPE html><html><body><aside id="dokufix-rail"></aside><article id="root" class="dokufix-doc">' +
+    '<h1>Titel</h1><h2>Eins' + fnRef('a') + '</h2><h3>Zwei &amp; <code>🟢 Live</code></h3><h4 id=\'a"b\'>Drei</h4><h5>Zu tief</h5><h2>Fußnoten</h2>' + fnList('a') +
+    '</article></body></html>');
+  standIns(t, { document, window: { innerHeight: 800, addEventListener(){}, removeEventListener(){} } });
+  const { buildRail, buildStaticRailHtml } = await import('../src/app/rail.js');
+  const root = document.getElementById('root');
+  await runPasses(root, [{ name: 'Status-Chips', run: buildChips }, { name: 'Überschriften', run: assignHeadingIds }]);
+  buildRail(root);
+  const live = document.getElementById('dokufix-rail');
+  assert.ok(live.classList.contains('has-items'));
+  const exported = parseHTML('<html><body>' + buildStaticRailHtml(root) + '</body></html>').document.querySelector('aside.dokufix-rail');
+  const entries = rail => Array.from(rail.querySelectorAll('li'), li => [li.className, li.querySelector('a').getAttribute('href'), li.textContent]);
+  assert.deepEqual(entries(live), [['rail-h2', '#eins', 'Eins'], ['rail-h3', '#zwei-live', 'Zwei & Live'], ['rail-h4', '#a"b', 'Drei'], ['rail-h2', '#fussnoten', 'Fußnoten']]);
+  assert.deepEqual(entries(exported), entries(live));
+  // Three visible headings and a footnote: no rail, live or exported.
+  root.innerHTML = '<h2>Eins' + fnRef('a') + '</h2><h2>Zwei</h2><h2>Drei</h2>' + fnList('a');
+  assignHeadingIds(root);
+  buildRail(root);
+  assert.ok(!live.classList.contains('has-items'));
+  assert.equal(live.innerHTML, '');
+  assert.equal(buildStaticRailHtml(root), '');
 });
 
 // ---------- block markers ----------

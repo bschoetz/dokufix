@@ -2,11 +2,33 @@ import { escapeHtml } from './html.js';
 import { documentHeadings, headingLabelText, tocLinkHandler } from './toc.js';
 
 // --- Right-side scrollspy rail --------------------------------
-const railEl = document.getElementById('dokufix-rail');
+// This module loads without a page, so the tests reach it; the page's rail
+// element is looked up when a function needs it. buildRail() needs a page.
+const railElement = () => document.getElementById('dokufix-rail');
 export const RAIL_MIN_HEADINGS = 4;
+
+// The entries of both rails, the editor's and an export's, from the headings
+// of root: H2 to H4 of documentHeadings(), none below the minimum.
+function railItems(root){
+  const items = Array.from(documentHeadings(root)).filter(h => /^H[234]$/.test(h.tagName));
+  return items.length < RAIL_MIN_HEADINGS ? [] : items;
+}
+function railListHtml(items){
+  return '<ol>' + items.map(h => '<li class="rail-' + h.tagName.toLowerCase() + '">' +
+    '<a href="#' + escapeHtml(h.id) + '">' + escapeHtml(headingLabelText(h)) + '</a></li>').join('') + '</ol>';
+}
+
+// The rail of a read-only export: static HTML from the headings of the root it
+// is handed (an export's copy of the preview), anchor links only, no script.
+export function buildStaticRailHtml(root){
+  const items = railItems(root);
+  return items.length ? '<aside class="dokufix-rail has-items" aria-label="Navigation">' + railListHtml(items) + '</aside>' : '';
+}
+
 // Click handler is attached ONCE at init; the rail's children are
 // rebuilt on each render() but the rail element itself persists.
 export function registerRailClicks(){
+  const railEl = railElement();
   if (railEl) railEl.addEventListener('click', tocLinkHandler);
 }
 // Reading line: where in the viewport we consider "what the reader is currently looking at".
@@ -21,6 +43,7 @@ let railResizeHandler = null;
 // whatever failed before it: the checks take "the rail was rewritten" as
 // "the render is finished".
 export function buildRail(root){
+  const railEl = railElement();
   if (!railEl) return;
 
   // Detach previous handlers before rebuilding (re-render of editor source).
@@ -33,20 +56,14 @@ export function buildRail(root){
     railResizeHandler = null;
   }
 
-  const items = Array.from(documentHeadings(root)).filter(h => /^H[234]$/.test(h.tagName));
-  if (items.length < RAIL_MIN_HEADINGS){
+  const items = railItems(root);
+  if (!items.length){
     railEl.classList.remove('has-items');
     railEl.innerHTML = '';
     return;
   }
 
-  let html = '<ol>';
-  for (const h of items){
-    html += '<li class="rail-' + h.tagName.toLowerCase() + '">' +
-            '<a href="#' + escapeHtml(h.id) + '">' + escapeHtml(headingLabelText(h)) + '</a></li>';
-  }
-  html += '</ol>';
-  railEl.innerHTML = html;
+  railEl.innerHTML = railListHtml(items);
   railEl.classList.add('has-items');
 
   // Scrollspy: pick the last heading whose top edge is at or above the reading line.

@@ -1,6 +1,7 @@
 import { escapeHtml } from './html.js';
 import { CALLOUT_CLASS } from './callouts.js';
 import { CHIP_STATUS_CLASS } from './chips.js';
+import { isFootnoteMarker } from './facets.js';
 
 // --- Table of Contents ----------------------------------------
 // Two layers, see README:
@@ -16,10 +17,12 @@ import { CHIP_STATUS_CLASS } from './chips.js';
 // table of contents, the rail of the editor and the rail of an export all ask
 // here, each at the moment it runs. A heading inside a callout is part of the
 // callout, not of the document's outline: it gets no id and no entry. The
-// numbering leaves it out by the same rule, written in src/doc.css.
+// numbering leaves it out by the same rule, written in src/doc.css. So is the
+// hidden heading marked-footnote puts above the footnotes (.footnotes h2,
+// hidden by src/doc.css): a reader never sees it, so it is no entry either.
 export function documentHeadings(root){
   return Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6'))
-    .filter(h => !h.closest('.' + CALLOUT_CLASS));
+    .filter(h => !h.closest('.' + CALLOUT_CLASS) && !h.closest('.footnotes'));
 }
 
 // Exported for the checks: the comparison run asks which anchor a label gives.
@@ -52,12 +55,13 @@ export function slugify(text, used){
 // Document pass. Heading IDs come first — both the inline ToC and the rail need them.
 // The anchor is made from the same text as the label of the heading's entry,
 // through the one function below: what is no part of the label is no part of
-// the anchor either.
+// the anchor either. Every id already in the root is taken: a footnote's, the
+// hidden heading's footnote-label, one in raw HTML. A heading that would match
+// one gets the next free anchor, as two headings of the same text do. Ids made
+// after this pass (a diagram's controls) are not guarded.
 export function assignHeadingIds(root){
-  const headings = documentHeadings(root);
-  const used = new Set();
-  headings.forEach(h => { if (h.id) used.add(h.id); });
-  headings.forEach(h => { if (!h.id) h.id = slugify(headingLabelText(h), used); });
+  const used = new Set(Array.from(root.querySelectorAll('[id]'), el => el.id));
+  documentHeadings(root).forEach(h => { if (!h.id) h.id = slugify(headingLabelText(h), used); });
 }
 
 function buildTocHtml(headings, maxLevel){
@@ -80,12 +84,12 @@ function buildTocHtml(headings, maxLevel){
   return html;
 }
 
-// Heading text for a ToC or rail label. Not h.textContent: attachFootnotePreviews()
-// appends the whole footnote into a <span> inside the marker's <sup>, so a marker
-// in a heading drags the entire footnote into the label. textContent is DOM-level
-// and does not care that the span is visibility:hidden. processInlineToc() happens
-// to run before the preview pass and would escape today, but that is call ordering,
-// not a guarantee — buildRail() and buildStaticRailHtml() run after it.
+// Heading text for a ToC or rail label. Not h.textContent: a footnote marker in
+// a heading would put its number into the label, and attachFootnotePreviews()
+// appends the whole footnote into a <span> inside the marker's <sup>. So the
+// whole marker is left out, with its preview, before and after the preview
+// pass alike: "## Kündigung[^bgb]" reads "Kündigung", and its anchor is
+// #kuendigung, as the search's group reads it.
 // A status chip in a heading carries the name of its colour as text for
 // assistive technology (chips.js). That text is left out as well: the entry of
 // "## Bestellung `🟢 Live`" reads "Bestellung Live", and its anchor is the one
@@ -98,7 +102,7 @@ function buildTocHtml(headings, maxLevel){
 // heading, gets none.
 export function headingLabelText(h){
   const clone = h.cloneNode(true);
-  clone.querySelectorAll('.dokufix-fn-preview').forEach(n => n.remove());
+  clone.querySelectorAll('sup, a[data-footnote-ref]').forEach(n => { if (isFootnoteMarker(n)) n.remove(); });
   // U+0000 marks where a word stood; a parsed document never holds one.
   clone.querySelectorAll('.' + CHIP_STATUS_CLASS).forEach(n => { n.textContent = '\0'; });
   return clone.textContent.replace(/(^|\s)\0/g, '$1').replace(/\0/g, ' ');
