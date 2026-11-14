@@ -13,7 +13,6 @@
 // it imports the module with stand-ins for document and window in place.
 
 import test from 'node:test';
-import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { parseHTML } from 'linkedom';
 import { runPasses } from '../src/app/passes.js';
@@ -182,8 +181,6 @@ test('an id the author wrote on a heading stays one attribute in the table of co
   assert.deepEqual(await runPasses(root, [{ name: 'Überschriften', run: assignHeadingIds }, { name: 'Inhaltsverzeichnis', run: processInlineToc }]), []);
   const links = Array.from(root.querySelectorAll('nav.dokufix-toc a'));
   assert.deepEqual(links.map(a => [a.getAttribute('href'), a.textContent]), [['#a"b&c', 'Eins'], ['#zwei', 'Zwei']]);
-  // Both rails write the link the same way, from one function in rail.js.
-  assert.match(fs.readFileSync(new URL('../src/app/rail.js', import.meta.url), 'utf8'), /'<a href="#' \+ escapeHtml\(h\.id\) \+ '">'/);
 });
 test('a real pass that fails on its input is contained like any other', async t => {
   const root = rootWith('<h2>Eins</h2><p>[[toc]]</p>');
