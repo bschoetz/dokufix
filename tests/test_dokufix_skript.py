@@ -2,7 +2,7 @@
 
     python3 -m unittest discover -s tests -p 'test_*.py'   (npm test runs it too)
 
-The matrices of epic 3, stories 1, 8, 9 and 4, against dist/dokufix.html; the reader of parts against
+The matrices of epic 3, stories 1, 8, 9, 4 and 5, against dist/dokufix.html; the reader of parts against
 every case of tests/fixtures/parts/, as tests/parts-cases.test.mjs runs the product's. A file saved in the
 editor, {"gz": ...}, is made here as the page writes it; that the page writes
 it so, tests/speichern.mjs shows in step 11, in a browser.
@@ -11,7 +11,9 @@ import base64
 import gzip
 import hashlib
 import json
+import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -26,7 +28,7 @@ CASES = ROOT / 'tests' / 'fixtures' / 'parts'
 sys.path.insert(0, str(SCRIPT.parent))
 # No __pycache__ in the folder story 3.12 ships.
 sys.dont_write_bytecode = True
-from dokufix import read_parts  # noqa: E402
+from dokufix import covers, matches, read_parts  # noqa: E402
 
 TRICKY = ('# Überschrift\n\n```html\n<script>alert(1)</script>\n<!-- kein Kommentar -->\n```\n\n'
           'Ein </script> im Text, $& und \\n und "Anführung", ein Backslash \\ am Ende')
@@ -51,8 +53,9 @@ def case(name):
     return (CASES / name).read_bytes().decode('utf-8')
 
 
-def run(*args):
-    return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True)
+def run(*args, env=None):
+    return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True,
+                          env=env and {**os.environ, **env})
 
 
 def block(html, block_id):
@@ -75,7 +78,7 @@ class Script(unittest.TestCase):
         return p
 
     def inject(self, data):
-        target = self.tmp / 'x.html'
+        target = self.tmp / 'x.dokufix.html'
         r = run('inject', self.md(data), target)
         self.assertEqual(r.returncode, 0, r.stderr.decode())
         return target
@@ -105,7 +108,7 @@ class Script(unittest.TestCase):
 
     def test_each_file_gets_a_fresh_identifier(self):
         uuids = set()
-        for name in ('x1.html', 'x2.html'):
+        for name in ('x1.dokufix.html', 'x2.dokufix.html'):
             r = run('inject', self.md(TRICKY), self.tmp / name)
             self.assertEqual(r.returncode, 0, r.stderr.decode())
             history = json.loads(block((self.tmp / name).read_text(encoding='utf-8'), 'dokufix-history'))
@@ -119,10 +122,10 @@ class Script(unittest.TestCase):
 
     def test_a_byte_order_mark_is_dropped(self):
         self.assertEqual(self.extract(self.inject(b'\xef\xbb\xbf# Titel\n')), '# Titel\n')
-        self.refused(run('inject', self.md(b'\xef\xbb\xbf'), self.tmp / 'y.html'), 'empty')
+        self.refused(run('inject', self.md(b'\xef\xbb\xbf'), self.tmp / 'y.dokufix.html'), 'empty')
 
     def test_a_target_in_a_missing_folder_is_refused(self):
-        self.refused(run('inject', self.md(TRICKY), self.tmp / 'fehlt' / 'x.html'), 'cannot be written')
+        self.refused(run('inject', self.md(TRICKY), self.tmp / 'fehlt' / 'x.dokufix.html'), 'cannot be written')
 
     def test_a_damaged_gz_block_is_refused(self):
         html = self.inject(TRICKY).read_text(encoding='utf-8')
@@ -161,9 +164,9 @@ class Script(unittest.TestCase):
 
     def test_empty_markdown_is_refused(self):
         for data in ('', ' \n\t\r\n'):
-            r = run('inject', self.md(data), self.tmp / 'x.html')
+            r = run('inject', self.md(data), self.tmp / 'x.dokufix.html')
             self.refused(r, 'empty')
-            self.assertFalse((self.tmp / 'x.html').exists())
+            self.assertFalse((self.tmp / 'x.dokufix.html').exists())
 
     def test_inject_into_an_existing_file_replaces_its_document_alone(self):
         # A file with an identifier, two versions and an image, as the editor saves it, with CRLF around its blocks.
@@ -172,7 +175,7 @@ class Script(unittest.TestCase):
         html = html.replace(block(html, 'dokufix-history'), json.dumps(history))
         html = html.replace(block(html, 'dokufix-assets'), json.dumps({'ab' * 32: {'m': 'image/png', 'd': 'iVBORw0K'}}))
         html = html.replace(block(html, 'dokufix-source'), json.dumps({'gz': base64.b64encode(gzip.compress(TRICKY.encode('utf-8'))).decode('ascii')}))
-        target = self.tmp / 'x.html'
+        target = self.tmp / 'x.dokufix.html'
         target.write_bytes(html.replace('\n', '\r\n').encode('utf-8'))
         target.chmod(0o600)
         before = target.read_bytes()
@@ -184,7 +187,7 @@ class Script(unittest.TestCase):
         strip = lambda b: re.sub(rb'(id="dokufix-source">).*?</script>', rb'\1</script>', b, flags=re.S)
         self.assertEqual(strip(after), strip(before))
         self.assertEqual(target.stat().st_mode & 0o777, 0o600)
-        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ['a.md', 'b.md', 'x.html'])
+        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ['a.md', 'b.md', 'x.dokufix.html'])
 
     def test_inject_into_a_write_protected_file_is_refused(self):
         target = self.inject(TRICKY)
@@ -200,10 +203,10 @@ class Script(unittest.TestCase):
         finally:
             self.tmp.chmod(0o755)
         self.assertEqual(self.extract(target), TRICKY)
-        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ['a.md', 'b.md', 'x.html'])
+        self.assertEqual(sorted(p.name for p in self.tmp.iterdir()), ['a.md', 'b.md', 'x.dokufix.html'])
 
     def test_inject_into_what_is_no_dokufix_file_with_editor_leaves_it_alone(self):
-        target = self.tmp / 'x.html'
+        target = self.tmp / 'x.dokufix.html'
         target.write_text('<!doctype html><title>x</title><p>vorher</p>', encoding='utf-8')
         self.refused(run('inject', self.md(TRICKY), target), 'no dokufix file with editor')
         self.assertEqual(target.read_text(encoding='utf-8'), '<!doctype html><title>x</title><p>vorher</p>')
@@ -286,22 +289,22 @@ class Script(unittest.TestCase):
             f.write(IMAGES['logo.png'])
             f.truncate(5 * 1024 * 1024 + 1)
         (self.tmp / 'notiz.txt').write_text('kein Bild', encoding='utf-8')
-        existing = self.tmp / 'da.html'
+        existing = self.tmp / 'da.dokufix.html'
         run('inject', self.md(TRICKY, 'da.md'), existing)
         before = existing.read_bytes()
         for ref, word in [('fehlt.png', 'cannot be read'), ('bild.svg', 'no PNG, JPEG, GIF or WebP'),
                           ('notiz.txt', 'no PNG, JPEG, GIF or WebP'), ('gross.png', 'larger than 5 MB')]:
-            for target in [self.tmp / 'x.html', existing]:
+            for target in [self.tmp / 'x.dokufix.html', existing]:
                 with self.subTest(ref=ref, target=target.name):
                     r = run('inject', self.md('# T\n\n![Ok](ok.png) ![X](%s)\n' % ref), target)
                     self.refused(r, word)
                     self.assertIn(ref, r.stderr.decode())
-        self.assertFalse((self.tmp / 'x.html').exists())
+        self.assertFalse((self.tmp / 'x.dokufix.html').exists())
         self.assertEqual(existing.read_bytes(), before)
 
     def test_markdown_not_utf8_is_refused(self):
-        self.refused(run('inject', self.md(b'# \xe4rger\n'), self.tmp / 'x.html'), 'UTF-8')
-        self.assertFalse((self.tmp / 'x.html').exists())
+        self.refused(run('inject', self.md(b'# \xe4rger\n'), self.tmp / 'x.dokufix.html'), 'UTF-8')
+        self.assertFalse((self.tmp / 'x.dokufix.html').exists())
 
     def part(self, target, wanted):
         return self.extract_args(target, '--part', wanted)
@@ -374,7 +377,7 @@ class Script(unittest.TestCase):
         gz = base64.b64encode(gzip.compress(doc.encode('utf-8'))).decode('ascii')
         saved.write_text(html.replace(block(html, 'dokufix-source'), json.dumps({'gz': gz})), encoding='utf-8')
         self.assertEqual(self.part(saved, 'Ausleihe'), doc.split('---part\n')[0])
-        self.assertEqual(self.overview(saved), self.overview(self.tmp / 'x.html'))
+        self.assertEqual(self.overview(saved), self.overview(self.tmp / 'x.dokufix.html'))
 
     def export(self, doc, variant, images=b''):
         # A read-only export as the page writes it (story 3.11): no block #dokufix-source, the Markdown in a template
@@ -438,7 +441,7 @@ class Script(unittest.TestCase):
                 export = self.export(md, variant, data)
                 a = self.md(self.extract(export), 'aus-export.md')
                 existing = self.inject(TRICKY)
-                for target in (self.tmp / ('neu-' + variant + '.html'), existing):
+                for target in (self.tmp / ('neu-' + variant + '.dokufix.html'), existing):
                     r = run('inject', a, target, '--images-from', export)
                     self.assertEqual(r.returncode, 0, r.stderr.decode())
                     self.assertEqual(self.extract(target), md)
@@ -460,23 +463,23 @@ class Script(unittest.TestCase):
         md = self.md('![X](#asset-%s)\n' % sha(IMAGES['logo.png']), 'b.md')
         other = self.tmp / 'other.html'
         other.write_text('<!doctype html><title>x</title><p>Hallo</p>', encoding='utf-8')
-        self.refused(run('inject', md, self.tmp / 'neu.html', '--images-from', other), 'no read-only dokufix export')
-        self.refused(run('inject', md, self.tmp / 'neu.html', '--images-from', self.export('# K\n', 'kompakt')), 'kompakt without its packed body')
-        self.assertFalse((self.tmp / 'neu.html').exists())
+        self.refused(run('inject', md, self.tmp / 'neu.dokufix.html', '--images-from', other), 'no read-only dokufix export')
+        self.refused(run('inject', md, self.tmp / 'neu.dokufix.html', '--images-from', self.export('# K\n', 'kompakt')), 'kompakt without its packed body')
+        self.assertFalse((self.tmp / 'neu.dokufix.html').exists())
 
     def test_images_from_an_editor_file_or_a_hash_found_nowhere_are_refused(self):
         (self.tmp / 'logo.png').write_bytes(IMAGES['logo.png'])
         editor = self.inject('# Bild\n\n![Logo](logo.png)\n')
         a = self.md(self.extract(editor), 'aus-editor.md')
-        self.refused(run('inject', a, self.tmp / 'neu.html', '--images-from', editor), 'it has its images itself')
+        self.refused(run('inject', a, self.tmp / 'neu.dokufix.html', '--images-from', editor), 'it has its images itself')
         missing = 'cd' * 32
         export = self.export('# Bild\n', 'nur-lesen', IMAGES['foto.jpg'])
         existing = self.inject(TRICKY)
         before = existing.read_bytes()
-        for target in (self.tmp / 'neu.html', existing):
+        for target in (self.tmp / 'neu.dokufix.html', existing):
             r = run('inject', self.md('![X](#asset-%s)\n' % missing, 'b.md'), target, '--images-from', export)
             self.refused(r, missing)
-        self.assertFalse((self.tmp / 'neu.html').exists())
+        self.assertFalse((self.tmp / 'neu.dokufix.html').exists())
         self.assertEqual(existing.read_bytes(), before)
 
     def test_extract_refuses_what_is_no_dokufix_file(self):
@@ -484,6 +487,200 @@ class Script(unittest.TestCase):
         other.write_text('<!doctype html><title>x</title><p>Hallo</p>', encoding='utf-8')
         self.refused(run('extract', other), 'no dokufix file')
         self.refused(run('extract', self.tmp / 'missing.html'), 'cannot be read')
+
+
+SOURCES = '''---
+title: Eins
+sources: src/x.py
+---
+# Eins
+
+---part
+title: Zwei
+kind: reference
+functions: Ausleihe
+sources:
+  - src/
+  - ./src/x.py
+---
+
+---part
+title: Drei
+kind: reference
+sources:
+  - src/xy.py
+---
+'''
+
+
+class Project(unittest.TestCase):
+    """list and query across a project (story 3.5)."""
+    setUp, tearDown, md, inject, export, refused = Script.setUp, Script.tearDown, Script.md, Script.inject, Script.export, Script.refused
+
+    @property
+    def root(self):
+        return self.tmp / 'projekt'
+
+    def put(self, rel, doc):
+        target = self.root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        r = run('inject', self.md(doc), target)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        return target
+
+    def ok(self, *args, env=None):
+        r = run(*args, env=env)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertNotIn(b'<', r.stdout)
+        return json.loads(r.stdout.decode('utf-8'))
+
+    def listed(self, root=None, env=None):
+        return {f['path']: f['variant'] for f in self.ok('list', root or self.root, env=env)['files']}
+
+    def found(self, *args):
+        return [(p['file'], p['number']) for p in self.ok('query', self.root, *args)['parts']]
+
+    def test_list_finds_dokufix_files_by_their_ending_and_by_their_content(self):
+        self.put('a.dokufix.html', SOURCES)
+        self.put('b.dokufix.html', '# B\n').rename(self.root / 'b.html')
+        (self.root / 'sub').mkdir()
+        shutil.move(self.export(SOURCES, 'nur-lesen'), self.root / 'sub' / 'a-export.htm')
+        (self.root / 'andere.html').write_text('<!doctype html><p>Hallo</p>', encoding='utf-8')
+        (self.root / 'sub' / 'zweite.HTML').write_text('<!doctype html><p>auch</p>', encoding='utf-8')
+        self.assertEqual(self.listed(), {'a.dokufix.html': 'editor', 'b.html': 'editor', 'sub/a-export.htm': 'nur-lesen'})
+
+    def test_a_damaged_named_file_shows_and_what_cannot_be_read_does_not(self):
+        self.root.mkdir()
+        (self.root / 'kaputt.dokufix.html').write_text('<!doctype html><p>nichts</p>', encoding='utf-8')
+        (self.root / 'latin.dokufix.html').write_bytes(b'<p>\xe4</p>')
+        (self.root / 'ordner.dokufix.html').mkdir()
+        self.assertEqual(self.ok('list', self.root), {'files': [{'path': 'kaputt.dokufix.html', 'variant': None, 'parts': None}]})
+
+    def test_list_gives_per_part_its_name_kind_and_state(self):
+        self.put('a.dokufix.html', case('pt03-two-parts.md'))
+        self.put('leer.dokufix.html', '---\nkind:\nstate:\n---\n# Ohne\n')
+        files = self.ok('list', self.root)['files']
+        self.assertEqual(files[0]['parts'], [{'number': 1, 'name': 'Ausleihe', 'kind': 'reference', 'state': None},
+                                             {'number': 2, 'name': 'Rückgabe', 'kind': 'how-to', 'state': '3464d1c'}])
+        self.assertEqual(files[1]['parts'], [{'number': 1, 'name': 'Ohne', 'kind': None, 'state': None}])
+
+    def test_query_by_source_covers_and_gives_each_part_once_with_its_header(self):
+        self.put('a.dokufix.html', SOURCES)
+        r = self.ok('query', self.root, '--source', 'src/x.py')
+        self.assertEqual([(p['file'], p['number'], p['line'], p['name']) for p in r['parts']],
+                         [('a.dokufix.html', 1, 1, 'Eins'), ('a.dokufix.html', 2, 7, 'Zwei')])
+        self.assertEqual(r['parts'][1]['header']['sources'], ['src/', './src/x.py'])
+        self.assertEqual(self.found('--source', './src/xy.py/'), [('a.dokufix.html', 2), ('a.dokufix.html', 3)])
+        self.assertEqual(self.found('--source', 'lib/x.py'), [])
+
+    def test_query_by_kind_and_function_and_all_criteria_at_once(self):
+        self.put('a.dokufix.html', SOURCES)
+        self.assertEqual(self.found('--kind', 'reference'), [('a.dokufix.html', 2), ('a.dokufix.html', 3)])
+        self.assertEqual(self.found('--function', 'Ausleihe'), [('a.dokufix.html', 2)])
+        self.assertEqual(self.found('--function', 'Ausl'), [])
+        self.assertEqual(self.found('--kind', 'reference', '--source', 'src/x.py'), [('a.dokufix.html', 2)])
+
+    def test_query_reads_read_only_exports_only_on_request(self):
+        self.put('a.dokufix.html', SOURCES)
+        shutil.move(self.export(SOURCES, 'kompakt'), self.root / 'a-kompakt.dokufix.html')
+        self.assertEqual(self.found('--source', 'src/x.py'), [('a.dokufix.html', 1), ('a.dokufix.html', 2)])
+        self.assertEqual(self.found('--source', 'src/x.py', '--read-only'),
+                         [('a-kompakt.dokufix.html', 1), ('a-kompakt.dokufix.html', 2), ('a.dokufix.html', 1), ('a.dokufix.html', 2)])
+
+    def test_query_refuses_a_path_not_from_the_root_and_a_query_without_criterion(self):
+        self.put('a.dokufix.html', SOURCES)
+        for path in ('/home/x/src/x.py', 'C:/src/x.py', '../src/x.py', 'src/../x.py', 'src\\x.py'):
+            with self.subTest(path=path):
+                self.refused(run('query', self.root, '--source', path), 'from the root of the repository')
+        r = run('query', self.root)
+        self.refused(r, '--kind')
+        self.assertIn('--function', r.stderr.decode())
+        self.assertIn('--source', r.stderr.decode())
+
+    @unittest.skipUnless(shutil.which('git'), 'no git')
+    def test_in_git_its_files_tracked_or_new_and_not_ignored_and_neither_output_nor_nested_repositories(self):
+        git = lambda where, *a: subprocess.run(['git', '-C', where, *a], check=True, capture_output=True)
+        self.root.mkdir()
+        git(self.root, 'init', '-q')
+        (self.root / '.gitignore').write_text('out/\n', encoding='utf-8')
+        for rel in ('a.dokufix.html', 'weg.dokufix.html', 'sub/s.dokufix.html'):
+            self.put(rel, '# T\n')
+        git(self.root, 'add', 'a.dokufix.html', 'weg.dokufix.html', 'sub/s.dokufix.html')
+        # Tracked, though ignored: git lists it.
+        self.put('out/getrackt.dokufix.html', '# G\n')
+        git(self.root, 'add', '-f', 'out/getrackt.dokufix.html')
+        git(self.root, '-c', 'user.name=t', '-c', 'user.email=t@t', 'commit', '-q', '-m', 'eins')
+        (self.root / 'weg.dokufix.html').unlink()
+        self.put('neu.dokufix.html', '# N\n')
+        self.put('out/o.dokufix.html', '# O\n')
+        git(self.root, 'init', '-q', 'nested')
+        self.put('nested/n.dokufix.html', '# N\n')
+        want = {'a.dokufix.html': 'editor', 'neu.dokufix.html': 'editor', 'out/getrackt.dokufix.html': 'editor', 'sub/s.dokufix.html': 'editor'}
+        self.assertEqual(self.listed(), want)
+        self.assertEqual(self.listed(self.root / 'sub'), {'s.dokufix.html': 'editor'})
+        # As a Git hook runs it: GIT_DIR, GIT_WORK_TREE and GIT_INDEX_FILE of another repository do not decide.
+        other = self.tmp / 'anders'
+        other.mkdir()
+        git(other, 'init', '-q')
+        (other / '.git' / 'info' / 'exclude').write_text('a.dokufix.html\n', encoding='utf-8')
+        for env in ({'GIT_DIR': str(other / '.git')}, {'GIT_INDEX_FILE': str(other / '.git' / 'index')}):
+            self.assertEqual(self.listed(env=env), want)
+        self.assertEqual(self.listed(env={'GIT_DIR': str(other / '.git'), 'GIT_WORK_TREE': str(other),
+                                          'GIT_INDEX_FILE': str(other / '.git' / 'index')}), want)
+
+    def test_without_git_the_folder_is_walked_without_dot_folders_and_node_modules(self):
+        self.put('a.dokufix.html', '# A\n')
+        self.put('out/o.dokufix.html', '# O\n')
+        self.put('.versteckt/v.dokufix.html', '# V\n')
+        self.put('node_modules/m.dokufix.html', '# M\n')
+        # So that git finds no repository, also when the temp folder lies inside one.
+        self.assertEqual(self.listed(env={'GIT_CEILING_DIRECTORIES': str(self.tmp.parent)}),
+                         {'a.dokufix.html': 'editor', 'out/o.dokufix.html': 'editor'})
+
+    def test_a_root_that_is_no_folder_is_refused(self):
+        self.put('a.dokufix.html', '# A\n')
+        self.refused(run('list', self.tmp / 'fehlt'), 'is no folder')
+        self.refused(run('query', self.root / 'a.dokufix.html', '--kind', 'x'), 'is no folder')
+
+    def test_an_empty_criterion_is_refused_and_a_colon_in_a_path_is_no_drive(self):
+        self.put('a.dokufix.html', '---\ntitle: A\nsources: a:b.py\n---\n')
+        for args in (('--kind', ''), ('--function', ''), ('--source', ''), ('--source', '.'), ('--source', './')):
+            with self.subTest(args=args):
+                self.refused(run('query', self.root, *args), 'query %s is empty' % args[0])
+        self.assertEqual(self.found('--source', 'a:b.py'), [('a.dokufix.html', 1)])
+
+    def test_a_header_nested_too_deep_does_not_stop_list_and_query(self):
+        self.put('a.dokufix.html', '---\nkind: reference\ntitle: A\n---\n')
+        self.put('tief.dokufix.html', '---json\n' + '{"a":' * 100000 + '1' + '}' * 100000 + '\n---\n# Tief\n')
+        # split_frontmatter() takes its RecursionError for an unreadable header.
+        self.assertEqual(self.ok('list', self.root)['files'][1]['parts'], [{'number': 1, 'name': 'Tief', 'kind': None, 'state': None}])
+        self.assertEqual(self.found('--kind', 'reference'), [('a.dokufix.html', 1)])
+
+    def test_inject_writes_a_new_file_only_with_the_ending_and_an_existing_one_by_any_name(self):
+        self.root.mkdir()
+        for name in ('neu.html', 'neu.dokufix.htm'):
+            # The name is checked first: neither the missing Markdown nor the export is read.
+            self.refused(run('inject', self.tmp / 'fehlt.md', self.root / name, '--images-from', self.tmp / 'fehlt.html'), '.dokufix.html')
+            self.assertFalse((self.root / name).exists())
+        self.put('GROSS.DOKUFIX.HTML', '# Gross\n')
+        self.put('b.dokufix.html', '# B\n').rename(self.root / 'b.html')
+        r = run('inject', self.md('# Anders\n'), self.root / 'b.html')
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertEqual(run('extract', self.root / 'b.html').stdout, b'# Anders\n')
+
+    def test_the_covering_rule(self):
+        for header, path, want in [('src/x.py', 'src/x.py', True), ('src', 'src/x.py', True), ('src/', 'src/x.py', True),
+                                   ('./src/app', 'src/app/x.js', True), ('src/app', './src/app/', True),
+                                   ('src/app', 'src/apps.js', False), ('src/x.py', 'src', False), ('', 'src', False),
+                                   ('./', 'src', False)]:
+            with self.subTest(header=header, path=path):
+                self.assertEqual(covers(header, path), want)
+        self.assertTrue(matches({'sources': 'src'}, source='src/x.py'))
+        self.assertTrue(matches({'functions': 'Suche'}, function='Suche'))
+        for header in ({'sources': None}, {'sources': ''}, {'sources': []}, {}, None, ['src']):
+            with self.subTest(header=header):
+                self.assertFalse(matches(header, source='src/x.py'))
+        self.assertFalse(matches({'kind': 'how-to', 'sources': 'src'}, kind='reference', source='src/x.py'))
 
 
 class Parts(unittest.TestCase):

@@ -1094,7 +1094,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
 
     // 11. a file written by the script for language models (epic 3, story 1)
     scope = name + ' file of the script';
-    const injected = path.join(dir, 'skript-injiziert.html'), injectedSaved = path.join(dir, 'skript-gespeichert.html');
+    const injected = path.join(dir, 'skript-injiziert.dokufix.html'), injectedSaved = path.join(dir, 'skript-gespeichert.html');
     const markdown = path.join(dir, 'skript.md');
     fs.writeFileSync(markdown, SKRIPT_DOC);
     const injecting = spawnSync('python3', [SKRIPT, 'inject', markdown, injected], { encoding: 'utf8' });
@@ -1164,7 +1164,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await o.context.close();
     // Images through inject (story 3.9): a PNG beside the Markdown, named three ways: inline with
     // a title, by a reference-style definition, in an <img> with a width.
-    const withImage = path.join(dir, 'skript-mit-bild.html'), imageExport = path.join(dir, 'skript-mit-bild-nur-lesen.html');
+    const withImage = path.join(dir, 'skript-mit-bild.dokufix.html'), imageExport = path.join(dir, 'skript-mit-bild-nur-lesen.html');
     const imageCompact = path.join(dir, 'skript-mit-bild-kompakt.html');
     fs.writeFileSync(path.join(dir, 'skript-bild.png'), png);
     const imageDoc = SKRIPT_DOC_LF.replace('## Zweitens', '## Zweitens\n\n![Ein Bild daneben](skript-bild.png "Mit Titel")\n\n' +
@@ -1196,7 +1196,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       // Story 3.11: its Markdown from nur-lesen and from kompakt, into a new file with the images of the export;
       // the blank does not hold the PNG.
       for (const [label, file] of [['nur-lesen', imageExport], ['kompakt', imageCompact]]){
-        const md = path.join(dir, 'aus-' + label + '.md'), fresh = path.join(dir, 'skript-bilder-aus-' + label + '.html');
+        const md = path.join(dir, 'aus-' + label + '.md'), fresh = path.join(dir, 'skript-bilder-aus-' + label + '.dokufix.html');
         const fromExport = spawnSync('python3', [SKRIPT, 'extract', file], { encoding: 'utf8' }).stdout;
         same(scope, 'extract of ' + label + ' returns the reference to the asset', fromExport, imageWant);
         fs.writeFileSync(md, fromExport);
