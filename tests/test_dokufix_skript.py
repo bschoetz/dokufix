@@ -53,6 +53,10 @@ def case(name):
     return (CASES / name).read_bytes().decode('utf-8')
 
 
+# Test commits without the machine's git config: commit.gpgsign or core.hooksPath would make them fail.
+GIT_ENV = {**os.environ, 'GIT_CONFIG_GLOBAL': os.devnull, 'GIT_CONFIG_NOSYSTEM': '1'}
+
+
 def run(*args, env=None):
     return subprocess.run([sys.executable, str(SCRIPT), *map(str, args)], capture_output=True,
                           env=env and {**os.environ, **env})
@@ -599,7 +603,7 @@ class Project(unittest.TestCase):
 
     @unittest.skipUnless(shutil.which('git'), 'no git')
     def test_in_git_its_files_tracked_or_new_and_not_ignored_and_neither_output_nor_nested_repositories(self):
-        git = lambda where, *a: subprocess.run(['git', '-C', where, *a], check=True, capture_output=True)
+        git = lambda where, *a: subprocess.run(['git', '-C', where, *a], check=True, capture_output=True, env=GIT_ENV)
         self.root.mkdir()
         git(self.root, 'init', '-q')
         (self.root / '.gitignore').write_text('out/\n', encoding='utf-8')
@@ -681,6 +685,118 @@ class Project(unittest.TestCase):
             with self.subTest(header=header):
                 self.assertFalse(matches(header, source='src/x.py'))
         self.assertFalse(matches({'kind': 'how-to', 'sources': 'src'}, kind='reference', source='src/x.py'))
+
+
+def part(name, state=None, sources=None):
+    if isinstance(sources, list):
+        sources = ''.join('\n  - ' + s for s in sources)
+    head = ''.join('%s: %s\n' % kv for kv in (('title', name), ('state', state), ('sources', sources)) if kv[1] is not None)
+    return '---part\n%s---\n# %s\n\n' % (head, name)
+
+
+@unittest.skipUnless(shutil.which('git'), 'no git')
+class Stale(unittest.TestCase):
+    """stale: the parts whose sources have commits since their state (story 3.6)."""
+    setUp, tearDown, md, inject, export, refused = Script.setUp, Script.tearDown, Script.md, Script.inject, Script.export, Script.refused
+    root, put = Project.root, Project.put
+
+    def git(self, *args, env=None):
+        return subprocess.run(['git', '-C', self.root, '-c', 'user.name=t', '-c', 'user.email=t@t', *args], check=True,
+                              capture_output=True, env={**GIT_ENV, **(env or {})}).stdout.decode().strip()
+
+    def commit(self, date, *paths, time='12:00:00'):
+        for rel in paths:
+            f = self.root / rel
+            f.parent.mkdir(parents=True, exist_ok=True)
+            f.write_text(f.read_text() + 'x\n' if f.exists() else 'x\n')
+        self.git('add', *paths)
+        stamp = date + 'T' + time + '+0000'
+        self.git('commit', '-q', '-m', date, env={'GIT_AUTHOR_DATE': stamp, 'GIT_COMMITTER_DATE': stamp})
+        return self.git('rev-parse', 'HEAD')
+
+    def history(self):
+        """c1 on 2026-01-05 with four files and tag v1, src/a.py changed on 01-10 at 12:00 and 23:30, src/a.py, src/b.py and
+        src/x/y.py on 01-12."""
+        self.root.mkdir()
+        self.git('init', '-q')
+        first = self.commit('2026-01-05', 'src/a.py', 'src/b.py', 'src/c.py', 'src/x/y.py')
+        self.git('tag', 'v1')
+        self.commit('2026-01-10', 'src/a.py')
+        self.commit('2026-01-10', 'src/a.py', time='23:30:00')
+        self.commit('2026-01-12', 'src/a.py', 'src/b.py', 'src/x/y.py')
+        return first
+
+    def stale(self, *args, root=None):
+        r = run('stale', root or self.root, *args, env={'TZ': 'UTC'})
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        self.assertNotIn(b'<', r.stdout)
+        return json.loads(r.stdout.decode('utf-8'))
+
+    def changed(self, *args, root=None):
+        return [(p['file'], p['name'], [(c['source'], c['commits']) for c in p['changed']])
+                for p in self.stale(*args, root=root)['parts']]
+
+    def test_the_ticket_check_a_changed_source_is_listed_an_unchanged_one_not(self):
+        self.history()
+        self.put('a.dokufix.html', part('A', 'v1', 'src/a.py') + part('B', 'v1', 'src/c.py'))
+        out = self.stale()
+        self.assertEqual(out, {'parts': [{'file': 'a.dokufix.html', 'number': 1, 'line': 1, 'name': 'A', 'state': 'v1',
+                                          'changed': [{'source': 'src/a.py', 'commits': 3}]}], 'unchecked': []})
+
+    def test_a_folder_several_sources_dates_and_a_commit_as_state(self):
+        first = self.history()
+        self.put('a.dokufix.html', part('Ordner', first, 'src') + part('Mehrere', 'v1', ['src/a.py', './src/b.py', 'src/c.py'])
+                 + part('Datum', '2026-01-10', 'src/a.py') + part('Vorher', '2000-01-01', 'src/a.py')
+                 + part('Doppelt', 'v1', ['src/a.py', './src/a.py', './', '/']))
+        # Datum: the commit at 23:30 on the state's day is covered by the state.
+        self.assertEqual(self.changed(), [('a.dokufix.html', 'Ordner', [('src', 3)]),
+                                          ('a.dokufix.html', 'Mehrere', [('src/a.py', 3), ('./src/b.py', 1)]),
+                                          ('a.dokufix.html', 'Datum', [('src/a.py', 1)]),
+                                          ('a.dokufix.html', 'Vorher', [('src/a.py', 4)]),
+                                          ('a.dokufix.html', 'Doppelt', [('src/a.py', 3)])])
+
+    def test_what_git_does_not_know_is_unchecked_and_a_part_without_sources_or_state_is_left_out(self):
+        self.history()
+        self.put('a.dokufix.html', part('Commit', 'deadbee', 'src/a.py') + part('Tag', 'v9', 'src/a.py')
+                 + part('Option', '--all', 'src/a.py') + part('Kopf', 'HEAD', 'src/a.py')
+                 + part('Fehlt', 'v1', ['src/c.py', 'src/fehlt.py'])
+                 + part('Stern', 'v1', "'src/*.py'") + part('Nur Quelle', sources='src/a.py') + part('Nur Stand', 'v1')
+                 + part('Februar', '2026-02-30', 'src/a.py') + part('Monat', '2026-13-01', 'src/a.py')
+                 + part('Gemischt', 'v1', ['src/a.py', 'src/fehlt.py', 'src/fehlt2.py']))
+        out = self.stale()
+        self.assertEqual([(p['name'], p['changed']) for p in out['parts']], [('Gemischt', [{'source': 'src/a.py', 'commits': 3}])])
+        self.assertEqual([(p['name'], p['reason']) for p in out['unchecked']],
+                         [('Commit', 'git does not know the state deadbee'), ('Tag', 'git does not know the state v9'),
+                          ('Option', 'git does not know the state --all'), ('Kopf', 'git does not know the state HEAD'),
+                          ('Fehlt', 'no file src/fehlt.py at HEAD'),
+                          ('Stern', 'no file src/*.py at HEAD'), ('Februar', 'git does not know the state 2026-02-30'),
+                          ('Monat', 'git does not know the state 2026-13-01'),
+                          ('Gemischt', 'no file src/fehlt.py, src/fehlt2.py at HEAD')])
+
+    def test_a_source_moved_before_the_state_is_unchecked_one_deleted_after_it_changed(self):
+        self.history()
+        self.git('mv', 'src/c.py', 'src/d.py')
+        stamp = '2026-01-13T12:00:00+0000'
+        self.git('commit', '-q', '-m', 'mv', env={'GIT_AUTHOR_DATE': stamp, 'GIT_COMMITTER_DATE': stamp})
+        self.put('a.dokufix.html', part('Umbenannt', self.git('rev-parse', 'HEAD'), 'src/c.py') + part('Geloescht', 'v1', 'src/c.py'))
+        out = self.stale()
+        self.assertEqual([(p['name'], p['changed']) for p in out['parts']], [('Geloescht', [{'source': 'src/c.py', 'commits': 1}])])
+        self.assertEqual([(p['name'], p['reason']) for p in out['unchecked']], [('Umbenannt', 'no file src/c.py at HEAD')])
+
+    def test_a_root_in_a_subfolder_and_exports_only_on_request(self):
+        self.history()
+        self.put('docs/a.dokufix.html', part('A', 'v1', 'src/a.py'))
+        shutil.move(self.export(part('A', 'v1', 'src/a.py'), 'nur-lesen'), self.root / 'docs' / 'a-nur-lesen.dokufix.html')
+        self.assertEqual([p[0] for p in self.changed(root=self.root / 'docs')], ['a.dokufix.html'])
+        self.assertEqual([p[0] for p in self.changed('--read-only', root=self.root / 'docs')],
+                         ['a-nur-lesen.dokufix.html', 'a.dokufix.html'])
+
+    def test_outside_a_repository_it_is_refused(self):
+        self.put('a.dokufix.html', part('A', 'v1', 'src/a.py'))
+        r = run('stale', self.root, env={'GIT_CEILING_DIRECTORIES': str(self.tmp.parent)})
+        self.refused(r, 'git repository')
+        (self.tmp / 'leer').mkdir()
+        self.refused(run('stale', self.root, env={'PATH': str(self.tmp / 'leer')}), 'git repository')
 
 
 class Parts(unittest.TestCase):

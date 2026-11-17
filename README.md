@@ -35,9 +35,10 @@ python3 skill/dokufix/dokufix.py extract <file> [--part <n|name>] [--read-only] 
 python3 skill/dokufix/dokufix.py overview <file> [--read-only]                        # parts, headers and headings as JSON
 python3 skill/dokufix/dokufix.py list [<root>]                                        # the dokufix files of a project and their parts as JSON
 python3 skill/dokufix/dokufix.py query [<root>] --kind|--function|--source <…> [--read-only]  # the parts whose headers match, as JSON
+python3 skill/dokufix/dokufix.py stale [<root>] [--read-only]                        # parts whose sources changed since their state, and those it cannot check, as JSON
 ```
 
-`extract` reads the editor file and the three read-only exports alike. `--part`, `overview` and `query` read an export only with `--read-only`; `inject` refuses an export as its target, and a new file whose name does not end in `.dokufix.html`. `list` finds a file by that ending and by its content, also one renamed. `--images-from` takes the images an `#asset-<hash>` names from a read-only export, so Markdown extracted from one becomes a file with editor again.
+`extract` reads the editor file and the three read-only exports alike. `--part`, `overview`, `query` and `stale` read an export only with `--read-only`; `inject` refuses an export as its target, and a new file whose name does not end in `.dokufix.html`. `list` finds a file by that ending and by its content, also one renamed. `--images-from` takes the images an `#asset-<hash>` names from a read-only export, so Markdown extracted from one becomes a file with editor again.
 
 ## BPMN tools
 
