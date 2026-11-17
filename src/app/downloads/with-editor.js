@@ -153,7 +153,7 @@ export async function downloadWithEditor(){
     if (sourceClone) sourceClone.textContent = encodeJsonForScript({ gz: sourceGz });
 
     const html = '<!DOCTYPE html>\n' + docClone.outerHTML;
-    triggerDownload(safeFilenameBase() + '.html', html);
+    triggerDownload(safeFilenameBase() + '-editor.dokufix.html', html);
 
     // Download initiated successfully. Now (and only now) mutate global state.
     state.currentVersion = pendingVersion;

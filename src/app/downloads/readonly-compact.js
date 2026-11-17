@@ -35,7 +35,7 @@ export async function downloadReadonlyCompact(){
 </head>
 <body${bodyClassForExport()}>
 ${licencesHtml()}
-<noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.html) anfordern.</p></noscript>
+<noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.dokufix.html) anfordern.</p></noscript>
 <main class="reader-body dokufix-doc"><div id="d"></div></main>
 ${railHtmlPending}
 <script type="text/plain" id="p">${payload}<\/script>${readerBlock}
@@ -55,5 +55,5 @@ ${railHtmlPending}
 </body>
 </html>`;
 
-  triggerDownload(safeFilenameBase() + '-kompakt.html', html);
+  triggerDownload(safeFilenameBase() + '-kompakt.dokufix.html', html);
 }

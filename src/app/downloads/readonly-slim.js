@@ -83,5 +83,5 @@ ${rail}
 </body>
 </html>`;
 
-  triggerDownload(safeFilenameBase() + '-schlank.html', html);
+  triggerDownload(safeFilenameBase() + '-schlank.dokufix.html', html);
 }
