@@ -2,11 +2,14 @@
 """dokufix for language models: Markdown into a dokufix file and back out.
 
     python3 dokufix.py inject <markdown> <target> [--images-from <export>]
-                                                    writes a new dokufix file, or the document of one
+                                                    writes a new dokufix file, named *.dokufix.html, or the document of one
     python3 dokufix.py extract <file> [--part <n>] [--read-only]
                                                     prints its Markdown, also of a read-only export, or one part of it
     python3 dokufix.py overview <file> [--read-only]
                                                     prints per part its header and its headings as JSON
+    python3 dokufix.py list [<root>]                prints each dokufix file of a project, its variant and its parts as JSON
+    python3 dokufix.py query [<root>] [--kind <k>] [--function <f>] [--source <path>] [--read-only]
+                                                    prints the parts whose headers match, with their headers, as JSON
 
 Python 3 and its standard library alone. No command prints HTML. See
 src/README.md, "The script for language models".
@@ -20,6 +23,7 @@ import math
 import os
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 import urllib.parse
@@ -55,6 +59,8 @@ def replace_block(html, block_id, obj, where):
 
 # As ASSET_MAX_INPUT_BYTES in src/app/assets.js.
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
+# The ending of a dokufix file's name; a new file inject writes must have it (story 3.5).
+ENDING = '.dokufix.html'
 # What a packed block may unpack to: a file from someone else must not fill the memory (gzip bomb).
 UNPACKED_MAX_BYTES = 50 * 1024 * 1024
 
@@ -229,6 +235,8 @@ def read_html(path):
 
 def inject(markdown_path, target_path, images_from=None):
     target = Path(target_path)
+    if not target.exists() and not target.name.lower().endswith(ENDING):
+        raise Refusal('%s: a new dokufix file is named <name>%s, so that list finds it' % (target, ENDING))
     images = images_of(images_from) if images_from else None
     try:
         # utf-8-sig: a byte order mark of a Windows editor is no part of the document.
@@ -283,7 +291,10 @@ def inject_into(target, text, assets, images=None, images_from=None):
 
 def extract(file_path):
     """The Markdown of a dokufix file with editor or of a read-only export, and its variant."""
-    html = read_html(file_path)
+    return markdown_of(read_html(file_path), file_path)
+
+
+def markdown_of(html, file_path):
     variant = variant_of(html)
     if not variant:
         raise Refusal('%s holds no Markdown: it is no dokufix file with editor and no read-only export that carries it' % file_path)
@@ -660,6 +671,117 @@ def overview(document):
                        'headings': p['headings']} for n, p in enumerate(read_parts(document), 1)]}
 
 
+# --- A project -------------------------------------------------------------
+
+def candidates(root):
+    """The HTML files under root, as paths relative to it with /: in a Git repository its files, tracked or new and not
+    ignored, so build output, nested repositories and worktrees stay out; else the folder without links, node_modules
+    and folders whose name starts with a dot."""
+    html = lambda name: name.lower().endswith(('.html', '.htm'))
+    # Without GIT_DIR and its kind, so that -C alone decides, also when a Git hook runs the script.
+    env = {k: v for k, v in os.environ.items() if k not in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR')}
+    try:
+        r = subprocess.run(['git', '-C', str(root), 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
+                           capture_output=True, env=env)
+        if r.returncode == 0:
+            # A set: during a merge conflict git lists an unmerged path once per stage.
+            return sorted({n for n in r.stdout.decode('utf-8', 'surrogateescape').split('\0') if html(n)})
+    except OSError:  # no git
+        pass
+    found = []
+    for folder, dirs, files in os.walk(root):
+        dirs[:] = [d for d in dirs if d != 'node_modules' and not d.startswith('.')]
+        found += [(Path(folder) / f).relative_to(root).as_posix() for f in files if html(f)]
+    return sorted(found)
+
+
+def dokufix_files(root):
+    """Per dokufix file under root its path, its variant and its HTML; a file named *.dokufix.html without a variant
+    too, with None, so a damaged file shows. What cannot be read is left out."""
+    for rel in candidates(root):
+        try:
+            html = read_html(Path(root) / rel)
+        except Refusal:
+            continue
+        variant = variant_of(html)
+        if variant or rel.lower().endswith(ENDING):
+            yield rel, variant, html
+
+
+def parts_of(rel, variant, html):
+    """The parts of a file, or None when its document cannot be read."""
+    if not variant:
+        return None
+    try:
+        return read_parts(markdown_of(html, rel)[0])
+    except Refusal:
+        return None
+
+
+def field(header, key):
+    """A field of a header; one without a value, null included, is None."""
+    value = header.get(key) if isinstance(header, dict) else None
+    return None if value in ('', [], None) else value
+
+
+def listing(root):
+    files = []
+    for rel, variant, html in dokufix_files(root):
+        parts = parts_of(rel, variant, html)
+        files.append({'path': rel, 'variant': variant, 'parts': None if parts is None else [
+            {'number': n, 'name': p['name'], 'kind': field(p['header'], 'kind'), 'state': field(p['header'], 'state')}
+            for n, p in enumerate(parts, 1)]})
+    return {'files': files}
+
+
+def strings(value):
+    """One string counts as a list of one."""
+    return [value] if isinstance(value, str) else [v for v in value if isinstance(v, str)] if isinstance(value, list) else []
+
+
+def norm_path(path):
+    return re.sub(r'^(?:\./)+', '', path).rstrip('/')
+
+
+def covers(header_path, path):
+    """A path of sources covers itself and, as a folder, every path below it (Parts and their headers)."""
+    h, p = norm_path(header_path), norm_path(path)
+    return bool(h) and (p == h or p.startswith(h + '/'))
+
+
+def matches(header, kind=None, function=None, source=None):
+    """Whether a header matches every criterion given."""
+    return ((kind is None or field(header, 'kind') == kind)
+            and (function is None or function in strings(field(header, 'functions')))
+            and (source is None or any(covers(s, source) for s in strings(field(header, 'sources')))))
+
+
+def query(root, kind=None, function=None, source=None, read_only=False):
+    if kind is None and function is None and source is None:
+        raise Refusal('query: name what to look for with --kind, --function or --source')
+    # An empty criterion matches nothing, and its empty answer would read as "no documentation".
+    for option, empty in (('--kind', kind == ''), ('--function', function == ''),
+                          ('--source', source is not None and norm_path(source) in ('', '.'))):
+        if empty:
+            raise Refusal('query %s is empty; name what to look for' % option)
+    if source is not None and (source.startswith('/') or re.match(r'[A-Za-z]:([/\\]|$)', source) or '\\' in source
+                               or '..' in source.split('/')):
+        raise Refusal('query --source %s: give the path from the root of the repository, with /, without ..' % source)
+    found = []
+    for rel, variant, html in dokufix_files(root):
+        if variant == 'editor' or (variant and read_only):
+            for n, p in enumerate(parts_of(rel, variant, html) or [], 1):
+                if matches(p['header'], kind, function, source):
+                    found.append({'file': rel, 'number': n, 'line': p['line'], 'name': p['name'], 'header': p['header']})
+    return {'parts': found}
+
+
+def print_json(obj):
+    out = json.dumps(obj, ensure_ascii=False) + '\n'
+    # A lone surrogate of a JSON header is written as its escape, as JSON.stringify writes it.
+    sys.stdout.buffer.write(out.encode('utf-8', errors='backslashreplace'))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(prog='dokufix.py', description='Markdown into a dokufix file and back out.')
     commands = parser.add_subparsers(dest='command', required=True)
@@ -674,14 +796,26 @@ def main(argv=None):
     p = commands.add_parser('overview', help='print per part its header and its headings as JSON')
     p.add_argument('file')
     p.add_argument('--read-only', action='store_true', help='read a read-only export too')
+    p = commands.add_parser('list', help='print each dokufix file under the root, its variant and per part its name, kind and state, as JSON')
+    p.add_argument('root', nargs='?', default='.')
+    p = commands.add_parser('query', help='print the parts whose headers match every criterion, with their headers, as JSON')
+    p.add_argument('root', nargs='?', default='.')
+    p.add_argument('--kind', help='the kind of the part, exactly')
+    p.add_argument('--function', help='a function the part names, exactly')
+    p.add_argument('--source', metavar='PATH', help='a path from the root of the repository; a part matches whose sources cover it')
+    p.add_argument('--read-only', action='store_true', help='look in read-only exports too')
     args = parser.parse_args(argv)
     try:
+        if args.command in ('list', 'query') and not os.path.isdir(args.root):
+            raise Refusal('%s is no folder' % args.root)
         if args.command == 'inject':
             inject(args.markdown, args.target, args.images_from)
         elif args.command == 'overview':
-            out = json.dumps(overview(read_document(args.file, args.read_only)), ensure_ascii=False) + '\n'
-            # A lone surrogate of a JSON header is written as its escape, as JSON.stringify writes it.
-            sys.stdout.buffer.write(out.encode('utf-8', errors='backslashreplace'))
+            print_json(overview(read_document(args.file, args.read_only)))
+        elif args.command == 'list':
+            print_json(listing(args.root))
+        elif args.command == 'query':
+            print_json(query(args.root, args.kind, args.function, args.source, args.read_only))
         else:
             if args.part is not None:
                 text = find_part(read_parts(read_document(args.file, args.read_only)), args.part, args.file)['text']
