@@ -10,6 +10,8 @@
     python3 dokufix.py list [<root>]                prints each dokufix file of a project, its variant and its parts as JSON
     python3 dokufix.py query [<root>] [--kind <k>] [--function <f>] [--source <path>] [--read-only]
                                                     prints the parts whose headers match, with their headers, as JSON
+    python3 dokufix.py stale [<root>] [--read-only]
+                                                    prints the parts whose sources have commits since their state, and those git cannot check, as JSON
 
 Python 3 and its standard library alone. No command prints HTML. See
 src/README.md, "The script for language models".
@@ -17,6 +19,7 @@ src/README.md, "The script for language models".
 import argparse
 import base64
 import contextlib
+import datetime
 import hashlib
 import json
 import math
@@ -673,16 +676,20 @@ def overview(document):
 
 # --- A project -------------------------------------------------------------
 
+def git(root, *args):
+    """git -C root; raises OSError without git."""
+    # Without GIT_DIR and its kind, so that -C alone decides, also when a Git hook runs the script.
+    env = {k: v for k, v in os.environ.items() if k not in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR')}
+    return subprocess.run(['git', '-C', str(root), *args], capture_output=True, env=env)
+
+
 def candidates(root):
     """The HTML files under root, as paths relative to it with /: in a Git repository its files, tracked or new and not
     ignored, so build output, nested repositories and worktrees stay out; else the folder without links, node_modules
     and folders whose name starts with a dot."""
     html = lambda name: name.lower().endswith(('.html', '.htm'))
-    # Without GIT_DIR and its kind, so that -C alone decides, also when a Git hook runs the script.
-    env = {k: v for k, v in os.environ.items() if k not in ('GIT_DIR', 'GIT_WORK_TREE', 'GIT_INDEX_FILE', 'GIT_COMMON_DIR')}
     try:
-        r = subprocess.run(['git', '-C', str(root), 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
-                           capture_output=True, env=env)
+        r = git(root, 'ls-files', '-z', '--cached', '--others', '--exclude-standard')
         if r.returncode == 0:
             # A set: during a merge conflict git lists an unmerged path once per stage.
             return sorted({n for n in r.stdout.decode('utf-8', 'surrogateescape').split('\0') if html(n)})
@@ -776,6 +783,65 @@ def query(root, kind=None, function=None, source=None, read_only=False):
     return {'parts': found}
 
 
+def base_of(top, state):
+    """The commit a state names: '' for a date before the history, None for what git does not know."""
+    if re.fullmatch(r'\d{4}-\d{2}-\d{2}', state):
+        try:
+            datetime.date.fromisoformat(state)
+        except ValueError:  # git's lenient parser would read 2026-02-30 as some other day
+            return None
+        r = git(top, 'rev-list', '-1', '--before=%s 23:59:59' % state, 'HEAD')
+        return r.stdout.decode().strip() if r.returncode == 0 else None
+    r = git(top, 'rev-parse', '--verify', '--quiet', '--end-of-options', state + '^{commit}')
+    return (r.stdout.decode().strip() or None) if r.returncode == 0 else None
+
+
+def stale(root, read_only=False):
+    """Per part with sources and state the sources with commits since the state (FR40), and the parts git cannot check."""
+    try:
+        r = git(root, 'rev-parse', '--show-toplevel')
+    except OSError:  # no git
+        r = None
+    if r is None or r.returncode != 0:
+        why = r and r.stderr.decode('utf-8', 'replace').strip().splitlines()
+        raise Refusal('stale needs a git repository; %s is in none' % root + (': ' + why[0] if why else ''))
+    top = r.stdout.decode('utf-8', 'surrogateescape').rstrip('\n')
+
+    def count(*args):  # a pathspec git refuses counts as no commit
+        r = git(top, 'rev-list', '--count', *args)
+        return int(r.stdout) if r.returncode == 0 else 0
+    changed, unchecked = [], []
+    for rel, variant, html in dokufix_files(root):
+        if not (variant == 'editor' or (variant and read_only)):
+            continue
+        for n, p in enumerate(parts_of(rel, variant, html) or [], 1):
+            state, sources = field(p['header'], 'state'), strings(field(p['header'], 'sources'))
+            if not isinstance(state, str) or not sources:
+                continue
+            where = {'file': rel, 'number': n, 'line': p['line'], 'name': p['name'], 'state': state}
+            base = base_of(top, state)
+            if base is None:
+                unchecked.append({**where, 'reason': 'git does not know the state %s' % state})
+                continue
+            found, missing, seen = [], [], set()
+            for source in sources:
+                path = norm_path(source)
+                # An empty path covers nothing, as in covers(); a path written twice counts once.
+                if not path or path in seen:
+                    continue
+                seen.add(path)
+                commits = count(base + '..HEAD' if base else 'HEAD', '--', ':(literal)' + path)
+                if commits:
+                    found.append({'source': source, 'commits': commits})
+                elif git(top, 'rev-parse', '--verify', '--quiet', 'HEAD:' + path).returncode != 0:
+                    missing.append(source)
+            if found:
+                changed.append({**where, 'changed': found})
+            if missing:
+                unchecked.append({**where, 'reason': 'no file %s at HEAD' % ', '.join(missing)})
+    return {'parts': changed, 'unchecked': unchecked}
+
+
 def print_json(obj):
     out = json.dumps(obj, ensure_ascii=False) + '\n'
     # A lone surrogate of a JSON header is written as its escape, as JSON.stringify writes it.
@@ -804,9 +870,12 @@ def main(argv=None):
     p.add_argument('--function', help='a function the part names, exactly')
     p.add_argument('--source', metavar='PATH', help='a path from the root of the repository; a part matches whose sources cover it')
     p.add_argument('--read-only', action='store_true', help='look in read-only exports too')
+    p = commands.add_parser('stale', help='print the parts whose sources have commits since their state, and those git cannot check, as JSON')
+    p.add_argument('root', nargs='?', default='.')
+    p.add_argument('--read-only', action='store_true', help='look in read-only exports too')
     args = parser.parse_args(argv)
     try:
-        if args.command in ('list', 'query') and not os.path.isdir(args.root):
+        if args.command in ('list', 'query', 'stale') and not os.path.isdir(args.root):
             raise Refusal('%s is no folder' % args.root)
         if args.command == 'inject':
             inject(args.markdown, args.target, args.images_from)
@@ -816,6 +885,8 @@ def main(argv=None):
             print_json(listing(args.root))
         elif args.command == 'query':
             print_json(query(args.root, args.kind, args.function, args.source, args.read_only))
+        elif args.command == 'stale':
+            print_json(stale(args.root, args.read_only))
         else:
             if args.part is not None:
                 text = find_part(read_parts(read_document(args.file, args.read_only)), args.part, args.file)['text']
