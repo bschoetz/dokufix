@@ -792,7 +792,10 @@ def base_of(top, state):
             return None
         r = git(top, 'rev-list', '-1', '--before=%s 23:59:59' % state, 'HEAD')
         return r.stdout.decode().strip() if r.returncode == 0 else None
-    r = git(top, 'rev-parse', '--verify', '--quiet', '--end-of-options', state + '^{commit}')
+    # A state that is no commit is a tag (Parts and their headers, `state`); a branch or HEAD would move with HEAD
+    # and never read as stale.
+    ref = state if re.fullmatch(r'[0-9a-fA-F]{7,40}', state) else 'refs/tags/' + state
+    r = git(top, 'rev-parse', '--verify', '--quiet', '--end-of-options', ref + '^{commit}')
     return (r.stdout.decode().strip() or None) if r.returncode == 0 else None
 
 

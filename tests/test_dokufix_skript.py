@@ -758,7 +758,8 @@ class Stale(unittest.TestCase):
     def test_what_git_does_not_know_is_unchecked_and_a_part_without_sources_or_state_is_left_out(self):
         self.history()
         self.put('a.dokufix.html', part('Commit', 'deadbee', 'src/a.py') + part('Tag', 'v9', 'src/a.py')
-                 + part('Option', '--all', 'src/a.py') + part('Fehlt', 'v1', ['src/c.py', 'src/fehlt.py'])
+                 + part('Option', '--all', 'src/a.py') + part('Kopf', 'HEAD', 'src/a.py')
+                 + part('Fehlt', 'v1', ['src/c.py', 'src/fehlt.py'])
                  + part('Stern', 'v1', "'src/*.py'") + part('Nur Quelle', sources='src/a.py') + part('Nur Stand', 'v1')
                  + part('Februar', '2026-02-30', 'src/a.py') + part('Monat', '2026-13-01', 'src/a.py')
                  + part('Gemischt', 'v1', ['src/a.py', 'src/fehlt.py', 'src/fehlt2.py']))
@@ -766,7 +767,8 @@ class Stale(unittest.TestCase):
         self.assertEqual([(p['name'], p['changed']) for p in out['parts']], [('Gemischt', [{'source': 'src/a.py', 'commits': 3}])])
         self.assertEqual([(p['name'], p['reason']) for p in out['unchecked']],
                          [('Commit', 'git does not know the state deadbee'), ('Tag', 'git does not know the state v9'),
-                          ('Option', 'git does not know the state --all'), ('Fehlt', 'no file src/fehlt.py at HEAD'),
+                          ('Option', 'git does not know the state --all'), ('Kopf', 'git does not know the state HEAD'),
+                          ('Fehlt', 'no file src/fehlt.py at HEAD'),
                           ('Stern', 'no file src/*.py at HEAD'), ('Februar', 'git does not know the state 2026-02-30'),
                           ('Monat', 'git does not know the state 2026-13-01'),
                           ('Gemischt', 'no file src/fehlt.py, src/fehlt2.py at HEAD')])
