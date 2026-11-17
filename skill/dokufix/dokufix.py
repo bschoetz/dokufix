@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
 """dokufix for language models: Markdown into a dokufix file and back out.
 
-    python3 dokufix.py inject <markdown> <target>   writes a new dokufix file, or the document of one
-    python3 dokufix.py extract <file> [--part <n>]  prints its Markdown, or one part of it by number or name
-    python3 dokufix.py overview <file>              prints per part its header and its headings as JSON
+    python3 dokufix.py inject <markdown> <target> [--images-from <export>]
+                                                    writes a new dokufix file, or the document of one
+    python3 dokufix.py extract <file> [--part <n>] [--read-only]
+                                                    prints its Markdown, also of a read-only export, or one part of it
+    python3 dokufix.py overview <file> [--read-only]
+                                                    prints per part its header and its headings as JSON
 
 Python 3 and its standard library alone. No command prints HTML. See
 src/README.md, "The script for language models".
@@ -11,7 +14,6 @@ src/README.md, "The script for language models".
 import argparse
 import base64
 import contextlib
-import gzip
 import hashlib
 import json
 import math
@@ -53,6 +55,19 @@ def replace_block(html, block_id, obj, where):
 
 # As ASSET_MAX_INPUT_BYTES in src/app/assets.js.
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
+# What a packed block may unpack to: a file from someone else must not fill the memory (gzip bomb).
+UNPACKED_MAX_BYTES = 50 * 1024 * 1024
+
+
+def gunzip(b64):
+    """The text of base64 gzip, as gzip.decompress gives it, refused past UNPACKED_MAX_BYTES."""
+    d = zlib.decompressobj(wbits=31)
+    data = d.decompress(base64.b64decode(b64), UNPACKED_MAX_BYTES + 1)
+    if len(data) > UNPACKED_MAX_BYTES:
+        raise ValueError('it unpacks to more than %d MB' % (UNPACKED_MAX_BYTES // 1024 // 1024))
+    if not d.eof:
+        raise EOFError('the packed data ends early')
+    return data.decode('utf-8')
 # Code as the editor's Markdown reads it: a fence, at any indent, to its closing fence or the end (a backtick
 # fence holds no backtick after its run), a code span, a run of backticks not escaped to the next run as long,
 # within a paragraph, and an HTML comment.
@@ -84,6 +99,16 @@ def image_type(data):
     if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
         return 'image/webp'
     return None
+
+
+def code_parts(text):
+    """The text as (piece, is code) pairs, in order."""
+    parts, i = [], 0
+    for c in CODE.finditer(text):
+        parts += [(text[i:c.start()], False), (c.group(0), True)]
+        i = c.end()
+    parts.append((text[i:], False))
+    return parts
 
 
 def embed_images(text, markdown_path):
@@ -120,18 +145,62 @@ def embed_images(text, markdown_path):
         ref = embed(next(g for g in m.groups()[1:] if g is not None))
         return m.group(1) + 'src="' + ref + '"' if ref else m.group(0)
 
-    parts, i = [], 0
-    for c in CODE.finditer(text):
-        parts += [(text[i:c.start()], False), (c.group(0), True)]
-        i = c.end()
-    parts.append((text[i:], False))
+    parts = code_parts(text)
     used = {label(m.group(2) or m.group(1)) for t, code in parts if not code for m in IMAGE_REF.finditer(t)}
     out = ''.join(t if code else IMG_TAG.sub(tag, DEFINITION.sub(definition, IMAGE.sub(image, t))) for t, code in parts)
     return out, assets
 
 
-def add_assets(html, assets, where):
+# As ASSET_REF_RE in src/app/assets.js.
+ASSET_REF = re.compile(r'#asset-([0-9a-f]{12,64})', re.I)
+# The images a read-only export carries, inlined by the page (src/app/assets.js, inlineAssetRefsAsDataUrls).
+DATA_IMAGE = re.compile(r'data:(image/[\w.+-]+);base64,([A-Za-z0-9+/]+=*)')
+# The template the three exports carry their Markdown in (src/app/downloads/export-body.js, markdownCarrier).
+CARRIER = re.compile(r'<template id="dokufix-markdown" data-variant="(nur-lesen|schlank|kompakt)">(.*?)</template>', re.S)
+# The packed body of kompakt (src/app/downloads/readonly-compact.js).
+PACKED = re.compile(r'<script type="text/plain" id="p">(.*?)</script>', re.S)
+
+
+def variant_of(html):
+    """'editor', the variant a read-only export names, or None."""
+    if block_pattern('dokufix-source').search(html):
+        return 'editor'
+    m = CARRIER.search(html)
+    return m.group(1) if m else None
+
+
+def images_of(path):
+    """The images of a read-only export by the SHA-256 of their bytes, as assets {m, d} (story 3.11)."""
+    html = read_html(path)
+    variant = variant_of(html)
+    if variant == 'editor':
+        raise Refusal('--images-from %s: it is a dokufix file with editor; it has its images itself' % path)
+    if not variant:
+        raise Refusal('--images-from %s: it is no read-only dokufix export' % path)
+    if variant == 'kompakt':
+        m = PACKED.search(html)
+        if not m:
+            raise Refusal('--images-from %s: kompakt without its packed body' % path)
+        try:
+            html += gunzip(m.group(1).strip())
+        except (ValueError, OSError, EOFError, zlib.error) as e:
+            raise Refusal('--images-from %s: its packed body cannot be read: %s' % (path, e))
+    images = {}
+    for _, b64 in DATA_IMAGE.findall(html):
+        try:
+            data = base64.b64decode(b64)
+        except ValueError:  # a URL cut short is no image of the export
+            continue
+        # As embed_images takes an image file: what the editor would not take is no asset of the export (an SVG of a diagram).
+        mime = image_type(data)
+        if mime and len(data) <= IMAGE_MAX_BYTES:
+            images[hashlib.sha256(data).hexdigest()] = {'m': mime, 'd': base64.b64encode(data).decode('ascii')}
+    return images
+
+
+def add_assets(html, assets, where, text='', images=None, images_from=None):
     # What the file holds stays; the block is written only for a new one, so a file without new images keeps it byte for byte.
+    # With images, an #asset-<hash> the text names that neither the file nor assets hold is taken from them, or refused.
     m = block_pattern('dokufix-assets').search(html)
     try:
         held = json.loads(m.group(2).strip() or '{}') if m else {}
@@ -139,6 +208,13 @@ def add_assets(html, assets, where):
         raise Refusal('%s: the block #dokufix-assets cannot be read: %s' % (where, e))
     if not isinstance(held, dict):
         raise Refusal('%s: the block #dokufix-assets holds no assets' % where)
+    if images is not None:
+        assets = dict(assets)
+        named = {h.lower() for t, code in code_parts(text) if not code for h in ASSET_REF.findall(t)}
+        for h in sorted(named - held.keys() - assets.keys()):
+            if h not in images:
+                raise Refusal('the image #asset-%s is in neither the target nor %s' % (h, images_from))
+            assets[h] = images[h]
     new = {h: a for h, a in assets.items() if h not in held}
     return replace_block(html, 'dokufix-assets', {**held, **new}, where) if new else html
 
@@ -151,8 +227,9 @@ def read_html(path):
         raise Refusal('%s cannot be read: %s' % (path, e))
 
 
-def inject(markdown_path, target_path):
+def inject(markdown_path, target_path, images_from=None):
     target = Path(target_path)
+    images = images_of(images_from) if images_from else None
     try:
         # utf-8-sig: a byte order mark of a Windows editor is no part of the document.
         text = Path(markdown_path).read_bytes().decode('utf-8-sig')
@@ -166,10 +243,10 @@ def inject(markdown_path, target_path):
         raise Refusal('%s is empty or only whitespace; there is no document to write' % markdown_path)
     text, assets = embed_images(text, markdown_path)
     if target.exists():
-        return inject_into(target.resolve(), text, assets)
+        return inject_into(target.resolve(), text, assets, images, images_from)
     html = replace_block(read_html(BLANK), 'dokufix-source', {'text': text}, BLANK)
     html = replace_block(html, 'dokufix-history', {'uuid': str(uuid.uuid4()), 'version': 0, 'history': []}, BLANK)
-    html = add_assets(html, assets, BLANK)
+    html = add_assets(html, assets, BLANK, text, images, images_from)
     try:
         with open(target, 'x', encoding='utf-8', newline='') as f:
             f.write(html)
@@ -177,13 +254,17 @@ def inject(markdown_path, target_path):
         raise Refusal('%s cannot be written: %s' % (target, e))
 
 
-def inject_into(target, text, assets):
+def inject_into(target, text, assets, images=None, images_from=None):
     # The document alone: identifier, version history and images stay, and no version is added (FR27).
     if target == BLANK.resolve():
         raise Refusal('%s is the blank; inject into a new file instead' % target)
     if not os.access(target, os.W_OK):
         raise Refusal('%s cannot be written: it is write-protected' % target)
-    html = add_assets(replace_block(read_html(target), 'dokufix-source', {'text': text}, target), assets, target)
+    html = read_html(target)
+    variant = variant_of(html)
+    if variant and variant != 'editor':
+        raise Refusal('%s is a read-only export (%s); inject into a dokufix file with editor instead' % (target, variant))
+    html = add_assets(replace_block(html, 'dokufix-source', {'text': text}, target), assets, target, text, images, images_from)
     # Written beside it with its mode and moved over it, so that a failed write leaves the file as it was.
     # shortcut: a new file replaces it, so hard links, ACLs and the owner are not kept; write in place if one needs them.
     tmp = None
@@ -201,20 +282,31 @@ def inject_into(target, text, assets):
 
 
 def extract(file_path):
+    """The Markdown of a dokufix file with editor or of a read-only export, and its variant."""
     html = read_html(file_path)
-    m = block_pattern('dokufix-source').search(html)
-    if not m:
-        raise Refusal('%s is no dokufix file with editor: it has no block #dokufix-source' % file_path)
+    variant = variant_of(html)
+    if not variant:
+        raise Refusal('%s holds no Markdown: it is no dokufix file with editor and no read-only export that carries it' % file_path)
+    m = block_pattern('dokufix-source').search(html) if variant == 'editor' else CARRIER.search(html)
+    where = '#dokufix-source' if variant == 'editor' else '#dokufix-markdown'
     # As readTextBlock (src/app/document.js) reads it: gz before text.
     try:
         block = json.loads(m.group(2).strip() or '{}')
         if isinstance(block.get('gz'), str) and block['gz']:
-            return gzip.decompress(base64.b64decode(block['gz'])).decode('utf-8')
+            return gunzip(block['gz']), variant
         if isinstance(block.get('text'), str):
-            return block['text']
+            return block['text'], variant
     except (ValueError, OSError, EOFError, zlib.error, AttributeError) as e:
-        raise Refusal('%s: the block #dokufix-source cannot be read: %s' % (file_path, e))
-    raise Refusal('%s: the block #dokufix-source holds no document' % file_path)
+        raise Refusal('%s: the block %s cannot be read: %s' % (file_path, where, e))
+    raise Refusal('%s: the block %s holds no document' % (file_path, where))
+
+
+def read_document(file_path, read_only):
+    """The Markdown for --part and overview: of a read-only export only with --read-only (story 3.11)."""
+    text, variant = extract(file_path)
+    if variant != 'editor' and not read_only:
+        raise Refusal('%s is a read-only export (%s); read it with --read-only' % (file_path, variant))
+    return text
 
 
 # --- Parts ----------------------------------------------------------------
@@ -574,23 +666,27 @@ def main(argv=None):
     p = commands.add_parser('inject', help='write Markdown into a new dokufix file, or as the document of an existing one')
     p.add_argument('markdown')
     p.add_argument('target')
-    p = commands.add_parser('extract', help='print the Markdown of a dokufix file, or of one part of it')
+    p.add_argument('--images-from', metavar='EXPORT', help='a read-only export to take the images from that an #asset-<hash> names and the target lacks')
+    p = commands.add_parser('extract', help='print the Markdown of a dokufix file, also of a read-only export, or of one part of it')
     p.add_argument('file')
     p.add_argument('--part', help='the number of the part, from 1, or its name; a name starting with - as --part=<name>')
+    p.add_argument('--read-only', action='store_true', help='with --part, read a read-only export too')
     p = commands.add_parser('overview', help='print per part its header and its headings as JSON')
     p.add_argument('file')
+    p.add_argument('--read-only', action='store_true', help='read a read-only export too')
     args = parser.parse_args(argv)
     try:
         if args.command == 'inject':
-            inject(args.markdown, args.target)
+            inject(args.markdown, args.target, args.images_from)
         elif args.command == 'overview':
-            out = json.dumps(overview(extract(args.file)), ensure_ascii=False) + '\n'
+            out = json.dumps(overview(read_document(args.file, args.read_only)), ensure_ascii=False) + '\n'
             # A lone surrogate of a JSON header is written as its escape, as JSON.stringify writes it.
             sys.stdout.buffer.write(out.encode('utf-8', errors='backslashreplace'))
         else:
-            text = extract(args.file)
             if args.part is not None:
-                text = find_part(read_parts(text), args.part, args.file)['text']
+                text = find_part(read_parts(read_document(args.file, args.read_only)), args.part, args.file)['text']
+            else:
+                text = extract(args.file)[0]
             sys.stdout.buffer.write(text.encode('utf-8'))
     except Refusal as e:
         print('dokufix.py: ' + str(e), file=sys.stderr)

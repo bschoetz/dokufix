@@ -30,10 +30,12 @@ Status: working prototype. The editor loads its libraries from a CDN at pinned v
 [`skill/dokufix/dokufix.py`](skill/dokufix/dokufix.py) lets a language model write and read dokufix files without the HTML entering its context. Python 3, standard library only.
 
 ```
-python3 skill/dokufix/dokufix.py inject <markdown> <target>      # new file, or new document in an existing one
-python3 skill/dokufix/dokufix.py extract <file> [--part <n|name>] # print the Markdown
-python3 skill/dokufix/dokufix.py overview <file>                  # parts, headers and headings as JSON
+python3 skill/dokufix/dokufix.py inject <markdown> <target> [--images-from <export>]  # new file, or new document in an existing one
+python3 skill/dokufix/dokufix.py extract <file> [--part <n|name>] [--read-only]       # print the Markdown
+python3 skill/dokufix/dokufix.py overview <file> [--read-only]                        # parts, headers and headings as JSON
 ```
+
+`extract` reads the editor file and the three read-only exports alike. `--part` and `overview` read an export only with `--read-only`; `inject` refuses an export as its target. `--images-from` takes the images an `#asset-<hash>` names from a read-only export, so Markdown extracted from one becomes a file with editor again.
 
 ## BPMN tools
 

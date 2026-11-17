@@ -1,4 +1,5 @@
 import { inlineAssetRefsAsDataUrls } from '../assets.js';
+import { gzipB64 } from '../gzip.js';
 import { sourceEl, previewEl } from '../dom.js';
 import { deriveDocTitle } from '../frontmatter.js';
 import { escapeHtml } from '../html.js';
@@ -49,17 +50,30 @@ export function readerScript(){
   return block ? block.textContent.trim() : '';
 }
 
-// Returns { title, body, rail }: the document's title, its content as HTML and
-// the static rail, '' where the document has too few headings for one.
+// Returns { title, body, rail, markdown }: the document's title, its content as
+// HTML, the static rail, '' where the document has too few headings for one,
+// and the source the copy was taken from, for markdownCarrier().
 // extraSteps run after EXPORT_STEPS: what one export alone does to the copy.
 export async function buildExportBody(extraSteps = []){
   await render(); // the preview reflects the current source AND Mermaid SVGs are inlined
   // The copy is taken in the same turn the render ends in: a render that was
   // requested meanwhile has not started yet.
   const copy = previewEl.cloneNode(true);
-  const title = deriveDocTitle(sourceEl.value, 'dokufix-Dokument');
+  const markdown = sourceEl.value;
+  const title = deriveDocTitle(markdown, 'dokufix-Dokument');
   for (const step of [...EXPORT_STEPS, ...extraSteps]) await step(copy);
-  return { title, body: copy.innerHTML, rail: buildStaticRailHtml(copy) };
+  return { title, body: copy.innerHTML, rail: buildStaticRailHtml(copy), markdown };
+}
+
+// The Markdown of the document in a read-only export, for `dokufix.py
+// extract` (epic 3, story 11): the text "Mit Editor" would save, gzipped as its
+// block. A <template> is inert: not shown, printed or searched (search-places.js
+// skips it), and no script, so `nur-lesen` stays without one. The variant is
+// written, not guessed by the script. Base64 in JSON holds no "<".
+// Each export puts it in <head>, after <style>.
+export async function markdownCarrier(variant, markdown){
+  return '<template id="dokufix-markdown" data-variant="' + variant + '">' +
+    JSON.stringify({ gz: await gzipB64(markdown) }) + '</template>';
 }
 
 // --- Styles of the read-only exports ---------------------------
