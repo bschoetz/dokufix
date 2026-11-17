@@ -5,7 +5,7 @@ import { DOWNLOADS_CLASS } from '../diagram-downloads.js';
 import { licencesHtml } from '../licences.js';
 import { UNPACKED_EVENT, UNPACKING_ATTR } from '../search.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
-import { buildExportBody, readonlyCss, bodyClassForExport, buildMetaFooterHtml, readerScript } from './export-body.js';
+import { buildExportBody, markdownCarrier, readonlyCss, bodyClassForExport, buildMetaFooterHtml, readerScript } from './export-body.js';
 
 // --- Download #2b — schlank: text plain, only the diagrams' SVGs gzipped per-element ---
 export async function downloadReadonlySlim(){
@@ -37,7 +37,8 @@ export async function downloadReadonlySlim(){
       linkCount++;
     }
   }
-  const { title, body, rail } = await buildExportBody([gzipDiagrams, gzipSourceLinks]);
+  const { title, body, rail, markdown } = await buildExportBody([gzipDiagrams, gzipSourceLinks]);
+  const carrier = await markdownCarrier('schlank', markdown);
 
   // Tiny inline decoder (only emitted if there are diagrams or source links to
   // expand). It unpacks each SVG into its container and each source link's
@@ -69,6 +70,7 @@ export async function downloadReadonlySlim(){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <style>${readonlyCss()}</style>
+${carrier}
 ${noscript}
 </head>
 <body${bodyClassForExport()}>

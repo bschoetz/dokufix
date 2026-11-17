@@ -2,14 +2,15 @@ import { escapeHtml } from '../html.js';
 import { gzipB64 } from '../gzip.js';
 import { licencesHtml } from '../licences.js';
 import { safeFilenameBase, triggerDownload } from './download.js';
-import { buildExportBody, readonlyCss, bodyClassForExport, buildMetaFooterHtml, readerScript } from './export-body.js';
+import { buildExportBody, markdownCarrier, readonlyCss, bodyClassForExport, buildMetaFooterHtml, readerScript } from './export-body.js';
 
 // --- Download #2c — read-only, fully gzip-compressed, tiny JS decoder ---
 export async function downloadReadonlyCompact(){
   // Image refs are data: URLs before gzipping (an export step). Binary PNG/WebP
   // doesn't compress meaningfully a second time, but base64 itself shrinks by
   // ~30 % through gzip, so the overall cost vs an open export is modest.
-  const { title, body, rail } = await buildExportBody();
+  const { title, body, rail, markdown } = await buildExportBody();
+  const carrier = await markdownCarrier('kompakt', markdown);
   const bodyHtml = body + buildMetaFooterHtml();
   const payload = await gzipB64(bodyHtml);
   // Rail stays outside the compressed payload so it appears immediately
@@ -32,6 +33,7 @@ export async function downloadReadonlyCompact(){
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>${escapeHtml(title)}</title>
 <style>${readonlyCss()}</style>
+${carrier}
 </head>
 <body${bodyClassForExport()}>
 ${licencesHtml()}

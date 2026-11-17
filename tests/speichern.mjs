@@ -135,8 +135,11 @@
 //      its history and assets byte for byte as they were. Then a Markdown
 //      that names a PNG beside it three ways, inline, by reference and in an
 //      <img> (story 3.9): opened, the image shows, and
-//      in its nur-lesen export too, its bytes unchanged. Story 3.11 adds its
-//      cases here
+//      in its nur-lesen export too, its bytes unchanged. Story 3.11: the
+//      Markdown of the demo text's nur-lesen, changed, injected into its file
+//      with editor: opened, panels, image and history are kept; the Markdown
+//      of the PNG's nur-lesen and kompakt, injected into a new file with
+//      --images-from the export: opened, it shows the image
 //
 // A and B contain what could break a block or a replacement: </script>, <!--,
 // backticks, ${…}, $&, backslashes, quotes, non-ASCII. B ends without a newline.
@@ -553,6 +556,14 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     }
     const partsFile = path.join(dir, 'teile-mit-editor.html');
     suggested.push(await saveWithEditor(o.page, partsFile));
+    // Story 3.11: each export carries the Markdown, and extract gives it back as from the file with editor.
+    const fromEditor = spawnSync('python3', [SKRIPT, 'extract', partsFile], { encoding: 'utf8' }).stdout;
+    same(scope, 'extract of Mit Editor gives the demo text', fromEditor, demo);
+    for (const kind of ['readonly-open', 'readonly-slim', 'readonly-compact']){
+      const r = spawnSync('python3', [SKRIPT, 'extract', path.join(dir, 'teile-' + kind + '.html')], { encoding: 'utf8' });
+      check(scope, 'extract of ' + kind + ' exits 0', r.status === 0, r.stderr);
+      same(scope, 'extract of ' + kind + ' gives what extract of Mit Editor gives, byte for byte', r.stdout, fromEditor);
+    }
     // Story 3.10: each variant is named <title>-<variant>.dokufix.html.
     const base = 'Willkommen-bei-dokufix'; // the demo text's first heading, as safeFilenameBase() writes it
     check(scope, 'the four downloads are named Willkommen-bei-dokufix-nur-lesen|-schlank|-kompakt|-editor.dokufix.html',
@@ -1130,9 +1141,31 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     await o.context.close();
     const back = spawnSync('python3', [SKRIPT, 'extract', into], { encoding: 'utf8' });
     same(scope, 'extract returns the new document', back.stdout, intoDoc);
+    // Story 3.11: the Markdown of the demo text's nur-lesen, changed, injected into a copy of its file with editor.
+    const partsInto = path.join(dir, 'teile-injiziert.html'), partsEditor = path.join(dir, 'teile-mit-editor.html');
+    fs.copyFileSync(partsEditor, partsInto);
+    const fromOpen = spawnSync('python3', [SKRIPT, 'extract', path.join(dir, 'teile-readonly-open.html')], { encoding: 'utf8' });
+    check(scope, 'extract of the demo text\'s nur-lesen exits 0', fromOpen.status === 0, fromOpen.stderr || String(fromOpen.error));
+    same(scope, 'extract of the demo text\'s nur-lesen gives the demo text', fromOpen.stdout, demo);
+    const changedDoc = fromOpen.stdout + '\nVom Skript geändert.\n';
+    fs.writeFileSync(markdown, changedDoc);
+    const injectingParts = spawnSync('python3', [SKRIPT, 'inject', markdown, partsInto], { encoding: 'utf8' });
+    check(scope, 'inject of the changed Markdown of nur-lesen into its file with editor exits 0', injectingParts.status === 0, injectingParts.stderr || String(injectingParts.error));
+    same(scope, 'its #dokufix-history and #dokufix-assets are as they were, byte for byte',
+      ['dokufix-history', 'dokufix-assets'].map(id => dataBlock(fs.readFileSync(partsInto, 'utf8'), id)).join('\n'),
+      ['dokufix-history', 'dokufix-assets'].map(id => dataBlock(fs.readFileSync(partsEditor, 'utf8'), id)).join('\n'));
+    o = await open(browser, partsInto);
+    s = await state(o.page);
+    same(scope, 'opened, the editor holds the changed document', s.source, changedDoc);
+    const injectedParts = await o.page.evaluate(() => document.querySelectorAll('#preview details.dokufix-frontmatter').length);
+    const injectedImages = await shownImages(o.page, '#preview img');
+    check(scope, 'not marked as changed, a panel for each part, the image shown', !s.dirty && injectedParts === 2 && allShown(injectedImages), JSON.stringify({ dirty: s.dirty, panels: injectedParts, images: injectedImages }));
+    check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+    await o.context.close();
     // Images through inject (story 3.9): a PNG beside the Markdown, named three ways: inline with
     // a title, by a reference-style definition, in an <img> with a width.
     const withImage = path.join(dir, 'skript-mit-bild.html'), imageExport = path.join(dir, 'skript-mit-bild-nur-lesen.html');
+    const imageCompact = path.join(dir, 'skript-mit-bild-kompakt.html');
     fs.writeFileSync(path.join(dir, 'skript-bild.png'), png);
     const imageDoc = SKRIPT_DOC_LF.replace('## Zweitens', '## Zweitens\n\n![Ein Bild daneben](skript-bild.png "Mit Titel")\n\n' +
       '![Noch einmal][bild]\n\n<img src="skript-bild.png" width="40" alt="Klein">\n\n[bild]: skript-bild.png');
@@ -1147,6 +1180,7 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       const embedded = await shownImages(o.page, '#preview img');
       check(scope, 'the embedded image is shown three times, inline with its title, by reference and as <img>', embedded.length === 3 && allShown(embedded) && embedded[0].title === 'Mit Titel', JSON.stringify(embedded));
       await exportReadonly(o.page, 'readonly-open', imageExport);
+      await exportReadonly(o.page, 'readonly-compact', imageCompact);
       check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
       await o.context.close();
       check(scope, 'nur-lesen of it holds the PNG byte for byte', fs.readFileSync(imageExport, 'utf8').includes('data:image/png;base64,' + png.toString('base64')));
@@ -1159,6 +1193,24 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
       check(scope, 'no page error in nur-lesen', exportErrors.length === 0, exportErrors.join(' | '));
       await exportContext.close();
       same(scope, 'extract returns the reference to the asset', spawnSync('python3', [SKRIPT, 'extract', withImage], { encoding: 'utf8' }).stdout, imageWant);
+      // Story 3.11: its Markdown from nur-lesen and from kompakt, into a new file with the images of the export;
+      // the blank does not hold the PNG.
+      for (const [label, file] of [['nur-lesen', imageExport], ['kompakt', imageCompact]]){
+        const md = path.join(dir, 'aus-' + label + '.md'), fresh = path.join(dir, 'skript-bilder-aus-' + label + '.html');
+        const fromExport = spawnSync('python3', [SKRIPT, 'extract', file], { encoding: 'utf8' }).stdout;
+        same(scope, 'extract of ' + label + ' returns the reference to the asset', fromExport, imageWant);
+        fs.writeFileSync(md, fromExport);
+        const r = spawnSync('python3', [SKRIPT, 'inject', md, fresh, '--images-from', file], { encoding: 'utf8' });
+        check(scope, 'inject --images-from ' + label + ' into a new file exits 0', r.status === 0, r.stderr || String(r.error));
+        if (r.status !== 0) continue;
+        const asset = JSON.parse(dataBlock(fs.readFileSync(fresh, 'utf8'), 'dokufix-assets'))[own];
+        check(scope, 'the new file holds the PNG from ' + label + ' under its hash, byte for byte', asset && asset.m === 'image/png' && asset.d === png.toString('base64'), JSON.stringify(asset));
+        o = await open(browser, fresh);
+        const fromImages = await shownImages(o.page, '#preview img');
+        check(scope, 'opened, the new file from ' + label + ' shows the image three times', fromImages.length === 3 && allShown(fromImages), JSON.stringify(fromImages));
+        check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
+        await o.context.close();
+      }
     }
   } finally {
     await browser.close();

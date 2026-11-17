@@ -357,13 +357,108 @@ class Script(unittest.TestCase):
         self.assertEqual(self.part(saved, 'Ausleihe'), doc.split('---part\n')[0])
         self.assertEqual(self.overview(saved), self.overview(self.tmp / 'x.html'))
 
-    def test_a_read_only_export_is_refused_by_both_commands(self):
-        # A nur-lesen export carries the document as HTML alone, no block #dokufix-source.
-        html = self.inject(case('pt03-two-parts.md')).read_text(encoding='utf-8')
-        export = self.tmp / 'nur-lesen.html'
-        export.write_text(re.sub(r'<script type="application/json" id="dokufix-source">.*?</script>', '', html, flags=re.S), encoding='utf-8')
-        for args in (('overview', export), ('extract', export, '--part', '1')):
-            self.refused(run(*args), 'no dokufix file with editor')
+    def export(self, doc, variant, images=b''):
+        # A read-only export as the page writes it (story 3.11): no block #dokufix-source, the Markdown in a template
+        # in <head>, the images as data: URLs, in kompakt inside the packed body #p. tests/speichern.mjs shows the
+        # page writes it so, in a browser.
+        html = self.inject(doc).read_text(encoding='utf-8')
+        # No script of the editor: its code holds the template of kompakt's #p. The build keeps "</script" out of each.
+        html = re.sub(r'<script\b[^>]*>.*?</script>', '', html, flags=re.S)
+        gz = base64.b64encode(gzip.compress(doc.encode('utf-8'))).decode('ascii')
+        html = html.replace('<head>', '<head><template id="dokufix-markdown" data-variant="%s">%s</template>' % (variant, json.dumps({'gz': gz})), 1)
+        img = '<p><img src="data:image/png;base64,%s" alt="x"></p>' % base64.b64encode(images).decode('ascii') if images else ''
+        if variant == 'kompakt' and img:
+            img = '<script type="text/plain" id="p">%s</script>' % base64.b64encode(gzip.compress(img.encode('utf-8'))).decode('ascii')
+        export = self.tmp / ('e-' + variant + '.html')
+        export.write_text(html.replace('</body>', img + '</body>', 1), encoding='utf-8')
+        return export
+
+    def test_extract_reads_every_read_only_export_and_part_and_overview_only_on_request(self):
+        doc = case('pt03-two-parts.md')
+        editor = self.inject(doc)
+        part2 = self.part(editor, '2')
+        for variant in ('nur-lesen', 'schlank', 'kompakt'):
+            with self.subTest(variant=variant):
+                export = self.export(doc, variant)
+                self.assertEqual(self.extract(export), doc)
+                self.refused(run('extract', export, '--part', '2'), '--read-only')
+                self.refused(run('overview', export), '--read-only')
+                self.assertEqual(self.extract_args(export, '--part', '2', '--read-only'), part2)
+                r = run('overview', export, '--read-only')
+                self.assertEqual(r.returncode, 0, r.stderr.decode())
+                self.assertEqual(json.loads(r.stdout.decode('utf-8')), self.overview(self.inject(doc)))
+
+    def test_inject_into_a_read_only_export_is_refused_by_its_variant(self):
+        for variant in ('nur-lesen', 'schlank', 'kompakt'):
+            with self.subTest(variant=variant):
+                export = self.export(TRICKY, variant)
+                before = export.read_bytes()
+                self.refused(run('inject', self.md('# Neu\n'), export), 'read-only export (%s)' % variant)
+                self.assertEqual(export.read_bytes(), before)
+
+    def test_an_export_without_its_markdown_is_refused(self):
+        # An export from before story 3.11: the document as HTML alone.
+        export = self.export(TRICKY, 'nur-lesen')
+        export.write_text(re.sub(r'<template id="dokufix-markdown".*?</template>', '', export.read_text(encoding='utf-8'), flags=re.S), encoding='utf-8')
+        for args in (('extract', export), ('overview', export, '--read-only'), ('extract', export, '--part', '1')):
+            self.refused(run(*args), 'no Markdown')
+
+    def test_a_carrier_damaged_or_naming_no_export_is_refused(self):
+        export = self.export(TRICKY, 'schlank')
+        html = export.read_text(encoding='utf-8')
+        export.write_text(re.sub(r'"gz": "[^"]*"', '"gz": "kaputt"', html), encoding='utf-8')
+        self.refused(run('extract', export), 'cannot be read')
+        export.write_text(html.replace('data-variant="schlank"', 'data-variant="editor"'), encoding='utf-8')
+        self.refused(run('extract', export), 'no Markdown')
+
+    def test_images_from_an_export_go_into_a_new_or_an_existing_file_with_their_bytes(self):
+        data = IMAGES['logo.png']
+        md = '# Bild\n\n![Logo](#asset-%s)\n' % sha(data)
+        for variant in ('nur-lesen', 'schlank', 'kompakt'):
+            with self.subTest(variant=variant):
+                export = self.export(md, variant, data)
+                a = self.md(self.extract(export), 'aus-export.md')
+                existing = self.inject(TRICKY)
+                for target in (self.tmp / ('neu-' + variant + '.html'), existing):
+                    r = run('inject', a, target, '--images-from', export)
+                    self.assertEqual(r.returncode, 0, r.stderr.decode())
+                    self.assertEqual(self.extract(target), md)
+                    self.assertEqual(assets_of(target)[sha(data)], {'m': 'image/png', 'd': base64.b64encode(data).decode('ascii')})
+
+    def test_images_from_keep_what_the_target_holds_and_take_an_image_file_beside_the_markdown(self):
+        (self.tmp / 'logo.png').write_bytes(IMAGES['logo.png'])
+        (self.tmp / 'other.png').write_bytes(b'\x89PNG\r\n\x1a\n-other')
+        existing = self.inject('# Bild\n\n![Logo](logo.png)\n')
+        before = assets_of(existing)
+        export = self.export('# Leer\n', 'nur-lesen')
+        md = self.md('![a](#asset-%s) ![b](other.png) und `#asset-%s` im Code\n' % (sha(IMAGES['logo.png']), 'ef' * 32), 'b.md')
+        r = run('inject', md, existing, '--images-from', export)
+        self.assertEqual(r.returncode, 0, r.stderr.decode())
+        other = b'\x89PNG\r\n\x1a\n-other'
+        self.assertEqual(assets_of(existing), {**before, sha(other): {'m': 'image/png', 'd': base64.b64encode(other).decode('ascii')}})
+
+    def test_images_from_what_is_no_export_or_a_kompakt_without_its_packed_body_are_refused(self):
+        md = self.md('![X](#asset-%s)\n' % sha(IMAGES['logo.png']), 'b.md')
+        other = self.tmp / 'other.html'
+        other.write_text('<!doctype html><title>x</title><p>Hallo</p>', encoding='utf-8')
+        self.refused(run('inject', md, self.tmp / 'neu.html', '--images-from', other), 'no read-only dokufix export')
+        self.refused(run('inject', md, self.tmp / 'neu.html', '--images-from', self.export('# K\n', 'kompakt')), 'kompakt without its packed body')
+        self.assertFalse((self.tmp / 'neu.html').exists())
+
+    def test_images_from_an_editor_file_or_a_hash_found_nowhere_are_refused(self):
+        (self.tmp / 'logo.png').write_bytes(IMAGES['logo.png'])
+        editor = self.inject('# Bild\n\n![Logo](logo.png)\n')
+        a = self.md(self.extract(editor), 'aus-editor.md')
+        self.refused(run('inject', a, self.tmp / 'neu.html', '--images-from', editor), 'it has its images itself')
+        missing = 'cd' * 32
+        export = self.export('# Bild\n', 'nur-lesen', IMAGES['foto.jpg'])
+        existing = self.inject(TRICKY)
+        before = existing.read_bytes()
+        for target in (self.tmp / 'neu.html', existing):
+            r = run('inject', self.md('![X](#asset-%s)\n' % missing, 'b.md'), target, '--images-from', export)
+            self.refused(r, missing)
+        self.assertFalse((self.tmp / 'neu.html').exists())
+        self.assertEqual(existing.read_bytes(), before)
 
     def test_extract_refuses_what_is_no_dokufix_file(self):
         other = self.tmp / 'other.html'
