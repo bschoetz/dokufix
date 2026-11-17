@@ -14,7 +14,6 @@ src/README.md, "The script for language models".
 import argparse
 import base64
 import contextlib
-import gzip
 import hashlib
 import json
 import math
@@ -56,6 +55,19 @@ def replace_block(html, block_id, obj, where):
 
 # As ASSET_MAX_INPUT_BYTES in src/app/assets.js.
 IMAGE_MAX_BYTES = 5 * 1024 * 1024
+# What a packed block may unpack to: a file from someone else must not fill the memory (gzip bomb).
+UNPACKED_MAX_BYTES = 50 * 1024 * 1024
+
+
+def gunzip(b64):
+    """The text of base64 gzip, as gzip.decompress gives it, refused past UNPACKED_MAX_BYTES."""
+    d = zlib.decompressobj(wbits=31)
+    data = d.decompress(base64.b64decode(b64), UNPACKED_MAX_BYTES + 1)
+    if len(data) > UNPACKED_MAX_BYTES:
+        raise ValueError('it unpacks to more than %d MB' % (UNPACKED_MAX_BYTES // 1024 // 1024))
+    if not d.eof:
+        raise EOFError('the packed data ends early')
+    return data.decode('utf-8')
 # Code as the editor's Markdown reads it: a fence, at any indent, to its closing fence or the end (a backtick
 # fence holds no backtick after its run), a code span, a run of backticks not escaped to the next run as long,
 # within a paragraph, and an HTML comment.
@@ -170,7 +182,7 @@ def images_of(path):
         if not m:
             raise Refusal('--images-from %s: kompakt without its packed body' % path)
         try:
-            html += gzip.decompress(base64.b64decode(m.group(1).strip())).decode('utf-8')
+            html += gunzip(m.group(1).strip())
         except (ValueError, OSError, EOFError, zlib.error) as e:
             raise Refusal('--images-from %s: its packed body cannot be read: %s' % (path, e))
     images = {}
@@ -281,7 +293,7 @@ def extract(file_path):
     try:
         block = json.loads(m.group(2).strip() or '{}')
         if isinstance(block.get('gz'), str) and block['gz']:
-            return gzip.decompress(base64.b64decode(block['gz'])).decode('utf-8'), variant
+            return gunzip(block['gz']), variant
         if isinstance(block.get('text'), str):
             return block['text'], variant
     except (ValueError, OSError, EOFError, zlib.error, AttributeError) as e:

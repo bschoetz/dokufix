@@ -132,6 +132,25 @@ class Script(unittest.TestCase):
             saved.write_text(html.replace(block(html, 'dokufix-source'), json.dumps({'gz': bad})), encoding='utf-8')
             self.refused(run('extract', saved), 'cannot be read')
 
+    def test_a_gzip_bomb_is_refused_where_the_script_unpacks(self):
+        # 60 MB of zeros pack to about 60 KB; the script unpacks at most 50 MB (UNPACKED_MAX_BYTES).
+        bomb = base64.b64encode(gzip.compress(b'\0' * (60 * 1024 * 1024))).decode('ascii')
+        html = self.inject(TRICKY).read_text(encoding='utf-8')
+        editor = self.tmp / 'bombe-editor.html'
+        editor.write_text(html.replace(block(html, 'dokufix-source'), json.dumps({'gz': bomb})), encoding='utf-8')
+        self.refused(run('extract', editor), 'more than 50 MB')
+        export = self.export(TRICKY, 'nur-lesen')
+        export.write_text(re.sub(r'(<template id="dokufix-markdown"[^>]*>).*?(</template>)', lambda m: m.group(1) + json.dumps({'gz': bomb}) + m.group(2),
+                                 export.read_text(encoding='utf-8'), flags=re.S), encoding='utf-8')
+        self.refused(run('extract', export), 'more than 50 MB')
+        data = IMAGES['logo.png']
+        kompakt = self.export('# Bild\n', 'kompakt', data)
+        kompakt.write_text(re.sub(r'(<script type="text/plain" id="p">).*?(</script>)', lambda m: m.group(1) + bomb + m.group(2),
+                                  kompakt.read_text(encoding='utf-8'), flags=re.S), encoding='utf-8')
+        a = self.md('![Logo](#asset-%s)\n' % sha(data), 'bombe.md')
+        self.refused(run('inject', a, self.tmp / 'neu-bombe.dokufix.html', '--images-from', kompakt), 'more than 50 MB')
+        self.assertFalse((self.tmp / 'neu-bombe.dokufix.html').exists())
+
     def test_a_file_saved_in_the_editor(self):
         target = self.inject(TRICKY)
         html = target.read_text(encoding='utf-8')
