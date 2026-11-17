@@ -144,7 +144,7 @@ Eine Markierung, die nicht wirken kann, wird an ihrer Stelle zur Warnung, und di
 
 Eine Markierung über einer Tabelle nennt eine Spalte: `<!-- dokufix: facets Art -->`. Über der Tabelle steht dann für jeden Wert dieser Spalte ein Knopf. Wählen Sie einen, und die Tabelle zeigt nur die Zeilen mit diesem Wert; „Alle“ zeigt wieder alle. Das geht mit der Maus und mit den Pfeiltasten, und es braucht kein Skript: Der Filter arbeitet auch in der Nur-Lese-Fassung.
 
-Eine zweite Markierung gibt derselben Tabelle ein Suchfeld: `<!-- dokufix: filter "Baustein suchen …" -->`. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt; die Zahl daneben sagt, wie viele das sind. Suchfeld und Knöpfe wirken zusammen. Das Suchfeld braucht ein Skript: Es steht hier, in der Datei „Mit Editor“ und in den Fassungen „schlank“ und „kompakt“. Die offene Fassung ohne Skript (`-nur-lesen.html`) zeigt die ganze Tabelle ohne Suchfeld, ebenso „schlank“, wenn der Browser keine Skripte ausführt, und auf Papier steht immer die ganze Tabelle.
+Eine zweite Markierung gibt derselben Tabelle ein Suchfeld: `<!-- dokufix: filter "Baustein suchen …" -->`. Wer etwas eintippt, sieht nur die Zeilen, in denen der Text vorkommt; die Zahl daneben sagt, wie viele das sind. Suchfeld und Knöpfe wirken zusammen. Das Suchfeld braucht ein Skript: Es steht hier, in der Datei „Mit Editor“ und in den Fassungen „schlank“ und „kompakt“. Die offene Fassung ohne Skript (`-nur-lesen.dokufix.html`) zeigt die ganze Tabelle ohne Suchfeld, ebenso „schlank“, wenn der Browser keine Skripte ausführt, und auf Papier steht immer die ganze Tabelle.
 
 <!-- dokufix: filter "Baustein suchen …" -->
 <!-- dokufix: facets Art -->
@@ -176,12 +176,12 @@ Ein Suchfeld steht auch allein über einer Tabelle. Ohne Angabe hinter `filter` 
 
 Eine Tabelle, die breiter ist als die Lesespalte, rollt für sich seitwärts. Die Seite bleibt so breit wie das Fenster:
 
-| Auslieferung | Dateiendung | Weiterbearbeitung | Versionsgeschichte | Skriptabhängigkeit | Diagrammdarstellung | Größenordnung | Verwendungszweck |
+| Auslieferung | Dateiname endet auf | Weiterbearbeitung | Versionsgeschichte | Skriptabhängigkeit | Diagrammdarstellung | Größenordnung | Verwendungszweck |
 |---|---|---|---|---|---|---|---|
-| Mit Editor | `.html` | uneingeschränkt | vollständig | Bibliotheken aus dem Netz | beim Öffnen gezeichnet | am größten | Zusammenarbeit |
-| Offen | `-nur-lesen.html` | ausgeschlossen | letzter Stand | keine | eingebettet | groß | Veröffentlichung, Langzeitablage |
-| Schlank | `-schlank.html` | ausgeschlossen | letzter Stand | für Diagramme, Suche und Suchfelder | gepackt | mittel | Versand |
-| Kompakt | `-kompakt.html` | ausgeschlossen | letzter Stand | für alles | gepackt | am kleinsten | Versand über schmale Leitungen |
+| Mit Editor | `-editor.dokufix.html` | uneingeschränkt | vollständig | Bibliotheken aus dem Netz | beim Öffnen gezeichnet | am größten | Zusammenarbeit |
+| Offen | `-nur-lesen.dokufix.html` | ausgeschlossen | letzter Stand | keine | eingebettet | groß | Veröffentlichung, Langzeitablage |
+| Schlank | `-schlank.dokufix.html` | ausgeschlossen | letzter Stand | für Diagramme, Suche und Suchfelder | gepackt | mittel | Versand |
+| Kompakt | `-kompakt.dokufix.html` | ausgeschlossen | letzter Stand | für alles | gepackt | am kleinsten | Versand über schmale Leitungen |
 
 ## Bilder
 
@@ -332,7 +332,7 @@ function dokufix(md) {
 // Diese Zeile ist länger als die Spalte: Sie bricht um, ihre Fortsetzung steht ohne eigene Nummer unter ihrem Text, und nichts rollt seitlich.
 ```
 
-Jede Zeile trägt ihre Nummer, auch die leere Zeile 5; die Nummern werden weder markiert noch kopiert noch gefunden. Die Schaltfläche oben rechts kopiert den Code, wie er geschrieben ist, und zeigt zwei Sekunden lang ein Häkchen; in der offenen Fassung ohne Skript (`-nur-lesen.html`) fehlt sie, Nummern und Umbruch bleiben.
+Jede Zeile trägt ihre Nummer, auch die leere Zeile 5; die Nummern werden weder markiert noch kopiert noch gefunden. Die Schaltfläche oben rechts kopiert den Code, wie er geschrieben ist, und zeigt zwei Sekunden lang ein Häkchen; in der offenen Fassung ohne Skript (`-nur-lesen.dokufix.html`) fehlt sie, Nummern und Umbruch bleiben.
 
 Ein Block `diff`: `+` blassgrün, `-` blassrot; Kopfzeilen `---`, `+++` und `@@` sowie unveränderte Zeilen bleiben ungefärbt.
 

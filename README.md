@@ -23,6 +23,8 @@ Status: working prototype. The editor loads its libraries from a CDN at pinned v
   | schlank | no | for diagrams and search only |
   | kompakt | no | yes |
 
+  The files are named `<title>-editor.dokufix.html`, `<title>-nur-lesen.dokufix.html`, `<title>-schlank.dokufix.html` and `<title>-kompakt.dokufix.html`.
+
 ## dokufix for language models
 
 [`skill/dokufix/dokufix.py`](skill/dokufix/dokufix.py) lets a language model write and read dokufix files without the HTML entering its context. Python 3, standard library only.

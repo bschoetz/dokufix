@@ -27,5 +27,5 @@ ${rail}
 </body>
 </html>`;
 
-  triggerDownload(safeFilenameBase() + '-nur-lesen.html', html);
+  triggerDownload(safeFilenameBase() + '-nur-lesen.dokufix.html', html);
 }

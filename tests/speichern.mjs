@@ -35,6 +35,10 @@
 //                                        save carries the images of the demo text
 //                                        (both generations hold them in their
 //                                        #dokufix-assets block, by their hash)
+//      the demo text, a document of two  each variant shows a panel per part,
+//      parts, in the three read-only     the image and the footnote; the four
+//      exports and "Mit Editor"          are named <title>-nur-lesen|-schlank|
+//                                        -kompakt|-editor.dokufix.html
 //   4. build a copy of src/ whose demo text contains </script>, <!-- and the
 //      like, open it                     the editor holds that text unchanged
 //  4b. one storage, one browser context: a draft of generation 1, then
@@ -327,7 +331,7 @@ async function editAndSave(page, text, file, numbering = false){
   if (numbering) await page.click('#numbering-btn');
   await saveWithEditor(page, file);
 }
-// Saves the page as "Mit Editor" into file.
+// Saves the page as "Mit Editor" into file; gives the name the browser suggests.
 async function saveWithEditor(page, file){
   await page.click('#download-btn');
   const [download] = await Promise.all([
@@ -336,8 +340,9 @@ async function saveWithEditor(page, file){
   ]);
   await download.saveAs(file);
   await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+  return download.suggestedFilename();
 }
-// Downloads a read-only export, kind readonly-open (nur-lesen), readonly-slim or readonly-compact, into file.
+// Downloads a read-only export, kind readonly-open (nur-lesen), readonly-slim or readonly-compact, into file; gives the name the browser suggests.
 async function exportReadonly(page, kind, file){
   const [download] = await Promise.all([
     page.waitForEvent('download', { timeout: 60000 }),
@@ -345,6 +350,7 @@ async function exportReadonly(page, kind, file){
   ]);
   await download.saveAs(file);
   await page.waitForFunction(() => !document.querySelector('button[data-download]:disabled'));
+  return download.suggestedFilename();
 }
 // Downloads nur-lesen into file and gives the text of its footer.
 async function exportFooter(page, file){
@@ -536,16 +542,21 @@ async function runBrowser(name, opts, demoFile, demoWithMarkup){
     // footnote [^tasten] cited in both parts and defined at the end. Every
     // variant shows a panel per part, the image and the footnote.
     const panelsOf = html => (html.match(/<details class="dokufix-frontmatter"/g) || []).length;
+    const suggested = [];
     for (const kind of ['readonly-open', 'readonly-slim', 'readonly-compact']){
       const file = path.join(dir, 'teile-' + kind + '.html');
-      await exportReadonly(o.page, kind, file);
+      suggested.push(await exportReadonly(o.page, kind, file));
       const text = fs.readFileSync(file, 'utf8'), html = kind === 'readonly-compact' ? kompaktBody(text) || '' : text;
       check(scope, kind + ' of the demo text: a panel for each of its two parts, the image as data, the footnote across parts' + (kind === 'readonly-open' ? ', no <script>' : ''),
         panelsOf(html) === 2 && /<img[^>]+src="data:image\//.test(html) && html.includes('id="footnote-tasten"') && (kind !== 'readonly-open' || !/<script/i.test(text)),
         JSON.stringify({ panels: panelsOf(html), script: /<script/i.test(text) }));
     }
     const partsFile = path.join(dir, 'teile-mit-editor.html');
-    await saveWithEditor(o.page, partsFile);
+    suggested.push(await saveWithEditor(o.page, partsFile));
+    // Story 3.10: each variant is named <title>-<variant>.dokufix.html.
+    const base = 'Willkommen-bei-dokufix'; // the demo text's first heading, as safeFilenameBase() writes it
+    check(scope, 'the four downloads are named Willkommen-bei-dokufix-nur-lesen|-schlank|-kompakt|-editor.dokufix.html',
+      suggested.join() === ['-nur-lesen', '-schlank', '-kompakt', '-editor'].map(v => base + v + '.dokufix.html').join(), JSON.stringify(suggested));
     check(scope, 'no page error', o.errors.length === 0, o.errors.join(' | '));
     await o.context.close();
     o = await open(browser, partsFile);
