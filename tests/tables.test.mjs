@@ -22,6 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { buildTables, TABLE_CLASS, CELL_SUB_CLASS } from '../src/app/tables.js';
+import { readCss } from './css-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -176,7 +177,7 @@ test('render.js runs the pass "Tabellen" directly after "Markierungen" and befor
 });
 
 // ---------- the look in the document styles ----------
-const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
+const docCss = readCss('doc.css');
 const bare = docCss.replace(/\/\*[\s\S]*?\*\//g, '');
 function ruleOf(css, selector){
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

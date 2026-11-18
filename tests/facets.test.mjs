@@ -32,6 +32,7 @@ import {
 import { buildChips } from '../src/app/chips.js';
 import { buildTables, TABLE_CLASS } from '../src/app/tables.js';
 import { buildWarning } from '../src/app/warning.js';
+import { readCss } from './css-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -437,7 +438,7 @@ test('the wrapper of the table stands inside the group, below the controls, and 
 });
 
 // ---------- the look in the document styles ----------
-const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
+const docCss = readCss('doc.css');
 const bare = docCss.replace(/\/\*[\s\S]*?\*\//g, '');
 // The text between the braces of the first block that starts with this head.
 function blockOf(css, head, from = 0){

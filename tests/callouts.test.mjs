@@ -21,6 +21,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { buildCallouts, CALLOUT_CLASS, CALLOUT_LABELS } from '../src/app/callouts.js';
+import { readCss, ROOT_VARS } from './css-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -220,9 +221,10 @@ test('known limit: a masked marker arrives as the same markup and becomes a call
 });
 
 // ---------- the symbols in the document styles ----------
-const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
+const docCss = readCss('doc.css');
+const docCssRaw = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
 const symbolOf = type => {
-  const rule = new RegExp('\\.dokufix-doc \\.dokufix-callout-' + type + ' > \\.dokufix-callout-label::before\\{background-image:url\\("(data:image/svg\\+xml,[^"]*)"\\)\\}');
+  const rule = new RegExp('\\.dokufix-doc \\.dokufix-callout-' + type + ' > \\.dokufix-callout-label::before\\{--dokufix-callout-icon:url\\("(data:image/svg\\+xml,[^"]*)"\\)\\}');
   const m = docCss.match(rule);
   return m ? m[1] : null;
 };
@@ -241,17 +243,21 @@ test('each type has its symbol in the document styles: an SVG of 16 px with one 
     assert.equal(el.getAttribute('viewBox'), '0 0 16 16');
     assert.equal(el.getAttribute('width'), '16');
     assert.equal(el.getAttribute('height'), '16');
-    assert.match(el.getAttribute('fill'), /^#[0-9a-f]{6}$/);
+    // No colour of its own: the symbol is a mask, drawn in its label's colour (story 6.1).
+    assert.equal(el.getAttribute('fill'), null);
     assert.equal(el.children.length, 1);
     assert.equal(el.firstElementChild.tagName.toLowerCase(), 'path');
     assert.match(el.firstElementChild.getAttribute('d'), /^M[\d\sA-Za-z.,-]+Z$/);
-    // The symbol has the colour of its label and of its edge.
-    const colour = el.getAttribute('fill');
-    assert.ok(docCss.includes('.dokufix-doc .dokufix-callout-' + type + '{border-left-color:' + colour + '}'), type + ': the edge has the symbol\'s colour');
-    assert.ok(docCss.includes('.dokufix-doc .dokufix-callout-' + type + ' > .dokufix-callout-label{color:' + colour + '}'), type + ': the label has the symbol\'s colour');
+    // Edge and label name the same variable of the type, a colour of six hex
+    // digits in the :root rule; the symbol takes the label's colour.
+    const variable = 'var(--dokufix-status-' + type + ')';
+    assert.ok(docCssRaw.includes('.dokufix-doc .dokufix-callout-' + type + '{border-left-color:' + variable + '}'), type + ': the edge reads ' + variable);
+    assert.ok(docCssRaw.includes('.dokufix-doc .dokufix-callout-' + type + ' > .dokufix-callout-label{color:' + variable + '}'), type + ': the label reads ' + variable);
+    assert.match(ROOT_VARS['--dokufix-status-' + type] || '', /^#[0-9a-f]{6}$/, type + ': the variable is a colour');
     seen.add(uri);
   }
   assert.equal(seen.size, TYPES.length, 'five different symbols');
+  assert.match(docCss, /\.dokufix-doc \.dokufix-callout-label::before\{[^}]*background-color:currentColor;[^}]*-webkit-mask:no-repeat center\/16px 16px var\(--dokufix-callout-icon\);mask:no-repeat center\/16px 16px var\(--dokufix-callout-icon\);/);
 });
 test('the build hands every symbol on as it is written', () => {
   // esbuild minifies doc.css; a url() it rewrote would still have to be the

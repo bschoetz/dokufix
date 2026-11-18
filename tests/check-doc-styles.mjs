@@ -43,6 +43,15 @@
 //   5. every read-only export builds its stylesheet with readonlyCss()
 //   6. the old twin READONLY_CSS is gone
 //   7. the built file has exactly one block, and it is not empty
+//   8. doc.css has exactly one :root rule, and it declares --dokufix-
+//      variables only; every var(--dokufix-…) names one declared somewhere
+//      (RUNTIME_VARS aside); no colour literal (#hex, %23hex inside a data:
+//      URL, rgb(, rgba(, hsl(, hsla(, hwb(, lab(, lch(, oklab(, oklch(,
+//      color(, color-mix() outside that rule: not in the
+//      rest of doc.css, app.css, search.css, index.html, nor in any .js under
+//      src/ but the tools' (TOOL_SOURCES). Every colour is a --dokufix-
+//      variable of that rule (story 6.1); the two exceptions are in
+//      COLOUR_EXCEPTIONS
 //
 // The allowlists are the frame: things that exist only around a document, not in it.
 // dokufix's own components are dokufix- prefixed (NFR5), but what marked,
@@ -105,7 +114,27 @@ const FRAME_SELECTORS = new Set([
 //     mode and in the exports the page is what scrolls, and its root is the
 //     only element that can stop that; the content container cannot.
 // Their names are not taken for the block's (check 3): they are the frame's.
-const BLOCK_EXCEPTIONS = new Set(['html:has(.dokufix-diagram-toggle:checked)']);
+//   :root   the colours and font stacks of dokufix as --dokufix- variables
+//     (story 6.1); the block is the one stylesheet every variant carries, so
+//     every other stylesheet and inline style reads them from here.
+const BLOCK_EXCEPTIONS = new Set(['html:has(.dokufix-diagram-toggle:checked)', ':root']);
+
+// Check 8. The tools have stylesheets and presets of their own and no theme.
+const TOOL_SOURCES = /^(?:bpmn-assistant|werkbank|bpmn-audi)\/|^bpmn-tools\/theme\.js$/;
+const COLOUR_RE = /(?<![&\w])#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{3,4})(?![\w-])|%23[0-9a-fA-F]{3,8}(?![0-9a-fA-F])|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\(/gi;
+// The only colour literals allowed outside the :root rule, each with its
+// declaration's property:
+//   #000 in a mask-image   the gradient of a mask, black means opaque; not
+//                          a colour anybody sees (doc.css, footnote preview)
+//   rgba(0,0,0,…) in a box-shadow   the neutral black of a shadow; no theme
+//                          sets it
+// Variables that a script or the renderer sets at run time, not a stylesheet.
+const RUNTIME_VARS = new Set(['--dokufix-code-digits', '--dokufix-diagram-width', '--dokufix-bpmn-head']);
+const RUNTIME_PREFIX = '--dokufix-bpmn-';
+const COLOUR_EXCEPTIONS = [
+  { property: /^(?:-webkit-)?mask-image$/, literal: /^#000$/ },
+  { property: /^box-shadow$/, literal: /^rgba\(0,0,0,/ },
+];
 
 // ---------- arguments and files ----------
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -378,6 +407,62 @@ const exportFns = scripts.flatMap(script =>
     }
   }
   check('the built file has one <style id="' + BLOCK_ID + '"> block, not empty', problems);
+}
+
+// 8
+{
+  const problems = [];
+  // CSS comments blanked, offsets kept; a script is read as it stands.
+  const blankComments = text => text.replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '));
+  const rootRanges = [];
+  {
+    const css = neutralise(docCss.text);
+    for (const r of walk(docCss.text, 0)){
+      if (!/:root\b/.test(r.selector)) continue;
+      if (r.selector !== ':root'){ problems.push(at(docCss, r.offset) + ': "' + r.selector + '": the variables stand in a rule whose selector is :root alone'); continue; }
+      const open = css.indexOf('{', r.offset), close = matchingBrace(css, open);
+      rootRanges.push([open, close]);
+      // Every declaration a --dokufix- variable.
+      let start = open + 1;
+      for (const decl of css.slice(open + 1, close).split(';')){
+        if (decl.trim() && !/^\s*--dokufix-[\w-]+\s*:/.test(decl)){
+          problems.push(at(docCss, start + decl.length - decl.trimStart().length) + ': "' + decl.trim() + '" in the :root rule; it declares --dokufix- variables only');
+        }
+        start += decl.length + 1;
+      }
+    }
+    if (rootRanges.length !== 1) problems.push(docCss.name + ': found ' + rootRanges.length + ' :root rules, expected exactly one');
+  }
+  const sources = [
+    { src: docCss, text: blankComments(docCss.text), skip: rootRanges },
+    { src: appCss, text: blankComments(appCss.text) },
+    { src: searchCss, text: blankComments(searchCss.text) },
+    { src: page, text: page.text },
+    ...scripts.filter(s => !TOOL_SOURCES.test(s.name.split(path.sep).slice(1).join('/'))).map(s => ({ src: s, text: s.text })),
+  ];
+  for (const { src, text, skip = [] } of sources){
+    for (const m of text.matchAll(COLOUR_RE)){
+      if (skip.some(([a, b]) => m.index > a && m.index < b)) continue;
+      // The declaration it stands in: back to the last ; { or quote.
+      let i = m.index;
+      while (i > 0 && !';{"\'`'.includes(text[i - 1])) i--;
+      const property = (text.slice(i, m.index).match(/^\s*([\w-]+)\s*:/) || [])[1] || '';
+      const literal = m[0].endsWith('(') ? text.slice(m.index, text.indexOf(')', m.index) + 1).replace(/\s+/g, '') : m[0];
+      if (COLOUR_EXCEPTIONS.some(e => e.property.test(property) && e.literal.test(literal))) continue;
+      problems.push(at(src, m.index) + ': colour literal "' + m[0] + '"; write var(--dokufix-…) and give a new colour a variable in the :root rule of doc.css');
+    }
+  }
+  // Every var(--dokufix-…) names a variable that is declared: in the :root
+  // rule or by another rule or inline style of these sources.
+  const declared = new Set(sources.flatMap(({ text }) => [...text.matchAll(/(--dokufix-[\w-]+)\s*:/g)].map(m => m[1])));
+  for (const { src, text } of sources){
+    for (const m of text.matchAll(/var\(\s*(--dokufix-[\w-]*)/g)){
+      const name = m[1];
+      if (declared.has(name) || RUNTIME_VARS.has(name) || name.startsWith(RUNTIME_PREFIX)) continue;
+      problems.push(at(src, m.index) + ': var(' + name + ') names no variable; declare it in the :root rule of doc.css');
+    }
+  }
+  check('one :root rule of --dokufix- variables, every var() declared, no colour literal outside it', problems);
 }
 
 // ---------- report ----------

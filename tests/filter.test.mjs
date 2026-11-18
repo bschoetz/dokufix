@@ -35,6 +35,7 @@ import { buildTables, TABLE_CLASS } from '../src/app/tables.js';
 import { TRANSIENT_ATTR, removeTransient } from '../src/app/transient.js';
 import { registerEscape } from '../src/app/escape.js';
 import { findHits, tooShort } from '../src/app/search-match.js';
+import { readCss } from './css-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -444,7 +445,7 @@ test('render.js runs the pass "Tabellenfilter" as a run-time pass, after every d
 });
 
 // ---------- the look in the document styles ----------
-const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
+const docCss = readCss('doc.css');
 const bare = docCss.replace(/\/\*[\s\S]*?\*\//g, '');
 function ruleOf(css, selector){
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

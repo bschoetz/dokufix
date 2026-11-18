@@ -60,7 +60,7 @@ export async function downloadReadonlySlim(){
   // of downloads, whose source is packed and whose picture needs the script;
   // the credit of a BPMN diagram stands alone, centred, as in print.
   const noscript = svgCount + linkCount > 0
-    ? `<noscript><style>.dokufix-diagram-svg[data-gz]{display:block;padding:24px;border:1px dashed #d8d8da;color:#8e8e92;text-align:center;font-size:14px;font-style:italic}.dokufix-diagram-svg[data-gz]::before{content:"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"}.dokufix-diagram-downloads{display:none!important}.dokufix-diagram-downloads+.dokufix-diagram-credit{display:block;margin:4px 0 0}</style></noscript>`
+    ? `<noscript><style>.dokufix-diagram-svg[data-gz]{display:block;padding:24px;border:1px dashed var(--dokufix-placeholder-line);color:var(--dokufix-text-faint);text-align:center;font-size:14px;font-style:italic}.dokufix-diagram-svg[data-gz]::before{content:"[Diagramm — JavaScript erforderlich, um es anzuzeigen]"}.dokufix-diagram-downloads{display:none!important}.dokufix-diagram-downloads+.dokufix-diagram-credit{display:block;margin:4px 0 0}</style></noscript>`
     : '';
 
   const html = `<!DOCTYPE html>

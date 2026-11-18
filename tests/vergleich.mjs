@@ -203,13 +203,13 @@ const EDITOR_RULES = [
 ];
 
 // The five callout types: the word a reader sees and the colour of edge, label
-// and symbol (src/app/callouts.js, src/doc.css).
+// and symbol (src/app/callouts.js, src/doc.css); the symbol is a mask in that colour.
 const CALLOUTS = {
-  note:      { label: 'Hinweis',  colour: 'rgb(9, 105, 218)',  fill: '#0969da' },
-  tip:       { label: 'Tipp',     colour: 'rgb(26, 127, 55)',  fill: '#1a7f37' },
-  important: { label: 'Wichtig',  colour: 'rgb(130, 80, 223)', fill: '#8250df' },
-  warning:   { label: 'Achtung',  colour: 'rgb(154, 103, 0)',  fill: '#9a6700' },
-  caution:   { label: 'Vorsicht', colour: 'rgb(207, 34, 46)',  fill: '#cf222e' },
+  note:      { label: 'Hinweis',  colour: 'rgb(9, 105, 218)' },
+  tip:       { label: 'Tipp',     colour: 'rgb(26, 127, 55)' },
+  important: { label: 'Wichtig',  colour: 'rgb(130, 80, 223)' },
+  warning:   { label: 'Achtung',  colour: 'rgb(154, 103, 0)' },
+  caution:   { label: 'Vorsicht', colour: 'rgb(207, 34, 46)' },
 };
 // Controls for the numbering of headings after a callout; see assertVariant().
 // The first forces what the document styles are meant to do, the second what
@@ -3077,7 +3077,9 @@ async function assertSearch(page, check, key){
             for (const sheet of document.styleSheets){ try { walk(sheet.cssRules); } catch (e){ /* a sheet of another origin */ } }
             const pre = document.querySelectorAll(rootSel + ' pre')[place];
             const cs = getComputedStyle(pre);
-            return { color, background, preColor: cs.color, preBackground: cs.backgroundColor };
+            // The rule names its colours as var(--dokufix-…) (story 6.1): an element of the page resolves them.
+            const resolve = value => { if (!value) return value; const probe = document.createElement('i'); probe.style.color = value; document.body.appendChild(probe); const c = getComputedStyle(probe).color; probe.remove(); return c; };
+            return { color: resolve(color), background: resolve(background), preColor: cs.color, preBackground: cs.backgroundColor };
           }, [ROOT_SEL, HIGHLIGHT, preAt]);
           const rgb = c => { const m = String(c).match(/\d+(\.\d+)?/g); return m ? m.slice(0, 3).map(Number) : null; };
           const lum = c => { const v = rgb(c); return v ? v.map(x => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }).reduce((s, x, i) => s + x * [0.2126, 0.7152, 0.0722][i], 0) : NaN; };
@@ -4196,7 +4198,7 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
         if (!line) return null;
         const a = line.querySelector(':scope > a'), button = line.querySelector(':scope > button');
         const look = el => { if (!el) return null; const cs = getComputedStyle(el), b = getComputedStyle(el, '::before'), r = el.getBoundingClientRect();
-          return { font: cs.fontSize, border: cs.borderTopWidth + ' ' + cs.borderTopStyle, radius: cs.borderTopLeftRadius, symbol: b.backgroundImage.startsWith('url("data:image/svg+xml') && b.width + ' ' + b.height, visible: r.width > 0 && r.height > 0 }; };
+          return { font: cs.fontSize, border: cs.borderTopWidth + ' ' + cs.borderTopStyle, radius: cs.borderTopLeftRadius, symbol: (s => s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage || 'none'))(b).startsWith('url("data:image/svg+xml') && b.backgroundColor === 'rgb(110, 110, 115)' && b.width + ' ' + b.height, visible: r.width > 0 && r.height > 0 }; };
         let content = null;
         try { content = a ? await (await fetch(a.getAttribute('href'))).text() : null; } catch (e){ content = 'fetch failed: ' + e.message; }
         return {
@@ -5370,7 +5372,7 @@ async function assertVariant(browser, file, key, exp, results, label){
             labelColour: ls ? ls.color : '',
             edge: cs.borderLeftWidth + ' ' + cs.borderLeftStyle + ' ' + cs.borderLeftColor,
             otherEdges: [cs.borderTopWidth, cs.borderRightWidth, cs.borderBottomWidth].join(' '),
-            symbol: bs ? bs.backgroundImage : '', symbolBox: bs ? bs.width + ' ' + bs.height : '',
+            symbol: bs ? (s => s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage || 'none'))(bs) : '', symbolBox: bs ? bs.width + ' ' + bs.height : '', symbolColour: bs ? bs.backgroundColor : '',
             markerLeft: /\[!/.test(c.textContent),
             emptyParagraphs: Array.from(c.querySelectorAll('p')).filter(p => !p.textContent.trim() && !p.children.length).length,
           };
@@ -5424,11 +5426,12 @@ async function assertVariant(browser, file, key, exp, results, label){
       const labels = bad(c => [c.tag, c.role, c.label, c.labelFirst, c.labelVisible, c.markerLeft, c.emptyParagraphs],
         (c, want) => c.tag === 'DIV' && c.role === 'note' && c.label === want.label && c.labelFirst && c.labelVisible && !c.markerLeft && c.emptyParagraphs === 0);
       check('every callout is labelled: the word of its type, visible, as its first line, the marker gone', labels.length === 0, labels.join(' | '));
-      const styles = bad(c => [c.edge, c.otherEdges, c.labelColour, c.symbolBox],
-        (c, want) => c.edge === '4px solid ' + want.colour && c.otherEdges === '0px 0px 0px' && c.labelColour === want.colour && c.symbolBox === '16px 16px');
-      check('every callout is styled: an edge on the left only, edge and label in the colour of the type', styles.length === 0, styles.join(' | '));
-      // The symbol is a data: URI in the document styles. That the rule arrived
-      // says little; the picture has to be one a browser draws.
+      const styles = bad(c => [c.edge, c.otherEdges, c.labelColour, c.symbolBox, c.symbolColour],
+        (c, want) => c.edge === '4px solid ' + want.colour && c.otherEdges === '0px 0px 0px' && c.labelColour === want.colour && c.symbolBox === '16px 16px' && c.symbolColour === want.colour);
+      check('every callout is styled: an edge on the left only, edge, label and symbol in the colour of the type', styles.length === 0, styles.join(' | '));
+      // The symbol is a data: URI in the document styles, a mask drawn in the
+      // colour of the type (story 6.1). That the rule arrived says little; the
+      // picture has to be one a browser draws.
       const symbols = await page.evaluate(async list => {
         const out = [];
         for (const c of list){
@@ -5440,7 +5443,7 @@ async function assertVariant(browser, file, key, exp, results, label){
         }
         return out;
       }, s.callouts.map(c => ({ type: c.type, symbol: c.symbol })));
-      const badSymbols = symbols.filter(y => y.problem || !y.loaded || y.size !== '16x16' || !y.svg.includes("fill='" + (CALLOUTS[y.type] || {}).fill + "'") || !/<path d='M[^']+Z'\/>/.test(y.svg))
+      const badSymbols = symbols.filter(y => y.problem || !y.loaded || y.size !== '16x16' || /fill=/.test(y.svg) || !/<path d='M[^']+Z'\/>/.test(y.svg))
         .map(y => y.type + ': ' + (y.problem || (y.loaded ? y.size : 'does not load')));
       const distinct = new Set(symbols.map(y => y.svg)).size === new Set(s.callouts.map(c => c.type)).size;
       check('every callout has its symbol: an SVG of 16 px in the colour of the type, one per type', badSymbols.length === 0 && distinct,
@@ -5464,14 +5467,15 @@ async function assertVariant(browser, file, key, exp, results, label){
         callout.insertAdjacentHTML('afterend', '<div class="dokufix-warning" role="note"><p class="dokufix-warning-title"><strong>Warnung:</strong> Ein Diagramm konnte nicht gezeichnet werden.</p></div>');
         const warning = callout.nextElementSibling;
         const box = el => { const cs = getComputedStyle(el); return { top: cs.borderTopWidth, right: cs.borderRightWidth, bottom: cs.borderBottomWidth, left: cs.borderLeftWidth }; };
+        const maskOf = s => s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage || 'none');
         const cLabel = callout.querySelector(':scope > .dokufix-callout-label'), wLabel = warning.querySelector('.dokufix-warning-title > strong');
         const out = {
           callout: { ...box(callout), word: cLabel.textContent, labelDisplay: getComputedStyle(cLabel).display,
                      ownLine: !cLabel.nextElementSibling || cLabel.getBoundingClientRect().bottom <= cLabel.nextElementSibling.getBoundingClientRect().top,
-                     symbol: getComputedStyle(cLabel, '::before').backgroundImage !== 'none' },
+                     symbol: maskOf(getComputedStyle(cLabel, '::before')) !== 'none' },
           warning: { ...box(warning), word: wLabel.textContent, labelDisplay: getComputedStyle(wLabel).display,
                      ownLine: wLabel.parentElement.textContent.trim() === wLabel.textContent.trim(),
-                     symbol: getComputedStyle(wLabel, '::before').backgroundImage !== 'none' },
+                     symbol: maskOf(getComputedStyle(wLabel, '::before')) !== 'none' },
         };
         warning.remove();
         return out;

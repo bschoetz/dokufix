@@ -62,7 +62,7 @@ function fails(name, changed, expected, builtText = null){
 test('the sources and the built file as they are pass', () => {
   const r = run();
   assert.equal(r.status, 0, r.stdout);
-  assert.equal(r.stdout.trim().split('\n').length, 7);
+  assert.equal(r.stdout.trim().split('\n').length, 8);
 });
 
 fails('#preview descendant rule in the app stylesheet', prepend('app.css', '#preview h5{color:red}\n'), /src\/app\.css line 1, the app stylesheet: "#preview h5"/);
@@ -86,7 +86,7 @@ test('the root rule of the large view passes, in the block where it stands and w
   assert.ok(original('doc.css').includes(LARGE_VIEW_ROOT + '{'));
   const r = run(prepend('doc.css', LARGE_VIEW_ROOT + '{overflow:hidden}\n'));
   assert.equal(r.status, 0, r.stdout);
-  assert.equal(r.stdout.trim().split('\n').length, 7);
+  assert.equal(r.stdout.trim().split('\n').length, 8);
 });
 fails('another root rule in the block', prepend('doc.css', 'html:has(.dokufix-callout){overflow:hidden}\n'), /src\/doc\.css line 1: "html:has\(\.dokufix-callout\)" does not start with \.dokufix-doc/);
 fails('the root rule of the large view with a descendant, in the block', prepend('doc.css', LARGE_VIEW_ROOT + ' p{color:red}\n'), /src\/doc\.css line 1: "html:has\(\.dokufix-diagram-toggle:checked\) p" does not start with \.dokufix-doc/);
@@ -97,6 +97,21 @@ fails('block doubled in the page', inFile('index.html', BLOCK, BLOCK + BLOCK), /
 
 fails('document rule in a <style> of the page', inFile('index.html', '</head>', '<style>.dokufix-doc h5{color:red}</style>\n</head>'), /src\/index\.html line \d+, a <style> in the page: "\.dokufix-doc h5"/);
 fails('document rules written into the block\'s element instead of doc.css', inFile('index.html', BLOCK, BLOCK.replace('{{slot:doc.css}}', '{{slot:doc.css}}\n.dokufix-doc h5{color:red}')), /src\/index\.html line \d+: the block holds something other than \{\{slot:doc\.css\}\}/);
+// Every colour is a variable of the :root rule in doc.css (story 6.1): a
+// literal anywhere else fails, in a data: URL too.
+fails('colour literal in the app stylesheet', prepend('app.css', 'header{color:#123456}\n'), /src\/app\.css line 1: colour literal "#123456"/);
+fails('colour literal in a data: URL in the block', prepend('doc.css', '.dokufix-doc .x::before{background:url("data:image/svg+xml,%3Csvg fill=\'%23cf222e\'%3E%3C/svg%3E")}\n'), /src\/doc\.css line 1: colour literal "%23cf222e"/);
+fails('colour literal in an inline style of a script', inFile('app/layout-notice.js', 'var(--dokufix-text-muted)', 'rgba(0,0,0,.5)'), /src\/app\/layout-notice\.js line \d+: colour literal "rgba\("/);
+
+// The two exceptions are narrow: black in a box-shadow, #000 in a mask-image.
+fails('a coloured shadow in the app stylesheet', prepend('app.css', 'header{box-shadow:0 1px 2px rgba(255,0,0,.5)}\n'), /src\/app\.css line 1: colour literal "rgba\("/);
+fails('black as a text colour in the app stylesheet', prepend('app.css', 'header{color:#000}\n'), /src\/app\.css line 1: colour literal "#000"/);
+fails('a modern colour function in the app stylesheet', prepend('app.css', 'header{color:OKLCH(50% .1 200)}\n'), /src\/app\.css line 1: colour literal "OKLCH\("/);
+// The :root rule holds variables only, once; a var() names a declared variable.
+fails('a plain declaration in the :root rule', inFile('doc.css', ':root{', ':root{color:#f00;'), /src\/doc\.css line \d+: "color:#f00" in the :root rule/);
+fails('a second :root rule', prepend('doc.css', ':root{--dokufix-x:#f00}\n'), /src\/doc\.css: found 2 :root rules/);
+fails('a variable that is declared nowhere', inFile('app.css', 'var(--dokufix-chrome)', 'var(--dokufix-chrom)'), /src\/app\.css line \d+: var\(--dokufix-chrom\) names no variable/);
+
 fails('built file without the block', {}, /found 0 blocks/, mutate(built, BUILT_BLOCK, ''));
 fails('built file with an empty block', {}, /dokufix\.html line \d+: the block is empty/, mutate(built, BUILT_BLOCK, '<style id="dokufix-doc-css">\n</style>\n'));
 fails('built file with the block doubled', {}, /found 2 blocks/, mutate(built, BUILT_BLOCK, m => m + m));

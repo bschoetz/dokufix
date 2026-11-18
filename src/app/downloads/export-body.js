@@ -107,13 +107,13 @@ export async function markdownCarrier(variant, markdown){
 // tests/check-doc-styles.mjs fails when one turns up here.
 const READONLY_FRAME_CSS = `*{box-sizing:border-box;margin:0;padding:0}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
-  color:#1c1c1e;background:#fff;line-height:1.5;
+  font-family:var(--dokufix-font-body);
+  color:var(--dokufix-text);background:var(--dokufix-surface);line-height:1.5;
   max-width:950px;margin:0 auto;padding:80px 32px 120px;
   font-size:17px;-webkit-font-smoothing:antialiased;
 }
 .reader-body{min-width:0}
-.dokufix-meta{margin-top:4em;padding-top:1.5em;border-top:1px solid #e5e5ea;font-size:.85em;color:#8e8e92}
+.dokufix-meta{margin-top:4em;padding-top:1.5em;border-top:1px solid var(--dokufix-line);font-size:.85em;color:var(--dokufix-text-faint)}
 .dokufix-meta p{margin:0}
 noscript p{margin-bottom:1em}
 @media (min-width:1500px){
@@ -123,11 +123,11 @@ noscript p{margin-bottom:1em}
 }
 .dokufix-rail-pending{pointer-events:none;opacity:.4;transition:opacity .25s ease}
 @media (max-width:820px){body{padding:64px 22px 96px;font-size:16px}}
-.dokufix-licences{position:absolute;z-index:40;top:56px;right:max(32px, calc(50% - 443px));font-size:12px;line-height:1.4;color:#6e6e73}
+.dokufix-licences{position:absolute;z-index:40;top:56px;right:max(32px, calc(50% - 443px));font-size:12px;line-height:1.4;color:var(--dokufix-text-muted)}
 .dokufix-licences summary{display:block;cursor:pointer;text-decoration:underline;white-space:nowrap}
 .dokufix-licences summary::-webkit-details-marker{display:none}
-.dokufix-licences summary:hover{color:#1c1c1e}
-.dokufix-licences-view{position:absolute;top:calc(100% + 6px);right:0;width:min(560px, calc(100vw - 44px));max-height:70vh;overflow:auto;padding:14px 16px;background:#fff;color:#1c1c1e;border:1px solid #d1d1d6;border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,0.18);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
+.dokufix-licences summary:hover{color:var(--dokufix-text)}
+.dokufix-licences-view{position:absolute;top:calc(100% + 6px);right:0;width:min(560px, calc(100vw - 44px));max-height:70vh;overflow:auto;padding:14px 16px;background:var(--dokufix-surface);color:var(--dokufix-text);border:1px solid var(--dokufix-line-strong);border-radius:6px;box-shadow:0 8px 28px rgba(0,0,0,0.18);font-size:13px;line-height:1.5;overflow-wrap:anywhere}
 .dokufix-licences-view p{margin-bottom:.7em}
 .dokufix-licences-view ul{list-style:none;margin-bottom:.7em}
 .dokufix-licences-view li{margin-bottom:.5em}
