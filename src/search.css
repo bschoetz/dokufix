@@ -20,8 +20,8 @@
   display:flex;flex-direction:column;
   position:fixed;top:64px;right:16px;bottom:16px;z-index:45;
   width:min(380px, calc(100vw - 32px));
-  background:#fff;color:#1c1c1e;
-  border:1px solid #d1d1d6;border-radius:6px;
+  background:var(--dokufix-surface);color:var(--dokufix-text);
+  border:1px solid var(--dokufix-line-strong);border-radius:6px;
   box-shadow:0 8px 28px rgba(0,0,0,0.18);
   font-size:14px;line-height:1.4;
 }
@@ -31,23 +31,23 @@
 .search-label-text{margin-bottom:6px;padding-right:36px;font-size:13px;font-weight:700;line-height:24px}
 .search-close{
   position:absolute;top:10px;right:10px;
-  background:none;border:0;color:#6e6e73;cursor:pointer;
+  background:none;border:0;color:var(--dokufix-text-muted);cursor:pointer;
   font:inherit;font-size:20px;line-height:1;padding:2px 6px;border-radius:4px;
 }
-.search-close:hover{color:#1c1c1e;background:#f2f2f7}
+.search-close:hover{color:var(--dokufix-text);background:var(--dokufix-hover)}
 .search-input{
   padding:7px 10px;
   font:inherit;color:inherit;
-  border:1px solid #c7c7cc;border-radius:4px;
+  border:1px solid var(--dokufix-line-input);border-radius:4px;
 }
-.search-input:focus{outline:2px solid #1c1c1e;outline-offset:-1px}
+.search-input:focus{outline:2px solid var(--dokufix-focus-strong);outline-offset:-1px}
 /* The two switches below the field, one per line. */
 .search-switches{display:flex;flex-direction:column;gap:2px;padding:8px 14px 0}
 .search-switch{display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer}
 .search-switch input{margin:0}
-.search-summary{padding:8px 14px 6px;font-size:12px;color:#6e6e73}
+.search-summary{padding:8px 14px 6px;font-size:12px;color:var(--dokufix-text-muted)}
 .search-summary:empty{padding:0}
-.search-results{flex:1;min-height:0;overflow-y:auto;list-style:none;margin:0;padding:0;border-top:1px solid #e5e5ea}
+.search-results{flex:1;min-height:0;overflow-y:auto;list-style:none;margin:0;padding:0;border-top:1px solid var(--dokufix-line)}
 .search-results:empty{border-top:0}
 /* The results under their group headings: one group per heading H2 to H4 of
    the rail, nested as the headings are. A group heading is one line of 28 px,
@@ -63,56 +63,56 @@
   position:sticky;top:0;z-index:3;
   display:flex;align-items:baseline;gap:8px;
   box-sizing:border-box;height:28px;padding:5px 14px;
-  background:#f7f7fa;border-bottom:1px solid #e5e5ea;
+  background:var(--dokufix-result-group);border-bottom:1px solid var(--dokufix-line);
   font-size:12px;line-height:17px;white-space:nowrap;
 }
 .search-group .search-group > .search-group-head{top:28px;z-index:2}
 .search-group .search-group .search-group > .search-group-head{top:56px;z-index:1}
 .search-group-title{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:700}
-.search-group-count{flex:none;color:#6e6e73}
+.search-group-count{flex:none;color:var(--dokufix-text-muted)}
 .search-group-h3 > .search-group-head,
 .search-group-h3 > .search-group-list > li > .search-result{padding-left:26px}
 .search-group-h4 > .search-group-head,
 .search-group-h4 > .search-group-list > li > .search-result{padding-left:38px}
 .search-result{
   display:block;width:100%;text-align:left;cursor:pointer;
-  background:none;border:0;border-bottom:1px solid #e5e5ea;
+  background:none;border:0;border-bottom:1px solid var(--dokufix-line);
   padding:9px 14px;
   font:inherit;font-size:13px;color:inherit;overflow-wrap:anywhere;
 }
-.search-result:hover,.search-result:focus-visible{background:#f2f2f7}
-.search-result:focus-visible{outline:2px solid #1c1c1e;outline-offset:-2px}
-.search-result mark{background:#ffe066;color:inherit;border-radius:2px}
+.search-result:hover,.search-result:focus-visible{background:var(--dokufix-result-hover)}
+.search-result:focus-visible{outline:2px solid var(--dokufix-focus-strong);outline-offset:-2px}
+.search-result mark{background:var(--dokufix-mark);color:inherit;border-radius:2px}
 /* Before the text of a table row's result its kind, "Tabelle: ", in the grey
    of the numbers, set apart from the text the term is found in; after the
    text of a row a table's filter hides " (ausgeblendet)", in the dark red of
    the red status chip's label, so it is not overlooked (Ben, 2026-10-03). */
-.search-kind{color:#6e6e73}
+.search-kind{color:var(--dokufix-text-muted)}
 /* Each kind with an icon and a colour of its own, so the eye finds tables,
    diagrams and code in the list at a glance (story 18, Ben 2026-10-05). The
    icon is an Octicon (@primer/octicons 19.38.0, build/svg/<name>-16.svg),
    drawn at 12 px as a mask in the colour of its label; the label keeps its
    text. Every colour reads at least 4.5:1 on the panel and on a hovered
    result (#f2f2f7). The metadata panel keeps the grey and has no icon. */
-.search-kind-table{color:#1a7f37;--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25ZM6.5 6.5v8h7.75a.25.25 0 0 0 .25-.25V6.5Zm8-1.5V1.75a.25.25 0 0 0-.25-.25H6.5V5Zm-13 1.5v7.75c0 .138.112.25.25.25H5v-8ZM5 5V1.5H1.75a.25.25 0 0 0-.25.25V5Z'/%3E%3C/svg%3E")}
-.search-kind-bpmn{color:#0969da}
-.search-kind-mermaid{color:#8250df}
+.search-kind-table{color:var(--dokufix-status-tip);--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v12.5A1.75 1.75 0 0 1 14.25 16H1.75A1.75 1.75 0 0 1 0 14.25ZM6.5 6.5v8h7.75a.25.25 0 0 0 .25-.25V6.5Zm8-1.5V1.75a.25.25 0 0 0-.25-.25H6.5V5Zm-13 1.5v7.75c0 .138.112.25.25.25H5v-8ZM5 5V1.5H1.75a.25.25 0 0 0-.25.25V5Z'/%3E%3C/svg%3E")}
+.search-kind-bpmn{color:var(--dokufix-status-note)}
+.search-kind-mermaid{color:var(--dokufix-status-important)}
 :is(.search-kind-bpmn,.search-kind-mermaid,.search-kind-diagram){--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h3.5C6.216 0 7 .784 7 1.75v3.5A1.75 1.75 0 0 1 5.25 7H4v4a1 1 0 0 0 1 1h4v-1.25C9 9.784 9.784 9 10.75 9h3.5c.966 0 1.75.784 1.75 1.75v3.5A1.75 1.75 0 0 1 14.25 16h-3.5A1.75 1.75 0 0 1 9 14.25v-.75H5A2.5 2.5 0 0 1 2.5 11V7h-.75A1.75 1.75 0 0 1 0 5.25Zm1.75-.25a.25.25 0 0 0-.25.25v3.5c0 .138.112.25.25.25h3.5a.25.25 0 0 0 .25-.25v-3.5a.25.25 0 0 0-.25-.25Zm9 9a.25.25 0 0 0-.25.25v3.5c0 .138.112.25.25.25h3.5a.25.25 0 0 0 .25-.25v-3.5a.25.25 0 0 0-.25-.25Z'/%3E%3C/svg%3E")}
-.search-kind-code{color:#bc4c00;--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z'/%3E%3C/svg%3E")}
+.search-kind-code{color:var(--dokufix-kind-code);--search-kind-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='m11.28 3.22 4.25 4.25a.75.75 0 0 1 0 1.06l-4.25 4.25a.749.749 0 0 1-1.275-.326.749.749 0 0 1 .215-.734L13.94 8l-3.72-3.72a.749.749 0 0 1 .326-1.275.749.749 0 0 1 .734.215Zm-6.56 0a.751.751 0 0 1 1.042.018.751.751 0 0 1 .018 1.042L2.06 8l3.72 3.72a.749.749 0 0 1-.326 1.275.749.749 0 0 1-.734-.215L.47 8.53a.75.75 0 0 1 0-1.06Z'/%3E%3C/svg%3E")}
 :is(.search-kind-table,.search-kind-bpmn,.search-kind-mermaid,.search-kind-diagram,.search-kind-code)::before{
   content:"";display:inline-block;width:12px;height:12px;margin-right:4px;vertical-align:-1px;
   background-color:currentColor;
   -webkit-mask:no-repeat center/12px 12px var(--search-kind-icon);mask:no-repeat center/12px 12px var(--search-kind-icon);
 }
-.search-hidden{color:#a40e26;font-style:italic}
+.search-hidden{color:var(--dokufix-status-caution-text);font-style:italic}
 /* The hits in the document while the panel is open (src/app/search.js): a
    highlight of the CSS Custom Highlight API, no element and no class in the
    document, in the colour of the marks in the results. On screen its text is
    dark, so a hit reads on the yellow wherever it stands; since the code
    block is light (story 5.19) its own text would as well, and the rule
    stays for any light text a document may have. Not printed. */
-::highlight(search-hit){background-color:#ffe066}
-@media screen{::highlight(search-hit){color:#1c1c1e}}
+::highlight(search-hit){background-color:var(--dokufix-mark)}
+@media screen{::highlight(search-hit){color:var(--dokufix-text)}}
 /* The magnifier (src/app/search.js), a button that opens the panel, for a
    reader who does not know "/". One element, placed by CSS alone, here and,
    in the editor, in src/app.css, at the same place at every width, with a
@@ -128,13 +128,13 @@
   position:fixed;top:16px;right:16px;z-index:42;
   display:flex;align-items:center;justify-content:center;
   width:35px;height:35px;padding:0;
-  background:#fff;color:#1c1c1e;
-  border:1px solid rgba(0,0,0,0.18);border-radius:4px;
+  background:var(--dokufix-surface);color:var(--dokufix-text);
+  border:1px solid var(--dokufix-line-float);border-radius:4px;
   box-shadow:0 2px 10px rgba(0,0,0,0.08);
   cursor:pointer;
 }
-.search-magnifier:hover{background:#1c1c1e;color:#fff;border-color:#1c1c1e}
-.search-magnifier:focus-visible{outline:2px solid #1c1c1e;outline-offset:2px}
+.search-magnifier:hover{background:var(--dokufix-inverse);color:var(--dokufix-on-inverse);border-color:var(--dokufix-inverse)}
+.search-magnifier:focus-visible{outline:2px solid var(--dokufix-focus-strong);outline-offset:2px}
 .search-magnifier svg{display:block}
 /* The bar of a collapsed panel (src/app/search.js, story 12): in the narrow
    view, a window of at most 820 px, the app's narrow layout (src/app.css),
@@ -158,12 +158,12 @@
   .search-bar-count{flex:1;min-width:0;padding-left:4px;font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .search-bar button{
     min-width:44px;min-height:44px;padding:0 10px;
-    background:none;border:1px solid #c7c7cc;border-radius:6px;
-    color:#1c1c1e;font:inherit;font-size:15px;cursor:pointer;
+    background:none;border:1px solid var(--dokufix-line-input);border-radius:6px;
+    color:var(--dokufix-text);font:inherit;font-size:15px;cursor:pointer;
   }
   .search-bar .search-bar-prev,.search-bar .search-bar-next,.search-bar .search-bar-close{font-size:22px;line-height:1}
-  .search-bar button:disabled{color:#c7c7cc;border-color:#e5e5ea;cursor:default}
-  .search-bar button:focus-visible{outline:2px solid #1c1c1e;outline-offset:1px}
+  .search-bar button:disabled{color:var(--dokufix-text-disabled);border-color:var(--dokufix-line);cursor:default}
+  .search-bar button:focus-visible{outline:2px solid var(--dokufix-focus-strong);outline-offset:1px}
   html:has(> body > .search-panel.search-collapsed:not([hidden])){scroll-padding-bottom:61px}
 }
 @media print{

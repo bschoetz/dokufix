@@ -45,6 +45,7 @@ import { headingLabelText } from '../src/app/toc.js';
 import { buildChips } from '../src/app/chips.js';
 import { buildSteps } from '../src/app/steps.js';
 import { TRANSIENT_ATTR } from '../src/app/transient.js';
+import { readCss } from './css-colours.mjs';
 
 // What the search calls a diagram of each language (src/app/diagram-kinds.js).
 const KIND_BPMN = DIAGRAM_LANGUAGES.bpmn.label;
@@ -1117,7 +1118,7 @@ test('the reader bundle registers the search over its content container, always 
 });
 
 test('the styles of the search: a hit highlighted in the colour of the marks, not in print, dark on screen; a kind grey, a hidden row red and italic', () => {
-  const css = read('search.css');
+  const css = readCss('search.css');
   const mark = css.match(/\.search-result mark\{background:(#[0-9a-f]+)/)[1];
   assert.match(css, new RegExp('^::highlight\\(search-hit\\)\\{background-color:' + mark + '\\}$', 'm'));
   assert.match(css, /@media print\{[^}]*\}\s*::highlight\(search-hit\)\{background-color:transparent\}\s*\}/);
@@ -1128,7 +1129,7 @@ test('the styles of the search: a hit highlighted in the colour of the marks, no
 });
 
 test('each kind of result has a class, and a table, a diagram and a code block an icon and a colour: search.js names a class for every kind there is, search.css gives those an Octicon, the metadata panel keeps the grey without one, and every colour reads 4.5:1 on the panel and on a hovered result (story 18)', () => {
-  const js = read('app/search.js'), css = read('search.css');
+  const js = read('app/search.js'), css = readCss('search.css');
   for (const name of ['KIND_ROW', 'KIND_META', 'KIND_CODE', 'DIAGRAM_LABEL', 'DIAGRAM_LANGUAGES']) assert.match(js, new RegExp('KIND_CLASSES[\\s\\S]*' + name), name);
   // Every rule of the kinds: its selector and its body.
   const rules = [...css.matchAll(/^([^{}\n]*\.search-kind-[^{}\n]*)\{([^}]*)\}$/gm)].map(m => ({ sel: m[1], body: m[2] }));

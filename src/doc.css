@@ -21,19 +21,68 @@
      specificity (.dokufix-meta p against .dokufix-doc p, a.active against
      .rail-h4 a) the frame has to win. */
 
+  /* COLOURS AND FONTS (story 6.1). Every colour of dokufix and the two font
+     stacks of the document are variables of this rule; every other rule, in
+     this block, in src/app.css, src/search.css, READONLY_FRAME_CSS and the
+     inline styles of the scripts, reads them with var(). The rule is here
+     because this block reaches every variant. One variable per role, not
+     per value: #8e8e92 as text is --dokufix-text-faint, as a line
+     --dokufix-line-faint. tests/check-doc-styles.mjs fails on a colour
+     literal anywhere else; the named exceptions are the #000 of a
+     mask-image gradient and the black of rgba(0,0,0,…) shadows.
+     The first group is what a theme may set; the BPMN variables below
+     read these too. */
+  :root{
+    --dokufix-text:#1c1c1e;--dokufix-text-muted:#6e6e73;--dokufix-text-faint:#8e8e92;
+    --dokufix-surface:#fff;--dokufix-surface-alt:#fafafa;--dokufix-surface-sunken:#f0f0f3;
+    --dokufix-line:#e5e5ea;--dokufix-line-strong:#d1d1d6;--dokufix-line-faint:#8e8e92;
+    --dokufix-link:#0066cc;--dokufix-focus:#0066cc;
+    --dokufix-accent:#d4ff00;--dokufix-on-accent:#1c1c1e;--dokufix-mark:#ffe066;
+    --dokufix-chrome:#1c1c1e;--dokufix-chrome-raised:#2c2c2e;--dokufix-chrome-line:#3a3a3c;
+    --dokufix-on-chrome:#f5f5f7;--dokufix-app-bg:#f5f5f7;
+    --dokufix-status-note:#0969da;--dokufix-status-note-tint:#ddf4ff;--dokufix-status-note-text:#0550ae;
+    --dokufix-status-tip:#1a7f37;--dokufix-status-tip-tint:#dafbe1;--dokufix-status-tip-text:#116329;
+    --dokufix-status-important:#8250df;
+    --dokufix-status-warning:#9a6700;--dokufix-status-warning-tint:#fff8c5;--dokufix-status-warning-text:#7d4e00;
+    --dokufix-status-caution:#cf222e;--dokufix-status-caution-tint:#ffebe9;--dokufix-status-caution-text:#a40e26;
+    --dokufix-font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --dokufix-font-mono:ui-monospace,monospace;
+    /* internal: a theme does not set these */
+    --dokufix-accent-hover:#bce300;
+    --dokufix-accent-tint-12:rgba(212,255,0,0.12);--dokufix-accent-tint-30:rgba(212,255,0,.30);--dokufix-accent-tint-35:rgba(212,255,0,0.35);
+    --dokufix-link-tint-6:rgba(0,102,204,0.06);
+    --dokufix-chrome-line-hover:#48484a;--dokufix-chrome-edge:#000;
+    --dokufix-chrome-divider:#2c2c2e;--dokufix-focus-strong:#1c1c1e;--dokufix-focus-accent:#d4ff00;
+    --dokufix-inverse:#1c1c1e;--dokufix-on-inverse:#fff;--dokufix-line-active:#1c1c1e;--dokufix-hover:#f2f2f7;
+    --dokufix-on-chrome-strong:#fff;--dokufix-on-chrome-faint:#8e8e92;
+    --dokufix-text-soft:#3a3a3f;--dokufix-text-disabled:#c7c7cc;
+    --dokufix-line-soft:#f0f0f3;--dokufix-line-input:#c7c7cc;--dokufix-line-float:rgba(0,0,0,0.18);
+    --dokufix-solid-hover:#3a3a3c;--dokufix-backdrop:rgba(0,0,0,0.5);--dokufix-pane-gap:#d8d8da;
+    --dokufix-button:#f5f5f7;--dokufix-button-hover:#e9e9ee;--dokufix-summary-hover:#f0f0f2;
+    --dokufix-result-hover:#f2f2f7;--dokufix-result-group:#f7f7fa;--dokufix-kind-code:#bc4c00;
+    --dokufix-placeholder-line:#d8d8da;
+    --dokufix-chip-grey:#57606a;--dokufix-chip-grey-text:#424a53;--dokufix-chip-grey-tint:#eaeef2;
+    --dokufix-facet-count:#57606a;
+    --dokufix-code-bg:#f3f6fa;--dokufix-code-text:#1c2733;--dokufix-code-line:#dde4ee;--dokufix-code-line-hover:#b8c4d2;
+    --dokufix-code-number:#5f6b78;--dokufix-code-button:#4b5a6b;--dokufix-code-inline:#c41a16;
+    --dokufix-notice-bg:#fff8e1;--dokufix-notice-text:#3a2a00;--dokufix-notice-line:#b26a00;--dokufix-fm-unparsed:#a06000;
+    --dokufix-error-bg:#fee;--dokufix-error-tint:#fff3f3;--dokufix-error-line:#c44;--dokufix-error-text:#8b1300;
+    --dokufix-saved:#48d160;--dokufix-alert:#ff8a6a;--dokufix-alert-tint:rgba(255,91,58,0.18);--dokufix-alert-line:rgba(255,91,58,0.5);
+  }
+
   .dokufix-doc h1,.dokufix-doc h2,.dokufix-doc h3,.dokufix-doc h4{
     line-height:1.2;margin-top:1.4em;margin-bottom:0.5em;
     letter-spacing:-0.015em;font-weight:800;
   }
   .dokufix-doc h1{font-size:34px;margin-top:0}
-  .dokufix-doc h2{font-size:25px;border-bottom:1px solid #e5e5ea;padding-bottom:6px}
+  .dokufix-doc h2{font-size:25px;border-bottom:1px solid var(--dokufix-line);padding-bottom:6px}
   .dokufix-doc h3{font-size:19px}
   .dokufix-doc p{margin-bottom:1em}
   .dokufix-doc ul,.dokufix-doc ol{margin:0 0 1em 1.5em}
   .dokufix-doc li{margin-bottom:4px}
   .dokufix-doc code:not(pre code){
-    background:#f0f0f3;padding:2px 6px;border-radius:3px;
-    font-family:ui-monospace,monospace;font-size:0.88em;color:#c41a16;
+    background:var(--dokufix-surface-sunken);padding:2px 6px;border-radius:3px;
+    font-family:var(--dokufix-font-mono);font-size:0.88em;color:var(--dokufix-code-inline);
   }
   /* A code block (story 5.19, Ben 2026-10-05, variant C): a light box, every
      line numbered, a long line wrapped. The lines are elements of their own
@@ -44,9 +93,9 @@
      colour reads at least 4.5:1 on the box, the numbers' #5f6b78 5.0:1. */
   .dokufix-doc pre{
     position:relative;
-    background:#f3f6fa;color:#1c2733;border:1px solid #dde4ee;padding:12px 16px;
+    background:var(--dokufix-code-bg);color:var(--dokufix-code-text);border:1px solid var(--dokufix-code-line);padding:12px 16px;
     border-radius:6px;overflow-x:auto;margin:0 0 1em;
-    font-family:ui-monospace,monospace;font-size:13px;line-height:1.5;
+    font-family:var(--dokufix-font-mono);font-size:13px;line-height:1.5;
     white-space:pre-wrap;overflow-wrap:anywhere;
   }
   .dokufix-doc pre code{background:transparent;padding:0;color:inherit}
@@ -58,12 +107,12 @@
   /* A diff block (```diff): an added line pale green, a removed one pale red,
      across the whole width of the box; the shadows reach into its padding
      and the box clips them. Text 13.6:1 and 13.2:1, numbers 4.9:1 and 4.7:1. */
-  .dokufix-doc .dokufix-code-add{background:#dafbe1;box-shadow:-16px 0 0 #dafbe1,44px 0 0 #dafbe1;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-  .dokufix-doc .dokufix-code-del{background:#ffebe9;box-shadow:-16px 0 0 #ffebe9,44px 0 0 #ffebe9;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .dokufix-doc .dokufix-code-add{background:var(--dokufix-status-tip-tint);box-shadow:-16px 0 0 var(--dokufix-status-tip-tint),44px 0 0 var(--dokufix-status-tip-tint);-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .dokufix-doc .dokufix-code-del{background:var(--dokufix-status-caution-tint);box-shadow:-16px 0 0 var(--dokufix-status-caution-tint),44px 0 0 var(--dokufix-status-caution-tint);-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .dokufix-doc .dokufix-code-line::before{
     counter-increment:dokufix-code-line;content:counter(dokufix-code-line);
     position:absolute;left:0;top:0;width:calc(var(--dokufix-code-digits,1) * 1ch);
-    text-align:right;color:#5f6b78;
+    text-align:right;color:var(--dokufix-code-number);
     -webkit-user-select:none;user-select:none;pointer-events:none;
   }
   /* The copy button at the top right of a code block, where a script runs
@@ -78,11 +127,11 @@
     .dokufix-doc .dokufix-code-copy{
       display:flex;align-items:center;justify-content:center;
       position:absolute;top:6px;right:6px;width:28px;height:28px;margin:0;padding:0;
-      border:1px solid #dde4ee;border-radius:4px;background:#fff;color:#4b5a6b;cursor:pointer;
+      border:1px solid var(--dokufix-code-line);border-radius:4px;background:var(--dokufix-surface);color:var(--dokufix-code-button);cursor:pointer;
     }
   }
-  .dokufix-doc .dokufix-code-copy:hover{border-color:#b8c4d2;color:#1c2733}
-  .dokufix-doc .dokufix-code-copy:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+  .dokufix-doc .dokufix-code-copy:hover{border-color:var(--dokufix-code-line-hover);color:var(--dokufix-code-text)}
+  .dokufix-doc .dokufix-code-copy:focus-visible{outline:2px solid var(--dokufix-focus);outline-offset:2px}
   .dokufix-doc .dokufix-code-copy::before{
     content:"";flex:none;width:16px;height:16px;background-color:currentColor;
     -webkit-mask:no-repeat center/16px 16px var(--dokufix-code-icon);mask:no-repeat center/16px 16px var(--dokufix-code-icon);
@@ -90,34 +139,34 @@
   /* copy-16 */
   .dokufix-doc .dokufix-code-copy{--dokufix-code-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z'/%3E%3Cpath d='M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z'/%3E%3C/svg%3E")}
   /* check-16 */
-  .dokufix-doc .dokufix-code-copy.dokufix-code-copied{color:#1a7f37;--dokufix-code-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z'/%3E%3C/svg%3E")}
-  .dokufix-doc .dokufix-code-copy.dokufix-code-failed{color:#a40e26}
+  .dokufix-doc .dokufix-code-copy.dokufix-code-copied{color:var(--dokufix-status-tip);--dokufix-code-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-code-copy.dokufix-code-failed{color:var(--dokufix-status-caution-text)}
   .dokufix-doc blockquote{
-    border-left:4px solid #d4ff00;padding:10px 18px;
-    background:#fafafa;margin:0 0 1em;color:#3a3a3f;
+    border-left:4px solid var(--dokufix-accent);padding:10px 18px;
+    background:var(--dokufix-surface-alt);margin:0 0 1em;color:var(--dokufix-text-soft);
   }
   .dokufix-doc blockquote p:last-child{margin-bottom:0}
   .dokufix-doc table{border-collapse:collapse;width:100%;margin-bottom:1em;font-size:14px}
-  .dokufix-doc th,.dokufix-doc td{border:1px solid #e5e5ea;padding:8px 12px;text-align:left}
-  .dokufix-doc th{background:#fafafa;font-weight:700}
+  .dokufix-doc th,.dokufix-doc td{border:1px solid var(--dokufix-line);padding:8px 12px;text-align:left}
+  .dokufix-doc th{background:var(--dokufix-surface-alt);font-weight:700}
   .dokufix-doc img{max-width:100%;height:auto;border-radius:4px;margin:8px 0}
   .dokufix-doc img[data-missing-asset]{
     display:inline-block;min-width:200px;padding:14px 18px;
-    background:#fff3f3;border:1px dashed #c44;border-radius:6px;
-    color:#8b1300;font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--dokufix-error-tint);border:1px dashed var(--dokufix-error-line);border-radius:6px;
+    color:var(--dokufix-error-text);font:600 13px/1.3 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
     text-align:center;object-fit:contain;
   }
   .dokufix-doc img[data-missing-asset]::after{
     content:"Bild fehlt: " attr(data-missing-asset);
     word-break:break-all;
   }
-  .dokufix-doc a{color:#0066cc}
+  .dokufix-doc a{color:var(--dokufix-link)}
   /* Diagrams: the one figure every diagram stands in (src/app/diagrams.js).
      The margin replaces the browser's 1em 40px of a figure. */
   .dokufix-doc .dokufix-diagram{margin:24px 0;text-align:center}
   .dokufix-doc .dokufix-diagram-svg svg{max-width:100%;height:auto}
   /* The credit of a library below its diagram: "Gezeichnet mit bpmn-js". */
-  .dokufix-doc .dokufix-diagram-credit{margin-top:4px;font-size:12px;line-height:1.4;color:#6e6e73}
+  .dokufix-doc .dokufix-diagram-credit{margin-top:4px;font-size:12px;line-height:1.4;color:var(--dokufix-text-muted)}
   .dokufix-doc .dokufix-diagram-credit a{color:inherit}
   /* The downloads below a drawn diagram (story 2.10, src/app/diagram-downloads.js):
      below the diagram, centred, in the credit's 12 px and grey; in the markup
@@ -125,7 +174,8 @@
      picture button look alike: a small button with the download symbol and
      the extension of the file. The symbol is the 16 px Octicon "download"
      (@primer/octicons 19.38.0, MIT, © GitHub Inc.), its path data as it
-     stands in the package, as a data: URI like the symbols of the callouts.
+     stands in the package, as a data: URI like the symbols of the callouts,
+     drawn as a mask in --dokufix-text-muted (story 6.1), also on hover.
      Below a BPMN diagram the downloads and the credit stand in one line (Ben,
      2026-10-03): both are inline boxes, centred together by the figure's
      text-align, vertically aligned, the credit wrapping below only where the
@@ -138,15 +188,17 @@
   }
   .dokufix-doc .dokufix-diagram-downloads > :is(a,button){
     display:inline-flex;align-items:center;gap:4px;margin:0;padding:1px 8px 1px 6px;
-    border:1px solid #d1d1d6;border-radius:4px;background:#f5f5f7;
-    font:inherit;font-size:12px;line-height:1.4;color:#6e6e73;text-decoration:none;cursor:pointer;
+    border:1px solid var(--dokufix-line-strong);border-radius:4px;background:var(--dokufix-button);
+    font:inherit;font-size:12px;line-height:1.4;color:var(--dokufix-text-muted);text-decoration:none;cursor:pointer;
   }
-  .dokufix-doc .dokufix-diagram-downloads > :is(a,button):hover{background:#e9e9ee;color:#1c1c1e}
-  .dokufix-doc .dokufix-diagram-downloads > :is(a,button):focus-visible{outline:2px solid #0066cc;outline-offset:2px}
+  .dokufix-doc .dokufix-diagram-downloads > :is(a,button):hover{background:var(--dokufix-button-hover);color:var(--dokufix-text)}
+  .dokufix-doc .dokufix-diagram-downloads > :is(a,button):focus-visible{outline:2px solid var(--dokufix-focus);outline-offset:2px}
   /* download-16 */
   .dokufix-doc .dokufix-diagram-downloads > :is(a,button)::before{
     content:"";flex:none;width:12px;height:12px;
-    background:no-repeat center/12px 12px url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%236e6e73'%3E%3Cpath d='M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z'/%3E%3Cpath d='M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z'/%3E%3C/svg%3E");
+    background-color:var(--dokufix-text-muted);
+    -webkit-mask:no-repeat center/12px 12px var(--dokufix-download-icon);mask:no-repeat center/12px 12px var(--dokufix-download-icon);
+    --dokufix-download-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M2.75 14A1.75 1.75 0 0 1 1 12.25v-2.5a.75.75 0 0 1 1.5 0v2.5c0 .138.112.25.25.25h10.5a.25.25 0 0 0 .25-.25v-2.5a.75.75 0 0 1 1.5 0v2.5A1.75 1.75 0 0 1 13.25 14Z'/%3E%3Cpath d='M7.25 7.689V2a.75.75 0 0 1 1.5 0v5.689l1.97-1.969a.749.749 0 1 1 1.06 1.06l-3.25 3.25a.749.749 0 0 1-1.06 0L4.22 6.78a.749.749 0 1 1 1.06-1.06l1.97 1.969Z'/%3E%3C/svg%3E");
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   /* The large view of a diagram (story 2.9). Its controls are in the figure
@@ -179,7 +231,7 @@
   .dokufix-doc .dokufix-diagram-stage{display:block;cursor:zoom-in}
   /* The focus ring of the checkbox: on the diagram while it is closed, on
      "Schließen" while it is open, because Space on the checkbox closes it. */
-  .dokufix-doc .dokufix-diagram-toggle:not(:checked):focus-visible ~ .dokufix-diagram-view .dokufix-diagram-stage{outline:2px solid #0066cc;outline-offset:4px}
+  .dokufix-doc .dokufix-diagram-toggle:not(:checked):focus-visible ~ .dokufix-diagram-view .dokufix-diagram-stage{outline:2px solid var(--dokufix-focus);outline-offset:4px}
   @media not print{
     /* The page behind does not scroll: in read mode and in the exports the
        page scrolls, so the root does not (the one rule here that does not start
@@ -196,33 +248,33 @@
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view{
       position:fixed;inset:0;z-index:100;
       display:flex;flex-direction:column;
-      background:#fff;color:#1c1c1e;text-align:left;
+      background:var(--dokufix-surface);color:var(--dokufix-text);text-align:left;
     }
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-bar{
       display:flex;align-items:center;gap:12px;flex-shrink:0;
-      padding:10px 16px;background:#fafafa;border-bottom:1px solid #e5e5ea;
+      padding:10px 16px;background:var(--dokufix-surface-alt);border-bottom:1px solid var(--dokufix-line);
       font-size:14px;line-height:1.4;
     }
     .dokufix-doc .dokufix-diagram-name{flex:1;min-width:0;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .dokufix-doc .dokufix-diagram-steps{display:flex;gap:6px}
     .dokufix-doc .dokufix-diagram-step,
     .dokufix-doc .dokufix-diagram-close{
-      padding:4px 10px;border:1px solid #d1d1d6;border-radius:4px;
-      background:#fff;cursor:pointer;white-space:nowrap;user-select:none;
+      padding:4px 10px;border:1px solid var(--dokufix-line-strong);border-radius:4px;
+      background:var(--dokufix-surface);cursor:pointer;white-space:nowrap;user-select:none;
     }
     .dokufix-doc .dokufix-diagram-step:hover,
-    .dokufix-doc .dokufix-diagram-close:hover{background:#f0f0f3}
+    .dokufix-doc .dokufix-diagram-close:hover{background:var(--dokufix-surface-sunken)}
     .dokufix-doc .dokufix-diagram-close{margin-left:6px;font-weight:600}
     /* The chosen step, and the focus ring of a radio button on its label. */
     .dokufix-doc .dokufix-diagram-zoom[value="fit"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(1),
     .dokufix-doc .dokufix-diagram-zoom[value="100"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(2),
     .dokufix-doc .dokufix-diagram-zoom[value="150"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(3),
-    .dokufix-doc .dokufix-diagram-zoom[value="200"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(4){background:#1c1c1e;border-color:#1c1c1e;color:#fff}
+    .dokufix-doc .dokufix-diagram-zoom[value="200"]:checked ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(4){background:var(--dokufix-inverse);border-color:var(--dokufix-inverse);color:var(--dokufix-on-inverse)}
     .dokufix-doc .dokufix-diagram-zoom[value="fit"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(1),
     .dokufix-doc .dokufix-diagram-zoom[value="100"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(2),
     .dokufix-doc .dokufix-diagram-zoom[value="150"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(3),
     .dokufix-doc .dokufix-diagram-zoom[value="200"]:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-step:nth-child(4),
-    .dokufix-doc .dokufix-diagram-toggle:checked:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-close{outline:2px solid #0066cc;outline-offset:2px}
+    .dokufix-doc .dokufix-diagram-toggle:checked:focus-visible ~ .dokufix-diagram-view .dokufix-diagram-close{outline:2px solid var(--dokufix-focus);outline-offset:2px}
     /* The stage: the rest of the window, scrolling where the diagram is
        larger. A click on it closes the view, as on "Schließen". */
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-stage{
@@ -259,7 +311,7 @@
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-live{display:block;flex:1;min-height:0;overflow:hidden;touch-action:none}
     .dokufix-doc .dokufix-diagram-toggle:checked ~ .dokufix-diagram-view .dokufix-diagram-live + .dokufix-diagram-stage{display:none}
     .dokufix-doc .dokufix-diagram-live svg:focus{outline:none}
-    .dokufix-doc .dokufix-diagram-hint{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:#6e6e73;white-space:nowrap}
+    .dokufix-doc .dokufix-diagram-hint{flex:0 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:12px;color:var(--dokufix-text-muted);white-space:nowrap}
   }
   /* Below 520 px the bar has no room for the hint: it goes, its gap with it,
      so "Schließen" stays in the window. */
@@ -271,20 +323,20 @@
   /* BPMN (src/app/bpmn.js). The SVG draws with these three properties instead
      of colours; the class the renderer gives each element by its type sets
      them for that element. The document's greys and its link colour. */
-  .dokufix-doc .dokufix-diagram-bpmn{--dokufix-bpmn-fill:#fff;--dokufix-bpmn-stroke:#3a3a3f;--dokufix-bpmn-label:#1c1c1e}
-  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-pool{--dokufix-bpmn-fill:#fafafa;--dokufix-bpmn-stroke:#8e8e92}
-  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-lane{--dokufix-bpmn-stroke:#8e8e92}
-  .dokufix-doc .dokufix-diagram-bpmn :is(.dokufix-bpmn-task,.dokufix-bpmn-callactivity,.dokufix-bpmn-subprocess,.dokufix-bpmn-gateway,.dokufix-bpmn-event){--dokufix-bpmn-stroke:#0066cc}
-  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-endevent{--dokufix-bpmn-stroke:#1c1c1e}
-  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-messageflow{--dokufix-bpmn-stroke:#6e6e73}
-  .dokufix-doc hr{border:0;border-top:1px solid #e5e5ea;margin:2em 0}
+  .dokufix-doc .dokufix-diagram-bpmn{--dokufix-bpmn-fill:var(--dokufix-surface);--dokufix-bpmn-stroke:var(--dokufix-text-soft);--dokufix-bpmn-label:var(--dokufix-text)}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-pool{--dokufix-bpmn-fill:var(--dokufix-surface-alt);--dokufix-bpmn-stroke:var(--dokufix-line-faint)}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-lane{--dokufix-bpmn-stroke:var(--dokufix-line-faint)}
+  .dokufix-doc .dokufix-diagram-bpmn :is(.dokufix-bpmn-task,.dokufix-bpmn-callactivity,.dokufix-bpmn-subprocess,.dokufix-bpmn-gateway,.dokufix-bpmn-event){--dokufix-bpmn-stroke:var(--dokufix-link)}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-endevent{--dokufix-bpmn-stroke:var(--dokufix-text)}
+  .dokufix-doc .dokufix-diagram-bpmn .dokufix-bpmn-messageflow{--dokufix-bpmn-stroke:var(--dokufix-text-muted)}
+  .dokufix-doc hr{border:0;border-top:1px solid var(--dokufix-line);margin:2em 0}
 
   /* Inline Table of Contents — injected where the markdown contains [[toc]] */
   .dokufix-doc .dokufix-toc{
     margin:1.5em 0 2em;
     padding:1.1em 1.4em 1.2em;
-    background:#fafafa;
-    border:1px solid #e5e5ea;
+    background:var(--dokufix-surface-alt);
+    border:1px solid var(--dokufix-line);
     border-radius:6px;
     font-size:.94em;
   }
@@ -295,29 +347,29 @@
   .dokufix-doc .dokufix-toc ol ol{
     margin:.3em 0 .3em 1.2em;
     padding-left:.6em;
-    border-left:1px solid #e5e5ea;
+    border-left:1px solid var(--dokufix-line);
     counter-reset:tocH3;
   }
   .dokufix-doc .dokufix-toc ol ol ol{counter-reset:tocH4}
   .dokufix-doc .dokufix-toc li{margin:.25em 0;line-height:1.4}
   .dokufix-doc .dokufix-toc a{
-    text-decoration:none;color:#1c1c1e;
+    text-decoration:none;color:var(--dokufix-text);
     border-bottom:1px solid transparent;
     transition:color .12s ease, border-color .12s ease;
   }
-  .dokufix-doc .dokufix-toc a:hover{color:#0066cc;border-bottom-color:currentColor}
+  .dokufix-doc .dokufix-toc a:hover{color:var(--dokufix-link);border-bottom-color:currentColor}
   /* Numbered ToC: mirror body.numbered, separate counter scope */
   .numbered .dokufix-doc .dokufix-toc > ol > li > a::before{
     counter-increment:tocH2;content:counter(tocH2) ". ";
-    color:#8e8e92;font-weight:600;margin-right:.15em;
+    color:var(--dokufix-text-faint);font-weight:600;margin-right:.15em;
   }
   .numbered .dokufix-doc .dokufix-toc ol ol > li > a::before{
     counter-increment:tocH3;content:counter(tocH2) "." counter(tocH3) " ";
-    color:#8e8e92;font-weight:600;margin-right:.15em;
+    color:var(--dokufix-text-faint);font-weight:600;margin-right:.15em;
   }
   .numbered .dokufix-doc .dokufix-toc ol ol ol > li > a::before{
     counter-increment:tocH4;content:counter(tocH2) "." counter(tocH3) "." counter(tocH4) " ";
-    color:#8e8e92;font-weight:600;margin-right:.15em;
+    color:var(--dokufix-text-faint);font-weight:600;margin-right:.15em;
   }
 
   /* Frontmatter — YAML/JSON metadata header as a collapsible panel.
@@ -326,8 +378,8 @@
      document on first open, with metadata as context rather than headline. */
   .dokufix-doc .dokufix-frontmatter{
     margin:0 0 2em;
-    background:#fafafa;
-    border:1px solid #e5e5ea;
+    background:var(--dokufix-surface-alt);
+    border:1px solid var(--dokufix-line);
     border-radius:6px;
     font-size:.92em;
   }
@@ -341,34 +393,34 @@
   }
   .dokufix-doc .dokufix-frontmatter summary::-webkit-details-marker{display:none}
   .dokufix-doc .dokufix-frontmatter summary::before{
-    content:"▸";color:#8e8e92;font-size:.9em;
+    content:"▸";color:var(--dokufix-text-faint);font-size:.9em;
     display:inline-block;transition:transform .12s ease;
   }
   .dokufix-doc .dokufix-frontmatter[open] > summary::before{transform:rotate(90deg)}
-  .dokufix-doc .dokufix-frontmatter summary:hover{background:#f0f0f2}
-  .dokufix-doc .dokufix-fm-label{font-weight:600;color:#1c1c1e}
+  .dokufix-doc .dokufix-frontmatter summary:hover{background:var(--dokufix-summary-hover)}
+  .dokufix-doc .dokufix-fm-label{font-weight:600;color:var(--dokufix-text)}
   .dokufix-doc .dokufix-fm-digest{
-    color:#8e8e92;min-width:0;
+    color:var(--dokufix-text-faint);min-width:0;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
   .dokufix-doc .dokufix-fm-body{padding:0 1.1em 1em}
   .dokufix-doc .dokufix-fm-rows{
     margin:0;display:grid;grid-template-columns:auto 1fr;gap:.35em .9em;
   }
-  .dokufix-doc .dokufix-fm-rows dt{color:#8e8e92;font-weight:600;white-space:nowrap}
-  .dokufix-doc .dokufix-fm-rows dd{margin:0;color:#1c1c1e;min-width:0;overflow-wrap:anywhere}
+  .dokufix-doc .dokufix-fm-rows dt{color:var(--dokufix-text-faint);font-weight:600;white-space:nowrap}
+  .dokufix-doc .dokufix-fm-rows dd{margin:0;color:var(--dokufix-text);min-width:0;overflow-wrap:anywhere}
   .dokufix-doc .dokufix-fm-rows dd > .dokufix-fm-rows{
-    margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid #e5e5ea;
+    margin:.15em 0 .35em;padding-left:.8em;border-left:1px solid var(--dokufix-line);
   }
   .dokufix-doc .dokufix-fm-list{margin:0;padding-left:1.1em}
   .dokufix-doc .dokufix-fm-list li{margin:.1em 0}
-  .dokufix-doc .dokufix-fm-empty{color:#8e8e92}
+  .dokufix-doc .dokufix-fm-empty{color:var(--dokufix-text-faint)}
   .dokufix-doc .dokufix-fm-raw{
     margin:0;padding:.8em 1em;
-    background:#fff;border:1px solid #e5e5ea;border-radius:4px;
+    background:var(--dokufix-surface);border:1px solid var(--dokufix-line);border-radius:4px;
     font-size:.9em;white-space:pre-wrap;overflow-x:auto;
   }
-  .dokufix-doc .dokufix-fm-unparsed .dokufix-fm-digest{color:#a06000}
+  .dokufix-doc .dokufix-fm-unparsed .dokufix-fm-digest{color:var(--dokufix-fm-unparsed)}
 
   /* Warning — what a reader sees where something could not be rendered:
      Markdown that could not be read, a pass that failed, a diagram with an
@@ -379,8 +431,8 @@
      the box has a heavy rule on its left. */
   .dokufix-doc .dokufix-warning{
     margin:0 0 1.5em;padding:12px 16px;
-    background:#fff8e1;color:#3a2a00;
-    border:1px solid #b26a00;border-left-width:6px;
+    background:var(--dokufix-notice-bg);color:var(--dokufix-notice-text);
+    border:1px solid var(--dokufix-notice-line);border-left-width:6px;
     border-radius:0 4px 4px 0;
     font-size:.92em;
   }
@@ -402,19 +454,20 @@
      first line.
      The symbols are the 16 px Octicons GitHub shows for the five alert types
      (@primer/octicons 19.38.0, MIT, © GitHub Inc.): the path data as it stands
-     in the package, each in its type's colour. They are data: URIs so that
+     in the package, each a mask in the colour of its label, its type's
+     --dokufix-status-<kind> (story 6.1). They are data: URIs so that
      they look the same on every system and travel with the document styles;
      nothing in the markup refers to them. */
   .dokufix-doc .dokufix-callout{
     margin:0 0 1em;padding:8px 18px;
-    border-left:4px solid #8e8e92;
+    border-left:4px solid var(--dokufix-line-faint);
   }
   .dokufix-doc .dokufix-callout-label{
     display:flex;align-items:center;gap:8px;
     margin:0 0 .5em;
     font-weight:600;line-height:1.3;
   }
-  /* The symbol is a background, and a browser leaves backgrounds out when it
+  /* The symbol is a background colour, and a browser leaves backgrounds out when it
      prints unless it is told not to: without print-color-adjust a printed page
      or a PDF has the label with a gap in front of it. The -webkit- form is for
      Chromium before 136, which the browser target (shipped from 2025 onward)
@@ -422,32 +475,33 @@
   .dokufix-doc .dokufix-callout-label::before{
     content:"";flex:none;
     width:16px;height:16px;
-    background:no-repeat center/16px 16px;
+    background-color:currentColor;
+    -webkit-mask:no-repeat center/16px 16px var(--dokufix-callout-icon);mask:no-repeat center/16px 16px var(--dokufix-callout-icon);
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .dokufix-doc .dokufix-callout > :last-child{margin-bottom:0}
   /* A heading right under the label keeps to it. */
   .dokufix-doc .dokufix-callout-label + :is(h1,h2,h3,h4,h5,h6){margin-top:0}
   /* info-16 */
-  .dokufix-doc .dokufix-callout-note{border-left-color:#0969da}
-  .dokufix-doc .dokufix-callout-note > .dokufix-callout-label{color:#0969da}
-  .dokufix-doc .dokufix-callout-note > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%230969da'%3E%3Cpath d='M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-callout-note{border-left-color:var(--dokufix-status-note)}
+  .dokufix-doc .dokufix-callout-note > .dokufix-callout-label{color:var(--dokufix-status-note)}
+  .dokufix-doc .dokufix-callout-note > .dokufix-callout-label::before{--dokufix-callout-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M0 8a8 8 0 1 1 16 0A8 8 0 0 1 0 8Zm8-6.5a6.5 6.5 0 1 0 0 13 6.5 6.5 0 0 0 0-13ZM6.5 7.75A.75.75 0 0 1 7.25 7h1a.75.75 0 0 1 .75.75v2.75h.25a.75.75 0 0 1 0 1.5h-2a.75.75 0 0 1 0-1.5h.25v-2h-.25a.75.75 0 0 1-.75-.75ZM8 6a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E")}
   /* light-bulb-16 */
-  .dokufix-doc .dokufix-callout-tip{border-left-color:#1a7f37}
-  .dokufix-doc .dokufix-callout-tip > .dokufix-callout-label{color:#1a7f37}
-  .dokufix-doc .dokufix-callout-tip > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%231a7f37'%3E%3Cpath d='M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-callout-tip{border-left-color:var(--dokufix-status-tip)}
+  .dokufix-doc .dokufix-callout-tip > .dokufix-callout-label{color:var(--dokufix-status-tip)}
+  .dokufix-doc .dokufix-callout-tip > .dokufix-callout-label::before{--dokufix-callout-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M8 1.5c-2.363 0-4 1.69-4 3.75 0 .984.424 1.625.984 2.304l.214.253c.223.264.47.556.673.848.284.411.537.896.621 1.49a.75.75 0 0 1-1.484.211c-.04-.282-.163-.547-.37-.847a8.456 8.456 0 0 0-.542-.68c-.084-.1-.173-.205-.268-.32C3.201 7.75 2.5 6.766 2.5 5.25 2.5 2.31 4.863 0 8 0s5.5 2.31 5.5 5.25c0 1.516-.701 2.5-1.328 3.259-.095.115-.184.22-.268.319-.207.245-.383.453-.541.681-.208.3-.33.565-.37.847a.751.751 0 0 1-1.485-.212c.084-.593.337-1.078.621-1.489.203-.292.45-.584.673-.848.075-.088.147-.173.213-.253.561-.679.985-1.32.985-2.304 0-2.06-1.637-3.75-4-3.75ZM5.75 12h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1 0-1.5ZM6 15.25a.75.75 0 0 1 .75-.75h2.5a.75.75 0 0 1 0 1.5h-2.5a.75.75 0 0 1-.75-.75Z'/%3E%3C/svg%3E")}
   /* report-16 */
-  .dokufix-doc .dokufix-callout-important{border-left-color:#8250df}
-  .dokufix-doc .dokufix-callout-important > .dokufix-callout-label{color:#8250df}
-  .dokufix-doc .dokufix-callout-important > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%238250df'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-callout-important{border-left-color:var(--dokufix-status-important)}
+  .dokufix-doc .dokufix-callout-important > .dokufix-callout-label{color:var(--dokufix-status-important)}
+  .dokufix-doc .dokufix-callout-important > .dokufix-callout-label::before{--dokufix-callout-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M0 1.75C0 .784.784 0 1.75 0h12.5C15.216 0 16 .784 16 1.75v9.5A1.75 1.75 0 0 1 14.25 13H8.06l-2.573 2.573A1.458 1.458 0 0 1 3 14.543V13H1.75A1.75 1.75 0 0 1 0 11.25Zm1.75-.25a.25.25 0 0 0-.25.25v9.5c0 .138.112.25.25.25h2a.75.75 0 0 1 .75.75v2.19l2.72-2.72a.749.749 0 0 1 .53-.22h6.5a.25.25 0 0 0 .25-.25v-9.5a.25.25 0 0 0-.25-.25Zm7 2.25v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 9a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E")}
   /* alert-16 */
-  .dokufix-doc .dokufix-callout-warning{border-left-color:#9a6700}
-  .dokufix-doc .dokufix-callout-warning > .dokufix-callout-label{color:#9a6700}
-  .dokufix-doc .dokufix-callout-warning > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%239a6700'%3E%3Cpath d='M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-callout-warning{border-left-color:var(--dokufix-status-warning)}
+  .dokufix-doc .dokufix-callout-warning > .dokufix-callout-label{color:var(--dokufix-status-warning)}
+  .dokufix-doc .dokufix-callout-warning > .dokufix-callout-label::before{--dokufix-callout-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M6.457 1.047c.659-1.234 2.427-1.234 3.086 0l6.082 11.378A1.75 1.75 0 0 1 14.082 15H1.918a1.75 1.75 0 0 1-1.543-2.575Zm1.763.707a.25.25 0 0 0-.44 0L1.698 13.132a.25.25 0 0 0 .22.368h12.164a.25.25 0 0 0 .22-.368Zm.53 3.996v2.5a.75.75 0 0 1-1.5 0v-2.5a.75.75 0 0 1 1.5 0ZM9 11a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z'/%3E%3C/svg%3E")}
   /* stop-16 */
-  .dokufix-doc .dokufix-callout-caution{border-left-color:#cf222e}
-  .dokufix-doc .dokufix-callout-caution > .dokufix-callout-label{color:#cf222e}
-  .dokufix-doc .dokufix-callout-caution > .dokufix-callout-label::before{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16' fill='%23cf222e'%3E%3Cpath d='M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E")}
+  .dokufix-doc .dokufix-callout-caution{border-left-color:var(--dokufix-status-caution)}
+  .dokufix-doc .dokufix-callout-caution > .dokufix-callout-label{color:var(--dokufix-status-caution)}
+  .dokufix-doc .dokufix-callout-caution > .dokufix-callout-label::before{--dokufix-callout-icon:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 16 16'%3E%3Cpath d='M4.47.22A.749.749 0 0 1 5 0h6c.199 0 .389.079.53.22l4.25 4.25c.141.14.22.331.22.53v6a.749.749 0 0 1-.22.53l-4.25 4.25A.749.749 0 0 1 11 16H5a.749.749 0 0 1-.53-.22L.22 11.53A.749.749 0 0 1 0 11V5c0-.199.079-.389.22-.53Zm.84 1.28L1.5 5.31v5.38l3.81 3.81h5.38l3.81-3.81V5.31L10.69 1.5ZM8 4a.75.75 0 0 1 .75.75v3.5a.75.75 0 0 1-1.5 0v-3.5A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 1 0-2 1 1 0 0 1 0 2Z'/%3E%3C/svg%3E")}
 
   /* Status chips — a code span that starts with a colour dot, a blank and a
      label, `🟢 Live` (buildChips() in src/app/chips.js). A pill in small
@@ -471,9 +525,9 @@
   .dokufix-doc .dokufix-chip{
     position:relative;display:inline-block;vertical-align:middle;
     margin:-2px 0;padding:1px 8px;border:1px solid transparent;border-radius:10px;
-    font:400 11px/1.3 ui-monospace,monospace;
+    font:400 11px/1.3 var(--dokufix-font-mono);
     letter-spacing:.06em;text-transform:uppercase;
-    color:#424a53;background:#eaeef2;
+    color:var(--dokufix-chip-grey-text);background:var(--dokufix-chip-grey-tint);
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   /* The box is the square. The mark stands on the baseline and is about as
@@ -483,26 +537,26 @@
   .dokufix-doc .dokufix-chip::before{
     content:"";display:inline-block;box-sizing:border-box;
     width:8px;height:8px;margin-right:6px;
-    color:#57606a;background:currentColor;
+    color:var(--dokufix-chip-grey);background:currentColor;
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
-  .dokufix-doc .dokufix-chip-green{color:#116329;background:#dafbe1}
-  .dokufix-doc .dokufix-chip-green::before{color:#1a7f37;border-radius:50%}
+  .dokufix-doc .dokufix-chip-green{color:var(--dokufix-status-tip-text);background:var(--dokufix-status-tip-tint)}
+  .dokufix-doc .dokufix-chip-green::before{color:var(--dokufix-status-tip);border-radius:50%}
   /* Triangle and diamond fill half of their box, so theirs is a little larger
      and the margins take the difference back: every label starts at the same
      place. */
-  .dokufix-doc .dokufix-chip-yellow{color:#7d4e00;background:#fff8c5}
+  .dokufix-doc .dokufix-chip-yellow{color:var(--dokufix-status-warning-text);background:var(--dokufix-status-warning-tint)}
   .dokufix-doc .dokufix-chip-yellow::before{
-    color:#9a6700;width:10px;height:9px;margin:0 5px 0 -1px;
+    color:var(--dokufix-status-warning);width:10px;height:9px;margin:0 5px 0 -1px;
     clip-path:polygon(50% 0,100% 100%,0 100%);
   }
-  .dokufix-doc .dokufix-chip-red{color:#a40e26;background:#ffebe9}
-  .dokufix-doc .dokufix-chip-red::before{color:#cf222e}
-  .dokufix-doc .dokufix-chip-grey{color:#424a53;background:#eaeef2}
-  .dokufix-doc .dokufix-chip-grey::before{color:#57606a;background:transparent;border:2px solid;border-radius:50%}
-  .dokufix-doc .dokufix-chip-blue{color:#0550ae;background:#ddf4ff}
+  .dokufix-doc .dokufix-chip-red{color:var(--dokufix-status-caution-text);background:var(--dokufix-status-caution-tint)}
+  .dokufix-doc .dokufix-chip-red::before{color:var(--dokufix-status-caution)}
+  .dokufix-doc .dokufix-chip-grey{color:var(--dokufix-chip-grey-text);background:var(--dokufix-chip-grey-tint)}
+  .dokufix-doc .dokufix-chip-grey::before{color:var(--dokufix-chip-grey);background:transparent;border:2px solid;border-radius:50%}
+  .dokufix-doc .dokufix-chip-blue{color:var(--dokufix-status-note-text);background:var(--dokufix-status-note-tint)}
   .dokufix-doc .dokufix-chip-blue::before{
-    color:#0969da;width:10px;height:10px;margin:0 5px -1px -1px;
+    color:var(--dokufix-status-note);width:10px;height:10px;margin:0 5px -1px -1px;
     clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);
   }
   /* A chip in a link. The link's underline does not reach it: the chip is a
@@ -542,7 +596,7 @@
      class; nothing here asks where an <em> stands. */
   .dokufix-doc .dokufix-table{overflow-x:auto;margin-bottom:14px}
   .dokufix-doc .dokufix-table > table{margin-bottom:0}
-  .dokufix-doc .dokufix-cell-sub{font-style:normal;font-size:12px;color:#6e6e73}
+  .dokufix-doc .dokufix-cell-sub{font-style:normal;font-size:12px;color:var(--dokufix-text-muted)}
 
   /* Facet filter — a table with the marker "facets Spalte" before it
      (buildFacets() in src/app/facets.js): one control per distinct value of
@@ -573,11 +627,11 @@
   .dokufix-doc .dokufix-facet-bar{
     display:none;min-width:0;
     margin:0 0 4px;padding:0;border:0;
-    font-size:13px;line-height:1.4;color:#3a3a3f;
+    font-size:13px;line-height:1.4;color:var(--dokufix-text-soft);
   }
   .dokufix-doc .dokufix-facet-bar legend{
     float:left;margin:0 10px 6px 0;padding:3px 0;
-    font-weight:600;color:#6e6e73;
+    font-weight:600;color:var(--dokufix-text-muted);
   }
   /* The legend floats; the controls are a flex container, a formatting
      context of its own, so they stand beside the legend as a whole and every
@@ -586,22 +640,22 @@
   .dokufix-doc .dokufix-facet-bar label{
     position:relative;display:inline-block;
     margin:0;padding:2px 10px 2px 8px;
-    border:1px solid #e5e5ea;border-radius:13px;
-    background:#fafafa;cursor:pointer;
+    border:1px solid var(--dokufix-line);border-radius:13px;
+    background:var(--dokufix-surface-alt);cursor:pointer;
   }
   .dokufix-doc .dokufix-facet-bar label::before{
     content:"";display:inline-block;box-sizing:border-box;
     width:10px;height:10px;margin-right:6px;
-    border:2px solid #8e8e92;border-radius:50%;
+    border:2px solid var(--dokufix-line-faint);border-radius:50%;
   }
   .dokufix-doc .dokufix-facet-bar input{
     position:absolute;left:0;top:0;width:1px;height:1px;
     margin:0;opacity:0;pointer-events:none;
   }
-  .dokufix-doc .dokufix-facet-count{margin-left:2px;font:400 11px/1 ui-monospace,monospace;color:#57606a}
-  .dokufix-doc .dokufix-facet-bar label:has(input:checked){border-color:#1c1c1e;background:#f0f0f3;color:#1c1c1e}
-  .dokufix-doc .dokufix-facet-bar label:has(input:checked)::before{border-width:5px;border-color:#1c1c1e}
-  .dokufix-doc .dokufix-facet-bar label:has(input:focus-visible){outline:2px solid #0066cc;outline-offset:2px}
+  .dokufix-doc .dokufix-facet-count{margin-left:2px;font:400 11px/1 var(--dokufix-font-mono);color:var(--dokufix-facet-count)}
+  .dokufix-doc .dokufix-facet-bar label:has(input:checked){border-color:var(--dokufix-line-active);background:var(--dokufix-surface-sunken);color:var(--dokufix-text)}
+  .dokufix-doc .dokufix-facet-bar label:has(input:checked)::before{border-width:5px;border-color:var(--dokufix-line-active)}
+  .dokufix-doc .dokufix-facet-bar label:has(input:focus-visible){outline:2px solid var(--dokufix-focus);outline-offset:2px}
   @media not print{
     @supports selector(:has(a)){
       .dokufix-doc .dokufix-facet-bar{display:block}
@@ -658,12 +712,12 @@
   }
   .dokufix-doc .dokufix-filter-input{
     box-sizing:border-box;width:320px;max-width:100%;margin:0;padding:3px 10px;
-    border:1px solid #8e8e92;border-radius:13px;background:#fafafa;
-    font:inherit;color:#1c1c1e;
+    border:1px solid var(--dokufix-line-faint);border-radius:13px;background:var(--dokufix-surface-alt);
+    font:inherit;color:var(--dokufix-text);
   }
-  .dokufix-doc .dokufix-filter-input::placeholder{color:#6e6e73;opacity:1}
-  .dokufix-doc .dokufix-filter-input:focus-visible{outline:2px solid #0066cc;outline-offset:2px}
-  .dokufix-doc .dokufix-filter-count{font-size:12px;color:#6e6e73}
+  .dokufix-doc .dokufix-filter-input::placeholder{color:var(--dokufix-text-muted);opacity:1}
+  .dokufix-doc .dokufix-filter-input:focus-visible{outline:2px solid var(--dokufix-focus);outline-offset:2px}
+  .dokufix-doc .dokufix-filter-count{font-size:12px;color:var(--dokufix-text-muted)}
   @media not print{
     .dokufix-doc .dokufix-filter{display:flex}
     .dokufix-doc .dokufix-filter-out{display:none}
@@ -684,10 +738,10 @@
   }
   .dokufix-doc .dokufix-cards > li{
     min-width:0;margin:0;padding:12px 16px;
-    border:1px solid #e5e5ea;border-radius:6px;
-    font-size:.94em;color:#3a3a3f;
+    border:1px solid var(--dokufix-line);border-radius:6px;
+    font-size:.94em;color:var(--dokufix-text-soft);
   }
-  .dokufix-doc .dokufix-card-title{display:block;margin-bottom:4px;color:#1c1c1e}
+  .dokufix-doc .dokufix-card-title{display:block;margin-bottom:4px;color:var(--dokufix-text)}
   /* An item of a list with blank lines between its items holds paragraphs. */
   .dokufix-doc .dokufix-cards > li > p{margin-bottom:.5em}
   .dokufix-doc .dokufix-cards > li > :last-child:not(.dokufix-card-title){margin-bottom:0}
@@ -716,15 +770,15 @@
   .dokufix-doc .dokufix-step-number{
     float:left;min-width:28px;
     margin:1px 0 0 -42px;padding:0 4px;border-radius:4px;
-    font:600 12px/24px ui-monospace,monospace;text-align:center;
-    color:#3a3a3f;background:#f0f0f3;
+    font:600 12px/24px var(--dokufix-font-mono);text-align:center;
+    color:var(--dokufix-text-soft);background:var(--dokufix-surface-sunken);
     -webkit-print-color-adjust:exact;print-color-adjust:exact;
   }
   .dokufix-doc .dokufix-step-actor{
     display:block;
-    font:600 11px/1.6 ui-monospace,monospace;
+    font:600 11px/1.6 var(--dokufix-font-mono);
     letter-spacing:.06em;text-transform:uppercase;
-    color:#6e6e73;
+    color:var(--dokufix-text-muted);
   }
   /* A step list in a footnote: the preview of that footnote is one run of
      text and keeps both elements with their classes. There number and actor
@@ -739,8 +793,8 @@
   /* Footnotes (marked-footnote / GFM style) */
   .dokufix-doc .footnotes{
     margin-top:3em;padding-top:1.5em;
-    border-top:1px solid #e5e5ea;
-    font-size:.9em;color:#3a3a3f;
+    border-top:1px solid var(--dokufix-line);
+    font-size:.9em;color:var(--dokufix-text-soft);
   }
   .dokufix-doc .footnotes h2{display:none}
   .dokufix-doc .footnotes ol{margin:0 0 0 1.5em}
@@ -748,7 +802,7 @@
   .dokufix-doc .footnotes li p{margin:0}
   .dokufix-doc sup a, .dokufix-doc a[data-footnote-ref]{
     text-decoration:none;font-weight:700;
-    padding:0 2px;color:#0066cc;
+    padding:0 2px;color:var(--dokufix-link);
   }
   .dokufix-doc a[data-footnote-backref]{
     text-decoration:none;margin-left:4px;opacity:.55;
@@ -761,20 +815,20 @@
      now targets its own arrow — see linkFootnoteReturnPaths(). */
   .dokufix-doc .footnotes li:target,
   .dokufix-doc .footnotes li:has(a[data-footnote-backref]:target){
-    background:rgba(212,255,0,.30);
-    box-shadow:0 0 0 7px rgba(212,255,0,.30);
+    background:var(--dokufix-accent-tint-30);
+    box-shadow:0 0 0 7px var(--dokufix-accent-tint-30);
     border-radius:2px;
     transition:background-color .25s ease, box-shadow .25s ease;
   }
   .dokufix-doc .footnotes li{scroll-margin-top:90px}
   /* Exactly the arrow that leads back where you came from. */
   .dokufix-doc .footnotes a[data-footnote-backref]:target{
-    background:#d4ff00;
+    background:var(--dokufix-accent);
     opacity:1;
     padding:0 4px;
     border-radius:3px;
     scroll-margin-top:90px;
-    outline:2px solid #d4ff00;
+    outline:2px solid var(--dokufix-accent);
     /* Match the definition's fade: the two highlight as one gesture, and the
        padding jump would otherwise shove neighbouring text sideways instantly. */
     transition:background-color .25s ease, padding .25s ease, outline-color .25s ease;
@@ -818,13 +872,13 @@
     overflow:hidden;
     mask-image:linear-gradient(to bottom, #000 calc(100% - 1.6em), transparent);
     padding:.7em .9em;
-    background:#fff;
-    border:1px solid #e5e5ea;
+    background:var(--dokufix-surface);
+    border:1px solid var(--dokufix-line);
     border-radius:6px;
     box-shadow:0 6px 20px rgba(0,0,0,.13);
     /* rem, not em: the host <sup> is font-size:smaller and would shrink it */
     font-size:.85rem;font-weight:400;line-height:1.5;
-    color:#3a3a3f;text-align:left;
+    color:var(--dokufix-text-soft);text-align:left;
     white-space:normal;
     vertical-align:baseline;
     visibility:hidden;opacity:0;
@@ -883,9 +937,9 @@
   .numbered .dokufix-doc{counter-reset:h2}
   .numbered .dokufix-doc h2{counter-reset:h3}
   .numbered .dokufix-doc h3{counter-reset:h4}
-  .numbered .dokufix-doc h2::before{counter-increment:h2;content:counter(h2) ". ";color:#8e8e92;font-weight:600;margin-right:.15em}
-  .numbered .dokufix-doc h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
-  .numbered .dokufix-doc h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:#8e8e92;font-weight:600;margin-right:.15em}
+  .numbered .dokufix-doc h2::before{counter-increment:h2;content:counter(h2) ". ";color:var(--dokufix-text-faint);font-weight:600;margin-right:.15em}
+  .numbered .dokufix-doc h3::before{counter-increment:h3;content:counter(h2) "." counter(h3) " ";color:var(--dokufix-text-faint);font-weight:600;margin-right:.15em}
+  .numbered .dokufix-doc h4::before{counter-increment:h4;content:counter(h2) "." counter(h3) "." counter(h4) " ";color:var(--dokufix-text-faint);font-weight:600;margin-right:.15em}
   /* A heading inside a callout or inside the footnotes (one an author indents
      into a definition) is no document heading (documentHeadings() in
      src/app/toc.js): it gets no number, and it does not count, so the headings
@@ -906,12 +960,12 @@
     content:"Auf dieser Seite";
     display:block;
     font-size:10px;letter-spacing:0.16em;text-transform:uppercase;
-    color:#8e8e92;font-weight:700;
+    color:var(--dokufix-text-faint);font-weight:700;
     padding:0 14px 8px;
   }
   .dokufix-rail ol{
     list-style:none;margin:0;padding:0;
-    border-left:2px solid #e5e5ea;
+    border-left:2px solid var(--dokufix-line);
   }
   .dokufix-rail li{margin:0}
   .dokufix-rail ol ol{
@@ -925,10 +979,17 @@
     padding:5px 14px;
     margin-left:-2px;
     border-left:2px solid transparent;
-    color:#6e6e73;text-decoration:none;
+    color:var(--dokufix-text-muted);text-decoration:none;
     transition:color .15s ease, border-left-color .15s ease;
     word-break:break-word;
   }
-  .dokufix-rail a:hover{color:#1c1c1e}
+  .dokufix-rail a:hover{color:var(--dokufix-text)}
   .dokufix-rail .rail-h3 a{padding-left:28px;font-size:12px}
-  .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:#8e8e92}
+  .dokufix-rail .rail-h4 a{padding-left:40px;font-size:12px;color:var(--dokufix-text-faint)}
+  /* The masked symbols (story 6.1, and the copy button): with forced colours their background
+     colour would become Canvas and the symbol vanish. */
+  @media (forced-colors:active){
+    .dokufix-doc .dokufix-callout-label::before,
+    .dokufix-doc .dokufix-diagram-downloads > :is(a,button)::before,
+    .dokufix-doc .dokufix-code-copy::before{forced-color-adjust:none;background-color:CanvasText}
+  }

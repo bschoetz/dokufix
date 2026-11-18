@@ -37,7 +37,7 @@ ${carrier}
 </head>
 <body${bodyClassForExport()}>
 ${licencesHtml()}
-<noscript><p style="padding:40px 32px;color:#8b1300">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.dokufix.html) anfordern.</p></noscript>
+<noscript><p style="padding:40px 32px;color:var(--dokufix-error-text)">Diese kompakte Variante benötigt JavaScript zum Entpacken. Wenn JavaScript nicht erlaubt ist, bitte die offene Variante (-nur-lesen.dokufix.html) anfordern.</p></noscript>
 <main class="reader-body dokufix-doc"><div id="d"></div></main>
 ${railHtmlPending}
 <script type="text/plain" id="p">${payload}<\/script>${readerBlock}

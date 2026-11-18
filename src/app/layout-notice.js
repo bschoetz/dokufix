@@ -38,7 +38,7 @@ import { TRANSIENT_ATTR } from './transient.js';
 
 export const LAYOUT_NOTICE_CLASS = 'layout-notice';
 export const LAYOUT_NOTICE_TEXT = 'Diagramm wird angeordnet …';
-const LAYOUT_NOTICE_STYLE = 'margin:0;padding:24px 0;text-align:center;color:#6e6e73;font-size:14px;font-variant-numeric:tabular-nums';
+const LAYOUT_NOTICE_STYLE = 'margin:0;padding:24px 0;text-align:center;color:var(--dokufix-text-muted);font-size:14px;font-variant-numeric:tabular-nums';
 // The seconds as the notice shows them.
 export const layoutSeconds = s => s + ' s';
 

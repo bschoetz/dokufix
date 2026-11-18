@@ -33,6 +33,7 @@ import { STEPS, STEPS_CLASS, STEP_NUMBER_CLASS, STEP_ACTOR_CLASS, buildSteps } f
 import { FACETS, buildFacets } from '../src/app/facets.js';
 import { FILTER, markFilter } from '../src/app/filter.js';
 import { buildWarning } from '../src/app/warning.js';
+import { readCss } from './css-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -671,7 +672,7 @@ test('the pass takes the root alone: the runner\'s context is not mistaken for a
 });
 
 // ---------- the look in the document styles ----------
-const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
+const docCss = readCss('doc.css');
 // The declarations of the rule with exactly this selector, as { property: value }.
 function ruleOf(css, selector){
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

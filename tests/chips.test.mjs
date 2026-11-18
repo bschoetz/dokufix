@@ -21,6 +21,7 @@ import { fileURLToPath } from 'node:url';
 import { parseHTML } from 'linkedom';
 import { buildChips, buildChip, readChip, CHIP_CLASS, CHIP_STATUS_CLASS, CHIP_COLOURS } from '../src/app/chips.js';
 import { buildCallouts } from '../src/app/callouts.js';
+import { readCss } from './css-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -266,7 +267,7 @@ test('no module but chips.js tests for a colour dot', () => {
 });
 
 // ---------- the look in the document styles ----------
-const docCss = fs.readFileSync(path.join(here, '../src/doc.css'), 'utf8');
+const docCss = readCss('doc.css');
 // The declarations of the rule with exactly this selector, as { property: value }.
 function ruleOf(css, selector){
   const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');

@@ -173,6 +173,41 @@ No dependencies, no browser. It reads the sources, because that is where a rule 
 
 The `dokufix-` prefix alone is not the test. dokufix's own components carry it, but what `marked` and `marked-footnote` produce does not (`.footnotes`, `[data-footnote-ref]`), so the check takes the class and attribute names from the block's own selectors. Three short allowlists name what a frame may use anyway: the frame names `.dokufix-meta`, `.dokufix-rail-pending`, `.dokufix-licences` and `.dokufix-licences-view`, each listed, so that `.dokufix-licences-x` still fails; `.dokufix-rail` together with `.has-items` or `a.active`; and five selectors that share a name with the block but style something else (`.version-modal[open]`, and in the `<noscript>` style of `schlank` `.dokufix-diagram-svg[data-gz]` with its `::before`, and `.dokufix-diagram-downloads` with `.dokufix-diagram-downloads+.dokufix-diagram-credit`, which hide the packed downloads and set the credit back to its own line (story 2.10); they may use the block's `dokufix-` names because they stand only where scripts are off). The link has no rule for its open state: `.dokufix-licences[open]` would use an attribute the block uses and is not on that list. What the check cannot see: a rule that reaches document content through another ancestor and names none of these, such as `.pane-preview h5{…}`, and rules written with CSS nesting, which its reader does not unfold. Run it after every change to a style.
 
+**Colours and fonts** (story 6.1). Every colour of dokufix and the two font stacks of the document (`font-body`, `font-mono`) are variables of one `:root{…}` rule at the head of `src/doc.css`, with the values the product had before; every other rule reads them with `var(--dokufix-…)`: the rest of the block, `app.css`, `search.css`, `READONLY_FRAME_CSS` and the inline styles in `index.html` (save banner), `layout-notice.js`, `readonly-compact.js` and `readonly-slim.js`. The rule sits in the block because the block reaches all four variants, so the frame, the search panel and the `<noscript>` texts of `kompakt` and `schlank` read the same variables without a copy; the rule is 2.6 KB minified in every variant, and the editor's variables ride along in the read-only exports. `:root` is the second entry of `BLOCK_EXCEPTIONS`. Other font stacks stay as they are: the missing-image placeholder, the drop overlay and the save banner keep their short system stack, and the editor's controls their own monospace stack (`'SF Mono',Menlo,…`).
+
+One variable per role, not per value, and no two values merged: `#8e8e92` is `--dokufix-text-faint` as text, `--dokufix-line-faint` as a line (callout edge, filter field, BPMN lanes) and `--dokufix-on-chrome-faint` in the editor's toolbar; `#0066cc` is `--dokufix-link`, and `--dokufix-focus` as an outline. The rule has two groups. The first is what a theme may set (story 6.2):
+
+| Variable `--dokufix-…` | Role | Value |
+|---|---|---|
+| `text`, `text-muted`, `text-faint` | body text and headings; secondary text, captions; meta, footer, numbers | `#1c1c1e`, `#6e6e73`, `#8e8e92` |
+| `surface`, `surface-alt`, `surface-sunken` | page; table of contents, table head, pool; inline code, pills | `#fff`, `#fafafa`, `#f0f0f3` |
+| `line`, `line-strong`, `line-faint` | rules and borders; borders of fields and buttons; callout edge, BPMN lanes | `#e5e5ea`, `#d1d1d6`, `#8e8e92` |
+| `link`, `focus` | links, BPMN tasks, gateways, events; focus ring | `#0066cc`, `#0066cc` |
+| `accent`, `on-accent`, `mark` | quote bar, jump target, main button; text on it; search hit | `#d4ff00`, `#1c1c1e`, `#ffe066` |
+| `chrome`, `chrome-raised`, `chrome-line`, `on-chrome`, `app-bg` | editor toolbar; its buttons and menus; its borders; its text; behind the editor panes | `#1c1c1e`, `#2c2c2e`, `#3a3a3c`, `#f5f5f7`, `#f5f5f7` |
+| `status-<kind>`, `status-<kind>-tint`, `status-<kind>-text` | callouts, chips, diff lines, search kinds, for `note`, `tip`, `important`, `warning`, `caution` (`important` has no tint and text) | see the rule |
+| `font-body`, `font-mono` | the font stacks of the page and of code | `-apple-system,…,sans-serif`, `ui-monospace,monospace` |
+
+Internal variables that share a value with one above but have a role of their own, so a theme that sets the one does not move the other:
+
+| Variable `--dokufix-…` | Role | Value |
+|---|---|---|
+| `inverse`, `on-inverse` | a dark solid button or selected step and its text: the commit button, "Editor ↩" and the magnifier on hover, the chosen zoom step | `#1c1c1e`, `#fff` |
+| `line-active` | the edge of the active rail entry, the border of a checked facet | `#1c1c1e` |
+| `focus-strong` | the dark focus rings of the search panel | `#1c1c1e` |
+| `focus-accent` | the focus rings of the version badge and the commit button | `#d4ff00` |
+| `chrome-divider` | the borders of the toolbar's menus and between their entries | `#2c2c2e` |
+| `hover` | the close button of the search panel, hovered | `#f2f2f7` |
+| `on-chrome-faint`, `on-chrome-strong` | faint and strong text in the toolbar | `#8e8e92`, `#fff` |
+
+The second group, after the comment "internal", is what a theme does not set: the hover of the accent, the tints of accent and link (`--dokufix-accent-tint-12/-30/-35`, `--dokufix-link-tint-6`, each with its literal value; 6.2 derives them), the code block, the grey chip, the product warning, error, the dirty and failed badges of the editor and a few greys of one place each. The BPMN variables (`--dokufix-bpmn-*`, see *Diagrams*) read the first group. A diagram download resolves the nested `var()` as before (`resolveCustomProperties()`).
+
+The five callout symbols and the download symbol are masks with a `background-color`, as the search panel's kind icons already were, so their colour follows a variable: a callout symbol takes its label's colour (`currentColor`), the download symbol `--dokufix-text-muted`, also while its button is hovered. With forced colours a background colour becomes `Canvas` and a mask would vanish, so there both draw in `CanvasText` (`forced-color-adjust:none`), as the chips' marks do.
+
+Check 8 of `tests/check-doc-styles.mjs` fails, with file and line, when `doc.css` has more or fewer than one `:root` rule or that rule declares anything but `--dokufix-` variables, when a `var(--dokufix-…)` names a variable declared nowhere (run-time ones aside: `--dokufix-code-digits`, `--dokufix-diagram-width`, `--dokufix-bpmn-*`), and on a colour literal (`#hex`, `%23hex` inside a `data:` URL, `rgb(`, `rgba(`, `hsl(`, `hsla(`, `hwb(`, `lab(`, `lch(`, `oklab(`, `oklch(`, `color(`, `color-mix(`, in any case) outside that rule: in `doc.css`, `app.css`, `search.css`, `index.html` and every `.js` under `src/` except the tools' (`bpmn-assistant/`, `werkbank/`, `bpmn-audi/`, `bpmn-tools/theme.js`), which keep their own stylesheets and presets. Two exceptions, named in `COLOUR_EXCEPTIONS`: `#000` in a `mask-image` (the fade of the footnote preview, black means opaque) and `rgba(0,0,0,…)` in a `box-shadow`. A new colour gets a variable in the rule.
+
+Proof (2026-11-18): `tests/vergleich.mjs --strict` against the build before, reference and demo, both browsers, every variant: 0 differing pixels outside the six masked symbols. Those differ by anti-aliasing, at most 5 of 255 in a channel, inside their 16 or 12 px box; Ben accepted that on 2026-11-18, and the masked state is the baseline from then on. And the built CSS with every `var()` resolved from the rule equals the CSS before, except the mask lines and what esbuild could no longer shorten (`#d4ff004d` is `rgba(212,255,0,.30)`, the zero blur of a shadow, the quotes of `'Segoe UI'`).
+
 **Two things that are load-bearing.**
 
 - *Order.* In `src/index.html` the block stands before the app stylesheet, and `readonlyCss()` puts the frame after the block. Where a frame rule and a document rule have the same specificity, the frame has to win: `.dokufix-meta p` against `.dokufix-doc p` in the exports, `.dokufix-rail a.active` against `.dokufix-rail .rail-h4 a` in the editor.
