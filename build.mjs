@@ -105,7 +105,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { readTheme, themeTemplate } from './tools/theme.mjs';
+import { ID, readTheme, themeTemplate } from './tools/theme.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The committed file, and the readable one beside it.
@@ -318,7 +318,7 @@ function parseArgs(argv){
 function themeId(dir){
   try {
     const id = JSON.parse(fs.readFileSync(path.join(dir, 'theme.json'), 'utf8')).id;
-    return typeof id === 'string' && /^[a-z0-9-]+$/.test(id) ? id : 'theme';
+    return typeof id === 'string' && ID.test(id) ? id : 'theme';
   } catch { return 'theme'; }
 }
 

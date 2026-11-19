@@ -16,6 +16,8 @@ import { BuildError } from '../build.mjs';
 import { contrast, lum } from '../src/bpmn-tools/theme.js';
 
 const HEX6 = /^#[0-9a-f]{6}$/i;
+// The theme's id, also its file name.
+export const ID = /^[a-z0-9-]+$/;
 const FONT_NAME = /^[A-Za-z0-9 _-]+$/;
 
 // '#fff' → '#ffffff', for comparing and for contrast().
@@ -96,7 +98,7 @@ export function readTheme(dir, docCss){
   };
 
   for (const k of Object.keys(t)) if (!['id', 'name', 'tag', 'colors', 'status', 'fonts'].includes(k)) unknown('', k, ['id', 'name', 'tag', 'colors', 'status', 'fonts']);
-  if (typeof t.id !== 'string' || !/^[a-z0-9-]+$/.test(t.id)) problems.push('theme.json: id is ' + JSON.stringify(t.id) + ', expected [a-z0-9-]+');
+  if (typeof t.id !== 'string' || !ID.test(t.id)) problems.push('theme.json: id is ' + JSON.stringify(t.id) + ', expected [a-z0-9-]+');
   const name = typeof t.name === 'string' ? t.name.trim() : t.name;
   const tag = typeof t.tag === 'string' ? t.tag.trim() : t.tag;
   if (typeof name !== 'string' || !name || name.length > 40) problems.push('theme.json: name is ' + JSON.stringify(t.name) + ', expected a text of 1 to 40 characters');
