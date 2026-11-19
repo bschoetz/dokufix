@@ -6,3 +6,4 @@ dist/dokufix.dev.html
 tools/bpmn-layout/arbeit/
 # What Python writes when it runs the tests of skill/dokufix/dokufix.py
 __pycache__/
+themes/*/dist/

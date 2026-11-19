@@ -1,0 +1,20 @@
+{
+  "id": "beispiel",
+  "name": "Beispiel GmbH Doku",
+  "colors": {
+    "text": "#1f2933",
+    "link": "#0b6b70",
+    "accent": "#d9a43a",
+    "on-accent": "#1f2933",
+    "chrome": "#263238",
+    "chrome-raised": "#34434b",
+    "chrome-line": "#455a64",
+    "on-chrome": "#eceff1",
+    "app-bg": "#eef1f2"
+  },
+  "status": {
+    "note": { "color": "#0b5f8a", "tint": "#e1f0f7" },
+    "tip": { "color": "#266b43", "tint": "#e3f2e8" }
+  },
+  "fonts": { "body": ["Beispiel Sans", "Segoe UI", "Helvetica", "Arial", "sans-serif"] }
+}

@@ -15,6 +15,13 @@
 //   node build.mjs --dev --watch
 //                             the same, and again whenever a file under src/
 //                             changes ("npm run watch")
+//   node build.mjs --theme <dir>
+//                             a themed build (tools/theme.mjs, src/README.md
+//                             "Themes"): <dir>/theme.json checked, its :root
+//                             rule behind doc.css, its name in title and header;
+//                             writes <dir>/dist/dokufix-<id>.html and
+//                             dokufix-<id>-showcase.html. With --check it compares
+//                             them; with --dry it checks and builds, writes nothing
 //
 // Options, for the tests, which build copies of src/:
 //   --src <dir>    the sources (default: src/ beside this file)
@@ -98,6 +105,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { ID, readTheme, themeTemplate } from './tools/theme.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 // The committed file, and the readable one beside it.
@@ -225,7 +233,7 @@ export async function bundleScript(file, dev, outFile, define = {}, plugins = []
 
 // The built page as a string. options: { dev, out }, see bundleScript(), and
 // demo, the file of the demo text in srcDir: 'demo.md', or 'showcase.md' for
-// the showcase.
+// the showcase; theme, what readTheme() gave, or nothing.
 export async function build(srcDir, options = {}){
   const dev = !!options.dev;
   const demoName = options.demo || 'demo.md';
@@ -234,7 +242,7 @@ export async function build(srcDir, options = {}){
     if (!fs.existsSync(file)) throw new BuildError('source not found: ' + file);
     return fs.readFileSync(file, 'utf8');
   };
-  const template = read('index.html');
+  const template = options.theme ? themeTemplate(read('index.html'), options.theme) : read('index.html');
   const demo = read(demoName);
   const docCss = read('doc.css'), appCss = read('app.css'), searchCss = read('search.css');
   read('app.js');   // esbuild reads them itself; this is for the message when one is missing
@@ -249,7 +257,8 @@ export async function build(srcDir, options = {}){
     const searchPage = dev ? await minifyCss(searchCss, 'search.css', true) : searchMin;
     if (/<\/style/i.test(searchMin)) throw new BuildError('the minified search.css contains "</style"; it would end the style element early');
     parts = {
-      'doc.css': await minifyCss(docCss, 'doc.css', dev),
+      // A theme's rule after the first: it wins at equal specificity.
+      'doc.css': await minifyCss(docCss, 'doc.css', dev) + (options.theme && options.theme.css ? '\n' + options.theme.css : ''),
       'app.css': (await minifyCss(appCss, 'app.css', dev)) + '\n' + searchPage,
       'app.js': await bundleScript(path.join(srcDir, 'app.js'), dev, options.out || DEV),
       // Minified with --dev as well: an export carries it as it is.
@@ -269,11 +278,11 @@ export async function build(srcDir, options = {}){
 }
 
 function parseArgs(argv){
-  const a = { check: false, dev: false, watch: false, src: path.join(here, 'src'), out: null, showcaseOut: null };
-  const valued = { '--src': 'src', '--out': 'out', '--showcase-out': 'showcaseOut' };
+  const a = { check: false, dev: false, watch: false, dry: false, src: path.join(here, 'src'), out: null, showcaseOut: null, theme: null };
+  const valued = { '--src': 'src', '--out': 'out', '--showcase-out': 'showcaseOut', '--theme': 'theme' };
   for (let i = 0; i < argv.length; i++){
     const k = argv[i];
-    if (k === '--check' || k === '--dev' || k === '--watch') a[k.slice(2)] = true;
+    if (k === '--check' || k === '--dev' || k === '--watch' || k === '--dry') a[k.slice(2)] = true;
     else if (Object.hasOwn(valued, k)){
       if (argv[i + 1] === undefined) throw new BuildError(k + ' needs a value');
       a[valued[k]] = path.resolve(argv[++i]);
@@ -283,6 +292,16 @@ function parseArgs(argv){
   if (a.dev && a.check) throw new BuildError('--dev and --check do not go together: the check is about the committed file, which is the minified one');
   if (a.watch && !a.dev) throw new BuildError('--watch goes with --dev: the committed file is built on purpose, not on every change');
   if (a.dev && a.showcaseOut !== null) throw new BuildError('--dev and --showcase-out do not go together: the readable file is of the demo text only');
+  if (a.theme !== null && a.dev) throw new BuildError('--theme and --dev do not go together: a themed file is a minified one');
+  if (a.dry && a.theme === null) throw new BuildError('--dry goes with --theme');
+  if (a.dry && a.check) throw new BuildError('--dry and --check do not go together: --dry writes nothing and compares nothing');
+  // A themed run writes beside its theme, never the committed files: each
+  // output not named goes to <theme>/dist/.
+  if (a.theme !== null){
+    const id = themeId(a.theme);
+    if (a.out === null) a.out = path.join(a.theme, 'dist', 'dokufix-' + id + '.html');
+    if (a.showcaseOut === null) a.showcaseOut = path.join(a.theme, 'dist', 'dokufix-' + id + '-showcase.html');
+  }
   // Without either output named: both committed files, or with --dev the readable one.
   if (a.out === null && a.showcaseOut === null && !a.dev) a.showcaseOut = SHOWCASE;
   if (a.out === null) a.out = a.dev ? DEV : COMMITTED;
@@ -294,6 +313,15 @@ function parseArgs(argv){
   return a;
 }
 
+// The id for the file names, before the theme is checked: readTheme() names
+// a bad one together with every other problem.
+function themeId(dir){
+  try {
+    const id = JSON.parse(fs.readFileSync(path.join(dir, 'theme.json'), 'utf8')).id;
+    return typeof id === 'string' && ID.test(id) ? id : 'theme';
+  } catch { return 'theme'; }
+}
+
 const shownPath = file => path.relative(process.cwd(), file) || file;
 const shownSize = html => Buffer.byteLength(html).toLocaleString('en-US').replace(/,/g, ' ') + ' B';
 
@@ -301,14 +329,22 @@ const shownSize = html => Buffer.byteLength(html).toLocaleString('en-US').replac
 // the showcase. Both are built before either is written or compared, so a
 // source that breaks one of them leaves both files as they were.
 async function buildAll(opts){
-  const jobs = [[opts.out, build(opts.src, { dev: opts.dev, out: opts.out })]];
-  if (opts.showcaseOut) jobs.push([opts.showcaseOut, build(opts.src, { demo: 'showcase.md' })]);
+  let theme;
+  if (opts.theme !== null){
+    const docCss = path.join(opts.src, 'doc.css');
+    if (!fs.existsSync(docCss)) throw new BuildError('source not found: ' + docCss);
+    theme = readTheme(opts.theme, fs.readFileSync(docCss, 'utf8'));
+    if (theme.inherited.length) console.log('theme ' + theme.id + ': callout kinds inherited from dokufix: ' + theme.inherited.join(', '));
+  }
+  const jobs = [[opts.out, build(opts.src, { dev: opts.dev, out: opts.out, theme })]];
+  if (opts.showcaseOut) jobs.push([opts.showcaseOut, build(opts.src, { demo: 'showcase.md', theme })]);
   const htmls = await Promise.all(jobs.map(([, job]) => job));
   return jobs.map(([file], i) => [file, htmls[i]]);
 }
 
 async function buildAndWrite(opts){
   for (const [file, html] of await buildAll(opts)){
+    if (opts.dry){ console.log(shownPath(file) + ' built, not written (' + shownSize(html) + ')'); continue; }
     fs.mkdirSync(path.dirname(file), { recursive: true });
     fs.writeFileSync(file, html);
     console.log(shownPath(file) + ' written (' + shownSize(html) + (opts.dev ? ', not minified, with a source map' : '') + ')');

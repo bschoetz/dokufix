@@ -42,7 +42,7 @@
     --dokufix-on-chrome:#f5f5f7;--dokufix-app-bg:#f5f5f7;
     --dokufix-status-note:#0969da;--dokufix-status-note-tint:#ddf4ff;--dokufix-status-note-text:#0550ae;
     --dokufix-status-tip:#1a7f37;--dokufix-status-tip-tint:#dafbe1;--dokufix-status-tip-text:#116329;
-    --dokufix-status-important:#8250df;
+    --dokufix-status-important:#8250df;--dokufix-status-important-tint:#fbefff;--dokufix-status-important-text:#6639ba;
     --dokufix-status-warning:#9a6700;--dokufix-status-warning-tint:#fff8c5;--dokufix-status-warning-text:#7d4e00;
     --dokufix-status-caution:#cf222e;--dokufix-status-caution-tint:#ffebe9;--dokufix-status-caution-text:#a40e26;
     --dokufix-font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
