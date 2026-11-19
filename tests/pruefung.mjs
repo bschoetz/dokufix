@@ -15,7 +15,9 @@
 //
 // The standard runs need no arguments: the comparison run on the reference
 // document and on the demo text, the save round trip and the failure cases,
-// each on dist/dokufix.html. The arguments of --run and --control are split at
+// each on dist/dokufix.html, and the comparison run on the example theme,
+// which is built first (node build.mjs --theme themes/beispiel; a failing
+// build stops the command). The arguments of --run and --control are split at
 // blanks and must not name --out.
 //
 // Exit code 1 when a standard run or a --run fails. A run that failed is
@@ -24,7 +26,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { prepareLibraries } from './cdn.mjs';
 
@@ -37,6 +39,7 @@ function parseArgs(argv){
     { name: 'demo',        kind: 'standard', script: 'vergleich.mjs',   args: ['--demo'] },
     { name: 'speichern',   kind: 'standard', script: 'speichern.mjs',   args: [] },
     { name: 'durchlaeufe', kind: 'standard', script: 'durchlaeufe.mjs', args: [] },
+    { name: 'theme',       kind: 'standard', script: 'vergleich.mjs',   args: ['--file', path.join(root, 'themes/beispiel/dist/dokufix-beispiel.html')] },
   ] };
   for (let i = 0; i < argv.length; i++){
     const k = argv[i];
@@ -102,6 +105,9 @@ const opts = parseArgs(process.argv.slice(2));
 // fetched here, and without the network the command stops here.
 try { await prepareLibraries(path.join(root, 'dist/dokufix.html')); }
 catch (e){ console.error(e.message); process.exit(1); }
+// The example theme, built once for the run theme; a failing build stops here too.
+const themeBuild = spawnSync(process.execPath, [path.join(root, 'build.mjs'), '--theme', path.join(root, 'themes/beispiel')], { stdio: 'inherit' });
+if (themeBuild.status !== 0){ console.error('the example theme did not build'); process.exit(1); }
 fs.mkdirSync(opts.out, { recursive: true });
 
 console.log(opts.runs.length + ' runs side by side, in ' + opts.out);

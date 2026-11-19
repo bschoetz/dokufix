@@ -33,7 +33,13 @@
 // Besides the pictures of the page at rest and with every state switched on,
 // the run takes one of the large view of the first diagram open, per variant
 // at 1400 px in the light scheme, into <browser>/grossansicht/ (see
-// compareRun()).
+// compareRun()). With --compare, <browser>/vergleich.html shows each image
+// beside its baseline and its diff mask.
+// Every colour an assertion expects is read from the file under test, from the
+// :root rules of its dokufix-doc-css block (readColours()), so a themed build
+// (node build.mjs --theme <folder>) is checked against its own colours. A file
+// without that block, or without a variable the run asks for, stops the run
+// with exit 1 before a browser starts.
 // Differing pixels alone do not fail the
 // run unless --strict is given: some differences are decided, and the run lists
 // them so a human can attribute each one. An image that only one side has counts
@@ -134,6 +140,7 @@ import { parseHTML } from 'linkedom';
 import { collectPlaces, groupResults, nodeRanges } from '../src/app/search-places.js';
 import { findHits } from '../src/app/search-match.js';
 import { prepareLibraries, librariesLine, versionOf } from './cdn.mjs';
+import { DEFAULT_COLOURS, computedColour } from './default-colours.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -162,6 +169,37 @@ function parseArgs(argv){
   if (a.compare && a.compare === a.out) throw new Error('--out and --compare are the same folder; the run would delete its own baseline');
   return a;
 }
+
+// ---------- colours of the file under test ----------
+// Every colour an assertion expects is read from the file under test: the
+// variables of the :root rules of its dokufix-doc-css block, a later rule
+// winning (a theme appends a second one), in the form a browser computes.
+// So a themed file is checked against its own colours, an unthemed one
+// against dokufix's. A block without --dokufix- variables (the PoC) is
+// checked against dokufix's default colours (tests/default-colours.mjs).
+// Every name the run asks for is resolved here, before a browser starts.
+function readColours(file){
+  const block = fs.readFileSync(file, 'utf8').match(/<style id="dokufix-doc-css">([\s\S]*?)<\/style>/);
+  if (!block) throw new Error(file + ': no <style id="dokufix-doc-css"> block, so no colours to check against');
+  const vars = new Map();
+  for (const rule of block[1].matchAll(/:root\s*\{([^}]*)\}/g))
+    for (const d of rule[1].matchAll(/--dokufix-([\w-]+)\s*:\s*([^;]+)/g)) vars.set(d[1], d[2].trim());
+  if (!vars.size) return { ...DEFAULT_COLOURS };
+  return Object.fromEntries(Object.keys(DEFAULT_COLOURS).map(name => {
+    if (!vars.has(name)) throw new Error(file + ': no colour variable --dokufix-' + name);
+    const c = computedColour(vars.get(name));
+    if (!c) throw new Error(file + ': --dokufix-' + name + ' has a value this run cannot compare: ' + vars.get(name));
+    return [name, c];
+  }));
+}
+const opts = parseArgs(process.argv.slice(2));
+let colours;
+try { colours = readColours(opts.file); }
+catch (e){ console.error(e.message); process.exit(1); }
+const col = name => {
+  if (!(name in colours)) throw new Error('tests/vergleich.mjs asks for --dokufix-' + name + ', which is not in tests/default-colours.mjs');
+  return colours[name];
+};
 
 // ---------- browsers ----------
 function findFirefox(){
@@ -205,11 +243,11 @@ const EDITOR_RULES = [
 // The five callout types: the word a reader sees and the colour of edge, label
 // and symbol (src/app/callouts.js, src/doc.css); the symbol is a mask in that colour.
 const CALLOUTS = {
-  note:      { label: 'Hinweis',  colour: 'rgb(9, 105, 218)' },
-  tip:       { label: 'Tipp',     colour: 'rgb(26, 127, 55)' },
-  important: { label: 'Wichtig',  colour: 'rgb(130, 80, 223)' },
-  warning:   { label: 'Achtung',  colour: 'rgb(154, 103, 0)' },
-  caution:   { label: 'Vorsicht', colour: 'rgb(207, 34, 46)' },
+  note:      { label: 'Hinweis',  colour: col('status-note') },
+  tip:       { label: 'Tipp',     colour: col('status-tip') },
+  important: { label: 'Wichtig',  colour: col('status-important') },
+  warning:   { label: 'Achtung',  colour: col('status-warning') },
+  caution:   { label: 'Vorsicht', colour: col('status-caution') },
 };
 // Controls for the numbering of headings after a callout; see assertVariant().
 // The first forces what the document styles are meant to do, the second what
@@ -228,11 +266,11 @@ const CALLOUT_HEADINGS_IN =
 // colour of the label, which is the darker one, the colour of the mark, and
 // the tint of the pill (src/app/chips.js, src/doc.css).
 const CHIPS = {
-  green:  { word: 'grün', text: 'rgb(17, 99, 41)',  colour: 'rgb(26, 127, 55)',  tint: 'rgb(218, 251, 225)' },
-  yellow: { word: 'gelb', text: 'rgb(125, 78, 0)',  colour: 'rgb(154, 103, 0)',  tint: 'rgb(255, 248, 197)' },
-  red:    { word: 'rot',  text: 'rgb(164, 14, 38)', colour: 'rgb(207, 34, 46)',  tint: 'rgb(255, 235, 233)' },
-  grey:   { word: 'grau', text: 'rgb(66, 74, 83)',  colour: 'rgb(87, 96, 106)',  tint: 'rgb(234, 238, 242)' },
-  blue:   { word: 'blau', text: 'rgb(5, 80, 174)',  colour: 'rgb(9, 105, 218)',  tint: 'rgb(221, 244, 255)' },
+  green:  { word: 'grün', text: col('status-tip-text'), colour: col('status-tip'), tint: col('status-tip-tint') },
+  yellow: { word: 'gelb', text: col('status-warning-text'), colour: col('status-warning'), tint: col('status-warning-tint') },
+  red:    { word: 'rot',  text: col('status-caution-text'), colour: col('status-caution'), tint: col('status-caution-tint') },
+  grey:   { word: 'grau', text: col('chip-grey-text'), colour: col('chip-grey'), tint: col('chip-grey-tint') },
+  blue:   { word: 'blau', text: col('status-note-text'), colour: col('status-note'), tint: col('status-note-tint') },
 };
 // For the pictures of the marks: every chip in one colour, so that what is
 // left to tell two apart is the shape of the mark.
@@ -250,10 +288,10 @@ const MARK_MIN_DIFFERENCE = 8;
 // Cards and step lists (story 2.4): the thin border of a card, the tint of a
 // number tile and the colour of an actor (src/doc.css), and the look of the
 // product's warning, which a marker that cannot act becomes.
-const CARD_BORDER = '1px solid rgb(229, 229, 234)';
-const STEP_TILE = 'rgb(240, 240, 243)';
-const STEP_ACTOR = 'rgb(110, 110, 115)';
-const WARNING_LOOK = { edge: '6px solid', background: 'rgb(255, 248, 225)' };
+const CARD_BORDER = '1px solid ' + col('line');
+const STEP_TILE = col('surface-sunken');
+const STEP_ACTOR = col('text-muted');
+const WARNING_LOOK = { edge: '6px solid', background: col('notice-bg') };
 // The width at which cards have to stand below each other: two columns of
 // 210 px with their gap do not fit into the text column of any variant.
 const CARDS_NARROW = 400;
@@ -261,8 +299,8 @@ const CARDS_NARROW = 400;
 // Tables (story 2.5): the look of a sub-line and of the controls of a facet
 // filter (src/doc.css), and the width at which the page is measured a second
 // time: narrower than every table of the reference document.
-const SUB_LINE = 'normal 12px rgb(110, 110, 115)';
-const FACET_PILL = { border: '1px solid rgb(229, 229, 234)', chosen: '1px solid rgb(28, 28, 30)', radius: '13px', ring: '2px', ringChosen: '5px' };
+const SUB_LINE = 'normal 12px ' + col('text-muted');
+const FACET_PILL = { border: '1px solid ' + col('line'), chosen: '1px solid ' + col('line-active'), radius: '13px', ring: '2px', ringChosen: '5px' };
 const TABLES_NARROW = 600;
 // A Markdown table with this many columns or more is taken for one that is
 // wider than the text column: that is how the reference document and the demo
@@ -1930,7 +1968,7 @@ async function assertFilters(page, check, exp, key){
     f.fields.every((x, g) => x.role === 'status' && x.rows && x.rows.length === exp.filters[g].rows.length && x.rows.every(Boolean) && x.count === filterCountText(x.rows.length, x.rows.length)),
     json(f.fields.map(x => [x.role, x.count, x.rows])));
   check('the field is shown and styled: at most 320 px wide, the counter small and grey; nothing of it is positioned',
-    f.fields.every(x => x.display === 'flex' && x.visible && x.width > 100 && x.width <= 320.5 && x.countLook === '12px rgb(110, 110, 115)' && x.holds.every(h => h === STATIC)),
+    f.fields.every(x => x.display === 'flex' && x.visible && x.width > 100 && x.width <= 320.5 && x.countLook === '12px ' + col('text-muted') && x.holds.every(h => h === STATIC)),
     json(f.fields.map(x => [x.display, x.visible, x.width, x.countLook, x.holds])));
 
   // --- typing, as a reader does
@@ -2869,7 +2907,7 @@ async function assertSearch(page, check, key){
           return { cls: k.className, colour: getComputedStyle(k).color, icon: b.backgroundColor, mask: (b.maskImage || b.webkitMaskImage || '').slice(0, 30), size: b.width + ' ' + b.height };
         }, n);
         check('search: the kind "' + wantAt[n].kind + ': " stands with its icon, 12 px, in a colour of its own, the icon in the colour of the label',
-          /search-kind-(bpmn|mermaid)$/.test(kind.cls) && kind.mask.startsWith('url("data:image/svg+xml') && kind.size === '12px 12px' && kind.icon === kind.colour && kind.colour !== 'rgb(110, 110, 115)', json(kind));
+          /search-kind-(bpmn|mermaid)$/.test(kind.cls) && kind.mask.startsWith('url("data:image/svg+xml') && kind.size === '12px 12px' && kind.icon === kind.colour && kind.colour !== col('text-muted'), json(kind));
       }
       if (n < 0) continue;
       const figureAt = figures.indexOf(wantAt[n].el);
@@ -3858,9 +3896,9 @@ const BPMN_KIND_CLASS = tag => tag === 'participant' ? 'dokufix-bpmn-pool' : tag
   : 'dokufix-bpmn-' + tag.toLowerCase();
 // The colours the document styles give, as a browser computes them.
 const BPMN_COLOURS = {
-  task: 'rgb(0, 102, 204)', taskFill: 'rgb(255, 255, 255)', gateway: 'rgb(0, 102, 204)', start: 'rgb(0, 102, 204)', end: 'rgb(28, 28, 30)',
-  pool: 'rgb(142, 142, 146) / rgb(250, 250, 250)', lane: 'rgb(142, 142, 146)',
-  sequence: 'rgb(58, 58, 63)', message: 'rgb(110, 110, 115)', label: 'rgb(28, 28, 30)',
+  task: col('link'), taskFill: col('surface'), gateway: col('link'), start: col('link'), end: col('text'),
+  pool: col('line-faint') + ' / ' + col('surface-alt'), lane: col('line-faint'),
+  sequence: col('text-soft'), message: col('text-muted'), label: col('text'),
 };
 const BPMN_CREDIT_HTML = '<figcaption class="dokufix-diagram-credit">' + BPMN_CREDIT.before + '<a href="' + BPMN_CREDIT.href + '">' + BPMN_CREDIT.text + '</a></figcaption>';
 const BPMN_CREDIT_LINE = BPMN_CREDIT.before + BPMN_CREDIT.text;
@@ -3998,7 +4036,7 @@ async function assertBpmn(page, check, exp, key, text, label, dir){
   const colours = f.figures.flatMap(x => Object.entries(x.colours).filter(([k, v]) => v !== null && v !== BPMN_COLOURS[k]).map(([k, v]) => x.title + ' ' + k + ': ' + v + ', expected ' + BPMN_COLOURS[k]));
   const seen = new Set(f.figures.flatMap(x => Object.entries(x.colours).filter(([, v]) => v !== null).map(([k]) => k)));
   check('BPMN: the colours are the ones the document styles give: ' + [...seen].join(', '), colours.length === 0 && (!want.length || seen.size >= 8), colours.join(' | ') || 'seen only ' + [...seen].join(', '));
-  const credits = f.figures.filter(x => !x.credit || x.credit.text !== BPMN_CREDIT.text || x.credit.href !== BPMN_CREDIT.href || x.credit.caption !== BPMN_CREDIT_LINE || !x.credit.visible || !x.credit.below || x.credit.look !== '12px rgb(110, 110, 115)')
+  const credits = f.figures.filter(x => !x.credit || x.credit.text !== BPMN_CREDIT.text || x.credit.href !== BPMN_CREDIT.href || x.credit.caption !== BPMN_CREDIT_LINE || !x.credit.visible || !x.credit.below || x.credit.look !== '12px ' + col('text-muted'))
     .map(x => x.title + ': ' + json(x.credit));
   check('BPMN: "' + BPMN_CREDIT_LINE + '" below every BPMN diagram, "' + BPMN_CREDIT.text + '" a visible link to ' + BPMN_CREDIT.href, credits.length === 0 && f.figures.length === want.length, credits.join(' | '));
   // A block that cannot be drawn: the warning in its place, naming its title, with the reason.
@@ -4190,7 +4228,7 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
   const drawn = exp.diagrams.filter(d => d.drawn);
   const names = downloadNames(exp).filter((n, i) => exp.diagrams[i].drawn);
   const json = JSON.stringify;
-  const f = await page.evaluate(async () => {
+  const f = await page.evaluate(async muted => {
     const root = document.querySelector('#preview') || document.querySelector('main.reader-body') || document.body;
     return {
       lines: await Promise.all(Array.from(root.querySelectorAll('figure.dokufix-diagram')).map(async fig => {
@@ -4198,7 +4236,7 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
         if (!line) return null;
         const a = line.querySelector(':scope > a'), button = line.querySelector(':scope > button');
         const look = el => { if (!el) return null; const cs = getComputedStyle(el), b = getComputedStyle(el, '::before'), r = el.getBoundingClientRect();
-          return { font: cs.fontSize, border: cs.borderTopWidth + ' ' + cs.borderTopStyle, radius: cs.borderTopLeftRadius, symbol: (s => s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage || 'none'))(b).startsWith('url("data:image/svg+xml') && b.backgroundColor === 'rgb(110, 110, 115)' && b.width + ' ' + b.height, visible: r.width > 0 && r.height > 0 }; };
+          return { font: cs.fontSize, border: cs.borderTopWidth + ' ' + cs.borderTopStyle, radius: cs.borderTopLeftRadius, symbol: (s => s.maskImage && s.maskImage !== 'none' ? s.maskImage : (s.webkitMaskImage || 'none'))(b).startsWith('url("data:image/svg+xml') && b.backgroundColor === muted && b.width + ' ' + b.height, visible: r.width > 0 && r.height > 0 }; };
         let content = null;
         try { content = a ? await (await fetch(a.getAttribute('href'))).text() : null; } catch (e){ content = 'fetch failed: ' + e.message; }
         return {
@@ -4216,7 +4254,7 @@ async function assertDiagramDownloads(page, check, exp, key, text, label, dir){
       })),
       warningLines: root.querySelectorAll('.dokufix-warning .dokufix-diagram-downloads').length,
     };
-  });
+  }, col('text-muted'));
   const lines = f.lines;
   check('downloads: a line below every drawn diagram, outside its large view, a group named "' + DOWNLOADS_LABEL + '", with the source link named by its title (' + names.length + ')',
     lines.length === drawn.length && lines.every((l, i) => l && l.role === 'group' && l.label === DOWNLOADS_LABEL && !l.inView && l.below && l.download === names[i] + KINDS[drawn[i].kind].download.ext && l.text === KINDS[drawn[i].kind].download.ext) && f.warningLines === 0,
@@ -4378,7 +4416,7 @@ async function assertLargeView(page, check, exp, key){
   if (!drawn.length || start.closed !== drawn.length) return;
 
   // What the view of the n-th figure is like now.
-  const facts = n => page.evaluate(([sel, n]) => {
+  const facts = n => page.evaluate(([sel, n, inverse]) => {
     const f = document.querySelectorAll(sel)[n];
     const t = f.querySelector(':scope > .dokufix-diagram-toggle'), view = f.querySelector(':scope > .dokufix-diagram-view');
     const bar = view.querySelector('.dokufix-diagram-bar'), stage = view.querySelector('.dokufix-diagram-stage'), svg = stage.querySelector('svg');
@@ -4399,7 +4437,7 @@ async function assertLargeView(page, check, exp, key){
         ...Array.from(document.querySelectorAll('body > .search-magnifier')).filter(m => m.getClientRects().length).map(m => { const r = m.getBoundingClientRect(); return [(r.left + r.right) / 2, (r.top + r.bottom) / 2]; })].every(([x, y]) => inView(x, y)),
       bar: getComputedStyle(bar).display, name: (bar.querySelector('.dokufix-diagram-name') || {}).textContent, title: f.getAttribute('aria-label'),
       steps: steps.map(s => s.textContent), close: (bar.querySelector('.dokufix-diagram-close') || {}).textContent,
-      chosen: steps.filter(s => getComputedStyle(s).backgroundColor === 'rgb(28, 28, 30)').map(s => s.textContent),
+      chosen: steps.filter(s => getComputedStyle(s).backgroundColor === inverse).map(s => s.textContent),
       rings: { stage: ring(stage), close: ring(bar.querySelector('.dokufix-diagram-close')), steps: steps.map(ring) },
       focus: document.activeElement === t ? 'toggle' : (document.activeElement && document.activeElement.classList.contains('dokufix-diagram-zoom') && f.contains(document.activeElement) ? 'zoom ' + document.activeElement.value : (document.activeElement || {}).tagName),
       svg: s, inner: box(stage) && { left: box(stage).left + pad, top: box(stage).top + pad, right: box(stage).left + stage.clientWidth - pad, bottom: box(stage).top + stage.clientHeight - pad },
@@ -4412,7 +4450,7 @@ async function assertLargeView(page, check, exp, key){
       read: document.body.classList.contains('mode-view'),
       header: (() => { const h = document.querySelector('body > header'); if (!h || !h.getClientRects().length) return null; const r = h.getBoundingClientRect(); return inView(r.left + r.width / 2, r.top + r.height / 2); })(),
     };
-  }, [FIG, n]);
+  }, [FIG, n, col('inverse')]);
   const n = 0;
   const STAGE = page.locator(FIG).nth(n).locator('.dokufix-diagram-stage');
   const step = async k => { await page.locator(FIG).nth(n).locator('.dokufix-diagram-step').nth(k).click(); await frames(page); return facts(n); };
@@ -5193,7 +5231,7 @@ const kompaktBody = text => {
   const m = /<script type="text\/plain" id="p">([^<]*)<\/script>/.exec(text);
   return m ? zlib.gunzipSync(Buffer.from(m[1].trim(), 'base64')).toString('utf8') : null;
 };
-const CODE_LOOK = { background: 'rgb(243, 246, 250)', border: '1px solid rgb(221, 228, 238)', color: 'rgb(28, 39, 51)' };
+const CODE_LOOK = { background: col('code-bg'), border: '1px solid ' + col('code-line'), color: col('code-text') };
 async function assertCodeBlocks(page, check, exp, key, text){
   const json = JSON.stringify;
   const f = await page.evaluate(() => {
@@ -5543,7 +5581,7 @@ async function assertVariant(browser, file, key, exp, results, label){
     if (exp.frontmatter){
       check('metadata panel present and collapsed', s.fm && s.fmOpen === false, 'present ' + s.fm + ', open ' + s.fmOpen);
       check('metadata digest', s.digest === exp.digest, JSON.stringify(s.digest));
-      check('metadata panel styled', s.fmBorder === '1px' && s.fmBg === 'rgb(250, 250, 250)', s.fmBorder + ' ' + s.fmBg);
+      check('metadata panel styled', s.fmBorder === '1px' && s.fmBg === col('surface-alt'), s.fmBorder + ' ' + s.fmBg);
       await page.click('details.dokufix-frontmatter > summary');
       const opened = await page.evaluate(() => {
         const fm = document.querySelector('details.dokufix-frontmatter');
@@ -5608,7 +5646,7 @@ async function assertVariant(browser, file, key, exp, results, label){
       check('multiply cited footnote has one arrow per citation', ids && ids.arrows.length >= 2 && ids.arrows.every(Boolean), JSON.stringify(ids));
       if (ids && ids.arrows[1]){
         await page.click('a[data-footnote-ref][href="#' + ids.arrows[1] + '"]');
-        const YELLOW = 'rgb(212, 255, 0)', SHADE = 'rgba(212, 255, 0, 0.3)';
+        const YELLOW = col('accent'), SHADE = col('accent-tint-30');
         const landed = await settles(page, ([arrowId, liId, yellow, shade]) => {
           const arrow = document.getElementById(arrowId), li = document.getElementById(liId);
           return location.hash === '#' + arrowId
@@ -6071,6 +6109,18 @@ function compareRun(run, baselineRoot){
     out.libraries = base.libraries;
   }
   fs.writeFileSync(path.join(run.dir, 'vergleich.json'), JSON.stringify(out, null, 2) + '\n');
+  // The same pairs for the eye: per image the baseline, this run and the diff mask side by side.
+  const esc = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const src = f => esc(f.split(path.sep).map(encodeURIComponent).join('/'));
+  const cell = (f, what) => f ? '<td><a href="' + src(f) + '"><img src="' + src(f) + '" alt="' + what + '" loading="lazy"></a></td>' : '<td>' + what + '</td>';
+  const rows = out.images.map(i => '<tr><th colspan="3">' + esc(i.image) + ' — ' +
+      (i.missingRun ? 'only in the baseline' : i.missingBaseline ? 'no baseline image' : i.differing ? i.differing + ' px differ' : 'identical') + '</th></tr><tr>' +
+      cell(i.missingBaseline ? null : path.relative(run.dir, path.join(baseDir, i.image)), 'baseline') +
+      cell(i.missingRun ? null : i.image, 'this run') +
+      cell(i.differing ? 'diff/' + i.image : null, i.differing ? 'diff' : 'no diff') + '</tr>').join('\n');
+  fs.writeFileSync(path.join(run.dir, 'vergleich.html'), '<!doctype html><meta charset="utf-8"><title>' + esc(run.name + ': ' + run.dir + ' against ' + baseDir) + '</title>\n' +
+    '<style>body{font:14px sans-serif;margin:16px}table{border-collapse:collapse;width:100%}th{text-align:left;padding:16px 0 4px}td{width:33%;vertical-align:top;padding:2px}img{width:100%;border:1px solid #ccc}</style>\n' +
+    '<h1>' + esc(run.name) + '</h1><p>baseline ' + esc(baseDir) + ' · this run ' + esc(run.dir) + '</p>\n<table>\n' + rows + '\n</table>\n');
   return out;
 }
 
@@ -6115,7 +6165,6 @@ function report(run, cmp){
 }
 
 // ---------- main ----------
-const opts = parseArgs(process.argv.slice(2));
 const md = opts.demo ? null : fs.readFileSync(opts.doc, 'utf8');
 // The images the file under test carries (its #dokufix-assets block): an
 // #asset- reference to one of them is shown, any other is a missing image.
