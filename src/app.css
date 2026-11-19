@@ -34,6 +34,10 @@
   }
   .hamburger:hover{background:var(--dokufix-chrome-raised);border-color:var(--dokufix-chrome-line-hover)}
   header h1{font-size:18px;font-weight:800;letter-spacing:-0.01em}
+  /* A themed build (story 6.2): the customer's name in the h1, a long one cut
+     with an ellipsis, and "dokufix" smaller beside it, never cut. */
+  header h1:has(+.brand){min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  header .brand{font-size:12px;font-weight:400;color:var(--dokufix-on-chrome);flex-shrink:0}
   header .tag{
     font-size:10px;background:var(--dokufix-accent);color:var(--dokufix-on-accent);
     padding:3px 8px;border-radius:3px;font-weight:800;letter-spacing:0.08em;
@@ -258,7 +262,7 @@
   }
   .img-btn{
     margin-left:auto;background:transparent;border:1px solid var(--dokufix-line-strong);color:var(--dokufix-text);
-    font:600 10px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    font:600 10px/1 var(--dokufix-font-body);
     letter-spacing:0.14em;text-transform:uppercase;
     padding:5px 10px;border-radius:4px;cursor:pointer;transition:background .12s ease;
   }
@@ -267,7 +271,7 @@
   .drop-overlay{
     position:absolute;inset:32px;border:2px dashed var(--dokufix-link);border-radius:8px;
     background:var(--dokufix-link-tint-6);display:none;align-items:center;justify-content:center;
-    color:var(--dokufix-link);font:600 18px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    color:var(--dokufix-link);font:600 18px/1 var(--dokufix-font-body);
     pointer-events:none;z-index:5;
   }
   .pane-source.is-drop-target .drop-overlay{display:flex}
